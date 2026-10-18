@@ -15,7 +15,7 @@
 | B.1-expo-app | done | - | - | - | Create Expo app with template |
 | B.2-design-system | done | - | 19/19 passed | - | NativeWind, tokens, components |
 | B.3-navigation | done | - | 0/0 passed | - | Expo Router, 4 tab screens complete |
-| B.4-voice-module | doing | - | - | - | Sherpa-onnx, Pipecat, earbud protocol |
+| B.4-voice-module | doing | - | - | TypeScript errors | Fix TS errors, Sherpa-onnx, Pipecat, earbud protocol |
 | B.5-maps-module | todo | - | - | - | munim-maps, PMTiles, offline |
 | B.6-sync-engine | todo | - | - | - | op-sqlite, event sourcing |
 | B.7-compat-test | todo | - | - | - | Week 1: 5 native modules stress test |
@@ -45,7 +45,7 @@
 ---
 
 **Session Started:** 2026-10-19 00:53:00 +13:00
-**Last Updated:** 2026-10-19 03:45:00 +13:00
+**Last Updated:** 2026-10-19 04:20:00 +13:00
 **Current Phase:** Phase B - Expo App Creation & Design System (B.4-voice-module in progress)
-**Repository:** haytham26/courier (feat/0.05-ci branch)
-**Notes:** Phase A complete (monorepo, shared packages, auth, OpenAPI). All 62 shared package tests pass. Mobile app structure with 4 tabs, design system with NativeWind + tokens, Expo Router navigation all working. TypeScript compilation clean. Moving to B.4-voice-module (Sherpa-onnx, Pipecat, earbud protocol).
+**Repository:** haytham26/courier (feat/0.01-repo-setup branch)
+**Notes:** Phase A complete (monorepo, shared packages, auth, OpenAPI). All 62 shared package tests pass. Mobile app structure with 4 tabs, design system with NativeWind + tokens, Expo Router navigation all working. Fixed TypeScript errors in shared packages. Currently fixing TypeScript errors in mobile voice module (expo-audio, sherpa-onnx, pipecat imports, shared package paths).

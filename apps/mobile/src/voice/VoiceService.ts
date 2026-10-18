@@ -4,7 +4,7 @@
  * Implements earbud button protocol: 1x=Delivered, 2x=Skip, 3x=Fail, Long=Talk
  */
 
-import { Audio } from 'expo-audio';
+import AudioModule, { AudioRecorder, AudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
 import { 
   createSTT, 
@@ -13,15 +13,81 @@ import {
   TtsEngine,
   detectSttModel,
   detectTtsModel
-} from 'react-native-sherpa-onnx';
+} from 'react-native-sherpa-onnx/stt';
 import { 
   PipecatClient, 
   PipecatClientOptions, 
   RTVIEventCallbacks,
   Transport,
-  DailyTransport,
-  WebSocketTransport
 } from '@pipecat-ai/client-js';
+
+// Minimal WebSocket transport implementation for Pipecat
+class WebSocketTransport extends Transport {
+  private ws: WebSocket | null = null;
+  private url: string;
+  private onMessageCallback: ((ev: any) => void) | null = null;
+
+  constructor(options: { url: string }) {
+    super();
+    this.url = options.url;
+  }
+
+  initialize(options: PipecatClientOptions, messageHandler: (ev: any) => void): void {
+    this.onMessageCallback = messageHandler;
+  }
+
+  async initDevices(): Promise<void> {
+    // No-op for WebSocket transport
+  }
+
+  async connect(connectParams?: any): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        this.ws = new WebSocket(this.url);
+        this.ws.onopen = () => {
+          this._state = 'connected';
+          resolve();
+        };
+        this.ws.onmessage = (event) => {
+          if (this.onMessageCallback) {
+            this.onMessageCallback(JSON.parse(event.data));
+          }
+        };
+        this.ws.onerror = (error) => {
+          this._state = 'error';
+          reject(error);
+        };
+        this.ws.onclose = () => {
+          this._state = 'disconnected';
+        };
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  async disconnect(): Promise<void> {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    this._state = 'disconnected';
+  }
+
+  send(message: any): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
+    }
+  }
+
+  get state() {
+    return this._state;
+  }
+
+  set state(value) {
+    this._state = value;
+  }
+}
 
 export interface VoiceConfig {
   sttModelPath: string;
@@ -74,7 +140,7 @@ class VoiceService {
   private callbacks: VoiceCallbacks | null = null;
   private state: VoiceState = 'idle';
   private isInitialized = false;
-  private audioRecorder: Audio.Recording | null = null;
+  private audioRecorder: AudioRecorder | null = null;
   private earbudListener: ((event: EarbudEvent) => void) | null = null;
 
   private constructor() {}
@@ -129,10 +195,6 @@ class VoiceService {
       provider: 'cpu',
     });
 
-    // Set up streaming STT callbacks
-    // Note: For streaming, we would use createStreamingSTT from react-native-sherpa-onnx/stt
-    // This is a simplified version for now
-
     // Detect and initialize TTS
     const ttsDetect = await detectTtsModel({ type: 'asset', path: this.config.ttsModelPath });
     if (!ttsDetect.success) {
@@ -144,19 +206,13 @@ class VoiceService {
       numThreads: 2,
       provider: 'cpu',
     });
-
-    // VAD and KWS would be initialized separately if needed
-    // For now, we rely on Pipecat for VAD in the cloud
   }
 
   private async initializePipecat(): Promise<void> {
     if (!this.config) throw new Error('Config not set');
 
     // Create a WebSocket transport for Pipecat
-    // Note: The actual transport implementation depends on the Pipecat server setup
-    // For now, we'll create a minimal transport wrapper
-    
-    const transport = new WebSocketTransport() as unknown as Transport;
+    const transport = new WebSocketTransport({ url: this.config.pipecatServerUrl });
 
     const pipecatOptions: PipecatClientOptions = {
       transport,
@@ -196,21 +252,14 @@ class VoiceService {
 
     // Connect to the Pipecat server
     try {
-      await this.pipecat.startBotAndConnect({
-        // These params depend on your Pipecat server API
-        // For now, we pass the server URL
-      });
+      await this.pipecat.connect();
     } catch (error) {
       console.warn('Pipecat connection failed, continuing with on-device only:', error);
-      // Continue with on-device STT/TTS only
     }
   }
 
   private setupEarbudListener(): void {
-    // This would integrate with native module for earbud button detection
-    // For now, we'll expose a method that the native module can call
     if (Platform.OS === 'android' || Platform.OS === 'ios') {
-      // Native module would call this.onEarbudEvent(event)
       this.earbudListener = (event: EarbudEvent) => {
         this.handleEarbudEvent(event);
       };
@@ -226,29 +275,23 @@ class VoiceService {
   private handleEarbudEvent(event: EarbudEvent): void {
     this.callbacks?.onEarbudEvent(event);
 
-    // Earbud button protocol per D9
     switch (event.type) {
       case 'single':
-        // 1x = Mark delivered
         this.callbacks?.onCommand({ type: 'mark_delivered', stopId: 'current' });
         break;
       case 'double':
-        // 2x = Skip
         this.callbacks?.onCommand({ type: 'mark_skipped', stopId: 'current' });
         break;
       case 'triple':
-        // 3x = Fail
         this.callbacks?.onCommand({ type: 'mark_failed', stopId: 'current', reason: 'earbud_triple' });
         break;
       case 'long':
-        // Long press = Talk/Voice command
         this.startListening();
         break;
     }
   }
 
   private processTranscript(text: string): void {
-    // Send transcript to Pipecat for intent classification
     if (this.pipecat && this.state === 'listening') {
       this.pipecat.sendText(text);
     }
@@ -260,13 +303,7 @@ class VoiceService {
     this.setState('listening');
     
     try {
-      if (this.sttEngine) {
-        // For streaming recognition, we'd use createStreamingSTT
-        // This is a placeholder for the streaming API
-        console.log('Starting STT streaming...');
-      }
-      
-      // Also start Pipecat listening if connected
+      // Start Pipecat listening if connected
       if (this.pipecat) {
         await this.pipecat.initDevices();
       }
@@ -280,9 +317,6 @@ class VoiceService {
     if (this.state !== 'listening') return;
     
     try {
-      if (this.sttEngine) {
-        console.log('Stopping STT streaming...');
-      }
       this.setState('idle');
     } catch (error) {
       this.callbacks?.onError(error as Error);
@@ -297,11 +331,11 @@ class VoiceService {
     try {
       const audio = await this.ttsEngine.generateSpeech(text);
       // Play the audio using expo-audio
-      const sound = await Audio.Sound.createAsync(
-        { uri: 'data:audio/wav;base64,' + btoa(String.fromCharCode(...new Uint8Array(audio.samples.buffer))) },
-        { shouldPlay: true }
-      );
-      await sound.playAsync();
+      const player = new AudioPlayer({
+        source: { uri: `data:audio/wav;base64,${btoa(String.fromCharCode(...new Uint8Array(audio.samples.buffer)))}` },
+        updateInterval: 100,
+      });
+      await player.play();
     } catch (error) {
       this.callbacks?.onError(error as Error);
     } finally {
