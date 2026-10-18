@@ -9,7 +9,7 @@
 | 0.4-local-secrets | done | feat/0.04-secrets | - | - | .env.local, check-secrets, push-secrets scripts |
 | 0.5-ci-pipeline | done | feat/0.05-ci | - | - | GitHub Actions with review-gate, backtest 50x |
 | A.1-monorepo-migration | done | - | - | - | Move existing code to apps/api |
-| A.2-shared-packages | done | - | 62/62 passed, backtest 50/50 | - | packages/shared, nz-address, design-tokens - BACKTEST COMPLETE |
+| A.2-shared-packages | done | - | 62/62 passed, backtest 50/50 | - | packages/shared, nz-address, design-tokens - BACKTEST COMPLETE 50/50 PASSED |
 | A.3-auth-better-auth | doing | - | 0/0 passed | Better Auth migration needed + tests | Replace Supabase Auth with Better Auth, add tests |
 | A.4-openapi-spec | done | - | - | - | OpenSpec for all APIs (openspec/api.yaml) |
 | B.1-expo-app | doing | - | 0/0 passed | Needs tests | Create Expo app with template, add tests |

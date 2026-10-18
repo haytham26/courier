@@ -1,12 +1,10 @@
 // jest.setup.js - Setup file for Jest tests
-require('@testing-library/jest-native/extend-expect');
+const { expect } = require('expect');
 
-// Mock react-native-platform to prevent window redefinition issues
-jest.mock('react-native/Libraries/Utilities/Platform', () => ({
-  OS: 'ios',
-  Version: '16.0',
-  select: jest.fn((obj) => obj.ios),
-}));
+global.expect = expect;
+global.jest = jest;
+
+require('@testing-library/jest-native/extend-expect');
 
 // Silence console warnings during tests
 const originalWarn = console.warn;

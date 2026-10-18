@@ -1,1 +1,0 @@
-$ tsc && tsc --module ESNext --outDir dist --declarationDir dist --emitDeclarationOnly false --declaration true --declarationMap true --sourceMap true

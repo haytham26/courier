@@ -1,12 +1,12 @@
 import React from 'react';
 
-const View = ({ children, ...props }: any) => <div {...props}>{children}</div>;
-const Text = ({ children, ...props }: any) => <span {...props}>{children}</span>;
-const ScrollView = ({ children, ...props }: any) => <div {...props}>{children}</div>;
-const SafeAreaView = ({ children, ...props }: any) => <div {...props}>{children}</div>;
-const Pressable = ({ children, onPress, ...props }: any) => <div {...props} onClick={onPress}>{children}</div>;
-const TouchableOpacity = ({ children, onPress, ...props }: any) => <div {...props} onClick={onPress}>{children}</div>;
-const Image = ({ ...props }: any) => <div {...props} />;
+const View = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Text = ({ children, ...props }: any) => React.createElement('span', props, children);
+const ScrollView = ({ children, ...props }: any) => React.createElement('div', props, children);
+const SafeAreaView = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Pressable = ({ children, onPress, ...props }: any) => React.createElement('div', { ...props, onClick: onPress }, children);
+const TouchableOpacity = ({ children, onPress, ...props }: any) => React.createElement('div', { ...props, onClick: onPress }, children);
+const Image = ({ ...props }: any) => React.createElement('div', props);
 const StatusBar = () => null;
 const StyleSheet = {
   create: (styles: any) => styles,
@@ -32,14 +32,14 @@ const Dimensions = {
     if (dimension === 'screen') return { width: 375, height: 667, scale: 2, fontScale: 1 };
     return { width: 375, height: 667, scale: 2, fontScale: 1 };
   },
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
+  addEventListener: () => {},
+  removeEventListener: () => {},
 };
 const Animated = {
-  View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-  Image: ({ ...props }: any) => <div {...props} />,
-  ScrollView: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  View: ({ children, ...props }: any) => React.createElement('div', props, children),
+  Text: ({ children, ...props }: any) => React.createElement('span', props, children),
+  Image: ({ ...props }: any) => React.createElement('div', props),
+  ScrollView: ({ children, ...props }: any) => React.createElement('div', props, children),
   createAnimatedComponent: (component: any) => component,
   Value: class {
     constructor(public _value: number = 0) {}
@@ -121,36 +121,36 @@ const Animated = {
 };
 
 const Keyboard = {
-  addListener: jest.fn(),
-  removeListener: jest.fn(),
-  removeAllListeners: jest.fn(),
-  dismiss: jest.fn(),
-  scheduleLayoutAnimation: jest.fn(),
+  addListener: () => {},
+  removeListener: () => {},
+  removeAllListeners: () => {},
+  dismiss: () => {},
+  scheduleLayoutAnimation: () => {},
 };
 
 const Alert = {
-  alert: jest.fn(),
+  alert: () => {},
 };
 
 const Linking = {
-  openURL: jest.fn().mockResolvedValue(undefined),
-  canOpenURL: jest.fn().mockResolvedValue(true),
-  getInitialURL: jest.fn().mockResolvedValue(null),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
+  openURL: () => Promise.resolve(undefined),
+  canOpenURL: () => Promise.resolve(true),
+  getInitialURL: () => Promise.resolve(null),
+  addEventListener: () => {},
+  removeEventListener: () => {},
 };
 
 const AppState = {
   currentState: 'active',
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
+  addEventListener: () => {},
+  removeEventListener: () => {},
 };
 
 const AccessibilityInfo = {
-  isScreenReaderEnabled: jest.fn().mockResolvedValue(false),
-  isReduceMotionEnabled: jest.fn().mockResolvedValue(false),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
+  isScreenReaderEnabled: () => Promise.resolve(false),
+  isReduceMotionEnabled: () => Promise.resolve(false),
+  addEventListener: () => {},
+  removeEventListener: () => {},
 };
 
 const NativeModules = {

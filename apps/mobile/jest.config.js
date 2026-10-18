@@ -1,7 +1,8 @@
 module.exports = {
   testEnvironment: 'jsdom',
-  setupFilesAfterSetup: ['@testing-library/jest-native/extend-expect'],
-  setupFiles: ['<rootDir>/jest.setup.js'],
+  setupFiles: [
+    '<rootDir>/jest.setup.js',
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@courier/design-tokens/(.*)$': '<rootDir>/../packages/design-tokens/dist/$1',

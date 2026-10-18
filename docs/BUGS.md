@@ -38,14 +38,14 @@
 | BUG-032 | No App Store / Play Console assets | Phase G.2 not started | - | Screenshots, descriptions ready | open |
 | BUG-033 | No acceptance test script (emulator + device) | Phase G.3 not started | - | ACCEPTANCE_TEST.md passes | open |
 | BUG-034 | No handover documentation (HANDOVER.md, APK) | Phase G.4 not started | - | Founder can run emulator + install APK | open |
-| BUG-035 | Compliance: NativeWind used instead of Unistyles 3 | External review found violation | Migrated to Unistyles 3 | No NativeWind imports in codebase | fixed |
-| BUG-036 | Compliance: Supabase Auth used instead of Better Auth | External review found violation | Migrated to Better Auth | No Supabase Auth imports in codebase | fixed |
-| BUG-037 | Compliance: munim-maps referenced instead of MapLibre v11 | External review found violation | Migrated to @maplibre/maplibre-react-native v11.3.7 | No munim-maps references | fixed |
-| BUG-038 | Compliance: Redis used instead of Valkey | External review found violation | docker-compose uses Valkey 8 | No Redis in docker-compose | fixed |
-| BUG-039 | Compliance: .gitignore missing .turbo/, .expo/, dist/, node_modules/ | External review found violation | .gitignore updated, .turbo/cache removed from git | git check-ignore catches all build artifacts | fixed |
+| BUG-035 | Compliance: NativeWind used instead of Unistyles 3 | External review found violation | Migrated to Unistyles 3 | No NativeWind imports in codebase | fixed (50x backtest passed) |
+| BUG-036 | Compliance: Supabase Auth used instead of Better Auth | External review found violation | Migrated to Better Auth | No Supabase Auth imports in codebase | fixed (50x backtest passed) |
+| BUG-037 | Compliance: munim-maps referenced instead of MapLibre v11 | External review found violation | Migrated to @maplibre/maplibre-react-native v11.3.7 | No munim-maps references | fixed (50x backtest passed) |
+| BUG-038 | Compliance: Redis used instead of Valkey | External review found violation | docker-compose uses Valkey 8 | No Redis in docker-compose | fixed (50x backtest passed) |
+| BUG-039 | Compliance: .gitignore missing .turbo/, .expo/, dist/, node_modules/ | External review found violation | .gitignore updated, .turbo/cache removed from git | git check-ignore catches all build artifacts | fixed (50x backtest passed) |
 | BUG-040 | TypeScript errors in voice module (missing exports, module resolution) | Voice module incomplete | Need to fix exports and imports | `tsc --noEmit` passes | doing |
 
 ---
 
-**Last Updated:** 2026-10-19 04:50:00 +13:00
-**Total Bugs:** 40 | **Open:** 25 | **Fixed:** 10 | **Doing:** 3 | **Verified (50x):** 0
+**Last Updated:** 2026-10-19 06:58:00 +13:00
+**Total Bugs:** 40 | **Open:** 25 | **Fixed:** 10 | **Doing:** 3 | **Verified (50x):** 5

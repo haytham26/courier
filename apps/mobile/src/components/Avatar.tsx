@@ -1,18 +1,19 @@
 import React from 'react';
-import { Image, View, Text, StyleSheet } from 'react-native';
+import { Image, View, Text, StyleSheet, type StyleProp, type ViewStyle, type TextStyle } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { useTheme } from 'react-native-unistyles';
 
 const avatarVariants = cva(
-  'rounded-full overflow-hidden flex-shrink-0 bg-neutral-200 dark:bg-neutral-700',
+  'rounded-full overflow-hidden flex-shrink-0',
   {
     variants: {
       size: {
-        xs: 'w-6 h-6 text-xs',
-        sm: 'w-8 h-8 text-sm',
-        md: 'w-10 h-10 text-base',
-        lg: 'w-12 h-12 text-lg',
-        xl: 'w-16 h-16 text-xl',
-        '2xl': 'w-24 h-24 text-2xl',
+        xs: '',
+        sm: '',
+        md: '',
+        lg: '',
+        xl: '',
+        '2xl': '',
       },
       shape: {
         circle: 'rounded-full',
@@ -55,21 +56,42 @@ function stringToColor(str: string): string {
 
 export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProps>(
   ({ className, size, shape, src, alt, name, fallbackColor, style, ...props }, ref) => {
-    const fallbackBg = fallbackColor || (name ? stringToColor(name) : 'var(--color-neutral-400)');
+    const { theme } = useTheme();
+    const fallbackBg = fallbackColor || (name ? stringToColor(name) : theme.colors.border);
     const initials = name ? getInitials(name) : '?';
+
+    const sizeStyles = StyleSheet.create({
+      xs: { width: 24, height: 24, fontSize: theme.typography.fontSizes.xs },
+      sm: { width: 32, height: 32, fontSize: theme.typography.fontSizes.sm },
+      md: { width: 40, height: 40, fontSize: theme.typography.fontSizes.base },
+      lg: { width: 48, height: 48, fontSize: theme.typography.fontSizes.lg },
+      xl: { width: 64, height: 64, fontSize: theme.typography.fontSizes.xl },
+      '2xl': { width: 96, height: 96, fontSize: theme.typography.fontSizes['2xl'] },
+    });
+
+    const shapeStyles = StyleSheet.create({
+      circle: { borderRadius: 9999 },
+      square: { borderRadius: theme.borderRadius.lg },
+    });
+
+    const containerStyle = [
+      sizeStyles[size as keyof typeof sizeStyles],
+      shapeStyles[shape as keyof typeof shapeStyles],
+      { backgroundColor: fallbackBg },
+      style,
+    ] as StyleProp<ViewStyle>;
 
     if (src) {
       return (
         <View
           ref={ref}
-          className={avatarVariants({ size, shape, className })}
-          style={style}
+          style={containerStyle}
           {...props}
         >
           <Image
             source={{ uri: src }}
             alt={alt || name || 'Avatar'}
-            style={StyleSheet.absoluteFill}
+            style={StyleSheet.absoluteFillObject}
             resizeMode="cover"
           />
         </View>
@@ -79,14 +101,20 @@ export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProp
     return (
       <View
         ref={ref}
-        className={avatarVariants({ size, shape, className })}
-        style={[{ backgroundColor: fallbackBg }, style]}
+        style={containerStyle}
         {...props}
         accessibilityLabel={alt || name || 'Avatar'}
       >
         <Text
-          className="w-full h-full flex-center text-white font-semibold select-none"
-          style={StyleSheet.absoluteFill}
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              textAlign: 'center',
+              textAlignVertical: 'center',
+              color: '#ffffff',
+              fontWeight: '600',
+            } as TextStyle,
+          ]}
         >
           {initials}
         </Text>

@@ -1,25 +1,25 @@
 import React from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { useTheme } from 'react-native-unistyles';
 
 const badgeVariants = cva(
   'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-colors',
   {
     variants: {
       variant: {
-        default: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200',
-        primary: 'bg-brand-primary-100 text-brand-primary-700 dark:bg-brand-primary-900 dark:text-brand-primary-200',
-        secondary: 'bg-brand-secondary-100 text-brand-secondary-700 dark:bg-brand-secondary-900 dark:text-brand-secondary-200',
-        success: 'bg-semantic-success-bg text-semantic-success-dark dark:bg-semantic-success-dark/20 dark:text-semantic-success-light',
-        warning: 'bg-semantic-warning-bg text-semantic-warning-dark dark:bg-semantic-warning-dark/20 dark:text-semantic-warning-light',
-        error: 'bg-semantic-error-bg text-semantic-error-dark dark:bg-semantic-error-dark/20 dark:text-semantic-error-light',
-        info: 'bg-semantic-info-bg text-semantic-info-dark dark:bg-semantic-info-dark/20 dark:text-semantic-info-light',
-        // Delivery status variants
-        pending: 'bg-status-pending/20 text-status-pending',
-        active: 'bg-status-active/20 text-status-active',
-        delivered: 'bg-status-delivered/20 text-status-delivered',
-        failed: 'bg-status-failed/20 text-status-failed',
-        skipped: 'bg-status-skipped/20 text-status-skipped',
+        default: '',
+        primary: '',
+        secondary: '',
+        success: '',
+        warning: '',
+        error: '',
+        info: '',
+        pending: '',
+        active: '',
+        delivered: '',
+        failed: '',
+        skipped: '',
       },
       size: {
         sm: 'px-1.5 py-0 text-[10px]',
@@ -48,20 +48,95 @@ interface BadgeProps
 
 export const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>(
   ({ className, variant, size, dot, dotColor, children, style, ...props }, ref) => {
+    const { theme } = useTheme();
+
+    const baseStyles = StyleSheet.create({
+      default: {
+        backgroundColor: `${theme.colors.border}40`, // 25% opacity
+        color: theme.colors.textSecondary,
+      },
+      primary: {
+        backgroundColor: `${theme.colors.brandPrimary}33`, // 20% opacity
+        color: theme.colors.brandPrimary,
+      },
+      secondary: {
+        backgroundColor: `${theme.colors.brandSecondary}33`,
+        color: theme.colors.brandSecondary,
+      },
+      success: {
+        backgroundColor: `${theme.colors.success}33`,
+        color: theme.colors.success,
+      },
+      warning: {
+        backgroundColor: `${theme.colors.warning}33`,
+        color: theme.colors.warning,
+      },
+      error: {
+        backgroundColor: `${theme.colors.error}33`,
+        color: theme.colors.error,
+      },
+      info: {
+        backgroundColor: `${theme.colors.info}33`,
+        color: theme.colors.info,
+      },
+      pending: {
+        backgroundColor: `${theme.colors.statusPending}33`,
+        color: theme.colors.statusPending,
+      },
+      active: {
+        backgroundColor: `${theme.colors.statusActive}33`,
+        color: theme.colors.statusActive,
+      },
+      delivered: {
+        backgroundColor: `${theme.colors.statusDelivered}33`,
+        color: theme.colors.statusDelivered,
+      },
+      failed: {
+        backgroundColor: `${theme.colors.statusFailed}33`,
+        color: theme.colors.statusFailed,
+      },
+      skipped: {
+        backgroundColor: `${theme.colors.statusSkipped}33`,
+        color: theme.colors.statusSkipped,
+      },
+    });
+
+    const variantStyle = baseStyles[variant as keyof typeof baseStyles] || baseStyles.default;
+
+    const sizeStyles = StyleSheet.create({
+      sm: { paddingHorizontal: theme.spacing[1.5], paddingVertical: 0, fontSize: 10 },
+      md: { paddingHorizontal: theme.spacing[2], paddingVertical: theme.spacing[0.5], fontSize: 12 },
+      lg: { paddingHorizontal: theme.spacing[2.5], paddingVertical: theme.spacing[1], fontSize: 14 },
+    });
+
     return (
       <View
         ref={ref}
-        className={badgeVariants({ variant, size, dot, className })}
-        style={style}
+        style={[
+          {
+            borderRadius: 9999,
+            flexDirection: dot ? 'row' : 'column',
+            alignItems: 'center',
+            gap: dot ? theme.spacing[1.5] : 0,
+          },
+          variantStyle,
+          sizeStyles[size as keyof typeof sizeStyles],
+          style,
+        ] as StyleProp<ViewStyle>}
         {...props}
       >
         {dot && (
           <View
-            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: dotColor }}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: dotColor || (variantStyle as any).color,
+              flexShrink: 0,
+            }}
           />
         )}
-        <Text className="select-none">{children}</Text>
+        <Text style={{ fontWeight: '600' }} selectable={false}>{children}</Text>
       </View>
     );
   }

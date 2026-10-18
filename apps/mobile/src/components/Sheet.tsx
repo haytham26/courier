@@ -1,17 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, Easing, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Easing, Keyboard, type StyleProp, type ViewStyle } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from 'react-native-unistyles';
 
 const sheetVariants = cva(
-  'rounded-t-lg bg-surface-primary shadow-elevation5',
+  'rounded-t-lg',
   {
     variants: {
       size: {
-        small: 'h-[30%]',
-        medium: 'h-[50%]',
-        large: 'h-[75%]',
-        full: 'h-[90%]',
+        small: '',
+        medium: '',
+        large: '',
+        full: '',
         auto: '',
       },
     },
@@ -52,6 +53,7 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
     },
     ref
   ) => {
+    const { theme } = useTheme();
     const insets = useSafeAreaInsets();
     const [animation] = React.useState(() => new Animated.Value(0));
     const [isAnimating, setIsAnimating] = React.useState(false);
@@ -78,7 +80,7 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
           onClose();
         });
       }
-    }, [isOpen]);
+    }, [isOpen, animation]);
 
     const translateY = animation.interpolate({
       inputRange: [0, 1],
@@ -95,6 +97,14 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
     }
 
     const variantClassName = sheetVariants({ size, className });
+
+    const sizeStyles = StyleSheet.create({
+      small: { maxHeight: '30%' },
+      medium: { maxHeight: '50%' },
+      large: { maxHeight: '75%' },
+      full: { maxHeight: '90%' },
+      auto: {},
+    });
 
     return (
       <Animated.View
@@ -119,34 +129,46 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
               bottom: 0,
               left: 0,
               right: 0,
-              transform: [{ translateY }],
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
+              transform: [{ translateY }] as any,
+              borderTopLeftRadius: theme.borderRadius.xl,
+              borderTopRightRadius: theme.borderRadius.xl,
               paddingBottom: insets.bottom,
+              backgroundColor: theme.colors.surface,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+              elevation: 8,
+              maxHeight: sizeStyles[size as keyof typeof sizeStyles]?.maxHeight || '50%',
             },
             style,
-          ]}
+          ] as StyleProp<ViewStyle>}
           {...props}
         >
           {handleStyle !== 'hidden' && (
-            <View className="flex-row items-center justify-center pb-3">
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingBottom: theme.spacing[3] }}>
               <View
-                className="w-10 h-1 bg-border-default rounded-full"
+                style={{
+                  width: 40,
+                  height: 5,
+                  borderRadius: 2.5,
+                  backgroundColor: theme.colors.border,
+                }}
                 importantForAccessibility="no-hide-descendants"
               />
             </View>
           )}
           {(title || subtitle) && (
-            <View className="px-4 pb-3 border-b border-border-light">
+            <View style={{ paddingHorizontal: theme.spacing[4], paddingBottom: theme.spacing[3], borderBottomWidth: 1, borderBottomColor: theme.colors.border }}>
               {title && (
-                <Text className="text-lg font-semibold text-text-primary">{title}</Text>
+                <Text style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: '600', color: theme.colors.textPrimary }}>{title}</Text>
               )}
               {subtitle && (
-                <Text className="text-sm text-text-secondary mt-0.5">{subtitle}</Text>
+                <Text style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.textSecondary, marginTop: theme.spacing[0.5] }}>{subtitle}</Text>
               )}
             </View>
           )}
-          <View className="flex-1 overflow-y-auto px-4 py-4">
+          <View style={{ flex: 1, overflow: 'hidden', paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[4] }}>
             {children}
           </View>
         </Animated.View>

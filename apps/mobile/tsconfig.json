@@ -1,1 +1,14 @@
-{"compilerOptions": {"paths": {"@courier/design-tokens/*": ["../../packages/design-tokens/dist/*"], "@/*": ["./src/*"], "*": ["./*"]}}, "extends": "expo/tsconfig.base", "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]} 
+{
+  "compilerOptions": {
+    "paths": {
+      "@courier/design-tokens/*": ["../../packages/design-tokens/dist/*"],
+      "@courier/shared/*": ["../../packages/shared/dist/*"],
+      "@/*": ["./src/*"],
+      "*": ["./*"]
+    },
+    "types": ["jest"]
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "__mocks__/**/*.ts"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"],
+  "extends": "expo/tsconfig.base"
+}

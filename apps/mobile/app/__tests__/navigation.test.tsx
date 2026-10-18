@@ -1,10 +1,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { router } from 'expo-router';
 
-// Mock expo-router
+// Mock expo-router completely (no actual require)
 jest.mock('expo-router', () => ({
-  ...jest.requireActual('expo-router'),
   router: {
     push: jest.fn(),
     replace: jest.fn(),
@@ -20,25 +18,31 @@ jest.mock('expo-router', () => ({
 }));
 
 // Mock react-native
-jest.mock('react-native', () => ({
-  ...jest.requireActual('react-native'),
-  View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-  StyleSheet: { create: (x: any) => x },
-  Platform: { OS: 'ios' },
-  SafeAreaView: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  StatusBar: () => null,
-}));
+jest.mock('react-native', () => {
+  const ReactMock = require('react');
+  return {
+    View: ({ children, ...props }: any) => ReactMock.createElement('div', props, children),
+    Text: ({ children, ...props }: any) => ReactMock.createElement('span', props, children),
+    StyleSheet: { 
+      create: (x: any) => x, 
+      flatten: (x: any) => x,
+      absoluteFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+      absoluteFillObject: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+      hairlineWidth: 1,
+    },
+    Platform: { OS: 'ios', Version: '16.0', select: (obj: any) => obj.ios },
+    SafeAreaView: ({ children, ...props }: any) => ReactMock.createElement('div', props, children),
+    StatusBar: () => null,
+    Dimensions: { get: () => ({ width: 375, height: 667, scale: 2, fontScale: 1 }) },
+  };
+});
 
 import { View, Text, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
 
 describe('Navigation Structure', () => {
   it('has correct tab routes defined', () => {
-    // Test that the expected routes exist in the app structure
     const expectedRoutes = ['index', 'map', 'stops', 'settings'];
     
-    // This would be more meaningful with actual route testing
-    // For now, we verify the routes are expected
     expect(expectedRoutes).toHaveLength(4);
     expect(expectedRoutes).toContain('index');
     expect(expectedRoutes).toContain('map');
@@ -67,9 +71,6 @@ describe('Navigation Structure', () => {
 
 describe('App Layout', () => {
   it('renders without crashing', () => {
-    // Simple smoke test for app layout
-    const { render: rtlRender } = require('@testing-library/react-native');
-    
     const TestComponent = () => (
       <SafeAreaView>
         <StatusBar />
@@ -79,7 +80,7 @@ describe('App Layout', () => {
       </SafeAreaView>
     );
     
-    const { unmount } = rtlRender(<TestComponent />);
+    const { unmount } = render(<TestComponent />);
     expect(screen.getByText('App Layout')).toBeTruthy();
     unmount();
   });

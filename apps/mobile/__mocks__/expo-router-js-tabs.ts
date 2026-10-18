@@ -1,24 +1,21 @@
 import React from 'react';
 
 export const Tabs = ({ children, screenOptions }: any) => {
-  return (
-    <React.Fragment>
-      {React.Children.map(children, (child) => {
-        if (React.isValidElement(child) && child.type && (child.type as any).displayName === 'Screen') {
-          return React.cloneElement(child, { screenOptions });
-        }
-        return child;
-      })}
-    </React.Fragment>
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.Children.map(children, (child) => {
+      if (React.isValidElement(child) && child.type && (child.type as any).displayName === 'Screen') {
+        return React.cloneElement(child, { screenOptions } as any);
+      }
+      return child;
+    })
   );
 };
 
-export const Screen = ({ name, options }: any) => (
-  <View data-testid={`tab-${name}`}><Text>{options?.title || name}</Text></View>
-);
+export const Screen = ({ name, options }: any) =>
+  React.createElement('div', { 'data-testid': `tab-${name}` },
+    React.createElement('span', null, options?.title || name)
+  );
 
 (Screen as any).displayName = 'Screen';
-
-// Mock View and Text for this file
-const View = ({ children, ...props }: any) => <div {...props}>{children}</div>;
-const Text = ({ children, ...props }: any) => <span {...props}>{children}</span>;

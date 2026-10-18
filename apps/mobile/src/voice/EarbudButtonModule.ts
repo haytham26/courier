@@ -15,7 +15,7 @@ export interface EarbudButtonModuleInterface {
   startListening(): Promise<void>;
   stopListening(): Promise<void>;
   isSupported(): Promise<boolean>;
-  addListener(eventName: string, listener: (event: EarbudEvent) => void): void;
+  addListener(eventName: string, listener: (...args: any[]) => void): void;
   removeListeners(count: number): void;
 }
 
@@ -51,7 +51,7 @@ export const EarbudButtonModule: EarbudButtonModuleInterface = {
     return EarbudButtonManager.isSupported?.() ?? false;
   },
 
-  addListener(eventName: string, listener: (event: EarbudEvent) => void): void {
+  addListener(eventName: string, listener: (...args: any[]) => void): void {
     if (!eventEmitter) {
       console.warn('EarbudButtonManager native module not available');
       return;
