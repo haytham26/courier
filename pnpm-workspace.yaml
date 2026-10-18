@@ -1,0 +1,6 @@
+packages:
+  - apps/mobile
+  - apps/web
+  - packages/*
+
+ignoreScripts: true

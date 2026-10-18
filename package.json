@@ -1,0 +1,38 @@
+{
+  "name": "courier",
+  "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:push": "turbo run db:push",
+    "db:studio": "turbo run db:studio",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md,yml,yaml}\"",
+    "check-secrets": "node scripts/check-secrets.js",
+    "push-secrets": "bash scripts/push-secrets.sh",
+    "open-secrets": "bash scripts/open-secrets.sh"
+  },
+  "devDependencies": {
+    "turbo": "latest",
+    "prettier": "latest",
+    "typescript": "latest",
+    "@types/node": "latest",
+    "eslint": "latest",
+    "@typescript-eslint/eslint-plugin": "latest",
+    "@typescript-eslint/parser": "latest"
+  },
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "pnpm": {
+    "ignoredBuiltScripts": ["esbuild"]
+  }
+}

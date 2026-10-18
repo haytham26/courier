@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "Courier Copilot",
+    "slug": "courier-copilot",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "courier",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.courier.copilot",
+      "infoPlist": {
+        "UIBackgroundModes": ["location", "audio"],
+        "NSLocationWhenInUseUsageDescription": "Needed for door memory and geofence whispers during deliveries",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Needed for background location tracking during shifts",
+        "NSMicrophoneUsageDescription": "Needed for voice commands and live voice agent",
+        "NSSpeechRecognitionUsageDescription": "Needed for on-device speech recognition"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ff6b00",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.courier.copilot",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECORD_AUDIO",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "FOREGROUND_SERVICE_MICROPHONE",
+        "WAKE_LOCK"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Courier Copilot to use your location for door memory and geofence whispers."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Courier Copilot to use microphone for voice commands."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

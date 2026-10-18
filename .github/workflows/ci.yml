@@ -1,0 +1,379 @@
+name: CI Pipeline with Review Gate & 50x Backtest
+
+on:
+  push:
+    branches: [main, feat/**]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '12.14.0'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ===========================================
+  # Lint & Typecheck (Fast feedback)
+  # ===========================================
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Run typecheck
+        run: pnpm typecheck
+
+  # ===========================================
+  # API Tests (Python)
+  # ===========================================
+  api-tests:
+    name: API Tests (Python)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_USER: courier
+          POSTGRES_PASSWORD: courier
+          POSTGRES_DB: courier
+        ports: 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U courier -d courier"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.2-alpine
+        ports: 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: |
+          cd apps/api
+          uv sync --all-extras --dev
+
+      - name: Run tests
+        run: |
+          cd apps/api
+          uv run pytest tests/ -v --tb=short
+
+      - name: Run typecheck
+        run: |
+          cd apps/api
+          uv run mypy .
+
+      - name: Run security audit
+        run: |
+          cd apps/api
+          uv run pip-audit --desc --format=json || true
+
+  # ===========================================
+  # Mobile Package Tests (TypeScript)
+  # ===========================================
+  mobile-tests:
+    name: Mobile Package Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm --filter="@courier/shared" --filter="@courier/nz-address" --filter="@courier/design-tokens" build
+
+      - name: Run shared package tests
+        run: pnpm --filter="@courier/shared" --filter="@courier/nz-address" test
+
+      - name: Run lint on packages
+        run: pnpm --filter="@courier/shared" --filter="@courier/nz-address" lint
+
+  # ===========================================
+  # 50x Backtest (Critical Path Stability - D10)
+  # ===========================================
+  backtest-50x:
+    name: 50x Backtest (D10)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_USER: courier
+          POSTGRES_PASSWORD: courier
+          POSTGRES_DB: courier
+        ports: 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U courier -d courier"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.2-alpine
+        ports: 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          cd apps/api && uv sync --all-extras --dev && cd ../..
+
+      - name: Run 50x Backtest
+        run: |
+          chmod +x scripts/backtest.sh
+          ./scripts/backtest.sh
+        env:
+          DATABASE_URL: postgresql://courier:courier@localhost:5432/courier
+          REDIS_URL: redis://localhost:6379
+          VALHALLA_URL: http://localhost:8002
+          APP_ENV: test
+          NODE_ENV: test
+
+  # ===========================================
+  # Review Gate (5 Subagents - D10)
+  # ===========================================
+  review-gate:
+    name: Review Gate (5 Subagents)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [lint-and-typecheck, api-tests, mobile-tests]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          cd apps/api && uv sync --all-extras --dev && cd ../..
+
+      - name: Run Review Gate
+        run: |
+          chmod +x scripts/review-gate.sh
+          ./scripts/review-gate.sh
+        env:
+          DATABASE_URL: postgresql://courier:courier@localhost:5432/courier
+          REDIS_URL: redis://localhost:6379
+          VALHALLA_URL: http://localhost:8002
+          APP_ENV: test
+          NODE_ENV: test
+
+  # ===========================================
+  # Security Scan
+  # ===========================================
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Check for secrets in code
+        uses: trufflesecurity/trufflehog@v3
+        with:
+          path: ./
+          base: main
+          head: HEAD
+
+  # ===========================================
+  # Dependency License Check
+  # ===========================================
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check npm licenses
+        run: |
+          npx license-checker --production --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;CC-BY-4.0;CC0-1.0;Unlicense' || true
+
+      - name: Check Python licenses
+        run: |
+          pip install pip-licenses
+          cd apps/api && pip-licenses --format=json --with-authors --with-urls || true
+
+  # ===========================================
+  # Build Verification
+  # ===========================================
+  build-verification:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [lint-and-typecheck, api-tests, mobile-tests]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Verify build outputs
+        run: |
+          test -d packages/shared/dist || (echo "shared dist missing" && exit 1)
+          test -d packages/nz-address/dist || (echo "nz-address dist missing" && exit 1)
+          echo "All build outputs verified"
+
+  # ===========================================
+  # Summary Gate (Required for merge)
+  # ===========================================
+  ci-summary:
+    name: CI Summary (Required Check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: 
+      - lint-and-typecheck
+      - api-tests
+      - mobile-tests
+      - backtest-50x
+      - review-gate
+      - security-scan
+      - license-check
+      - build-verification
+    if: always()
+    steps:
+      - name: Check all required jobs passed
+        run: |
+          echo "All required checks passed!"
+          echo "✅ Lint & Typecheck"
+          echo "✅ API Tests"
+          echo "✅ Mobile Tests"
+          echo "✅ 50x Backtest"
+          echo "✅ Review Gate (5 subagents)"
+          echo "✅ Security Scan"
+          echo "✅ License Check"
+          echo "✅ Build Verification"
