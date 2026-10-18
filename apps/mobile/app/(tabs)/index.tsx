@@ -6,7 +6,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { VoiceButton } from '@/voice/VoiceButton';
-import { useVoice } from '@/voice/VoiceService';
+import { useVoice } from '@/voice/useVoice';
 
 interface Stop {
   id: string;
@@ -313,13 +313,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   quickCommandText: { fontSize: 13, fontWeight: '500' },
-  voiceButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+  voiceStatus: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
     alignSelf: 'center',
-    minWidth: 200,
-    alignItems: 'center',
+    marginTop: 8,
   },
-  voiceButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  voiceStatusText: { fontSize: 14, fontWeight: '500', textAlign: 'center' },
 });
