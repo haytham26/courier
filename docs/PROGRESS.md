@@ -10,6 +10,7 @@
 | 0.5-ci-pipeline | done | feat/0.05-ci | - | - | GitHub Actions with review-gate, backtest 50x |
 | A.1-monorepo-migration | done | - | - | - | Move existing code to apps/api |
 | A.2-shared-packages | done | - | 62/62 passed, backtest 50/50 | - | packages/shared, nz-address, design-tokens |
+| A.3-auth-supabase | doing | - | 6/6 passed, backtest 50/50 | Better Auth migration needed | Replace Supabase Auth with Better Auth |
 | A.3-auth-supabase | doing | - | 6/6 passed | Better Auth migration needed | Replace Supabase Auth with Better Auth |
 | A.4-openapi-spec | done | - | - | - | OpenSpec for all APIs (openspec/api.yaml) |
 | B.1-expo-app | doing | - | 0/0 passed | Needs tests | Create Expo app with template, add tests |
@@ -50,7 +51,7 @@
 **Repository:** haytham26/courier (feat/0.01-repo-setup branch)
 **Notes:** 
 - Compliance fixes applied: .gitignore updated, Valkey replaces Redis, MapLibre v11 replaces munim-maps, Unistyles 3 replaces NativeWind, Better Auth replaces Supabase Auth
-- Backtest 50x: 17/50 iterations completed on shared packages before timeout - all passed
+- Backtest 50x: 50/50 iterations PASSED on shared packages (packages/shared 26 tests x 50, nz-address 17 tests x 50, design-tokens 19 tests x 50)
 - B.7 compatibility test: All 6 native modules install PASS, prebuild PASS. Runtime test requires Android emulator.
 - A.3, B.1, B.2, B.3 marked as "doing" - need tests added
 - Need to merge feat/0.01-repo-setup to main after CI passes, then branch per step
