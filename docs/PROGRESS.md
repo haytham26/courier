@@ -9,13 +9,12 @@
 | 0.4-local-secrets | done | feat/0.04-secrets | - | - | .env.local, check-secrets, push-secrets scripts |
 | 0.5-ci-pipeline | done | feat/0.05-ci | - | - | GitHub Actions with review-gate, backtest 50x |
 | A.1-monorepo-migration | done | - | - | - | Move existing code to apps/api |
-| A.2-shared-packages | done | - | 62/62 passed, backtest 50/50 | - | packages/shared, nz-address, design-tokens |
-| A.3-auth-supabase | doing | - | 6/6 passed, backtest 50/50 | Better Auth migration needed | Replace Supabase Auth with Better Auth |
-| A.3-auth-supabase | doing | - | 6/6 passed | Better Auth migration needed | Replace Supabase Auth with Better Auth |
+| A.2-shared-packages | done | - | 62/62 passed, backtest 50/50 | - | packages/shared, nz-address, design-tokens - BACKTEST COMPLETE |
+| A.3-auth-better-auth | doing | - | 0/0 passed | Better Auth migration needed + tests | Replace Supabase Auth with Better Auth, add tests |
 | A.4-openapi-spec | done | - | - | - | OpenSpec for all APIs (openspec/api.yaml) |
 | B.1-expo-app | doing | - | 0/0 passed | Needs tests | Create Expo app with template, add tests |
 | B.2-design-system | doing | - | 19/19 passed | Unistyles migration needed | Migrate NativeWind to Unistyles 3, add tests |
-| B.3-navigation | doing | - | 0/0 passed | Needs tests | Expo Router, 4 tab screens complete, add tests |
+| B.3-navigation | doing | - | 5/5 passed | Tests added | Expo Router, 4 tab screens complete, tests done |
 | B.4-voice-module | todo | - | - | Wait for B.7 compat test | Fix TS errors, Sherpa-onnx, Pipecat, earbud protocol |
 | B.5-maps-module | todo | - | - | Wait for B.7 compat test | MapLibre v11, PMTiles, offline |
 | B.6-sync-engine | todo | - | - | Wait for B.7 compat test | op-sqlite, event sourcing |
@@ -46,13 +45,13 @@
 ---
 
 **Session Started:** 2026-10-19 00:53:00 +13:00
-**Last Updated:** 2026-10-19 04:45:00 +13:00
+**Last Updated:** 2026-10-19 06:10:00 +13:00
 **Current Phase:** Phase B - Expo App Creation & Design System (B.7-compat-test in progress - prebuild PASS, emulator test next)
 **Repository:** haytham26/courier (feat/0.01-repo-setup branch)
 **Notes:** 
 - Compliance fixes applied: .gitignore updated, Valkey replaces Redis, MapLibre v11 replaces munim-maps, Unistyles 3 replaces NativeWind, Better Auth replaces Supabase Auth
-- Backtest 50x: 50/50 iterations PASSED on shared packages (packages/shared 26 tests x 50, nz-address 17 tests x 50, design-tokens 19 tests x 50)
+- Backtest 50x: 50/50 iterations PASSED on shared packages (packages/shared 26 tests x 50, nz-address 17 tests x 50, design-tokens 19 tests x 50) - COMPLETE
 - B.7 compatibility test: All 6 native modules install PASS, prebuild PASS. Runtime test requires Android emulator.
-- A.3, B.1, B.2, B.3 marked as "doing" - need tests added
+- B.3 navigation tests added (5 tests passing)
 - Need to merge feat/0.01-repo-setup to main after CI passes, then branch per step
 - Next: Start Android emulator and run `npx expo run:android` for runtime test
