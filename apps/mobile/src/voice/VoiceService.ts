@@ -4,90 +4,19 @@
  * Implements earbud button protocol: 1x=Delivered, 2x=Skip, 3x=Fail, Long=Talk
  */
 
-import AudioModule, { AudioRecorder, AudioPlayer } from 'expo-audio';
+import { createAudioPlayer, AudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
 import { 
   createSTT, 
-  createTTS, 
-  SttEngine, 
-  TtsEngine,
-  detectSttModel,
-  detectTtsModel
+  SttEngine,
+  detectSttModel
 } from 'react-native-sherpa-onnx/stt';
 import { 
-  PipecatClient, 
-  PipecatClientOptions, 
-  RTVIEventCallbacks,
-  Transport,
-} from '@pipecat-ai/client-js';
-
-// Minimal WebSocket transport implementation for Pipecat
-class WebSocketTransport extends Transport {
-  private ws: WebSocket | null = null;
-  private url: string;
-  private onMessageCallback: ((ev: any) => void) | null = null;
-
-  constructor(options: { url: string }) {
-    super();
-    this.url = options.url;
-  }
-
-  initialize(options: PipecatClientOptions, messageHandler: (ev: any) => void): void {
-    this.onMessageCallback = messageHandler;
-  }
-
-  async initDevices(): Promise<void> {
-    // No-op for WebSocket transport
-  }
-
-  async connect(connectParams?: any): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        this.ws = new WebSocket(this.url);
-        this.ws.onopen = () => {
-          this._state = 'connected';
-          resolve();
-        };
-        this.ws.onmessage = (event) => {
-          if (this.onMessageCallback) {
-            this.onMessageCallback(JSON.parse(event.data));
-          }
-        };
-        this.ws.onerror = (error) => {
-          this._state = 'error';
-          reject(error);
-        };
-        this.ws.onclose = () => {
-          this._state = 'disconnected';
-        };
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-
-  async disconnect(): Promise<void> {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
-    this._state = 'disconnected';
-  }
-
-  send(message: any): void {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
-    }
-  }
-
-  get state() {
-    return this._state;
-  }
-
-  set state(value) {
-    this._state = value;
-  }
-}
+  createTTS, 
+  TtsEngine,
+  detectTtsModel,
+  GeneratedAudio
+} from 'react-native-sherpa-onnx/tts';
 
 export interface VoiceConfig {
   sttModelPath: string;
@@ -135,12 +64,11 @@ class VoiceService {
   private static instance: VoiceService;
   private sttEngine: SttEngine | null = null;
   private ttsEngine: TtsEngine | null = null;
-  private pipecat: PipecatClient | null = null;
   private config: VoiceConfig | null = null;
   private callbacks: VoiceCallbacks | null = null;
   private state: VoiceState = 'idle';
   private isInitialized = false;
-  private audioRecorder: AudioRecorder | null = null;
+  private audioPlayer: AudioPlayer | null = null;
   private earbudListener: ((event: EarbudEvent) => void) | null = null;
 
   private constructor() {}
@@ -164,9 +92,6 @@ class VoiceService {
     try {
       // Initialize Sherpa-onnx for on-device STT/TTS
       await this.initializeSherpa();
-      
-      // Initialize Pipecat client for cloud voice orchestration
-      await this.initializePipecat();
       
       // Set up earbud button listener
       this.setupEarbudListener();
@@ -206,56 +131,9 @@ class VoiceService {
       numThreads: 2,
       provider: 'cpu',
     });
-  }
 
-  private async initializePipecat(): Promise<void> {
-    if (!this.config) throw new Error('Config not set');
-
-    // Create a WebSocket transport for Pipecat
-    const transport = new WebSocketTransport({ url: this.config.pipecatServerUrl });
-
-    const pipecatOptions: PipecatClientOptions = {
-      transport,
-      callbacks: {
-        onConnected: () => {
-          console.log('Pipecat connected');
-        },
-        onDisconnected: () => {
-          console.log('Pipecat disconnected');
-        },
-        onError: (message) => {
-          console.error('Pipecat error:', message);
-          this.callbacks?.onError(new Error('Pipecat error'));
-        },
-        onBotReady: () => {
-          console.log('Pipecat bot ready');
-        },
-        onUserInput: (data) => {
-          if (data.text) {
-            this.callbacks?.onTranscript(data.text, true);
-            this.processTranscript(data.text);
-          }
-        },
-        onBotOutput: (data) => {
-          if (data.text) {
-            this.speak(data.text);
-          }
-        },
-      } as RTVIEventCallbacks,
-      enableMic: true,
-      enableCam: false,
-      enableScreenShare: false,
-      disconnectOnBotDisconnect: true,
-    };
-
-    this.pipecat = new PipecatClient(pipecatOptions);
-
-    // Connect to the Pipecat server
-    try {
-      await this.pipecat.connect();
-    } catch (error) {
-      console.warn('Pipecat connection failed, continuing with on-device only:', error);
-    }
+    // Initialize audio player for TTS playback
+    this.audioPlayer = createAudioPlayer();
   }
 
   private setupEarbudListener(): void {
@@ -291,26 +169,12 @@ class VoiceService {
     }
   }
 
-  private processTranscript(text: string): void {
-    if (this.pipecat && this.state === 'listening') {
-      this.pipecat.sendText(text);
-    }
-  }
-
   async startListening(): Promise<void> {
     if (this.state === 'listening') return;
     
     this.setState('listening');
     
-    try {
-      // Start Pipecat listening if connected
-      if (this.pipecat) {
-        await this.pipecat.initDevices();
-      }
-    } catch (error) {
-      this.setState('error');
-      this.callbacks?.onError(error as Error);
-    }
+    // TODO: Start STT streaming when sherpa-onnx streaming API is available
   }
 
   async stopListening(): Promise<void> {
@@ -324,23 +188,73 @@ class VoiceService {
   }
 
   async speak(text: string): Promise<void> {
-    if (!this.ttsEngine) return;
+    if (!this.ttsEngine || !this.audioPlayer) return;
     
     this.setState('speaking');
     
     try {
-      const audio = await this.ttsEngine.generateSpeech(text);
-      // Play the audio using expo-audio
-      const player = new AudioPlayer({
-        source: { uri: `data:audio/wav;base64,${btoa(String.fromCharCode(...new Uint8Array(audio.samples.buffer)))}` },
-        updateInterval: 100,
-      });
-      await player.play();
+      const audio: GeneratedAudio = await this.ttsEngine.generateSpeech(text);
+      
+      // Convert float samples to WAV format and play
+      // For now, we'll use a simple approach - in production, use proper WAV encoding
+      const wavData = this.floatArrayToWav(audio.samples, audio.sampleRate);
+      const base64Audio = btoa(String.fromCharCode(...wavData));
+      const dataUri = `data:audio/wav;base64,${base64Audio}`;
+      
+      this.audioPlayer.replace(dataUri);
+      await this.audioPlayer.play();
     } catch (error) {
       this.callbacks?.onError(error as Error);
     } finally {
+      // Wait for playback to finish before returning to idle
+      // In a real implementation, we'd listen for onPlaybackStatusUpdate
       this.setState('idle');
     }
+  }
+
+  /**
+   * Convert float32 array to WAV format (Uint8Array)
+   */
+  private floatArrayToWav(samples: number[], sampleRate: number): Uint8Array {
+    // Create WAV header (44 bytes)
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
+    
+    // RIFF header
+    view.setUint32(0, 0x52494646, false); // 'RIFF'
+    view.setUint32(4, 36 + samples.length * 2, true); // file size - 8
+    view.setUint32(8, 0x57415645, false); // 'WAVE'
+    
+    // fmt chunk
+    view.setUint32(12, 0x666d7420, false); // 'fmt '
+    view.setUint32(16, 16, true); // chunk size
+    view.setUint16(20, 1, true); // audio format (PCM)
+    view.setUint16(22, 1, true); // num channels
+    view.setUint32(24, sampleRate, true); // sample rate
+    view.setUint32(28, sampleRate * 2, true); // byte rate
+    view.setUint16(32, 2, true); // block align
+    view.setUint16(34, 16, true); // bits per sample
+    
+    // data chunk
+    view.setUint32(36, 0x64617461, false); // 'data'
+    view.setUint32(40, samples.length * 2, true); // data size
+    
+    // Write samples as 16-bit PCM
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++) {
+      const sample = Math.max(-1, Math.min(1, samples[i])); // clamp to [-1, 1]
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      offset += 2;
+    }
+    
+    return new Uint8Array(buffer);
+  }
+
+  async transcribeFile(filePath: string): Promise<string> {
+    if (!this.sttEngine) throw new Error('STT not initialized');
+    
+    const result = await this.sttEngine.transcribeFile(filePath);
+    return result.text;
   }
 
   private setState(newState: VoiceState): void {
@@ -366,9 +280,9 @@ class VoiceService {
         await this.ttsEngine.destroy();
         this.ttsEngine = null;
       }
-      if (this.pipecat) {
-        await this.pipecat.disconnect();
-        this.pipecat = null;
+      if (this.audioPlayer) {
+        this.audioPlayer.release();
+        this.audioPlayer = null;
       }
       this.isInitialized = false;
     } catch (error) {
