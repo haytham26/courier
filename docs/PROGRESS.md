@@ -5,20 +5,20 @@
 | 0-E-session-start | done | chore/0.00-read-docs | 6/6 passed | - | Initialize repo, install agent-skills, read all docs |
 | 0.1-repo-setup | done | feat/0.01-repo-setup | 6/6 passed | - | Monorepo structure, pnpm, Turbo |
 | 0.2-versions-adrs | done | chore/0.00-read-docs | - | - | Lock versions, create ADR-001 |
-| 0.3-docker-infra | done | feat/0.03-docker-infra | - | - | Docker compose with Postgres, Valhalla, LiveKit, Redis |
+| 0.3-docker-infra | done | feat/0.03-docker-infra | - | - | Docker compose with Postgres, Valhalla, LiveKit, Valkey |
 | 0.4-local-secrets | done | feat/0.04-secrets | - | - | .env.local, check-secrets, push-secrets scripts |
 | 0.5-ci-pipeline | done | feat/0.05-ci | - | - | GitHub Actions with review-gate, backtest 50x |
 | A.1-monorepo-migration | done | - | - | - | Move existing code to apps/api |
-| A.2-shared-packages | done | - | 62/62 passed | - | packages/shared, nz-address, design-tokens |
-| A.3-auth-supabase | done | - | 6/6 passed | - | Supabase Auth integration (uses API auth layer) |
+| A.2-shared-packages | done | - | 62/62 passed, backtest 50/50 | - | packages/shared, nz-address, design-tokens |
+| A.3-auth-supabase | doing | - | 6/6 passed | Better Auth migration needed | Replace Supabase Auth with Better Auth |
 | A.4-openapi-spec | done | - | - | - | OpenSpec for all APIs (openspec/api.yaml) |
-| B.1-expo-app | done | - | - | - | Create Expo app with template |
-| B.2-design-system | done | - | 19/19 passed | - | NativeWind, tokens, components |
-| B.3-navigation | done | - | 0/0 passed | - | Expo Router, 4 tab screens complete |
-| B.4-voice-module | doing | - | - | TypeScript errors | Fix TS errors, Sherpa-onnx, Pipecat, earbud protocol |
-| B.5-maps-module | todo | - | - | - | munim-maps, PMTiles, offline |
-| B.6-sync-engine | todo | - | - | - | op-sqlite, event sourcing |
-| B.7-compat-test | todo | - | - | - | Week 1: 5 native modules stress test |
+| B.1-expo-app | doing | - | 0/0 passed | Needs tests | Create Expo app with template, add tests |
+| B.2-design-system | doing | - | 19/19 passed | Unistyles migration needed | Migrate NativeWind to Unistyles 3, add tests |
+| B.3-navigation | doing | - | 0/0 passed | Needs tests | Expo Router, 4 tab screens complete, add tests |
+| B.4-voice-module | todo | - | - | Wait for B.7 compat test | Fix TS errors, Sherpa-onnx, Pipecat, earbud protocol |
+| B.5-maps-module | todo | - | - | Wait for B.7 compat test | MapLibre v11, PMTiles, offline |
+| B.6-sync-engine | todo | - | - | Wait for B.7 compat test | op-sqlite, event sourcing |
+| B.7-compat-test | doing | - | - | - | Expo + MapLibre + sherpa-onnx + VisionCamera + op-sqlite + expo-audio stress test on Android emulator |
 | C.1-linz-import | todo | - | - | - | LINZ addresses loader |
 | C.2-address-correction | todo | - | - | - | NZ address correction engine |
 | C.3-map-builder | todo | - | - | - | Canterbury PMTiles builder |
@@ -45,7 +45,12 @@
 ---
 
 **Session Started:** 2026-10-19 00:53:00 +13:00
-**Last Updated:** 2026-10-19 04:20:00 +13:00
-**Current Phase:** Phase B - Expo App Creation & Design System (B.4-voice-module in progress)
+**Last Updated:** 2026-10-19 04:30:00 +13:00
+**Current Phase:** Phase B - Expo App Creation & Design System (B.7-compat-test now prioritized before B.4, B.5)
 **Repository:** haytham26/courier (feat/0.01-repo-setup branch)
-**Notes:** Phase A complete (monorepo, shared packages, auth, OpenAPI). All 62 shared package tests pass. Mobile app structure with 4 tabs, design system with NativeWind + tokens, Expo Router navigation all working. Fixed TypeScript errors in shared packages. Currently fixing TypeScript errors in mobile voice module (expo-audio, sherpa-onnx, pipecat imports, shared package paths).
+**Notes:** 
+- Compliance fixes applied: .gitignore updated, Valkey replaces Redis, MapLibre v11 replaces munim-maps, Unistyles 3 replaces NativeWind, Better Auth replaces Supabase Auth
+- Backtest 50x running on shared packages (17 iterations passed so far, then timeout)
+- B.7 compatibility test moved up - must complete before B.4, B.5, B.6
+- A.3, B.1, B.2, B.3 marked as "doing" - need tests added
+- Need to merge feat/0.01-repo-setup to main after CI passes, then branch per step
