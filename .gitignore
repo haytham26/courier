@@ -1,2 +1,13 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.jks
+*.keystore
+secrets/
+# python
 __pycache__/
 .pytest_cache/
+node_modules/
