@@ -163,30 +163,52 @@ This ADR records all locked versions for dependencies, tools, and SDKs used in t
 
 ## Week 1 Compatibility Test Results (B.7)
 
-**Status:** IN PROGRESS - Prebuild PASS, Runtime tests require Android emulator
+**Status:** PREBUILD PASS ✅ - Emulator test pending (requires Android SDK)
 
-**Test Matrix:** Expo 58 + RN 0.88 + all 6 native modules on Android emulator
+**Test Matrix:** Expo 58 + RN 0.88 + all 6 native modules
 
 | Module | Install | Build (Prebuild) | Runtime (Emulator) | Notes |
 |--------|---------|------------------|-------------------|-------|
-| react-native-sherpa-onnx | ✅ PASS | ✅ PASS | ⏳ PENDING | STT/TTS/VAD/KWS - needs emulator test |
-| react-native-vision-camera | ✅ PASS | ✅ PASS | ⏳ PENDING | OCR label scanning - needs emulator test |
-| react-native-reanimated | ✅ PASS | ✅ PASS | ⏳ PENDING | Animations - needs emulator test |
-| @maplibre/maplibre-react-native | ✅ PASS | ✅ PASS | ⏳ PENDING | Offline maps - needs emulator test |
-| @op-engineering/op-sqlite | ✅ PASS | ✅ PASS | ⏳ PENDING | Offline sync - needs emulator test |
-| expo-audio | ✅ PASS | ✅ PASS | ⏳ PENDING | Voice playback - needs emulator test |
+| react-native-sherpa-onnx | ✅ PASS | ✅ PASS | ⏳ PENDING | STT/TTS/VAD/KWS - needs emulator |
+| react-native-vision-camera | ✅ PASS | ✅ PASS | ⏳ PENDING | OCR label scanning - needs emulator |
+| react-native-reanimated | ✅ PASS | ✅ PASS | ⏳ PENDING | Animations - needs emulator |
+| @maplibre/maplibre-react-native | ✅ PASS | ✅ PASS | ⏳ PENDING | Offline maps - needs emulator |
+| @op-engineering/op-sqlite | ✅ PASS | ✅ PASS | ⏳ PENDING | Offline sync - needs emulator |
+| expo-audio | ✅ PASS | ✅ PASS | ⏳ PENDING | Voice playback - needs emulator |
 
-**Note:** Node.js direct import test failed as expected - these are React Native modules requiring emulator/device runtime. Prebuild succeeded for all modules, confirming native code generation works. Next step: run on Android emulator.
+**Prebuild Result:** All 6 native modules generate native Android/iOS code successfully. No compilation errors during prebuild.
+
+**Blocker for Runtime Test:** Android SDK not installed in current environment (`ANDROID_HOME` not set, `adb` not available). This is expected in CI environments.
+
+**Next for Runtime Test:** On a machine with Android SDK (API 34), run:
+```bash
+cd apps/mobile
+npx expo run:android
+# Then test each module:
+# - sherpa-onnx: load STT/TTS models, run inference
+# - VisionCamera: request camera permission, start preview
+# - Reanimated: run worklet animations on UI thread
+# - MapLibre: load PMTiles, render map
+# - op-sqlite: open DB, run queries
+# - expo-audio: play TTS audio
+```
+
+**Stress Test Plan (on emulator/device):**
+1. Memory pressure: load all modules simultaneously, monitor RSS
+2. JSI thread contention: run Reanimated worklets + sherpa-onnx inference + MapLibre rendering
+3. Background/foreground: 50 cycles, verify no crashes
+4. Battery/thermal: 30 min continuous voice + map + camera
 
 ---
 
 ## Next Steps
 
-1. **Start Android emulator** and run `npx expo run:android` to test runtime on device
-2. Create a compatibility test screen in the app that exercises all 6 modules
-3. Stress test: memory usage, JSI thread contention, background/foreground cycles
-4. Update this ADR with emulator test results
-5. Lock all versions in `pnpm-lock.yaml` and `uv.lock` with hashes
+1. **Android SDK setup** on target machine for emulator test
+2. **EAS Build** for APK generation (cloud build, no local SDK needed): `eas build --platform android --profile development`
+3. Create compatibility test screen in app exercising all 6 modules
+4. Run stress test on emulator/device
+5. Update this ADR with emulator test results
+6. Lock all versions in `pnpm-lock.yaml` and `uv.lock` with hashes
 
 ---
 
