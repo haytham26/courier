@@ -11,35 +11,41 @@
 | BUG-005 | No monorepo structure - code in `app/` not `apps/api/` | Pre-monorepo layout | Monorepo created with apps/api, packages/shared, nz-address, design-tokens | Turborepo builds all packages | fixed |
 | BUG-006 | No CI pipeline with review-gate and 50x backtest | Not implemented | - | CI runs backtest.sh 50x on critical paths | open |
 | BUG-007 | No Docker compose for local infrastructure (Postgres, Valhalla, LiveKit, Redis) | Not implemented | - | `docker compose up` brings up all services | open |
-| BUG-008 | No Expo mobile app created yet | Phase B not started | - | `pnpm mobile start` runs on device/emulator | open |
-| BUG-009 | No design system / design tokens pipeline | Phase B.2 not started | - | Style Dictionary builds tokens for all platforms | open |
-| BUG-010 | No voice module (Sherpa-onnx, Pipecat, earbud protocol) | Phase B.4 not started | - | Voice commands work offline <300ms | open |
-| BUG-011 | No maps module (munim-maps, PMTiles, offline Canterbury) | Phase B.5 not started | - | Map renders offline at 60fps | open |
-| BUG-011 | No sync engine (op-sqlite, event sourcing) | Phase B.6 not started | - | Offline-first sync works | open |
-| BUG-012 | No LINZ address import worker | Phase C.1 not started | - | Weekly LINZ changeset import works | open |
-| BUG-013 | No NZ address correction engine (pg_trgm, phonetic) | Phase C.2 not started | - | 95%+ correction accuracy on golden set | open |
-| BUG-014 | No map builder pipeline (planetiler, PMTiles) | Phase C.3 not started | - | Canterbury PMTiles < 500MB builds weekly | open |
-| BUG-015 | No routing engine (Valhalla + VROOM + OR-Tools) | Phase C.4 not started | - | 200 stops routed < 5s | open |
-| BUG-016 | No 3-point door memory with EWMA learning | Phase C.5 not started | - | Door memory persists across shifts | open |
-| BUG-017 | No dictation mode with auto-correction report | Phase D.1 not started | - | 30 addresses dictated → corrected list | open |
-| BUG-018 | No live voice agent (Pipecat cascade, all languages) | Phase D.2 not started | - | Multi-language conversation works | open |
-| BUG-019 | Not all features voice-accessible (D2) | Phase D.3 not started | - | Every tool has voice command | open |
-| BUG-020 | No driving mode (geofences, whispers, nav handoff) | Phase D.4 not started | - | 10-stop drive hands-free | open |
-| BUG-021 | No web dashboard (Next.js) | Phase E.1 not started | - | Driver dashboard syncs with mobile | open |
-| BUG-022 | No admin panel | Phase E.2 not started | - | Internal admin sees all orgs | open |
-| BUG-023 | No Stripe billing (NZD, GST) | Phase E.3 not started | - | Subscriptions work end-to-end | open |
-| BUG-024 | No team/franchise features | Phase E.4 not started | - | Multi-driver orgs work | open |
-| BUG-025 | No OCR label scanning (VisionCamera + ML Kit) | Phase F.1 not started | - | 50 label photos → 95% LINZ address_id | open |
-| BUG-026 | No POD photo capture | Phase F.2 not started | - | Optional photo per delivery | open |
-| BUG-027 | No optional SMS notifications | Phase F.3 not started | - | Customer tracking link via SMS | open |
-| BUG-028 | No IRD logbook PDF generation | Phase F.4 not started | - | PDF with IRD-compliant numbers | open |
-| BUG-029 | No Ferrostar turn-by-turn behind flag | Phase F.5 not started | - | Flag toggles built-in navigation | open |
-| BUG-030 | No Privacy Impact Assessment | Phase G.1 not started | - | PIA document complete | open |
-| BUG-031 | No App Store / Play Console assets | Phase G.2 not started | - | Screenshots, descriptions ready | open |
-| BUG-032 | No acceptance test script (emulator + device) | Phase G.3 not started | - | ACCEPTANCE_TEST.md passes | open |
-| BUG-033 | No handover documentation (HANDOVER.md, APK) | Phase G.4 not started | - | Founder can run emulator + install APK | open |
+| BUG-008 | No Expo mobile app created yet | Phase B not started | Expo app created with all 6 native modules | `pnpm mobile start` runs on device/emulator | fixed |
+| BUG-009 | No design system / design tokens pipeline | Phase B.2 not started | Design tokens with Unistyles 3 | Style Dictionary builds tokens for all platforms | doing |
+| BUG-010 | No voice module (Sherpa-onnx, Pipecat, earbud protocol) | Phase B.4 not started | Voice service created, needs TS fixes | Voice commands work offline <300ms | todo |
+| BUG-011 | No maps module (munim-maps, PMTiles, offline Canterbury) | Phase B.5 not started | MapLibre v11.3.7 integrated | Map renders offline at 60fps | todo |
+| BUG-012 | No sync engine (op-sqlite, event sourcing) | Phase B.6 not started | @op-engineering/op-sqlite installed | Offline-first sync works | todo |
+| BUG-013 | No LINZ address import worker | Phase C.1 not started | - | Weekly LINZ changeset import works | open |
+| BUG-014 | No NZ address correction engine (pg_trgm, phonetic) | Phase C.2 not started | - | 95%+ correction accuracy on golden set | open |
+| BUG-015 | No map builder pipeline (planetiler, PMTiles) | Phase C.3 not started | - | Canterbury PMTiles < 500MB builds weekly | open |
+| BUG-016 | No routing engine (Valhalla + VROOM + OR-Tools) | Phase C.4 not started | - | 200 stops routed < 5s | open |
+| BUG-017 | No 3-point door memory with EWMA learning | Phase C.5 not started | - | Door memory persists across shifts | open |
+| BUG-018 | No dictation mode with auto-correction report | Phase D.1 not started | - | 30 addresses dictated → corrected list | open |
+| BUG-019 | No live voice agent (Pipecat cascade, all languages) | Phase D.2 not started | - | Multi-language conversation works | open |
+| BUG-020 | Not all features voice-accessible (D2) | Phase D.3 not started | - | Every tool has voice command | open |
+| BUG-021 | No driving mode (geofences, whispers, nav handoff) | Phase D.4 not started | - | 10-stop drive hands-free | open |
+| BUG-022 | No web dashboard (Next.js) | Phase E.1 not started | - | Driver dashboard syncs with mobile | open |
+| BUG-023 | No admin panel | Phase E.2 not started | - | Internal admin sees all orgs | open |
+| BUG-024 | No Stripe billing (NZD, GST) | Phase E.3 not started | - | Subscriptions work end-to-end | open |
+| BUG-025 | No team/franchise features | Phase E.4 not started | - | Multi-driver orgs work | open |
+| BUG-026 | No OCR label scanning (VisionCamera + ML Kit) | Phase F.1 not started | - | 50 label photos → 95% LINZ address_id | open |
+| BUG-027 | No POD photo capture | Phase F.2 not started | - | Optional photo per delivery | open |
+| BUG-028 | No optional SMS notifications | Phase F.3 not started | - | Customer tracking link via SMS | open |
+| BUG-029 | No IRD logbook PDF generation | Phase F.4 not started | - | PDF with IRD-compliant numbers | open |
+| BUG-030 | No Ferrostar turn-by-turn behind flag | Phase F.5 not started | - | Flag toggles built-in navigation | open |
+| BUG-031 | No Privacy Impact Assessment | Phase G.1 not started | - | PIA document complete | open |
+| BUG-032 | No App Store / Play Console assets | Phase G.2 not started | - | Screenshots, descriptions ready | open |
+| BUG-033 | No acceptance test script (emulator + device) | Phase G.3 not started | - | ACCEPTANCE_TEST.md passes | open |
+| BUG-034 | No handover documentation (HANDOVER.md, APK) | Phase G.4 not started | - | Founder can run emulator + install APK | open |
+| BUG-035 | Compliance: NativeWind used instead of Unistyles 3 | External review found violation | Migrated to Unistyles 3 | No NativeWind imports in codebase | fixed |
+| BUG-036 | Compliance: Supabase Auth used instead of Better Auth | External review found violation | Migrated to Better Auth | No Supabase Auth imports in codebase | fixed |
+| BUG-037 | Compliance: munim-maps referenced instead of MapLibre v11 | External review found violation | Migrated to @maplibre/maplibre-react-native v11.3.7 | No munim-maps references | fixed |
+| BUG-038 | Compliance: Redis used instead of Valkey | External review found violation | docker-compose uses Valkey 8 | No Redis in docker-compose | fixed |
+| BUG-039 | Compliance: .gitignore missing .turbo/, .expo/, dist/, node_modules/ | External review found violation | .gitignore updated, .turbo/cache removed from git | git check-ignore catches all build artifacts | fixed |
+| BUG-040 | TypeScript errors in voice module (missing exports, module resolution) | Voice module incomplete | Need to fix exports and imports | `tsc --noEmit` passes | doing |
 
 ---
 
-**Last Updated:** 2026-10-19 00:53:00 +13:00
-**Total Bugs:** 33 | **Open:** 33 | **Fixed:** 0 | **Verified (50x):** 0
+**Last Updated:** 2026-10-19 04:50:00 +13:00
+**Total Bugs:** 40 | **Open:** 25 | **Fixed:** 10 | **Doing:** 3 | **Verified (50x):** 0
