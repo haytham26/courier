@@ -1,0 +1,589 @@
+openapi: 3.1.0
+info:
+  title: Courier Copilot API
+  version: 0.1.0
+  description: |
+    Voice-first delivery driver API for NZ/AU markets.
+    All endpoints follow the decisions in DECISIONS.md (D1-D17).
+    - D1: Live voice agent is core MVP feature
+    - D2: Voice-only control, everything voice-accessible
+    - D3: All languages from day 1
+    - D4: Voice delivery proof default
+    - D7: Enterprise-grade design
+    - D10: Autonomous execution with review boards + 50x backtest
+    - D12: Free-first with auto paid fallback
+    - D15: Bundled offline map + weekly updates
+    - D16: Custom day/night/high-contrast map style
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://api.courier-copilot.com
+    description: Production server
+tags:
+  - name: shifts
+    description: Driver shift management
+  - name: runs
+    description: Territory run configuration
+  - name: intake
+    description: Morning intake (voice/OCR)
+  - name: voice
+    description: Real-time voice channel (WebSocket)
+  - name: templates
+    description: Master Template Lock
+  - name: locations
+    description: Learned door/park/entry points
+paths:
+  /runs/{run_id}/template:
+    put:
+      tags: [templates]
+      summary: Master Template Lock - replace run's street order
+      operationId: putTemplate
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/TemplateSegment'
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /shifts/{shift_id}/intake:
+    post:
+      tags: [intake]
+      summary: Start morning intake from voice text
+      operationId: intakeText
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: shift_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntakeText'
+      responses:
+        '200':
+          description: Intake started - returns briefing or first question
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/BriefingResponse'
+                  - $ref: '#/components/schemas/InterruptQuestion'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /shifts/{shift_id}/intake/manifest:
+    post:
+      tags: [intake]
+      summary: Upload paper manifest photo for OCR extraction
+      operationId: intakeManifest
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: shift_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Photo of paper manifest
+      responses:
+        '200':
+          description: OCR extraction queued - same intake graph with source='ocr'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/BriefingResponse'
+                  - $ref: '#/components/schemas/InterruptQuestion'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /shifts/{shift_id}/stops:
+    get:
+      tags: [shifts]
+      summary: List stops for a shift
+      operationId: listStops
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: shift_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, delivered, skipped, deferred, failed]
+      responses:
+        '200':
+          description: List of stops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StopResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /shifts/{shift_id}/events:batch:
+    post:
+      tags: [shifts]
+      summary: Offline-first batch sync of delivery events
+      operationId: syncEvents
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: shift_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/DeliveryEvent'
+      responses:
+        '200':
+          description: Events synced, returns server cursor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /shifts/{shift_id}/voice:
+    get:
+      tags: [voice]
+      summary: Bidirectional voice channel (WebSocket upgrade)
+      operationId: voiceChannel
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: shift_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '101':
+          description: Switching protocols to WebSocket
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /runs:
+    post:
+      tags: [runs]
+      summary: Create a new territory run
+      operationId: createRun
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRunRequest'
+      responses:
+        '201':
+          description: Run created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+    get:
+      tags: [runs]
+      summary: List runs for current driver
+      operationId: listRuns
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: List of runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RunResponse'
+
+  /runs/{run_id}:
+    get:
+      tags: [runs]
+      summary: Get run details
+      operationId: getRun
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Run details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResponse'
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /locations/{location_id}/notes:
+    get:
+      tags: [locations]
+      summary: Get learned notes for a location (entry codes, hazards, etc.)
+      operationId: getLocationNotes
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Location notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LocationNote'
+
+  /locations/{location_id}/notes:
+    post:
+      tags: [locations]
+      summary: Add a learned note for a location
+      operationId: addLocationNote
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: location_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLocationNoteRequest'
+      responses:
+        '201':
+          description: Note created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationNote'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    IntakeText:
+      type: object
+      required: [text]
+      properties:
+        source:
+          type: string
+          enum: [voice, ocr, scan, manual]
+          default: voice
+        text:
+          type: string
+          description: Raw voice transcript or OCR text
+
+    TemplateSegment:
+      type: object
+      required: [street_key]
+      properties:
+        street_key:
+          type: string
+          description: Normalised street key (e.g., "redwood:main north rd")
+        direction:
+          type: string
+          enum: [odd_first, even_first, zigzag, asc, desc]
+          default: asc
+          description: Delivery direction for this street
+
+    TemplateResponse:
+      type: object
+      properties:
+        run_id:
+          type: string
+          format: uuid
+        segments:
+          type: integer
+
+    BriefingResponse:
+      type: object
+      properties:
+        briefing:
+          type: string
+          description: Spoken briefing for driver
+        stops_count:
+          type: integer
+        set_aside_count:
+          type: integer
+
+    InterruptQuestion:
+      type: object
+      properties:
+        speak:
+          type: string
+          description: Question to speak to driver
+        index:
+          type: integer
+          description: Parcel index requiring clarification
+
+    DeliveryEvent:
+      type: object
+      required: [id, stop_id, kind, occurred_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Client-generated for idempotent offline replay
+        stop_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [delivered, left_at, skipped, failed]
+          description: "D4: Voice delivery proof default"
+        utterance:
+          type: string
+          description: Exact driver words
+        safe_place:
+          type: string
+          description: "D9: Safe place if 'left at'"
+        lat:
+          type: number
+          format: double
+          description: GPS latitude at moment of event
+        lon:
+          type: number
+          format: double
+          description: GPS longitude at moment of event
+        accuracy_m:
+          type: number
+          format: double
+          description: GPS accuracy in meters (learning only if <= 15m)
+        occurred_at:
+          type: string
+          format: date-time
+
+    SyncResponse:
+      type: object
+      properties:
+        cursor:
+          type: integer
+          description: Server cursor for incremental sync
+        accepted:
+          type: integer
+          description: Number of events accepted
+
+    StopResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        address:
+          type: string
+        seq:
+          type: integer
+        status:
+          type: string
+          enum: [pending, delivered, skipped, deferred, failed]
+        van_zone:
+          type: string
+          enum: [FL, FR, MID_RACK, REAR, HEAVY_BASE]
+        tip:
+          type: string
+          description: Learned access tip for this stop
+
+    CreateRunRequest:
+      type: object
+      required: [name, territory, depot]
+      properties:
+        name:
+          type: string
+        territory:
+          type: object
+          description: GeoJSON MultiPolygon
+        depot:
+          type: object
+          description: GeoJSON Point
+
+    RunResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        driver_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        territory:
+          type: object
+          description: GeoJSON MultiPolygon
+        depot:
+          type: object
+          description: GeoJSON Point
+
+    LocationNote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [entry, gate_code, hazard, safe_place, access]
+        body:
+          type: string
+        confidence:
+          type: number
+          format: float
+        last_confirmed:
+          type: string
+          format: date-time
+
+    CreateLocationNoteRequest:
+      type: object
+      required: [kind, body]
+      properties:
+        kind:
+          type: string
+          enum: [entry, gate_code, hazard, safe_place, access]
+        body:
+          type: string
+        confidence:
+          type: number
+          format: float
+          default: 0.5
+
+  # WebSocket message schemas (for documentation)
+  x-websocket-messages:
+    client_to_server:
+      - type: transcript
+        fields:
+          type: string
+          enum: [transcript]
+          text: string
+          final: boolean
+          gps:
+            type: object
+            properties:
+              lat: number
+              lon: number
+              accuracy_m: number
+              speed_kmh: number
+      - type: gps
+        fields:
+          type: string
+          enum: [gps]
+          lat: number
+          lon: number
+          accuracy_m: number
+          speed_kmh: number
+
+    server_to_client:
+      - type: say
+        fields:
+          type: string
+          enum: [say]
+          text: string
+          priority: string
+          enum: [now, queue]
+      - type: state
+        fields:
+          type: string
+          enum: [state]
+          stop: object
+      - type: approach_whisper
+        fields:
+          type: string
+          enum: [approach_whisper]
+          stop_id: string
+          distance_m: number
+          instruction: string
+      - type: imminent_whisper
+        fields:
+          type: string
+          enum: [imminent_whisper]
+          stop_id: string
+          distance_m: number
+          instruction: string

@@ -1,0 +1,27 @@
+$ tsc
+src/parser.ts(108,9): error TS2532: Object is possibly 'undefined'.
+src/parser.ts(109,21): error TS2532: Object is possibly 'undefined'.
+src/parser.ts(110,46): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/parser.ts(110,72): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/parser.ts(113,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/parser.ts(127,36): error TS2538: Type 'undefined' cannot be used as an index type.
+src/parser.ts(150,21): error TS18048: 'firstToken' is possibly 'undefined'.
+src/parser.ts(160,61): error TS2538: Type 'undefined' cannot be used as an index type.
+src/parser.ts(160,112): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/parser.ts(161,28): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/parser.ts(168,61): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/parser.ts(184,21): error TS18048: 'firstToken' is possibly 'undefined'.
+src/parser.ts(195,54): error TS2538: Type 'undefined' cannot be used as an index type.
+src/parser.ts(195,98): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/parser.ts(196,28): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/parser.ts(202,54): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+[ELIFECYCLE] Command failed with exit code 2.
