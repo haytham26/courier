@@ -12,7 +12,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.courier.copilot",
       "infoPlist": {
-        "UIBackgroundModes": ["location", "audio"],
+        "UIBackgroundModes": [
+          "location",
+          "audio"
+        ],
         "NSLocationWhenInUseUsageDescription": "Needed for door memory and geofence whispers during deliveries",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Needed for background location tracking during shifts",
         "NSMicrophoneUsageDescription": "Needed for voice commands and live voice agent",
@@ -56,7 +59,8 @@
         {
           "microphonePermission": "Allow Courier Copilot to use microphone for voice commands."
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true

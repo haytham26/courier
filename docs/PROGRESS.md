@@ -18,7 +18,7 @@
 | B.4-voice-module | todo | - | - | Wait for B.7 compat test | Fix TS errors, Sherpa-onnx, Pipecat, earbud protocol |
 | B.5-maps-module | todo | - | - | Wait for B.7 compat test | MapLibre v11, PMTiles, offline |
 | B.6-sync-engine | todo | - | - | Wait for B.7 compat test | op-sqlite, event sourcing |
-| B.7-compat-test | doing | - | - | - | Expo + MapLibre + sherpa-onnx + VisionCamera + op-sqlite + expo-audio stress test on Android emulator |
+| B.7-compat-test | doing | - | Prebuild 6/6 PASS | Emulator runtime test pending | Run on Android emulator, stress test |
 | C.1-linz-import | todo | - | - | - | LINZ addresses loader |
 | C.2-address-correction | todo | - | - | - | NZ address correction engine |
 | C.3-map-builder | todo | - | - | - | Canterbury PMTiles builder |
@@ -45,12 +45,13 @@
 ---
 
 **Session Started:** 2026-10-19 00:53:00 +13:00
-**Last Updated:** 2026-10-19 04:30:00 +13:00
-**Current Phase:** Phase B - Expo App Creation & Design System (B.7-compat-test now prioritized before B.4, B.5)
+**Last Updated:** 2026-10-19 04:45:00 +13:00
+**Current Phase:** Phase B - Expo App Creation & Design System (B.7-compat-test in progress - prebuild PASS, emulator test next)
 **Repository:** haytham26/courier (feat/0.01-repo-setup branch)
 **Notes:** 
 - Compliance fixes applied: .gitignore updated, Valkey replaces Redis, MapLibre v11 replaces munim-maps, Unistyles 3 replaces NativeWind, Better Auth replaces Supabase Auth
-- Backtest 50x running on shared packages (17 iterations passed so far, then timeout)
-- B.7 compatibility test moved up - must complete before B.4, B.5, B.6
+- Backtest 50x: 17/50 iterations completed on shared packages before timeout - all passed
+- B.7 compatibility test: All 6 native modules install PASS, prebuild PASS. Runtime test requires Android emulator.
 - A.3, B.1, B.2, B.3 marked as "doing" - need tests added
 - Need to merge feat/0.01-repo-setup to main after CI passes, then branch per step
+- Next: Start Android emulator and run `npx expo run:android` for runtime test
