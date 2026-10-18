@@ -63,10 +63,10 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-      redis:
-        image: redis:7.2-alpine
+      valkey:
+        image: valkey/valkey:8-alpine
         ports: 6379:6379
-        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+        options: --health-cmd "valkey-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -155,10 +155,10 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-      redis:
-        image: redis:7.2-alpine
+      valkey:
+        image: valkey/valkey:8-alpine
         ports: 6379:6379
-        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+        options: --health-cmd "valkey-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -194,7 +194,7 @@ jobs:
           ./scripts/backtest.sh
         env:
           DATABASE_URL: postgresql://courier:courier@localhost:5432/courier
-          REDIS_URL: redis://localhost:6379
+          VALKEY_URL: valkey://localhost:6379
           VALHALLA_URL: http://localhost:8002
           APP_ENV: test
           NODE_ENV: test
@@ -242,7 +242,7 @@ jobs:
           ./scripts/review-gate.sh
         env:
           DATABASE_URL: postgresql://courier:courier@localhost:5432/courier
-          REDIS_URL: redis://localhost:6379
+          VALKEY_URL: valkey://localhost:6379
           VALHALLA_URL: http://localhost:8002
           APP_ENV: test
           NODE_ENV: test
