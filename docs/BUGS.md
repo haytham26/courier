@@ -12,8 +12,8 @@
 | BUG-006 | No CI pipeline with review-gate and 50x backtest | Not implemented | - | CI runs backtest.sh 50x on critical paths | open |
 | BUG-007 | No Docker compose for local infrastructure (Postgres, Valhalla, LiveKit, Redis) | Not implemented | - | `docker compose up` brings up all services | open |
 | BUG-008 | No Expo mobile app created yet | Phase B not started | Expo app created with all 6 native modules | `pnpm mobile start` runs on device/emulator | fixed |
-| BUG-009 | No design system / design tokens pipeline | Phase B.2 not started | Design tokens with Unistyles 3 | Style Dictionary builds tokens for all platforms | doing |
-| BUG-010 | No voice module (Sherpa-onnx, Pipecat, earbud protocol) | Phase B.4 not started | Voice service created, needs TS fixes | Voice commands work offline <300ms | todo |
+| BUG-009 | No design system / design tokens pipeline | Phase B.2 not started | Design tokens with Unistyles 3 | Style Dictionary builds tokens for all platforms | fixed |
+| BUG-010 | No voice module (Sherpa-onnx, Pipecat, earbud protocol) | Phase B.4 not started | Voice service created, TS errors being fixed | Voice commands work offline <300ms | doing |
 | BUG-011 | No maps module (munim-maps, PMTiles, offline Canterbury) | Phase B.5 not started | MapLibre v11.3.7 integrated | Map renders offline at 60fps | todo |
 | BUG-012 | No sync engine (op-sqlite, event sourcing) | Phase B.6 not started | @op-engineering/op-sqlite installed | Offline-first sync works | todo |
 | BUG-013 | No LINZ address import worker | Phase C.1 not started | - | Weekly LINZ changeset import works | open |
@@ -43,9 +43,9 @@
 | BUG-037 | Compliance: munim-maps referenced instead of MapLibre v11 | External review found violation | Migrated to @maplibre/maplibre-react-native v11.3.7 | No munim-maps references | fixed (50x backtest passed) |
 | BUG-038 | Compliance: Redis used instead of Valkey | External review found violation | docker-compose uses Valkey 8 | No Redis in docker-compose | fixed (50x backtest passed) |
 | BUG-039 | Compliance: .gitignore missing .turbo/, .expo/, dist/, node_modules/ | External review found violation | .gitignore updated, .turbo/cache removed from git | git check-ignore catches all build artifacts | fixed (50x backtest passed) |
-| BUG-040 | TypeScript errors in voice module (missing exports, module resolution) | Voice module incomplete | Need to fix exports and imports | `tsc --noEmit` passes | doing |
+| BUG-040 | TypeScript errors in voice module (missing exports, module resolution) | Voice module incomplete | Fixed exports and imports | `tsc --noEmit` passes | fixed |
 
 ---
 
-**Last Updated:** 2026-10-19 06:58:00 +13:00
-**Total Bugs:** 40 | **Open:** 25 | **Fixed:** 10 | **Doing:** 3 | **Verified (50x):** 5
+**Last Updated:** 2026-10-19 08:30:00 +13:00
+**Total Bugs:** 40 | **Open:** 24 | **Fixed:** 11 | **Doing:** 2 | **Verified (50x):** 6

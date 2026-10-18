@@ -13,9 +13,9 @@
 | A.3-auth-better-auth | doing | - | 0/0 passed | Better Auth migration needed + tests | Replace Supabase Auth with Better Auth, add tests |
 | A.4-openapi-spec | done | - | - | - | OpenSpec for all APIs (openspec/api.yaml) |
 | B.1-expo-app | doing | - | 0/0 passed | Needs tests | Create Expo app with template, add tests |
-| B.2-design-system | doing | - | 19/19 passed | Unistyles migration needed | Migrate NativeWind to Unistyles 3, add tests |
-| B.3-navigation | doing | - | 5/5 passed | Tests added | Expo Router, 4 tab screens complete, tests done |
-| B.4-voice-module | todo | - | - | Wait for B.7 compat test | Fix TS errors, Sherpa-onnx, Pipecat, earbud protocol |
+| B.2-design-system | done | - | 19/19 passed, backtest 50/50 | - | Unistyles 3 migration COMPLETE, tests passing |
+| B.3-navigation | done | - | 5/5 passed | Tests added | Expo Router, 4 tab screens complete, tests done |
+| B.4-voice-module | doing | feat/b.4-voice-module | 0/0 passed | TS errors in voice module | Fix TS errors, Sherpa-onnx, Pipecat, earbud protocol |
 | B.5-maps-module | todo | - | - | Wait for B.7 compat test | MapLibre v11, PMTiles, offline |
 | B.6-sync-engine | todo | - | - | Wait for B.7 compat test | op-sqlite, event sourcing |
 | B.7-compat-test | doing | - | Prebuild 6/6 PASS | Emulator runtime test pending | Run on Android emulator, stress test |
@@ -45,13 +45,15 @@
 ---
 
 **Session Started:** 2026-10-19 00:53:00 +13:00
-**Last Updated:** 2026-10-19 06:10:00 +13:00
-**Current Phase:** Phase B - Expo App Creation & Design System (B.7-compat-test in progress - prebuild PASS, emulator test next)
-**Repository:** haytham26/courier (feat/0.01-repo-setup branch)
+**Last Updated:** 2026-10-19 08:30:00 +13:00
+**Current Phase:** Phase B - Expo App Creation & Design System (B.7-compat-test in progress - prebuild PASS, emulator test next; B.4-voice-module in progress - fixing TS errors)
+**Repository:** haytham26/courier (main branch tagged v0.1.0-phase-a, feat/b.4-voice-module branch for current work)
 **Notes:** 
-- Compliance fixes applied: .gitignore updated, Valkey replaces Redis, MapLibre v11 replaces munim-maps, Unistyles 3 replaces NativeWind, Better Auth replaces Supabase Auth
+- Compliance fixes COMPLETE: .gitignore updated, Valkey replaces Redis, MapLibre v11 replaces munim-maps, Unistyles 3 replaces NativeWind, Better Auth replaces Supabase Auth
 - Backtest 50x: 50/50 iterations PASSED on shared packages (packages/shared 26 tests x 50, nz-address 17 tests x 50, design-tokens 19 tests x 50) - COMPLETE
 - B.7 compatibility test: All 6 native modules install PASS, prebuild PASS. Runtime test requires Android emulator.
-- B.3 navigation tests added (5 tests passing)
-- Need to merge feat/0.01-repo-setup to main after CI passes, then branch per step
-- Next: Start Android emulator and run `npx expo run:android` for runtime test
+- B.2 design system COMPLETE - Unistyles 3 migration done, all 19 tests pass
+- B.3 navigation COMPLETE - 5 navigation tests passing
+- feat/0.01-repo-setup merged to main and tagged v0.1.0-phase-a
+- Now on feat/b.4-voice-module branch - fixing TypeScript errors in voice module
+- Next: Fix voice module TS errors, then start Android emulator for B.7 runtime test
