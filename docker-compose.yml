@@ -26,17 +26,17 @@ services:
       -c work_mem=16MB
       -c maintenance_work_mem=256MB
 
-  # Redis 7.2 for caching, rate limiting, session storage
-  redis:
-    image: redis:7.2-alpine
-    container_name: courier-redis
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+  # Valkey 8.x for caching, rate limiting, session storage (Redis fork, OSI-approved)
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: courier-valkey
+    command: valkey-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
-      - redis_data:/data
+      - valkey_data:/data
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -105,14 +105,14 @@ services:
     container_name: courier-glitchtip
     environment:
       - DATABASE_URL=postgresql://courier:courier@postgres:5432/courier
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://valkey:6379
       - SECRET_KEY=dev-secret-key-change-in-production
       - ALLOWED_HOSTS=*
       - DEBUG=true
       - EMAIL_URL=console://
     depends_on:
       - postgres
-      - redis
+      - valkey
     ports:
       - "8000:8000"
     healthcheck:
@@ -141,13 +141,13 @@ services:
     container_name: courier-langfuse
     environment:
       - DATABASE_URL=postgresql://courier:courier@postgres:5432/courier
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://valkey:6379
       - NEXTAUTH_SECRET=dev-secret-change-in-production
       - NEXTAUTH_URL=http://localhost:3002
       - TELEMETRY_ENABLED=false
     depends_on:
       - postgres
-      - redis
+      - valkey
     ports:
       - "3002:3000"
     healthcheck:
@@ -158,7 +158,7 @@ services:
 
 volumes:
   postgres_data:
-  redis_data:
+  valkey_data:
   valhalla_tiles:
   minio_data:
   uptime_kuma_data:
