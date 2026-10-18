@@ -11,15 +11,62 @@
 
 1. **Git:**
    - لا تعمل على `main` مباشرة. كل خطوة على فرع مستقل: `feat/<phase>-<step>-<slug>` أو `fix/...` أو `chore/...`.
-   - Commits صغيرة وواضحة (Conventional Commits). كل تغيير يدخل عبر PR، والإنسان (المؤسس) يوافق على كل PR. لا merge ذاتي.
-2. **خطوة واحدة في كل مرة:** نفِّذ خطوة واحدة من خطة البناء (القسم 12)، شغّل الاختبارات، اكتب ملخصاً، ثم **توقف وانتظر الموافقة** قبل الخطوة التالية.
+   - Commits صغيرة وواضحة (Conventional Commits). كل تغيير يدخل عبر PR يُدمج **تلقائيًا** فقط بعد نجاح كل بوابات الجودة في القسم 0-A. بعد كل مرحلة: tag (`v0.<phase>`) للاسترجاع.
+2. **تنفيذ ذاتي متواصل (D10):** نفِّذ خطة البناء كاملة بلا توقف للموافقة، خطوة بعد خطوة، حسب «حلقة الجودة» في القسم 0-A. لا تتوقف إلا لما لا يقدر عليه إلا المؤسس (القسم 0-A.6).
 3. **تحقق من الإصدارات قبل التثبيت:** لا تخترع أرقام إصدارات أو أسماء حزم أو مستودعات. قبل تثبيت أي حزمة تحقق من وجودها وإصدارها المستقر الحالي ورخصتها من المصدر الرسمي (npm / PyPI / GitHub releases / صفحة التوثيق). الحزم الأصلية في الموبايل تُثبَّت بـ `npx expo install`. الإصدارات في هذا البرومبت **مرشّحة** وليست مثبّتة؛ التثبيت النهائي يُسجَّل في `docs/adr/ADR-001-versions.md` بعد اختبار الأسبوع الأول.
 4. **لا أسرار في git أبداً:** لا مفاتيح API ولا `.env` ولا شهادات. استخدم مدير أسرار على الخادم فقط. `gitleaks` في pre-commit وفي CI. وسّع `.gitignore` ليشمل: `.env*`, `*.pem`, `*.key`, `secrets/`.
 5. **لا وسطاء نماذج غير رسميين:** استدعاء النماذج عبر SDKs الرسمية للمزوّدين بمفاتيح من جانب الخادم فقط. البوابة الوحيدة المسموحة هي LiteLLM (MIT core, ≥ 1.83.0, hash-locked) إن احتجنا بوابة. لا proxies مجهولة ولا مفاتيح في التطبيق.
 6. **الرخص:** ممنوع ضمّ أي شيء AGPL / GPL / SSPL / Commons Clause / CC-NC / FSL / BUSL داخل التطبيق (انظر القسم 9).
-7. **عند الشك اسأل:** إذا تعارض شيء مع D1–D9 أو احتاج قراراً تجارياً أو قانونياً، توقف واسأل المؤسس ولا تخمّن.
+7. **عند الشك:** إذا تعارض شيء مع D1–D11 اتبع القرارات. القرارات التقنية تحسمها لجنة المراجعة وتُسجَّل في `docs/adr/`. لا تتوقف إلا لقرار تجاري أو قانوني أو حساب/مال (0-A.6)، وأثناء الانتظار تكمل كل ما لا يعتمد عليه.
 8. **المواصفات أولاً:** الأداة الوحيدة للمواصفات هي **OpenSpec**. لا تنفّذ ميزة بلا spec معتمد. التصميم لا يُنفَّذ إلا من tokens معتمدة.
 9. **صلاحيات الوكلاء:** دور قاعدة بيانات read-only للوكلاء، ومفاتيح Stripe في test mode فقط.
+
+
+## 0-A. وضع الشركة الكاملة والتنفيذ الذاتي (D10، D11) — أعلى من أي قسم آخر
+
+### 0-A.1 النطاق
+**نسخة واحدة كاملة.** كل الخدمات في القسم 7 (P0 و P1 و P2) وكل بنود Phase G، ومنها **مسح الملصقات بالكاميرا (OCR + باركود)**، تُبنى قبل التسليم. لا «نسخة أولى ثم ثانية». المؤسس يستلم تطبيقًا كاملًا ويدخل مباشرة فترة الاختبار الميداني.
+
+### 0-A.2 الشركة (فريق الوكلاء)
+شغّل الأدوار في القسم 11 كفريق كامل، وأضف لها:
+- **لجنة مراجعة لكل وحدة (Review Board):** قبل دمج أي PR، تراجعه لجنة من مراجعين مستقلين بزوايا مختلفة: الصحة (correctness)، الأمان، الأداء والبطارية، التصميم (D7)، الصوت وتعدد اللغات، الخصوصية والرخص، قابلية الصيانة. كل مراجع يحاول **رفض** التغيير؛ يُدمج فقط إذا لم يجد أغلبيتهم مشكلة حقيقية. على امتداد المشروع يتجاوز عدد المراجعات المستقلة 100.
+- **مدقق الحقائق:** قبل تثبيت أي مكتبة أو استخدام أي API، يتحقق من الإصدار والرخصة والسعر من المصدر الرسمي، ويسجّل ذلك في `docs/adr/ADR-001-versions.md`.
+- **مهندس الاكتمال:** بعد كل مرحلة يسأل «ما الناقص؟» مقارنةً بـ DECISIONS.md والقسم 7 وجدول التكافؤ في RESEARCH_2026_WAVE3.md، ويضيف الناقص كخطوات جديدة تلقائيًا.
+
+### 0-A.3 حلقة الجودة لكل خطوة (لا تنتقل قبل نجاحها)
+1. اكتب spec (OpenSpec) ← نفّذ ← اختبارات وحدة وتكامل.
+2. شغّل **كامل** مجموعة الاختبارات المعنية (pytest، Jest/Vitest، Maestro E2E بتسجيلات صوتية، promptfoo على مجموعة عناوين Canterbury الذهبية، اختبارات offline/sync chaos).
+3. **اختبار الثبات (backtest):** أعد تشغيل المجموعة الحرجة (الإملاء والتصحيح، الأوامر الصوتية، المزامنة، الدفع) **50 مرة متتالية** في CI مع بيانات وترتيب عشوائي. أي فشل واحد = فشل الخطوة؛ اعثر على السبب الجذري وأصلحه (ممنوع تعطيل أو تخطي اختبار).
+4. لجنة المراجعة (0-A.2) ← إصلاح كل ما وجدته ← إعادة من البند 2.
+5. نجاح كامل ← دمج ← tag ← تحديث `docs/PROGRESS.md`.
+
+### 0-A.4 ترتيب الملفات (لا فوضى)
+```
+courier/
+├── apps/mobile/          # Expo app (features/<feature>/ ، modules/voice ، modules/maps)
+├── apps/web/             # Next.js: لوحة السائق، /admin، التسويق، المساعدة
+├── services/api/         # FastAPI + LangGraph + Pipecat (الكود الحالي في app/ ينتقل هنا)
+├── services/worker/      # Hatchet jobs: LINZ، تعلّم الأبواب، التقارير
+├── packages/shared/      # مخطط الأدوات الصوتية + الأنواع (مصدر واحد → Zod و Pydantic)
+├── packages/nz-address/  # القاموس والمطبّع المشترك
+├── packages/design-tokens/
+├── infra/                # docker-compose، maps/، valhalla/، migrations/
+├── tests/golden/         # تسجيلات وعناوين Canterbury الذهبية
+├── openspec/             # spec لكل ميزة
+└── docs/                 # adr/، DECISIONS.md، PROGRESS.md، runbooks/
+```
+CODEOWNERS لكل مجلد، و CLAUDE.md داخل كل حزمة يشرح قواعدها.
+
+### 0-A.5 الحفظ والاسترجاع
+- كل شيء على GitHub (`haytham26/courier`): الكود، الـ specs، الـ ADRs، تقارير الاختبار.
+- `main` محمي ودائمًا أخضر. tag بعد كل مرحلة (`v0.A`، `v0.B`…) و release candidate في النهاية (`v1.0.0-rc.1`).
+- `docs/PROGRESS.md` يُحدَّث بعد كل خطوة: ما انتهى، ما المتبقي، أين توقفنا — حتى تستطيع أي جلسة جديدة الإكمال.
+
+### 0-A.6 متى تتوقف فقط
+فقط لما لا يمكن أتمتته: إنشاء الحسابات والدفع (Apple، Google Play، Stripe live، مزوّدي الصوت)، المفاتيح، القرارات القانونية والتسعير النهائي، والاختبار على **هاتف حقيقي في يد السائق**. في هذه الحالة: سجّل الطلب في `docs/FOUNDER_TODO.md`، أرسل ملخصًا، و**أكمل كل العمل الآخر** أثناء الانتظار.
+
+### 0-A.7 التسليم
+التطبيق «جاهز للاستلام» عندما: كل خدمات القسم 7 مبنية؛ كل الأدوات الصوتية مغطاة باختبار؛ 50/50 نجاح في اختبار الثبات للمسارات الحرجة؛ لا ملاحظة مفتوحة من لجان المراجعة بدرجة حرجة أو عالية؛ builds على TestFlight و Play Internal Testing؛ دليل تشغيل للمؤسس في `docs/HANDOVER.md`.
 
 ---
 
@@ -92,7 +139,7 @@ git checkout -b chore/0-read-docs
 | R21 | Ferrostar خلف flag مطفأ؛ v1 يستخدم deep link لـ Google Maps / Apple Maps / Waze. |
 | R22 | القص بمضلّع المنطقة الرسمي لـ Canterbury وليس bbox. |
 | R23 | `42B` = رقم + لاحقة؛ `2/14` = وحدة. |
-| R24 | سعر Pro عند NZ$35 تقريباً مساوٍ لـ Spoke Standard وليس ضعفه؛ يجب إعادة تبرير التسعير. |
+| R24 | سعر Solo عند NZ$35 تقريباً مساوٍ لـ Spoke Standard وليس ضعفه؛ يجب إعادة تبرير التسعير. |
 
 ---
 
@@ -122,11 +169,11 @@ pnpm workspaces + Turborepo.
 | Monorepo | pnpm workspaces + Turborepo | pin بعد الأسبوع 1 |
 | Mobile | Expo (New Architecture, Hermes V1, dev client, expo-router, EAS) + React Native | SDK 58 مرشح **[UNVERIFIED]**، بديل SDK 57 مع expo ≥ 57.0.17 |
 | UI | Unistyles 3, Reanimated 4 + worklets (نسخ SDK)، FlashList v2، Expo UI، Material Symbols، Inter/Noto | |
-| Maps | `@maplibre/maplibre-react-native` v11 (11.5.x مرشح) + PMTiles | MBTiles بديل |
+| Maps | `@maplibre/maplibre-react-native` v11 (آخر إصدار مؤكد 11.3.7، أغسطس 2026) + PMTiles | MBTiles بديل |
 | Camera (P2) | VisionCamera 5.x + nitro-modules + ML Kit plugin خاص بنا | |
-| On-device voice | sherpa-onnx (1.13.8 مرشح) داخل `modules/voice` | |
+| On-device voice | sherpa-onnx (≥ 1.13.6 مؤكد في releases؛ ثبّت أحدث 1.13.x) داخل `modules/voice` | |
 | Transport | LiveKit RN SDK + Expo plugin | |
-| Orchestrator | Pipecat 1.12.x (`pipecat.flows` من core)، Smart Turn v3.2 | |
+| Orchestrator | Pipecat 1.10.x (آخر إصدار مستقر مؤكد سبتمبر 2026) (`pipecat.flows` من core)، Smart Turn v3.2 | |
 | Speech models | Gemini Live GA (خليفة 2.5، في config)، `gpt-realtime-2.1-mini` احتياطي، Claude Haiku للـ cascade | IDs في config؛ eval قبل أي تبديل |
 | Local DB | op-sqlite + SQLCipher | |
 | Location | expo-location + expo-task-manager (Transistor كبديل مدفوع) | |
@@ -134,7 +181,7 @@ pnpm workspaces + Turborepo.
 | Database | Postgres 16/17 + PostGIS 3 + pgvector (HNSW) + pg_trgm + fuzzystrmatch، Sydney (ap-southeast-2)، PITR | |
 | Auth | Better Auth (organization + Expo plugins)، تحقق JWKS في FastAPI، RLS يقرأ claims | |
 | Jobs | Hatchet | |
-| Routing | Valhalla 3.9.x، VROOM 1.15.0 **[UNVERIFIED]**، OR-Tools 9.x (للقواعد فقط) | pin images؛ لا OSRM ولا GraphHopper |
+| Routing | Valhalla 3.6.x (آخر سلسلة مؤكدة)، VROOM (أحدث release رسمي من GitHub — رقم 1.15.0 غير موجود)، OR-Tools 9.x (للقواعد فقط) | pin images؛ لا OSRM ولا GraphHopper |
 | LLM gateway | LiteLLM MIT core ≥ 1.83.0 (اختياري) | hash-locked |
 | Web | Next.js (قاعدة `nextjs/saas-starter`) + shadcn/ui بألوان tokens + i18n/RTL | |
 | Billing | Stripe (ويب، NZD، شامل GST) + RevenueCat (IAP) | |
@@ -253,7 +300,7 @@ class ToolSpec(BaseModel):
 ### 5.4 الخرائط والتوجيه
 - **Vector tiles:** Geofabrik NZ PBF → osmium (مضلّع المنطقة؛ في الخلفية فقط لأنه GPL) → planetiler مع Protomaps profile → `canterbury.pmtiles`. تنزيل عبر Wi-Fi مع استئناف و checksums ومستثنى من النسخ الاحتياطي. العرض بـ MapLibre RN v11. MBTiles بديل إن فشل PMTiles.
 - **Aerial (phase 2):** raster PMTiles من LINZ open-data COGs على AWS. لا استخدام جماعي لـ Basemaps API.
-- **Routing:** Valhalla 3.9.x (matrix + directions)، VROOM 1.15.0 **[UNVERIFIED]**، OR-Tools 9.x (قواعد فقط).
+- **Routing:** Valhalla 3.6.x (matrix + directions)، VROOM (أحدث release رسمي)، OR-Tools 9.x (قواعد فقط).
 - **Navigation:** deep link إلى Google Maps / Apple Maps / Waze إلى نقطة الدخول المتعلَّمة، مع ducking لصوتنا بجانب تطبيق الملاحة.
 - **Attribution في التطبيق والويب:** "© LINZ CC BY 4.0" و "© OpenStreetMap contributors (ODbL)". لا تخزين لبيانات Google، ولا geocoding جماعي عبر Nominatim العام.
 - **Geofences:** 150 m و 30 m، مع تدوير المحطات القادمة للبقاء ضمن حد iOS (20 منطقة).
@@ -401,7 +448,7 @@ class ToolSpec(BaseModel):
 
 | الدور | المسؤولية | النطاق المسموح |
 |---|---|---|
-| **Lead / Integrator** | يقسّم الخطوات، يكتب OpenSpec specs، يدير الفروع، يجمع ملخصات PR، يوقف العمل للموافقة | كل المستودع (قراءة)، `openspec/`, `docs/adr/` |
+| **Lead / Integrator** | يقسّم الخطوات، يكتب OpenSpec specs، يدير الفروع، يجمع ملخصات PR، يدير حلقة الجودة ولجان المراجعة | كل المستودع (قراءة)، `openspec/`, `docs/adr/` |
 | **Mobile & Native Voice** | `apps/mobile`، `modules/voice` (Swift/Kotlin)، آلة حالات الصوت، الأزرار، الخلفية، op-sqlite outbox | `apps/mobile`, `modules/` |
 | **Backend & Voice Server** | FastAPI، tool registry، Pipecat pipeline، LangGraph، Hatchet، المزامنة، الفوترة على الخادم | `apps/api`, `packages/shared` |
 | **Geo & Routing** | LINZ loader، pipeline التصحيح، FTS slice، Valhalla/VROOM/OR-Tools، القوالب والقواعد، PMTiles | `packages/nz-address`, `infra/`, وحدات geo في `apps/api` |
@@ -413,7 +460,7 @@ class ToolSpec(BaseModel):
 ---
 
 ## 12. خطة البناء المرحلية
-كل خطوة = فرع + PR + اختبارات + توقف للموافقة.
+كل خطوة = فرع + PR + حلقة الجودة (0-A.3) + دمج تلقائي عند النجاح + تحديث `docs/PROGRESS.md`.
 
 ### Phase 0 — الأسبوع 1: Go/No-Go spike
 **الخطوات:**
@@ -448,7 +495,7 @@ class ToolSpec(BaseModel):
 **الخطوات:** PIA، سياسة الخصوصية، قائمة المعالجين، الموافقات؛ حزم مراجعة المتاجر؛ شاشة الـ attribution؛ runbook للإطلاق التدريجي و on-call؛ beta مع سائقين في Christchurch (ride-along).
 **تعريف الإنجاز:** كل SLOs ثابتة لأسبوعين من الـ beta؛ مراجعة التصميم موقّعة (D7)؛ فحص الرخص نظيف؛ شروط Silero والمزوّدين مؤكدة؛ موافقة المتاجر.
 
-### Phase G — المرحلة الثانية
+### Phase G — ضمن v1 أيضًا (D11): كل بنود هذه المرحلة تُبنى قبل التسليم
 Label OCR، الطبقة الجوية، Team dispatcher، IRD logbook، Ferrostar.
 
 ---
@@ -480,9 +527,9 @@ Label OCR، الطبقة الجوية، Team dispatcher، IRD logbook، Ferrosta
 3. أجهزة اختبار حقيقية: iPhone، Android متوسط، Android منخفض، سماعات السائق، وصول إلى بلوتوث سيارة.
 4. 200+ تسجيل صوتي لعناوين Canterbury حقيقية (بموافقة) + عينات أوامر لكل لغة ذات أولوية، وقائمة اللغات ذات الأولوية بالترتيب.
 5. سائقون للـ beta والـ ride-alongs الشهرية في Christchurch.
-6. قرارات مفتوحة: هل OCR الملصقات (مدرج في قائمة أساسيات ما قبل الإطلاق في RESEARCH_2026_WAVE3) يبقى P2 أم ينتقل إلى v1؛ نقاط الأسعار ونموذج الهامش بعد التحقق من التكاليف، مزوّد SMS، الهوية البصرية، الموافقة على tokens ومواصفات الشاشات وواجهة الصوت.
+6. قرارات مفتوحة: (OCR الملصقات محسوم: ضمن v1 حسب D11)؛ نقاط الأسعار ونموذج الهامش بعد التحقق من التكاليف، مزوّد SMS، الهوية البصرية، الموافقة على tokens ومواصفات الشاشات وواجهة الصوت.
 7. مراجعة قانونية: PIA، سياسة الخصوصية، قائمة المعالجين ومناطقهم، شروط المزوّدين (no-training / zero-retention)، تأكيد رخصة Silero، نصوص تسويق متوافقة مع Rule 7.3A.
 8. مراجعون لترجمات الواجهة لإزالة وسم `needs_review`.
-9. موافقة على كل PR، وقرار Go/No-Go في نهاية Phase 0.
+9. لا موافقة على كل PR (D10). المؤسس يستلم التطبيق كاملًا ويدخل فترة الاختبار الميداني.
 
-**ابدأ الآن بالقسم 1 فقط، ثم توقف وانتظر الموافقة.**
+**ابدأ الآن بالقسم 0-A ثم القسم 1، واستمر حتى نهاية القسم 12 دون توقف إلا حسب 0-A.6.**
