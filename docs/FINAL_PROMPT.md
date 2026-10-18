@@ -2,7 +2,7 @@
 
 > هذا البرومبت موجَّه إلى مساعد برمجة ذكي (أو فريق وكلاء) سيبني **Courier Copilot** داخل المستودع `haytham26/courier`.
 > الشرح بالعربية، والكود والأوامر والأسماء بالإنجليزية.
-> البرومبت مكتفٍ بذاته: لا تحتاج أي محادثة سابقة. ترتيب السلطة: `DECISIONS.md` (D1–D9) ثم هذا البرومبت ثم مستندات البحث.
+> البرومبت مكتفٍ بذاته: لا تحتاج أي محادثة سابقة. ترتيب السلطة: `DECISIONS.md` (D1–D12) ثم هذا البرومبت ثم مستندات البحث.
 > أي بند موسوم **[UNVERIFIED]** أو **[OPEN]** أو **[RE-CONFIRM]** يجب التحقق منه بمصدر موثّق قبل الاعتماد عليه في قرار تسعير أو قانون أو إصدار.
 
 ---
@@ -69,6 +69,20 @@ CODEOWNERS لكل مجلد، و CLAUDE.md داخل كل حزمة يشرح قوا
 التطبيق «جاهز للاستلام» عندما: كل خدمات القسم 7 مبنية؛ كل الأدوات الصوتية مغطاة باختبار؛ 50/50 نجاح في اختبار الثبات للمسارات الحرجة؛ لا ملاحظة مفتوحة من لجان المراجعة بدرجة حرجة أو عالية؛ builds على TestFlight و Play Internal Testing؛ دليل تشغيل للمؤسس في `docs/HANDOVER.md`.
 
 ---
+
+## 0-B. سياسة التكلفة: مجاني أولًا مع تحويل تلقائي (D12)
+
+التفاصيل الكاملة في `docs/COST_PLAN.md`، وهو مُلزِم.
+1. **كل قدرة لها سلسلة مرتبة:** افتراضي مجاني (على الهاتف / أدواتنا المفتوحة على خادمنا) ← حصة مجانية رسمية ← مزوّد مدفوع. التحويل تلقائي عند الفشل أو البطء أو نفاد الحصة، والسائق لا يُقطع أبدًا.
+2. **التبديل بسطر واحد:** التطبيق يستدعي أسماء منطقية (`courier-llm`، `courier-stt`، `courier-tts`، `courier-realtime`)؛ الترتيب في `infra/router/` (LiteLLM ≥ 1.83.0، لا 1.82.7/1.82.8) وطبقة `ProviderChain` للصوت.
+3. **الصوت:** sherpa-onnx على الهاتف ← faster-whisper / Kokoro على خادمنا ← Groq / Cloudflare free ← Deepgram / Cartesia. المحادثة الحية: Pipecat cascade على LiveKit self-hosted، و Gemini Live (paid) / OpenAI Realtime احتياطي مدفوع.
+4. **PII:** طلبات فيها بيانات سائق/زبون لا تذهب لمستوى مجاني يدرّب على البيانات (Gemini free وأمثاله = تطوير فقط).
+5. **حساب واحد لكل مزوّد.** ممنوع تعدد الحسابات أو المفاتيح لمضاعفة الحصص.
+6. **Sandbox:** gpt4free وأي وسيط غير رسمي مسموح فقط في `sandbox/` معزول ببيانات اصطناعية. CI يفشل إن ظهر في الإنتاج، والخادم يرفض الإقلاع إن وُجد مع `ENV=prod`.
+7. **البناء والنشر:** GitHub Actions + `eas build --local` + Fastlane + OTA self-hosted (expo-open-ota على R2)؛ EAS Free/Starter احتياطي فقط.
+8. **الاستضافة:** Oracle Always Free (Sydney) + Cloudflare R2/Tunnel؛ VPS مدفوع احتياطي. GPU خاص فقط عندما يصبح أرخص من الدفع لكل دقيقة.
+9. **المدفوع الحتمي فقط:** Apple، Google Play، رسوم Stripe/RevenueCat، النطاق، و SMS إن فُعّل.
+10. التكلفة التقديرية [UNVERIFIED]: 1 سائق ≈ $0–5/شهر، 10 ≈ $10–65، 100 ≈ $170–660، 1000 ≈ $1k–3.6k.
 
 ## 1. الاتصال بالمستودع وقراءة المستندات
 
@@ -167,26 +181,27 @@ pnpm workspaces + Turborepo.
 | الطبقة | الاختيار | ملاحظة |
 |---|---|---|
 | Monorepo | pnpm workspaces + Turborepo | pin بعد الأسبوع 1 |
-| Mobile | Expo (New Architecture, Hermes V1, dev client, expo-router, EAS) + React Native | SDK 58 مرشح **[UNVERIFIED]**، بديل SDK 57 مع expo ≥ 57.0.17 |
+| Mobile | Expo (New Architecture, Hermes V1, dev client, expo-router) + React Native؛ البناء: GitHub Actions + `eas build --local` + Fastlane، OTA: expo-open-ota على R2 (EAS احتياطي، D12) | SDK 58 مرشح **[UNVERIFIED]**، بديل SDK 57 مع expo ≥ 57.0.17 |
 | UI | Unistyles 3, Reanimated 4 + worklets (نسخ SDK)، FlashList v2، Expo UI، Material Symbols، Inter/Noto | |
 | Maps | `@maplibre/maplibre-react-native` v11 (آخر إصدار مؤكد 11.3.7، أغسطس 2026) + PMTiles | MBTiles بديل |
 | Camera (P2) | VisionCamera 5.x + nitro-modules + ML Kit plugin خاص بنا | |
 | On-device voice | sherpa-onnx (≥ 1.13.6 مؤكد في releases؛ ثبّت أحدث 1.13.x) داخل `modules/voice` | |
 | Transport | LiveKit RN SDK + Expo plugin | |
 | Orchestrator | Pipecat 1.10.x (آخر إصدار مستقر مؤكد سبتمبر 2026) (`pipecat.flows` من core)، Smart Turn v3.2 | |
-| Speech models | Gemini Live GA (خليفة 2.5، في config)، `gpt-realtime-2.1-mini` احتياطي، Claude Haiku للـ cascade | IDs في config؛ eval قبل أي تبديل |
+| Speech models | D12: افتراضي sherpa-onnx على الهاتف + faster-whisper / Kokoro على خادمنا عبر Pipecat cascade ← Groq / Cloudflare free ← مدفوع: Deepgram، Cartesia، Gemini Live GA (paid tier)، `gpt-realtime-2.1-mini` | IDs والترتيب في config؛ eval قبل أي تبديل؛ انظر COST_PLAN.md |
 | Local DB | op-sqlite + SQLCipher | |
 | Location | expo-location + expo-task-manager (Transistor كبديل مدفوع) | |
 | Backend | FastAPI, Pydantic v2, LangGraph 1.x + Postgres checkpointer, SQLAlchemy 2, GeoAlchemy2, Alembic | hash-locked |
-| Database | Postgres 16/17 + PostGIS 3 + pgvector (HNSW) + pg_trgm + fuzzystrmatch، Sydney (ap-southeast-2)، PITR | |
+| Database | Postgres 16/17 + PostGIS 3 + pgvector (HNSW) + pg_trgm + fuzzystrmatch، Sydney (ap-southeast-2)، PITR | D12: self-hosted على Oracle Always Free + نسخ ليلي لـ R2؛ Postgres مُدار مدفوع احتياطي |
 | Auth | Better Auth (organization + Expo plugins)، تحقق JWKS في FastAPI، RLS يقرأ claims | |
 | Jobs | Hatchet | |
 | Routing | Valhalla 3.6.x (آخر سلسلة مؤكدة)، VROOM (أحدث release رسمي من GitHub — رقم 1.15.0 غير موجود)، OR-Tools 9.x (للقواعد فقط) | pin images؛ لا OSRM ولا GraphHopper |
-| LLM gateway | LiteLLM MIT core ≥ 1.83.0 (اختياري) | hash-locked |
+| LLM gateway | LiteLLM MIT core ≥ 1.83.0 (**إلزامي**، D12): on-device ← Groq / Cloudflare free (بلا PII) ← vLLM خاص عند الحجم ← Claude Haiku / GPT | hash-locked؛ ممنوع 1.82.7/1.82.8 |
 | Web | Next.js (قاعدة `nextjs/saas-starter`) + shadcn/ui بألوان tokens + i18n/RTL | |
 | Billing | Stripe (ويب، NZD، شامل GST) + RevenueCat (IAP) | |
 | Email/SMS | Resend + React Email؛ مزوّد SMS برقم NZ طويل | المزوّد **[OPEN]** |
-| Observability | Sentry SaaS، PostHog EU، Langfuse self-hosted AU، Uptime Kuma | |
+| Observability | Sentry SaaS، PostHog EU، Langfuse self-hosted AU، Uptime Kuma | D12: GlitchTip self-hosted بديل مجاني لـ Sentry |
+| Hosting | Oracle Cloud Always Free A1 (Sydney/Melbourne) + Docker + Cloudflare R2/Tunnel/Pages؛ LiveKit Server self-hosted | VPS أسترالي مدفوع احتياطي؛ LiveKit Cloud احتياطي (D12) |
 | Tests | pytest، Schemathesis، jest-expo + RNTL، Vitest، Playwright، Maestro، Reassure، Flashlight، promptfoo | |
 
 **ممنوع تثبيته:** `expo-speech-recognition`، `whisper.rn` مستقل، `react-native-track-player` (v5 ممنوعة؛ v4 فقط إن لزم)، NativeWind، Restyle، HeroUI، PowerSync، Supabase، Arq.
@@ -522,6 +537,8 @@ Label OCR، الطبقة الجوية، Team dispatcher، IRD logbook، Ferrosta
 ---
 
 ## 14. ما يجب أن يوفّره المؤسس
+
+> **تحديث D12:** قائمة الحسابات أدناه تُقرأ مع `docs/COST_PLAN.md` (قسم المفاتيح). الآن: الحسابات المجانية فقط. الحسابات المدفوعة (مزوّدو الصوت والنماذج) هي احتياط يُفعَّل قبل الإطلاق فقط.
 1. صلاحية write على `haytham26/courier` وحماية فرع `main` (مراجعة إلزامية).
 2. حسابات وفوترة، وتُخزن مفاتيحها في مدير الأسرار وليس في git: Apple Developer، Google Play Console، Expo/EAS، Google Cloud (Gemini Live)، OpenAI، Anthropic، LiveKit (أو موافقة على self-host)، Stripe (test + live، NZ)، RevenueCat، Resend، Sentry، PostHog EU، مزوّد SMS برقم NZ طويل (**[OPEN]**)، استضافة Sydney لـ Postgres و API و Valhalla، VPS منفصل لـ Uptime Kuma، و LINZ LDS account key.
 3. أجهزة اختبار حقيقية: iPhone، Android متوسط، Android منخفض، سماعات السائق، وصول إلى بلوتوث سيارة.
