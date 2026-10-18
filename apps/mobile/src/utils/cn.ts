@@ -1,5 +1,4 @@
 import { clsx, type ClassValue } from 'clsx';
-import { style as unistyle } from 'react-native-unistyles';
 
 /**
  * Utility to merge class names with Unistyles
@@ -13,4 +12,4 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Create styles with Unistyles - works like StyleSheet.create but with theme awareness
  */
-export const createStyles = unistyle.createStyleSheet;
+export { StyleSheet } from 'react-native-unistyles';

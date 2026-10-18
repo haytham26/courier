@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View, StyleSheet, ActivityIndicator, type StyleProp, type ViewStyle } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { useTheme } from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 
 const buttonVariants = cva(
   'flex-row items-center justify-center rounded-default transition-colors disabled:opacity-50 disabled:pointer-events-none touch-target-comfortable',
@@ -43,7 +43,7 @@ interface ButtonProps
   children: React.ReactNode;
 }
 
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, ButtonProps>(
   (
     {
       className,
@@ -60,41 +60,48 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    const { theme } = useTheme();
+    const { theme } = useUnistyles();
 
     const baseStyles = StyleSheet.create({
       primary: {
-        backgroundColor: theme.colors.brandPrimary,
+        backgroundColor: theme.colors.brandPrimary ?? '#ff6b00',
       },
       secondary: {
-        backgroundColor: theme.colors.brandSecondary,
+        backgroundColor: theme.colors.brandSecondary ?? '#0070e6',
       },
       outline: {
         backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: theme.colors.border,
+        borderColor: theme.colors.border ?? '#e4e4e7',
       },
       ghost: {
         backgroundColor: 'transparent',
       },
       destructive: {
-        backgroundColor: theme.colors.error,
+        backgroundColor: theme.colors.error ?? '#ef4444',
       },
       success: {
-        backgroundColor: theme.colors.success,
+        backgroundColor: theme.colors.success ?? '#059669',
       },
       warning: {
-        backgroundColor: theme.colors.warning,
+        backgroundColor: theme.colors.warning ?? '#f59e0b',
       },
     });
 
     const variantStyle = baseStyles[variant as keyof typeof baseStyles] || baseStyles.primary;
 
+    const textColor = theme.colors.textPrimary ?? '#18181b';
+
+    const lightVariants = ['primary', 'secondary', 'destructive', 'success', 'warning'] as const;
+    const darkTextVariants = ['outline', 'ghost'] as const;
+    const isLightVariant = lightVariants.includes(variant as typeof lightVariants[number]);
+    const isDarkTextVariant = darkTextVariants.includes(variant as typeof darkTextVariants[number]);
+
     return (
       <Pressable
         ref={ref as any}
         disabled={disabled || loading}
-        style={[{ borderRadius: theme.borderRadius.default }, variantStyle, style] as StyleProp<ViewStyle>}
+        style={[{ borderRadius: theme.borderRadius.DEFAULT ?? 8 }, variantStyle, style] as StyleProp<ViewStyle>}
         {...props}
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || loading }}
@@ -102,13 +109,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {loading ? (
           <ActivityIndicator
             size="small"
-            color={['primary', 'secondary', 'destructive', 'success', 'warning'].includes(variant) ? '#ffffff' : theme.colors.textPrimary}
+            color={isLightVariant ? '#ffffff' : textColor}
             style={{ marginRight: leftIcon ? 8 : 0 }}
           />
         ) : (
           <>
             {leftIcon && <View style={{ marginRight: 8 }}>{leftIcon}</View>}
-            <Text style={{ fontWeight: '600', color: ['outline', 'ghost'].includes(variant) ? theme.colors.textPrimary : '#ffffff' }}>{children}</Text>
+            <Text style={{ fontWeight: '600', color: isDarkTextVariant ? textColor : '#ffffff' }}>{children}</Text>
             {rightIcon && <View style={{ marginLeft: 8 }}>{rightIcon}</View>}
           </>
         )}

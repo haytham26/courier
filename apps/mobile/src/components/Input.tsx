@@ -1,7 +1,7 @@
 import React from 'react';
 import { TextInput, View, Text, StyleSheet, type StyleProp, type ViewStyle, type TextStyle } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { useTheme } from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 
 const inputVariants = cva(
   'flex-1 rounded-default border transition-colors disabled:pointer-events-none',
@@ -33,6 +33,7 @@ interface InputProps
   helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  disabled?: boolean;
 }
 
 export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputProps>(
@@ -47,50 +48,50 @@ export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputP
       leftIcon,
       rightIcon,
       style,
+      disabled,
       ...props
     },
     ref
   ) => {
-    const { theme } = useTheme();
+    const { theme } = useUnistyles();
     const hasError = state === 'error' || !!error;
     const hasHelper = helperText || error;
 
     const baseStyles = StyleSheet.create({
       input: {
         height: 44,
-        paddingHorizontal: theme.spacing[4],
-        fontSize: theme.typography.fontSizes.base,
+        paddingHorizontal: 16,
+        fontSize: 16,
         borderWidth: 1,
-        borderRadius: theme.borderRadius.default,
-        backgroundColor: theme.colors.surface,
-        color: theme.colors.textPrimary,
-        placeholderTextColor: theme.colors.textTertiary,
+        borderRadius: 8,
+        backgroundColor: theme.colors.surface ?? '#fafafa',
+        color: theme.colors.textPrimary ?? '#18181b',
       },
       inputError: {
-        borderColor: theme.colors.error,
+        borderColor: theme.colors.error ?? '#ef4444',
       },
       inputSuccess: {
-        borderColor: theme.colors.success,
+        borderColor: theme.colors.success ?? '#059669',
       },
       inputDefault: {
-        borderColor: theme.colors.border,
+        borderColor: theme.colors.border ?? '#e4e4e7',
       },
       inputDisabled: {
-        backgroundColor: theme.colors.surfaceElevated,
+        backgroundColor: theme.colors.surfaceElevated ?? '#ffffff',
       },
     });
 
     const sizeStyles = StyleSheet.create({
-      sm: { height: 36, paddingHorizontal: theme.spacing[3], fontSize: theme.typography.fontSizes.sm },
-      md: { height: 44, paddingHorizontal: theme.spacing[4], fontSize: theme.typography.fontSizes.base },
-      lg: { height: 52, paddingHorizontal: theme.spacing[5], fontSize: theme.typography.fontSizes.lg },
+      sm: { height: 36, paddingHorizontal: 12, fontSize: 14 },
+      md: { height: 44, paddingHorizontal: 16, fontSize: 16 },
+      lg: { height: 52, paddingHorizontal: 20, fontSize: 18 },
     });
 
     const inputStyle = [
       baseStyles.input,
       sizeStyles[size as keyof typeof sizeStyles],
       hasError ? baseStyles.inputError : state === 'success' ? baseStyles.inputSuccess : baseStyles.inputDefault,
-      props.disabled ? baseStyles.inputDisabled : null,
+      disabled ? baseStyles.inputDisabled : null,
       leftIcon && { paddingLeft: 44 },
       rightIcon && { paddingRight: 44 },
       style,
@@ -99,29 +100,30 @@ export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputP
     return (
       <View style={{ width: '100%' }}>
         {label && (
-          <Text style={{ fontSize: theme.typography.fontSizes.sm, fontWeight: '500', color: theme.colors.textSecondary, marginBottom: theme.spacing[1.5] }}>{label}</Text>
+          <Text style={{ fontSize: 14, fontWeight: '500', color: theme.colors.textSecondary ?? '#000000', marginBottom: 6 }}>{label}</Text>
         )}
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {leftIcon && (
-            <View style={{ position: 'absolute', left: theme.spacing[3], zIndex: 10, color: theme.colors.textTertiary }}>
+            <View style={{ position: 'absolute', left: 12, zIndex: 10 }}>
               {leftIcon}
             </View>
           )}
           <TextInput
             ref={ref}
             style={inputStyle}
+            editable={!disabled}
             {...props}
             accessibilityLabel={label}
             accessibilityHint={helperText}
           />
           {rightIcon && (
-            <View style={{ position: 'absolute', right: theme.spacing[3], zIndex: 10, color: theme.colors.textTertiary }}>
+            <View style={{ position: 'absolute', right: 12, zIndex: 10 }}>
               {rightIcon}
             </View>
           )}
         </View>
         {hasHelper && (
-          <Text style={{ fontSize: theme.typography.fontSizes.xs, marginTop: theme.spacing[1.5], color: hasError ? theme.colors.error : theme.colors.textTertiary }}>
+          <Text style={{ fontSize: 12, marginTop: 6, color: hasError ? theme.colors.error ?? '#ef4444' : theme.colors.textTertiary ?? '#a1a1aa' }}>
             {error || helperText}
           </Text>
         )}

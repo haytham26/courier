@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, View, Text, StyleSheet, type StyleProp, type ViewStyle, type TextStyle } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { useTheme } from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 
 const avatarVariants = cva(
   'rounded-full overflow-hidden flex-shrink-0',
@@ -56,17 +56,17 @@ function stringToColor(str: string): string {
 
 export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProps>(
   ({ className, size, shape, src, alt, name, fallbackColor, style, ...props }, ref) => {
-    const { theme } = useTheme();
+    const { theme } = useUnistyles();
     const fallbackBg = fallbackColor || (name ? stringToColor(name) : theme.colors.border);
     const initials = name ? getInitials(name) : '?';
 
     const sizeStyles = StyleSheet.create({
-      xs: { width: 24, height: 24, fontSize: theme.typography.fontSizes.xs },
-      sm: { width: 32, height: 32, fontSize: theme.typography.fontSizes.sm },
-      md: { width: 40, height: 40, fontSize: theme.typography.fontSizes.base },
-      lg: { width: 48, height: 48, fontSize: theme.typography.fontSizes.lg },
-      xl: { width: 64, height: 64, fontSize: theme.typography.fontSizes.xl },
-      '2xl': { width: 96, height: 96, fontSize: theme.typography.fontSizes['2xl'] },
+      xs: { width: 24, height: 24, fontSize: 12 },
+      sm: { width: 32, height: 32, fontSize: 14 },
+      md: { width: 40, height: 40, fontSize: 16 },
+      lg: { width: 48, height: 48, fontSize: 18 },
+      xl: { width: 64, height: 64, fontSize: 20 },
+      '2xl': { width: 96, height: 96, fontSize: 24 },
     });
 
     const shapeStyles = StyleSheet.create({
@@ -91,7 +91,7 @@ export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProp
           <Image
             source={{ uri: src }}
             alt={alt || name || 'Avatar'}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             resizeMode="cover"
           />
         </View>
@@ -107,7 +107,7 @@ export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProp
       >
         <Text
           style={[
-            StyleSheet.absoluteFillObject,
+            StyleSheet.absoluteFill,
             {
               textAlign: 'center',
               textAlignVertical: 'center',

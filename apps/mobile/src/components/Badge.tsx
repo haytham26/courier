@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { useTheme } from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 
 const badgeVariants = cva(
   'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-colors',
@@ -48,7 +48,7 @@ interface BadgeProps
 
 export const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>(
   ({ className, variant, size, dot, dotColor, children, style, ...props }, ref) => {
-    const { theme } = useTheme();
+    const { theme } = useUnistyles();
 
     const baseStyles = StyleSheet.create({
       default: {
@@ -104,9 +104,9 @@ export const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>
     const variantStyle = baseStyles[variant as keyof typeof baseStyles] || baseStyles.default;
 
     const sizeStyles = StyleSheet.create({
-      sm: { paddingHorizontal: theme.spacing[1.5], paddingVertical: 0, fontSize: 10 },
-      md: { paddingHorizontal: theme.spacing[2], paddingVertical: theme.spacing[0.5], fontSize: 12 },
-      lg: { paddingHorizontal: theme.spacing[2.5], paddingVertical: theme.spacing[1], fontSize: 14 },
+      sm: { paddingHorizontal: 6, paddingVertical: 0, fontSize: 10 },
+      md: { paddingHorizontal: 8, paddingVertical: 2, fontSize: 12 },
+      lg: { paddingHorizontal: 10, paddingVertical: 4, fontSize: 14 },
     });
 
     return (
@@ -117,7 +117,7 @@ export const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>
             borderRadius: 9999,
             flexDirection: dot ? 'row' : 'column',
             alignItems: 'center',
-            gap: dot ? theme.spacing[1.5] : 0,
+            gap: dot ? 6 : 0,
           },
           variantStyle,
           sizeStyles[size as keyof typeof sizeStyles],
@@ -131,7 +131,7 @@ export const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>
               width: 6,
               height: 6,
               borderRadius: 3,
-              backgroundColor: dotColor || (variantStyle as any).color,
+              backgroundColor: dotColor || variantStyle.color,
               flexShrink: 0,
             }}
           />

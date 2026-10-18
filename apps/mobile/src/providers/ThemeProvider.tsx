@@ -1,10 +1,7 @@
 import React, { createContext, useContext, useCallback } from 'react';
 import { useUnistyles } from 'react-native-unistyles';
-import { type ThemeName, generateCSSVariables } from '@courier/design-tokens/themes';
+import { type ThemeName, generateCSSVariables, type Theme } from '@courier/design-tokens/themes';
 import { Platform } from 'react-native';
-
-// Get theme type from Unistyles
-type Theme = ReturnType<typeof useUnistyles>['theme'];
 
 interface ThemeContextType {
   theme: Theme;
@@ -19,8 +16,14 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 // Order for toggle
 const themeOrder: ThemeName[] = ['day', 'night', 'highContrast'];
 
+// Extended runtime type with setTheme method (actual runtime may have this)
+interface ExtendedUnistylesRuntime {
+  setTheme(themeName: string): void;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { theme, name: themeName, setTheme: setUnistylesTheme } = useUnistyles();
+  const { theme, rt } = useUnistyles();
+  const [themeName, setThemeName] = React.useState<ThemeName>('day');
   const [cssVariables, setCssVariables] = React.useState('');
 
   // Generate CSS variables when theme changes
@@ -33,18 +36,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [theme]);
 
-  const setTheme = useCallback((name: ThemeName) => {
-    setUnistylesTheme(name);
-  }, [setUnistylesTheme]);
+  const handleSetTheme = useCallback((name: ThemeName) => {
+    (rt as unknown as ExtendedUnistylesRuntime).setTheme(name);
+    setThemeName(name);
+  }, [rt]);
 
   const toggleTheme = useCallback(() => {
     const currentIndex = themeOrder.indexOf(themeName);
     const nextIndex = (currentIndex + 1) % themeOrder.length;
-    setUnistylesTheme(themeOrder[nextIndex]);
-  }, [themeName, setUnistylesTheme]);
+    const nextTheme = themeOrder[nextIndex];
+    (rt as unknown as ExtendedUnistylesRuntime).setTheme(nextTheme);
+    setThemeName(nextTheme);
+  }, [themeName, rt]);
 
   return (
-    <ThemeContext.Provider value={{ theme, themeName, setTheme, toggleTheme, cssVariables }}>
+    <ThemeContext.Provider value={{ theme, themeName, setTheme: handleSetTheme, toggleTheme, cssVariables }}>
       {children}
     </ThemeContext.Provider>
   );

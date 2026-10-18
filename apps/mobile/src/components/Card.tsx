@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { useTheme } from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 
 const cardVariants = cva(
   'rounded-lg border transition-shadow',
@@ -36,7 +36,7 @@ interface CardProps
 
 export const Card = React.forwardRef<React.ElementRef<typeof View>, CardProps>(
   ({ className, variant, padding, children, style, ...props }, ref) => {
-    const { theme } = useTheme();
+    const { theme } = useUnistyles();
 
     const baseStyles = StyleSheet.create({
       default: {

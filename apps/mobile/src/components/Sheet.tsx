@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, Easing, Keyboard, type StyleProp, type ViewStyle } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 
 const sheetVariants = cva(
   'rounded-t-lg',
@@ -53,7 +53,7 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
     },
     ref
   ) => {
-    const { theme } = useTheme();
+    const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
     const [animation] = React.useState(() => new Animated.Value(0));
     const [isAnimating, setIsAnimating] = React.useState(false);
@@ -98,13 +98,15 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
 
     const variantClassName = sheetVariants({ size, className });
 
-    const sizeStyles = StyleSheet.create({
-      small: { maxHeight: '30%' },
-      medium: { maxHeight: '50%' },
-      large: { maxHeight: '75%' },
-      full: { maxHeight: '90%' },
-      auto: {},
-    });
+    const sizeStyles = {
+      small: '30%',
+      medium: '50%',
+      large: '75%',
+      full: '90%',
+      auto: 'auto',
+    } as const;
+
+    const maxHeight = sizeStyles[size as keyof typeof sizeStyles] || '50%';
 
     return (
       <Animated.View
@@ -139,36 +141,36 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
               shadowOpacity: 0.15,
               shadowRadius: 12,
               elevation: 8,
-              maxHeight: sizeStyles[size as keyof typeof sizeStyles]?.maxHeight || '50%',
+              maxHeight,
             },
             style,
           ] as StyleProp<ViewStyle>}
           {...props}
         >
           {handleStyle !== 'hidden' && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingBottom: theme.spacing[3] }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingBottom: 12 }}>
               <View
                 style={{
                   width: 40,
                   height: 5,
                   borderRadius: 2.5,
-                  backgroundColor: theme.colors.border,
+                  backgroundColor: theme.colors.border ?? '#e4e4e7',
                 }}
                 importantForAccessibility="no-hide-descendants"
               />
             </View>
           )}
           {(title || subtitle) && (
-            <View style={{ paddingHorizontal: theme.spacing[4], paddingBottom: theme.spacing[3], borderBottomWidth: 1, borderBottomColor: theme.colors.border }}>
+            <View style={{ paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border ?? '#e4e4e7' }}>
               {title && (
-                <Text style={{ fontSize: theme.typography.fontSizes.lg, fontWeight: '600', color: theme.colors.textPrimary }}>{title}</Text>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: theme.colors.textPrimary ?? '#18181b' }}>{title}</Text>
               )}
               {subtitle && (
-                <Text style={{ fontSize: theme.typography.fontSizes.sm, color: theme.colors.textSecondary, marginTop: theme.spacing[0.5] }}>{subtitle}</Text>
+                <Text style={{ fontSize: 14, color: theme.colors.textSecondary ?? '#52525b', marginTop: 2 }}>{subtitle}</Text>
               )}
             </View>
           )}
-          <View style={{ flex: 1, overflow: 'hidden', paddingHorizontal: theme.spacing[4], paddingTop: theme.spacing[4] }}>
+          <View style={{ flex: 1, overflow: 'hidden', paddingHorizontal: 16, paddingTop: 16 }}>
             {children}
           </View>
         </Animated.View>

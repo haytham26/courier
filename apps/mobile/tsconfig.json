@@ -6,9 +6,9 @@
       "@/*": ["./src/*"],
       "*": ["./*"]
     },
-    "types": ["jest"]
+    "types": ["jest", "@courier/design-tokens/themes"]
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "__mocks__/**/*.ts"],
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "__mocks__/**/*.ts", "src/providers/unistyles.d.ts"],
   "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/__tests__/**"],
   "extends": "expo/tsconfig.base"
 }

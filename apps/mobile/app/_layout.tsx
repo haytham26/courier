@@ -1,7 +1,6 @@
 import React from 'react';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import '@/unistyles.config'; // Initialize Unistyles themes
 import { Providers } from '@/providers/Providers';
 
 export default function RootLayout() {
