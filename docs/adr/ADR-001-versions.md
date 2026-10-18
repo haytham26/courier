@@ -80,8 +80,8 @@ This ADR records all locked versions for dependencies, tools, and SDKs used in t
 | expo-task-manager | 58.0.17 | MIT | npm | ✅ |
 | expo-background-fetch | 58.0.17 | MIT | npm | ✅ |
 | expo-haptics | 58.0.17 | MIT | npm | ✅ |
-| expo-sqlite | 58.0.17 | MIT | npm | ✅ |
-| op-sqlite | 1.0.0 | MIT | npm | ✅ |
+| expo-sqlite | 58.0.13 | MIT | npm | ✅ |
+| **@op-engineering/op-sqlite** | **18.2.5** | FSL-1.1 | npm | ✅ |
 | watmelondb | 0.28.0 | MIT | npm | ✅ |
 | @deepgram/sdk | 3.0.0 | MIT | npm | ✅ |
 | @pipecat-ai/client-js | 1.14.0 | BSD-2 | npm | ✅ |
@@ -130,7 +130,7 @@ This ADR records all locked versions for dependencies, tools, and SDKs used in t
 | VisionCamera | 5.2.3 | Nitro Modules | `npx expo install` | 🟡 Medium |
 | Reanimated | 4.7.1 | JSI / Fabric | `npx expo install` | 🟡 Medium |
 | **@maplibre/maplibre-react-native** | **11.3.7** | Nitro Modules | `npx expo install` | 🟡 Medium |
-| op-sqlite | 1.0.0 | JSI | `npx expo install` | 🟢 Low |
+| **@op-engineering/op-sqlite** | **18.2.5** | JSI | `npx expo install` | 🟢 Low |
 | expo-audio | 58.0.9 | Expo Module | `npx expo install` | 🟢 Low |
 
 ---
@@ -163,26 +163,30 @@ This ADR records all locked versions for dependencies, tools, and SDKs used in t
 
 ## Week 1 Compatibility Test Results (B.7)
 
-**Status:** IN PROGRESS - Started 2026-10-19
+**Status:** IN PROGRESS - Prebuild PASS, Runtime tests require Android emulator
 
 **Test Matrix:** Expo 58 + RN 0.88 + all 6 native modules on Android emulator
 
-| Module | Install | Build | Runtime | Notes |
-|--------|---------|-------|---------|-------|
-| react-native-sherpa-onnx | ⏳ | ⏳ | ⏳ | STT/TTS/VAD/KWS |
-| VisionCamera | ⏳ | ⏳ | ⏳ | OCR label scanning |
-| Reanimated 4.7.1 | ✅ | ✅ | ⏳ | Animations |
-| @maplibre/maplibre-react-native | ⏳ | ⏳ | ⏳ | Offline maps |
-| op-sqlite | ⏳ | ⏳ | ⏳ | Offline sync |
-| expo-audio | ✅ | ✅ | ⏳ | Voice playback |
+| Module | Install | Build (Prebuild) | Runtime (Emulator) | Notes |
+|--------|---------|------------------|-------------------|-------|
+| react-native-sherpa-onnx | ✅ PASS | ✅ PASS | ⏳ PENDING | STT/TTS/VAD/KWS - needs emulator test |
+| react-native-vision-camera | ✅ PASS | ✅ PASS | ⏳ PENDING | OCR label scanning - needs emulator test |
+| react-native-reanimated | ✅ PASS | ✅ PASS | ⏳ PENDING | Animations - needs emulator test |
+| @maplibre/maplibre-react-native | ✅ PASS | ✅ PASS | ⏳ PENDING | Offline maps - needs emulator test |
+| @op-engineering/op-sqlite | ✅ PASS | ✅ PASS | ⏳ PENDING | Offline sync - needs emulator test |
+| expo-audio | ✅ PASS | ✅ PASS | ⏳ PENDING | Voice playback - needs emulator test |
+
+**Note:** Node.js direct import test failed as expected - these are React Native modules requiring emulator/device runtime. Prebuild succeeded for all modules, confirming native code generation works. Next step: run on Android emulator.
 
 ---
 
 ## Next Steps
 
-1. **Week 1 Compatibility Test** - Install all 6 critical native modules together and stress test on Android emulator
-2. Update this ADR with actual working versions after spike
-3. Lock all versions in `pnpm-lock.yaml` and `uv.lock` with hashes
+1. **Start Android emulator** and run `npx expo run:android` to test runtime on device
+2. Create a compatibility test screen in the app that exercises all 6 modules
+3. Stress test: memory usage, JSI thread contention, background/foreground cycles
+4. Update this ADR with emulator test results
+5. Lock all versions in `pnpm-lock.yaml` and `uv.lock` with hashes
 
 ---
 
@@ -195,3 +199,4 @@ This ADR records all locked versions for dependencies, tools, and SDKs used in t
 - munim-maps → @maplibre/maplibre-react-native v11 (R10: use confirmed version 11.3.7)
 - .gitignore updated with .turbo/, .expo/, dist/, node_modules/
 - .turbo/cache removed from git history
+- op-sqlite package corrected to @op-engineering/op-sqlite v18.2.5
