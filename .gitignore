@@ -11,6 +11,20 @@ secrets/
 __pycache__/
 .pytest_cache/
 node_modules/
-
+# turbo
+.turbo/
+# expo
+.expo/
+# build outputs
+dist/
+*.tsbuildinfo
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+# OS
+.DS_Store
+Thumbs.db
 # Local LINZ datasets (large, not committed)
 data/linz/
