@@ -11,3 +11,6 @@ secrets/
 __pycache__/
 .pytest_cache/
 node_modules/
+
+# Local LINZ datasets (large, not committed)
+data/linz/
