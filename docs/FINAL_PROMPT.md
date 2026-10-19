@@ -225,6 +225,26 @@ courier/
 4. **اختبار الاستلام الحقيقي بالمفاتيح:** أعد تشغيل كل الاختبارات **بالخدمات الحقيقية** (LINZ الحقيقي وبناء خريطة/عناوين كانتربري كاملة، Oracle، Cloudflare R2، Groq، Stripe test، البريد، المراقبة) + اختبار الثبات 50× للمسارات الحرجة + `ACCEPTANCE_TEST.md` على المحاكي. أصلح كل ما يفشل حتى ينجح الكل.
 5. بعدها فقط: ابنِ الـ APK النهائي وانشره على Releases وسلّم حسب 0-A.7 و 0-C.3.
 
+## 0-F. قاعدة الدليل والإصلاحات الإلزامية (D21) — تُنفَّذ قبل أي مرحلة جديدة
+
+### 0-F.1 لا PASS بلا دليل
+- ممنوع كتابة PASS أو ✅ أو "يعمل" لأي اختبار أو مرحلة بدون دليل مرفوع في `docs/evidence/<المرحلة>/`.
+- الدليل = سجل أمر كامل (build.log أو test.log) + لقطة شاشة أو مخرَج فعلي. اختبار فشل يبقى FAIL، أو NOT VERIFIED إذا لم يُشغَّل.
+- اختبار B.7 الحالي (commit 3838765) مرفوض: تُغيَّر حالته إلى NOT VERIFIED حتى يُثبَت بـ `npx expo run:android` وسجله، مع شاشة اختبار تستدعي فعلًا كل وحدة أصلية (sherpa، الكاميرا، الخريطة، op-sqlite، الصوت، Reanimated). إذا تعطّل المحاكي أكثر من 30 دقيقة → APK عبر GitHub Actions.
+
+### 0-F.2 الإصدارات مقفلة
+- Expo SDK 57 هو المعتمد. ممنوع تغيير أي إصدار بدون ADR يذكر المصدر الرسمي وسبب التغيير.
+
+### 0-F.3 إصلاحات معلّقة (بالترتيب، commit + push بعد كل بند)
+1. Better Auth: احذف `apps/api/app/auth/better_auth.py`. أنشئ `services/auth` (Node + Better Auth حقيقي، plugins: organization, expo, jwt). FastAPI يتحقق عبر JWKS فقط. لا يوجد مفتاح افتراضي؛ إذا كان المتغير مفقودًا يفشل التشغيل.
+2. `apps/mobile/src/constants/theme.ts`: احذف كل `var(--...)`. استخدم Unistyles 3 مع themes (light/dark) من `packages/design-tokens` بقيم hex.
+3. محرك العناوين (D8): كل نتيجة = `{original, corrected, reason, confidence, needs_question}`. يعالج: رقم غير موجود في الشارع (1400→140)، الإملاء (Rickerton→Riccarton)، التصحيح الذاتي ("7… no, 17")، وشارع موجود في أكثر من ضاحية → needs_question مع الخيارات. اختبار 50 عنوانًا حقيقيًا من Christchurch بدقة ≥ 95%.
+4. أضف `*.egg-info/` إلى .gitignore ثم `git rm -r --cached apps/api/courier_api.egg-info`. انقل `cleanup_avd.py` إلى `scripts/`. احذف `test-imports.js` المكرر.
+5. التصميم: الشاشات تطابق الـ mockup المعتمد (قيادة ليلي، تقرير الإملاء، قائمة اليوم). ممنوع أيقونات emoji؛ استخدم مكتبة أيقونات SVG.
+
+### 0-F.4 أدوات مرفوضة (لا تُضاف)
+- laya-coreml: يعمل على Apple Silicon/Core ML فقط، ولا يناسب Android أو خادم Linux.
+
 ## 0-E. بدء الجلسة واستئنافها
 1. إن لم يوجد `docs/PROGRESS.md`: أنشئه من القالب أدناه، ومعه `docs/FOUNDER_TODO.md` و `docs/BUGS.md`، وابدأ بالقسم 1.
 2. إن وُجد: اقرأه، `git pull`، انتقل إلى الفرع المفتوح إن وُجد، وتابع من أول خطوة ليست `done`.
