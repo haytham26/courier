@@ -18,8 +18,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "baseUrl": ".",
     "paths": {
+      "*": ["./*"],
       "@courier/design-tokens/*": ["./src/*"]
     }
   },
