@@ -1,46 +1,23 @@
 import React from 'react';
 import { TextInput, View, Text, StyleSheet } from 'react-native';
-import { cva, type VariantProps } from 'class-variance-authority';
 import { useTheme } from '../providers/ThemeProvider';
 
-const inputVariants = cva(
-  'flex-1 h-11 px-4 text-base rounded-default border border-border-default bg-surface-primary text-text-primary placeholder-text-tertiary transition-colors disabled:bg-neutral-100 dark:disabled:bg-neutral-800 disabled:pointer-events-none',
-  {
-    variants: {
-      state: {
-        default: '',
-        error: 'border-error focus:border-error focus:ring-2 focus:ring-error/20',
-        success: 'border-success focus:border-success focus:ring-2 focus:ring-success/20',
-      },
-      size: {
-        sm: 'h-9 px-3 text-sm',
-        md: 'h-11 px-4 text-base',
-        lg: 'h-13 px-5 text-lg',
-      },
-    },
-    defaultVariants: {
-      state: 'default',
-      size: 'md',
-    },
-  }
-);
-
 interface InputProps
-  extends React.ComponentPropsWithoutRef<typeof TextInput>,
-    VariantProps<typeof inputVariants> {
+  extends React.ComponentPropsWithoutRef<typeof TextInput> {
   label?: string;
   error?: string;
   helperText?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  state?: 'default' | 'error' | 'success';
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputProps>(
   (
     {
-      className,
-      state,
-      size,
+      state = 'default',
+      size = 'md',
       label,
       error,
       helperText,
@@ -186,5 +163,3 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 });
-
-export { inputVariants };

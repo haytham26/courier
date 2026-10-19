@@ -1,43 +1,19 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, Platform } from 'react-native';
-import { cva, type VariantProps } from 'class-variance-authority';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { useTheme } from '../providers/ThemeProvider';
 
-const avatarVariants = cva(
-  'rounded-full overflow-hidden bg-neutral-200 dark:bg-neutral-700 flex-center',
-  {
-    variants: {
-      size: {
-        xs: 'w-6 h-6 text-xs',
-        sm: 'w-8 h-8 text-sm',
-        md: 'w-10 h-10 text-base',
-        lg: 'w-12 h-12 text-lg',
-        xl: 'w-16 h-16 text-xl',
-        '2xl': 'w-24 h-24 text-2xl',
-      },
-      shape: {
-        circle: 'rounded-full',
-        square: 'rounded-lg',
-      },
-    },
-    defaultVariants: {
-      size: 'md',
-      shape: 'circle',
-    },
-  }
-);
-
 interface AvatarProps
-  extends React.ComponentPropsWithoutRef<typeof View>,
-    VariantProps<typeof avatarVariants> {
+  extends React.ComponentPropsWithoutRef<typeof View> {
   src?: string;
   alt?: string;
   fallback?: string;
   name?: string;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  shape?: 'circle' | 'square';
 }
 
 export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProps>(
-  ({ className, size, shape, src, alt, fallback, name, style, ...props }, ref) => {
+  ({ size = 'md', shape = 'circle', src, alt, fallback, name, style, ...props }, ref) => {
     const { theme } = useTheme();
     const [imageError, setImageError] = React.useState(false);
 
@@ -50,8 +26,7 @@ export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProp
         xl: { width: 64, height: 64, fontSize: 20 },
         '2xl': { width: 96, height: 96, fontSize: 28 },
       };
-      const sizeKey = size ?? 'md';
-      return sizes[sizeKey] || sizes.md;
+      return sizes[size] || sizes.md;
     };
 
     const sizeStyles = getSizeStyles();
@@ -163,5 +138,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
-export { avatarVariants };

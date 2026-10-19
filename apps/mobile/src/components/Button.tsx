@@ -1,61 +1,32 @@
 import React from 'react';
 import { Pressable, Text, View, StyleSheet, ActivityIndicator, ViewStyle, StyleProp } from 'react-native';
-import { cva, type VariantProps } from 'class-variance-authority';
 import { useTheme } from '../providers/ThemeProvider';
 
-const buttonVariants = cva(
-  'flex-row items-center justify-center rounded-default transition-colors disabled:opacity-50 disabled:pointer-events-none touch-target-comfortable',
-  {
-    variants: {
-      variant: {
-        primary: 'bg-brand-primary-500 text-white hover:bg-brand-primary-600 active:bg-brand-primary-700',
-        secondary: 'bg-brand-secondary-500 text-white hover:bg-brand-secondary-600 active:bg-brand-secondary-700',
-        outline: 'border border-border-default bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800',
-        ghost: 'bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800',
-        destructive: 'bg-semantic-error-DEFAULT text-white hover:bg-semantic-error-dark active:bg-semantic-error-dark',
-        success: 'bg-semantic-success-DEFAULT text-white hover:bg-semantic-success-dark',
-        warning: 'bg-semantic-warning-DEFAULT text-white hover:bg-semantic-warning-dark',
-      },
-      size: {
-        sm: 'h-9 px-3 text-xs',
-        md: 'h-11 px-4 text-sm',
-        lg: 'h-13 px-6 text-base',
-      },
-      fullWidth: {
-        true: 'w-full',
-        false: '',
-      },
-    },
-    defaultVariants: {
-      variant: 'primary',
-      size: 'md',
-      fullWidth: false,
-    },
-  }
-);
-
 interface ButtonProps
-  extends React.ComponentPropsWithoutRef<typeof Pressable>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ComponentPropsWithoutRef<typeof Pressable> {
   loading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   children: React.ReactNode;
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'success' | 'warning';
+  size?: 'sm' | 'md' | 'lg';
+  fullWidth?: boolean;
 }
 
 export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, ButtonProps>(
   (
     {
-      className,
-      variant,
-      size,
-      fullWidth,
+      variant = 'primary',
+      size = 'md',
+      fullWidth = false,
       loading = false,
       disabled,
       leftIcon,
       rightIcon,
       children,
       style,
+      onPressIn,
+      onPressOut,
       ...props
     },
     ref
@@ -151,8 +122,8 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
         {...props}
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || loading }}
-        onPressIn={() => {}}
-        onPressOut={() => {}}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
       >
         {loading ? (
           <ActivityIndicator
@@ -197,5 +168,3 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-
-export { buttonVariants };

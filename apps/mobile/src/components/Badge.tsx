@@ -1,50 +1,18 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { cva, type VariantProps } from 'class-variance-authority';
 import { useTheme } from '../providers/ThemeProvider';
 
-const badgeVariants = cva(
-  'flex-row items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
-  {
-    variants: {
-      variant: {
-        default: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200',
-        primary: 'bg-brand-primary-100 text-brand-primary-700 dark:bg-brand-primary-900/30 dark:text-brand-primary-300',
-        secondary: 'bg-brand-secondary-100 text-brand-secondary-700 dark:bg-brand-secondary-900/30 dark:text-brand-secondary-300',
-        success: 'bg-semantic-success-bg text-semantic-success-DEFAULT dark:bg-semantic-success-DEFAULT/20 dark:text-semantic-success-light',
-        warning: 'bg-semantic-warning-bg text-semantic-warning-DEFAULT dark:bg-semantic-warning-DEFAULT/20 dark:text-semantic-warning-light',
-        error: 'bg-semantic-error-bg text-semantic-error-DEFAULT dark:bg-semantic-error-DEFAULT/20 dark:text-semantic-error-light',
-        info: 'bg-semantic-info-bg text-semantic-info-DEFAULT dark:bg-semantic-info-DEFAULT/20 dark:text-semantic-info-light',
-        outline: 'border border-border-default bg-transparent',
-        active: 'bg-brand-secondary-100 text-brand-secondary-700 dark:bg-brand-secondary-900/30 dark:text-brand-secondary-300',
-      },
-      size: {
-        sm: 'px-2 py-0.5 text-xs',
-        md: 'px-2.5 py-0.5 text-xs',
-        lg: 'px-3 py-1 text-sm',
-      },
-      dot: {
-        true: 'flex-row items-center',
-        false: '',
-      },
-    },
-    defaultVariants: {
-      variant: 'default',
-      size: 'md',
-      dot: false,
-    },
-  }
-);
-
 interface BadgeProps
-  extends React.ComponentPropsWithoutRef<typeof View>,
-    VariantProps<typeof badgeVariants> {
+  extends React.ComponentPropsWithoutRef<typeof View> {
   children: React.ReactNode;
+  variant?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'active' | 'outline';
+  size?: 'sm' | 'md' | 'lg';
+  dot?: boolean;
   dotColor?: string;
 }
 
 export const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>(
-  ({ className, variant, size, dot, dotColor, children, style, ...props }, ref) => {
+  ({ variant = 'default', size = 'md', dot = false, dotColor, children, style, ...props }, ref) => {
     const { theme } = useTheme();
 
     const getVariantStyles = () => {
@@ -160,5 +128,3 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
 });
-
-export { badgeVariants };

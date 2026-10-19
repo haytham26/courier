@@ -1,30 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, Easing, Keyboard } from 'react-native';
-import { cva, type VariantProps } from 'class-variance-authority';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../providers/ThemeProvider';
 
-const sheetVariants = cva(
-  'rounded-t-lg bg-surface-primary shadow-elevation5',
-  {
-    variants: {
-      size: {
-        small: 'h-[30%]',
-        medium: 'h-[50%]',
-        large: 'h-[75%]',
-        full: 'h-[90%]',
-        auto: '',
-      },
-    },
-    defaultVariants: {
-      size: 'medium',
-    },
-  }
-);
-
 interface SheetProps
-  extends React.ComponentPropsWithoutRef<typeof View>,
-    VariantProps<typeof sheetVariants> {
+  extends React.ComponentPropsWithoutRef<typeof View> {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
@@ -33,13 +13,13 @@ interface SheetProps
   handleStyle?: 'default' | 'hidden';
   backdropDismissible?: boolean;
   onBackdropPress?: () => void;
+  size?: 'small' | 'medium' | 'large' | 'full' | 'auto';
 }
 
 export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, SheetProps>(
   (
     {
-      className,
-      size,
+      size = 'medium',
       isOpen,
       onClose,
       title,
@@ -96,6 +76,25 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
       return null;
     }
 
+    const getSizeStyles = () => {
+      switch (size) {
+        case 'small':
+          return { maxHeight: '30%' };
+        case 'medium':
+          return { maxHeight: '50%' };
+        case 'large':
+          return { maxHeight: '75%' };
+        case 'full':
+          return { maxHeight: '90%' };
+        case 'auto':
+          return { maxHeight: '90%' };
+        default:
+          return { maxHeight: '50%' };
+      }
+    };
+
+    const sizeStyles = getSizeStyles();
+
     const sheetStyle = {
       position: 'absolute' as const,
       bottom: 0,
@@ -111,6 +110,7 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
       shadowOpacity: 0.2,
       shadowRadius: 16,
       elevation: 8,
+      ...sizeStyles,
     };
 
     return (
@@ -213,5 +213,3 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
 });
-
-export { sheetVariants };

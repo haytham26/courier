@@ -2,10 +2,10 @@ $ vitest run
 
 [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/Users/DCL/projects/courier/packages/design-tokens[39m
 
- [32m✓[39m src/tokens.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 65[2mms[22m[39m
+ [32m✓[39m src/tokens.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 28[2mms[22m[39m
 
 [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
 [2m      Tests [22m [1m[32m19 passed[39m[22m[90m (19)[39m
-[2m   Start at [22m 16:24:19
-[2m   Duration [22m 5.73s[2m (transform 727ms, setup 0ms, collect 798ms, tests 65ms, environment 1ms, prepare 1.81s)[22m
+[2m   Start at [22m 16:32:41
+[2m   Duration [22m 6.24s[2m (transform 552ms, setup 0ms, collect 612ms, tests 28ms, environment 1ms, prepare 2.31s)[22m
 
