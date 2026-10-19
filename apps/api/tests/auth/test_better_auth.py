@@ -8,14 +8,34 @@ from datetime import datetime, timedelta
 import jwt
 import uuid
 
+# Test database setup
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.pool import StaticPool
+from app.auth.better_auth import Base, set_test_database, init_db
+
+# Create in-memory SQLite database for testing
+test_engine = create_async_engine(
+    "sqlite+aiosqlite:///:memory:",
+    echo=False,
+    poolclass=StaticPool,
+    connect_args={"check_same_thread": False},
+)
+test_session_maker = async_sessionmaker(test_engine, expire_on_commit=False)
+
+# Override the database for tests
+set_test_database(test_engine, test_session_maker)
+
+# Initialize database tables
+import asyncio
+asyncio.run(init_db())
+
 from app.auth.better_auth import (
     BetterAuthManager,
     User,
     Session,
     UserCreate,
     UserLogin,
-    hash_password,
-    verify_password,
+    auth_manager,
 )
 
 
@@ -26,15 +46,13 @@ def auth_manager():
 
 
 @pytest.fixture
-def sample_user():
-    """Create a sample user for testing."""
-    return User(
-        id=str(uuid.uuid4()),
-        email="test@example.com",
-        hashed_password="$2b$12$hashedpassword",
-        name="Test User",
-        email_verified=False,
-        created_at=datetime.utcnow(),
+def sample_user_data():
+    """Create sample user data for testing with unique email."""
+    unique_id = str(uuid.uuid4())[:8]
+    return UserCreate(
+        email=f"test_{unique_id}@example.com",
+        password="password123",
+        name="Test User"
     )
 
 
@@ -118,207 +136,142 @@ class TestUserOperations:
     """Test user database operations."""
 
     @pytest.mark.asyncio
-    async def test_create_user(self, auth_manager):
-        with patch('app.auth.better_auth.async_session_maker') as mock_session_maker:
-            mock_session = AsyncMock()
-            mock_session_maker.return_value.__aenter__.return_value = mock_session
-            
-            user_data = UserCreate(
-                email="new@example.com",
-                password="password123",
-                name="New User"
-            )
-            
-            # Mock the session operations
-            mock_session.commit = AsyncMock()
-            mock_session.refresh = AsyncMock()
-            
-            user = await auth_manager.create_user(user_data)
-            
-            assert user.email == "new@example.com"
-            assert user.name == "New User"
-            assert user.hashed_password is not None
-            assert user.hashed_password != "password123"
-            mock_session.add.assert_called_once()
-            mock_session.commit.assert_called_once()
+    async def test_create_user(self, auth_manager, sample_user_data):
+        user = await auth_manager.create_user(sample_user_data)
+        
+        assert user.email == sample_user_data.email
+        assert user.name == sample_user_data.name
+        assert user.hashed_password is not None
+        assert user.hashed_password != sample_user_data.password
 
     @pytest.mark.asyncio
-    async def test_get_user_by_email(self, auth_manager, sample_user):
-        with patch('app.auth.better_auth.async_session_maker') as mock_session_maker:
-            mock_session = AsyncMock()
-            mock_session_maker.return_value.__aenter__.return_value = mock_session
-            
-            mock_result = MagicMock()
-            mock_result.scalar_one_or_none.return_value = sample_user
-            mock_session.execute = AsyncMock(return_value=mock_result)
-            
-            user = await auth_manager.get_user_by_email("test@example.com")
-            
-            assert user == sample_user
-            mock_session.execute.assert_called_once()
+    async def test_get_user_by_email(self, auth_manager, sample_user_data):
+        # First create the user
+        await auth_manager.create_user(sample_user_data)
+        
+        user = await auth_manager.get_user_by_email(sample_user_data.email)
+        
+        assert user is not None
+        assert user.email == sample_user_data.email
 
     @pytest.mark.asyncio
-    async def test_authenticate_user_success(self, auth_manager, sample_user):
-        with patch('app.auth.better_auth.async_session_maker') as mock_session_maker:
-            mock_session = AsyncMock()
-            mock_session_maker.return_value.__aenter__.return_value = mock_session
-            
-            mock_result = MagicMock()
-            mock_result.scalar_one_or_none.return_value = sample_user
-            mock_session.execute = AsyncMock(return_value=mock_result)
-            
-            with patch.object(auth_manager, 'verify_password', return_value=True):
-                result = await auth_manager.authenticate_user("test@example.com", "password123")
-            
-            assert result.user == sample_user
-            assert result.error is None
+    async def test_authenticate_user_success(self, auth_manager, sample_user_data):
+        # First create the user
+        await auth_manager.create_user(sample_user_data)
+        
+        result = await auth_manager.authenticate_user(sample_user_data.email, "password123")
+        
+        assert result.user is not None
+        assert result.error is None
 
     @pytest.mark.asyncio
-    async def test_authenticate_user_wrong_password(self, auth_manager, sample_user):
-        with patch('app.auth.better_auth.async_session_maker') as mock_session_maker:
-            mock_session = AsyncMock()
-            mock_session_maker.return_value.__aenter__.return_value = mock_session
-            
-            mock_result = MagicMock()
-            mock_result.scalar_one_or_none.return_value = sample_user
-            mock_session.execute = AsyncMock(return_value=mock_result)
-            
-            with patch.object(auth_manager, 'verify_password', return_value=False):
-                result = await auth_manager.authenticate_user("test@example.com", "wrong_password")
-            
-            assert result.user is None
-            assert result.error == "Invalid credentials"
+    async def test_authenticate_user_wrong_password(self, auth_manager, sample_user_data):
+        # First create the user
+        await auth_manager.create_user(sample_user_data)
+        
+        result = await auth_manager.authenticate_user(sample_user_data.email, "wrong_password")
+        
+        assert result.user is None
+        assert result.error == "Invalid credentials"
 
     @pytest.mark.asyncio
     async def test_authenticate_user_not_found(self, auth_manager):
-        with patch('app.auth.better_auth.async_session_maker') as mock_session_maker:
-            mock_session = AsyncMock()
-            mock_session_maker.return_value.__aenter__.return_value = mock_session
-            
-            mock_result = MagicMock()
-            mock_result.scalar_one_or_none.return_value = None
-            mock_session.execute = AsyncMock(return_value=mock_result)
-            
-            result = await auth_manager.authenticate_user("nonexistent@example.com", "password123")
-            
-            assert result.user is None
-            assert result.error == "Invalid credentials"
+        result = await auth_manager.authenticate_user("nonexistent@example.com", "password123")
+        
+        assert result.user is None
+        assert result.error == "Invalid credentials"
 
 
 class TestSessionOperations:
     """Test session management."""
 
     @pytest.mark.asyncio
-    async def test_create_session(self, auth_manager, sample_user):
-        with patch('app.auth.better_auth.async_session_maker') as mock_session_maker:
-            mock_session = AsyncMock()
-            mock_session_maker.return_value.__aenter__.return_value = mock_session
-            
-            mock_request = MagicMock()
-            mock_request.client.host = "127.0.0.1"
-            mock_request.headers.get.return_value = "test-agent"
-            
-            mock_session.commit = AsyncMock()
-            mock_session.refresh = AsyncMock()
-            
-            session = await auth_manager.create_session(sample_user, mock_request)
-            
-            assert session.user_id == sample_user.id
-            assert session.token is not None
-            assert session.expires_at > datetime.utcnow()
-            mock_session.add.assert_called_once()
+    async def test_create_session(self, auth_manager, sample_user_data):
+        # First create the user
+        created_user = await auth_manager.create_user(sample_user_data)
+        
+        mock_request = MagicMock()
+        mock_request.client.host = "127.0.0.1"
+        mock_request.headers.get.return_value = "test-agent"
+        
+        session = await auth_manager.create_session(created_user, mock_request)
+        
+        assert session.user_id == created_user.id
+        assert session.token is not None
+        assert session.expires_at > datetime.utcnow()
 
     @pytest.mark.asyncio
-    async def test_get_session(self, auth_manager):
-        with patch('app.auth.better_auth.async_session_maker') as mock_session_maker:
-            mock_session = AsyncMock()
-            mock_session_maker.return_value.__aenter__.return_value = mock_session
-            
-            mock_session_obj = Session(
-                id=str(uuid.uuid4()),
-                user_id=str(uuid.uuid4()),
-                token="test_token",
-                expires_at=datetime.utcnow() + timedelta(days=1),
-            )
-            
-            mock_result = MagicMock()
-            mock_result.scalar_one_or_none.return_value = mock_session_obj
-            mock_session.execute = AsyncMock(return_value=mock_result)
-            
-            session = await auth_manager.get_session("test_token")
-            
-            assert session == mock_session_obj
+    async def test_get_session(self, auth_manager, sample_user_data):
+        # First create the user and session
+        created_user = await auth_manager.create_user(sample_user_data)
+        
+        mock_request = MagicMock()
+        mock_request.client.host = "127.0.0.1"
+        mock_request.headers.get.return_value = "test-agent"
+        
+        session = await auth_manager.create_session(created_user, mock_request)
+        
+        retrieved_session = await auth_manager.get_session(session.token)
+        
+        assert retrieved_session is not None
+        assert retrieved_session.token == session.token
 
     @pytest.mark.asyncio
-    async def test_validate_session_valid(self, auth_manager, sample_user):
-        with patch('app.auth.better_auth.async_session_maker') as mock_session_maker:
-            mock_session = AsyncMock()
-            mock_session_maker.return_value.__aenter__.return_value = mock_session
-            
-            session_obj = Session(
-                id=str(uuid.uuid4()),
-                user_id=sample_user.id,
-                token="valid_token",
-                expires_at=datetime.utcnow() + timedelta(days=1),
-            )
-            
-            mock_result1 = MagicMock()
-            mock_result1.scalar_one_or_none.return_value = session_obj
-            
-            mock_result2 = MagicMock()
-            mock_result2.scalar_one_or_none.return_value = sample_user
-            
-            mock_session.execute = AsyncMock(side_effect=[mock_result1, mock_result2])
-            
-            user = await auth_manager.validate_session("valid_token")
-            
-            assert user == sample_user
+    async def test_validate_session_valid(self, auth_manager, sample_user_data):
+        # First create the user
+        created_user = await auth_manager.create_user(sample_user_data)
+        
+        mock_request = MagicMock()
+        mock_request.client.host = "127.0.0.1"
+        mock_request.headers.get.return_value = "test-agent"
+        
+        session = await auth_manager.create_session(created_user, mock_request)
+        
+        user = await auth_manager.validate_session(session.token)
+        
+        assert user is not None
+        assert user.id == created_user.id
 
     @pytest.mark.asyncio
     async def test_validate_session_expired(self, auth_manager):
-        with patch('app.auth.better_auth.async_session_maker') as mock_session_maker:
-            mock_session = AsyncMock()
-            mock_session_maker.return_value.__aenter__.return_value = mock_session
-            
-            session_obj = Session(
-                id=str(uuid.uuid4()),
-                user_id=str(uuid.uuid4()),
-                token="expired_token",
-                expires_at=datetime.utcnow() - timedelta(hours=1),  # Expired
-            )
-            
-            mock_result = MagicMock()
-            mock_result.scalar_one_or_none.return_value = session_obj
-            mock_session.execute = AsyncMock(return_value=mock_result)
-            
-            user = await auth_manager.validate_session("expired_token")
-            
-            assert user is None
+        # Create an expired session directly in the database
+        async with test_session_maker() as session:
+            import sqlalchemy as sa
+            from sqlalchemy import text
+            await session.execute(text("""
+                INSERT INTO sessions (id, user_id, token, expires_at, created_at)
+                VALUES (:id, :user_id, :token, :expires_at, :created_at)
+            """), {
+                "id": str(uuid.uuid4()),
+                "user_id": str(uuid.uuid4()),
+                "token": "expired_token",
+                "expires_at": datetime.utcnow() - timedelta(hours=1),
+                "created_at": datetime.utcnow() - timedelta(days=2),
+            })
+            await session.commit()
+        
+        user = await auth_manager.validate_session("expired_token")
+        
+        assert user is None
 
     @pytest.mark.asyncio
-    async def test_delete_session(self, auth_manager):
-        with patch('app.auth.better_auth.async_session_maker') as mock_session_maker:
-            mock_session = AsyncMock()
-            mock_session_maker.return_value.__aenter__.return_value = mock_session
-            
-            session_obj = Session(
-                id=str(uuid.uuid4()),
-                user_id=str(uuid.uuid4()),
-                token="token_to_delete",
-                expires_at=datetime.utcnow() + timedelta(days=1),
-            )
-            
-            mock_result = MagicMock()
-            mock_result.scalar_one_or_none.return_value = session_obj
-            mock_session.execute = AsyncMock(return_value=mock_result)
-            mock_session.delete = AsyncMock()
-            mock_session.commit = AsyncMock()
-            
-            result = await auth_manager.delete_session("token_to_delete")
-            
-            assert result is True
-            mock_session.delete.assert_called_once_with(session_obj)
-            mock_session.commit.assert_called_once()
+    async def test_delete_session(self, auth_manager, sample_user_data):
+        # First create the user and session
+        created_user = await auth_manager.create_user(sample_user_data)
+        
+        mock_request = MagicMock()
+        mock_request.client.host = "127.0.0.1"
+        mock_request.headers.get.return_value = "test-agent"
+        
+        session = await auth_manager.create_session(created_user, mock_request)
+        
+        result = await auth_manager.delete_session(session.token)
+        
+        assert result is True
+        
+        # Verify session is deleted
+        deleted_session = await auth_manager.get_session(session.token)
+        assert deleted_session is None
 
 
 if __name__ == "__main__":

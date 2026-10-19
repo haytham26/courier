@@ -25,8 +25,39 @@ from jose import JWTError
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://courier:courier@localhost:5432/courier")
-engine = create_async_engine(DATABASE_URL, echo=False)
-async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
+
+# Allow test override for in-memory SQLite
+_test_engine = None
+_test_session_maker = None
+
+def get_engine():
+    global _test_engine
+    if _test_engine is not None:
+        return _test_engine
+    return create_async_engine(DATABASE_URL, echo=False)
+
+def get_session_maker():
+    global _test_session_maker
+    if _test_session_maker is not None:
+        return _test_session_maker
+    return async_sessionmaker(get_engine(), expire_on_commit=False)
+
+def set_test_database(engine, session_maker):
+    """Set test database engine and session maker (for testing only)."""
+    global _test_engine, _test_session_maker
+    _test_engine = engine
+    _test_session_maker = session_maker
+
+# Lazy engine creation - only create when needed
+engine = None
+async_session_maker = None
+
+def _ensure_engine():
+    """Ensure engine is initialized (lazy initialization)."""
+    global engine, async_session_maker
+    if engine is None:
+        engine = get_engine()
+        async_session_maker = get_session_maker()
 Base = declarative_base()
 
 # Password hashing
@@ -154,21 +185,24 @@ class BetterAuthManager:
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             return payload
-        except JWTError:
+        except (JWTError, jwt.exceptions.DecodeError, jwt.exceptions.ExpiredSignatureError):
             return None
     
     # Database operations
     async def get_user_by_email(self, email: str) -> Optional[User]:
+        _ensure_engine()
         async with async_session_maker() as session:
             result = await session.execute(select(User).where(User.email == email))
             return result.scalar_one_or_none()
     
     async def get_user_by_id(self, user_id: str) -> Optional[User]:
+        _ensure_engine()
         async with async_session_maker() as session:
             result = await session.execute(select(User).where(User.id == user_id))
             return result.scalar_one_or_none()
     
     async def create_user(self, user_data: UserCreate) -> User:
+        _ensure_engine()
         async with async_session_maker() as session:
             import uuid
             user = User(
@@ -193,6 +227,7 @@ class BetterAuthManager:
         return AuthResult(user=user)
     
     async def create_session(self, user: User, request: Request) -> Session:
+        _ensure_engine()
         import uuid
         session_token = jwt.encode(
             {"sub": user.id, "type": "session", "jti": str(uuid.uuid4())},
@@ -215,6 +250,7 @@ class BetterAuthManager:
             return session_obj
     
     async def get_session(self, token: str) -> Optional[Session]:
+        _ensure_engine()
         async with async_session_maker() as session:
             result = await session.execute(
                 select(Session).where(Session.token == token)
@@ -222,6 +258,7 @@ class BetterAuthManager:
             return result.scalar_one_or_none()
     
     async def delete_session(self, token: str) -> bool:
+        _ensure_engine()
         async with async_session_maker() as session:
             result = await session.execute(
                 select(Session).where(Session.token == token)
@@ -276,6 +313,7 @@ async def get_current_user(
 # Initialize database tables
 async def init_db():
     """Create all tables."""
+    _ensure_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
