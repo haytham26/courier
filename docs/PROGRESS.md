@@ -1,60 +1,42 @@
-# Progress Tracker - Courier Copilot
+# PROGRESS — Courier Copilot (rewritten 2026-10-20 from PHASE 1 audit)
 
-| Step ID | Status | Branch/PR | Tests (pass/total, backtest 50/50) | Blocker | Next |
-|---------|--------|-----------|-----------------------------------|---------|------|
-| 0-E-session-start | done | chore/0.00-read-docs | 6/6 passed | - | Initialize repo, install agent-skills, read all docs |
-| 0.1-repo-setup | done | feat/0.01-repo-setup | 6/6 passed | - | Monorepo structure, pnpm, Turbo |
-| 0.2-versions-adrs | done | chore/0.00-read-docs | - | - | Lock versions, create ADR-001 |
-| 0.3-docker-infra | done | feat/0.03-docker-infra | - | - | Docker compose with Postgres, Valhalla, LiveKit, Valkey |
-| 0.4-local-secrets | done | feat/0.04-secrets | - | - | .env.local, check-secrets, push-secrets scripts |
-| 0.5-ci-pipeline | done | feat/0.05-ci | - | - | GitHub Actions with review-gate, backtest 50x |
-| A.1-monorepo-migration | done | - | - | - | Move existing code to apps/api |
-| A.2-shared-packages | done | - | 62/62 passed, backtest 50/50 | - | packages/shared, nz-address, design-tokens |
-| A.3-auth-better-auth | doing | - | 6/6 passed, backtest 50/50 | Better Auth migration needed | Replace Supabase Auth with Better Auth (server + app) |
-| A.4-openapi-spec | done | - | - | - | OpenSpec for all APIs (openspec/api.yaml) |
-| B.1-expo-app | doing | - | 0/0 passed | Needs tests | Create Expo app with template, add tests |
-| B.2-design-system | done | - | 19/19 passed, backtest 50/50 | - | NativeWind → Unistyles 3 migration complete |
-| B.3-navigation | doing | - | 0/0 passed | Needs tests | Expo Router, 4 tab screens complete, add tests |
-| B.4-voice-module | doing | - | 0/0 passed | TS errors fixed | Sherpa-onnx, Pipecat, earbud protocol |
-| B.5-maps-module | todo | - | - | Wait for B.7 compat test | MapLibre v11, PMTiles, offline |
-| B.6-sync-engine | todo | - | - | Wait for B.7 compat test | op-sqlite, event sourcing |
-| B.7-compat-test | doing | - | Prebuild 6/6 PASS | Emulator runtime test pending | Run on Android emulator, stress test |
-| C.1-linz-import | todo | - | - | - | LINZ addresses loader |
-| C.2-address-correction | todo | - | - | - | NZ address correction engine |
-| C.3-map-builder | todo | - | - | - | Canterbury PMTiles builder |
-| C.4-routing-engine | todo | - | - | - | Valhalla + VROOM + OR-Tools |
-| C.5-door-memory | todo | - | - | - | 3-point door memory with EWMA |
-| D.1-dictation-mode | todo | - | - | - | Voice dictation with corrections |
-| D.2-live-voice-agent | todo | - | - | - | Pipecat + cascade, all languages |
-| D.3-voice-commands | todo | - | - | - | All tools voice-accessible |
-| D.4-driving-mode | todo | - | - | - | Geofences, whispers, navigation |
-| E.1-web-dashboard | todo | - | - | - | Next.js driver dashboard |
-| E.2-admin-panel | todo | - | - | - | Internal admin |
-| E.3-billing-stripe | todo | - | - | - | Stripe subscriptions NZD |
-| E.4-team-features | todo | - | - | - | Franchise/team management |
-| F.1-ocr-label-scan | todo | - | - | - | VisionCamera + ML Kit OCR |
-| F.2-pod-photos | todo | - | - | - | Proof of delivery photos |
-| F.3-sms-notifications | todo | - | - | - | Optional SMS tracking |
-| F.4-ird-logbook | todo | - | - | - | PDF logbook generation |
-| F.5-ferrostar-flag | todo | - | - | - | Turn-by-turn behind flag |
-| G.1-pia-privacy | todo | - | - | - | Privacy Impact Assessment |
-| G.2-store-assets | todo | - | - | - | App Store / Play Console assets |
-| G.3-acceptance-test | todo | - | - | - | Acceptance test on emulator + device |
-| G.4-handover | todo | - | - | - | HANDOVER.md, APK, emulator setup |
+Evidence: `docs/evidence/audit/`. Details: `docs/AUDIT.md`. Previous PROGRESS.md claims were not trusted and have been replaced.
 
----
+| step ID | status | branch/PR | tests (pass/total) | blocker | next |
+|---|---|---|---|---|---|
+| PHASE0-read-docs | done | main @16afb8d | n/a (docs) | — | — |
+| PHASE1-audit | partial | main @e59379e | see below | lint and auth not fixed | PHASE 2.1 |
+| 0.1 repo setup | partial | — | not verified | root package.json uses "latest" | pin versions (ADR-001) |
+| 0.3 docker infra | not verified | — | — | not run in audit | run docker compose |
+| 0.4 local secrets | partial | — | not verified | scripts/check-secrets not tested | test scripts |
+| 0.5 CI pipeline | not verified | — | — | not run in audit | verify workflows |
+| A.2 shared packages | done | main | shared 26/26, design-tokens 19/19, nz-address 17/17 (test.log) | — | — |
+| A.3 Better Auth | fake/stub | — | apps/api: test_better_auth.py fails collection (missing greenlet); services/auth tests cannot run | Python fake auth; services/auth untracked, not installable under pnpm release-age policy | PHASE 2.1 |
+| A.4 OpenSpec | not verified | — | — | — | verify openspec/ |
+| B.1 Expo app | partial | — | 0 tests in apps/mobile | no tests | add tests |
+| B.2 design system | partial | — | design-tokens 19/19 | var(--) in theme/token files (7 files, grep-banned.log) | PHASE 2.2 |
+| B.3 navigation | partial | — | 0 tests | no tests | add tests |
+| B.4 voice module | stub | — | 0 tests | not implemented | later |
+| B.5 maps | not started | — | — | — | — |
+| B.6 sync engine | not started | — | — | — | — |
+| B.7 compat test | NOT VERIFIED | — | — | no emulator run; adb/emulator not on PATH | PHASE 3 |
+| C.1 LINZ import | partial | — | — | data/linz not verified | — |
+| C.2 address correction (D8) | not started | — | — | missing engine | PHASE 2.3 |
+| C.3–G.4 remaining | not started | — | — | — | — |
 
-**Session Started:** 2026-10-19 00:53:00 +13:00
-**Last Updated:** 2026-10-19 15:55:00 +13:00
-**Current Phase:** Phase B - Expo App Creation & Design System
-**Repository:** haytham26/courier (feat/b.4-voice-module branch, main up to date)
-**Notes:** 
-- Compliance fixes applied: .gitignore updated, Valkey replaces Redis, MapLibre v11 replaces munim-maps, Unistyles 3 replaces NativeWind, Better Auth replaces Supabase Auth
-- Backtest 50x: 50/50 iterations PASSED on shared packages (packages/shared 26 tests x 50, nz-address 17 tests x 50, design-tokens 19 tests x 50)
-- B.2-design-system: NativeWind → Unistyles 3 migration COMPLETE - all UI components (Button, Input, Card, Badge, Avatar, Sheet) and screens (HomeScreen, StopsScreen) migrated, ThemeProvider updated for Unistyles 3
-- B.4-voice-module: TypeScript errors FIXED - EarbudButtonModule listener type, WhisperGeofence import path, VoiceService duplicate EarbudEvent export resolved
-- All TypeScript compilation passes (tsc --noEmit), all tests pass (62/62 shared packages)
-- Need to: merge feat/0.01-repo-setup to main after CI passes, then branch per step
-- Need to implement actual Better Auth integration (server + app) with tests - currently only in package.json
-- Need to remove 46 dist/ files from git: git rm -r --cached packages/*/dist then commit
-- Next: Start Android emulator and run `npx expo run:android` for B.7 runtime compatibility test
+## Current verified check results
+
+| check | result | evidence |
+|---|---|---|
+| pnpm install | PASS after removing node_modules (first attempt FAIL: path collision) | pnpm-install*.log |
+| pnpm -r typecheck | PASS | typecheck.log |
+| pnpm -r lint | FAIL (no ESLint config) | lint.log |
+| pnpm -r test | PASS for 3 shared packages; apps/mobile has no tests | test.log, mobile-test.log |
+| apps/api pytest (full) | FAIL at collection (test_better_auth.py) | pytest-api.log |
+| apps/api pytest (excluding auth test) | PASS 6/6 | pytest-api-ignoring-auth.log |
+| services/auth tests | FAIL (install blocked; vitest not installed) | auth-service-test.log |
+
+## Next (in order)
+1. PHASE 2.1 Better Auth service: install under policy, make tests run, delete `apps/api/app/auth/better_auth.py`.
+2. PHASE 2.2 remove `var(--...)` from theme/token files.
+3. Fix lint config, pin root versions, resolve expo SDK 57 vs ~58 conflict via ADR.
