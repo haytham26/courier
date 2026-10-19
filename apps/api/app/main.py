@@ -4,12 +4,17 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from fastapi import FastAPI, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, UploadFile, WebSocket, WebSocketDisconnect, Depends
 from pydantic import BaseModel
 
 from .agents import copilot
+from .auth.routes import router as auth_router
+from .auth.better_auth import get_current_user, User
 
 app = FastAPI(title="Courier Copilot", version="0.1.0")
+
+# Include auth routes
+app.include_router(auth_router)
 
 
 class IntakeText(BaseModel):
@@ -35,31 +40,31 @@ class TemplateSegment(BaseModel):
 
 
 @app.put("/runs/{run_id}/template")
-def put_template(run_id: uuid.UUID, segments: list[TemplateSegment]):
+def put_template(run_id: uuid.UUID, segments: list[TemplateSegment], current_user: User = Depends(get_current_user)):
     """Master Template Lock: replace the run's street order."""
     return {"run_id": str(run_id), "segments": len(segments)}
 
 
 @app.post("/shifts/{shift_id}/intake")
-def intake_text(shift_id: uuid.UUID, body: IntakeText):
+def intake_text(shift_id: uuid.UUID, body: IntakeText, current_user: User = Depends(get_current_user)):
     """Starts the intake graph (thread_id = shift_id). Returns either the briefing or the
     first interrupt question; answers flow back over the voice socket."""
     ...
 
 
 @app.post("/shifts/{shift_id}/intake/manifest")
-async def intake_manifest(shift_id: uuid.UUID, image: UploadFile):
+async def intake_manifest(shift_id: uuid.UUID, image: UploadFile, current_user: User = Depends(get_current_user)):
     """Photo of paper manifest -> vision extraction -> same intake graph with source='ocr'."""
     ...
 
 
 @app.get("/shifts/{shift_id}/stops")
-def list_stops(shift_id: uuid.UUID, status: str | None = None):
+def list_stops(shift_id: uuid.UUID, status: str | None = None, current_user: User = Depends(get_current_user)):
     ...
 
 
 @app.post("/shifts/{shift_id}/events:batch")
-def sync_events(shift_id: uuid.UUID, events: list[DeliveryEvent]):
+def sync_events(shift_id: uuid.UUID, events: list[DeliveryEvent], current_user: User = Depends(get_current_user)):
     """Offline-first sync: INSERT ... ON CONFLICT (id) DO NOTHING; returns server cursor."""
     ...
 

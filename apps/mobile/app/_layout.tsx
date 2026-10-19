@@ -2,20 +2,37 @@ import React from 'react';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Providers } from '@/providers/Providers';
+import { useAuth } from '@/providers/AuthProvider';
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Providers>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            gestureEnabled: true,
-          }}
-        >
-          <Stack.Screen name="(tabs)" />
-        </Stack>
+        <AuthNavigator />
       </Providers>
     </GestureHandlerRootView>
+  );
+}
+
+function AuthNavigator() {
+  const { isLoading, isAuthenticated } = useAuth();
+
+  if (isLoading) {
+    return null; // Or show a loading screen
+  }
+
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        gestureEnabled: true,
+      }}
+    >
+      {isAuthenticated ? (
+        <Stack.Screen name="(tabs)" />
+      ) : (
+        <Stack.Screen name="(auth)" />
+      )}
+    </Stack>
   );
 }
