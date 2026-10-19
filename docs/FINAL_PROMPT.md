@@ -124,6 +124,20 @@ courier/
 - **الصور الجوية:** ليست مضمّنة؛ تنزيل اختياري لمنطقة السائق فقط على الواي فاي.
 - **الستايل (D16):** ستايل MapLibre خاص بنا في `packages/map-style/` بمستوى Petal Maps و Apple Maps: نسختان **نهاري وليلي** تتبدّلان تلقائيًا حسب وقت الغروب، ونسخة **تباين عالٍ للشمس**؛ أسماء شوارع وأرقام بيوت كبيرة وواضحة؛ مبانٍ بإسقاط ثلاثي الأبعاد خفيف في الزوم القريب؛ ألوان حالات المحطات (باقية / سُلّمت / مؤجّلة / فشل) من design tokens؛ إظهار دبوس الباب ونقطة الوقوف. خطوط الخريطة مضمّنة (glyphs) والأيقونات (sprites) محلية. يراجعه مصمم المنتج (D7) ويُختبر بلقطات شاشة على المحاكي في النهار والليل. الإسناد «© OpenStreetMap contributors، LINZ CC BY 4.0» ظاهر.
 
+### 0-C.2c تثبيت Android SDK والمحاكي بنفسك (D20) — لا تنتظر المؤسس
+إذا لم يكن Android SDK موجودًا، **ثبّته أنت فورًا** ولا تعتبره عائقًا:
+- **Windows:** `winget install --id Google.AndroidStudio -e` (أو `choco install androidstudio`)، ثم `winget install --id Microsoft.OpenJDK.17 -e` إن لزم.
+- **macOS:** `brew install --cask android-studio` و `brew install --cask zulu@17`.
+- **Linux:** نزّل Android command-line tools من developer.android.com، فكّها في `$HOME/Android/Sdk/cmdline-tools/latest`.
+- ثم (كل الأنظمة): اضبط `ANDROID_HOME` و `PATH` (platform-tools، emulator، cmdline-tools/latest/bin)، وشغّل:
+  `sdkmanager --licenses` (اقبل الكل) ثم
+  `sdkmanager "platform-tools" "emulator" "platforms;android-35" "build-tools;35.0.0" "system-images;android-35;google_apis_playstore;x86_64"` ثم
+  `avdmanager create avd -n courier_pixel -k "system-images;android-35;google_apis_playstore;x86_64" -d pixel_8` ثم
+  `emulator -avd courier_pixel -no-snapshot-load &` و `adb wait-for-device`.
+- استخدم أحدث API مستقر يدعمه إصدار Expo المثبّت (تحقّق من وثائق Expo)؛ الأرقام أعلاه مثال.
+- إذا كان الجهاز لا يدعم المحاكاة (لا Hyper-V/HAXM/KVM): سجّل ذلك في FOUNDER_TODO.md، وابنِ APK عبر GitHub Actions (`eas build --local` على runner) ليثبّته المؤسس على هاتفه، وأكمل.
+- اكتب كل هذا في `scripts/setup-emulator.(ps1|sh)` حتى يُعاد تشغيله بأمر واحد.
+
 ### 0-C.3 المحاكي والتسليم على أندرويد (آخر خطوة بعد اكتمال كل شيء)
 1. **إعداد المحاكي على جهاز المؤسس** (اكتب دليلًا خطوة بخطوة في `docs/HANDOVER.md` وسكربت `scripts/setup-emulator.(sh|ps1)`):
    - تثبيت Android Studio + Android SDK + جهاز وهمي (Pixel حديث، أحدث Android مستقر، Google Play image).
