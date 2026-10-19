@@ -41,7 +41,7 @@ export default function LoginScreen() {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          autoCompleteType="email"
+          autoComplete="email"
           disabled={isSubmitting}
         />
         <TextInput
@@ -50,7 +50,7 @@ export default function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          autoCompleteType="password"
+          autoComplete="password"
           disabled={isSubmitting}
         />
 

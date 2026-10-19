@@ -5,9 +5,9 @@ interface User {
   id: string;
   email: string;
   name?: string;
-  avatarUrl?: string;
+  image?: string | null;
   emailVerified: boolean;
-  createdAt: string;
+  createdAt: Date | string;
 }
 
 interface AuthContextType {
@@ -30,7 +30,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const session = await authClient.getSession();
       if (session.data?.user) {
-        setUser(session.data.user as User);
+        // Convert the user to our User type
+        const userData = session.data.user;
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          name: userData.name,
+          image: userData.image,
+          emailVerified: userData.emailVerified,
+          createdAt: userData.createdAt,
+        });
       } else {
         setUser(null);
       }
@@ -44,14 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshSession();
     
-    // Listen for auth changes
-    const unsubscribe = authClient.$onAuthStateChange((session) => {
-      if (session?.user) {
-        setUser(session.user as User);
-      } else {
-        setUser(null);
-      }
-      setIsLoading(false);
+    // Listen for auth changes using the React client's useSession atom
+    // The React client exposes a $store with subscribe method
+    const unsubscribe = authClient.$store.listen('$sessionSignal', () => {
+      refreshSession();
     });
 
     return () => {
@@ -70,7 +75,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     if (data?.user) {
-      setUser(data.user as User);
+      const userData = data.user;
+      setUser({
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        image: userData.image,
+        emailVerified: userData.emailVerified,
+        createdAt: userData.createdAt,
+      });
     }
   };
 
@@ -86,7 +99,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     if (data?.user) {
-      setUser(data.user as User);
+      const userData = data.user;
+      setUser({
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        image: userData.image,
+        emailVerified: userData.emailVerified,
+        createdAt: userData.createdAt,
+      });
     }
   };
 

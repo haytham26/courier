@@ -16,5 +16,5 @@ export const signOut = authClient.signOut;
 export const getSession = authClient.getSession;
 export const useSession = authClient.useSession;
 
-// Type exports
-export type { Session, User } from 'better-auth/react';
+// Type exports - import from better-auth/client which exports the core types
+export type { Session, User } from 'better-auth/client';
