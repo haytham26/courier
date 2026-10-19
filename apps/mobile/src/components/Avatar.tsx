@@ -1,9 +1,10 @@
 import React from 'react';
-import { Image, View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image, Platform } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { useTheme } from '../providers/ThemeProvider';
 
 const avatarVariants = cva(
-  'rounded-full overflow-hidden flex-shrink-0 bg-neutral-200 dark:bg-neutral-700',
+  'rounded-full overflow-hidden bg-neutral-200 dark:bg-neutral-700 flex-center',
   {
     variants: {
       size: {
@@ -31,47 +32,85 @@ interface AvatarProps
     VariantProps<typeof avatarVariants> {
   src?: string;
   alt?: string;
+  fallback?: string;
   name?: string;
-  fallbackColor?: string;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-function stringToColor(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = hash % 360;
-  return `hsl(${hue}, 65%, 45%)`;
 }
 
 export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProps>(
-  ({ className, size, shape, src, alt, name, fallbackColor, style, ...props }, ref) => {
-    const fallbackBg = fallbackColor || (name ? stringToColor(name) : 'var(--color-neutral-400)');
-    const initials = name ? getInitials(name) : '?';
+  ({ className, size, shape, src, alt, fallback, name, style, ...props }, ref) => {
+    const { theme } = useTheme();
+    const [imageError, setImageError] = React.useState(false);
 
-    if (src) {
+    const getSizeStyles = () => {
+      const sizes: Record<string, { width: number; height: number; fontSize: number }> = {
+        xs: { width: 24, height: 24, fontSize: 10 },
+        sm: { width: 32, height: 32, fontSize: 12 },
+        md: { width: 40, height: 40, fontSize: 14 },
+        lg: { width: 48, height: 48, fontSize: 16 },
+        xl: { width: 64, height: 64, fontSize: 20 },
+        '2xl': { width: 96, height: 96, fontSize: 28 },
+      };
+      const sizeKey = size ?? 'md';
+      return sizes[sizeKey] || sizes.md;
+    };
+
+    const sizeStyles = getSizeStyles();
+    const borderRadius = shape === 'circle' ? sizeStyles.width / 2 : 8;
+
+    // Generate fallback initials from name
+    const getInitials = () => {
+      if (fallback) return fallback;
+      if (name) {
+        return name
+          .split(' ')
+          .map((n) => n[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2);
+      }
+      return '?';
+    };
+
+    // Generate consistent color from name
+    const getBackgroundColor = () => {
+      if (!name) return theme.colors.textTertiary || theme.colors.textSecondary || '#71717a';
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const hue = Math.abs(hash) % 360;
+      return `hsl(${hue}, 60%, 45%)`;
+    };
+
+    const showFallback = !src || imageError;
+
+    if (showFallback) {
       return (
         <View
           ref={ref}
-          className={avatarVariants({ size, shape, className })}
-          style={style}
+          style={[
+            styles.container,
+            {
+              width: sizeStyles.width,
+              height: sizeStyles.height,
+              borderRadius,
+              backgroundColor: getBackgroundColor(),
+            },
+            style,
+          ]}
           {...props}
         >
-          <Image
-            source={{ uri: src }}
-            alt={alt || name || 'Avatar'}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-          />
+          <Text
+            style={[
+              styles.initials,
+              {
+                fontSize: sizeStyles.fontSize,
+                color: theme.colors.textInverse,
+              },
+            ]}
+          >
+            {getInitials()}
+          </Text>
         </View>
       );
     }
@@ -79,22 +118,50 @@ export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProp
     return (
       <View
         ref={ref}
-        className={avatarVariants({ size, shape, className })}
-        style={[{ backgroundColor: fallbackBg }, style]}
+        style={[
+          styles.container,
+          {
+            width: sizeStyles.width,
+            height: sizeStyles.height,
+            borderRadius,
+          },
+          style,
+        ]}
         {...props}
-        accessibilityLabel={alt || name || 'Avatar'}
       >
-        <Text
-          className="w-full h-full flex-center text-white font-semibold select-none"
-          style={StyleSheet.absoluteFill}
-        >
-          {initials}
-        </Text>
+        <Image
+          source={{ uri: src }}
+          style={[
+            styles.image,
+            {
+              width: sizeStyles.width,
+              height: sizeStyles.height,
+              borderRadius,
+            },
+          ]}
+          alt={alt || name}
+          onError={() => setImageError(true)}
+          resizeMode="cover"
+        />
       </View>
     );
   }
 );
 
 Avatar.displayName = 'Avatar';
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  image: {
+    ...StyleSheet.absoluteFill,
+  },
+  initials: {
+    fontWeight: '600',
+  },
+});
 
 export { avatarVariants };

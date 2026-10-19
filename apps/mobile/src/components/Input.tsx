@@ -1,6 +1,7 @@
 import React from 'react';
 import { TextInput, View, Text, StyleSheet } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { useTheme } from '../providers/ThemeProvider';
 
 const inputVariants = cva(
   'flex-1 h-11 px-4 text-base rounded-default border border-border-default bg-surface-primary text-text-primary placeholder-text-tertiary transition-colors disabled:bg-neutral-100 dark:disabled:bg-neutral-800 disabled:pointer-events-none',
@@ -50,42 +51,100 @@ export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputP
     },
     ref
   ) => {
+    const { theme } = useTheme();
     const hasError = state === 'error' || !!error;
     const hasHelper = helperText || error;
 
+    const getInputStyles = () => {
+      const baseStyles = {
+        flex: 1,
+        height: 44,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.surface,
+        color: theme.colors.textPrimary,
+        placeholderTextColor: theme.colors.textTertiary,
+      };
+
+      if (hasError) {
+        return {
+          ...baseStyles,
+          borderColor: theme.colors.error,
+        };
+      }
+
+      if (state === 'success') {
+        return {
+          ...baseStyles,
+          borderColor: theme.colors.success,
+        };
+      }
+
+      return baseStyles;
+    };
+
+    const getSizeStyles = () => {
+      switch (size) {
+        case 'sm':
+          return { height: 36, paddingHorizontal: 12, fontSize: 14 };
+        case 'md':
+          return { height: 44, paddingHorizontal: 16, fontSize: 16 };
+        case 'lg':
+          return { height: 52, paddingHorizontal: 20, fontSize: 18 };
+        default:
+          return { height: 44, paddingHorizontal: 16, fontSize: 16 };
+      }
+    };
+
+    const inputStyles = getInputStyles();
+    const sizeStyles = getSizeStyles();
+
+    const leftPadding = leftIcon ? 48 : 0;
+    const rightPadding = rightIcon ? 48 : 0;
+
     return (
-      <View className="w-full">
+      <View style={styles.container}>
         {label && (
-          <Text className="text-sm font-medium text-text-secondary mb-1.5">{label}</Text>
+          <Text style={[
+            styles.label,
+            { color: theme.colors.textSecondary },
+          ]}>
+            {label}
+          </Text>
         )}
-        <View className="flex-row items-center">
+        <View style={styles.inputWrapper}>
           {leftIcon && (
-            <View className="absolute left-3 z-10 text-text-tertiary">
-              {leftIcon}
+            <View style={styles.iconLeft}>
+              <Text style={{ color: theme.colors.textTertiary }}>{leftIcon}</Text>
             </View>
           )}
           <TextInput
             ref={ref}
-            className={inputVariants({ state, size, className })}
             style={[
+              styles.input,
+              inputStyles,
+              sizeStyles,
+              { paddingLeft: leftPadding, paddingRight: rightPadding },
               style,
-              leftIcon && { paddingLeft: 40 },
-              rightIcon && { paddingRight: 40 },
-            ] as any}
+            ] as const}
             {...props}
             accessibilityLabel={label}
             accessibilityHint={helperText}
           />
           {rightIcon && (
-            <View className="absolute right-3 z-10 text-text-tertiary">
-              {rightIcon}
+            <View style={styles.iconRight}>
+              <Text style={{ color: theme.colors.textTertiary }}>{rightIcon}</Text>
             </View>
           )}
         </View>
         {hasHelper && (
-          <Text
-            className={`text-xs mt-1.5 ${hasError ? 'text-error' : 'text-text-tertiary'}`}
-          >
+          <Text style={[
+            styles.helperText,
+            { color: hasError ? theme.colors.error : theme.colors.textTertiary },
+          ]}>
             {error || helperText}
           </Text>
         )}
@@ -95,5 +154,37 @@ export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputP
 );
 
 Input.displayName = 'Input';
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 6,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  input: {
+    flex: 1,
+  },
+  iconLeft: {
+    position: 'absolute',
+    left: 12,
+    zIndex: 10,
+  },
+  iconRight: {
+    position: 'absolute',
+    right: 12,
+    zIndex: 10,
+  },
+  helperText: {
+    fontSize: 12,
+    marginTop: 6,
+  },
+});
 
 export { inputVariants };

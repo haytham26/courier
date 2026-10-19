@@ -70,11 +70,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Update CSS variables when theme changes
   useEffect(() => {
     const theme = themes[themeName];
-    setCssVariables(generateCSSVariables(theme));
+    const cssVars = generateCSSVariables(theme);
+    setCssVariables(cssVars);
     
     if (Platform.OS === 'web') {
-      document.documentElement.style.cssText = generateCSSVariables(theme);
+      document.documentElement.style.cssText = cssVars;
     }
+    
+    // For Unistyles 3, we need to update the CSS variables on the root element
+    // This will be picked up by Unistyles for styling
+    const root = document.documentElement;
+    Object.entries(theme.colors).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        root.style.setProperty(`--color-${key.toLowerCase()}`, value);
+      }
+    });
   }, [themeName]);
 
   const theme = themes[themeName];

@@ -34,7 +34,7 @@ export default function HomeScreen() {
   const deliveredCount = mockStops.filter(s => s.status === 'delivered').length;
   const activeStop = mockStops.find(s => s.status === 'active');
 
-  const statusColorMap: Record<string, keyof typeof theme.colors> = {
+  const statusColorMap: Record<Stop['status'], keyof typeof theme.colors> = {
     delivered: 'statusDelivered',
     pending: 'statusPending',
     active: 'statusActive',
@@ -44,6 +44,16 @@ export default function HomeScreen() {
 
   const getStatusColor = (status: Stop['status']) => {
     return theme.colors[statusColorMap[status]] || theme.colors.textTertiary;
+  };
+
+  const getBadgeVariant = (status: Stop['status']) => {
+    switch (status) {
+      case 'delivered': return 'success';
+      case 'active': return 'active';
+      case 'failed': return 'error';
+      case 'skipped': return 'warning';
+      default: return 'default';
+    }
   };
 
   const handleVoiceCommand = (command: string) => {
@@ -183,15 +193,12 @@ export default function HomeScreen() {
               style={styles.stopItem}
               onPress={() => router.push(`/stops/${stop.id}`)}
             >
-              <View style={[
-                styles.stopStatusDot,
-                { backgroundColor: getStatusColor(stop.status) }
-              ]} />
+              <View style={[styles.stopStatusDot, { backgroundColor: getStatusColor(stop.status) }]} />
               <View style={styles.stopInfo}>
                 <Text style={[styles.stopAddress, { color: theme.colors.textPrimary }]}>{stop.address}</Text>
                 <Text style={[styles.stopSuburb, { color: theme.colors.textSecondary }]}>{stop.suburb}</Text>
               </View>
-              <Badge variant={stop.status === 'delivered' ? 'success' : stop.status === 'active' ? 'active' : 'default'}>
+              <Badge variant={getBadgeVariant(stop.status)}>
                 {stop.status}
               </Badge>
             </TouchableOpacity>
@@ -217,7 +224,7 @@ export default function HomeScreen() {
 
         {/* Voice Status Display */}
         {voiceState !== 'idle' && (
-          <View style={styles.voiceStatus}>
+          <View style={[styles.voiceStatus, { backgroundColor: theme.colors.surface }]}>
             <Text style={[styles.voiceStatusText, { color: theme.colors.textSecondary }]}>
               Status: {voiceState === 'listening' ? '🎙️ Listening...' : 
                        voiceState === 'speaking' ? '🔊 Speaking...' :
@@ -243,7 +250,10 @@ export default function HomeScreen() {
           ].map((cmd, i) => (
             <TouchableOpacity
               key={i}
-              style={styles.quickCommandChip}
+              style={[
+                styles.quickCommandChip,
+                { borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
+              ]}
               onPress={() => handleVoiceCommand(cmd.toLowerCase())}
             >
               <Text style={[styles.quickCommandText, { color: theme.colors.brandPrimary }]}>{cmd}</Text>
@@ -296,10 +306,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    backgroundColor: '#fff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
   },
   stopStatusDot: { width: 10, height: 10, borderRadius: 5 },
   stopInfo: { flex: 1 },
@@ -309,15 +317,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#fff',
   },
   quickCommandText: { fontSize: 13, fontWeight: '500' },
   voiceStatus: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#f3f4f6',
     alignSelf: 'center',
     marginTop: 8,
   },

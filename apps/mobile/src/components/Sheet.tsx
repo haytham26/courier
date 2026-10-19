@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, Easing, Keyboard } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../providers/ThemeProvider';
 
 const sheetVariants = cva(
   'rounded-t-lg bg-surface-primary shadow-elevation5',
@@ -53,6 +54,7 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
     ref
   ) => {
     const insets = useSafeAreaInsets();
+    const { theme } = useTheme();
     const [animation] = React.useState(() => new Animated.Value(0));
     const [isAnimating, setIsAnimating] = React.useState(false);
 
@@ -94,7 +96,22 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
       return null;
     }
 
-    const variantClassName = sheetVariants({ size, className });
+    const sheetStyle = {
+      position: 'absolute' as const,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      transform: [{ translateY }] as any,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      paddingBottom: insets.bottom,
+      backgroundColor: theme.colors.surfaceElevated,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+      elevation: 8,
+    };
 
     return (
       <Animated.View
@@ -112,41 +129,45 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
         />
         <Animated.View
           ref={ref}
-          className={variantClassName}
           style={[
-            {
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              transform: [{ translateY }],
-              borderTopLeftRadius: 16,
-              borderTopRightRadius: 16,
-              paddingBottom: insets.bottom,
-            },
+            styles.sheet,
+            sheetStyle,
             style,
-          ]}
+          ] as const}
           {...props}
         >
           {handleStyle !== 'hidden' && (
-            <View className="flex-row items-center justify-center pb-3">
+            <View style={styles.handleContainer}>
               <View
-                className="w-10 h-1 bg-border-default rounded-full"
+                style={[
+                  styles.handle,
+                  { backgroundColor: theme.colors.border },
+                ]}
                 importantForAccessibility="no-hide-descendants"
               />
             </View>
           )}
           {(title || subtitle) && (
-            <View className="px-4 pb-3 border-b border-border-light">
+            <View style={[
+              styles.header,
+              { borderBottomColor: theme.colors.border },
+            ]}>
               {title && (
-                <Text className="text-lg font-semibold text-text-primary">{title}</Text>
+                <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+                  {title}
+                </Text>
               )}
               {subtitle && (
-                <Text className="text-sm text-text-secondary mt-0.5">{subtitle}</Text>
+                <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+                  {subtitle}
+                </Text>
               )}
             </View>
           )}
-          <View className="flex-1 overflow-y-auto px-4 py-4">
+          <View style={[
+            styles.content,
+            { paddingBottom: insets.bottom },
+          ]}>
             {children}
           </View>
         </Animated.View>
@@ -156,5 +177,41 @@ export const Sheet = React.forwardRef<React.ElementRef<typeof Animated.View>, Sh
 );
 
 Sheet.displayName = 'Sheet';
+
+const styles = StyleSheet.create({
+  sheet: {
+    overflow: 'hidden',
+  },
+  handleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 12,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  subtitle: {
+    fontSize: 14,
+    marginTop: 4,
+  },
+  content: {
+    flex: 1,
+    overflow: 'hidden',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+});
 
 export { sheetVariants };

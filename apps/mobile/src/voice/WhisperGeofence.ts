@@ -4,7 +4,7 @@
  * Implements the "Whisper" approach from the requirements
  */
 
-import { Location, haversineDistance } from '../../packages/shared/src/utils';
+import { Location, haversineDistance } from '@courier/shared';
 
 export interface GeofenceConfig {
   outerRadius: number; // 150m - first whisper

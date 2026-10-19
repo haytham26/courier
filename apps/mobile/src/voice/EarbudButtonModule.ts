@@ -56,7 +56,9 @@ export const EarbudButtonModule: EarbudButtonModuleInterface = {
       console.warn('EarbudButtonManager native module not available');
       return;
     }
-    eventEmitter.addListener(eventName, listener);
+    // NativeEventEmitter expects (...args: any[]) => void, so we wrap the listener
+    const wrappedListener = (event: any) => listener(event as EarbudEvent);
+    eventEmitter.addListener(eventName, wrappedListener);
   },
 
   removeListeners(count: number): void {

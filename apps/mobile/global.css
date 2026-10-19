@@ -1,8 +1,6 @@
-@import "nativewind";
+/* Unistyles 3 Configuration for Courier Copilot */
 
-@custom-variant dark (&:where(.dark, .dark *));
-
-/* Theme CSS variables - will be applied by ThemeProvider */
+/* Theme CSS variables - applied by ThemeProvider */
 :root {
   --color-background: #ffffff;
   --color-surface: #fafafa;
