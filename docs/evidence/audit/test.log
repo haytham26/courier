@@ -1,0 +1,37 @@
+Scope: 4 of 5 workspace projects
+packages/nz-address test$ vitest run
+packages/design-tokens test$ vitest run
+packages/shared test$ vitest run
+packages/design-tokens test: 
+packages/design-tokens test:  RUN  v2.1.9 C:/Users/DCL/projects/courier/packages/design-tokens
+packages/design-tokens test: 
+packages/shared test: 
+packages/shared test:  RUN  v2.1.9 C:/Users/DCL/projects/courier/packages/shared
+packages/shared test: 
+packages/nz-address test: 
+packages/nz-address test:  RUN  v2.1.9 C:/Users/DCL/projects/courier/packages/nz-address
+packages/nz-address test: 
+packages/shared test:  ✓ src/utils.test.ts (26 tests) 100ms
+packages/design-tokens test:  ✓ src/tokens.test.ts (19 tests) 54ms
+packages/nz-address test:  ✓ src/parser.test.ts (17 tests) 147ms
+packages/shared test: 
+packages/shared test:  Test Files  1 passed (1)
+packages/shared test:       Tests  26 passed (26)
+packages/shared test:    Start at  05:14:35
+packages/shared test:    Duration  7.50s (transform 1.20s, setup 0ms, collect 1.04s, tests 100ms, environment 1ms, prepare 2.69s)
+packages/shared test: 
+packages/design-tokens test: 
+packages/design-tokens test:  Test Files  1 passed (1)
+packages/design-tokens test:       Tests  19 passed (19)
+packages/design-tokens test:    Start at  05:14:35
+packages/design-tokens test:    Duration  7.64s (transform 1.37s, setup 0ms, collect 1.30s, tests 54ms, environment 1ms, prepare 2.76s)
+packages/design-tokens test: 
+packages/nz-address test: 
+packages/nz-address test:  Test Files  1 passed (1)
+packages/nz-address test:       Tests  17 passed (17)
+packages/nz-address test:    Start at  05:14:36
+packages/nz-address test:    Duration  7.63s (transform 854ms, setup 0ms, collect 823ms, tests 147ms, environment 1ms, prepare 2.65s)
+packages/nz-address test: 
+packages/shared test: Done
+packages/design-tokens test: Done
+packages/nz-address test: Done

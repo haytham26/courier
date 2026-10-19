@@ -1,0 +1,6 @@
+packages/nz-address typecheck$ tsc --noEmit
+packages/design-tokens typecheck$ tsc --noEmit
+packages/shared typecheck$ tsc --noEmit
+packages/design-tokens typecheck: Done
+packages/nz-address typecheck: Done
+packages/shared typecheck: Done

@@ -1,0 +1,46 @@
+? Verifying lockfile against supply-chain policies (188 entries)...
+Progress: resolved 30, reused 30, downloaded 0, added 15
+Progress: resolved 61, reused 61, downloaded 0, added 59
+✗ Lockfile failed supply-chain policy check (188 entries in 4s)
+Lockfile is up to date, resolution step is skipped
+Error: ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION
+
+  × installing dependencies
+  ╰─▶ 9 lockfile entries failed verification:
+        @better-auth/core@1.7.11 was published at 2026-10-19T00:39:21.000Z,
+      within the minimumReleaseAge cutoff (2026-10-18T16:19:52.531Z)
+        @better-auth/drizzle-adapter@1.7.11 was published at 2026-10-
+      19T00:39:21.000Z, within the minimumReleaseAge cutoff (2026-10-
+      18T16:19:52.531Z)
+        @better-auth/kysely-adapter@1.7.11 was published at 2026-10-
+      19T00:39:20.000Z, within the minimumReleaseAge cutoff (2026-10-
+      18T16:19:52.531Z)
+        @better-auth/memory-adapter@1.7.11 was published at 2026-10-
+      19T00:39:26.000Z, within the minimumReleaseAge cutoff (2026-10-
+      18T16:19:52.531Z)
+        @better-auth/mongo-adapter@1.7.11 was published at 2026-10-
+      19T00:39:27.000Z, within the minimumReleaseAge cutoff (2026-10-
+      18T16:19:52.531Z)
+        @better-auth/prisma-adapter@1.7.11 was published at 2026-10-
+      19T00:39:27.000Z, within the minimumReleaseAge cutoff (2026-10-
+      18T16:19:52.531Z)
+        @better-auth/telemetry@1.7.11 was published at 2026-10-
+      19T00:39:33.000Z, within the minimumReleaseAge cutoff (2026-10-
+      18T16:19:52.531Z)
+        better-auth@1.7.11 was published at 2026-10-19T00:39:21.000Z, within
+      the minimumReleaseAge cutoff (2026-10-18T16:19:52.531Z)
+        postcss@8.5.31 was published at 2026-10-18T19:36:28.000Z, within the
+      minimumReleaseAge cutoff (2026-10-18T16:19:52.531Z)
+  help: The lockfile contains entries that the active policies reject. This
+        can mean the lockfile is stale, or that someone committed a lockfile
+        that bypassed the policy locally — inspect recent changes to pnpm-
+        lock.yaml before trusting it. If the changes look expected, run "pnpm
+        clean --lockfile" and then "pnpm install" to rebuild from a fresh
+        resolution. If the fresh resolution still fails and you trust the
+        affected packages, relax the policy that flagged them.
+
+[WARN] The install that runs before scripts failed, so your node_modules may be out of sync with your lockfile. Set "verifyDepsBeforeRun: false" to skip this install.
+$ vitest run
+'vitest' is not recognized as an internal or external command,
+operable program or batch file.
+[ELIFECYCLE] Test failed. See above for more details.

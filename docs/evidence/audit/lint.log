@@ -1,0 +1,62 @@
+packages/shared lint$ eslint . --ext .ts
+packages/nz-address lint$ eslint . --ext .ts
+packages/design-tokens lint$ eslint . --ext .ts
+packages/design-tokens lint: 
+packages/design-tokens lint: Oops! Something went wrong! :(
+packages/design-tokens lint: 
+packages/design-tokens lint: ESLint: 9.39.5
+packages/design-tokens lint: 
+packages/design-tokens lint: ESLint couldn't find an eslint.config.(js|mjs|cjs) file.
+packages/design-tokens lint: 
+packages/design-tokens lint: From ESLint v9.0.0, the default configuration file is now eslint.config.js.
+packages/design-tokens lint: If you are using a .eslintrc.* file, please follow the migration guide
+packages/design-tokens lint: to update your configuration file to the new format:
+packages/design-tokens lint: 
+packages/design-tokens lint: https://eslint.org/docs/latest/use/configure/migration-guide
+packages/design-tokens lint: 
+packages/design-tokens lint: If you still have problems after following the migration guide, please stop by
+packages/design-tokens lint: https://eslint.org/chat/help to chat with the team.
+packages/design-tokens lint: 
+packages/shared lint: 
+packages/shared lint: Oops! Something went wrong! :(
+packages/shared lint: 
+packages/shared lint: ESLint: 9.39.5
+packages/shared lint: 
+packages/shared lint: ESLint couldn't find an eslint.config.(js|mjs|cjs) file.
+packages/shared lint: 
+packages/shared lint: From ESLint v9.0.0, the default configuration file is now eslint.config.js.
+packages/shared lint: If you are using a .eslintrc.* file, please follow the migration guide
+packages/shared lint: to update your configuration file to the new format:
+packages/shared lint: 
+packages/shared lint: https://eslint.org/docs/latest/use/configure/migration-guide
+packages/shared lint: 
+packages/shared lint: If you still have problems after following the migration guide, please stop by
+packages/shared lint: https://eslint.org/chat/help to chat with the team.
+packages/shared lint: 
+packages/nz-address lint: 
+packages/nz-address lint: Oops! Something went wrong! :(
+packages/nz-address lint: 
+packages/nz-address lint: ESLint: 9.39.5
+packages/nz-address lint: 
+packages/nz-address lint: ESLint couldn't find an eslint.config.(js|mjs|cjs) file.
+packages/nz-address lint: 
+packages/nz-address lint: From ESLint v9.0.0, the default configuration file is now eslint.config.js.
+packages/nz-address lint: If you are using a .eslintrc.* file, please follow the migration guide
+packages/nz-address lint: to update your configuration file to the new format:
+packages/nz-address lint: 
+packages/nz-address lint: https://eslint.org/docs/latest/use/configure/migration-guide
+packages/nz-address lint: 
+packages/nz-address lint: If you still have problems after following the migration guide, please stop by
+packages/nz-address lint: https://eslint.org/chat/help to chat with the team.
+packages/nz-address lint: 
+packages/design-tokens lint: Failed
+[ELIFECYCLE] Command failed with exit code 2.
+packages/shared lint: Failed
+[ELIFECYCLE] Command failed with exit code 2.
+packages/nz-address lint: Failed
+[ELIFECYCLE] Command failed with exit code 2.
+Error: ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL
+
+  × "pnpm recursive run" failed in C:
+  │ \Users\DCL\projects\courier\packages\design-tokens
+
