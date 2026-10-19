@@ -8,8 +8,9 @@ import shutil
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent))
 
-from services.worker.address_correction import (
+from address_correction import (
     LINZAddressCorrector, 
     NZAddress, 
     build_from_data_dir,
