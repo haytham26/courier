@@ -112,3 +112,12 @@ Install `rea-agents` inside the repo workflow and use it for: (a) **our own APK 
   - Offline-first everything with visible sync status; works in dead zones (rural Canterbury).
   - Gesture + haptic language consistent across the app; big-glove mode.
   Add new ideas from research, Spoke reviews and beta feedback; reject with reason.
+
+## 10. Conflict resolution (read before acting)
+When documents disagree, **this file wins, then the newest ADR/DECISIONS entry, then V4, then V3, then older prompts**. Known resolutions:
+- Expo: **SDK 58** per ADR-002 (V3/T2 text about SDK 57 is superseded).
+- Mutation score: **≥ 80%** on address, routing, sync, billing, auth (§8.2 supersedes V4 §2's 70%); ≥ 70% elsewhere.
+- Voice weights: the founder decision in V4 §13.6 + D23 (2026-10-20) supersedes the earlier D22/ADR-004 text about OmniVoice weights — update ADR-004/D22 to reference it; keep the commercially-licensed alternative benchmarked and the engine swappable.
+- Android E2E triggers: §7.1 (PRs to main + nightly + manual) supersedes "every push".
+- Definition of Done: §6 here (it includes V4 §9).
+Record any new conflict and its resolution in DECISIONS.md.
