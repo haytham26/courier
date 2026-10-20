@@ -2,5 +2,6 @@ packages:
   - apps/mobile
   - apps/web
   - packages/*
+  - services/auth
 
 ignoreScripts: true

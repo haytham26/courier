@@ -1,0 +1,39 @@
+/**
+ * Entry point for the Courier Copilot auth service.
+ *
+ * Fails fast when required configuration is missing (no default secrets).
+ */
+import { createServer } from "node:http";
+import { toNodeHandler } from "better-auth/node";
+
+import { loadConfig } from "./config.js";
+import { createAuth } from "./server.js";
+
+function main(): void {
+  const config = loadConfig(process.env);
+  const auth = createAuth(config);
+  const handler = toNodeHandler(auth);
+
+  const server = createServer((req, res) => {
+    void handler(req, res);
+  });
+
+  server.listen(config.port, () => {
+    console.log(
+      `[auth] listening on ${config.baseURL} (jwks ${config.jwks.path}, db ${config.database.provider})`,
+    );
+  });
+
+  const shutdown = () => {
+    server.close(() => process.exit(0));
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+}
+
+try {
+  main();
+} catch (error) {
+  console.error(`[auth] failed to start: ${(error as Error).message}`);
+  process.exit(1);
+}

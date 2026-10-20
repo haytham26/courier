@@ -4,7 +4,8 @@
   "workspaces": [
     "apps/mobile",
     "apps/web",
-    "packages/*"
+    "packages/*",
+    "services/auth"
   ],
   "scripts": {
     "dev": "turbo run dev",
@@ -20,13 +21,14 @@
     "open-secrets": "bash scripts/open-secrets.sh"
   },
   "devDependencies": {
-    "turbo": "latest",
-    "prettier": "latest",
-    "typescript": "latest",
-    "@types/node": "latest",
-    "eslint": "latest",
-    "@typescript-eslint/eslint-plugin": "latest",
-    "@typescript-eslint/parser": "latest"
+    "turbo": "2.11.9",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3",
+    "@types/node": "24.19.2",
+    "eslint": "10.13.0",
+    "@typescript-eslint/eslint-plugin": "8.71.0",
+    "@typescript-eslint/parser": "8.71.0",
+    "typescript-eslint": "8.71.0"
   },
   "packageManager": "pnpm@12.14.0",
   "engines": {
