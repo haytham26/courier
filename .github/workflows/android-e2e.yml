@@ -25,7 +25,7 @@ jobs:
   maestro:
     name: Build the app and run the Maestro flows
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -100,7 +100,7 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
-          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 2048
           script: bash .maestro/run-all.sh
           working-directory: .
 

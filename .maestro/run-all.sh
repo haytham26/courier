@@ -33,6 +33,11 @@ for _ in $(seq 1 30); do
 done
 echo "::endgroup::"
 
+echo "::group::wait for the emulator"
+adb wait-for-device
+adb shell getprop sys.boot_completed | grep -q 1 || { echo "the emulator did not finish booting"; exit 2; }
+echo "::endgroup::"
+
 echo "::group::install the APK"
 adb install -r "${APK}"
 echo "::endgroup::"
@@ -47,7 +52,7 @@ echo "::endgroup::"
 status=0
 for flow in .maestro/*.yaml; do
   echo "::group::${flow}"
-  if ! timeout 300 maestro test "${flow}"; then
+  if ! timeout 180 maestro test "${flow}"; then
     echo "flow failed: ${flow}"
     status=1
   fi
