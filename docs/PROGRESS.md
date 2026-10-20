@@ -11,7 +11,8 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | PHASE2.2 themes | **done** | feat/2.2-unistyles-themes | design-tokens 27/27, workspace 101/101, mobile 6/6 | Unistyles native runtime NOT VERIFIED (no emulator/CI yet) | — |
 | PHASE2.3 address engine | **done** | feat/2.3-address-correction | api 48/48 (24 address tests) | LINZ accuracy NOT VERIFIED (data/linz empty) | — |
 | PHASE2.4 cleanup + lint | **done** | feat/2.4-cleanup-and-lint | workspace 107 + api 48 | mobile lint still off (BUG-045) | — |
-| PHASE3.1 CI + emulator | **done** | feat/3.1-ci-and-android-e2e | workflows + Maestro + B.7 screen | the CI/emulator runs were NOT observed here (no `GITHUB_TOKEN`) | link a green run |
+| PHASE3.1 CI + emulator | **done** | feat/v4-company-bootstrap (PR #1) | workflows + Maestro + B.7 screen | the emulator job was still running at the last check | link a green run |
+| V4 bootstrap | **done** | feat/v4-company-bootstrap (PR #1) | CONSTRAINTS.md, PARITY.md, design/SYSTEM.md, 10 squads, PR template, floor/coverage/licence/audit gates | the mutation harness lands with the first squad task | T2 |
 | 0.1 repo setup | partial | — | not verified | root package.json now pinned (2.1) | pin remaining ranges |
 | 0.3 docker infra | not verified | — | — | not run in audit | run docker compose |
 | 0.4 local secrets | partial | — | not verified | scripts/check-secrets not tested | test scripts |
@@ -63,10 +64,11 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
   `vitest` upgraded to 3.2.7 everywhere (clears the critical advisories).
 
 ## Next (in order)
-1. Watch the CI runs on the five pushed branches and merge them into `main` once they are green
-   (`main` must stay green; `gh` is not authenticated on this machine, so the merge is the founder's).
-2. PHASE 2.5 design to the approved mockups (Figtree, 72px buttons, SVG icon set, no emoji).
-3. PHASE 3 follow-up: link the green emulator run and the artifacts into `docs/evidence/b7/README.md`,
-   then B.7 can be marked PASS.
-4. Then the product phases C → G from `docs/KICKOFF_PROMPT_EN.md` (maps, sync, routing, door
-   memory, dictation, live voice agent, web dashboard, billing, privacy, handover).
+1. Merge PR #1 once the Android emulator job is green (the other gates are already green).
+2. T2 — the Expo version decision (D21): either the SDK 57 downgrade or the ADR that proves
+   SDK 58 with every native module, then DECISIONS.md.
+3. T3 — the emulator run green, the artifacts downloaded into `docs/evidence/b7/`, B.7 marked PASS.
+4. T4 — the real LINZ addresses (`scripts/fetch-linz.py`) and the ≥95 % accuracy report.
+5. T5 — the offline Canterbury PMTiles.
+6. T6 — the design to the approved mockups.
+7. T7 — the product itself (sync, routing, door memory, dictation, voice agent, web, billing, PIA).

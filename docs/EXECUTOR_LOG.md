@@ -141,10 +141,44 @@ PHASE 2.3 (D8 address correction), then 2.4 (cleanup, ESLint flat config for eve
   placeholder ids. The founder entry is in `docs/FOUNDER_TODO.md`.
 - The engine is not yet exposed through the API routes (the `/v1` surface is still a stub).
 
+## 2026-10-20 — V4 bootstrap + T1 (PR #1)
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+|---|---|---|
+| Writing the quality bar | `constraint-driven-development` | `CONSTRAINTS.md` separates the **floor** (no suppressions, no skipped tests, no `any`, no stubs) from the **numbers** (coverage, mutation, audits, bundles), every number names the command that produces it, the floors are the measured values of today (a ratchet) instead of aspirational ones, and every exception has an owner and an expiry. The floor is enforced by `scripts/check-floor.mjs` (diff-scoped). |
+| The gate wiring | `ci-cd-and-automation` | The gates run in separate jobs so a slow one never blocks the fast feedback: floor, coverage, licences, audits, Semgrep, CodeQL (weekly + per PR), the emulator E2E, the release workflow. |
+| Dependency hygiene | `source-driven-development` | The two critical advisories in the tree (`tinypool` prototype pollution through the test runner) are **fixed** by moving to `vitest@4.1.11`; the two remaining highs are build-time only, have no upstream patch, and are documented as accepted with a review date. |
+| Parity and the market | `api-and-interface-design` | `docs/PARITY.md` gives every one of the 49 feature families a status and the task that delivers it, so "planned" is never a vague word. |
+| The design contract | `frontend-ui-engineering` | `docs/design/SYSTEM.md` fixes the tokens, the seven states, the motion budget, the contrast ratios and the screenshot gate — the mockups stay the contract. |
+| Squads | `planning-and-task-breakdown` | Ten squads, each with a mission, measurable targets, an evaluation dataset and a status; a squad is not "done" until its benchmark is met on the CI emulator. |
+| Security of the change | `security-and-hardening` | The GitHub Actions are pinned to their commit SHA, the Maestro installer is downloaded and shown instead of piped into a shell, the containers run with `no-new-privileges`, the gitleaks allow-list names the exact test strings, and the SAST exclusions are listed with their reason (W3, W4). |
+| Review before merge | `code-review-and-quality`, `doubt-driven-development`, `code-simplification` | The PR body carries the story, the research, the parity rows, the evidence links, the risk and the rollback; the code review found the Semgrep-blocking `child_process` calls, the unpinned actions and the audit findings, all fixed before the merge. |
+| Branch and PR | `git-workflow-and-versioning` | One feature branch, atomic Conventional Commits, no force-push, no rebase, `gh pr create` → CI → `gh pr merge --merge`. |
+
+### Result
+
+- **V4 bootstrap**: `CONSTRAINTS.md`, `docs/PARITY.md`, `docs/design/SYSTEM.md`, ten squad folders, the PR
+  template, the floor/coverage/licence/audit gates, CodeQL, the `.semgrepignore` and the `.gitleaks.toml`.
+- **T1**: PR #1 (`feat/v4-company-bootstrap` → `main`) carries PHASE 2.1 → 3.1 and the V4 system.
+- Green on the PR: `lint, typecheck, test` (107 + 48 tests), the floor guard, the coverage ratchet
+  (81.7 % overall, 88.6 % for the auth service), the licence inventory, the dependency audits, Semgrep,
+  CodeQL (JS) and gitleaks.
+
+### Not verified
+
+- The Android emulator job is still running; B.7 stays **NOT VERIFIED** until it is green and the
+  artifacts are linked in `docs/evidence/b7/README.md`.
+- The mutation-testing gate (Stryker) is declared in `CONSTRAINTS.md` but the harness lands with the
+  first mutation-scoped squad task.
+- The coverage gap to the V4 target (85 % / 90 %) is recorded with its owners; the enforced floors are
+  today's values.
+
 ### Next
 
-PHASE 2.4 (cleanup: egg-info, `cleanup_avd.py`, duplicate test-imports, ESLint flat config for every
-package, the 3 expo-router layout typings), then 2.5 (design), then PHASE 3 (CI + emulator).
+T2 (the Expo 58 decision with the ADR), T3 (the emulator green), T4 (the real LINZ addresses), T5
+(the offline map), T6 (the design), then T7 (the product).
 
 ## 2026-10-20 — PHASE 2.4 (branch `feat/2.4-cleanup-and-lint`)
 
