@@ -28,3 +28,19 @@
 - Expo SDK 57 مقفل؛ أي تغيير إصدار يحتاج ADR بمصدر رسمي.
 - laya-coreml مرفوض (Apple فقط).
 - التفاصيل والإصلاحات المعلّقة: FINAL_PROMPT §0-F.
+
+## D22 — VoiceStudio / OmniVoice + post-launch open-source tools (2026-10-20)
+**Voice (founder decision: adopt and adapt VoiceStudio for multilingual voice):**
+- Upstream: github.com/debpalash/VoiceStudio (AGPL-3.0, engine k2-fsa/OmniVoice, 646 languages). Model weights have separate terms — verify before use.
+- Fork it as `haytham26/courier-voice` (public, AGPL-3.0) and adapt it as a **separate server-side voice service** (TTS, voice design, multilingual dictation/transcription, synthetic training-audio generation). The app talks to it only over a documented HTTP/WebSocket API (arm's-length), so the proprietary app code stays separate. All modifications to the fork are published in that fork (AGPL obligation). Founder to get a quick legal check before public launch.
+- Never copy VoiceStudio code into the courier repo or the mobile app.
+- On device stays sherpa-onnx (+ Kokoro or OmniVoice ONNX if its weights license allows commercial use and the benchmark wins).
+- Voice squad benchmarks the fork vs current stack (quality, latency, languages incl. NZ English, Māori place names, Arabic, Hindi/Punjabi, Mandarin, Samoan/Tongan) before switching any production path.
+
+**Post-launch tools (not in v1 scope, planned):**
+- Chatwoot — driver support chat (in-app + dashboard), self-hosted on Oracle.
+- WeKnora (Tencent) — help-centre Q&A over our docs/FAQ (private network only).
+- Cal.com — demo bookings with courier companies/teams.
+- Cap — product demo/tutorial videos.
+- OpenSEO — website SEO.
+Each: license check, self-host plan, security review, added to COST_PLAN when adopted.
