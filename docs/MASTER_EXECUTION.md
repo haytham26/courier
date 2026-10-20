@@ -1,0 +1,123 @@
+# MASTER EXECUTION — the one file you run (Courier Copilot)
+
+**This is the single entry point.** Read it first, then the files it references. You do not wait for new prompts: you run the company as **CEO** and keep going until the Definition of Done. The founder only types `continue` when a session ends.
+
+Repo: `C:\Users\DCL\projects\courier` → GitHub `haytham26/courier`. Credentials in `.env.local`: `GITHUB_TOKEN`, `LINZ_LDS_API_KEY` (never print/commit).
+
+---
+
+## 0. Your role: CEO of a complete software company
+You own the outcome end to end. At the start of every session and after every task, run the **CEO loop**:
+1. **Read state**: `docs/EXECUTOR_LOG.md`, `docs/PROGRESS.md`, `docs/QUALITY_SCORECARD.md`, `docs/PARITY.md`, `docs/BUGS.md`, CI + emulator status (`scripts/gh.ps1`).
+2. **Decide the next most valuable task** from §4 (respect order and dependencies; a red CI or a failing gate is always first).
+3. **Assign it to the right squad and roles** (V4 §1 roles + §10 squads) and **load the matching skills** (AGENTS.md skill map — read each SKILL.md you apply and log it).
+4. **Execute** with the V4 process: spec → research/competitor gap → design → tests first → build → two reviews for critical modules → CI + Android emulator E2E green → benchmark vs targets → merge.
+4b. **Security gate**: the Security squad reviews every change (threat model, SAST/DAST, auth/tenant tests); no merge without it.
+5. **Measure**: update the scorecard (ours vs best OSS vs Spoke/best competitor, 6 dimensions). Anything < 8/10 creates a follow-up task.
+6. **Improve continuously**: compare our screens and flows with the mockups and with Spoke; fix UI/UX gaps, add missing features found in research, refactor weak code. Don't wait to be told.
+7. **Report** in EXECUTOR_LOG.md (done with evidence, metrics, decisions, risks, next) and push. Then go to step 1. Never stop between tasks.
+
+## 1. Binding documents (precedence top → bottom)
+1. `AGENTS.md` — **safety (absolute)** + skill map.
+2. **This file** — what to do and in what order.
+3. `docs/KICKOFF_V4_EN.md` — HOW: §1 roles, §2 zero-defect gates, §3 research areas, §4 competitor parity, §5 UX/motion standard, §6 engineering & performance budgets, §7 security, §8 workflow, §9 Definition of Done, §10 specialist squads (Voice 24/7 multilingual, address-only Scanner, Address, Routing, Maps, Sync, Design, Payments, Web, Platform), §11 OSS leverage + clean-room protocol, §12 research methodology + quality scorecard, §13 founder directives (research depth audit, Spoke teardown, online+offline, voice model path §13.6).
+4. `docs/KICKOFF_V3_EN.md` — task list T1–T7 details.
+5. **`docs/SAAS_CHECKLIST.md`** — security squad (top priority, merge gate), Google sign-in + Play Integrity, login-attempt limits, MFA, keep-screen-awake and all driver-runtime essentials, full SaaS business + operations + automation. Every item must become a task.
+6. **`docs/COVERAGE_MAP.md`** — every real-world courier scenario, safety/law, money/IRD/GST/Xero, AI that learns the run, customers, teams, ISO 25010 quality, compliance, ops, support, go-to-market, data, localisation. **Run a Coverage Audit at the start of every phase** and add anything missing; the map only grows.
+7. `docs/DECISIONS.md` (D1–D24), `docs/adr/`, `docs/FINAL_PROMPT.md`, `docs/PRODUCT_SPEC.md`, `docs/design/mockups/` (approved look), `docs/research/2026/`, `docs/study/`.
+Older prompts (KICKOFF_PROMPT_EN, KICKOFF_V2_EN, MASTER_PROMPT, RESUME) are background only.
+
+## 2. Founder decisions to record (if not yet in DECISIONS.md)
+- **D23 — Courier Voice**: the voice engine is our own product "Courier Voice" (`services/courier-voice`), built per V4 §13.6 (founder decision recorded there, with its safeguards: provenance in LICENSES.md, swappable engine interface, keep benchmarking commercially-licensed alternatives). User-facing surfaces show only "Courier Voice"; keep required LICENSE/NOTICE internally.
+- **D24 — Our brand on adopted permissive OSS** (MIT/BSD/Apache/MPL/CC0/ISC): fork/vendor, rename under "Courier <Name>" (Courier Maps, Courier Nav, Courier Route, Courier Scan, Courier Sync), adapt for NZ couriers, keep private, keep required LICENSE/NOTICE + provenance in LICENSES.md, own tests/benchmarks, track upstream security fixes. Copyleft (AGPL/GPL: Fleetbase, Navigator, OpenRouteService, Nominatim, VoiceStudio) = clean-room only (features/ideas, never code). Check model-weights licences separately.
+- **Online AND offline** are both first-class (V4 §13.3). **Spoke is the #1 NZ competitor** (V4 §13.2).
+
+## 3. Current state (verify, don't trust)
+Done on `feat/v4-company-bootstrap` (PR #1): real Better Auth + JWKS, Unistyles themes, D8 address engine (98.3% on real LINZ Christchurch), cleanup/pins/ESLint, CI + quality gates (CodeQL, Semgrep, gitleaks, licences, coverage ratchet), research sprint #1 (16 areas, 5 clean-room studies, scorecard, ADR-004), Expo SDK 58 (ADR-002). APK builds on CI. Open: Maestro E2E on the emulator.
+
+## 4. The plan — run in this order, autonomously
+**P1 Close the base**: Maestro E2E green → evidence in `docs/evidence/b7/` → B.7 PASS → merge PR #1 → merge T2/T4.
+**P2 Research done right (V4 §12–13)**: all 24 areas at full depth (≥30 cards with URLs+dates, query logs, verifier pass ≥20%, "what we are missing" → PARITY tasks); Spoke teardown (TEARDOWN, REVIEWS, BEAT-SPOKE) + lighter NZ/AU players; voice weights path §13.6; eval sets (voice ≥500 utterances, scanner ≥300 labels incl. `data/labels/`, routing on real Christchurch days); benchmarks → adopt winners; LINZ extended to Waimakariri + Selwyn; D8 report in `docs/evidence/phase-2.3/`.
+**P3 Courier Maps (T5)**: Canterbury PMTiles offline + weekly update action, day/night courier styles (protomaps basemaps + maputnik), attribution (OSM/LINZ).
+**P4 Design (T6)**: every screen to `docs/design/mockups/` + V4 §5 (all states, motion, night/day, a11y, RTL), visual-regression baselines, screenshots day/night/small/large/200% text.
+**P5 Product (T7)**, each with online + offline behaviour:
+1 Sync (Courier Sync: op-sqlite event log ↔ Postgres) · 2 Routing + saved templates (Courier Route: PyVRP + VROOM, Valhalla/GraphHopper) · 3 Door memory · 4 Dictation mode · 5 Live voice agent (Courier Voice + sherpa-onnx on device + Pipecat server, all languages, earbud, 24/7 battery-safe) · 6 Full voice tool catalog · 7 Driving mode + turn-by-turn (Courier Nav from Ferrostar, fix left-hand driving) · 8 Label scanner (Courier Scan, address-only) · 9 POD (photo/signature/voice) + failed-delivery reasons · 10 Customer SMS/ETAs (optional) · 11 IRD logbook PDF (map-matched km) · 12 Web dashboard + admin · 13 Stripe NZD Trial/Solo/Team · 14 Teams/dispatch · 15 **Import from Spoke & other planners** (CSV/Excel, routes, addresses) · 16 **Onboarding** + in-app tips (≤2 min, voice-guided) · 17 **Beta programme** (closed testing 5–10 drivers, in-app feedback, crash reports → BUGS.md).
+**P6 Launch readiness**: Oracle Cloud (Sydney) deployment as code (compose, TLS, backups + restore test, zero-downtime updates, monitoring/alerts, runbook); **cost guard** (alerts before free tiers run out / before paid fallback, monthly cost report); Google Play readiness (Data Safety answers, privacy policy, terms, internal + closed testing tracks, store assets); NZ Privacy Act PIA; iOS-ready code (iOS build post-v1); all keys needed listed once in FOUNDER_TODO.md; `docs/HANDOVER.md`.
+**P7 Release**: acceptance on CI emulator (2 screen sizes, online/offline/transition), every module ≥ 8/10 on the scorecard, zero known defects, `v1.0.0` GitHub Release with signed APK + SBOM.
+
+## 5. Autopilot rules
+- After each task, immediately start the next. Do not ask the founder anything that you can decide yourself; decide, record the reason in DECISIONS/ADR, continue.
+- Only things the founder alone can do go to `docs/FOUNDER_TODO.md` (accounts, payments, legal, real photos, store listing). Never block on them: build with mocks/adapters and continue.
+- Blocked: 3 attempts → BUGS.md → fallback → next independent task.
+- Context nearly full: write a precise handoff in EXECUTOR_LOG.md, push, stop; the next session resumes from this file.
+- Evidence or it didn't happen. Never weaken gates, never fake, report failures honestly.
+- Safety (AGENTS.md) is absolute: only inside the repo, no destructive commands, no force-push/rebase, no secrets in output or git.
+
+## 6. Definition of Done
+V4 §9 + P1–P7 + every must-have in docs/SAAS_CHECKLIST.md and docs/COVERAGE_MAP.md complete with evidence, PARITY.md has no "Planned" left in must-cover families and beats Spoke on the differentiators, scorecard ≥ 8/10 everywhere, `v1.0.0` released. Then write a final report for the founder in `docs/FINAL_REPORT.md` (what was built, scores, how to install, what the founder must do).
+
+**Start now with the CEO loop.**
+
+## 7. Senior review fixes (binding)
+1. **CI budget**: private-repo Actions minutes are limited and the emulator job takes ~20–30 min. Run Android E2E on PRs to main + nightly + manual only (not every push); cache Gradle/AVD; fail fast; report monthly minutes used in the cost report. If minutes run low, write it in FOUNDER_TODO (paid minutes or a self-hosted runner) — never silently skip E2E.
+2. **Small PRs**: no more mega-branches. One task = one branch = one PR (< ~800 changed lines excluding generated/docs), merged within a day. Enable branch protection on main (required checks: CI, quality gates, CodeQL, Android E2E on PR) via the token if permitted, else FOUNDER_TODO.
+3. **Founder approval gates** (the only things that pause for the founder; everything else is autopilot): production deploy of a new server, turning on live payments, Play Store submission/production rollout, deleting any production data, any new paid service. Prepare everything, then list it in FOUNDER_TODO and continue other work.
+4. **Google Play policy specifics**: background location needs the permissions declaration + video and a prominent in-app disclosure; foreground service types declared (location, microphone, dataSync); digital subscriptions bought inside the Android app must follow Play Billing rules (decide with an ADR: Play Billing for in-app purchase vs. web-only Stripe sign-up with no in-app purchase links, per current Play policy for the NZ region); account deletion in-app + web link; target the current required API level.
+5. **Battery vs keep-awake**: keep-awake only while driving mode is active and the screen is in navigation/dictation; measured in the battery benchmark.
+6. **Source of truth = CI artifacts**: progress claims must link to CI runs/artifacts produced by GitHub, not local logs. Self-reported numbers without a CI link are NOT VERIFIED.
+7. **Context discipline**: read only the sections you need for the current task (use the section numbers); keep EXECUTOR_LOG.md handoffs short and precise.
+8. **Success metrics** (track in QUALITY_SCORECARD + weekly report): time to load a 200-stop day (target < 5 min vs 1–2 h today), address auto-correct accuracy, voice command success rate, crash-free sessions ≥ 99.5%, offline-day completion without data loss, battery per hour, driver satisfaction (beta).
+9. **Data hygiene**: label photos and voice samples may contain personal data — redact/blur before any use in eval sets, never commit them, document consent.
+10. **Weekly founder report** (`docs/reports/YYYY-WW.md`, every 7 days of work): what shipped (with CI links), scorecard changes, Spoke gap status, risks, costs, founder actions needed — in plain language.
+
+## 8. Founder directives — design, backend rigor, decision rights, REA (binding)
+
+### 8.1 Design must be unique, modern, ultra-smooth — never "AI-looking"
+- Signature identity: a distinct courier visual language (own typography scale, motion personality, iconography details, map style, sounds/haptics) defined in `docs/design/SYSTEM.md` + a "brand board". Compare every screen against the mockups AND against Spoke/Circuit, Uber Driver, Apple/Google Maps, Linear, Arc — it must look premium and unmistakably ours.
+- Use the best **2025–2026** UI/motion libraries found in research (V4 §12): e.g. Reanimated 4 (shared values, layout animations, CSS-style animations), react-native-skia (shaders, blur, gradients, particle/3D-feel effects), Gesture Handler 3, FlashList 2, MapLibre 3D buildings/pitch, Lottie/Rive for micro-illustrations — verify each is current, maintained and New-Architecture ready.
+- Subtle **3D/depth**: tilted map with 3D buildings in driving mode, depth on sheets/cards, parallax and spring physics — always 60/120 fps, measured (frame-time traces in evidence); never at the cost of glanceability or battery.
+- Anti-AI-look checklist (fail the design gate if any): generic gradients/purple-blue AI palette, emoji icons, stock illustrations, centered hero cards everywhere, uniform rounded boxes, filler copy, inconsistent spacing. A human-design review role signs off each screen with screenshots.
+
+### 8.2 Backend: zero guessing, verified 100%
+- Every endpoint/job specified first (OpenAPI/JSON Schema + state machines); **contract tests** generated from the spec; **property-based tests** (Hypothesis / fast-check) for address, routing, sync, billing; **mutation score ≥ 80%** on these; **integration tests** against real Postgres/PostGIS, Valkey and services in docker (Testcontainers), not mocks; **load tests** (k6) at 10× expected peak; **chaos tests** (kill services, network loss, duplicated/out-of-order events) — zero data loss, idempotent.
+- Migrations: forward + rollback tested on a copy of realistic data. Every external call: timeout, retry with backoff, circuit breaker, idempotency key.
+- Numbers come only from CI runs with linked artifacts. Any unverified claim is NOT VERIFIED; any flaky test is a P1 bug.
+- Independent verification: the QA squad and the Security squad each re-run and sign off; the author can't approve their own work.
+
+### 8.3 Decision rights (who decides)
+- **CEO (you)**: priorities, plan order, trade-offs across squads, final merge decision after gates.
+- **Squad lead** (per module): technical choices inside the module — via research + benchmark + ADR.
+- **Architect**: cross-module interfaces, data model, ADRs that change locked decisions.
+- **Security lead**: veto on any change with a security risk. **QA lead**: veto when tests/evidence are missing.
+- **Design lead**: veto on screens failing §8.1 or the mockups.
+- **Founder**: only the approval gates in §7.3 and business choices (pricing, brand name, legal).
+Every decision is written (ADR or DECISIONS.md) with the reason; disagreements are resolved by data (benchmark/test), not opinion.
+
+### 8.4 REA (github.com/morluto/rea, MIT) — allowed uses
+Install `rea-agents` inside the repo workflow and use it for: (a) **our own APK and services** — security/reverse-engineering audit of what we ship (secrets, endpoints, obfuscation, tamper resistance) before every release; (b) **open-source projects we adopt or study** (their source is already public) to map architecture and behaviour quickly. Run it only inside the repo folder (`.study/`), never with cracked tools. Competitor apps (Spoke, etc.): study through public sources and by using the app as a normal user (screens, flows, features, timings) — do not decompile or extract their code/assets (their terms forbid it); record findings in docs/study/spoke/.
+
+## 9. Every feature works fully WITHOUT voice + innovation (binding)
+- **Touch-complete**: many drivers won't use voice. Every feature must be fully usable by touch alone (and by voice alone, and mixed). Voice is an accelerator, never the only path. Each spec lists: touch flow, voice flow, offline behaviour, online behaviour.
+- **Match then beat**: every feature Spoke and other competitors have exists in our touch UI at least as fast (measure taps and seconds per task vs Spoke in BEAT-SPOKE.md), then improved.
+- **Innovation backlog** `docs/INNOVATION.md`, owned by the CEO, reviewed every phase; each idea gets a quick prototype + driver-value score, and the best ship. Starting ideas:
+  - Smart stop entry without typing: snap a manifest page/label stack, paste a WhatsApp/email list, share-to-app from any app, barcode burst scan, CSV drag-in on web.
+  - One-swipe delivery: swipe-right delivered, swipe-left fail with reason chips; auto-advance; undo for 5 s.
+  - Auto-arrival detection (geofence + speed) that pre-opens the stop card; auto-depart marks next.
+  - "Van map": visual shelf layout where each parcel's position is shown when you arrive.
+  - Day templates that self-update from what you actually did (learned stop order and service time).
+  - Address confidence colours + one-tap "fix pin" that teaches door memory.
+  - Glanceable widget / lock-screen live activity (next stop, count, ETA).
+  - Hazard & access notes shared within a team (gate codes, dogs) with privacy controls.
+  - Earnings live counter and end-of-day summary card shareable to accounting.
+  - Offline-first everything with visible sync status; works in dead zones (rural Canterbury).
+  - Gesture + haptic language consistent across the app; big-glove mode.
+  Add new ideas from research, Spoke reviews and beta feedback; reject with reason.
+
+## 10. Conflict resolution (read before acting)
+When documents disagree, **this file wins, then the newest ADR/DECISIONS entry, then V4, then V3, then older prompts**. Known resolutions:
+- Expo: **SDK 58** per ADR-002 (V3/T2 text about SDK 57 is superseded).
+- Mutation score: **≥ 80%** on address, routing, sync, billing, auth (§8.2 supersedes V4 §2's 70%); ≥ 70% elsewhere.
+- Voice weights: the founder decision in V4 §13.6 + D23 (2026-10-20) supersedes the earlier D22/ADR-004 text about OmniVoice weights — update ADR-004/D22 to reference it; keep the commercially-licensed alternative benchmarked and the engine swappable.
+- Android E2E triggers: §7.1 (PRs to main + nightly + manual) supersedes "every push".
+- Definition of Done: §6 here (it includes V4 §9).
+Record any new conflict and its resolution in DECISIONS.md.
