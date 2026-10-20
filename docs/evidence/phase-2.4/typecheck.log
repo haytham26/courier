@@ -1,0 +1,33 @@
+﻿cmd : $ turbo run typecheck && pnpm run typecheck:api
+At line:5 char:51
++ ... vidence\phase-2.4\typecheck.log" { cmd /c "corepack pnpm typecheck" }
++                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ turbo run typ...n typecheck:api:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+   ÔÇó turbo 2.11.9
+   ÔÇó Packages in scope: @courier/auth, @courier/design-tokens, @courier/eslint-config, @courier/nz-address, @courier/shared, mobile
+   ÔÇó Running typecheck in 6 packages
+   ÔÇó Remote caching disabled
+
+@courier/nz-address:typecheck: cache miss, executing 24ca68953c850617
+@courier/shared:typecheck: cache miss, executing acd53d91e61cd84c
+@courier/design-tokens:typecheck: cache miss, executing 85188272c257a482
+@courier/design-tokens:build: cache miss, executing bcd2edb170b9f71a
+@courier/auth:typecheck: cache hit, replaying logs 7db78f9253444f44
+@courier/auth:typecheck: $ tsc --noEmit
+@courier/nz-address:typecheck: $ tsc --noEmit
+@courier/shared:typecheck: $ tsc --noEmit
+@courier/design-tokens:typecheck: $ tsc --noEmit
+@courier/design-tokens:build: $ tsc -p tsconfig.build.json && tsc -p tsconfig.build.json --module ESNext --outDir dist --declarationDir dist --emitDeclarationOnly false --declaration true --declarationMap true --sourceMap true
+mobile:typecheck: cache miss, executing 95c981140cca0cb7
+mobile:typecheck: $ tsc --noEmit
+
+ Tasks:    6 successful, 6 total
+Cached:    1 cached, 6 total
+  Time:    4.718s 
+
+$ uv run --directory apps/api mypy .
+Success: no issues found in 16 source files
+EXIT_CODE=0

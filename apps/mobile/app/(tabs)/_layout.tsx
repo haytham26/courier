@@ -23,6 +23,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      id="tabs"
       screenOptions={({ route }) => {
         const routeIcons = tabIcons[route.name] || tabIcons.index;
         return {

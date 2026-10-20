@@ -10,9 +10,12 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "test": "turbo run test",
-    "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck",
+    "test": "turbo run test && pnpm run test:api",
+    "test:api": "uv run --directory apps/api pytest -q",
+    "lint": "turbo run lint && pnpm run lint:api",
+    "lint:api": "uv run --directory apps/api ruff check .",
+    "typecheck": "turbo run typecheck && pnpm run typecheck:api",
+    "typecheck:api": "uv run --directory apps/api mypy .",
     "db:push": "turbo run db:push",
     "db:studio": "turbo run db:studio",
     "format": "prettier --write \"**/*.{ts,tsx,json,md,yml,yaml}\"",
@@ -28,7 +31,8 @@
     "eslint": "10.13.0",
     "@typescript-eslint/eslint-plugin": "8.71.0",
     "@typescript-eslint/parser": "8.71.0",
-    "typescript-eslint": "8.71.0"
+    "typescript-eslint": "8.71.0",
+    "pnpm": "12.14.0"
   },
   "packageManager": "pnpm@12.14.0",
   "engines": {

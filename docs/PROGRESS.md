@@ -9,7 +9,8 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | PHASE1-audit | done | main @e59379e | see audit logs | — | — |
 | PHASE2.1 Better Auth | **done** | feat/2.1-better-auth-service | services/auth 31/31, api 23/23, shared 62/62 | runtime HTTP + Postgres path NOT VERIFIED (no server/DB here) | — |
 | PHASE2.2 themes | **done** | feat/2.2-unistyles-themes | design-tokens 27/27, workspace 101/101, mobile 6/6 | Unistyles native runtime NOT VERIFIED (no emulator/CI yet) | — |
-| PHASE2.3 address engine | **done** | feat/2.3-address-correction | api 48/48 (24 address tests) | LINZ accuracy NOT VERIFIED (data/linz empty) | PHASE 2.4 |
+| PHASE2.3 address engine | **done** | feat/2.3-address-correction | api 48/48 (24 address tests) | LINZ accuracy NOT VERIFIED (data/linz empty) | — |
+| PHASE2.4 cleanup + lint | **done** | feat/2.4-cleanup-and-lint | workspace 107 + api 48 | mobile lint still off (BUG-045) | PHASE 2.5 |
 | 0.1 repo setup | partial | — | not verified | root package.json now pinned (2.1) | pin remaining ranges |
 | 0.3 docker infra | not verified | — | — | not run in audit | run docker compose |
 | 0.4 local secrets | partial | — | not verified | scripts/check-secrets not tested | test scripts |
@@ -32,15 +33,15 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 
 | check | result | evidence |
 |---|---|---|
-| pnpm install | PASS (workspace now includes services/auth) | phase-2.1 logs |
-| pnpm -r typecheck | PASS for shared/design-tokens/nz-address/services-auth | phase-2.1 logs |
-| pnpm -r lint | PASS for services/auth (flat config); other packages still use `eslint . --ext .ts` (broken on ESLint 9+) | phase-2.1 logs |
-| pnpm -r test | PASS: shared 26, design-tokens 19, nz-address 17, services/auth 31 | phase-2.1 logs |
-| apps/api pytest | PASS 23/23 (was 6/6 + fake auth test) | phase-2.1/api-test.log |
-| apps/api ruff | PASS (was failing: invalid `FUR` selector) | phase-2.1/api-lint.log |
-| apps/api mypy | PASS 14 files | phase-2.1/api-typecheck.log |
+| pnpm install | PASS (workspace: apps/mobile, packages/*, services/auth) | phase-2.4 logs |
+| pnpm lint | **PASS** for every JS package (shared flat config in packages/eslint-config) + ruff for the API | phase-2.4/lint.log |
+| pnpm typecheck | **PASS** for 6 packages (incl. the mobile app) + mypy (16 files) | phase-2.4/typecheck.log |
+| pnpm test | **PASS**: shared 26, design-tokens 27, nz-address 17, services/auth 31, mobile 6, api 48 | phase-2.4/test.log |
+| apps/api pytest | PASS 48/48 | phase-2.4/test.log |
+| apps/api ruff | PASS | phase-2.4/lint.log |
+| apps/api mypy | PASS 16 files | phase-2.4/typecheck.log |
 | pnpm audit | 3 critical cleared (vitest 2.1.9 → 3.2.7); remaining are build-time only (metro/vite/esbuild) | phase-2.1/pnpm-audit.json |
-| banned-item grep | **0 hits** (was 41) | phase-2.2/banned-grep.log |
+| banned-item grep | **0 hits** (was 41) | phase-2.4/banned-grep.log |
 
 ## PHASE 2.1 what changed
 
@@ -61,10 +62,8 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
   `vitest` upgraded to 3.2.7 everywhere (clears the critical advisories).
 
 ## Next (in order)
-1. PHASE 2.3 D8 address-correction engine with a committed Christchurch fixture subset
-   (`data/linz/` is empty → needs `docs/FOUNDER_TODO.md` entry).
-2. PHASE 2.4 cleanup: egg-info, `cleanup_avd.py`, duplicate `test-imports.js`, ESLint flat
-   config for every package, pin the remaining ranges, the 3 expo-router layout typings.
-3. PHASE 2.5 design to the approved mockups.
-4. PHASE 3 CI + Android emulator on GitHub Actions (`.github/workflows/` is still empty) —
+1. PHASE 2.5 design to the approved mockups (Figtree, 72px buttons, SVG icon set, no emoji).
+2. PHASE 3 CI + Android emulator on GitHub Actions (`.github/workflows/` is still empty) —
    this is what will verify the Unistyles native runtime and B.7.
+3. Then the product phases C → G from `docs/KICKOFF_PROMPT_EN.md` (maps, sync, routing, door
+   memory, dictation, live voice agent, web dashboard, billing, privacy, handover).

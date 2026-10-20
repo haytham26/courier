@@ -91,7 +91,7 @@ export const VoiceResponseSchema = z.discriminatedUnion('type', [
 
 export const IntentSchema = z.object({
   tool: z.string().min(1),
-  args: z.record(z.unknown()),
+  args: z.record(z.string(), z.unknown()),
   speech: z.string().optional(),
   confidence: z.number().min(0).max(1),
 });
@@ -135,7 +135,7 @@ export const TemplateUpdateSchema = z.object({
 export const ApiErrorSchema = z.object({
   error: z.string().min(1),
   code: z.string().optional(),
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>

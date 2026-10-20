@@ -23,6 +23,7 @@ function AuthNavigator() {
 
   return (
     <Stack
+      id="root"
       screenOptions={{
         headerShown: false,
         gestureEnabled: true,

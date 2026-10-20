@@ -5,15 +5,12 @@
  */
 
 import type { ParsedAddress } from './types';
-import { 
-  SPOKEN_FIXES, 
-  NUMBER_WORDS, 
-  UNIT_INDICATORS, 
+import {
+  SPOKEN_FIXES,
+  NUMBER_WORDS,
   STREET_SUFFIXES,
   CANTERBURY_SUBURBS,
   NZ_CITIES,
-  NZ_REGIONS,
-  POSTCODE_PREFIXES 
 } from './constants';
 
 /**
@@ -392,12 +389,12 @@ export function parseMultiple(text: string): ParsedAddress[] {
 /**
  * Validate address against LINZ data (placeholder for pg_trgm integration)
  */
-export async function validateWithLinz(address: ParsedAddress): Promise<{
+export function validateWithLinz(address: ParsedAddress): {
   valid: boolean;
   linz_address_id?: string;
   corrected?: ParsedAddress;
   confidence: number;
-}> {
+} {
   // TODO: Integrate with PostgreSQL pg_trgm fuzzy matching
   // This would query the LINZ address database
   return {

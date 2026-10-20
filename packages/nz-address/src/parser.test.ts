@@ -109,9 +109,9 @@ describe('parseMultiple', () => {
     
     const results = parseMultiple(input);
     expect(results).toHaveLength(3);
-    expect(results[0].suburb).toBe('Papanui');
-    expect(results[1].suburb).toBe('Bishopdale');
-    expect(results[2].unit).toBe('2');
+    expect(results[0]?.suburb).toBe('Papanui');
+    expect(results[1]?.suburb).toBe('Bishopdale');
+    expect(results[2]?.unit).toBe('2');
   });
   
   it('skips empty lines', () => {

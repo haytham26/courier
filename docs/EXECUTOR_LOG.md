@@ -145,3 +145,36 @@ PHASE 2.3 (D8 address correction), then 2.4 (cleanup, ESLint flat config for eve
 
 PHASE 2.4 (cleanup: egg-info, `cleanup_avd.py`, duplicate test-imports, ESLint flat config for every
 package, the 3 expo-router layout typings), then 2.5 (design), then PHASE 3 (CI + emulator).
+
+## 2026-10-20 — PHASE 2.4 (branch `feat/2.4-cleanup-and-lint`)
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+|---|---|---|
+| Removing dead code | `deprecation-and-migration` | `cleanup_avd.py` (local AVD work that AGENTS.md now forbids), the duplicate `apps/mobile/test-imports.js`, the obsolete `apps/api/package.json` and the tracked `*.egg-info` were removed instead of being "kept just in case"; nothing that is still referenced was touched (`scripts/compat-test.js` still uses `compat-test-imports.js`). |
+| One lint config for the workspace | `code-simplification` | Instead of five near-identical flat configs, the rules live once in `packages/eslint-config` and each package imports it — one place to change a rule. |
+| Version pinning | `source-driven-development` | Every version was resolved from the registry (with publish dates) and pinned exactly; the Expo-managed packages keep their `~` range because `npx expo install --check` is what guards them. |
+| Fixing the findings | `debugging-and-error-recovery` | The lint failures were real code smells (unused imports, an `any` leak in `deepClone`, an `async` function without `await`, zod 4's two-argument `z.record`) and were fixed at the cause, not silenced. |
+| Review before commit | `code-review-and-quality`, `doubt-driven-development` | The mobile app's ~45 lint findings were **not** papered over: lint stays off there, the app now runs `typecheck` (green), and the backlog is tracked as BUG-045 next to the voice-module work (BUG-040). |
+| Quality gate | `constraint-driven-development` | `pnpm lint` / `pnpm typecheck` / `pnpm test` now also run the Python API (ruff, mypy, pytest) — one command proves the whole workspace, and the thresholds were not lowered. |
+| Branch and push | `git-workflow-and-versioning` | Feature branch, atomic commit, merge from `origin/main`, no rebase, no force-push. |
+
+### Result
+
+- ESLint flat config shared by every JS package; `pnpm lint` is green (4 packages + ruff).
+- `pnpm typecheck` is green (6 packages, including the mobile app for the first time + mypy).
+- `pnpm test` is green: 107 JS/TS tests + 48 API tests.
+- `*.egg-info/` gitignored and untracked; `cleanup_avd.py` and the duplicate `test-imports.js` deleted.
+- Every dependency version pinned exactly; the banned-item grep stays at 0 hits.
+- The 3 expo-router layout typings fixed (`id` on the navigators).
+
+### Not verified
+
+- `apps/mobile` has no lint script yet (BUG-045): the voice module and the jest mocks still carry
+  type-aware findings that belong to the voice-module work.
+
+### Next
+
+PHASE 2.5 (design to the approved mockups), then PHASE 3 (CI + Android emulator on GitHub
+Actions), then the product phases C → G.

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { tokens, themes, dayTheme, nightTheme, highContrastTheme, getTheme } from './index';
+import { tokens, themes, dayTheme, nightTheme, highContrastTheme, getTheme, type ThemeName } from './index';
 
 describe('Design Tokens', () => {
   it('exports tokens object with all categories', () => {
@@ -72,7 +72,7 @@ describe('Themes', () => {
     expect(getTheme('day')).toBe(dayTheme);
     expect(getTheme('night')).toBe(nightTheme);
     expect(getTheme('highContrast')).toBe(highContrastTheme);
-    expect(getTheme('invalid' as any)).toBe(dayTheme); // fallback
+    expect(getTheme('invalid' as ThemeName)).toBe(dayTheme); // fallback
   });
 
   it('generateCSSVariables produces valid CSS', () => {

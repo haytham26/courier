@@ -1,0 +1,4 @@
+﻿.gitignore:13:*.egg-info/	apps/api/courier_api.egg-info/PKG-INFO
+.gitignore:33:.local-backup/	.local-backup/inspect/package/dist/client.d.ts
+.gitignore:14:node_modules/	node_modules/.bin/pnpm.cmd
+EXIT_CODE=0
