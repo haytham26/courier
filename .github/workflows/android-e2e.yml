@@ -17,9 +17,10 @@ on:
 
 concurrency:
   group: android-e2e-${{ github.ref }}
-  # A cancelled emulator run wastes 20+ minutes of the private Actions minutes,
-  # so a new run waits for the current one instead of killing it.
-  cancel-in-progress: false
+  # A newer commit supersedes the older run: the Gradle cache stays warm, so the
+  # rebuild is fast, and a queue of pending emulator runs would waste the
+  # private Actions minutes.
+  cancel-in-progress: true
 
 jobs:
   maestro:
