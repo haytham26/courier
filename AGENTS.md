@@ -4,6 +4,12 @@ Project: **Courier Copilot** — voice-first app for independent parcel couriers
 Current instructions: **`docs/KICKOFF_V2_EN.md`** (binding). Full mission: `docs/KICKOFF_PROMPT_EN.md`. Spec: `docs/FINAL_PROMPT.md` + `docs/DECISIONS.md` (D1–D21).
 Status: `docs/PROGRESS.md`, `docs/AUDIT.md`, `docs/EXECUTOR_LOG.md`.
 
+## Quality bar
+
+`CONSTRAINTS.md` is the written bar: read it before writing code and **do not weaken it to make a
+change pass**. `docs/PARITY.md` says where we beat the market; `docs/design/SYSTEM.md` is the design
+contract; `docs/squads/<module>/` holds each module's research, benchmark and status.
+
 ## 🔴 Safety (absolute)
 - Work only inside this repo folder. Never read/write/delete outside it (no `~`, `$HOME`, `%USERPROFILE%`, AppData, OneDrive, Desktop, other drives).
 - No destructive commands (`rm -rf`, `Remove-Item -Recurse`, `rmdir /s`, `del /s`, `shutil.rmtree`, `git clean`, `git reset --hard`). Only `node_modules`/`dist`/`build`/`.turbo`/`.expo` inside the repo, by full literal path, never via a variable.

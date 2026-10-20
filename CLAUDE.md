@@ -1,3 +1,6 @@
 # CLAUDE.md
 
-Read and follow `AGENTS.md` (safety rules + skills) and `docs/KICKOFF_V2_EN.md`.
+Read and follow `AGENTS.md` (safety rules, skills, quality bar) and `docs/KICKOFF_V4_EN.md` +
+`docs/KICKOFF_V3_EN.md` (how and what to build).
+
+`CONSTRAINTS.md` is the quality bar: do not weaken it to make a change pass.

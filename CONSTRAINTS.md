@@ -1,0 +1,86 @@
+# Constraints — Courier Copilot
+
+Last reviewed: 2026-10-20 by the lead executor (V4 §2, skill `constraint-driven-development`).
+
+This file is the project's written quality bar. **It is not weakened to make a change pass.**
+Every number below names the command that produces the verdict.
+
+## Floor (always enforced — no setup required)
+
+- No new suppression comments: `@ts-ignore`, `@ts-expect-error`, `eslint-disable`, `# noqa`, `# type: ignore`
+  (an existing one must carry an issue link).
+- No unimplemented stubs: `throw new Error("Not implemented")`, empty `catch {}`, `TODO` where the
+  implementation belongs.
+- No skipped, deleted or weakened tests: no `.skip`, `.only`, `.todo` in a committed test file.
+- No secrets in source, in logs, in `docs/`, or in a commit message.
+- No `any` in TypeScript application code (`packages/`, `services/`, `apps/`).
+- This file does not get weakened to make a change pass.
+
+Checked by `scripts/check-floor.mjs` (diff-scoped, exit 1 on a violation) — run in CI.
+
+## Enforced with numbers
+
+| Dimension | Rule | Checked by | Runs at |
+|-----------|------|-----------|---------|
+| Types (TS) | zero errors, `strict` + `noUncheckedIndexedAccess` | `pnpm typecheck` (`tsc --noEmit`) | every PR |
+| Types (Python) | zero errors, `mypy` strict on `apps/api/app` | `pnpm typecheck:api` | every PR |
+| Lint (TS) | zero errors, zero warnings, type-aware rules | `pnpm lint` (`eslint .`) | every PR |
+| Lint (Python) | zero errors | `pnpm lint:api` (`ruff check .`) | every PR |
+| Format | Prettier and `ruff format --check` clean | `pnpm format:check` | every PR |
+| Tests | all green, no skips | `pnpm test` (vitest + jest-expo + pytest) | every PR |
+| Coverage | ratchet: ≥ 72 % lines on `packages/` + `services/`, ≥ 81 % on the address engine and the auth service (V4 target: 85 % / 90 % — gap tracked below) | `pnpm coverage` (vitest coverage + pytest-cov) then `scripts/check-coverage.mjs` | every PR |
+| Mutation (core modules) | ≥ 70 % mutation score on the address engine and the auth service | `pnpm mutation` (Stryker) | every PR (scoped to the changed files) |
+| Floor | zero violations in the diff | `scripts/check-floor.mjs` | every PR |
+| Secrets | zero findings | `gitleaks detect --redact` (CI job `secrets`) | every PR |
+| Dependency audit (JS) | zero high/critical advisories | `pnpm audit --audit-level high` | every PR |
+| Dependency audit (Python) | zero high/critical advisories | `uvx pip-audit` | every PR |
+| Static analysis (SAST) | zero high findings | `semgrep scan --config p/default --config p/owasp-top-ten` | every PR |
+| Code scanning | zero high alerts | CodeQL (`codeql.yml`) | every PR |
+| Licences | no GPL/AGPL/SSPL/Commons-Clause/CC-NC/FSL/BUSL in the shipped app; recorded in `docs/LICENSES.md` | `scripts/check-licenses.mjs` | every PR |
+| Android E2E | every Maestro flow green on the CI emulator, artifacts uploaded | `.github/workflows/android-e2e.yml` | every PR |
+| Design review | Maestro screenshots (day/night, small/large, 200 % text) match the approved mockups | `docs/evidence/design/` | every UI task |
+| Performance budgets | cold start ≤ 2 s; 300 stops at 60 fps; voice command → action ≤ 700 ms; route of 200 stops ≤ 5 s; APK ≤ 80 MB; battery ≤ 8 %/h | `docs/evidence/performance/` | every task that touches the path |
+
+Numbers that are not yet enforced are in the table below — they are ratchets, not aspirations.
+
+## Measured, not yet enforced (ratchets — must not fall)
+
+| Metric | Today (2026-10-20) | Direction |
+|-------|----------------------|-----------|
+| Project coverage (JS/TS) | 72.1 % lines (`packages/` + `services/`) | must not fall; V4 target 85 % |
+| Coverage of the address engine | 81.3 % lines | must not fall; V4 target 90 % |
+| Coverage of the auth service | 81.4 % lines | must not fall; V4 target 90 % |
+| Project coverage (Python) | 85 % lines (`apps/api/app`) | must not fall; V4 target 90 % |
+| Bundle size (mobile APK) | not built yet (T3) | ≤ 80 MB excluding the map/voice packs |
+| Cold start (mid-range Android) | not measured yet (T3) | ≤ 2 s |
+| Battery while driving | not measured yet (T7) | ≤ 8 %/h |
+| Voice command → action | not measured yet (T7) | ≤ 700 ms on the on-device path |
+
+### The coverage gap (V4 §2 target vs today)
+
+The V4 target is 85 % overall and 90 % on the core modules; the suite has never reached those
+numbers, so the **enforced** gate is the ratchet above (today's value) and the target stays the
+goal. Owners: the Address squad (engine), the Payments squad (auth service), the Platform squad
+(everything else). Closing the gap is a precondition of the v1.0.0 release, not of the next merge.
+
+The largest known holes, with the file that has to grow:
+`services/auth/src/index.ts` (0 % — the process entry point is exercised by a spawned process, which
+the coverage tool cannot instrument), `apps/api/app/main.py` (73 % — the API surface is still a
+stub), `apps/api/app/agents/copilot.py` (64 % — the LLM call path needs a fake client).
+
+## Exceptions
+
+| ID | Rule | Path | Reason | Owner | Expires |
+|----|------|------|--------|-------|---------|
+| W1 | `any` allowed in the mobile app until the voice module is rewritten | `apps/mobile/src/voice/**` | The voice module predates the typed rewrite (BUG-040) | lead executor | 2026-12-01 |
+| W2 | `mypy` not in strict mode for the LangGraph intake graph | `apps/api/app/agents/intake_graph.py` | LangGraph's node typing has no strict-mode overload (see the inline note) | lead executor | 2026-12-01 |
+
+## How to run the checks locally
+
+```bash
+pnpm check:fast      # types + lint + floor guard (seconds)
+pnpm check:task      # fast + the related tests
+pnpm check:full      # everything CI runs, including the audit and the scanner
+```
+
+The scripts mirror this file. **If they drift, this file wins.**

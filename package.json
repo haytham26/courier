@@ -19,6 +19,11 @@
     "db:push": "turbo run db:push",
     "db:studio": "turbo run db:studio",
     "format": "prettier --write \"**/*.{ts,tsx,json,md,yml,yaml}\"",
+    "check:fast": "pnpm typecheck && pnpm lint && node scripts/check-floor.mjs",
+    "check:task": "pnpm check:fast && pnpm test",
+    "check:full": "pnpm check:task && pnpm coverage && node scripts/check-licenses.mjs",
+    "coverage": "node scripts/run-coverage.mjs",
+    "format:check": "prettier --check .",
     "check-secrets": "node scripts/check-secrets.js",
     "push-secrets": "bash scripts/push-secrets.sh",
     "open-secrets": "bash scripts/open-secrets.sh"

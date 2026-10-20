@@ -146,7 +146,7 @@ def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
         # langgraph's add_node overloads do not accept a plain TypedDict
         # callable, so the call is checked by mypy but the overload is not
         # resolvable; the behaviour is covered by tests/test_core.py.
-        g.add_node(name, fn)  # type: ignore[call-overload]
+        g.add_node(name, fn)  # type: ignore[call-overload]  # W2: langgraph has no strict-mode overload
     g.set_entry_point("ingest")
     g.add_edge("ingest", "normalise")
     g.add_edge("normalise", "verify")

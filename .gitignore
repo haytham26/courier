@@ -18,6 +18,9 @@ node_modules/
 .expo/
 # build outputs
 dist/
+coverage/
+.coverage
+apps/api/coverage.json
 *.tsbuildinfo
 # IDE
 .vscode/
