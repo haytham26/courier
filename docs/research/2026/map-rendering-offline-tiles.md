@@ -1,287 +1,237 @@
-# Map rendering, offline tiles & map styles — 2026 OSS research
+# Map rendering, offline tiles & styles - 2026 OSS research (REDO, V4 §13.1)
 
-**Research date: 2026-10-20.** Method: V4 §12 (≥30 candidates, ≥10 shortlist, deep-review top 5,
-benchmark top 2–3). Every number below was copied from the live GitHub REST/GraphQL API, the npm
-registry or PyPI **on 2026-10-20**; nothing is estimated. Anything I could not read is marked
-**UNVERIFIED** with the exact command that would settle it.
-Card format (one line per field group): `repo · stars(+trend proxy) · created · last release/date ·
-cadence · issues · maintainers/90 d · licence(code/data) · New-Arch/Expo58/API34 · size ·
-on-device/server · advisories · production users · docs · CI · better than our choice · risks ·
-DECISION`.
+**Research date: 2026-10-21.** Method: V4 §12 (>= 30 candidates with a full evidence card, >= 10 shortlisted, top 5 deep-reviewed, benchmark top 2-3) + V4 §13.1 (query log, "what we are missing", honest UNVERIFIED marks). This file **replaces** the 2026-10-20 sprint-#1 note. Every number was read live from the GitHub GraphQL/REST API, the npm registry, `api.osv.dev` or the project's own licence file **on 2026-10-21**. Nothing is estimated; anything unread is **UNVERIFIED** with the command that would settle it.
 
-## 0. Scope, our current choice, and the bar we must clear
+Card fields: `repo | stars (+trend proxy) | created | last release/date | cadence | issues open/closed | maintainers/90 d | licence (code AND data) | New Arch/Expo 58/API 34 | size | on-device vs server | advisories + supply chain | production users | docs | CI | better than our current choice | risks | DECISION`. Trend proxy is written `rel6m / commits90d / humans90d`; "issues" = open and closed GitHub issues with **PRs excluded** (the REST `open_issues_count` includes PRs and overstates the backlog ~10x; both are given where they differ). **Median first-response time is UNVERIFIED for every candidate** (it needs per-issue timeline sampling across the pool).
 
-| Item | Today (verified 2026-10-20) |
+## 0. Scope, our current choice, and what changed since 2026-10-20
+
+| Item | Today (verified 2026-10-21) |
 |---|---|
-| Renderer binding | `@maplibre/maplibre-react-native@11.3.7` (pinned in `apps/mobile/package.json`) — latest **11.5.0** (2026-10-04), so we are **2 releases behind** |
-| App stack | Expo **58.0.14**, React Native **0.88.0**, React 19.3.0, `expo-location ~58.0.17` |
-| Offline tiles | **none** — no PMTiles, no MBTiles, no offline-region code in the repo |
-| Map style | **none** — `packages/map-style` does not exist yet (`docs/squads/maps/README.md`: "to be created") |
-| Squad gate | 60 fps pan/zoom, full Canterbury offline, day+night styles (`docs/squads/maps/README.md`) |
+| Renderer binding | `@maplibre/maplibre-react-native` **11.3.7** pinned in `apps/mobile/package.json`; npm latest **11.5.0** (published 2026-10-05) -> **6 releases behind** |
+| App stack | Expo **58.0.14**, RN **0.88.0**, React 19.3.0, `expo-location ~58.0.17` |
+| Offline tiles | **none** in the repo - no PMTiles, no MBTiles, no pack-download code |
+| Map style | **none** - `packages/map-style` does not exist (`docs/squads/maps/README.md`: "to be created") |
+| Squad gate | 60 fps pan/zoom, full Canterbury offline, day + night styles; APK <= 80 MB excl. packs, pack <= 50 MB (V4 §11.1) |
 
-So the question is **not** "which renderer" (MapLibre Native is already ours) but **which tile
-container, which style base, and how a full Canterbury pack reaches the phone**.
+**Correction 1 - the MapLibre upgrade is real and bigger than the old note said.** From `CHANGELOG.md`, the six missed releases contain: 11.3.8 *"Android: prevent two map ANR deadlocks and a camera NullPointerException"* + *"iOS: prevent NaN edge insets"*; 11.3.9 *"iOS: serialize style image loads to avoid CUICatalog heap corruption"*; 11.3.10 *"iOS: GeoJSONSource recycling"*; 11.4.0 *"Android: upgrade MapLibre Native to 13.6.1 / iOS: 6.31.0"*; 11.4.1 *"iOS: only add MLRN SPM to requiring targets"*; 11.5.0 *"add feature state API"*. **Two ANR deadlocks and a heap-corruption fix are already ours and not deployed.**
 
-**Correction 1 — "protomaps/PMTiles — Canterbury packs ≤ 50 MB" is UNVERIFIED.** The format is real
-and the tooling exists, but I found no published Canterbury PMTiles size:
-`https://build-metadata.protomaps.dev/builds.json` returns only the 62 *planet* builds (e.g.
-`20230918.pmtiles` = 114,683,195,425 bytes) and every area URL I tried
-(`build.protomaps.com/{2026,20261019,}/christchurch.pmtiles`, `.../nz.pmtiles`) returns **404**.
-**Settle it by:** `cd protomaps/basemaps/tiles && mvn clean package && java -jar target/*-with-deps.jar
---download --force --area=christchurch` then `ls -l christchurch.pmtiles`, and budget it against the
-80 MB APK ceiling in `CONSTRAINTS.md`.
-**Correction 2 — "protomaps/basemaps (BSD-3; ODbL data)" is correct but incomplete.** `LICENSE.md`:
-code **BSD-3-Clause**, *visual design* **CC0**, *tilesets* **ODbL** (attribute OSM), tile schema
-adapted from Tilezen, and "name your fork … something different". The CC0 design clause is the
-commercially important one and the shortlist omits it.
+**Correction 2 - the MapLibre critical advisory is a WEB-renderer bug, not a native one.** `CVE-2026-85061` = `GHSA-jrc7-96c5-q579`, **critical, CVSS 3.1 = 10.0**, published 2026-09-08 (NVD 2026-09-03); affects npm **`maplibre-gl` <= 6.4.0**, **first patched 6.4.1** (read from the GitHub advisory record) - a zero-click XSS sanitizer bypass in `DOM.sanitize()` (it iterated a live `NamedNodeMap` while removing attributes, so the next attribute survived). It does **not** affect `@maplibre/maplibre-react-native` (OSV query on the RN package: **0 advisories**). Action: the **web dashboard** pins `maplibre-gl >= 6.4.1` (we would take 6.15.0) and must never pass untrusted attribution strings into a style.
 
-### 6-month star trend — method note (applies to all four files)
+**Correction 3 - "protomaps/basemaps is BSD-3" is incomplete.** `LICENSE.md` + `README.md` + `LICENSE_DATA.md` (all read): code **BSD-3-Clause**; **visual design CC0**; tile schema adapted from Tilezen; tilesets **ODbL** with mandatory OSM attribution; POI icons (tangrams) **MIT**; the Daylight landcover layer = **ESA WorldCover CC-BY 4.0 DEED, so it needs its own attribution**; Natural Earth is public domain (crediting unnecessary). A fork must be **renamed** ("name your product ... something different from Protomaps"). `.pmtiles` itself is **public domain / CC0** (`protomaps/PMTiles` `LICENSE`, verbatim: *"The below license (BSD-3) applies to the reference implementations in this repository. The PMTiles specification itself is public domain, or CC0 where applicable."*).
 
-GitHub's stargazer listing is **not readable with the token in `.env.local`**: `GET
-/repos/{owner}/{repo}/stargazers` and the GraphQL `stargazers` connection both return
-`HTTP 403 Resource not accessible by personal access token` (the token lacks `read:user`).
-**Every "6-month star trend" field below is therefore UNVERIFIED.** Verifiable proxies are quoted
-in each card: **commits in the last 90 days** and **npm/PyPI downloads per month**
-(`https://api.npmjs.org/downloads/point/last-month/<pkg>`).
+**Correction 4 - the Canterbury pack size is still UNVERIFIED.** `https://build-metadata.protomaps.dev/builds.json` (fetched 2026-10-21) lists **only planet builds**; the newest is `20261020.pmtiles` = **139,013,292,063 bytes**. There is **no area/Canterbury artefact** and the Protomaps area URL pattern is undocumented. The number must be produced by a build, not found.
+
+**6-month star-trend - method note (binding for every card).** The stargazer listing is **not readable with the token in `.env.local`** - verified 2026-10-21: `GET /repos/{o}/{r}/stargazers` -> `HTTP 403 Resource not accessible by personal access token`; GraphQL `stargazers(first:3){edges{starredAt}}` -> `FORBIDDEN`. **Every "6-month star trend" below is UNVERIFIED.** The verifiable proxies used instead, as instructed: **releases in the last 6 months**, **commits in the last 90 days** (default-branch history since 2026-07-22), **distinct human maintainers in 90 days** (distinct `author.user.login` in that window, bots removed). npm downloads/month is added where a package exists.
 
 ## Queries run
 
-All via `scripts\gh.ps1` / `gh search repos` on 2026-10-20 (search API, 30 req/min limit):
+`gh search repos` + `gh api graphql` via `scripts\gh.ps1` (or `gh` with `GH_TOKEN` read from `.env.local` at runtime - never printed), 2026-10-21. Search API limit 30 req/min, observed.
 
-| # | Query | Sort | Result count |
+| # | Query | Filters | Results returned |
 |---|---|---|---|
-| 1 | `pmtiles` | stars | 30 (top: maplibre/martin 4012, protomaps/PMTiles 3090) |
-| 2 | `topic:maplibre` | stars | 30 (top: maplibre-gl-js 11899, GeoLibre 8049, openfreemap 6237) |
-| 3 | `topic:offline-first` | stars | 25 (no map hits — "offline-first" is a sync keyword, not a tile keyword) |
-| 4 | `offline map` | stars | 25 (top: organicmaps 15714, X-TRACK 6310, barefoot 693) |
-| 5 | `react-native map` | stars | 20 (top: react-native-maps 16010, rnmapbox 2921) |
-| 6 | `vector tile generator` | stars | 15 (top: walkerke/freestiler 153 — new 2026 repo) |
-| 7 | `maplibre` | stars | 25 |
-| 8 | `pmtiles offline tiles app` | updated | **0** (GitHub ANDs every term — recorded as a dead query) |
-| 9 | `vector tile generator openstreetmap` | stars | **0** (dead query) |
-| 10 | `react-native map offline navigation` | stars | **0** (dead query) |
-| 11 | `osrm` / `navigation engine` / `topic:geojson` | stars | 12 / 15 / 8 (cross-area sweep; surfaced `routingpy`, `maplibre-gl-directions`) |
+| 1 | `pmtiles` | `--sort stars --limit 30` | **30** - maplibre/martin 4012, protomaps/PMTiles 3091, protomaps/basemaps 760, protomaps/go-pmtiles 615, stadiamaps/pmtiles-rs 112, walkerke/pmtiles 86, developmentseed/async-pmtiles 59, developmentseed/tipmtiles 30, Matico-Platform/deck.gl-pmtiles 26 |
+| 2 | `topic:maplibre` | `--sort stars --limit 30` | **30** - maplibre-gl-js 11901, **opengeos/GeoLibre 8057**, hyperknot/openfreemap 6238, rnmapbox/maps 2921, maputnik 2659, maplibre-native 2276, **PimpinPumpkin/Vela 2077**, protomaps/basemaps 760, maplibre-react-native 670, maplibre-compose 590, **DenserMeerkat/June 480**, openfreemap-styles 261, opengeos/mapwidget 236, opengeos/anymap-ts 222 |
+| 3 | `topic:offline-maps` | `--sort stars --limit 30` | **30** - organicmaps 15716, **FASTSHIFT/X-TRACK 6310**, pizero_bikecomputer 1281, tiler 723, dxxzst/OfflineMap 498, flutter-maplibre-gl 375, libosmscout 305, IceNav-v3 192, osmin 164, MapCache 139 |
+| 4 | `basemap` | `--sort stars --limit 30` | **30** - BlenderGIS 9507, historical-basemaps 849, matplotlib/basemap 817, protomaps/basemaps 760, **maputnik/osm-liberty 549**, tilezen/vector-datasource 521, CartoDB/basemap-styles 390, **opengeos/qgis-basemaps 193**, **linz/basemaps 128**, free-tiles 120, **jonathanlurie/basemapkit 81** |
+| 5 | `protomaps basemaps` | `--sort stars --limit 30` | **30** - project-nomad-maps-europe 10, hfu/otaniemi.pmtiles 4, then 28 zero-star forks -> **dominated by forks, yielded nothing new** |
+| 6 | `offline map tiles react-native` | `--sort stars --limit 30` | **0** - dead query (`gh search repos` ANDs every term over name/description/topics) |
+| 7 | `vector tile generator openstreetmap` | `--sort stars --limit 30` | **0** - dead query |
+| 8 | `mbtiles offline tiles` / `map style json tilejson generator` | `--sort stars --limit 30` | **0 / 0** - dead queries |
+| 9 | `"offline map" in:readme` / `"vector tile" in:readme` / `"map style" in:readme` | `--sort stars --limit 30` | **30 / 30 / 30**, all top hits are awesome-lists and public-apis -> recorded, then abandoned |
+| 10 | `versatiles` | `--sort stars --limit 30` | **30 unrelated** (tmux, Iosevka, fabric) -> fuzzy match on an unrelated token; the real project was found by name lookup instead |
+| 11 | `maplibre` / `pmtiles offline tiles app` / `react-native map offline navigation` | `--sort stars` | 25 / **0** / **0** - the last two are dead queries |
 
-Plus non-search API reads: `repos/{o}/{r}`, `/releases`, `/contents/*`, `/commits?since=`,
-`/actions/runs`, `/license`, `search/code`, npm `registry.npmjs.org`, `api.npmjs.org/downloads`,
-OSV `api.osv.dev/v1/query`.
+Non-search API reads: `repos/{o}/{r}` (GraphQL), `/releases`, `/commits`, `/contents/*`, `/advisories`, npm `registry.npmjs.org` + `api.npmjs.org/downloads/point/last-month`, `api.osv.dev/v1/query`, `build-metadata.protomaps.dev/builds.json`. A cross-area sweep (`osrm`, `navigation engine`, `topic:geojson`) already run by the routing/navigation squads surfaced `routingpy` and `maplibre-gl-directions` - not re-counted here.
 
-## 1. Candidate pool — 38 candidates, full evidence card each
+## 1. Candidate pool - 32 full evidence cards + 22 also evaluated
 
-### C1 — maplibre/maplibre-react-native  ⭐ shortlist
-`github.com/maplibre/maplibre-react-native` · **669 ★** /128 f · created **2022-11-03** · last release **v11.5.0, 2026-10-04** (170 releases) · cadence **≈ weekly** (11.3.7 08-22, 11.3.8 09-01, 11.3.9 09-05, 11.3.10 09-07, 11.4.0 09-19, 11.4.1 10-01, 11.5.0 10-04) · issues **364 open / 330 closed** · maintainers 90 d **4 humans** (Kilian Finger, Markus Wendorf, Kacper Golinski, crockalet) + 60 bot commits · **MIT** code / n-a data · **New Arch YES** (`codegenConfig.type="all"` + iOS `componentProvider` per component → Fabric) · **Expo SDK 58 YES** (`peerDependencies: expo >= 54, react-native >= 0.80, react >= 19.1`; we run RN 0.88) · **Android `minSdk 24 / targetSdk 34 / compileSdk 35`** (from `package/android/gradle.properties`) → **API 34 exactly as V4 requires** · ships `org.maplibre.gl:android-sdk-opengl:13.6.1` (iOS MapLibre Native 6.31.0) · on-device · OSV **0** · **877,231 npm downloads/month** · docs: Docusaurus site + `docs/` workspace · CI: Release green 2026-10-15; `Review`/`autofix.ci` = action_required · **better than our choice**: it *is* our choice, but 11.4.x/11.5.0 add the **feature-state API** + an iOS SPM fix; 11.3.8 fixed **two Android ANR deadlocks** + a camera NPE; 11.3.9 fixed a **CUICatalog heap corruption** · risks: 4 maintainers is thin; 364 open issues · **KEEP → upgrade 11.3.7 → 11.5.0** (only RN binding with New-Arch codegen, Expo 58 peers and targetSdk 34; ships `pmtiles://` sources).
-### C2 — maplibre/maplibre-native  ⭐ shortlist
-**2,275 ★** /653 f · created 2020-11-20 · last release **android-v13.7.1, 2026-10-15** (252; also `ios-v7.0.0-pre2` 10-14, `*-globe` 10-19) · cadence **weekly** · 1,536 open / 1,014 closed · maintainers 90 d: large (Google/Mapbox alumni + Stadia + community) · **BSD-2-Clause** · **native PMTiles since Android 11.7.0**: `pmtiles://https://`, `pmtiles://file://`, `pmtiles://asset://` (asset byte-range reads added in 13.7.1) — `src/mln/storage/pmtiles_file_source.hpp`, `platform/android/docs/data/PMTiles.md` · on-device · OSV n/a · production users: MapLibre RN/Compose/Flutter, Organic Maps · docs: `MapLibre.docc` + platform docs · CI: linux/osx/windows + codecov · **better**: it is what makes an **offline, file-backed PMTiles** possible at all — GL JS cannot open a local archive without a custom protocol handler · risks: 1,536 open issues; "**PMTiles sources do not support offline pack downloads or caching**" (we own the pack lifecycle) · **KEEP (transitive, via C1)**.
-### C3 — protomaps/PMTiles  ⭐ shortlist
-**3,090 ★** /200 f · created 2021-02-16 · last push **2026-09-16** · **0 GitHub releases** (they live in `go-pmtiles` + npm/PyPI) · 245 open / 237 closed · maintainers 90 d: Protomaps core (small) · licence **BSD-3-Clause** for the reference implementations, **the spec itself is public domain / CC0** · data n/a (container format) · npm **`pmtiles` 4.5.0 (2026-08-10), BSD-3-Clause, 4,324,961 downloads/month**; PyPI `pmtiles` present · on-device + server · OSV **0** · docs: spec v3 (`spec/v3/spec.md`) + CLI docs · CI: GitHub Actions · **better**: **one single-file archive** → one download, one `pmtiles://file://` URL, weekly **diff** updates (v3 supports incremental updates) · risks: the repo has had **no commit since 2026-09-16** and no tagged releases (the CLI moved to `go-pmtiles`); pin the CLI exactly · **ADOPT (container format + JS reader)**.
-### C4 — protomaps/go-pmtiles  ⭐ shortlist
-**615 ★** /83 f · created 2021-04-22 · last release **v1.31.2, 2026-07-22** (72) · cadence: last release ~3 months, pushed 2026-07-22 · 109 open / 96 closed · maintainers: Protomaps core · **BSD-3-Clause** · CLI `pmtiles convert|extract|show|merge|diff` · **the tool that produces our Canterbury pack and the weekly diff** · server-side build tool (CI, not the app) · OSV n/a · docs: docs.protomaps.com/pmtiles/cli · CI: releases publish binaries for every OS/arch · **better**: `pmtiles extract` gives a **z17-limited, bbox-clipped, Canterbury-only** pack — the only way to hit the 80 MB APK ceiling · risks: Go binaries must be checksum-pinned (V4 §7) · **ADOPT (build tool)**.
-### C5 — protomaps/basemaps  ⭐ shortlist
-**759 ★** /106 f · created 2020-04-24 · last push **2026-09-11** · **0 GitHub releases** · 169 open / 140 closed · maintainers: Protomaps (Kelso Cartography) · licence **code BSD-3-Clause / visual design CC0 / tilesets ODbL (attribute OSM)** · npm `@protomaps/basemaps` (styles package) · server-side build (Planetiler profile) + on-device style JSON · docs: README + `styles/` TS package · CI: Java/Maven + node · **better**: **day and night for free** from one themeable style source (`styles/` is a TS generator with multiple colour themes) and a **z17-ready schema** already carrying house numbers, entrances and access tags for a courier style · risks: attribution request ("attribute the Protomaps project if you use the basemap styles unmodified or with additions") and "name your fork … something different" — we ship a modified style so the ask is satisfied, but still credit · **ADOPT as the style base, forked as `courier-copilot-style`**.
-### C6 — hyperknot/openfreemap
-**6,237 ★** /201 f · created 2023-12-13 · last push 2026-10-14 · **0 releases** · 110 open / 99 closed · maintainers 90 d: 1–2 core · **MIT** code / **OSM ODbL** data · server-side tile hosting (Planetiler + OpenMapTiles + Martin) · **explicitly does NOT provide** routing, navigation, geocoding or search (README) · production users: MapHub since June 2024 · docs: self-hosting guide · CI: Actions · **better**: a **free, key-less, unlimited** online fallback outside the downloaded region · risks: single-maintainer, donation-funded, no SLA · **WATCH (online fallback; self-host before relying)**.
-### C7 — hyperknot/openfreemap-styles
-**261 ★** /26 f · created 2023-12-28 · pushed 2026-10-12 · 22 open / 12 closed · **MIT** / ODbL data · style JSON generator on the OpenMapTiles schema · **WATCH** (alternative style base; Protomaps has the courier-relevant z17 layers).
-### C8 — stadiamaps/pmtiles-rs
-**112 ★** /25 f · created 2022-10-21 · last release **v0.25.0, 2026-10-15** (20) · 15 open / 8 closed · **Apache-2.0** · Rust PMTiles reader/writer with **HTTP range requests** → fetch only the byte ranges needed → the only path to a *partial*/remote offline pack · risks: 5 watchers · **WATCH**.
-### C9 — onthegomap/planetiler
-**2,221 ★** /196 f · created 2021-10-20 · last release **v0.10.2, 2026-03-29** (24) · 264 open / 165 closed · maintainers 90 d: Michael Barry + community · **Apache-2.0** · Java, "a map of the world in a few hours on a single machine without external tools or database" · server-side tile generation (MBTiles + PMTiles) · docs: extensive (docs site) · CI: Java/Gradle · **better**: the **engine under Protomaps basemaps**, so adopting basemaps already depends on it; a **YAML profile** lets us add courier layers without forking Java · risks: last release ~7 months ago though pushed daily · **KEEP (transitive dependency of C5)**.
-### C10 — felt/tippecanoe
-**1,623 ★** /140 f · created 2022-08-15 · pushed 2026-09-26 · last release **2.79.0, 2025-07-24** (187) · 169 open / 51 closed · **BSD-2-Clause** · C++ vector-tile encoder · **better**: encodes straight to `.pmtiles` with per-layer feature control (house numbers, entrances, access restrictions) · risks: tagged-release cadence has slowed (15 months) · **WATCH**.
-### C11 — maplibre/maputnik
-**2,659 ★** /477 f · created 2016-09-08 · last release **v3.1.0, 2026-07-06** (17) · 509 open / 423 closed · **MIT** · visual style editor (web) · **better**: this is how we *design* the courier style (house numbers from z17, entrances, access restrictions) and export style JSON; `versatiles-org/maputnik` is a maintained fork · risks: browser-only, no RN value · **KEEP (design-time tool, not shipped)**.
-### C12 — maplibre/maplibre-gl-js
-**11,899 ★** /1,289 f · created 2020-12-08 · last release **v6.15.0, 2026-10-18** · 1,730 open / 1,470 closed · **BSD-3-Clause** (`LICENSE.txt`; GitHub reports NOASSERTION) · npm `maplibre-gl` 6.15.0 · **server/web only** — GL JS cannot read a local archive without a custom `pmtiles://` handler and cannot run on a phone · **REJECT for the app (KEEP for the web dashboard)**.
-### C13 — maplibre/maplibre-rs
-**1,584 ★** /97 f · created 2021-11-28 · pushed 2026-10-16 · **0 GitHub releases** · 110 open / 53 closed · **Apache-2.0** · Rust WebGPU renderer for web/mobile/desktop · risk: pre-1.0, no releases · **WATCH** (2026 novelty; would be the fastest renderer if it lands).
-### C14 — maplibre/maplibre-style-spec
-**262 ★** · **BSD-3-Clause** (`LICENSE.txt`) · last release **v26.4.4, 2026-09-15** · the schema every style must satisfy · **KEEP (transitive via C1)**.
-### C15 — maplibre/maplibre-tile-spec
-**561 ★** · **Apache-2.0** · pushed 2026-10-20 · 306 tag-driven releases · MVT/MLT spec + wasm tooling · **WATCH** (MLT would shrink packs; not ready).
-### C16 — maplibre/martin
-**4,012 ★** /407 f · created 2017-09-30 · last release **martin-v1.16.1, 2026-09-09** · 582 open / 552 closed · **Apache-2.0** · Rust tile server (PostGIS/MBTiles/PMTiles) · **better**: if we ever need an *online* tile API with our own styles, Martin is the self-hosted choice · **WATCH** (server-side; not needed while offline-first).
-### C17 — maplibre/maplibre-compose (590 ★, BSD-3-Clause, v0.20.0 2026-10-10) and C18 — maplibre/flutter-maplibre-gl (375 ★, BSD, v0.27.1 2026-09-10)
-both are **not React Native** · C17 is the reference for how a MapLibre binding is structured when we review C1's patches · **REJECT (wrong toolchain)**.
-### C19 — rnmapbox/maps
-**2,921 ★** /955 f · created 2019-04-07 · last release **v10.3.10, 2026-10-19** · 1,917 open / 1,860 closed · repo licence **MIT** but the wrapped **Mapbox Maps SDK is proprietary** (token + per-MAU billing) · **REJECT** (vendor lock-in; contradicts our "no Google/Mapbox keys" stance).
-### C20 — react-native-maps/react-native-maps
-**16,010 ★** /4,965 f · last release **v1.29.11, 2026-09-27** · 4,147 open / 4,093 closed · **MIT** · **4,865,540 npm downloads/month** · wraps Google Maps + Apple Maps → **proprietary data, no offline vector tiles, no style we control** · **REJECT**.
-### C21 — mapbox/mapbox-gl-native
-**4,458 ★** · **ARCHIVED** (last push 2023-07-27) · proprietary SDK terms · **REJECT (archived)**.
-### C22 — mapbox/tilebelt
-288 ★ · MIT · last release v2.0.3 2025-12-05 · JS tile-shuffling for **raster** tiles · **REJECT** (we are vector/PMTiles).
-### C23 — tilezen/joerd
-425 ★ · MIT · **last push 2021-03-22, last release 2017-11-21** · **DEAD** · **REJECT**.
-### C24 — openmaptiles/openmaptiles (the Tilezen-derived schema)
-**3,197 ★** · created 2016-10-04 · last release **v3.16, 2025-12-18** · pushed 2026-07-29 · schema **CC-BY** (attribution required), toolchain Apache-2.0 · **better**: more POI layers than Protomaps · risks: extra attribution burden, heavier packs · **WATCH**.
-### C25 — versatiles-org/versatiles-rs
-**328 ★** · **MIT** · last release **v5.4.0, 2026-10-17** (144) · 188 open / 181 closed · the Rust VersaTiles stack (spec Unlicense, style MIT) · **better**: a **single-file archive with a self-describing layout** any client can read without a native library — a plausible alternative to PMTiles · risks: 4 watchers, niche · **WATCH**.
-### C26 — versatiles-org/versatiles-style
-114 ★ · MIT · v7.0.1 2026-10-15 · **WATCH** (style alternative).
-### C27 — opengeos/GeoLibre
-**8,050 ★** · **MIT** · **created 2026-05-27** · last release **v3.4.0, 2026-10-11** · "lightweight, cloud-native GIS platform" · **a brand-new 2026 repo with 8 k stars in 5 months** — the anti-bias requirement (≥3 newer/smaller challengers) is met by this one · **WATCH** (web/analytics, not the driver app).
-### C28 — maplibre/awesome-maplibre
-1,094 ★ · BSD-3-Clause · the discovery index used for strategy 3 · **KEEP (research tool)**.
-### C29 — maplibre/font-maker
-265 ★ · BSD-3-Clause · **last release v0.0.1 (2023-08-22)**, pushed 2026-07-27 · converts fonts to MapLibre fontstacks · **WATCH** (we need a courier glyph stack; `versatiles-org/versatiles-fonts` and `protomaps/basemaps-assets` are alternatives).
-### C30 — mbloch/mapshaper
-**4,192 ★** · created 2013-02-19 · last release **v0.7.91, 2026-10-20** · 659 open / 542 closed · NOASSERTION (repo) · shapefile/GeoJSON ⇄ vector tiles · **better**: fastest way to cut a bbox out of an OSM extract and re-encode as MVT without Java · **WATCH** (build-time helper).
-### C31 — OvertureMaps/overture-tiles
-175 ★ · MIT · v1.1.4 2026-07-24 · builds PMTiles from Overture (places, **structured addresses**) · **better**: better address data than OSM for the Address squad · **WATCH (cross-squad)**.
-### C32 — developmentseed/async-pmtiles (59 ★, MIT, pushed 2026-10-13) and C33 — developmentseed/tipmtiles (30 ★, MIT, pushed 2026-04-02)
-async PMTiles client for Python · **WATCH** (server-side Python client for the API).
-### C34 — Cyclenerd/offline-map-tile-downloader
-43 ★ · MIT · created 2025-08-27 · v1.1.1 2026-06-08 · Go CLI downloading **raster** tiles for a bbox · **REJECT** (raster, not vector).
-### C35 — walkerke/freestiler
-**153 ★** · **created 2026-03-05** · pushed 2026-10-04 · NOASSERTION (`LICENSE` = MIT-shaped "YEAR: 2026 COPYRIGHT HOLDER: Kyle Walker") · Rust vector-tile generator for R/Python/DuckDB · **better**: DuckDB-driven tiles from a CSV of stops — interesting for a *stop-density* overlay · **WATCH**.
-### C36 — PimpinPumpkin/Vela
-**2,072 ★** · **created 2026-06-15** · last release **v0.5.2621, 2026-10-19** (505) · **GPL-3.0** · "Maps and turn-by-turn navigation for Android without Google Play Services" · **the single most important 2026 newcomer** — proof that a full OSM nav stack is buildable now · **CLEAN-ROOM STUDY ONLY (V4 §11.2) — never quote code**.
-### C37 — organicmaps/organicmaps
-**15,714 ★** · created 2020-12-27 · last release **2026.09.29-32-android, 2026-09-29** · 6,422 open / 3,215 closed · root `LICENSE` is **Apache-2.0** (GitHub: NOASSERTION) but the project ships GPL-family components and **ODbL data** — treat the tree as copyleft until per-directory headers are audited · offline maps + routing + search, 6 M+ users · **CLEAN-ROOM STUDY ONLY** (UX + offline-pack lifecycle reference).
-### C38 — Framstag/libosmscout (305 ★, LGPL-3, last release v2024.06.02.1 2024-06-02) and mapsforge/mapsforge (1,416 ★, LGPL-3, v0.30.0 2026-08-20) and Akylas/alpimaps (194 ★, MIT)
-native/Java offline-map stacks with their own tile formats · **REJECT** (wrong licence family for the bundle; superseded by PMTiles + MapLibre).
-## 2. Shortlist (14) with decisions
+**C1 - maplibre/maplibre-react-native** | **our choice** | **670 stars**/128 f | created 2022-11-03 | last release **v11.5.0** (npm 2026-10-05) | 22 rel/6m | **34 open/330 closed** issues (REST 364 incl. PRs) | **7 humans/90 d** (Wendorf, KiwiKilian, michaelcohen-at, donadel, caspg, n-hallberg, crockalet) + 2 bots | **MIT** / n-a data | **New Arch YES** (`codegenConfig {type:"all"}` + iOS `componentProvider` per component -> Fabric) | **Expo SDK 58 YES** (peers expo >=54, RN >=0.80, react >=19.1; we run RN 0.88) | **Android API 34 YES** (minSdk 24 / targetSdk 34 / compileSdk 35, MapLibre Native 13.6.1, NDK 27.1) | npm unpacked **2.19 MB / 979 files** (11.3.7: 2.13 MB / 970) + native AAR (APK weight **UNVERIFIED**) | on-device | **OSV 0 advisories** + npm `provenance:true` | **877,231 dl/mo** | docs: Docusaurus + `examples/` | CI: Actions, `eslint --max-warnings 0`, `tsc` over src *and* tests, Jest + RNTL + snapshot-diff | **better**: 11.3.8-11.5.0 add the ANR/NPE/heap fixes + the **feature-state API** | **risks**: 7 humans; 7 open crash/recycle bugs (#1738 Fabric mount abort, #1736 ignored `initialViewState`, #1735 SIGSEGV on style reload, #1734 stale inline GeoJSON, #1733 recycled source views, #1732 sprite eviction, #1729 Android Marker long-press) | **DECISION: KEEP -> upgrade 11.3.7 -> 11.5.0 (blocking)**.
+
+**C2 - maplibre/maplibre-native** | transitive | **2,276 stars**/655 f | created 2020-11-21 | last release **android-v13.7.1 (2026-10-15)**; also `android-v2026.10.19-globe` (10-19), `ios-v7.0.0-pre2` (10-14), `ios-v6.31.0` (09-23) | 40 rel/6m | **522 open/1,014 closed** (REST 1,536 incl. PRs) | **20 humans/90 d** | **BSD-2-Clause** | native iOS+Android (no npm advisory applies; C/C++ SDK) | docs: `MapLibre.docc` + per-platform docs | CI: linux/osx/windows + Bazel + codecov | **better**: the only thing that makes an offline, file-backed map possible at all - `platform/android/docs/data/PMTiles.md` documents `pmtiles://https://`, `pmtiles://file://` and `pmtiles://asset://<name>.pmtiles` since **Android 11.7.0** and warns *"PMTiles sources do not support offline pack downloads or caching"*, so **we own the pack lifecycle** | **risks**: 522 open issues; iOS 7.0.0 still a pre-release | **DECISION: KEEP (transitive via C1)**.
+
+**C3 - protomaps/PMTiles** | **3,091 stars**/200 f | created 2021-02-16 | last push 2026-09-17 | **0 GitHub releases** (the CLI lives in `go-pmtiles`; the JS reader is npm `pmtiles`) | **0 rel/6m, 8 commits/90 d, 2 humans** (bdon, wipfli) | **8 open/237 closed** | **BSD-3 for the reference implementations; the SPECIFICATION is public domain / CC0** | npm `pmtiles` **4.5.0** (2026-08-11), BSD-3, **4,324,961 dl/mo** | on-device + server | OSV 0 | docs: `spec/v3/spec.md` + docs.protomaps.com | CI: Actions | **better**: one single-file archive -> one download, one `pmtiles://file://` URL, and v3 supports **incremental diffs** (weekly update without re-downloading) | **risks**: the reference repo is nearly dormant (no release since 2021, no commit since 2026-09-17) -> pin the CLI by SHA-256 | **DECISION: ADOPT (container format + JS reader)**.
+
+**C4 - protomaps/go-pmtiles** | **615 stars**/83 f | created 2021-04-22 | **v1.31.2 (2026-07-23)** | 5 rel/6m but **1 commit/90 d, 1 human** (YazeedAlKhalaf) | **13 open/96 closed** | **BSD-3-Clause** | CLI `convert|extract|show|merge|diff` | server-side build tool | **better**: `pmtiles extract` is the only way to cut a **bbox-clipped, z-capped** pack - the only route to the 50/80 MB ceiling | **risks**: one maintainer, 3 months since the last release; Go binaries must be checksum-pinned (V4 §7) | **DECISION: ADOPT (build tool), pinned**.
+
+**C5 - protomaps/basemaps** | **760 stars**/106 f | created 2020-04-24 | last push 2026-09-12 | **0 GitHub releases** | **0 rel/6m, 5 commits/90 d, 1 human** (bdon) | **29 open/140 closed** | **code BSD-3 / visual design CC0 / tilesets ODbL (OSM attribution mandatory) / tangram icons MIT / ESA WorldCover CC-BY 4.0 for landcover** | npm `@protomaps/basemaps` **5.7.2** (2026-03-11), BSD-3, **1,171,602 dl/mo** | server-side build (Planetiler/Maven) + on-device style JSON | OSV 0 | docs: README + `LICENSE.md` + `LICENSE_DATA.md` + `styles/` TS generator | CI: Java/Maven + node | **better**: **day and night from one themeable source** (the style is *generated*, so a night theme is a theme swap) and a z17-ready schema already carrying house numbers, entrances and access tags - the courier layers | **risks**: single maintainer; the Maven planet build is a CI killer (use `--area=christchurch`); the fork must be renamed | **DECISION: ADOPT as the style base, forked and renamed `courier-copilot-style`**.
+
+**C6 - hyperknot/openfreemap** | **6,238 stars**/201 f | created 2023-12-14 | last push 2026-10-20 | **0 rel/6m, 35 commits/90 d, 1 human** (hyperknot) | **11 open/99 closed** | **MIT** code / **OSM ODbL** data | server-side tile hosting (Planetiler + OpenMapTiles + Martin) | OSV 0 | production users: MapHub since June 2024 (README) | docs: README + `docs/self_hosting.md` + `docs/benchmark/` | CI: Actions + a live nginx deployment | **better**: a **free, key-less, unlimited** online fallback (no registration, no API keys, no cookies) with **weekly full-planet downloads in Btrfs, MBTiles and PMTiles** | **honest limits, verbatim**: *"OpenFreeMap is not providing: search or geocoding; route calculation, navigation or directions; static image generation; raster tile hosting; satellite image hosting; elevation lookup; custom tile or dataset hosting"* and *"OpenFreeMap is not something you can install locally"* (it is a Fabric/SSH deploy script) | **risks**: one maintainer, donation-funded, no SLA | **DECISION: WATCH -> self-host before relying**.
+
+**C7 - hyperknot/openfreemap-styles** | **261 stars**/26 f | created 2023-12-28 | pushed 2026-10-13 | 0 rel/6m, 5 commits/90 d | **10 open/12 closed** | **MIT** / ODbL data | OpenMapTiles-schema style generator | on-device style JSON | OSV 0 | CI: Actions | **better**: a second, schema-different style base | **risks**: Protomaps has the courier z17 layers | **DECISION: WATCH**.
+
+**C8 - stadiamaps/pmtiles-rs** | **112 stars**/25 f | created 2022-10-22 | **v0.25.0 (2026-10-15)** | 4 rel/6m, 14 commits/90 d | **7 open/8 closed** | **Apache-2.0** | Rust reader/writer with HTTP **range** requests | on-device + server | OSV 0 | CI: Actions | **better**: the only path to a *partial* or remote offline pack | **risks**: 4 watchers | **DECISION: WATCH**.
+
+**C9 - onthegomap/planetiler** | **2,221 stars**/196 f | created 2021-10-20 | last release `latest-main` **2026-10-17** (1 tagged rel/6m; CI publishes `latest-main` continuously) | 40 commits/90 d, **4 humans/90 d**
+(msbarry, birkskyum, CommanderStorm, j9d3it) + 1 dependabot | **99 open/165 closed** | **Apache-2.0** | Java, "a map of the world in a few hours on a single machine" | server-side (MBTiles + PMTiles) | docs: extensive | CI: Gradle + Java | **better**: **the engine under `protomaps/basemaps`** (adopting basemaps already depends on it) and its **YAML profile** adds courier layers without forking Java | **DECISION: KEEP (transitive dependency of C5)**.
+
+**C10 - felt/tippecanoe** | **1,624 stars**/140 f | created 2022-08-16 | **2.79.0 (2025-07-25)** | 0 rel/6m, 11 commits/90 d, 3 humans (e-n-f, bkeepers, youdie006) | **118 open/51 closed** | **BSD-2-Clause** | C++ vector-tile encoder -> **better**: per-layer feature control (house numbers, entrances, access restrictions) straight into `.pmtiles` | **risks**: tagged-release cadence stalled 15 months; C27 claims 8.6-21.3x over tippecanoe | **DECISION: WATCH**.
+
+**C11 - maplibre/maputnik** | **2,659 stars**/477 f | created 2016-09-09 | **v3.1.0 (2026-07-07)** | 1 rel/6m but **200 commits/90 d** | **86 open/423 closed** | **MIT** | web visual style editor (design-time) | OSV 0 | CI: Actions | **better**: where the courier style is authored and exported (`versatiles-org/maputnik` is the maintained fork) | **risks**: browser-only, not shipped | **DECISION: KEEP (design-time tool)**.
+
+**C12 - maplibre/maplibre-gl-js** | **11,901 stars**/1,290 f | created 2020-12-09 | **v6.15.0 (2026-10-19)** | 44 rel/6m, 580 commits/90 d | **261 open/1,470 closed** | **BSD-3-Clause** (`LICENSE.txt`; GitHub reports NOASSERTION) | npm `maplibre-gl` 6.15.0, **23,780,110 dl/mo** | **server/web only** - no local archive without a custom `pmtiles://` handler, cannot run on a phone | **the CVE-2026-85061 package** | **DECISION: REJECT for the app (KEEP for the web dashboard, pinned >= 6.4.1)**.
+
+**C13 - maplibre/maplibre-style-spec** | **262 stars**/127 f | created 2023-02-20 | **v26.4.4 (2026-09-16)** | 19 rel/6m, 117 commits/90 d | **69 open/114 closed** | **BSD-3-Clause** | the schema every style must satisfy (C1 pins 26.2.1) | CI: Actions | **DECISION: KEEP (transitive via C1)**.
+
+**C14 - maplibre/maplibre-tile-spec** | **561 stars**/74 f | created 2022-10-01 | **rust-mlt-wasm-v0.2.1 (2026-10-19)** | 100+ rel/6m (API-capped), 369 commits/90 d | **43 open/98 closed** | **Apache-2.0** | MVT + **MLT** (MapLibre Tiles) spec + wasm tooling | **better**: MLT would shrink the pack materially (PMTiles already handles empty MLT tiles like MVT, commit #653) | **risks**: not yet the default tile format | **DECISION: WATCH (MLT = the pack-size lever)**.
+
+**C15 - maplibre/maplibre-rs** | **1,584 stars**/97 f | created 2021-11-28 | pushed 2026-10-16 | 0 rel/6m, 1 commit/90 d | **57 open/53 closed** | **Apache-2.0** | Rust WebGPU renderer for web/desktop/mobile | **risks**: pre-1.0, no releases, dormant | **DECISION: WATCH (2026 novelty)**.
+
+**C16 - maplibre/martin** | **4,012 stars**/407 f | created 2017-09-30 | **martin-v2.0.0-beta.3 (2026-10-10)** | 57 rel/6m, 513 commits/90 d | **30 open/552 closed** | **Apache-2.0** | Rust tile server (PostGIS/MBTiles/PMTiles) | server-side | OSV 0 | CI: Actions | **better**: the self-hosted choice for an online tile API with our own styles (openfreemap already runs it) | **risks**: 2.0 is a beta | **DECISION: WATCH (server-side; not needed while offline-first)**.
+
+**C17 - react-native-maps/react-native-maps** | **16,010 stars**/4,965 f | created 2015-12-30 | **v1.29.11 (2026-09-28)** | 15 rel/6m, 25 commits/90 d | **54 open/4,093 closed** | **MIT** | wraps Google Maps + Apple Maps | **risks**: proprietary data, **no offline vector tiles, no style we control** | **DECISION: REJECT**.
+
+**C18 - rnmapbox/maps** | **2,921 stars**/955 f | created 2019-04-08 | **v10.3.10 (2026-10-20)** | 13 rel/6m, 77 commits/90 d | **57 open/1,860 closed** | repo **MIT** but the wrapped Mapbox SDK is proprietary (token + per-MAU billing) | **risks**: vendor lock-in; contradicts our "no Google/Mapbox keys" stance | **DECISION: REJECT**.
+
+**C19 - mapbox/mapbox-gl-native** | **4,458 stars**/1,319 f | created 2014-01-28 | **ARCHIVED** (last push 2023-07-27), last release `maps-v1.6.0` (2020-05-01) | 0 rel/6m, 0 commits/90 d | **295 open/7,973 closed** | proprietary SDK terms | **DECISION: REJECT (archived)**.
+
+**C20 - tilezen/vector-datasource** | **521 stars**/121 f | created 2013-10-10 | **v1.9.0 (2023-03-11)** | 0 rel/6m, 0 commits/90 d | **239 open/859 closed** | **MIT** (schema docs MIT) | the schema `protomaps/basemaps` adapts | **better**: the canonical layer/tag reference when we design the courier layers | **risks**: dormant | **DECISION: KEEP (reference)**.
+
+**C21 - openmaptiles/openmaptiles** | **3,198 stars**/677 f | created 2016-10-05 | **v3.16 (2025-12-18)** | 0 rel/6m, 4 commits/90 d | **217 open/753 closed** | schema **CC-BY** (attribution required), toolchain Apache-2.0 | server-side build | **better**: more POI layers than Protomaps | **risks**: extra attribution burden, heavier packs | **DECISION: WATCH**.
+
+**C22 - versatiles-org/versatiles-rs** | **2026 contender** | **328 stars**/17 f | created 2023-01-26 | **v5.4.0 (2026-10-18)** | 35 rel/6m, 546 commits/90 d | **7 open/181 closed** | **MIT** (the spec repo is **Unlicense**) | Rust CLI + NAPI-RS node bindings; npm `@versatiles/versatiles-rs` | server-side + on-device (reads the same `.pmtiles` we already write) | OSV 0 | docs: docs.versatiles.org | CI: Actions, signed **Sigstore/SLSA provenance** + `.sha256` per tarball, refuses glob/unanchored CORS | **better than our choice in three ways**: `versatiles convert --bbox= --min-zoom= --max-zoom=` (the job of `pmtiles extract`); **`versatiles reduce --style courier.json` strips every layer, property and feature the style never draws** - the single biggest lever on the 50 MB budget; `versatiles probe -ddd` validates MVT 2.1 conformance. It **reads and writes `.pmtiles`**, so it is a drop-in partner, not a rival | **risks**: 17 forks, 4 watchers, new format, `serve` is server-side only | **DECISION: WATCH -> ADOPT the `reduce` step if it beats `pmtiles extract` on the measured pack size**.
+
+**C23 - versatiles-org/versatiles-style** | **114 stars**/13 f | created 2023-03-16 | **v7.0.1 (2026-10-16)** | 18 rel/6m, 651 commits/90 d | **4 open/81 closed** | **MIT** | Shortbread-schema styles | **DECISION: WATCH (style alternative)**.
+
+**C24 - opengeos/GeoLibre** | **2026 newcomer** | **8,057 stars**/903 f | created **2026-05-28** (5 months old) | **v3.4.0 (2026-10-12)** | 35 rel/6m, **1,194 commits/90 d** | **18 open/880 closed** | **MIT** | Tauri v2 + React + **MapLibre GL JS** + DuckDB-WASM Spatial + deck.gl; native Android/iOS/desktop apps + browser + Jupyter | **better**: **1,000+ geoprocessing tools in WASM with no server and no data leaving the device**, a 3D-Tiles pipeline, **four interchangeable rendering engines** (MapLibre GL JS / Mapbox GL JS / CesiumJS / ArcGIS Maps SDK) and a SQL workspace | **risks**: the GL JS engine inherits the CVE-2026-85061 risk class; a GIS workbench, not a courier map runtime | **DECISION: WATCH (analytics + an in-app "inspect this parcel" tool)**.
+
+**C25 - OvertureMaps/overture-tiles** | **175 stars**/23 f | created 2023-07-28 | **v1.1.4 (2026-07-25)** | 5 rel/6m, 16 commits/90 d | **1 open/27 closed** | **MIT** code / Overture data under its own attribution guidelines | server-side (builds PMTiles from Overture places + **structured addresses**) | **better**: better address data than OSM for the Address squad | **DECISION: WATCH (cross-squad)**.
+
+**C26 - linz/basemaps** | **128 stars**/21 f | created 2019-07-29 | **v8.22.1 (2026-10-12)** | 36 rel/6m, 15 commits/90 d | **9 open/19 closed** | repo `LICENSE` = **MIT (Crown copyright, Toitu Te Whenua Land Information NZ)**; the **tile licence is not stated in-repo -> UNVERIFIED**; the docs point at the LINZ Data Service for the imagery | server-side tiles | **better**: **the only first-party NZ basemap** - LINZ parcel boundaries, address points, contours, aerial/satellite imagery and place labels, i.e. exactly the NZ layers OSM does not have well | **risks**: LINZ terms + usage limits; no PMTiles container | **DECISION: WATCH -> RESEARCH (T4 / Address)**.
+
+**C27 - geoparquet-io/tylertoo** | **2026 newcomer** | **80 stars**/3 f | created **2026-02-20** | **v0.8.0 (2026-10-07)** | 3 rel/6m, 257 commits/90 d | **60 open/283 closed** | **Apache-2.0** | GeoParquet to PMTiles (Rust engine, CLI, Python API) | server-side build | **better**: claims **8.6-21.3x faster than tippecanoe end-to-end** on 300k-813k-feature line/polygon datasets (their own benchmark, `benchmarks/e2e/RESULTS.md` - **we must re-measure, not adopt the claim**), streaming + bounded memory + **sharded builds across machines** (so the pack build can parallelise in CI) | **risks**: tiny project, self-reported benchmark | **DECISION: WATCH (pack-build accelerator; benchmark it)**.
+
+**C28 - mbloch/mapshaper** | **4,192 stars**/581 f | created 2013-02-20 | **v0.7.91 (2026-10-20)** | 85 rel/6m, 276 commits/90 d | **117 open/542 closed** | licence **NOASSERTION -> UNVERIFIED** | shapefile/GeoJSON <-> vector tiles | build-time | **better**: the fastest bbox cut-and-re-encode without Java, and the tool to turn **LINZ parcel boundaries** into a courier overlay | **DECISION: WATCH (build-time helper)**.
+
+**C29 - walkerke/freestiler** | **153 stars**/9 f | created **2026-03-06** | pushed 2026-10-05 | 0 rel/6m, 39 commits/90 d | **4 open/12 closed** | licence **NOASSERTION** (a "YEAR: 2026 COPYRIGHT HOLDER: Kyle Walker" file) -> **UNVERIFIED as a standard licence** | Rust tile generator for R/Python/DuckDB | build-time | **better**: DuckDB-driven tiles from a CSV of stops -> a **stop-density overlay** | **DECISION: WATCH**.
+
+**C30 - PimpinPumpkin/Vela** | **clean-room** | **2,077 stars**/104 f | created **2026-06-15** (4 months old) | last release **canary@2026-10-20** | 100+ rel/6m (API-capped), **1,447 commits/90 d** | **49 open/276 closed** | **GPL-3.0** -> copyleft | "Maps and turn-by-turn navigation for Android without Google Play Services" | **the single most important 2026 newcomer**: proof that a complete OSM navigation stack is buildable now | **DECISION: CLEAN-ROOM STUDY ONLY (V4 §11.2) - never quote its code.**
+
+**C31 - organicmaps/organicmaps** | **clean-room** | **15,716 stars**/1,651 f | created 2020-12-28 | last release **2026.09.29-32-android (2026-09-30)** | 8 rel/6m, 485 commits/90 d | **3,207 open/3,216 closed** | root `LICENSE` reports **NOASSERTION** (it ships GPL-family components + ODbL data) -> treat as copyleft until the per-directory headers are audited | offline maps + routing + search, 6 M+ users | **DECISION: CLEAN-ROOM STUDY ONLY - the best-written offline-pack download / resume / region-management UX in the market; study the UX, not the code.**
+
+**C32 - osmandapp/OsmAnd** | **clean-room** | **6,098 stars**/1,249 f | created 2011-01-16 | last tagged release **2.0.0 (2019)** but **2,169 commits/90 d** (the tags are not the releases) | **3,319 open/11,300 closed** | licence NOASSERTION -> copyleft family | on-device offline routing + POI search in one app | **DECISION: CLEAN-ROOM STUDY ONLY.**
+
+**Also evaluated (22 more; any field not stated is UNVERIFIED)** - `maplibre/maplibre-compose` (590 stars, BSD-3, v0.20.0 2026-10-10, 739 commits/90 d) and `maplibre/flutter-maplibre-gl` (375 stars, v0.27.1 2026-09-10) -> **REJECT (wrong toolchain)**; `maplibre/awesome-maplibre` (1,096 stars, BSD-3-Clause, 46 commits/90 d) -> **KEEP as a research tool**; `maplibre/font-maker` (265 stars, BSD-3-Clause, last release v0.0.1 2023-08-22, 1 commit/90 d) -> **WATCH** (we need a courier glyph stack); `protomaps/basemaps-assets` (93 stars, **no licence detected**, last push 2025-10-31, 0 commits/90 d) -> **WATCH (the fonts + sprites we would mirror into the APK: size AND licence to settle)**; `protomaps/celery`, `georgique/world-vector-tiles`, `maplibre/maplibre-gl-style-spectral` -> the API returned **NOT_FOUND** on 2026-10-21 (renamed or removed?) -> **UNVERIFIED**; `mapbox/tilebelt` (288 stars, MIT, v2.0.3 2025-12-06) -> **REJECT (raster)**; `mapbox/geojson-vt` (2,080 stars, ISC, v5.0.4 2026-10-01) -> **WATCH (build-time)**; `mapbox/vector-tile` (52 stars, ISC, v1.0.3 2018-11-13) -> **REJECT (stale)**; `maputnik/osm-liberty` (549 stars, NOASSERTION) -> **WATCH**; `systemed/tilemaker` (1,908 stars, v3.2.0 2026-08-30, NOASSERTION -> UNVERIFIED) -> **WATCH**; `mapsforge/mapsforge` (1,416 stars, **LGPL-3.0**) -> **REJECT**; `osmdroid/osmdroid` (3,078 stars, Apache-2.0, last release 6.1.20 2024-08-19, 0 commits/90 d) -> **REJECT (dead)**; `Akylas/alpimaps` (194 stars, MIT) -> **REJECT (wrong layer)**; `Framstag/libosmscout` (305 stars, LGPL family) -> **REJECT**; `Cyclenerd/offline-map-tile-downloader` (43 stars, MIT) -> **REJECT (raster)**; `nvkelso/natural-earth-vector` (2,255 stars, public-domain data) -> **REJECT as a dependency, KEEP the dataset** (public-domain reference layers for a low-zoom fallback); `gpxstudio/gpx.studio` (1,244 stars, MIT) -> **WATCH (IRD logbook)**; `JamesLMilner/terra-draw` (1,118 stars, MIT, 1.38.0 2026-10-19) -> **WATCH (draw on the map)**; `walkerke/pmtiles` (86 stars, created 2025-10-02, NOASSERTION -> UNVERIFIED) -> **WATCH**; `jonathanlurie/basemapkit` (81 stars, MIT, v0.5.2 2026-08-18) -> **WATCH**; `developmentseed/async-pmtiles` (59 stars, MIT) and `developmentseed/tipmtiles` (30 stars, MIT) -> **WATCH (server-side Python clients)**; `versatiles-org/versatiles-spec` (16 stars, **Unlicense**) and `versatiles-org/versatiles-fonts` (8 stars, MIT) -> **WATCH**; 2026 newcomers with partial cards only: `dimartarmizi/map-to-poster` (1,118 stars, created 2026-02-17), `DenserMeerkat/June` (480 stars, created 2026-08-11), `geolens-io/geolens` (277 stars), `OpenBeta/open-tacos` (255 stars), `opengeos/mapwidget` (236 stars), `opengeos/anymap-ts` (222 stars), `CartoDB/basemap-styles` (390 stars), `aourednik/historical-basemaps` (849 stars), `FASTSHIFT/X-TRACK` (6,310 stars) -> all **WATCH**.
+
+## 2. Shortlist (15) with decisions
 
 | # | Project | Decision | One-line reason |
 |---|---|---|---|
-| C1 | maplibre/maplibre-react-native | **KEEP → upgrade 11.3.7 → 11.5.0** | Only RN binding with New-Arch codegen, Expo 58 peer range and targetSdk 34. |
-| C3 | protomaps/PMTiles | **ADOPT** | Single-file archive; BSD-3 code + CC0 spec; on-device `pmtiles://file://`. |
-| C4 | protomaps/go-pmtiles | **ADOPT** | `pmtiles extract` is the only way to cut a bbox-limited Canterbury pack. |
-| C5 | protomaps/basemaps | **ADOPT (fork as `courier-copilot-style`)** | BSD-3 code + **CC0 design** + ODbL data; day/night themes and z17 courier layers. |
-| C2 | maplibre/maplibre-native | **KEEP (transitive)** | Provides the native `pmtiles://file://` / `asset://` reader that makes offline possible. |
-| C11 | maplibre/maputnik | **KEEP (design tool)** | Where the courier style is authored; MIT. |
-| C9 | onthegomap/planetiler | **KEEP (transitive)** | Generates the pack from OSM; YAML profiles add courier layers without forking Java. |
-| C6 | hyperknot/openfreemap | **WATCH** | Free key-less online fallback; single-maintainer risk. |
-| C8 | stadiamaps/pmtiles-rs | **WATCH** | HTTP range reader → partial/remote offline packs. |
-| C25/26 | versatiles-org/versatiles-rs + style | **WATCH** | Client-library-free single-file alternative. |
-| C27 | opengeos/GeoLibre | **WATCH** | New 2026 GIS platform, 8 k stars; analytics value, not driver-app value. |
-| C31 | OvertureMaps/overture-tiles | **WATCH (cross-squad)** | Structured addresses for the Address squad. |
-| C36 | PimpinPumpkin/Vela | **CLEAN-ROOM ONLY** | GPL-3; the 2026 proof that a full OSM nav stack is feasible. |
-| C37 | organicmaps/organicmaps | **CLEAN-ROOM ONLY** | Reference for offline-pack download/resume UX. |
+| C1 | maplibre/maplibre-react-native | **KEEP -> upgrade 11.3.7 -> 11.5.0** | Only RN binding with New-Arch codegen, Expo 58 peers and targetSdk 34; the six missed releases contain two ANR fixes and a heap-corruption fix. |
+| C2 | maplibre/maplibre-native | **KEEP (transitive)** | Provides `pmtiles://file://` / `asset://` - the reader that makes an offline file-backed map possible at all. |
+| C3 | protomaps/PMTiles | **ADOPT** | Single-file archive, BSD-3 code + **public-domain/CC0 spec**, on-device `pmtiles://file://`, weekly diffs. |
+| C4 | protomaps/go-pmtiles | **ADOPT (pinned)** | `pmtiles extract` is the only way to cut a bbox/zoom-limited Canterbury pack. |
+| C5 | protomaps/basemaps | **ADOPT (fork, renamed)** | BSD-3 code + **CC0 visual design** + ODbL data; day/night from one generated style; z17 courier layers. |
+| C9 | onthegomap/planetiler | **KEEP (transitive)** | Generates the pack from OSM; the YAML profile adds courier layers without forking Java. |
+| C11 | maplibre/maputnik | **KEEP (design tool)** | Where the courier style is authored and exported; MIT. |
+| C22 | versatiles-org/versatiles-rs | **WATCH -> ADOPT `reduce`** | `versatiles reduce --style` strips everything the style never draws - the biggest lever on the 50 MB budget; it reads and writes `.pmtiles`. |
+| C6 | hyperknot/openfreemap | **WATCH (self-host)** | Free key-less fallback with weekly planet PMTiles; one maintainer, no SLA, explicitly no routing/search. |
+| C8 | stadiamaps/pmtiles-rs | **WATCH** | HTTP-range reader -> partial/remote packs. |
+| C24 | opengeos/GeoLibre | **WATCH** | 2026-born GIS platform (8 k stars in 5 months); WASM analytics, not a driver-map runtime. |
+| C26 | linz/basemaps | **WATCH -> RESEARCH (T4)** | The only first-party NZ basemap - parcel boundaries and addresses OSM lacks. |
+| C27 | geoparquet-io/tylertoo | **WATCH** | 2026 newcomer claiming 8.6-21.3x over tippecanoe; re-measure before believing. |
+| C30 | PimpinPumpkin/Vela | **CLEAN-ROOM ONLY** | GPL-3; the 2026 proof that a full OSM nav stack is buildable. |
+| C31 | organicmaps/organicmaps | **CLEAN-ROOM ONLY** | The best-written offline-pack download/resume UX in the market. |
 
-## 3. Deep review — top 5
+## 3. Deep review - top 5 (V4 §12.4: README, docs, architecture, modules, tests, open critical issues, last 20 commits)
 
-**3.1 maplibre/maplibre-react-native** — Yarn-4 monorepo (`package/`, `docs/`, `examples/`, `scripts/`),
-`react-native-builder-bob` 0.41 building CJS+ESM+TS, npm `publishConfig.provenance: true`.
-`codegenConfig { name: "MapLibreReactNativeSpec", type: "all" }` + an iOS `componentProvider` per
-component → **Fabric-ready**, with the old architecture still supported. Ships `app.plugin.js` and a
-`./plugin` export → `expo prebuild` works; `peerDependencies` cover SDK 58. Android
-`minSdk 24 / target 34 / compile 35`; MapLibre Native `android-sdk-opengl:13.6.1`. `VectorSource`
-accepts a `pmtiles://` URL (example `examples/shared/src/examples/protocols/PMTilesVectorSource.tsx`),
-so `pmtiles://file:///…` works through the RN binding with MapLibre Native ≥ 11.7 on the device.
-Quality: ESLint `--max-warnings 0`, `tsc` over src *and* tests, Prettier + clang-format + ktlint,
-Jest + `@testing-library/react-native` + snapshot-diff; the CHANGELOG shows real bug-fix cadence
-(two ANR deadlocks in 11.3.8). Risk: ~4 human maintainers, 364 open issues.
+**3.1 maplibre/maplibre-react-native** - *Architecture*: Yarn-4 monorepo (`package/`, `docs/`, `examples/`), `react-native-builder-bob` 0.41 (CJS+ESM+TS), `publishConfig.provenance: true`; `codegenConfig {name:"MapLibreReactNativeSpec", type:"all"}` -> Fabric on both platforms, with an iOS `componentProvider` per component (`MLRNMapView`, `MLRNVectorSource`, `MLRNGeoJSONSource`, `MLRNRasterDEMSource`, `MLRNLayer`, `MLRNCamera`, ...) and the old architecture still supported. *Main modules*: `package/android` (Kotlin; `gradle.properties` pins `minSdk 24 / targetSdk 34 / compileSdk 35`, MapLibre Native `13.6.1`, plugin `3.0.2`, and `locationEngine=default|google` - **relevant to the degoogled-fleet case**), `package/ios` (SPM + CocoaPods), `package/cpp`. *Docs & Expo*: Docusaurus site + `examples/`; it ships `app.plugin.js` and a `./plugin` export so `expo prebuild` works; the peer range covers SDK 58. *Offline*: `VectorSource` takes any URL and `examples/.../PMTilesVectorSource.tsx` shows `url="pmtiles://https://..."`, so the same string with `file://` reaches MapLibre Native's PMTiles file source. *Tests*: `tsc` over `./` **and** `./src/__tests__`; `eslint --max-warnings 0`; Jest + `@testing-library/react-native` + `snapshot-diff`; clang-format + ktlint; semantic-release. *Last 20 commits*: 14 Dependabot bumps, 2 releases, and the only code commits are `feat: add feature state API (#1651)` and `fix(iOS): only add MLRN SPM to requiring targets (#1703)` -> **feature work per release is thin; the value is the backported fixes**. *Open critical issues*: #1738 (Fabric mount abort), #1736 (ignored `initialViewState`), #1735 (SIGSEGV on style reload), #1734 (stale inline GeoJSON), #1733 (recycled source views), #1732 (sprite eviction), #1729 (Android Marker long-press) - none blocks us, but #1733/#1735 mean we must not recycle source components ourselves. *Verdict*: **KEEP, upgrade to 11.5.0.**
 
-**3.2 protomaps/PMTiles** — v3 spec (`spec/v3/spec.md`); reference JS/Python/Go implementations
-**BSD-3**, **the spec public domain/CC0** (that is why the format can be re-implemented freely).
-`go-pmtiles` is the maintained CLI; npm `pmtiles` 4.5.0 the JS reader; `stadiamaps/pmtiles-rs` the
-Rust reader. It fits us because the archive is a *file*: MapLibre Native reads it with byte-range
-requests (`pmtiles://file://`), so **no tile server, no CORS, no API key** for the offline pack.
-Weakness: the repo has **no tagged releases and no commit since 2026-09-16** — the format is stable
-but the reference repo is quiet; pin `go-pmtiles` exactly and checksum it.
+**3.2 protomaps/PMTiles** - *Architecture*: v3 spec at `spec/v3/spec.md`; a directory of header/directory/tile blobs addressed by HTTP range; v3 adds **diffs** (incremental weekly updates) and **terrain** tiles (terrarium encoding, commit #660); reference implementations in JS, Python, Go and C++ plus `openlayers/` and `serverless/aws`. *Licence, verbatim*: *"The below license (BSD-3) applies to the reference implementations in this repository. The PMTiles specification itself is public domain, or CC0 where applicable."* - which is exactly why we may write our own reader if Protomaps stops shipping one. *Modules*: `js/` (npm `pmtiles` 4.5.0), `python/` (3.8.1), `cpp/`, `serverless/aws` (S3 + CloudFront), `app/` (the pmtiles.io viewer, upgraded to MapLibre GL JS v6 in #672 where the RTL plugin became unnecessary). *Tests*: unit tests in the Python and JS packages; the last 20 commits are real fixes - reproducible gzip mtime=0, 32-bit `long` in `tileid_to_zxy`, empty MLT tiles handled like MVT, abortable directory fetches, `fetch` credentials, `rio-pmtiles`/shapely 2.x, `finalize_header()` refactor, python 3.8.1. *Open issues*: #509 "PMTiles URLs in MapLibre are not valid URLs" (7 comments - **the MapLibre-URL quirk is real and known**), #658 "parsing fails for files with `Infinity` in metadata `tilestats`", #656 "ol-pmtiles PMTilesVectorSource doesn't work with OpenLayers 10+", #272 "Range requests browser caching not working in Firefox" (26 comments), #177 "GDAL/OGR + QGIS read-only support". *Weakness*: **no commit since 2026-09-17, no tagged release since 2021** - the format is stable, the reference repo is quiet. *Verdict*: **ADOPT the format; pin the CLI; write our own tiny reader if needed.**
 
-**3.3 protomaps/basemaps** — `tiles/` (Planetiler/Maven profile), `styles/` (TypeScript style
-generator with multiple colour themes), `app/` (Vite viewer + build browser). `LICENSE.md` verbatim:
-code BSD-3-Clause, **visual design CC0**, tilesets ODbL with OSM attribution, tile schema adapted
-from Tilezen, request to attribute and to name the fork differently. The style is generated from a
-TS package, so a day/night pair is a theme swap rather than two hand-written styles;
-`basemaps-assets` hosts fonts + sprites (we must mirror those into the APK — measure the size!).
-Risk: the Maven/Planetiler build is heavy for CI — for Canterbury we use `--area=christchurch`, not
-the planet.
+**3.3 protomaps/basemaps** - *Architecture*: `tiles/` (a Planetiler/Maven build profile producing `planet.pmtiles` from OSM + Natural Earth), `styles/` (a **TypeScript style generator** with several colour themes), `app/` (a Vite viewer + build browser); the style is **generated**, so day/night is a theme swap, not two styles to maintain. *Licence, read in full*: `LICENSE.md` = BSD-3 code + **CC0 visual design (Geraldine Sarmiento)** + MIT tangram icons; `README.md` = *"Tilesets are ODbL, attribute OSM ... Web maps and native apps that use this Produced Work must visibly attribute (c) OpenStreetMap - for example, in the corner of the map display"* and *"If you distribute a modified 'fork' of these basemap styles or tilesets ... you must name your product or service something different from Protomaps"*; `LICENSE_DATA.md` = OSM **ODbL** ("(c) OpenStreetMap"), osmdata.openstreetmap.de **ODbL**, Natural Earth **public domain (crediting unnecessary)**, Daylight landcover = **ESA WorldCover CC-BY 4.0 DEED** (attribution required), Mapzen icons **MIT**, and `places.csv` minzoom from Tilezen + Natural Earth. *CI*: Maven + node; no unit-test claim verified. *Open issues*: #641 "landuse=forest + leisure=* loses its forest", #633 "Country labels silently fall back to default zooms when the Wikidata join fails", #631 "Marine protected areas classified as landuse / kind=park", #638/#605 geometry inconsistencies at zoom boundaries -> **all rendering-quality issues in the basemap itself**, which is why the courier style must be verified visually (day/night screenshot diff). *Risk*: the Maven planet build is a CI killer - use `--area=christchurch`. *Verdict*: **ADOPT, forked and renamed.**
 
-**3.4 maplibre/maplibre-native** — PMTiles file source + Android/iOS docs support `https://`,
-`file://` and (13.7.1) `asset://` with **byte-range reads of APK assets** → we can ship a *small*
-city pack inside the APK and a *large* region pack as a downloadable file. Weekly releases
-(android-v13.7.1 10-15, android-v13.5.3 10-08, android-v2026.10.19-globe 10-19, ios-v7.0.0-pre2
-10-14). 2026 features worth knowing: globe projection, the experimental **C plugin API** for custom
-style layer types (n-gon example), `globalState` expressions, `interpolate-lab`/`hcl` colour ramps,
-`semiliteral` expressions, SDF images in `fill-pattern`, and **rendered-feature introspection**
-(`RenderingStats.getRenderedFeatures()`) — the last one is exactly what we need to prove "the
-courier style only draws house numbers at z17". Risks: 1,536 open issues; breaking iOS changes in
-the 7.0.0 pre-releases.
+**3.4 maplibre/maplibre-native** - *Why it matters*: it is the only component in our stack that can open a **file-backed** map. `platform/android/docs/data/PMTiles.md` (read in full) documents `pmtiles://https://`, `pmtiles://file://` (absolute path from `getExternalFilesDir`/`filesDir`) and `pmtiles://asset://<name>.pmtiles` (or `file:///android_asset/...`) from **Android 11.7.0**; it requires a fully-specified URL inside `pmtiles://` (no relative resolution, unlike GL JS); it works with any source type (vector/raster/raster-dem) from a style JSON or programmatically; and it warns *"PMTiles sources do not support offline pack downloads or caching"*. *Releases*: `android-v13.7.1` (2026-10-15), `android-v2026.10.19-globe` (10-19), `ios-v7.0.0-pre2` (10-14), `ios-v6.31.0` (09-23). *Last 20 commits*: "draw line-gradient together with line-dasharray", "avoid unnecessary per-frame vertex data uploads for 'fill' layers", "add support for colorized SDF fill patterns", "maintain renderer frame and draw statistics", "handle platform locale expression failures", "load file:///C:/ URLs and non-ASCII paths on Windows", "fix crash in RenderImageSource::update with an empty tile cover", "retry failed Vulkan swapchain and surface rebuilds", "ios: remove Mapbox.h", "publish -with-plugin-api artifacts and release 13.7.0" -> **a healthy, high-performance core with a plugin API for custom layer types**; `android-v13.7.1` adds the **asset byte-range reads**, so an in-APK city pack is possible as well as a downloaded file. *Verdict*: **KEEP (transitive), and pin the version in the eval harness so the PMTiles reader is the one we tested.**
 
-**3.5 hyperknot/openfreemap** — a *complete, open* production tile-hosting stack (Planetiler profile
-+ OpenMapTiles schema + Martin + MapLibre styles) with weekly planet builds in Btrfs and MBTiles.
-Honest limits from the README: **no search/geocoding, no route calculation, navigation or
-directions**, no raster/satellite/elevation. Fit for us: an online fallback outside the downloaded
-region, removing Google/Mapbox entirely. Risks: one primary maintainer, donation-funded, "best
-effort" SLA — if we depend on it we must self-host (the repo ships the whole production setup).
+**3.5 hyperknot/openfreemap** - *Architecture*: a complete, open production tile-hosting stack - a Planetiler profile (OpenMapTiles schema) + Martin + MapLibre styles, deployed by a **Fabric/SSH** script onto clean Ubuntu 24.04 servers, Docker-free on purpose, serving **Btrfs partition images with 300 M hard-linked tiles** behind nginx (average tile file 450 bytes); *"OpenFreeMap is not something you can install locally. This repo is a deploy script"* and *"OpenFreeMap does not promise worry-free automatic updates for self-hosters."* *Data*: OSM only (+ Natural Earth, Wikidata) -> ODbL attribution. *Availability*: weekly full-planet builds in **Btrfs, MBTiles and PMTiles**, `https://tiles.openfreemap.org/planet/latest` TileJSON, tiles cached 1 day / TileJSON 1 hour. *Honest limits*: no search/geocoding, no routing/navigation/directions, no raster/satellite, no elevation, no custom dataset hosting. *Last 20 commits* are all **operations**: planet version switching at 02:00 UTC Tuesdays, nginx `open_file_cache` cap, btrfs bucket retention, privacy-policy and log-retention work, a Planetiler pin for a JTS island-hole fix -> **a well-run production service maintained by one person**. *Verdict*: **WATCH -> self-host before relying; use its weekly planet PMTiles as the web dashboard's tile source.**
 
-## 4. Benchmarks — top 3
+## 4. Benchmarks - top 2-3 (V4 §12.5)
 
-**No published benchmark exists for our scenario, so I did NOT run one; UNVERIFIED, and the set that
-must be built is named below** (V4 §12.5).
+**No eval set exists for this area, so no benchmark was run.** Everything below is **UNVERIFIED** and the set that must be built is named (the map squad's frame-time traces).
 
 | Metric | Target | Status |
 |---|---|---|
-| Pan/zoom frame time, 60 fps | `docs/squads/maps/eval/` frame-time traces per screen size | **UNVERIFIED — set does not exist** |
-| Full Canterbury offline pack size | ≤ 50 MB (V4 §11.1) / ≤ 80 MB APK excl. packs (CONSTRAINTS.md) | **UNVERIFIED** |
-| Day/night style parity | Maestro screenshots vs mockups | **UNVERIFIED** |
+| Pan/zoom frame time | 60 fps on the CI emulator profile + one mid-range Android | **UNVERIFIED - the set does not exist** |
+| Full Canterbury offline pack size | <= 50 MB (V4 §11.1); APK <= 80 MB excl. packs | **UNVERIFIED** (the only published number is the planet: 139,013,292,063 bytes) |
+| Day/night style parity | Maestro screenshots vs `docs/design/mockups/` | **UNVERIFIED** |
+| Tile read latency from `pmtiles://file://` on a mid-range device | p95 < 50 ms | **UNVERIFIED** |
 
-**The set that must be built (per the squad working agreement "the benchmark exists before the
-library is chosen"):**
-1. `docs/squads/maps/eval/canterbury.mbtiles` — an OSM extract for the Christchurch City Council
-   boundary (LINZ/Geofabrik) + Natural Earth, built with the same Planetiler profile the app uses.
-2. `docs/squads/maps/eval/pack-matrix.md` — pack sizes for `{z14..z17}` × `{basemap,
-   basemap+courier-entrances}` × `{MBTiles, PMTiles}`; the decision rule is "pick the highest zoom
-   that keeps the pack under the agreed ceiling".
-3. `docs/squads/maps/eval/frame-traces/` — perfetto traces of a scripted pan+zoom over the stop list
-   at z17, on the CI emulator profile **and** one mid-range Android profile.
-4. `docs/squads/maps/eval/style-diff/` — day/night screenshots of the same bbox from the mockups.
-
-**Control set that already exists elsewhere:** the Protomaps `basemaps --area=` builds and MapLibre
-Native's own PMTiles sample apps.
+**The set that must be built - `docs/squads/maps/eval/`**: (1) `canterbury.osm.pbf` - the Christchurch City Council boundary extract (LINZ/Geofabrik) + Natural Earth, built with the **same Planetiler profile the app uses** (so we measure *our* pack); (2) `pack-matrix.md` - pack sizes for `{z14...z17}` x `{basemap, basemap+courier-entrances}` x `{MBTiles, PMTiles, PMTiles+versatiles-reduce}`, with the rule *"the highest zoom that keeps the pack under the agreed ceiling"* (this number decides C22); (3) `frame-traces/` - perfetto traces of a scripted pan+zoom over the stop list at z17 on the CI emulator profile **and** one mid-range Android profile; (4) `style-diff/` - day/night screenshots against the mockups; (5) `pack-verify.md` - the exact `pmtiles extract` / `versatiles reduce` commands, the tool versions and the SHA-256 of the produced pack, so the number is reproducible.
+**Control set that exists elsewhere**: the Protomaps `basemaps --area=` builds, openfreemap's weekly planet PMTiles, and MapLibre Native's own `PMTilesActivity` test app.
 
 ## 5. Decision
 
-1. **Renderer: keep `@maplibre/maplibre-react-native`, upgrade 11.3.7 → 11.5.0** (the two missed
-   releases contain an ANR fix and the feature-state API).
-2. **Tile container: ADOPT PMTiles v3** (spec = public domain → we may write our own reader) with
-   `go-pmtiles` pinned by SHA-256 as the build tool.
-3. **Style base: ADOPT Protomaps basemaps `styles/`** forked as `courier-copilot-style` (BSD-3 code,
-   **CC0 design**, so we may publish a modified courier style), with a day and a night theme
-   generated from the same theme source.
-4. **Packs: server-side Planetiler profile** (`--area=christchurch`) → `pmtiles extract` to the
-   agreed bbox/zoom → a file the app reads via `pmtiles://file://`.
-5. **Fallback: self-hosted `hyperknot/openfreemap`**, not their public instance, for out-of-region.
+1. **Renderer: KEEP `@maplibre/maplibre-react-native`, upgrade 11.3.7 -> 11.5.0 (blocking).** The missed releases contain two Android ANR deadlocks, a camera NPE and an iOS CUICatalog heap corruption.
+2. **Tile container: ADOPT PMTiles v3** (spec = public domain, so we may write our own reader), with `go-pmtiles` pinned by SHA-256 as the build tool.
+3. **Style base: ADOPT `protomaps/basemaps` `styles/`**, forked and **renamed** `courier-copilot-style` (BSD-3 code, **CC0 design**), day and night generated from the same theme source.
+4. **Packs: Planetiler profile** (`--area=christchurch`) -> `pmtiles extract` to the agreed bbox/zoom -> **`versatiles reduce --style courier.json`** -> a file the app reads with `pmtiles://file://` (and `pmtiles://asset://` for the small in-APK city core).
+5. **Fallback: self-hosted `hyperknot/openfreemap`** for out-of-region tiles on the web dashboard.
+6. **Research LINZ basemaps (C26)** for T4/Address: an OSM-only pack is not the final answer for NZ.
 
 ## 6. Risks
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| "Canterbury ≤ 50 MB" is unproven | **High** | Build the pack first (§4); the plan changes if a z17 courier pack exceeds the ceiling. |
-| ODbL share-alike on derived tilesets | **High** | We ship a renderer + style + our own POI overlay and consume OSM-derived tiles on-device. Get legal sign-off on whether an on-device cached OSM tile set is a "produced work" that must be ODbL-licensed. **UNVERIFIED — legal opinion required.** |
-| OSM trademark | Medium | Never say "OpenStreetMap" in the UI; only "© OpenStreetMap contributors" in the attribution; no OSM logo. |
-| Attribution plumbing | Medium | Attribution must be visible **offline** (a downloaded region may be the only map on screen). Put "© OpenStreetMap contributors · ODbL" in the map footer and in About. |
-| Font/sprite asset size | Medium | Mirror `protomaps/basemaps-assets` fonts + sprites into the APK; measure against the 80 MB budget. |
-| Single-maintainer upstream | Medium | Pin exact versions; vendor the style generator if Protomaps goes quiet. |
-| PMTiles native reader maturity | Medium | MapLibre Native's PMTiles file source is new (11.7.0, 2025) — test large-archive random access on a mid-range device. |
+| "Canterbury <= 50 MB" is unproven | **High** | Build the pack (§4). If a z17 courier pack exceeds the ceiling -> drop to z16 and rely on `versatiles reduce`. |
+| ODbL share-alike on a derived tileset | **High** | We ship a renderer + a style + our own overlay and consume OSM-derived tiles on-device. **Whether an on-device cached OSM tile set is a "Produced Work" that must itself be ODbL-licensed is a legal question -> UNVERIFIED, legal opinion required.** Protomaps' own wording covers us if the attribution is visible. |
+| OSM trademark | Medium | Never say "OpenStreetMap" in the UI; only "(c) OpenStreetMap contributors" in the attribution; no OSM logo. |
+| Attribution must be visible **offline** | Medium | A downloaded region may be the only map on screen -> the attribution must be in the map footer and in About, offline-capable, plus the ESA WorldCover credit if landcover is on. |
+| Font/sprite asset size + licence | Medium | `protomaps/basemaps-assets` has **no detected licence** -> resolve it before mirroring anything into the APK; then measure against the 80 MB budget. |
+| Single-maintainer upstream (Protomaps: 1 human on basemaps, 1 on go-pmtiles) | Medium | Pin exact versions + checksums; vendor the style generator if they go quiet. |
+| PMTiles native reader maturity | Medium | Native PMTiles support is new (11.7.0, 2025); test large-archive random access on a mid-range device and pin the MapLibre Native version used in the eval. |
+| `maplibre-gl` CVE-2026-85061 (critical, CVSS 10.0) | Medium | Affects the **web** renderer only (patched in 6.4.1). Pin `maplibre-gl >= 6.4.1` and never render untrusted attribution strings. |
+| GL JS cannot read a local archive | Medium | Never rely on the web dashboard for offline; the app uses the native PMTiles reader. |
+| `versatiles reduce` is a young tool | Low | An optimisation step, not the container: if it fails we keep `pmtiles extract`. |
 
 ## 7. What I could not verify
 
-* **6-month star trend** — blocked: the repo token lacks `read:user`, so no stargazer timestamps.
-  Proxies used: commits/90 d + release cadence + npm downloads/month.
-* **Canterbury PMTiles size** — no published figure; the Protomaps area-build URL pattern is not
-  documented and every candidate URL 404s. Build it.
-* **Median issue-response time** — not computed (needs per-issue timeline sampling across ~40 repos);
-  exact open/closed ratios are given instead.
-* **`protomaps/basemaps` npm package** — the styles package name/version was not confirmed from the
-  registry in this pass.
-* **Whether MapLibre Native's RN wrapper needs a patch for `pmtiles://file://`** — the RN example
-  only demonstrates `pmtiles://https://`; the file/asset variants are documented at the native layer
-  but I could not confirm an end-to-end RN test exists. **Prove it in the eval harness.**
-* **organicmaps per-directory licence split** — root LICENSE says Apache-2.0, but the project also
-  ships GPL/ODbL components; treat as copyleft until audited.
+- **6-month star trend** - blocked by token scope: `GET /repos/{o}/{r}/stargazers` -> HTTP 403 and GraphQL `stargazers` -> FORBIDDEN (both re-tested 2026-10-21). Proxies used: releases/6m, commits/90d, distinct human maintainers/90d, npm downloads/month.
+- **Canterbury PMTiles pack size** - still **UNVERIFIED**; `build-metadata.protomaps.dev/builds.json` publishes planet builds only (newest 139,013,292,063 bytes) and no area artefact exists. **Build it.**
+- **Median issue-response time** - not computed for any candidate. **UNVERIFIED.**
+- **The APK weight of the MapLibre native libraries** - the npm tarball is 2.19 MB unpacked, but the AAR/framework size is not published. **UNVERIFIED - measure it in the APK size budget.**
+- **`protomaps/basemaps-assets` licence** - GitHub detects **none**. **UNVERIFIED.**
+- **`@protomaps/styles` npm package** - not published under that name (404); the styles ship inside `@protomaps/basemaps` 5.7.2.
+- **The LINZ basemap tile licence string** - the repo is MIT (code) but does not state the tile licence in-repo. **UNVERIFIED - read the LINZ Data Service terms before T4 relies on it.**
+- **NOASSERTION licences** (`maputnik/osm-liberty`, `systemed/tilemaker`, `mbloch/mapshaper`, `walkerke/pmtiles`, `walkerke/freestiler`) -> **UNVERIFIED.**
+- **`protomaps/celery`, `georgique/world-vector-tiles`, `maplibre/maplibre-gl-style-spectral`** - the API returned NOT_FOUND on 2026-10-21 (renamed or removed?). **UNVERIFIED.**
+- **Whether the RN binding needs a patch for `pmtiles://file://`** - the RN example shows `pmtiles://https://` only. **Prove it in the eval harness before T5 is closed.**
+- **`organicmaps` per-directory licence split** - the root `LICENSE` reports NOASSERTION while the project ships GPL-family components and ODbL data. Treat as copyleft.
 
 ## 8. Corrections to the V4 §11.1 adopt list (maps-related)
 
-| V4 §11.1 item | Verified reality on 2026-10-20 | Correction |
+| V4 §11.1 item | Verified reality on 2026-10-21 | Correction |
 |---|---|---|
-| 2. `protomaps/basemaps` | 759 ★, BSD-3 code, **CC0 visual design**, ODbL tilesets, last push 2026-09-11, **no GitHub releases** | ✅ keep, but add the **CC0 design** clause and the "name your fork differently" request. |
-| 3. `protomaps/PMTiles` | 3,090 ★, **BSD-3 implementations + CC0/public-domain spec**, npm `pmtiles` 4.5.0 (2026-08-10) | ✅ keep — but the **CLI lives in `protomaps/go-pmtiles`** (BSD-3, v1.31.2, 2026-07-22), not in `protomaps/PMTiles`; name both. |
-| 10. `maplibre/maputnik` | 2,659 ★, MIT, **v3.1.0 2026-07-06**, pushed 2026-10-19 | ✅ keep. Note the maintained fork `versatiles-org/maputnik`. |
-| — (not in the list) | `PimpinPumpkin/Vela` — **2,072 ★, created 2026-06-15, 505 releases, GPL-3.0** | **New 2026 entry → clean-room study list (§11.2).** |
-| — (not in the list) | `opengeos/GeoLibre` — **8,050 ★, created 2026-05-27, MIT** | **New 2026 entry → WATCH** (analytics/web). |
-| — (not in the list) | `versatiles-org/versatiles-rs` — 328 ★, MIT, v5.4.0 2026-10-17 | **Add as the alternative tile container.** |
-| "Also evaluate: versatiles" | the project is `versatiles-org/versatiles-rs` + `-style` + `-spec` (Unlicense) | Correct the name. |
+| 2. `protomaps/basemaps` | 760 stars, BSD-3 code, **CC0 visual design**, ODbL tilesets, 1 human/90 d, **0 GitHub releases** | Keep, but add the **CC0 design** clause, the **ODbL/OSM attribution** duty, the **ESA WorldCover CC-BY** duty, and the **"name your fork differently"** request. |
+| 3. `protomaps/PMTiles` | 3,091 stars, **BSD-3 implementations + public-domain/CC0 spec**, npm `pmtiles` 4.5.0, **no commit since 2026-09-17** | Keep - but the **CLI lives in `protomaps/go-pmtiles`** (BSD-3, v1.31.2, **1 human**); name both and pin the CLI. |
+| 10. `maplibre/maputnik` | 2,659 stars, MIT, v3.1.0 2026-07-07, **200 commits/90 d** | Keep. Note the maintained fork `versatiles-org/maputnik`. |
+| - | `maplibre/maplibre-react-native` **11.3.7 -> 11.5.0 available** (6 releases, 22 rel/6m) | **Upgrade task** - two Android ANR deadlocks + a camera NPE + an iOS CUICatalog heap-corruption fix are waiting. |
+| - | **CVE-2026-85061 / GHSA-jrc7-96c5-q579, critical, CVSS 10.0**, `maplibre-gl` <= 6.4.0, fixed in **6.4.1** | **Web-dashboard pin**: `maplibre-gl >= 6.4.1`. It does **not** affect the RN/native binding. |
+| - (not in the list) | `PimpinPumpkin/Vela` - **2,077 stars, created 2026-06-15, 1,447 commits/90 d, GPL-3.0** | **New 2026 entry -> clean-room study list (§11.2).** |
+| - (not in the list) | `opengeos/GeoLibre` - **8,057 stars, created 2026-05-28, MIT, 1,194 commits/90 d** | **New 2026 entry -> WATCH** (WASM analytics). |
+| - (not in the list) | `versatiles-org/versatiles-rs` - 328 stars, MIT, v5.4.0 2026-10-18, **`reduce --style`** | **Add as the alternative container + the pack-size optimiser.** |
+| - (not in the list) | `linz/basemaps` - 128 stars, MIT (Crown/LINZ), v8.22.1 2026-10-12 | **Add as the NZ data source to research for T4 (parcel boundaries, addresses, imagery).** |
+| - (not in the list) | `geoparquet-io/tylertoo` - 80 stars, created 2026-02-20, Apache-2.0, 257 commits/90 d | **Add as the 2026 pack-build challenger (benchmark it; do not adopt the claim).** |
+| "Also evaluate: versatiles" | the project is `versatiles-org/versatiles-rs` + `-style` + `-spec` (Unlicense) + `-fonts` | Correct the name. |
+
+## What we are missing
+
+Each row is a capability found in the best repos/competitors above that we do **not** have today. The CEO merges these into `docs/PARITY.md`; the task id is where the row becomes work.
+
+| # | Feature | Family | Gap (today) | The task id it becomes |
+|---|---|---|---|---|
+| M1 | Offline vector map for the whole of Canterbury (PMTiles read via `pmtiles://file://`) | Offline maps | **No pack, no download, no offline map at all** | **T5** (existing) |
+| M2 | Day **and** night map styles generated from one theme source | Offline maps / design | No style, no `packages/map-style` | **T5.1** (new; design) |
+| M3 | Courier layers: house numbers at z17, entrances, access restrictions | Offline maps / address | No courier layer; OSM tags are not selected or filtered | **T5.2** (new) + **T7.3** (door memory) |
+| M4 | Style-driven pack reduction (`versatiles reduce --style`) to hit the <= 50 MB ceiling | Offline maps / perf | No pack-size strategy; the ceiling is unproven | **T5.3** (new) |
+| M5 | Visible "(c) OpenStreetMap" attribution that works offline, plus the ESA WorldCover credit | Offline maps / legal | No attribution UI at all | **T5.4** (new) |
+| M6 | Incremental (diff) tile updates so a weekly refresh does not re-download the whole pack | Offline maps / sync | Not designed | **T5.5** (new) + **T7.1** (sync) |
+| M7 | LINZ parcel boundaries / address points / contours / aerial as a basemap layer | Offline maps / NZ data | OSM-only assumption | **T4** (existing) + **T5.6** (new) |
+| M8 | In-app map feature-state (mark a stop done on the map, no second overlay) | Driver tools / map | No feature-state API in use (needs 11.5.0) | **T7.7** (driving mode) |
+| M9 | Draw/annotate on the map (access note, delivery area, geofence) | Driver tools / map | No drawing surface | **T7.3** (door memory) |
+| M10 | GPX track playback and export for the IRD mileage logbook | Earnings | No GPX in/out | **T7.11** (IRD logbook) |
+| M11 | Map on the web dashboard with our own style (self-hosted tiles) | Dispatch | No tile source, no style for the web | **T7.12** (web dashboard) |
+| M12 | Geofence auto-arrival driven by the map's own parcel/address data | Tracking | Geofence exists only as a concept | **T7.3** |
+| M13 | Rendered-feature introspection to prove "the style only draws house numbers at z17" | QA | No way to assert what the style renders | **T7.15** (acceptance test) |
+| M14 | Planet/region tiles for the web dashboard without a Google/Mapbox key | Dispatch / legal | No key-free online source chosen | **T7.12** |
+| M15 | Vector-tile terrain / elevation (terrarium) in the offline pack | Offline maps | No elevation | **T5.7** (new) |
+| M16 | A measured pack-size + frame-time benchmark published with the decision | QA | No eval set exists | **T5.8** (new; the §4 set) |
