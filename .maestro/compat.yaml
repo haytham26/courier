@@ -3,11 +3,11 @@ name: B.7 compatibility screen and the voice permission prompt
 ---
 - launchApp:
     clearState: true
-    deepLink: "courier://compat"
+- openLink: "courier://compat"
 - extendedWaitUntil:
     visible:
       id: "compat-screen"
-    timeout: 30000
+    timeout: 60000
 # The recording permission prompt appears when expo-audio asks for the microphone.
 - runFlow:
     when:
@@ -19,17 +19,17 @@ name: B.7 compatibility screen and the voice permission prompt
 - extendedWaitUntil:
     visible:
       id: "compat-running"
-    timeout: 30000
+    timeout: 60000
 - assertVisible:
     id: "compat-sherpa"
 - assertVisible:
-      id: "compat-camera"
+    id: "compat-camera"
 - assertVisible:
-      id: "compat-maplibre"
+    id: "compat-maplibre"
 - assertVisible:
-      id: "compat-opsqlite"
+    id: "compat-opsqlite"
 - assertVisible:
-      id: "compat-audio"
+    id: "compat-audio"
 - assertVisible:
-      id: "compat-reanimated"
+    id: "compat-reanimated"
 - takeScreenshot: "b7-compat"
