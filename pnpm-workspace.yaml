@@ -1,4 +1,4 @@
-# nosemgrep: pnpm 12 ships its own supply-chain policy and verifies the
+# nosemgrep: pnpm 12 ships its own supply-chain policy and verifies the (W3)
 # lockfile on every install; the community rules expect the pnpm 10 settings.
 packages:
   - apps/mobile

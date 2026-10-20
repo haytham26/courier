@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 const PORT = 3399;
 // The test server listens on the loopback interface: the request never leaves
 // the machine (the W4 exception in CONSTRAINTS.md).
-// nosemgrep: typescript.react.security.react-insecure-request
+// nosemgrep: typescript.react.security.react-insecure-request (W4)
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 let server: ChildProcess;
