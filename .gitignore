@@ -34,3 +34,5 @@ Thumbs.db
 data/linz/
 # Local scratch backups (never committed)
 .local-backup/
+# Clean-room study clones (never committed, read-only reference)
+.study/

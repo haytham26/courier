@@ -2,6 +2,16 @@
 
 ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
 
-| ADR | Title | Date | Status |
-|-----|-------|------|--------|
-| - | - | - | - |
+| Date | Decision | Candidate / basis | Source file | Status |
+|---|---|---|---|---|
+| 2026-10-20 | KEEP `@maplibre/maplibre-react-native` and **upgrade 11.3.7 -> 11.5.0** (the two missed releases contain an ANR fix and the feature-state API); keep MapLibre Native (transitive) | `maplibre/maplibre-react-native` (BSD-3-Clause) | `docs/research/2026/map-rendering-offline-tiles.md` | Accepted |
+| 2026-10-20 | ADOPT PMTiles v3 as the tile container (the spec is public domain, so we may write our own reader) with `go-pmtiles` pinned by SHA-256 as the build tool | `protomaps/PMTiles` (BSD-3 implementations, CC0 spec), `protomaps/go-pmtiles` (BSD-3) | `docs/research/2026/map-rendering-offline-tiles.md` | Accepted |
+| 2026-10-20 | ADOPT Protomaps basemaps `styles/` forked as `courier-copilot-style` (BSD-3 code, **CC0 design**), with a day and a night theme generated from one theme source; name the fork differently and attribute | `protomaps/basemaps` | `docs/research/2026/map-rendering-offline-tiles.md` | Accepted |
+| 2026-10-20 | ADOPT the server-side Planetiler profile (`--area=christchurch`) -> `pmtiles extract` to the agreed bbox/zoom -> a file the app reads via `pmtiles://file://`; keep `maplibre/maputnik` as the style editor | `onthegomap/planetiler` (Apache-2.0), `maplibre/maputnik` (MIT) | `docs/research/2026/map-rendering-offline-tiles.md` | Accepted |
+| 2026-10-20 | Fallback for out-of-region tiles: **self-hosted** `hyperknot/openfreemap`, never their public instance (one maintainer, donation-funded, best-effort SLA) | `hyperknot/openfreemap` (MIT) | `docs/research/2026/map-rendering-offline-tiles.md` | Accepted (fallback) |
+| 2026-10-20 | WATCH `stadiamaps/pmtiles-rs`, `versatiles-org/versatiles-rs` + style, `opengeos/GeoLibre`, `OvertureMaps/overture-tiles` (cross-squad), `maplibre-gl-directions` | various | `docs/research/2026/map-rendering-offline-tiles.md` | Watch |
+| 2026-10-20 | CLEAN-ROOM: `PimpinPumpkin/Vela` (GPL-3.0) and `organicmaps/organicmaps` (mixed licence) are study material only; REJECT `Framstag/libosmscout` and `mapsforge/mapsforge` (LGPL-3.0) and `Akylas/alpimaps` (stale) as dependencies | `PimpinPumpkin/Vela`, `organicmaps/organicmaps` | `docs/research/2026/map-rendering-offline-tiles.md` | Accepted (clean-room) |
+| 2026-10-20 | Attribution must be visible **offline**: put the OSM/ODbL attribution in the map footer and in About, never say "OpenStreetMap" in the UI and never use the OSM logo | OSM trademark policy | `docs/research/2026/map-rendering-offline-tiles.md` | Accepted |
+| 2026-10-20 | The ODbL share-alike position on an on-device cached OSM tile set is **UNVERIFIED and needs a legal opinion**; treat it as a risk until answered | ODbL | `docs/research/2026/map-rendering-offline-tiles.md` | Needs legal review |
+| 2026-10-20 | Build the maps eval set before signing off: a Canterbury pack, a pack-size matrix, perfetto frame traces on the CI emulator **and** one mid-range Android, and day/night style screenshots. 60 fps, the <= 50 MB pack and the style parity are all unmeasured | V4 §5 and §6.4 | `docs/squads/maps/README.md` | Accepted |
+| 2026-10-20 | Prove `pmtiles://file://` end to end through the RN binding in the eval harness - the RN example only demonstrates `pmtiles://https://` | `maplibre/maplibre-react-native` | `docs/research/2026/map-rendering-offline-tiles.md` | Accepted |

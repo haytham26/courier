@@ -340,3 +340,31 @@ ode node_modules/pnpm/install.js.
 - The D8 accuracy test is **skipped** when that index is absent, so the CI suite stays green; run
   it locally with uv run --directory apps/api pytest tests/address/test_linz_accuracy.py -v.
 - The GITHUB_TOKEN from .env.local works through scripts/gh.ps1 (it never prints the token).
+
+## 2026-10-20 - Research sprint: clean-room study of VoiceStudio + squad research/decisions refresh
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+|---|---|---|
+| Session start, skill selection | `using-agent-skills` | Picked the study phase workflow (Researcher -> Analyst) instead of improvising; every row below names its skill. |
+| Scoping the two tasks and the context to load | `context-engineering` | Loaded only the binding documents (KICKOFF_V4_EN, FINAL_PROMPT 4.1-4.5, DECISIONS D1-D22, PARITY, PRODUCT_SPEC, the squad READMEs) and the 15 area research files; the AGPL clone in `.study/voicestudio` was read, never copied. |
+| Study plan and the clean-room boundary | `spec-driven-development`, `planning-and-task-breakdown` | Turned the study into 24 numbered requirements with Given/When/Then acceptance criteria, then a separate GAP table with the PARITY status vocabulary. |
+| Evidence discipline (no invented facts) | `source-driven-development` | Every number, licence, date and version in the two new files and the 20 refreshed squad files was copied from the area files in `docs/research/2026/` or from the repository itself; anything we did not see is marked UNVERIFIED. |
+| Licence and privacy reasoning (CC-BY-NC weights, AGPL boundary) | `security-and-hardening` | The OmniVoice CC-BY-NC finding is written as a hard gate in SPEC R2 and a licence-safe substitution table; no requirement may depend on a non-commercial weight. |
+| Squad research summaries and decision rows | `documentation-and-adrs` | 10 `research.md` files (candidates, queries, deep-review outcome for the top 5, KEEP/ADOPT/WATCH/REJECT, UNVERIFIED) and 10 `decisions.md` tables (date, decision, candidate, source file, status). |
+| Final consistency pass | `code-review-and-quality`, `doubt-driven-development` | Checked every file for (a) copied identifiers or sentences from the studied project - none, (b) numbers not traceable to an area file, (c) line budgets (SPEC 244, GAP 99, squad research 53-80) and (d) UTF-8 integrity. |
+
+### Clean-room statement (V4 11.2)
+
+- `debpalash/VoiceStudio` (AGPL-3.0) was cloned to `.study/voicestudio/` (gitignored, `git check-ignore` confirms it is not tracked) and read: README, `docs/STRUCTURE.md`, `docs/feature-catalog.md`, `docs/features.yaml`, `docs/mcp.md`, `docs/speech-platform.md`, `docs/agentic-voice.md`, `docs/api-auth.md`, `docs/voice-design.md`, `docs/languages.md`, `docs/mobile.md`, `mobile/contract/SPEC.md`, the router list, the alembic migrations and the public issue titles.
+- **No code, file layout, string table, schema, identifier or asset from the studied project entered this repository.** The two new files describe behaviour in our own words as requirements for our product.
+- The studied project may be run locally as an internal dev tool (synthetic evaluation audio) only. It is never vendored, never served to users, and never a dependency. D22 is unchanged; the OmniVoice **weights** finding is recorded as an ADR trigger.
+
+### Result
+
+- `docs/study/voicestudio/SPEC.md` (244 lines): 24 requirements with acceptance criteria, the legal boundary, the locked-context inheritance, 6 explicit non-goals, the licence-safe substitution table, the UNVERIFIED list, and the observed user complaints mapped to our better answer.
+- `docs/study/voicestudio/GAP.md` (99 lines): 35 features compared (Have / Better / Planned / Skip), 4 new PARITY rows to merge, and what stays UNVERIFIED.
+- 10 squad `research.md` files rewritten from the sprint area files (53-80 lines each).
+- 10 squad `decisions.md` files rewritten as decision tables with date, candidate, source file and status.
+- Nothing in `docs/PARITY.md` was changed: a row may only leave `Planned` with evidence in `docs/evidence/`, and no evidence exists for these rows yet.

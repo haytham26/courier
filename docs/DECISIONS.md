@@ -31,7 +31,7 @@
 
 ## D22 — VoiceStudio / OmniVoice + post-launch open-source tools (2026-10-20)
 **Voice (founder decision: use everything VoiceStudio offers, keep our product private):**
-- The 600+ language capability comes from the engine **k2-fsa/OmniVoice (code Apache-2.0)** — free to modify and keep private, including in a commercial product. Verify the model weights license on Hugging Face (k2-fsa/OmniVoice) before production.
+- The 600+ language capability comes from the engine **k2-fsa/OmniVoice (code Apache-2.0)** - free to modify and keep private, including in a commercial product. **The weights licence was checked on 2026-10-20 and it is CC-BY-NC (non-commercial): the pretrained weights are NOT usable in our commercial product. The licence-safe replacement is sherpa-onnx + Kokoro on device and Qwen3-ASR/TTS (Apache-2.0 weights) on the private service. See docs/adr/ADR-004-voice-service-licences.md.**
 - Build our own **private** voice service (`services/voice`, in this repo) directly on OmniVoice + sherpa-onnx + Pipecat: TTS, voice design, multilingual dictation/transcription, and synthetic training-audio generation, adapted to couriers (NZ street/suburb vocabulary, accents, noise).
 - github.com/debpalash/VoiceStudio is AGPL-3.0: use it as a **reference and internal dev tool** (e.g. to generate synthetic eval audio, study its features/UX). Do NOT copy its code into our repos — re-implement needed features ourselves on top of OmniVoice. This keeps the whole product private with no source-publishing obligation.
 - On device stays sherpa-onnx (+ Kokoro or an OmniVoice ONNX export if weights license allows and the benchmark wins).

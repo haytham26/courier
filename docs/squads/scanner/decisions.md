@@ -2,6 +2,16 @@
 
 ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
 
-| ADR | Title | Date | Status |
-|-----|-------|------|--------|
-| - | - | - | - |
+| Date | Decision | Candidate / basis | Source file | Status |
+|---|---|---|---|---|
+| 2026-10-20 | KEEP `margelo/react-native-vision-camera` 5.2.3 (MIT) as the camera and frame-processor host; v5 is Nitro-based and v4 is archived | `margelo/react-native-vision-camera` | `docs/research/2026/ocr-label-scanning.md` | Accepted |
+| 2026-10-20 | ADOPT ML Kit Text Recognition v2, **bundled** Latin script, through either `react-native-vision-camera-ocr-plus` or `react-native-vision-camera-mlkit`; benchmark both before we pick | `jamenamcinteer/react-native-vision-camera-ocr-plus` (MIT), `pedrol2b/react-native-vision-camera-mlkit` (MIT) | `docs/research/2026/ocr-label-scanning.md` | Accepted (benchmark pending) |
+| 2026-10-20 | ADOPT `react-native-nitro-zxing` + `zxing-cpp` for **barcodes only**, behind our own interface; the vendor benchmark is 2.6x-10.2x faster than ML Kit on their own numbers | `margelo/react-native-nitro-zxing` (MIT), `zxing-cpp` (Apache-2.0) | `docs/research/2026/ocr-label-scanning.md` | Accepted (provisional) |
+| 2026-10-20 | ADOPT resize-before-OCR inside our own frame processor as the cheapest latency win (the cheapest of the three is to resize the frame, not the OCR model) | `mrousavy/vision-camera-resize-plugin` (pattern) | `docs/research/2026/ocr-label-scanning.md` | Accepted |
+| 2026-10-20 | ADOPT RapidOCR + PP-OCRv5/PP-OCRv6 tiny or small ONNX models as the **documented FOSS fallback** required by our licence policy, behind the same `TextRecogniser` interface (phase 2) | `RapidAI/RapidOCR` (Apache-2.0), `PaddlePaddle/PaddleOCR` (Apache-2.0) | `docs/research/2026/ocr-label-scanning.md` | Accepted (provisional) |
+| 2026-10-20 | Build our **own** address-block classifier from ML Kit element confidence and geometry; no off-the-shelf NZ address-block model exists and none should be trusted without our eval set | Hugging Face model sweep (no candidate found) | `docs/research/2026/ocr-label-scanning.md` | Accepted |
+| 2026-10-20 | Fallback chain: ML Kit bundled -> RapidOCR/PP-OCR ONNX -> tesseract-class -> ask the driver one quick question. **No cloud OCR, ever** | V4 §10.2 (on-device, offline, no images uploaded) | `docs/research/2026/ocr-label-scanning.md` | Accepted |
+| 2026-10-20 | WATCH `opencv` (glare / perspective correction for crumpled labels), `google-ai-edge/mediapipe`, `ahmeterenodaci/rn-mlkit-ocr`, `mrousavy/vision-camera-resize-plugin`, `juliansteenbakker/mobile_scanner` | various | `docs/research/2026/ocr-label-scanning.md` | Watch |
+| 2026-10-20 | REJECT `tesseract.js` (cannot run in Hermes, lowest accuracy), `tesseract`, `chineseocr_lite` (GPL-2.0), Anyline (commercial), the server-class OCR tools (`chandra`, `MinerU`, `EasyOCR`, `zerox`, `Unstructured`), `CRAFT-pytorch`, `gev2002/react-native-vision-camera-text-recognition` (stale, v3-era), `journeyapps/zxing-android-embedded` (Activity-based), `tony-xlh/react-native-document-scanner` (no licence) and the commercial dynamsoft-class plugins | various | `docs/research/2026/ocr-label-scanning.md` | Rejected |
+| 2026-10-20 | Record the Google ML Kit dependency explicitly in `docs/LICENSES.md` - its terms are not OSS, so the FOSS path must stay alive | Google ML Kit terms | `docs/research/2026/ocr-label-scanning.md` | Accepted |
+| 2026-10-20 | Build `docs/squads/scanner/eval/` (>= 300 real-style NZ courier label images) and the benchmark harness before the engine is chosen; >= 97 % correct recipient address, <= 1 % wrong-block and <= 1.5 s per label are all UNVERIFIED until then | V4 §10.2 working agreement #1 | `docs/squads/scanner/README.md` | Accepted |
