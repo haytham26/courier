@@ -1,0 +1,37 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\DCL\projects\courier\apps\api\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+Using --randomly-seed=4236583859
+rootdir: C:\Users\DCL\projects\courier\apps\api
+configfile: pyproject.toml
+plugins: anyio-4.15.1, langsmith-0.14.11, asyncio-1.4.0, randomly-5.0.0, repeat-0.9.4
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 24 items
+
+tests/address/test_correction.py::TestUnknownInput::test_unknown_street_asks PASSED [  4%]
+tests/address/test_correction.py::TestUnknownInput::test_empty_input_asks PASSED [  8%]
+tests/address/test_correction.py::TestUnitsAndFlats::test_reads_a_flat_as_a_unit PASSED [ 12%]
+tests/address/test_correction.py::TestUnitsAndFlats::test_keeps_the_unit PASSED [ 16%]
+tests/address/test_correction.py::TestUnitsAndFlats::test_a_bare_number_is_not_a_unit PASSED [ 20%]
+tests/address/test_correction.py::TestContract::test_original_is_preserved_verbatim PASSED [ 25%]
+tests/address/test_correction.py::TestContract::test_confidence_is_a_probability PASSED [ 29%]
+tests/address/test_correction.py::TestContract::test_result_has_the_d8_keys PASSED [ 33%]
+tests/address/test_correction.py::TestNonExistentNumber::test_1400_becomes_140 PASSED [ 37%]
+tests/address/test_correction.py::TestNonExistentNumber::test_an_unknown_number_asks_with_options PASSED [ 41%]
+tests/address/test_correction.py::TestMisspelling::test_corrects_a_misspelled_suburb PASSED [ 45%]
+tests/address/test_correction.py::TestMisspelling::test_corrects_a_misspelled_street PASSED [ 50%]
+tests/address/test_correction.py::TestAccuracyOnTheFixture::test_the_fixture_has_at_least_fifty_addresses PASSED [ 54%]
+tests/address/test_correction.py::TestAccuracyOnTheFixture::test_accuracy_is_at_least_95_percent PASSED [ 58%]
+tests/address/test_correction.py::TestExactMatch::test_normalises_spoken_numbers PASSED [ 62%]
+tests/address/test_correction.py::TestExactMatch::test_keeps_the_matched_lin_z_id PASSED [ 66%]
+tests/address/test_correction.py::TestExactMatch::test_corrects_a_known_address PASSED [ 70%]
+tests/address/test_correction.py::TestExactMatch::test_accepts_the_full_street_type PASSED [ 75%]
+tests/address/test_correction.py::TestAmbiguousSuburb::test_uses_the_suburb_when_given PASSED [ 79%]
+tests/address/test_correction.py::TestAmbiguousSuburb::test_asks_which_suburb PASSED [ 83%]
+tests/address/test_correction.py::TestSelfCorrection::test_uses_the_corrected_number PASSED [ 87%]
+tests/address/test_correction.py::TestSelfCorrection::test_handles_a_leading_correction PASSED [ 91%]
+tests/address/test_correction.py::TestRoadKey::test_street_types_are_normalised PASSED [ 95%]
+tests/address/test_correction.py::TestRuralAddresses::test_keeps_a_rural_delivery_number PASSED [100%]
+
+============================= 24 passed in 0.07s ==============================
+EXIT_CODE=0

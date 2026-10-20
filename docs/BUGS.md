@@ -17,7 +17,7 @@
 | BUG-011 | No maps module (munim-maps, PMTiles, offline Canterbury) | Phase B.5 not started | MapLibre v11.3.7 integrated | Map renders offline at 60fps | todo |
 | BUG-012 | No sync engine (op-sqlite, event sourcing) | Phase B.6 not started | @op-engineering/op-sqlite installed | Offline-first sync works | todo |
 | BUG-013 | No LINZ address import worker | Phase C.1 not started | - | Weekly LINZ changeset import works | open |
-| BUG-014 | No NZ address correction engine (pg_trgm, phonetic) | Phase C.2 not started | - | 95%+ correction accuracy on golden set | open |
+| BUG-014 | No NZ address correction engine (pg_trgm, phonetic) | Phase C.2 not started | PHASE 2.3: pp/address_correction.py (D8 contract, fuzzy road matching, number checks, self-correction, units/flats, RD) | 95%+ correction accuracy on golden set (the LINZ-backed accuracy run is **NOT VERIFIED** until data/linz/ is provided) | doing |
 | BUG-015 | No map builder pipeline (planetiler, PMTiles) | Phase C.3 not started | - | Canterbury PMTiles < 500MB builds weekly | open |
 | BUG-016 | No routing engine (Valhalla + VROOM + OR-Tools) | Phase C.4 not started | - | 200 stops routed < 5s | open |
 | BUG-017 | No 3-point door memory with EWMA learning | Phase C.5 not started | - | Door memory persists across shifts | open |
@@ -44,8 +44,12 @@
 | BUG-038 | Compliance: Redis used instead of Valkey | External review found violation | docker-compose uses Valkey 8 | No Redis in docker-compose | fixed |
 | BUG-039 | Compliance: .gitignore missing .turbo/, .expo/, dist/, node_modules/ | External review found violation | .gitignore updated, .turbo/cache removed from git | git check-ignore catches all build artifacts | fixed |
 | BUG-040 | TypeScript errors in voice module (missing exports, module resolution) | Voice module incomplete | Need to fix exports and imports | `tsc --noEmit` passes | doing |
+| BUG-041 | `pnpm install` left a half-deleted `node_modules`: pnpm skipped re-extracting packages, so packages resolved to the wrong hoisted versions (`zod@3` for Better Auth, `lru-cache@10` for Babel, a `react-native` without `Libraries/`). Symptoms: `LRUCache is not a constructor` (jest, expo CLI), `sessionSchema.loose is not a function` (Better Auth), `Could not locate module react-native/Libraries/AppState/AppState`. | The first install failed with a Windows path collision (`docs/evidence/audit/pnpm-install.log`); the later installs reused the broken tree. | Remove `node_modules` with a full literal path and reinstall (PHASE 2.1 / 2.2) | `pnpm install` from a clean tree + the full workspace test suite | fixed |
+| BUG-042 | `app/nz_address.py` read "42B" as unit `B` + number `42` | Legacy prototype parsing (R23: `42B` is number 42 + suffix B; a unit is written `2/14`) | PHASE 2.3: `ParsedAddress.suffix` added, suffix and unit separated | `tests/test_core.py::test_parse_spoken_address` + `test_parse_unit_slash_is_a_unit_not_a_suffix` | fixed |
+| BUG-043 | No D8 address-correction engine: no `{original, corrected, reason, confidence, needs_question, options[]}` contract, no non-existent-number handling, no self-correction, no multi-suburb question, no units/flats, no RD handling | Phase C.2 never started | PHASE 2.3: `app/address_correction.py` + 24 tests + an 87-address fixture | `tests/address/test_correction.py` (accuracy test over the fixture) | fixed |
+| BUG-044 | `ThemeProvider` wrote CSS variables to `document.documentElement` — undefined in React Native, so it crashed on device | CSS-variable theme ported from a web codebase | PHASE 2.2: Unistyles `StyleSheet.configure` + `UnistylesRuntime` | `pnpm --filter mobile test` | fixed |
 
 ---
 
-**Last Updated:** 2026-10-19 04:50:00 +13:00
-**Total Bugs:** 40 | **Open:** 25 | **Fixed:** 10 | **Doing:** 3 | **Verified (50x):** 0
+**Last Updated:** 2026-10-20 (PHASE 2.3)
+**Total Bugs:** 44 | **Open:** 25 | **Fixed:** 14 | **Doing:** 4 | **Verified (50x):** 0

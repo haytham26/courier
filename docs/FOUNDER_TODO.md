@@ -25,6 +25,8 @@
 | PostHog EU Key | eu.posthog.com → Project Settings | `POSTHOG_API_KEY`, `POSTHOG_HOST` | `.env.local` (optional) | Analytics. **Workaround:** No-op | No |
 | GlitchTip DSN | Self-hosted (agent) or app.glitchtip.com | `GLITCHTIP_DSN` | `.env.local` (optional) | Error tracking. **Workaround:** Console logs | No |
 | LINZ LDS API Key (duplicate?) | data.linz.govt.nz | `LINZ_LDS_API_KEY` | `.env.local` → GitHub Secrets → Server env | LINZ address imports (worker). **Workaround:** tests/fixtures/canterbury-sample.csv | No |
+| **LINZ local address export** | data.linz.govt.nz → LDS download (GeoPackage / Shapefile / CSV of *NZ Addresses* and *NZ Roads Addresses*) | — (files, not a key) | `data/linz/` (gitignored) | Address correction accuracy (D8) and the offline FTS slice. **Workaround:** the committed fixture `apps/api/tests/address/fixtures/christchurch_addresses.json` (87 real Christchurch streets/suburbs, placeholder ids). **Needed for:** the ≥95% accuracy claim on real LINZ ids and the weekly rebuild. | No |
+| Postgres for the auth service | local Docker (agent generates) or Neon free | `DATABASE_URL` | `.env.local` | `services/auth` user/session storage. **Workaround:** the in-memory adapter in tests (`AUTH_DATABASE_URL=memory://`). | No |
 
 ---
 

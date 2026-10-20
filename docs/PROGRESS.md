@@ -8,7 +8,8 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | PHASE0-read-docs | done | main @16afb8d | n/a (docs) | — | — |
 | PHASE1-audit | done | main @e59379e | see audit logs | — | — |
 | PHASE2.1 Better Auth | **done** | feat/2.1-better-auth-service | services/auth 31/31, api 23/23, shared 62/62 | runtime HTTP + Postgres path NOT VERIFIED (no server/DB here) | — |
-| PHASE2.2 themes | **done** | feat/2.2-unistyles-themes | design-tokens 27/27, workspace 101/101, mobile 6/6 | Unistyles native runtime NOT VERIFIED (no emulator/CI yet) | PHASE 2.3 |
+| PHASE2.2 themes | **done** | feat/2.2-unistyles-themes | design-tokens 27/27, workspace 101/101, mobile 6/6 | Unistyles native runtime NOT VERIFIED (no emulator/CI yet) | — |
+| PHASE2.3 address engine | **done** | feat/2.3-address-correction | api 48/48 (24 address tests) | LINZ accuracy NOT VERIFIED (data/linz empty) | PHASE 2.4 |
 | 0.1 repo setup | partial | — | not verified | root package.json now pinned (2.1) | pin remaining ranges |
 | 0.3 docker infra | not verified | — | — | not run in audit | run docker compose |
 | 0.4 local secrets | partial | — | not verified | scripts/check-secrets not tested | test scripts |
@@ -23,8 +24,8 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | B.5 maps | not started | — | — | — | — |
 | B.6 sync engine | not started | — | — | — | — |
 | B.7 compat test | NOT VERIFIED | — | — | no emulator run; CI workflows empty | PHASE 3 |
-| C.1 LINZ import | partial | — | — | `data/linz/` empty | founder to provide |
-| C.2 address correction (D8) | partial | — | worker test file exists, not wired | no fixtures | PHASE 2.3 |
+| C.1 LINZ import | partial | — | — | `data/linz/` empty → FOUNDER_TODO entry | founder to provide |
+| C.2 address correction (D8) | **done** | feat/2.3-address-correction | 24 address tests, 100% over the 87-address fixture | LINZ ground truth NOT VERIFIED | wire into the API |
 | C.3–G.4 remaining | not started | — | — | — | — |
 
 ## Current verified check results

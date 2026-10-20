@@ -38,6 +38,7 @@ NUM_WORDS.update({"thirty": "30", "forty": "40", "fifty": "50", "sixty": "60",
 class ParsedAddress:
     unit: str | None
     number: str | None
+    suffix: str | None
     street: str | None
     suburb: str | None
     confidence: float
@@ -49,7 +50,8 @@ class ParsedAddress:
     @property
     def address_key(self) -> str:
         unit = f"{self.unit}/" if self.unit else ""
-        return f"{unit}{self.number or '?'} {self.street or '?'}, {self.suburb or '?'}".lower()
+        number = f"{self.number or '?'}{self.suffix or ''}"
+        return f"{unit}{number} {self.street or '?'}, {self.suburb or '?'}".lower()
 
     @property
     def complete(self) -> bool:
@@ -97,6 +99,7 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
     text = re.sub(r"^(\d+) ([a-h])\b", r"\1\2", text)   # spoken "forty two B" -> 42b
 
     unit = None
+    suffix = None
     m = re.match(r"^(?:unit (\w+)\s+)?(\d+[a-z]?)(?:\s*/\s*(\d+[a-z]?))?\s+(.*)$", text)
     if m and m.group(3):          # "2/14 smith st" -> unit 2, number 14
         unit, number, rest = m.group(2), m.group(3), m.group(4)
@@ -105,9 +108,10 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
     else:
         number, rest = None, text
     if number and len(number) > 1 and unit is None:
+        # R23: "42B" is number 42 with suffix B; a unit is always written "2/14".
         m2 = re.match(r"^(\d+)([a-z])$", number)
         if m2:
-            unit, number = m2.group(2).upper(), m2.group(1)
+            suffix, number = m2.group(2).upper(), m2.group(1)
 
     tokens = rest.split()
     street, suburb, conf = None, None, 0.6
@@ -130,4 +134,4 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
             street = " ".join(t.title() for t in tokens) or None
     if not number:
         conf *= 0.5
-    return ParsedAddress(unit, number, street.strip() if street else None, suburb, round(conf, 2))
+    return ParsedAddress(unit, number, suffix, street.strip() if street else None, suburb, round(conf, 2))

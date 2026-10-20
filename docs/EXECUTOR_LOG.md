@@ -110,3 +110,38 @@ PHASE 3 (CI + Android emulator on GitHub Actions).
 
 PHASE 2.3 (D8 address correction), then 2.4 (cleanup, ESLint flat config for every package),
 2.5 (design), then PHASE 3 (CI + emulator).
+
+## 2026-10-20 — PHASE 2.3 (branch `feat/2.3-address-correction`)
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+|---|---|---|
+| The engine and its contract | `api-and-interface-design` | One result type (`Correction`) with the D8 keys, a `AddressStore` protocol so the engine works against the LINZ FTS slice, a fixture store or Postgres, and `SqliteAddressStore` for the offline slice. |
+| Rule-by-rule implementation | `spec-driven-development` | Every case in the phase (non-existent number, misspelling, self-correction, multi-suburb, units/flats, RD) is a named test before the code that satisfies it. |
+| Implementation | `incremental-implementation`, `test-driven-development` | 24 tests grew in slices: contract → exact match → misspelling → number handling → self-correction → ambiguity → units → RD → accuracy; each slice was green before the next. |
+| Factual grounding | `source-driven-development` | R23 (FINAL_PROMPT §1) and the D8 contract (§0-F.3.3, §5.1) were read from the binding docs; the existing `nz_address.py` and the worker's LINZ loader were read before the engine was written. |
+| Failures hit (suffix/unit, self-correction regex, unit preference) | `debugging-and-error-recovery` | Each failure was reproduced in a single test, traced to a cause (R23 violation in the parser, a greedy marker regex, an unordered candidate list) and fixed at the cause. |
+| Review before commit | `code-review-and-quality`, `doubt-driven-development` | Adversarially checked the engine: the fixture uses placeholder ids, so the accuracy number is explicitly **not** claimed as LINZ accuracy; the limits are in the evidence README and in `docs/FOUNDER_TODO.md`. |
+| Docs | `documentation-and-adrs` | `docs/FOUNDER_TODO.md` (LINZ export entry), `docs/BUGS.md` (BUG-041..044). |
+
+### Result
+
+- `apps/api/app/address_correction.py`: the D8 engine — contract, fuzzy road matching, house-number
+  verification, non-existent-number correction ("1400" → 140), spoken self-correction, multi-suburb
+  question with options, units/flats, rural delivery numbers, and an `SqliteAddressStore` for the
+  offline FTS slice.
+- `apps/api/app/nz_address.py`: `42B` is now number 42 + suffix B (R23); a unit is only ever `2/14`.
+- Fixture: 87 real Christchurch streets/suburbs (`apps/api/tests/address/fixtures/`).
+- 24 new tests; the API suite is 48/48, ruff and mypy clean.
+
+### Not verified
+
+- Accuracy against real LINZ ids: **NOT VERIFIED** — `data/linz/` is empty, so the fixture uses
+  placeholder ids. The founder entry is in `docs/FOUNDER_TODO.md`.
+- The engine is not yet exposed through the API routes (the `/v1` surface is still a stub).
+
+### Next
+
+PHASE 2.4 (cleanup: egg-info, `cleanup_avd.py`, duplicate test-imports, ESLint flat config for every
+package, the 3 expo-router layout typings), then 2.5 (design), then PHASE 3 (CI + emulator).
