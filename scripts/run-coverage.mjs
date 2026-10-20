@@ -16,10 +16,7 @@ const packages = [
   { name: '@courier/auth', dir: 'services/auth' },
 ];
 
-function run(command, args, options = {}) {
-  const result = spawnSync(command, args, { stdio: 'inherit', shell: true, ...options });
-  return result.status ?? 1;
-}
+
 
 mkdirSync('coverage', { recursive: true });
 
@@ -30,17 +27,15 @@ const perPackage = [];
 
 for (const { name, dir } of packages) {
   console.log(`\n=== coverage: ${name} ===`);
-  const status = run('corepack', [
-    'pnpm',
-    '--filter',
-    name,
-    'exec',
-    'vitest',
-    'run',
-    '--coverage',
-    '--coverage.reporter=json-summary',
-    '--coverage.reporter=text',
-  ]);
+  // vitest is started through its own entry point (no shell), so the command
+  // line is never interpreted by a shell.
+  const vitest = join(process.cwd(), dir, 'node_modules', 'vitest', 'vitest.mjs');
+  const status =
+    spawnSync(
+      process.execPath,
+      [vitest, 'run', '--coverage', '--coverage.reporter=json-summary', '--coverage.reporter=text'],
+      { cwd: dir, stdio: 'inherit' },
+    ).status ?? 1;
   if (status !== 0) {
     console.error(`coverage failed for ${name}`);
     process.exit(status);
@@ -62,16 +57,21 @@ writeFileSync('coverage/coverage-summary.json', JSON.stringify(merged, null, 2),
 console.log(`\nmerged ${perPackage.length} package summaries into coverage/coverage-summary.json`);
 
 console.log('\n=== coverage: the Python API ===');
-const apiStatus = run('uv', [
-  'run',
-  '--directory',
-  'apps/api',
-  'pytest',
-  '--cov=app',
-  '--cov-report=json:coverage.json',
-  '--cov-report=term-missing:skip-covered',
-  '-q',
-]);
+const apiStatus =
+  spawnSync(
+    'uv',
+    [
+      'run',
+      '--directory',
+      'apps/api',
+      'pytest',
+      '--cov=app',
+      '--cov-report=json:coverage.json',
+      '--cov-report=term-missing:skip-covered',
+      '-q',
+    ],
+    { stdio: 'inherit' },
+  ).status ?? 1;
 if (apiStatus !== 0) {
   console.error('the API coverage run failed');
   process.exit(apiStatus);

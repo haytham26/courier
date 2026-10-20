@@ -21,9 +21,9 @@ import { readFileSync, existsSync } from 'node:fs';
 // The V4 §2 targets are 85 % / 90 %; the gap to them is tracked in
 // CONSTRAINTS.md and owned by the address, payments and platform squads.
 const THRESHOLDS = [
-  { label: 'packages/ and services/ (overall)', floor: 72, groups: ['packages', 'services'] },
+  { label: 'packages/ and services/ (overall)', floor: 81, groups: ['packages', 'services'] },
   { label: 'the address engine', floor: 81, files: ['app/address_correction.py'] },
-  { label: 'the auth service', floor: 81, files: ['services/auth/src'] },
+  { label: 'the auth service', floor: 88, files: ['services/auth/src'] },
   { label: 'sync', floor: 90, files: ['app/sync', 'services/sync'], optional: true },
   { label: 'billing', floor: 90, files: ['app/billing', 'services/billing'], optional: true },
 ];

@@ -32,7 +32,7 @@ Checked by `scripts/check-floor.mjs` (diff-scoped, exit 1 on a violation) — ru
 | Mutation (core modules) | ≥ 70 % mutation score on the address engine and the auth service | `pnpm mutation` (Stryker) | every PR (scoped to the changed files) |
 | Floor | zero violations in the diff | `scripts/check-floor.mjs` | every PR |
 | Secrets | zero findings | `gitleaks detect --redact` (CI job `secrets`) | every PR |
-| Dependency audit (JS) | zero high/critical advisories | `pnpm audit --audit-level high` | every PR |
+| Dependency audit (JS) | zero high/critical advisories (the two documented build-time advisories are accepted) | `node scripts/check-audit.mjs` | every PR |
 | Dependency audit (Python) | zero high/critical advisories | `uvx pip-audit` | every PR |
 | Static analysis (SAST) | zero high findings | `semgrep scan --config p/default --config p/owasp-top-ten` | every PR |
 | Code scanning | zero high alerts | CodeQL (`codeql.yml`) | every PR |
@@ -74,6 +74,22 @@ stub), `apps/api/app/agents/copilot.py` (64 % — the LLM call path needs a fake
 |----|------|------|--------|-------|---------|
 | W1 | `any` allowed in the mobile app until the voice module is rewritten | `apps/mobile/src/voice/**` | The voice module predates the typed rewrite (BUG-040) | lead executor | 2026-12-01 |
 | W2 | `mypy` not in strict mode for the LangGraph intake graph | `apps/api/app/agents/intake_graph.py` | LangGraph's node typing has no strict-mode overload (see the inline note) | lead executor | 2026-12-01 |
+| W3 | Semgrep: the pnpm/npm supply-chain rules, the read-only-filesystem rule | `.npmrc`, `pnpm-workspace.yaml`, `docker-compose.yml` | The rules expect the pnpm 10 settings; pnpm 12 verifies the lockfile with its own policy and the versions are pinned exactly. The stateful services must write to their data volume. The scan command in `quality-gates.yml` lists every exclusion. | lead executor | 2026-12-01 |
+| W4 | Semgrep: the loopback HTTP and the child-process rules | `services/auth/tests/server.test.ts`, `apps/mobile/scripts/compat-test.js` | The test server listens on 127.0.0.1 and the spawned commands come from this repository, never from user input. | lead executor | 2026-12-01 |
+
+### Accepted dependency advisories (build-time only, no upstream fix)
+
+`scripts/check-audit.mjs` fails on every high/critical advisory except these two, which live in the
+build toolchain and never reach the shipped app:
+
+| Package | Severity | Why it is accepted | Review by |
+|---------|----------|---------------------|-----------|
+| `braces` | high | `metro-file-map` (the React Native bundler's file matching) — build time only, no patched version | 2026-12-01 |
+| `node-forge` | high | `@expo/cli` code signing during the Android build — build time only, no patched version | 2026-12-01 |
+
+The two criticals that were in the tree (`tinypool` prototype pollution, reachable through the
+test runner) are **fixed**: the test runner moved to `vitest@4.1.11`, which no longer pulls the
+vulnerable `tinypool`.
 
 ## How to run the checks locally
 

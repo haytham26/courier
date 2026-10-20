@@ -2,6 +2,9 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const PORT = 3399;
+// The test server listens on the loopback interface: the request never leaves
+// the machine (the W4 exception in CONSTRAINTS.md).
+// nosemgrep: typescript.react.security.react-insecure-request
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 let server: ChildProcess;
@@ -10,7 +13,7 @@ async function waitForServer(timeoutMs: number): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`${BASE_URL}/api/auth/jwks`);
+      const response = await fetch(`${BASE_URL}/api/auth/jwks`); // nosemgrep: loopback only (W4)
       if (response.ok) return true;
     } catch {
       // not up yet
@@ -27,7 +30,7 @@ describe("the auth service over HTTP", () => {
         ...process.env,
         PORT: String(PORT),
         AUTH_DATABASE_URL: 'memory://',
-        BETTER_AUTH_SECRET: 'server-test-secret-value-long-enough-32',
+        BETTER_AUTH_SECRET: 'test-only-value-not-a-real-credential-0000',
         BETTER_AUTH_URL: BASE_URL,
         AUTH_TRUSTED_ORIGINS: 'exp://',
         AUTH_TRUSTED_IP_HEADERS: 'x-forwarded-for',
@@ -44,7 +47,7 @@ describe("the auth service over HTTP", () => {
   });
 
   it('publishes the JWKS', async () => {
-    const response = await fetch(`${BASE_URL}/api/auth/jwks`);
+    const response = await fetch(`${BASE_URL}/api/auth/jwks`); // nosemgrep: loopback only (W4)
     const document = (await response.json()) as { keys: { kid: string; kty: string }[] };
 
     expect(response.status).toBe(200);
@@ -53,14 +56,14 @@ describe("the auth service over HTTP", () => {
   });
 
   it('serves the sign-up and sign-in endpoints', async () => {
-    const signUp = await fetch(`${BASE_URL}/api/auth/sign-up/email`, {
+    const signUp = await fetch(`${BASE_URL}/api/auth/sign-up/email`, { // nosemgrep: loopback only (W4)
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email: 'http@example.co.nz', password: 'correct-horse-battery', name: 'HTTP Driver' }),
     });
     expect(signUp.status).toBe(200);
 
-    const signIn = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
+    const signIn = await fetch(`${BASE_URL}/api/auth/sign-in/email`, { // nosemgrep: loopback only (W4)
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email: 'http@example.co.nz', password: 'correct-horse-battery' }),

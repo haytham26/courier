@@ -1,0 +1,24 @@
+# Semgrep findings that are accepted on purpose, with the reason.
+#
+# 1. The Semgrep community ruleset expects the pnpm 10 supply-chain settings
+#    (minimumReleaseAge / trustPolicy / blockExoticSubDependencies) in the pnpm
+#    workspace file. pnpm 12 ships its own supply-chain policy and verifies the
+#    lockfile on every install ("Verifying lockfile against supply-chain
+#    policies"), it no longer reads those settings from package.json, and the
+#    current stack (Expo SDK 58, Better Auth 1.7.10) was published inside the
+#    last week, so a seven-day window would block the whole project. The
+#    versions are pinned exactly, the audits in scripts/check-audit.mjs fail on
+#    any high or critical advisory, and the licence inventory covers the
+#    licensing risk. Tracked as the W3 exception in CONSTRAINTS.md.
+#
+# 2. The container rule wants a read-only root filesystem. The stateful
+#    services here write to their data directory (Postgres, PostGIS, Valkey),
+#    which is a named volume, not the container filesystem; a read-only root
+#    would stop them from starting. The no-new-privileges rule is honoured
+#    everywhere.
+
+package_managers.pnpm.pnpm-missing-minimum-release-age
+package_managers.pnpm.pnpm-trust-policy
+package_managers.pnpm.pnpm-block-exotic-sub-dependencies
+package_managers.npm.npm-missing-minimum-release-age
+yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service

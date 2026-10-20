@@ -1,7 +1,7 @@
 import { loadConfig, type AuthConfig } from "../src/config.js";
 import { createAuth, type AuthInstance } from "../src/server.js";
 
-export const TEST_SECRET = "test-secret-value-with-at-least-32-characters";
+export const TEST_SECRET = "test-only-value-not-a-real-credential-0000";
 export const BASE_URL = "http://localhost:3001";
 
 export function testConfig(overrides: Partial<AuthConfig> = {}): AuthConfig {

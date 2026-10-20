@@ -42,8 +42,5 @@
   "packageManager": "pnpm@12.14.0",
   "engines": {
     "node": ">=22.0.0"
-  },
-  "pnpm": {
-    "ignoredBuiltScripts": ["esbuild"]
   }
 }

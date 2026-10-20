@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { loadConfig, MissingEnvError } from "../src/config.js";
 
 const VALID_ENV = {
-  BETTER_AUTH_SECRET: "a-secret-that-is-definitely-long-enough-32",
+  BETTER_AUTH_SECRET: "test-only-value-not-a-real-credential-0000",
   BETTER_AUTH_URL: "https://auth.example.co.nz",
   AUTH_DATABASE_URL: "postgresql://courier:courier@localhost:5432/courier",
   NODE_ENV: "production",

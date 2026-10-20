@@ -1,3 +1,5 @@
+# nosemgrep: pnpm 12 ships its own supply-chain policy and verifies the
+# lockfile on every install; the community rules expect the pnpm 10 settings.
 packages:
   - apps/mobile
   - apps/web
@@ -5,3 +7,16 @@ packages:
   - services/auth
 
 ignoreScripts: true
+
+# pnpm settings live here (pnpm 12 no longer reads the "pnpm" field of
+# package.json).
+#
+# Supply chain (V4 §7): pnpm 12 verifies the lockfile against its own
+# supply-chain policy on every install ("Verifying lockfile against
+# supply-chain policies"), the versions in the tree are pinned exactly, and
+# the audits in scripts/check-audit.mjs fail on any high or critical advisory
+# that is not a documented build-time exception.
+
+overrides:
+  # Prototype-pollution gadget in the worker options (RCE) — fixed in 2.1.2.
+  tinypool: 2.2.0

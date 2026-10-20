@@ -23,7 +23,9 @@ const results = {
 
 async function runCommand(cmd, args, cwd = process.cwd(), timeout = 120000) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(cmd, args, { cwd, shell: true, stdio: 'pipe' });
+    // The command and its arguments come from this file only; no user input is
+    // ever passed to a shell (the W4 exception in CONSTRAINTS.md).
+    const proc = spawn(cmd, args, { cwd, shell: false, stdio: 'pipe' }); // nosemgrep: the command comes from this file only (W4)
     let stdout = '';
     let stderr = '';
     

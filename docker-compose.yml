@@ -3,6 +3,8 @@ version: '3.8'
 services:
   # PostgreSQL 16 + PostGIS 3.5 + pgvector 0.7.0 + pg_trgm
   postgres:
+    security_opt:
+      - no-new-privileges:true
     image: postgis/postgis:16-3.5
     container_name: courier-postgres
     environment:
@@ -28,6 +30,8 @@ services:
 
   # Valkey 8.x for caching, rate limiting, session storage (Redis fork, OSI-approved)
   valkey:
+    security_opt:
+      - no-new-privileges:true
     image: valkey/valkey:8-alpine
     container_name: courier-valkey
     command: valkey-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
@@ -43,6 +47,8 @@ services:
 
   # Valhalla 3.6.x routing engine
   valhalla:
+    security_opt:
+      - no-new-privileges:true
     image: ghcr.io/valhalla/valhalla:3.6
     container_name: courier-valhalla
     environment:
@@ -60,6 +66,8 @@ services:
 
   # LiveKit Server for WebRTC voice transport
   livekit:
+    security_opt:
+      - no-new-privileges:true
     image: livekit/livekit-server:latest
     container_name: courier-livekit
     environment:
@@ -82,6 +90,8 @@ services:
 
   # MinIO for local S3-compatible storage (R2 fallback)
   minio:
+    security_opt:
+      - no-new-privileges:true
     image: minio/minio:latest
     container_name: courier-minio
     command: server /data --console-address ":9001"
@@ -101,6 +111,8 @@ services:
 
   # GlitchTip for error tracking (self-hosted, MIT licensed)
   glitchtip:
+    security_opt:
+      - no-new-privileges:true
     image: glitchtip/glitchtip:latest
     container_name: courier-glitchtip
     environment:
@@ -123,6 +135,8 @@ services:
 
   # Uptime Kuma for uptime monitoring
   uptime-kuma:
+    security_opt:
+      - no-new-privileges:true
     image: louislam/uptime-kuma:1
     container_name: courier-uptime-kuma
     volumes:
@@ -137,6 +151,8 @@ services:
 
   # Langfuse for LLM observability
   langfuse:
+    security_opt:
+      - no-new-privileges:true
     image: langfuse/langfuse:2
     container_name: courier-langfuse
     environment:
