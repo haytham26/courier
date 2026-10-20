@@ -1,112 +1,51 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useColorScheme } from 'react-native';
-import { themes as baseThemes, ThemeName, generateCSSVariables, type Theme as BaseTheme } from '@courier/design-tokens/themes';
+import { UnistylesRuntime } from 'react-native-unistyles';
+import { themes as baseThemes, type ThemeName } from '@courier/design-tokens/themes';
 
-// Define theme with non-nullable colors for React Native compatibility
-interface ThemeColors {
-  background: string;
-  surface: string;
-  surfaceElevated: string;
-  border: string;
-  textPrimary: string;
-  textSecondary: string;
-  textTertiary: string;
-  textInverse: string;
-  brandPrimary: string;
-  brandSecondary: string;
-  success: string;
-  warning: string;
-  error: string;
-  info: string;
-  statusPending: string;
-  statusActive: string;
-  statusDelivered: string;
-  statusFailed: string;
-  statusSkipped: string;
-  mapBackground: string;
-  mapWater: string;
-  mapLand: string;
-  mapRoad: string;
-  mapHighway: string;
-  mapBuilding: string;
-  mapPark: string;
-  mapText: string;
-  stopPin: string;
-  routeLine: string;
-  userLocation: string;
-  [key: string]: string;
-}
+import { unistylesThemeNames } from '@/unistyles';
 
-// Override Theme with non-nullable colors
-type Theme = Omit<BaseTheme, 'colors'> & {
-  colors: ThemeColors;
-};
-
-// Cast the themes object to have non-nullable colors
-const themes = baseThemes as Record<ThemeName, Theme>;
+// The product theme names are the ones used in the app; Unistyles registers
+// `day` as `light` and `night` as `dark` so the OS colour scheme can drive
+// the day/night switch.
+const themes = baseThemes;
 
 interface ThemeContextType {
-  theme: Theme;
+  theme: (typeof themes)[ThemeName];
   themeName: ThemeName;
   setTheme: (name: ThemeName) => void;
   toggleTheme: () => void;
-  cssVariables: string;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const themeOrder: ThemeName[] = ['day', 'night', 'highContrast'];
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
-  const [themeName, setThemeName] = useState<ThemeName>('day');
-  const [cssVariables, setCssVariables] = useState('');
+  const [themeName, setThemeName] = useState<ThemeName>(
+    systemColorScheme === 'dark' ? 'night' : 'day',
+  );
 
-  // Initialize theme from system or storage
   useEffect(() => {
-    const initialTheme = systemColorScheme === 'dark' ? 'night' : 'day';
-    setThemeName(initialTheme);
+    setThemeName(systemColorScheme === 'dark' ? 'night' : 'day');
   }, [systemColorScheme]);
-
-  // Update CSS variables when theme changes
-  useEffect(() => {
-    const theme = themes[themeName];
-    const cssVars = generateCSSVariables(theme);
-    setCssVariables(cssVars);
-    
-    if (Platform.OS === 'web') {
-      document.documentElement.style.cssText = cssVars;
-    }
-    
-    // For Unistyles 3, we need to update the CSS variables on the root element
-    // This will be picked up by Unistyles for styling
-    const root = document.documentElement;
-    Object.entries(theme.colors).forEach(([key, value]) => {
-      if (typeof value === 'string') {
-        root.style.setProperty(`--color-${key.toLowerCase()}`, value);
-      }
-    });
-  }, [themeName]);
-
-  const theme = themes[themeName];
 
   const setTheme = useCallback((name: ThemeName) => {
     setThemeName(name);
+    // A manual choice overrides the automatic day/night switching.
+    UnistylesRuntime.setAdaptiveThemes(false);
+    UnistylesRuntime.setTheme(unistylesThemeNames[name]);
   }, []);
 
   const toggleTheme = useCallback(() => {
-    const themeOrder: ThemeName[] = ['day', 'night', 'highContrast'];
     const currentIndex = themeOrder.indexOf(themeName);
     const nextIndex = (currentIndex + 1) % themeOrder.length;
-    setThemeName(themeOrder[nextIndex]);
-  }, [themeName]);
+    setTheme(themeOrder[nextIndex] ?? 'day');
+  }, [setTheme, themeName]);
 
   return (
-    <ThemeContext.Provider value={{ theme, themeName, setTheme, toggleTheme, cssVariables }}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Text style={{ opacity: 0 }} testID="theme-css-variables">
-          {cssVariables}
-        </Text>
-      </View>
+    <ThemeContext.Provider value={{ theme: themes[themeName], themeName, setTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -120,4 +59,4 @@ export function useTheme() {
   return context;
 }
 
-export { themes, type Theme, type ThemeName };
+export { themes, type ThemeName };

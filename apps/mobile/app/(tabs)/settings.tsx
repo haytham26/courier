@@ -5,6 +5,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { cn } from '@/utils/cn';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function SettingsScreen() {
   const { theme, themeName, setTheme, toggleTheme } = useTheme();
@@ -185,7 +186,7 @@ export default function SettingsScreen() {
           </View>
           <View style={styles.aboutItem}>
             <Text style={[styles.aboutLabel, { color: theme.colors.textSecondary }]}>Sync</Text>
-            <Text style={[styles.aboutValue, { color: theme.colors.textPrimary }]}>PowerSync + op-sqlite</Text>
+            <Text style={[styles.aboutValue, { color: theme.colors.textPrimary }]}>op-sqlite (encrypted, offline-first)</Text>
           </View>
         </Card>
 
@@ -193,10 +194,12 @@ export default function SettingsScreen() {
         <Card style={[styles.sectionCard, { backgroundColor: theme.colors.surface, marginTop: 16 }]}>
           <Text style={[styles.sectionTitle, { color: theme.colors.error }]}>Danger Zone</Text>
           <Button variant="outline" onPress={() => console.log('Reset all data')} style={styles.dangerButton}>
-            🗑️ Reset All Data
+            <MaterialIcons name="delete-outline" size={18} color={theme.colors.error} />
+            {' Reset All Data'}
           </Button>
           <Button variant="outline" onPress={() => console.log('Logout')} style={styles.dangerButton}>
-            🚪 Sign Out
+            <MaterialIcons name="logout" size={18} color={theme.colors.error} />
+            {' Sign Out'}
           </Button>
         </Card>
 

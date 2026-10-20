@@ -84,7 +84,7 @@ export default function RegisterScreen() {
           editable={!isSubmitting}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleRegister} editable={!isSubmitting}>
+        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={isSubmitting}>
           {isSubmitting ? (
             <ActivityIndicator color={colors.textInverse} />
           ) : (

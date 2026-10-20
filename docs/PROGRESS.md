@@ -7,7 +7,8 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 |---|---|---|---|---|---|
 | PHASE0-read-docs | done | main @16afb8d | n/a (docs) | — | — |
 | PHASE1-audit | done | main @e59379e | see audit logs | — | — |
-| PHASE2.1 Better Auth | **done** | feat/2.1-better-auth-service | services/auth 31/31, api 23/23, shared 62/62 | runtime HTTP + Postgres path NOT VERIFIED (no server/DB here) | PHASE 2.2 |
+| PHASE2.1 Better Auth | **done** | feat/2.1-better-auth-service | services/auth 31/31, api 23/23, shared 62/62 | runtime HTTP + Postgres path NOT VERIFIED (no server/DB here) | — |
+| PHASE2.2 themes | **done** | feat/2.2-unistyles-themes | design-tokens 27/27, workspace 101/101, mobile 6/6 | Unistyles native runtime NOT VERIFIED (no emulator/CI yet) | PHASE 2.3 |
 | 0.1 repo setup | partial | — | not verified | root package.json now pinned (2.1) | pin remaining ranges |
 | 0.3 docker infra | not verified | — | — | not run in audit | run docker compose |
 | 0.4 local secrets | partial | — | not verified | scripts/check-secrets not tested | test scripts |
@@ -15,8 +16,8 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | A.2 shared packages | done | main | shared 26/26, design-tokens 19/19, nz-address 17/17 | — | — |
 | A.3 Better Auth | **done** | feat/2.1-better-auth-service | 31/31 + 23/23 | Postgres path NOT VERIFIED | docker-compose run |
 | A.4 OpenSpec | not verified | — | — | `openspec/` is empty | write specs |
-| B.1 Expo app | partial | — | 0 tests in apps/mobile | no tests | add tests |
-| B.2 design system | partial | — | design-tokens 19/19 | `var(--` in 5 files (grep-banned.log) | PHASE 2.2 |
+| B.1 Expo app | partial | feat/2.2-unistyles-themes | 6/6 (auth) | no jest before this phase; now wired | add screen tests |
+| B.2 design system | **done** | feat/2.2-unistyles-themes | design-tokens 27/27 | Unistyles native runtime NOT VERIFIED (no emulator) | — |
 | B.3 navigation | partial | — | 0 tests | no tests | add tests |
 | B.4 voice module | stub | — | 0 tests | not implemented | later |
 | B.5 maps | not started | — | — | — | — |
@@ -38,7 +39,7 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | apps/api ruff | PASS (was failing: invalid `FUR` selector) | phase-2.1/api-lint.log |
 | apps/api mypy | PASS 14 files | phase-2.1/api-typecheck.log |
 | pnpm audit | 3 critical cleared (vitest 2.1.9 → 3.2.7); remaining are build-time only (metro/vite/esbuild) | phase-2.1/pnpm-audit.json |
-| banned-item grep | 41 hits left, all PHASE 2.2 / 2.4 scope | phase-2.1/banned-grep.log |
+| banned-item grep | **0 hits** (was 41) | phase-2.2/banned-grep.log |
 
 ## PHASE 2.1 what changed
 
@@ -59,10 +60,10 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
   `vitest` upgraded to 3.2.7 everywhere (clears the critical advisories).
 
 ## Next (in order)
-1. PHASE 2.2 Unistyles 3 light/night themes from `packages/design-tokens`, remove every `var(--`.
-2. PHASE 2.3 D8 address-correction engine with a committed Christchurch fixture subset
+1. PHASE 2.3 D8 address-correction engine with a committed Christchurch fixture subset
    (`data/linz/` is empty → needs `docs/FOUNDER_TODO.md` entry).
-3. PHASE 2.4 cleanup: egg-info, `cleanup_avd.py`, duplicate `test-imports.js`, ESLint flat
-   config for every package, pin the remaining ranges.
-4. PHASE 2.5 design to the approved mockups.
-5. PHASE 3 CI + Android emulator on GitHub Actions (`.github/workflows/` is still empty).
+2. PHASE 2.4 cleanup: egg-info, `cleanup_avd.py`, duplicate `test-imports.js`, ESLint flat
+   config for every package, pin the remaining ranges, the 3 expo-router layout typings.
+3. PHASE 2.5 design to the approved mockups.
+4. PHASE 3 CI + Android emulator on GitHub Actions (`.github/workflows/` is still empty) —
+   this is what will verify the Unistyles native runtime and B.7.

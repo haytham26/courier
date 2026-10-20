@@ -72,3 +72,41 @@ Not yet read in PHASE 0: PRODUCT_SPEC, PROJECT_BRIEF, DRIVER_INTERVIEW_1, resear
 
 PHASE 2.2 (Unistyles 3 light/night themes, remove every `var(--`), then 2.3, 2.4, 2.5, then
 PHASE 3 (CI + Android emulator on GitHub Actions).
+
+## 2026-10-20 — PHASE 2.2 (branch `feat/2.2-unistyles-themes`)
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+|---|---|---|
+| Theme engine and screen work | `frontend-ui-engineering` | Semantic colour tokens instead of raw values, one icon set (Material Symbols) instead of emoji, no "AI look" (no gradients/glass), spacing and radii taken from the token scale. |
+| Theme contract between the token package and the app | `api-and-interface-design` | `packages/design-tokens` stays the single source of truth; the app derives `colors`/`spacing`/`borderRadius`/`typography` from it instead of duplicating values, and the theme shape is identical across day/night/high-contrast (a test now enforces it). |
+| Unistyles 3 API | `source-driven-development` | Read the installed `react-native-unistyles@3.5.3` typings and the official v3 theming/configuration guides: `StyleSheet.configure({ themes, settings })`, `light`/`dark` reserved names for adaptive themes, `UnistylesRuntime.setTheme`, and the mandatory babel plugin + nitro modules. |
+| Guards and verification | `test-driven-development` | Added failing-then-passing tests: 8 new design-token tests (hex only, no `var(`, identical keys, near-black night) and the mobile auth suite rewritten against the real client API. |
+| Failures hit (broken `node_modules` layout, jest/babel `LRUCache` crash, expo CLI crash, RN 0.88 `Libraries/` missing) | `debugging-and-error-recovery` | Root cause for all four was the same: the workspace `node_modules` was left half-deleted by the earlier failed install, so pnpm skipped re-extracting packages and hoisted the wrong versions (`zod@3` for Better Auth, `lru-cache@10` for Babel, a truncated `react-native` without `Libraries/`). Fixed by removing `node_modules` with a full literal path and reinstalling — not by patching symptoms. |
+| Pre-commit review | `code-review-and-quality`, `code-simplification`, `doubt-driven-development` | Removed the duplicated `global.css` NativeWind leftover and the duplicated spacing/typography tables; every claim below is tied to a log in `docs/evidence/phase-2.2/`. |
+| Branch and push | `git-workflow-and-versioning` | Feature branch off the 2.1 branch, atomic commit, merge from `origin/main`, no rebase, no force-push. |
+
+### Result
+
+- Unistyles 3 is now really wired: `StyleSheet.configure` with the design-token themes, the
+  Unistyles babel plugin, `react-native-nitro-modules` and `react-native-unistyles@3.5.3` pinned.
+- `apps/mobile/src/constants/theme.ts` exposes hex values from the token package (no `var(--`).
+- `ThemeProvider` no longer touches `document` (it crashed on native); manual theme switching
+  goes through `UnistylesRuntime`.
+- `apps/mobile/global.css` (NativeWind) deleted; `App.js` cleaned.
+- Emoji icons replaced with Material Symbols icons.
+- `apps/mobile` has a test runner again: jest-expo 58 + React Native Testing Library 13, 6 tests
+  green; the auth test now exercises the real client API.
+- **Banned-item grep is now 0 hits** across apps, packages, services, scripts, db and infra.
+
+### Not verified
+
+- The Unistyles native runtime is **NOT VERIFIED** (no emulator locally, no CI workflow yet).
+- `apps/mobile` typecheck still shows 3 pre-existing expo-router layout typings
+  (`Stack`/`Tabs` demanding an `id` prop) — untouched files, scheduled for PHASE 2.4.
+
+### Next
+
+PHASE 2.3 (D8 address correction), then 2.4 (cleanup, ESLint flat config for every package),
+2.5 (design), then PHASE 3 (CI + emulator).

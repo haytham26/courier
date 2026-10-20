@@ -1,79 +1,57 @@
 /**
- * Theme constants for Courier Copilot Mobile App
- * Re-exports design tokens for easy importing
+ * Theme constants for the Courier Copilot mobile app.
+ *
+ * The colours come from `packages/design-tokens` as plain hex values — CSS
+ * custom properties do not work in React Native. The spacing, radius and
+ * typography helpers are derived from the same tokens so the design system
+ * stays the single source of truth.
+ *
+ * Components that need to react to a theme change use `useTheme()` from
+ * `@/providers/ThemeProvider`; the exports below are the light-theme values.
  */
+import { themes, type Theme, type ThemeName } from '@courier/design-tokens/themes';
 
-import { themes, type Theme, type ThemeName, generateCSSVariables } from '@courier/design-tokens/themes';
+export { themes, type Theme, type ThemeName };
 
-export { themes, type Theme, type ThemeName, generateCSSVariables };
+export const colors = themes.day.colors;
 
-// Color shortcuts for easy access
-export const colors = {
-  // These will be dynamically updated based on current theme
-  // Use useTheme() hook in components to get actual values
-  background: 'var(--color-background)',
-  surface: 'var(--color-surface)',
-  surfaceElevated: 'var(--color-surface-elevated)',
-  border: 'var(--color-border)',
-  text: 'var(--color-text-primary)',
-  textSecondary: 'var(--color-text-secondary)',
-  textTertiary: 'var(--color-text-tertiary)',
-  textInverse: 'var(--color-text-inverse)',
-  brandPrimary: 'var(--color-brand-primary)',
-  brandSecondary: 'var(--color-brand-secondary)',
-  success: 'var(--color-success)',
-  warning: 'var(--color-warning)',
-  error: 'var(--color-error)',
-  info: 'var(--color-info)',
-  statusPending: 'var(--color-status-pending)',
-  statusActive: 'var(--color-status-active)',
-  statusDelivered: 'var(--color-status-delivered)',
-  statusFailed: 'var(--color-status-failed)',
-  statusSkipped: 'var(--color-status-skipped)',
-  mapBackground: 'var(--color-map-background)',
-  mapWater: 'var(--color-map-water)',
-  mapLand: 'var(--color-map-land)',
-  mapRoad: 'var(--color-map-road)',
-  mapHighway: 'var(--color-map-highway)',
-  mapBuilding: 'var(--color-map-building)',
-  mapPark: 'var(--color-map-park)',
-  mapText: 'var(--color-map-text)',
-  stopPin: 'var(--color-stop-pin)',
-  routeLine: 'var(--color-route-line)',
-  userLocation: 'var(--color-user-location)',
-};
+const space = themes.day.spacing;
+const radius = themes.day.borderRadius;
+const type = themes.day.typography;
+
+const px = (value: string): number => Number.parseFloat(value);
 
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  xs: px(space[1]),
+  sm: px(space[2]),
+  md: px(space[4]),
+  lg: px(space[6]),
+  xl: px(space[8]),
+  xxl: px(space[12]),
 };
 
 export const borderRadius = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
-  full: 9999,
+  sm: px(radius.sm),
+  md: px(radius.DEFAULT),
+  lg: px(radius.md),
+  xl: px(radius.lg),
+  full: px(radius.full),
 };
 
 export const typography = {
   fontFamily: {
-    regular: 'System',
-    medium: 'System',
-    bold: 'System',
+    regular: type.fontFamilies.sans,
+    medium: type.fontFamilies.sans,
+    bold: type.fontFamilies.sans,
   },
   fontSize: {
-    xs: 12,
-    sm: 14,
-    md: 16,
-    lg: 18,
-    xl: 20,
-    xxl: 24,
-    xxxl: 32,
+    xs: px(type.fontSizes.xs),
+    sm: px(type.fontSizes.sm),
+    md: px(type.fontSizes.base),
+    lg: px(type.fontSizes.lg),
+    xl: px(type.fontSizes.xl),
+    xxl: px(type.fontSizes['2xl']),
+    xxxl: px(type.fontSizes['3xl']),
   },
   lineHeight: {
     tight: 1.2,

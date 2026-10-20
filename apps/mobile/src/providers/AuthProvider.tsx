@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useCallback, useContext, useMemo } from 'react';
 import { authClient } from '@/lib/auth-client';
 
-interface User {
+export interface AuthUser {
   id: string;
   email: string;
   name?: string;
@@ -11,7 +11,7 @@ interface User {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -22,116 +22,63 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+interface SessionState {
+  data: { user: AuthUser } | null;
+  error: unknown;
+  isPending: boolean;
+  isRefetching: boolean;
+  refetch: () => Promise<void>;
+}
 
-  const refreshSession = useCallback(async () => {
-    try {
-      const session = await authClient.getSession();
-      if (session.data?.user) {
-        // Convert the user to our User type
-        const userData = session.data.user;
-        setUser({
-          id: userData.id,
-          email: userData.email,
-          name: userData.name,
-          image: userData.image,
-          emailVerified: userData.emailVerified,
-          createdAt: userData.createdAt,
-        });
-      } else {
-        setUser(null);
-      }
-    } catch {
-      setUser(null);
-    } finally {
-      setIsLoading(false);
+/**
+ * Session state comes from the Better Auth client (the Expo variant keeps the
+ * session cookie in the device secure store), so the provider only maps it
+ * into the shape the screens use.
+ */
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { data, isPending, refetch } = authClient.useSession() as SessionState;
+
+  const user = useMemo<AuthUser | null>(() => data?.user ?? null, [data]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const { error } = await authClient.signIn.email({ email, password });
+    if (error) {
+      throw new Error(error.message);
     }
   }, []);
 
-  useEffect(() => {
-    refreshSession();
-    
-    // Listen for auth changes using the React client's useSession atom
-    // The React client exposes a $store with subscribe method
-    const unsubscribe = authClient.$store.listen('$sessionSignal', () => {
-      refreshSession();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [refreshSession]);
-
-  const login = async (email: string, password: string) => {
-    const { data, error } = await authClient.signIn.email({
-      email,
-      password,
-    });
-    
+  const register = useCallback(async (email: string, password: string, name?: string) => {
+    const { error } = await authClient.signUp.email({ email, password, name });
     if (error) {
       throw new Error(error.message);
     }
-    
-    if (data?.user) {
-      const userData = data.user;
-      setUser({
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        image: userData.image,
-        emailVerified: userData.emailVerified,
-        createdAt: userData.createdAt,
-      });
-    }
-  };
+  }, []);
 
-  const register = async (email: string, password: string, name?: string) => {
-    const { data, error } = await authClient.signUp.email({
-      email,
-      password,
-      name,
-    });
-    
+  const logout = useCallback(async () => {
+    const { error } = await authClient.signOut({});
     if (error) {
       throw new Error(error.message);
     }
-    
-    if (data?.user) {
-      const userData = data.user;
-      setUser({
-        id: userData.id,
-        email: userData.email,
-        name: userData.name,
-        image: userData.image,
-        emailVerified: userData.emailVerified,
-        createdAt: userData.createdAt,
-      });
-    }
-  };
+  }, []);
 
-  const logout = async () => {
-    const { error } = await authClient.signOut();
-    if (error) {
-      throw new Error(error.message);
-    }
-    setUser(null);
-  };
+  const refreshSession = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
-  return (
-    <AuthContext.Provider value={{
+  const value = useMemo<AuthContextType>(
+    () => ({
       user,
-      isLoading,
-      isAuthenticated: !!user,
+      isLoading: isPending,
+      isAuthenticated: user !== null,
       login,
       register,
       logout,
       refreshSession,
-    }}>
-      {children}
-    </AuthContext.Provider>
+    }),
+    [user, isPending, login, register, logout, refreshSession],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

@@ -1,7 +1,7 @@
 /**
  * Theme definitions for Courier Copilot
  * Day, Night, and High Contrast themes (D16)
- * Maps to NativeWind/Tailwind config
+ * Consumed by Unistyles 3 on mobile and by the web app as CSS variables
  */
 
 import { spacing, typography, borderRadius, shadows, motion, components } from './tokens';

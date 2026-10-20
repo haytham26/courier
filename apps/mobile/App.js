@@ -1,8 +1,8 @@
 import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Slot } from 'expo-router';
 import { ThemeProvider } from './src/providers/ThemeProvider';
-import './global.css';
+import './src/unistyles';
 
 export default function App() {
   return (
@@ -17,6 +17,5 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'var(--color-background)',
   },
 });

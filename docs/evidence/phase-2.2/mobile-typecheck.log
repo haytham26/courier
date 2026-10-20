@@ -1,0 +1,14 @@
+﻿app/(auth)/_layout.tsx(6,6): error TS2741: Property 'id' is missing in type '{ children: Element[]; screenOptions: { headerShown: false; }; }' but required in type 'Omit<Omit<StandardUseNavigationBuilderOptions<StackNavigationState<ParamListBase>, NativeStackNavigationOptions, StandardNativeStackEventMap>, "initialRouteName"> & Omit<...> & Omit<...> & { ...; }, "children">'.
+app/(tabs)/_layout.tsx(25,6): error TS2741: Property 'id' is missing in type '{ children: Element[]; screenOptions: ({ route }: { route: DescriptorRouteProp<ParamListBase, string>; navigation: any; theme: Theme; }) => { ...; }; }' but required in type 'Omit<Omit<StandardUseNavigationBuilderOptions<TabNavigationState<ParamListBase>, TabsScreenOptions, BottomTabNavigationEventMap>, "initialRouteName"> & Omit<...> & Omit<...> & { ...; }, "children">'.
+app/_layout.tsx(25,6): error TS2741: Property 'id' is missing in type '{ children: Element; screenOptions: { headerShown: false; gestureEnabled: true; }; }' but required in type 'Omit<Omit<StandardUseNavigationBuilderOptions<StackNavigationState<ParamListBase>, NativeStackNavigationOptions, StandardNativeStackEventMap>, "initialRouteName"> & Omit<...> & Omit<...> & { ...; }, "children">'.
+cmd : Error: ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL
+At line:8 char:58
++ ... heck.log" { cmd /c "corepack pnpm --filter mobile exec tsc --noEmit"  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Error: ERR_PNPM...EXEC_FIRST_FAIL:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+  ├ù "pnpm recursive exec" failed in C:\Users\DCL\projects\courier\apps/mobile
+
+EXIT_CODE=1

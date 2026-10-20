@@ -54,7 +54,7 @@ export default function LoginScreen() {
           editable={!isSubmitting}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin} editable={!isSubmitting}>
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isSubmitting}>
           {isSubmitting ? (
             <ActivityIndicator color={colors.textInverse} />
           ) : (

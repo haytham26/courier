@@ -1,0 +1,23 @@
+﻿cmd : $ jest
+At line:5 char:53
++ ... -2.2\mobile-test.log" { cmd /c "corepack pnpm --filter mobile test" }
++                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ jest:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+PASS app/(auth)/__tests__/auth.test.tsx
+  AuthProvider
+    ÔêÜ provides the auth context to children (112 ms)
+    ÔêÜ exposes the signed-in user when a session exists (2 ms)
+  auth-client
+    ÔêÜ signIn.email forwards the credentials (1 ms)
+    ÔêÜ signUp.email forwards the credentials (1 ms)
+    ÔêÜ signOut calls the client
+    ÔêÜ getSession calls the client (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        0.733 s, estimated 2 s
+Ran all test suites.
+EXIT_CODE=0

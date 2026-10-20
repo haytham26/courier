@@ -81,6 +81,41 @@ describe('Themes', () => {
   });
 });
 
+describe('Theme colour values (React Native compatible)', () => {
+  const hexPattern = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+
+  for (const theme of Object.values(themes)) {
+    it(`${theme.name} theme only uses hex colours`, () => {
+      const offenders = Object.entries(theme.colors).filter(
+        ([, value]) => typeof value === 'string' && !hexPattern.test(value),
+      );
+
+      expect(offenders).toEqual([]);
+    });
+
+    it(`${theme.name} theme has no CSS custom properties`, () => {
+      const offenders = Object.entries(theme.colors).filter(([, value]) =>
+        String(value).includes('var('),
+      );
+
+      expect(offenders).toEqual([]);
+    });
+  }
+
+  it('all themes share the same colour keys', () => {
+    const reference = Object.keys(themes.day.colors).sort();
+
+    for (const theme of Object.values(themes)) {
+      expect(Object.keys(theme.colors).sort()).toEqual(reference);
+    }
+  });
+
+  it('night theme is near-black, not pure black (R17)', () => {
+    expect(themes.night.colors.background).toBe('#09090b');
+    expect(themes.night.colors.background).not.toBe('#000000');
+  });
+});
+
 describe('Component tokens', () => {
   it('has button tokens', () => {
     expect(tokens.component.button.height.DEFAULT).toBe('44px');

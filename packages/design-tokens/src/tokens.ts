@@ -2,7 +2,7 @@
  * Design Tokens for Courier Copilot
  * Enterprise-grade design system (D7)
  * Supports day/night/high-contrast themes (D16)
- * Built for NativeWind + Style Dictionary pipeline
+ * Built for the Unistyles 3 + Style Dictionary pipeline
  */
 
 // Color Palette - Semantic tokens
