@@ -250,3 +250,9 @@ OmniVoice **code is Apache-2.0** (we may study and reuse it); its **pretrained w
 
 ### 13.5 Apply the same to every module
 For each module: study how the best open-source projects and competitors build it, write the SPEC of what they do (in our words), list what we are missing, then build our own version — better and adapted to NZ couriers — through the full V4 process (tests first, two reviews for critical modules, CI + emulator green, benchmark targets met). **Zero known defects at merge.** Nothing is "done" without evidence and a scorecard ≥ 8/10 in every dimension (§12.8).
+
+### 13.6 Voice weights — fastest legal path (order of preference)
+1. **Find open weights with a commercial licence first** (Apache-2.0 / MIT / CC-BY / OpenRAIL-commercial): search Hugging Face + GitHub 2025–2026 for multilingual TTS/ASR/voice-cloning models, filter by licence, languages, size, on-device viability. Candidates to verify (licence of WEIGHTS, not just code): Kokoro, Qwen3-TTS/ASR, Chatterbox, Orpheus, Dia, Sesame CSM, Spark-TTS, Piper voices (per-voice licence), Parakeet/Canary, Moonshine, Whisper, SenseVoice, FireRedASR, and any 2026 entrant. Benchmark the commercially-usable ones vs OmniVoice quality.
+2. **Ask k2-fsa for a commercial licence** of the OmniVoice weights — draft the email for the founder in FOUNDER_TODO.md.
+3. **Train our own** with the Apache-2.0 OmniVoice code on commercially-licensed/own data (OWN-MODEL.md) — only if 1 and 2 fail the quality bar.
+**Not allowed:** shipping the CC-BY-NC weights, or a renamed/fine-tuned/modified copy of them (still the same licence). Code (Apache) may be studied, reused and modified freely.
