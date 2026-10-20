@@ -28,3 +28,5 @@ dist/
 Thumbs.db
 # Local LINZ datasets (large, not committed)
 data/linz/
+# Local scratch backups (never committed)
+.local-backup/
