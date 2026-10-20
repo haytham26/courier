@@ -1,1 +1,0 @@
-{"query":"query { repository(owner: \"fleetbase\", name: \"fleetbase\") { discussions(first: 80, orderBy: {field: UPDATED_AT, direction: DESC}) { nodes { number title body createdAt comments(first:5){ nodes { body author{login} } } } } } }"}
