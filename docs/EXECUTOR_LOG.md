@@ -401,3 +401,20 @@ ode node_modules/pnpm/install.js.
 - Every benchmark in the sprint: the eval sets do not exist yet. The scorecard carries that as the
   first honest fact.
 - The 6-month star trend of every candidate (the token has no stargazer scope).
+
+## 2026-10-20 — read of the new execution contract (MASTER_EXECUTION)
+
+I read docs/MASTER_EXECUTION.md (§0 the CEO loop, §1 precedence, §2 the founder decisions D23/D24,
+§3 the real state, §4 the P1-P7 plan, §5 the autopilot rules, §6 the Definition of Done, §7 the
+senior-review fixes, §8 the founder directives, §9 touch-complete parity and the innovation backlog,
+§10 the conflict resolution), docs/SAAS_CHECKLIST.md (the security squad as a merge gate, the
+driver-app runtime essentials, the SaaS business essentials and the "SaaS brain" automation, with the
+rule that every line becomes a task), docs/COVERAGE_MAP.md (the twelve coverage areas and the
+audit rule that runs at the start of every phase) and docs/KICKOFF_V4_EN.md §13 (the founder
+directives after the research sprint: the depth audit, the Spoke teardown, online AND offline, the
+voice model path and the per-module application). From here docs/MASTER_EXECUTION.md is my only
+instruction file; the earlier prompts are background, and the conflicts it lists in §10 are applied
+(Expo SDK 58 per ADR-002, mutation score >= 80% on the core modules, the voice weights per V4 §13.6
+and D23 with ADR-004 updated accordingly, and the Android E2E triggers reduced to PRs to main,
+nightly and manual). The merged main brought the MASTER_EXECUTION contract, the SaaS checklist,
+the coverage map and the approved mockups; nothing was dropped in the merge.

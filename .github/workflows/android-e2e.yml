@@ -1,10 +1,13 @@
 name: Android E2E (emulator + Maestro)
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-  pull_request:
+  schedule:
+    # Nightly. MASTER_EXECUTION 7.1: the emulator job costs 20-30 minutes of the
+    # private Actions minutes, so it runs on PRs to main, nightly and on demand.
+    - cron: '17 3 * * *'
   workflow_dispatch:
 
 concurrency:

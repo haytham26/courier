@@ -1,6 +1,6 @@
 # ADR-004 — The private voice service: sherpa-onnx and Kokoro on device, no non-commercial weights
 
-- **Status:** accepted (supersedes the D22 premise about OmniVoice)
+- **Status:** accepted, then **superseded in part** by V4 §13.6 + D23 (2026-10-20) — see "Superseding text" below
 - **Date:** 2026-10-20
 - **Decides:** D22 in `docs/DECISIONS.md` (the private voice service)
 - **Research:** `docs/research/2026/on-device-stt-tts-vad-kws.md`, `docs/research/2026/voice-agent-frameworks.md`,
@@ -47,11 +47,40 @@ the repositories.
 5. **VoiceStudio stays a reference**, and the clean-room study (`docs/study/voicestudio/`) is the
    only thing we take from it. No VoiceStudio code, text or schema enters this repository.
 
+## Superseding text (V4 §13.6 + D23, 2026-10-20)
+
+The founder's decision (D23, on their own legal advice) is that the team **may** take OmniVoice —
+**code and weights** — study it, reverse-engineer it, rename it and modify or fine-tune it into our
+own model for commercial use, subject to four conditions:
+
+1. the founder stores the written legal advice in `FOUNDER_TODO.md` (reference only, no confidential
+   text in git);
+2. the provenance is recorded in `docs/LICENSES.md` (upstream, version, what we changed);
+3. the voice engine stays behind a **swappable interface**, so a commercially-licensed model can
+   replace it at any time without changing the app;
+4. the option-1 benchmarks (Kokoro, Qwen3-ASR/TTS, Chatterbox, Orpheus, Dia, Sesame CSM, Spark-TTS,
+   Parakeet, Canaries, Moonshine, Whisper, SenseVoice, FireRedASR …) keep running, so a clean
+   alternative is always ready.
+
+**What this ADR therefore still decides** (it is not superseded on these points):
+
+- The **licence ledger is a shipped surface**, not a spreadsheet: every engine reports the licence of
+  its code *and* of its weights, and a non-commercial or unknown licence makes that engine
+  unavailable, with the reason. This holds for our own model too.
+- The **path is ordered** (V4 §13.6): (1) a commercially-licensed open model first, (2) ask k2-fsa for
+  a commercial licence of the OmniVoice weights, (3) train our own with the Apache-2.0 code on
+  commercially-licensed or our own data. Options 1 and 2 are the default; option 3 is the fallback.
+- Until our own weights beat the benchmark, we ship **sherpa-onnx + Kokoro** (device) and
+  **Qwen3-ASR/TTS** (server) — the licence-safe path.
+- The **clean-room rule for VoiceStudio** and the other AGPL projects is unchanged, and so is the
+  prohibition on copyleft reaching the shipped app (FINAL_PROMPT §9, `CONSTRAINTS.md`).
+
+The voice squad owns the two follow-ups: `docs/study/omnivoice/SPEC.md` and
+`docs/squads/voice/OWN-MODEL.md` (V4 §13.4, §13.6).
+
 ## Consequences
 
 - The product is shippable commercially with the voice pipeline as it is planned.
-- The private service needs an **engine registry** that reports "unavailable + reason" per engine
-  (the licence is one of the reasons), so the driver never meets a dead control.
 - The voice squad's eval set (`docs/squads/voice/eval/`, 500+ utterances) must include a
   **licence check per model** in the harness.
 - The "no non-commercial weights" rule becomes an automated gate, not a review step.
