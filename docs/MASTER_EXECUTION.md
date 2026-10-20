@@ -23,7 +23,8 @@ You own the outcome end to end. At the start of every session and after every ta
 3. `docs/KICKOFF_V4_EN.md` — HOW: §1 roles, §2 zero-defect gates, §3 research areas, §4 competitor parity, §5 UX/motion standard, §6 engineering & performance budgets, §7 security, §8 workflow, §9 Definition of Done, §10 specialist squads (Voice 24/7 multilingual, address-only Scanner, Address, Routing, Maps, Sync, Design, Payments, Web, Platform), §11 OSS leverage + clean-room protocol, §12 research methodology + quality scorecard, §13 founder directives (research depth audit, Spoke teardown, online+offline, voice model path §13.6).
 4. `docs/KICKOFF_V3_EN.md` — task list T1–T7 details.
 5. **`docs/SAAS_CHECKLIST.md`** — security squad (top priority, merge gate), Google sign-in + Play Integrity, login-attempt limits, MFA, keep-screen-awake and all driver-runtime essentials, full SaaS business + operations + automation. Every item must become a task.
-6. `docs/DECISIONS.md` (D1–D24), `docs/adr/`, `docs/FINAL_PROMPT.md`, `docs/PRODUCT_SPEC.md`, `docs/design/mockups/` (approved look), `docs/research/2026/`, `docs/study/`.
+6. **`docs/COVERAGE_MAP.md`** — every real-world courier scenario, safety/law, money/IRD/GST/Xero, AI that learns the run, customers, teams, ISO 25010 quality, compliance, ops, support, go-to-market, data, localisation. **Run a Coverage Audit at the start of every phase** and add anything missing; the map only grows.
+7. `docs/DECISIONS.md` (D1–D24), `docs/adr/`, `docs/FINAL_PROMPT.md`, `docs/PRODUCT_SPEC.md`, `docs/design/mockups/` (approved look), `docs/research/2026/`, `docs/study/`.
 Older prompts (KICKOFF_PROMPT_EN, KICKOFF_V2_EN, MASTER_PROMPT, RESUME) are background only.
 
 ## 2. Founder decisions to record (if not yet in DECISIONS.md)
@@ -53,7 +54,7 @@ Done on `feat/v4-company-bootstrap` (PR #1): real Better Auth + JWKS, Unistyles 
 - Safety (AGENTS.md) is absolute: only inside the repo, no destructive commands, no force-push/rebase, no secrets in output or git.
 
 ## 6. Definition of Done
-V4 §9 + P1–P7 + every must-have in docs/SAAS_CHECKLIST.md complete with evidence, PARITY.md has no "Planned" left in must-cover families and beats Spoke on the differentiators, scorecard ≥ 8/10 everywhere, `v1.0.0` released. Then write a final report for the founder in `docs/FINAL_REPORT.md` (what was built, scores, how to install, what the founder must do).
+V4 §9 + P1–P7 + every must-have in docs/SAAS_CHECKLIST.md and docs/COVERAGE_MAP.md complete with evidence, PARITY.md has no "Planned" left in must-cover families and beats Spoke on the differentiators, scorecard ≥ 8/10 everywhere, `v1.0.0` released. Then write a final report for the founder in `docs/FINAL_REPORT.md` (what was built, scores, how to install, what the founder must do).
 
 **Start now with the CEO loop.**
 
