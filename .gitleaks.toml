@@ -4,11 +4,13 @@
 # fixtures: they contain fixed strings that look like credentials to the
 # generic-api-key rule. They are test inputs, never real secrets — the tests
 # assert that the service refuses to start without a real one.
+#
+# Note: gitleaks 8.24 reads the global list under the singular key.
 
 [extend]
 useDefault = true
 
-[[allowlists]]
+[allowlist]
 description = "The fixed test strings of the auth service (they are not credentials)"
 regexTarget = "secret"
 regexes = [
