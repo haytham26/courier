@@ -37,6 +37,7 @@ Done on `feat/v4-company-bootstrap` (PR #1): real Better Auth + JWKS, Unistyles 
 
 ## 4. The plan — run in this order, autonomously
 **P1 Close the base**: Maestro E2E green → evidence in `docs/evidence/b7/` → B.7 PASS → merge PR #1 → merge T2/T4.
+  - **Emulator pipeline must be fixed at the root, not patched** (history: first runs waited for Metro; after the release-APK fix every run was cancelled by the next push). Required design: triggers = PR to main + nightly + manual only (no push), docs paths ignored; build job (release APK, cached by content hash, artifact) separate from e2e job (reuses the APK); AVD snapshot cache; readiness gates with short timeouts (boot → install → am start → pid → first-screen testID) that dump evidence and fail fast; smoke flow first; app runs in an E2E mode on local mocks (no Metro/auth/API); evidence uploaded on every run; `scripts/e2e-local.ps1` for local reproduction; work on a dedicated PR and don't push to it mid-run. Iterate on evidence until green; change approach after 3 identical failures; never skip. A red nightly is the first task of the next session.
 **P2 Research done right (V4 §12–13)**: all 24 areas at full depth (≥30 cards with URLs+dates, query logs, verifier pass ≥20%, "what we are missing" → PARITY tasks); Spoke teardown (TEARDOWN, REVIEWS, BEAT-SPOKE) + lighter NZ/AU players; voice weights path §13.6; eval sets (voice ≥500 utterances, scanner ≥300 labels incl. `data/labels/`, routing on real Christchurch days); benchmarks → adopt winners; LINZ extended to Waimakariri + Selwyn; D8 report in `docs/evidence/phase-2.3/`.
 **P3 Courier Maps (T5)**: Canterbury PMTiles offline + weekly update action, day/night courier styles (protomaps basemaps + maputnik), attribution (OSM/LINZ).
 **P4 Design (T6)**: every screen to `docs/design/mockups/` + V4 §5 (all states, motion, night/day, a11y, RTL), visual-regression baselines, screenshots day/night/small/large/200% text.
@@ -46,6 +47,8 @@ Done on `feat/v4-company-bootstrap` (PR #1): real Better Auth + JWKS, Unistyles 
 **P7 Release**: acceptance on CI emulator (2 screen sizes, online/offline/transition), every module ≥ 8/10 on the scorecard, zero known defects, `v1.0.0` GitHub Release with signed APK + SBOM.
 
 ## 5. Autopilot rules
+- **Session start**: verify state from GitHub (branch, PRs, latest CI/E2E conclusions) and write a 5-line state check in EXECUTOR_LOG.md before acting.
+- Never sit idle waiting for CI: work on independent tasks on other branches meanwhile.
 - After each task, immediately start the next. Do not ask the founder anything that you can decide yourself; decide, record the reason in DECISIONS/ADR, continue.
 - Only things the founder alone can do go to `docs/FOUNDER_TODO.md` (accounts, payments, legal, real photos, store listing). Never block on them: build with mocks/adapters and continue.
 - Blocked: 3 attempts → BUGS.md → fallback → next independent task.
