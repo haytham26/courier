@@ -64,3 +64,6 @@
 
 **Last Updated:** 2026-10-19 00:53:00 +13:00
 **Next Action:** Founder paste free keys into `.env.local` and run `scripts/check-secrets`
+## Post-launch tools (D22)
+- [ ] Chatwoot (support chat) · [ ] WeKnora (help-centre AI) · [ ] Cal.com (demos) · [ ] Cap (videos) · [ ] OpenSEO (website SEO)
+- [ ] Confirm OmniVoice model-weights license allows commercial use (Hugging Face k2-fsa/OmniVoice).

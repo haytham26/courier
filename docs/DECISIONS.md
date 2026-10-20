@@ -28,3 +28,19 @@
 - Expo SDK 57 مقفل؛ أي تغيير إصدار يحتاج ADR بمصدر رسمي.
 - laya-coreml مرفوض (Apple فقط).
 - التفاصيل والإصلاحات المعلّقة: FINAL_PROMPT §0-F.
+
+## D22 — VoiceStudio / OmniVoice + post-launch open-source tools (2026-10-20)
+**Voice (founder decision: use everything VoiceStudio offers, keep our product private):**
+- The 600+ language capability comes from the engine **k2-fsa/OmniVoice (code Apache-2.0)** — free to modify and keep private, including in a commercial product. Verify the model weights license on Hugging Face (k2-fsa/OmniVoice) before production.
+- Build our own **private** voice service (`services/voice`, in this repo) directly on OmniVoice + sherpa-onnx + Pipecat: TTS, voice design, multilingual dictation/transcription, and synthetic training-audio generation, adapted to couriers (NZ street/suburb vocabulary, accents, noise).
+- github.com/debpalash/VoiceStudio is AGPL-3.0: use it as a **reference and internal dev tool** (e.g. to generate synthetic eval audio, study its features/UX). Do NOT copy its code into our repos — re-implement needed features ourselves on top of OmniVoice. This keeps the whole product private with no source-publishing obligation.
+- On device stays sherpa-onnx (+ Kokoro or an OmniVoice ONNX export if weights license allows and the benchmark wins).
+- Voice squad benchmarks OmniVoice vs current stack (quality, latency, languages incl. NZ English, Māori place names, Arabic, Hindi/Punjabi, Mandarin, Samoan/Tongan) before switching any production path.
+
+**Post-launch tools (not in v1 scope, planned):**
+- Chatwoot — driver support chat (in-app + dashboard), self-hosted on Oracle.
+- WeKnora (Tencent) — help-centre Q&A over our docs/FAQ (private network only).
+- Cal.com — demo bookings with courier companies/teams.
+- Cap — product demo/tutorial videos.
+- OpenSEO — website SEO.
+Each: license check (fine to self-host unmodified as separate tools; if we modify an AGPL one that users access over the network, we must offer those users its modified source), self-host plan, security review, added to COST_PLAN when adopted.

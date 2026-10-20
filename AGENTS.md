@@ -1,7 +1,7 @@
 # AGENTS.md — read automatically by every coding agent (opencode, Codex, Claude Code, Cursor, …)
 
 Project: **Courier Copilot** — voice-first app for independent parcel couriers in Christchurch/Canterbury, NZ.
-Current instructions: **`docs/KICKOFF_V2_EN.md`** (binding). Full mission: `docs/KICKOFF_PROMPT_EN.md`. Spec: `docs/FINAL_PROMPT.md` + `docs/DECISIONS.md` (D1–D21).
+Current instructions: **`docs/KICKOFF_V4_EN.md`** (how) + **`docs/KICKOFF_V3_EN.md`** (task list) — binding. Full mission: `docs/KICKOFF_PROMPT_EN.md`. Spec: `docs/FINAL_PROMPT.md` + `docs/DECISIONS.md` (D1–D21).
 Status: `docs/PROGRESS.md`, `docs/AUDIT.md`, `docs/EXECUTOR_LOG.md`.
 
 ## Quality bar
