@@ -368,3 +368,36 @@ ode node_modules/pnpm/install.js.
 - 10 squad `research.md` files rewritten from the sprint area files (53-80 lines each).
 - 10 squad `decisions.md` files rewritten as decision tables with date, candidate, source file and status.
 - Nothing in `docs/PARITY.md` was changed: a row may only leave `Planned` with evidence in `docs/evidence/`, and no evidence exists for these rows yet.
+
+## 2026-10-20 — the research sprint (V4 §12) and the scorecard (V4 §12.8)
+
+### Skills applied
+
+- source-driven-development (every area): the candidates were read from the repositories, the
+  registries and the model cards - the numbers in the evidence cards carry the date they were
+  taken, and everything that could not be read is marked UNVERIFIED.
+- deprecation-and-migration (clean-room): the five copyleft projects were studied as
+  requirements, never as code; the clones live in .study/ (gitignored) and nothing was copied.
+- pi-and-interface-design (the tool catalogue and the licence ledger): the sprint's stack
+  choices are written as interfaces with a fake and a free-first -> paid chain, per FINAL_PROMPT 6.1.
+- security-and-hardening (the licence gate): the OmniVoice finding moved the licence ledger from
+  a review step to a build gate (ADR-004).
+- code-review-and-quality (the summary): the sprint summary is a change list with ADRs, not a
+  reading list.
+
+### Result
+
+- 16 area files (>= 30 candidates each, every query recorded), 5 clean-room studies
+  (Fleetbase, Navigator, OpenRouteService, Nominatim, VoiceStudio) with SPEC + GAP, the ten squad
+  research/decisions files rewritten, docs/research/2026/SPRINT-SUMMARY.md and
+  docs/QUALITY_SCORECARD.md.
+- **D22 changed** (ADR-004): the OmniVoice *weights* are CC-BY-NC, so the private voice service is
+  sherpa-onnx + Kokoro + Qwen3-ASR/TTS and the licence ledger becomes a shipped surface.
+- The V4 11.1 adopt list is corrected in six places (Ferrostar is not on npm and its left-hand
+  driving issue is open; the PMTiles CLI moved; traccar was superseded; Piper is GPL; and so on).
+
+### Not verified
+
+- Every benchmark in the sprint: the eval sets do not exist yet. The scorecard carries that as the
+  first honest fact.
+- The 6-month star trend of every candidate (the token has no stargazer scope).
