@@ -291,3 +291,52 @@ Nothing is half-finished in the working tree: `git status` is clean on every bra
   tree made pnpm resolve the wrong versions.
 - `data/linz/` is still empty → the D8 accuracy against real LINZ ids is NOT VERIFIED.
 - `gh` is not authenticated → no PR, no run link, no artifact download from this machine.
+
+## 2026-10-20 — session handoff (the newest section)
+
+### Where the work stands
+
+| Branch | What it carries | State |
+|--------|-----------------|-------|
+| eat/v4-company-bootstrap (PR #1) | PHASE 2.1 to 3.1 (the auth service + JWKS, the Unistyles themes, the D8 engine, the cleanup, the shared lint config) **and** the whole V4 system (CONSTRAINTS.md, docs/PARITY.md, docs/design/SYSTEM.md, ten squads, the PR template, the floor / coverage / licence / audit gates, CodeQL, the emulator and release workflows) | every gate green except the Android emulator job |
+| eat/t2-expo-58-decision | ADR-002 (stay on Expo SDK 58, D21 updated), the LINZ fetcher and index builder, the D8 fixes the real data forced, and the accuracy report | green locally; the PR is not open yet |
+
+### The open item: the Android emulator job
+
+- The **APK builds** on SDK 58 (ssembleDebug succeeded in 29 minutes).
+- The **Maestro step failed** after 84 seconds and the job then hung on db logcat -d (the run was
+  cancelled, so its log is gone). The Maestro artifacts were empty, so the failure is in the flows
+  themselves, not in the build.
+- The workflow was hardened while this was investigated: only the emulator ABI is built
+  (-PreactNativeArchitectures=x86_64), Gradle is cached, the job timeout is 90 minutes and the
+  logcat step is bounded.
+- **Next action:** watch the next run, read the Maestro step's log (gh run view --job <id>
+  --log-failed) and fix the flows. The likely causes, in order: the app crashes at start (the id
+  prop on the navigators, or a native module missing from the prebuild), the auth service is not
+  reachable on 10.0.2.2:3001, or the deep link courier://compat does not reach the compat
+  screen.
+
+### What a new session should do first
+
+1. git checkout feat/v4-company-bootstrap && git pull - read this log and docs/PROGRESS.md.
+2. Read the emulator job log and fix the Maestro flows; when it is green, download the artifacts
+   (gh run download <run-id> --name maestro-artifacts), put them in docs/evidence/b7/ and mark
+   B.7 PASS in docs/PROGRESS.md.
+3. Merge PR #1 (every other gate is green), then open the PR for eat/t2-expo-58-decision.
+4. T5 (the offline Canterbury PMTiles: Geofabrik to planetiler into data/maps/, the weekly GitHub
+   Action, the day/night styles), T6 (the design to the approved mockups), then T7 (the product:
+   sync, routing, door memory, dictation, the live voice agent, the tool catalogue, driving mode,
+   OCR, POD, SMS, the IRD logbook, the web dashboard, billing, the PIA and the handover).
+
+### Notes for the next session
+
+- pnpm only works through corepack pnpm on this machine (the global install is broken); the
+  repo-local 
+ode_modules/.bin/pnpm shim is repaired with 
+ode node_modules/pnpm/install.js.
+- The real LINZ data is in data/linz/ (225,151 Christchurch addresses, gitignored). Rebuild it
+  with uv run --with httpx python scripts/fetch-linz.py --area christchurch and
+  uv run scripts/build-linz-index.py --area christchurch.
+- The D8 accuracy test is **skipped** when that index is absent, so the CI suite stays green; run
+  it locally with uv run --directory apps/api pytest tests/address/test_linz_accuracy.py -v.
+- The GITHUB_TOKEN from .env.local works through scripts/gh.ps1 (it never prints the token).
