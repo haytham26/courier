@@ -95,3 +95,20 @@ Every decision is written (ADR or DECISIONS.md) with the reason; disagreements a
 
 ### 8.4 REA (github.com/morluto/rea, MIT) — allowed uses
 Install `rea-agents` inside the repo workflow and use it for: (a) **our own APK and services** — security/reverse-engineering audit of what we ship (secrets, endpoints, obfuscation, tamper resistance) before every release; (b) **open-source projects we adopt or study** (their source is already public) to map architecture and behaviour quickly. Run it only inside the repo folder (`.study/`), never with cracked tools. Competitor apps (Spoke, etc.): study through public sources and by using the app as a normal user (screens, flows, features, timings) — do not decompile or extract their code/assets (their terms forbid it); record findings in docs/study/spoke/.
+
+## 9. Every feature works fully WITHOUT voice + innovation (binding)
+- **Touch-complete**: many drivers won't use voice. Every feature must be fully usable by touch alone (and by voice alone, and mixed). Voice is an accelerator, never the only path. Each spec lists: touch flow, voice flow, offline behaviour, online behaviour.
+- **Match then beat**: every feature Spoke and other competitors have exists in our touch UI at least as fast (measure taps and seconds per task vs Spoke in BEAT-SPOKE.md), then improved.
+- **Innovation backlog** `docs/INNOVATION.md`, owned by the CEO, reviewed every phase; each idea gets a quick prototype + driver-value score, and the best ship. Starting ideas:
+  - Smart stop entry without typing: snap a manifest page/label stack, paste a WhatsApp/email list, share-to-app from any app, barcode burst scan, CSV drag-in on web.
+  - One-swipe delivery: swipe-right delivered, swipe-left fail with reason chips; auto-advance; undo for 5 s.
+  - Auto-arrival detection (geofence + speed) that pre-opens the stop card; auto-depart marks next.
+  - "Van map": visual shelf layout where each parcel's position is shown when you arrive.
+  - Day templates that self-update from what you actually did (learned stop order and service time).
+  - Address confidence colours + one-tap "fix pin" that teaches door memory.
+  - Glanceable widget / lock-screen live activity (next stop, count, ETA).
+  - Hazard & access notes shared within a team (gate codes, dogs) with privacy controls.
+  - Earnings live counter and end-of-day summary card shareable to accounting.
+  - Offline-first everything with visible sync status; works in dead zones (rural Canterbury).
+  - Gesture + haptic language consistent across the app; big-glove mode.
+  Add new ideas from research, Spoke reviews and beta feedback; reject with reason.
