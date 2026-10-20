@@ -43,4 +43,4 @@
 - Cal.com — demo bookings with courier companies/teams.
 - Cap — product demo/tutorial videos.
 - OpenSEO — website SEO.
-Each: license check, self-host plan, security review, added to COST_PLAN when adopted.
+Each: license check (fine to self-host unmodified as separate tools; if we modify an AGPL one that users access over the network, we must offer those users its modified source), self-host plan, security review, added to COST_PLAN when adopted.
