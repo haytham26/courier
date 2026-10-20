@@ -1,0 +1,10 @@
+appId: com.courier.copilot
+name: Smoke - the app starts and shows its first screen
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+- assertVisible: "Good morning"

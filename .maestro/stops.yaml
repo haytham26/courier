@@ -1,0 +1,20 @@
+appId: com.courier.copilot
+name: The stops list opens a stop
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+- tapOn: "Stops"
+- extendedWaitUntil:
+    visible:
+      id: "stops-screen"
+    timeout: 30000
+- assertVisible:
+    id: "stop-2"
+- tapOn:
+    id: "stop-2"
+- assertVisible: "Riccarton"
+- takeScreenshot: "stop-detail"
