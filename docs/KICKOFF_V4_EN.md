@@ -104,3 +104,43 @@ Base: approved mockups (Driving night, Dictation report, Today's list) + `RESEAR
 All V3 tasks T1–T7 merged with evidence · PARITY.md has no "Planned" left for must-cover families · all §2 gates green in CI · Android E2E green on 2 emulator profiles (small + large screen) · performance budgets met with measurements · security checks zero high/critical · design screenshots approved against mockups · HANDOVER.md complete · FOUNDER_TODO.md lists only things only the founder can do (keys, accounts, store listing) · `v1.0.0` GitHub Release with signed APK.
 
 **Now: continue the current V3 task, applying V4 from this point on. First, create `CONSTRAINTS.md`, `docs/PARITY.md` (skeleton from existing research), `docs/design/SYSTEM.md`, the PR template, and the CI gates in §2 — then resume T1.**
+
+---
+
+## 10. Specialist squads — a dedicated expert team per module
+Each core module gets its own squad (the §1 roles, specialised). A squad owns: `docs/squads/<module>/` (research, design, decisions, benchmarks, evaluation datasets, test reports) and its code folder. A squad must research GitHub 2025–2026 for its exact niche (§3), build an **evaluation dataset + benchmark** before choosing anything, and publish results. No module is "done" until its benchmark targets are met on the CI emulator and recorded.
+
+### 10.1 Voice Assistant Squad — "always with you, all day" (the heart of the product)
+Roles: speech scientist (STT/TTS/VAD/KWS), conversation designer, agent/tool-calling engineer, on-device ML engineer, multilingual & accent specialist, latency/battery engineer, evaluation engineer.
+Research on GitHub 2026 (compare ≥ 10): on-device/offline STT (sherpa-onnx, Moonshine, Parakeet, Whisper variants, Vosk-class), streaming STT, VAD (Silero), wake-word/KWS (sherpa-onnx KWS, openWakeWord-class), turn-taking/end-of-turn (Smart Turn), TTS (Kokoro, Piper-class, multilingual), voice-agent frameworks (Pipecat, LiveKit Agents, and newer 2026 projects), barge-in/interruptions, noise suppression for vans/traffic, earbud media-button handling on Android, multilingual models covering at least: English (NZ accent), Māori place names, Arabic, Hindi/Punjabi, Mandarin, Samoan/Tongan, Spanish — plus auto language detection and code-switching.
+Build:
+- **Always-available, battery-safe**: Android foreground service while driving mode is on; low-power wake word + VAD gate; STT only after trigger or earbud press; duty-cycle tuning; survive screen-off, Doze and app switching; resume after calls/music (audio focus).
+- **Hybrid**: on-device first (commands, dictation, offline); server (Pipecat) for open conversation and complex tasks when online; seamless fallback.
+- **Custom adaptation ("training")**: build a domain vocabulary from LINZ street/suburb names + courier phrases; use hotword/contextual biasing and custom KWS phrases; fine-tune only small models (KWS, intent/NLU, punctuation) with LoRA/adapters if benchmarks require; generate synthetic training/eval audio with multilingual TTS + real noise samples (van, rain, traffic, indicator clicks). Never send driver audio to training providers; consent-based opt-in only for improvement data.
+- **Tool-calling agent**: every app action available as a typed tool (FINAL_PROMPT §4.5), confirmation policy enforced in the tool layer, short spoken replies (≤ 8 words while driving), never blocks driving.
+- **Evaluation dataset** `docs/squads/voice/eval/`: ≥ 500 utterances across languages/accents/noise levels incl. NZ addresses, numbers, self-corrections ("7… no, 17").
+- **Targets**: WER ≤ 8% NZ-English quiet / ≤ 15% van noise on addresses; intent accuracy ≥ 97%; wake-word false accepts ≤ 1/hour, misses ≤ 3%; command→action ≤ 700 ms on-device; battery ≤ 8%/hour driving mode; works fully offline for core commands.
+
+### 10.2 Label Scanner Squad — address-only extraction
+Roles: computer-vision engineer, OCR specialist, NZ address parsing expert, camera UX designer, evaluation engineer.
+Research on GitHub 2026 (compare ≥ 8): on-device OCR (ML Kit text recognition v2, PaddleOCR/PP-OCR mobile, RapidOCR/ONNX, Apple Vision on iOS later), document/label detection, barcode/QR (to read courier barcodes when present), VisionCamera frame processors, text-region detection, layout analysis.
+Build a **dedicated scanner that only finds and returns the delivery address**:
+- Live camera with auto-detect of the label and the address block (ignore sender, barcodes text, marketing, phone numbers, "From:" blocks); highlight the detected address on screen; auto-capture when stable; works in low light, glare, angles, crumpled labels.
+- Pipeline: frame → label detection → text regions → OCR → address-block classifier (recipient vs sender) → NZ address parser → D8 correction against LINZ → confidence; if low, ask one quick question.
+- Batch mode: scan 200+ parcels fast (target ≤ 1.5 s per parcel), each adds a stop, auto-dedupe same address, optional parcel-location tag (front/mid/back shelf) by voice.
+- Barcode assist: read barcode/QR to dedupe and link tracking numbers when available.
+- Fully on-device and offline; no images uploaded unless the driver chooses POD.
+- **Evaluation dataset** `docs/squads/scanner/eval/`: ≥ 300 real-style NZ courier label images (synthetic generated + founder-provided real photos with personal data redacted), varied carriers/layouts/lighting.
+- **Targets**: correct recipient address ≥ 97% after LINZ correction; wrong-block (sender picked) ≤ 1%; ≤ 1.5 s per label on a mid-range Android.
+
+### 10.3 Other squads (same rules: research ≥ 5–10 GitHub 2026 projects, eval set, benchmark targets)
+- **Address Intelligence** (parser + D8 + LINZ index + door memory): ≥ 95% correction accuracy on LINZ-sampled set; zero wrong-house auto-corrections at confidence ≥ 0.9.
+- **Routing & Templates** (Valhalla, VROOM, OR-Tools): solution within 5% of best-known on benchmark sets; 200 stops ≤ 5 s; templates rebuild a day in one tap.
+- **Maps & Navigation** (PMTiles, styles, offline, turn-by-turn flag): 60 fps pan/zoom, full Canterbury offline, day/night styles.
+- **Sync & Data** (op-sqlite event log ↔ Postgres): zero data loss under airplane-mode chaos tests, conflict rules tested.
+- **Design System & Motion**: §5 standard; visual regression baselines.
+- **Payments & Accounts** (Better Auth, Stripe NZD, teams): tenant isolation tests, webhook idempotency.
+- **Web Dashboard & Admin**: Lighthouse ≥ 95 performance/a11y.
+- **Platform/DevOps/Security**: CI/CD, emulator E2E, OTA, observability, SBOM, signed releases.
+
+Each squad writes a short weekly-style status in `docs/squads/<module>/STATUS.md` (done with evidence, metrics vs targets, next, risks). The Release Manager blocks merges for any squad whose targets regress.
