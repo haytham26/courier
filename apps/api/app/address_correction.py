@@ -263,6 +263,25 @@ def _as_int(number: str | None) -> int | None:
     return int(digits) if digits else None
 
 
+def _prefer_plain_address(candidates: list[Address], unit: str | None) -> list[Address]:
+    """Picks the address the driver meant when several share a number.
+
+    A building can have both a plain address ("16 Dundee Place") and unit
+    addresses ("27/16 Dundee Place"). When the driver did not say a unit, the
+    plain address is the right one; the order is then made deterministic.
+    """
+    if unit:
+        with_unit = [item for item in candidates if item.unit == unit]
+        if with_unit:
+            return with_unit
+        return candidates
+
+    without_unit = [item for item in candidates if not item.unit]
+    if without_unit:
+        return without_unit
+    return sorted(candidates, key=lambda item: item.linz_address_id)
+
+
 # ---------------------------------------------------------------------------
 # The corrector
 # ---------------------------------------------------------------------------
@@ -304,7 +323,21 @@ class AddressCorrector:
             )
 
         road_suburbs = self.store.suburbs_for_road(road_key(road))
-        suburb = self._match_suburb(parsed.suburb, road_suburbs)
+        # The suburb is matched against the suburbs this road really runs
+        # through, not against a hardcoded list: a rural suburb the list does
+        # not know must still resolve.
+        hint = parsed.suburb_hint or parsed.suburb
+        suburb = self._match_suburb(hint, road_suburbs)
+
+        if suburb is None and hint:
+            # The street type can be part of the road name ("Durham Street
+            # South"), so the hint is tried as a continuation of the road.
+            extended, extended_score = self._match_road(f"{parsed.street} {hint}")
+            if extended and extended_score >= 0.95:
+                road = extended
+                road_score = extended_score
+                road_suburbs = self.store.suburbs_for_road(road_key(road))
+                suburb = self._match_suburb(parsed.suburb, road_suburbs)
 
         if suburb is None and len(road_suburbs) > 1:
             return Correction(
@@ -408,10 +441,8 @@ class AddressCorrector:
             if _as_int(item.number) == number
             and (item.suffix or "").upper() == (suffix or "")
         ]
-        if parsed.unit:
-            with_unit = [item for item in exact if item.unit == parsed.unit]
-            if with_unit:
-                exact = with_unit
+        if exact:
+            exact = _prefer_plain_address(exact, parsed.unit)
         if exact:
             best = exact[0]
             if parsed.unit and not best.unit:
