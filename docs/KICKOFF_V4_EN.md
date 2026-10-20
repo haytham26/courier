@@ -144,3 +144,34 @@ Build a **dedicated scanner that only finds and returns the delivery address**:
 - **Platform/DevOps/Security**: CI/CD, emulator E2E, OTA, observability, SBOM, signed releases.
 
 Each squad writes a short weekly-style status in `docs/squads/<module>/STATUS.md` (done with evidence, metrics vs targets, next, risks). The Release Manager blocks merges for any squad whose targets regress.
+
+---
+
+## 11. Open-source leverage plan (maps, routing, courier) — see docs/research/2026/oss-maps-courier.md
+Verify each repo page first (stars, latest release, license, New Architecture compatibility) and record in `docs/LICENSES.md`.
+
+### 11.1 Adopt (permissive licenses — use, modify, keep private)
+1. **stadiamaps/ferrostar** — turn-by-turn + spoken guidance on Valhalla routes; Expo native module. Fallback: maplibre-navigation-android.
+2. **protomaps/basemaps** — base for our day/night courier styles.
+3. **protomaps/PMTiles** — Canterbury packs ≤ 50 MB, weekly diff updates in CI.
+4. **komoot/photon** — self-hosted typo-tolerant geocoder (NZ); on device: LINZ FTS5 index in op-sqlite.
+5. **VisionCamera code scanner + ML Kit text recognition + zxing-cpp** — label/barcode scanner squad.
+6. **PyVRP** — benchmark vs VROOM on real 80–150-stop Christchurch days; keep the winner (or ensemble).
+7. **Valhalla trace_attributes** — map-matching for IRD logbook km and per-segment speed learning; study on-device Valhalla, Plan B GraphHopper.
+8. **traccar-client-android** — background-location foreground-service + battery-whitelist pattern.
+9. **sherpa-onnx KWS + TTS** — wake word + spoken stop announcements.
+10. **maplibre/maputnik** — design the "courier mode" style (house numbers from z17, entrances, access restrictions).
+Also evaluate: openfreemap (online fallback/style ideas), versatiles, libpostal (server-side parser), traccar server (geofences, trip reports), k2-fsa/OmniVoice (D22).
+
+### 11.2 Clean-room study protocol for copyleft projects (AGPL/GPL)
+Projects: **fleetbase/fleetbase**, **fleetbase/navigator-app**, **GIScience/openrouteservice**, **osm-search/Nominatim**, **debpalash/VoiceStudio**, plus any other AGPL/GPL project found useful.
+Goal: capture **100% of their features and behaviour** for our product, legally, without their code entering ours.
+1. **Study team (Analyst role)**: read each project completely — README, docs, code, UI, API, data model, state machines, settings, edge cases, error handling, tests, issues/discussions (pain points users report). Install/run locally only inside `C:\Users\DCL\projects\courier\.study\` (gitignored) if needed.
+2. Write a **functional specification** per project in `docs/study/<project>/SPEC.md`: every feature, screen, flow, option, status, rule, API behaviour, data field, and UX detail — described in our own words, as requirements and acceptance criteria. **No code, no copied text, no copied identifiers/schemas verbatim, no copied assets.** Include "what users complain about" and "how we will do it better".
+3. Write `docs/study/<project>/GAP.md`: feature → have / better / planned (task) / skip (reason); merge into `docs/PARITY.md`.
+4. **Build team (Engineer role, separate session/context)** implements from SPEC.md only, without opening the copyleft source, using our stack and our architecture. Log in EXECUTOR_LOG.md that the clean-room rule was followed.
+5. Code review checks for similarity (no copied functions, comments, strings, file structure); any doubt → rewrite.
+This gives every feature and idea while keeping Courier Copilot fully private.
+
+### 11.3 Ongoing radar
+Each squad re-scans GitHub monthly for new 2026 projects in its niche (filters: release in last 6 months, permissive license, New Architecture ready, active issues/maintainers, no supply-chain incidents) and updates `docs/research/2026/<area>.md` with keep / adopt / watch / reject.
