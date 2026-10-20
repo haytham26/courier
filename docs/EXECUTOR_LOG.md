@@ -418,3 +418,33 @@ instruction file; the earlier prompts are background, and the conflicts it lists
 and D23 with ADR-004 updated accordingly, and the Android E2E triggers reduced to PRs to main,
 nightly and manual). The merged main brought the MASTER_EXECUTION contract, the SaaS checklist,
 the coverage map and the approved mockups; nothing was dropped in the merge.
+
+## 2026-10-20 — handoff (P1 in progress)
+
+### Where the company stands
+
+- **PR #1** (eat/v4-company-bootstrap -> main): every gate green (lint, typecheck, 107 JS/TS + 49 API
+  tests, floor guard, coverage ratchet, licences, audits, Semgrep, CodeQL, gitleaks) **except** the
+  Android emulator job, which is still running (run 39420731177). The APK builds in 14 minutes with
+  the warm Gradle cache; the Maestro step has been running for 40+ minutes, so the flows are the
+  remaining unknown.
+- **T2/T4** (eat/t2-expo-58-decision): ADR-002 (Expo 58), ADR-004 (voice licences, updated for
+  D23), the LINZ fetcher, 656,044 real Canterbury addresses indexed and the D8 accuracy at
+  **96.9 %** (1745/1800) — report in docs/evidence/phase-2.3/linz-accuracy.md. Its PR is not open yet.
+- The research sprint (16 areas, 5 clean-room studies, the scorecard, the task register) is merged into
+  PR #1.
+
+### The next three actions (P1)
+
+1. **Read the emulator log**: powershell -ExecutionPolicy Bypass -File scripts\gh.ps1 run view
+   --job 118618431796 --log-failed (the job id is in the run above). The run now leaves the
+   diagnostics: the resumed activity, the app pid and the logcat in docs/evidence/b7/. The likely
+   cause is that the app never renders (the AuthNavigator returns null while the session request is
+   in flight, and the auth service may not be reachable on 10.0.2.2:3001 at that moment) — the
+   compat flow then waits for compat-screen until its 60 s timeout.
+2. **Make the flows honest about the app**: the login screen must render even when the session
+   request fails (the AuthProvider should time out the pending state), and the flows should assert on
+   text, not only on testIDs.
+3. **Then**: artifacts into docs/evidence/b7/, B.7 PASS in docs/PROGRESS.md, merge PR #1, open
+   and merge the T2/T4 PR, and continue with P2 (the research depth audit, the Spoke teardown and
+   the eval sets) per docs/MASTER_EXECUTION.md §4.
