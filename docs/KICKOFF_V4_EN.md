@@ -212,3 +212,6 @@ Same eval set, same device profile (CI emulator + one mid-range Android profile)
 
 ### 12.7 Output of a research sprint
 Per area file + squad research/decisions updates + `docs/research/2026/SPRINT-SUMMARY.md` (stack changes, adopt/drop list, ADRs to write, updated T5–T7 plan, risks) + ADRs for any locked-decision change.
+
+### 12.8 Quality scorecard vs best-in-class (every module, after each sprint)
+In `docs/squads/<module>/STATUS.md` and a roll-up `docs/QUALITY_SCORECARD.md`, score each module 0–10 on: **functionality** (vs PARITY.md), **accuracy/benchmark** (vs squad targets AND vs the best open-source project measured in §12.5), **UX/smoothness** (vs mockups + §5), **reliability** (tests, mutation score, offline/chaos), **performance** (vs §6.4 budgets), **security**. Each score cites evidence (benchmark table, CI run, screenshots). Show "ours vs best OSS vs best competitor" side by side. A module counts as done only at ≥ 8/10 in every dimension. Report progress as both % built and quality score.
