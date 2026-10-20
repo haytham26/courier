@@ -178,3 +178,82 @@ package, the 3 expo-router layout typings), then 2.5 (design), then PHASE 3 (CI 
 
 PHASE 2.5 (design to the approved mockups), then PHASE 3 (CI + Android emulator on GitHub
 Actions), then the product phases C → G.
+
+## 2026-10-20 — PHASE 3.1 (branch `feat/3.1-ci-and-android-e2e`)
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+|---|---|---|
+| CI and emulator workflows | `ci-cd-and-automation` | The workflows install pnpm with `pnpm/action-setup` (no global install), keep the quality gate and the emulator gate as separate jobs, upload the APK/Maestro artifacts/logcat, and never claim a pass without a run link. |
+| The B.7 compatibility screen | `source-driven-development` | The screen was written against the **installed** type definitions (VisionCamera 5 `VisionCamera.requestCameraPermission()`, MapLibre v11 `Map`, expo-audio 58 `requestRecordingPermissionsAsync`, op-sqlite `open().execute()`), not from memory. |
+| Screens and testIDs | `frontend-ui-engineering` | Stable `testID`s on the login, register, today list, stops and map screens so the Maestro flows assert on the real UI. |
+| Evidence discipline | `documentation-and-adrs`, `code-review-and-quality` | `docs/evidence/b7/README.md` states plainly that B.7 is still **NOT VERIFIED** and why (the run cannot be observed without the founder's `GITHUB_TOKEN`). |
+
+### Result
+
+- `.github/workflows/ci.yml`: lint, typecheck, test (JS packages + the Python API) and gitleaks on
+  every push and PR.
+- `.github/workflows/android-e2e.yml`: builds the debug APK, boots an API 34 emulator, installs the
+  APK and runs the Maestro flows; uploads the APK, the Maestro artifacts and the logcat.
+- `.github/workflows/release-apk.yml`: signed preview APK on a `v*` tag, unsigned debug APK with a
+  warning when the signing secrets are missing.
+- `.maestro/`: `login`, `today-list`, `map`, `delivered`, `compat` + `run-all.sh` (starts the auth
+  service with an in-memory database so the app can really sign up).
+- `apps/mobile/app/compat.tsx`: the B.7 screen (sherpa-onnx, VisionCamera, MapLibre v11, op-sqlite,
+  expo-audio, Reanimated) — a module that cannot run yet reports `skipped` with the reason, never a
+  false `ok`.
+
+### Not verified
+
+- The CI run and the emulator run were **not observed** from this machine (`gh` is installed but
+  not authenticated — the `GITHUB_TOKEN` is a founder item). B.7 stays NOT VERIFIED until a green run
+  is linked from `docs/evidence/b7/README.md` and the artifacts are downloaded.
+
+---
+
+## Handoff (2026-10-20, end of this session)
+
+### Done and pushed (4 branches, each with evidence)
+
+| Branch | Content | Evidence |
+|---|---|---|
+| `feat/2.1-better-auth-service` | real Better Auth (Node) service in `services/auth` (organization + expo + jwt plugins, ES256 JWKS, no default secrets, 31 tests); the fake Python auth deleted; FastAPI verifies tokens via JWKS (PyJWT, 23 tests); banned deps removed; root versions pinned | `docs/evidence/phase-2.1/` |
+| `feat/2.2-unistyles-themes` | Unistyles 3 themes from the design tokens, every `var(--` gone, `global.css` deleted, emoji icons replaced, mobile jest set up (6 tests) — **banned-item grep: 0 hits** | `docs/evidence/phase-2.2/` |
+| `feat/2.3-address-correction` | the D8 engine (`{original, corrected, reason, confidence, needs_question, options[]}`) with the R23 suffix/unit fix and an 87-address Christchurch fixture (24 tests) | `docs/evidence/phase-2.3/` |
+| `feat/2.4-cleanup-and-lint` | shared ESLint flat config for every package, `*.egg-info`/`.turbo` untracked, `cleanup_avd.py` and the duplicate `test-imports.js` deleted, every version pinned, `pnpm lint/typecheck/test` now cover the Python API too | `docs/evidence/phase-2.4/` |
+| `feat/3.1-ci-and-android-e2e` | CI workflow, Android emulator workflow with Maestro, release workflow, the B.7 compatibility screen | `docs/evidence/phase-3.1/`, `docs/evidence/b7/` |
+
+### Current state of the quality gate
+
+`pnpm lint` → 4 JS packages + ruff ✅ · `pnpm typecheck` → 6 packages + mypy ✅ ·
+`pnpm test` → 107 JS/TS tests + 48 API tests ✅ · banned-item grep → 0 hits ✅
+
+### In progress
+
+Nothing is half-finished in the working tree: `git status` is clean on every branch.
+
+### Next, in order
+
+1. **Watch the CI runs** on the five pushed branches and merge them into `main` once they are green
+   (`main` must stay green; the merge is the founder's call because `gh` is not authenticated here).
+2. **PHASE 2.5** — design to the approved mockups: Figtree font, big numbers, 72 px primary buttons,
+   the SVG icon set (no emoji), the calm night theme. The mockups themselves are not in the repository,
+   so the written spec in FINAL_PROMPT §8 is the contract; the founder's visual review stays
+   asynchronous (§8, `docs/FOUNDER_TODO.md`).
+3. **PHASE 3 follow-up** — link the green emulator run and the artifacts into
+   `docs/evidence/b7/README.md`, then B.7 can be marked PASS.
+4. **The product itself**, in the order of `docs/KICKOFF_PROMPT_EN.md` §12: maps (Canterbury PMTiles)
+   → sync (op-sqlite event log) → routing (Valhalla + VROOM + OR-Tools) → door memory → dictation
+   mode → live voice agent → the full voice tool catalogue → driving mode → OCR label scan → POD
+   photos → optional SMS → IRD logbook PDF → web dashboard → admin → Stripe NZD → team features →
+   NZ Privacy Act PIA → store assets → acceptance test → `docs/HANDOVER.md`.
+
+### Context notes for the next session
+
+- `pnpm` on this machine is only reachable through `corepack pnpm`; the global npm install is
+  broken. The repo-local `node_modules/.bin/pnpm` shim was repaired with `node node_modules/pnpm/install.js`.
+- The workspace `node_modules` had to be deleted and reinstalled once (see BUG-041): a half-deleted
+  tree made pnpm resolve the wrong versions.
+- `data/linz/` is still empty → the D8 accuracy against real LINZ ids is NOT VERIFIED.
+- `gh` is not authenticated → no PR, no run link, no artifact download from this machine.

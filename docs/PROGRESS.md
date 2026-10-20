@@ -10,7 +10,8 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | PHASE2.1 Better Auth | **done** | feat/2.1-better-auth-service | services/auth 31/31, api 23/23, shared 62/62 | runtime HTTP + Postgres path NOT VERIFIED (no server/DB here) | — |
 | PHASE2.2 themes | **done** | feat/2.2-unistyles-themes | design-tokens 27/27, workspace 101/101, mobile 6/6 | Unistyles native runtime NOT VERIFIED (no emulator/CI yet) | — |
 | PHASE2.3 address engine | **done** | feat/2.3-address-correction | api 48/48 (24 address tests) | LINZ accuracy NOT VERIFIED (data/linz empty) | — |
-| PHASE2.4 cleanup + lint | **done** | feat/2.4-cleanup-and-lint | workspace 107 + api 48 | mobile lint still off (BUG-045) | PHASE 2.5 |
+| PHASE2.4 cleanup + lint | **done** | feat/2.4-cleanup-and-lint | workspace 107 + api 48 | mobile lint still off (BUG-045) | — |
+| PHASE3.1 CI + emulator | **done** | feat/3.1-ci-and-android-e2e | workflows + Maestro + B.7 screen | the CI/emulator runs were NOT observed here (no `GITHUB_TOKEN`) | link a green run |
 | 0.1 repo setup | partial | — | not verified | root package.json now pinned (2.1) | pin remaining ranges |
 | 0.3 docker infra | not verified | — | — | not run in audit | run docker compose |
 | 0.4 local secrets | partial | — | not verified | scripts/check-secrets not tested | test scripts |
@@ -24,7 +25,7 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | B.4 voice module | stub | — | 0 tests | not implemented | later |
 | B.5 maps | not started | — | — | — | — |
 | B.6 sync engine | not started | — | — | — | — |
-| B.7 compat test | NOT VERIFIED | — | — | no emulator run; CI workflows empty | PHASE 3 |
+| B.7 compat test | **NOT VERIFIED** | feat/3.1-ci-and-android-e2e | compat screen + Maestro flows written | the emulator run was not observed (no `GITHUB_TOKEN`); sherpa models and the PMTiles archive are missing | link a green run |
 | C.1 LINZ import | partial | — | — | `data/linz/` empty → FOUNDER_TODO entry | founder to provide |
 | C.2 address correction (D8) | **done** | feat/2.3-address-correction | 24 address tests, 100% over the 87-address fixture | LINZ ground truth NOT VERIFIED | wire into the API |
 | C.3–G.4 remaining | not started | — | — | — | — |
@@ -62,8 +63,10 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
   `vitest` upgraded to 3.2.7 everywhere (clears the critical advisories).
 
 ## Next (in order)
-1. PHASE 2.5 design to the approved mockups (Figtree, 72px buttons, SVG icon set, no emoji).
-2. PHASE 3 CI + Android emulator on GitHub Actions (`.github/workflows/` is still empty) —
-   this is what will verify the Unistyles native runtime and B.7.
-3. Then the product phases C → G from `docs/KICKOFF_PROMPT_EN.md` (maps, sync, routing, door
+1. Watch the CI runs on the five pushed branches and merge them into `main` once they are green
+   (`main` must stay green; `gh` is not authenticated on this machine, so the merge is the founder's).
+2. PHASE 2.5 design to the approved mockups (Figtree, 72px buttons, SVG icon set, no emoji).
+3. PHASE 3 follow-up: link the green emulator run and the artifacts into `docs/evidence/b7/README.md`,
+   then B.7 can be marked PASS.
+4. Then the product phases C → G from `docs/KICKOFF_PROMPT_EN.md` (maps, sync, routing, door
    memory, dictation, live voice agent, web dashboard, billing, privacy, handover).
