@@ -215,3 +215,38 @@ Per area file + squad research/decisions updates + `docs/research/2026/SPRINT-SU
 
 ### 12.8 Quality scorecard vs best-in-class (every module, after each sprint)
 In `docs/squads/<module>/STATUS.md` and a roll-up `docs/QUALITY_SCORECARD.md`, score each module 0–10 on: **functionality** (vs PARITY.md), **accuracy/benchmark** (vs squad targets AND vs the best open-source project measured in §12.5), **UX/smoothness** (vs mockups + §5), **reliability** (tests, mutation score, offline/chaos), **performance** (vs §6.4 budgets), **security**. Each score cites evidence (benchmark table, CI run, screenshots). Show "ours vs best OSS vs best competitor" side by side. A module counts as done only at ≥ 8/10 in every dimension. Report progress as both % built and quality score.
+
+---
+
+## 13. Founder directives after research sprint #1 (2026-10-20) — binding
+
+### 13.1 Redo the weak research properly (depth audit)
+Sprint #1 was fast and some areas are thin (routing, maps, scanner, address, sync, navigation, background location, OCR have few repo links). Redo them, and finish all 24 V4 §3 areas.
+- Each area: **≥ 30 evidence cards, each with its repo URL and the date read**; ≥ 10 shortlisted; top 5 deep-reviewed (code opened, last 20 commits/PRs, open critical issues).
+- **Query log** per area: every query, filters, and number of results returned (table).
+- **Verifier pass**: a second, independent Reviewer role spot-checks ≥ 20% of cards per area against the live repo page and records mismatches; any mismatch → re-check the whole area.
+- **Gap focus**: for every area add "What we are missing" — features/capabilities found in the best repos and competitors that we don't have yet → each becomes a PARITY.md row with a task.
+- No adoption without the benchmark (§12.5) once its eval set exists.
+
+### 13.2 Spoke is the #1 competitor in New Zealand — full teardown
+Spoke (Spoke Dispatch / Spoke Route Planner, formerly Circuit) is the main competitor for NZ couriers. Create `docs/study/spoke/`:
+- `TEARDOWN.md`: every feature, screen, flow, setting, plan/price tier (NZD), onboarding, stop entry methods (voice, OCR, paste, import), optimisation options, navigation hand-off, POD, customer notifications, driver/dispatcher roles, team features, integrations, offline behaviour, Android/iOS differences, accessibility, languages — from public sources (website, help centre, docs, app store listings & screenshots, changelog/release notes, YouTube tutorials, reviews).
+- `REVIEWS.md`: what NZ/AU drivers praise and complain about (App Store, Play Store, Reddit, Facebook groups) — ranked pain points.
+- `BEAT-SPOKE.md`: feature-by-feature **match / beat** plan with our concrete advantage (voice-first hands-free, NZ address auto-correct with explanation, door memory, template rebuild, works online AND offline, privacy, price), each mapped to a task.
+- Merge into PARITY.md; Spoke column is mandatory on every row. Also cover other NZ/AU players (NZ Post/CourierPost driver tools, Aramex, Mainfreight/Freightways contractors' apps, Routific, Upper, Route4Me) at lighter depth.
+- Public information only; never use their code, assets, or private APIs.
+
+### 13.3 Online AND offline — both are first-class
+The app must be excellent in both modes, switching seamlessly:
+- **Online**: server voice agent (Pipecat + server models), live re-optimisation, live traffic/ETAs, customer SMS, team dispatch, real-time sync, server geocoder (Photon/Pelias), cloud backups.
+- **Offline**: on-device voice (sherpa-onnx), offline maps (PMTiles), LINZ index, on-device routing fallback, local event log; everything queues and syncs when back online.
+- Test both modes and the transitions (airplane-mode on/off mid-route) in Maestro on the CI emulator; every feature declares its online and offline behaviour in its spec.
+
+### 13.4 Voice: learn from OmniVoice and build our own equivalent
+OmniVoice **code is Apache-2.0** (we may study and reuse it); its **pretrained weights are CC-BY-NC** (we may not ship them).
+- Voice squad writes `docs/study/omnivoice/SPEC.md`: architecture, training pipeline, tokenizer, data, inference, how it reaches 600+ languages.
+- Plan `docs/squads/voice/OWN-MODEL.md`: train/fine-tune our own weights with the Apache-2.0 code on **commercially-licensed or our own data** for the languages our drivers need first (NZ English + Māori place names, Arabic, Hindi/Punjabi, Mandarin, Samoan, Tongan, Spanish), with cost/GPU estimate, data sources and their licences, timeline, and the quality bar vs Kokoro/Qwen3-TTS.
+- Until our own weights beat the benchmark: ship sherpa-onnx + Kokoro (device) and Qwen3-ASR/TTS (server) per ADR-004. The licence ledger gate stays.
+
+### 13.5 Apply the same to every module
+For each module: study how the best open-source projects and competitors build it, write the SPEC of what they do (in our words), list what we are missing, then build our own version — better and adapted to NZ couriers — through the full V4 process (tests first, two reviews for critical modules, CI + emulator green, benchmark targets met). **Zero known defects at merge.** Nothing is "done" without evidence and a scorecard ≥ 8/10 in every dimension (§12.8).
