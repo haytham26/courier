@@ -30,12 +30,12 @@
 - التفاصيل والإصلاحات المعلّقة: FINAL_PROMPT §0-F.
 
 ## D22 — VoiceStudio / OmniVoice + post-launch open-source tools (2026-10-20)
-**Voice (founder decision: adopt and adapt VoiceStudio for multilingual voice):**
-- Upstream: github.com/debpalash/VoiceStudio (AGPL-3.0, engine k2-fsa/OmniVoice, 646 languages). Model weights have separate terms — verify before use.
-- Fork it as `haytham26/courier-voice` (public, AGPL-3.0) and adapt it as a **separate server-side voice service** (TTS, voice design, multilingual dictation/transcription, synthetic training-audio generation). The app talks to it only over a documented HTTP/WebSocket API (arm's-length), so the proprietary app code stays separate. All modifications to the fork are published in that fork (AGPL obligation). Founder to get a quick legal check before public launch.
-- Never copy VoiceStudio code into the courier repo or the mobile app.
-- On device stays sherpa-onnx (+ Kokoro or OmniVoice ONNX if its weights license allows commercial use and the benchmark wins).
-- Voice squad benchmarks the fork vs current stack (quality, latency, languages incl. NZ English, Māori place names, Arabic, Hindi/Punjabi, Mandarin, Samoan/Tongan) before switching any production path.
+**Voice (founder decision: use everything VoiceStudio offers, keep our product private):**
+- The 600+ language capability comes from the engine **k2-fsa/OmniVoice (code Apache-2.0)** — free to modify and keep private, including in a commercial product. Verify the model weights license on Hugging Face (k2-fsa/OmniVoice) before production.
+- Build our own **private** voice service (`services/voice`, in this repo) directly on OmniVoice + sherpa-onnx + Pipecat: TTS, voice design, multilingual dictation/transcription, and synthetic training-audio generation, adapted to couriers (NZ street/suburb vocabulary, accents, noise).
+- github.com/debpalash/VoiceStudio is AGPL-3.0: use it as a **reference and internal dev tool** (e.g. to generate synthetic eval audio, study its features/UX). Do NOT copy its code into our repos — re-implement needed features ourselves on top of OmniVoice. This keeps the whole product private with no source-publishing obligation.
+- On device stays sherpa-onnx (+ Kokoro or an OmniVoice ONNX export if weights license allows and the benchmark wins).
+- Voice squad benchmarks OmniVoice vs current stack (quality, latency, languages incl. NZ English, Māori place names, Arabic, Hindi/Punjabi, Mandarin, Samoan/Tongan) before switching any production path.
 
 **Post-launch tools (not in v1 scope, planned):**
 - Chatwoot — driver support chat (in-app + dashboard), self-hosted on Oracle.
