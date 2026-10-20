@@ -448,3 +448,44 @@ the coverage map and the approved mockups; nothing was dropped in the merge.
 3. **Then**: artifacts into docs/evidence/b7/, B.7 PASS in docs/PROGRESS.md, merge PR #1, open
    and merge the T2/T4 PR, and continue with P2 (the research depth audit, the Spoke teardown and
    the eval sets) per docs/MASTER_EXECUTION.md §4.
+
+## 2026-10-20 — handoff 2 (P1: the emulator)
+
+### What the failed run actually showed (the diagnosis is done)
+
+The Maestro artifacts of the failed run contain the screenshots, and they show the **Expo dev-client
+launcher** ("Development Build" / "Start a local development server with: npx expo start / Connect").
+The debug build of a dev-client app waits for a Metro server, so **no screen of ours ever rendered**
+and every flow timed out. Nothing was wrong with the flows.
+
+**Fix (pushed):** the workflow now builds a **release** APK (./gradlew assembleRelease), which embeds
+the JS bundle and runs standalone on the emulator. The APK path, the artifact path and
+.maestro/run-all.sh were updated to the release artifact. The emulator job also no longer cancels a
+running job (that had wasted 20 minutes of the private Actions minutes on every push), and every flow
+is bounded to five minutes with the diagnostics (resumed activity, app pid, logcat) left behind.
+
+### The state of the run
+
+Run 39427774817 (PR #1) was still queued/pending when this session ended. Watch it with:
+
+    powershell -ExecutionPolicy Bypass -File scripts\gh.ps1 run list --limit 3
+    powershell -ExecutionPolicy Bypass -File scripts\gh.ps1 run view 39427774817 --log-failed
+
+If the flows still fail, the artifacts carry the answer:
+gh run download 39427774817 --name maestro-artifacts --dir .local-backup/maestro (the screenshots
+are in <flow>/screenshots/, and maestro-logcat.txt holds the app's logcat).
+
+### The next actions, in order (MASTER_EXECUTION §4)
+
+1. **P1**: emulator green -> the artifacts into docs/evidence/b7/ -> B.7 PASS in
+   docs/PROGRESS.md -> merge PR #1 -> open and merge the T2/T4 PR.
+2. **P2**: the research depth audit (all 24 areas at >= 30 cards with a query log and a verifier pass
+   of >= 20 %), the Spoke teardown (docs/study/spoke/: TEARDOWN, REVIEWS, BEAT-SPOKE) with a Spoke
+   column on every PARITY row, the eval sets (voice >= 500 utterances, scanner >= 300 labels in
+   data/labels/, routing on real Christchurch days), docs/squads/voice/OWN-MODEL.md and
+   docs/study/omnivoice/SPEC.md.
+3. **P3-P7**: Courier Maps (T5) -> the design to the mockups (T6) -> the product (T7, 17 items) ->
+   launch readiness -> the v1.0.0 release.
+
+Everything is committed and pushed on eat/v4-company-bootstrap (PR #1) and
+eat/t2-expo-58-decision.
