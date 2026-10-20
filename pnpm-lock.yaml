@@ -311,9 +311,6 @@ importers:
       '@types/jest':
         specifier: 30.0.0
         version: 30.0.0
-      babel-preset-expo:
-        specifier: 58.0.17
-        version: 58.0.17(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.10)(expo@58.0.14)(react-refresh@0.14.2)(supports-color@8.1.1)
       jest:
         specifier: 30.5.2
         version: 30.5.2(@types/node@24.19.2)(supports-color@8.1.1)

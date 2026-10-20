@@ -1,0 +1,9 @@
+appId: com.courier.copilot
+name: Login screen renders
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "login-screen"
+- assertVisible: "Sign In"
+- assertVisible: "Don't have an account?"

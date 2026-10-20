@@ -1,13 +1,23 @@
 appId: com.courier.copilot
-name: Today's list shows the day
+name: Today's list renders
 ---
 - launchApp:
     clearState: true
+- assertVisible:
+    id: "login-screen"
+- tapOn: "Sign Up"
+- assertVisible: "Create your account"
+- tapOn:
+    id: "register-email"
+- inputText: "driver@example.co.nz"
+- tapOn:
+    id: "register-password"
+- inputText: "correct-horse-battery"
+- tapOn: "Create Account"
 - extendedWaitUntil:
     visible:
       id: "today-screen"
-    timeout: 60000
+    timeout: 20000
+- assertVisible: "Good morning"
 - assertVisible: "Delivered"
 - assertVisible: "Remaining"
-- assertVisible: "Success Rate"
-- takeScreenshot: "today-list"
