@@ -4,12 +4,15 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from fastapi import FastAPI, UploadFile, WebSocket, WebSocketDisconnect, Depends
+from fastapi import Depends, FastAPI, UploadFile, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from .agents import copilot
+from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
-from .auth.better_auth import get_current_user, User
+
+# Fail fast when the API cannot verify tokens (no default secrets).
+get_auth_settings()
 
 app = FastAPI(title="Courier Copilot", version="0.1.0")
 
@@ -40,31 +43,31 @@ class TemplateSegment(BaseModel):
 
 
 @app.put("/runs/{run_id}/template")
-def put_template(run_id: uuid.UUID, segments: list[TemplateSegment], current_user: User = Depends(get_current_user)):
+def put_template(run_id: uuid.UUID, segments: list[TemplateSegment], principal: AuthPrincipal = Depends(get_current_principal)):
     """Master Template Lock: replace the run's street order."""
     return {"run_id": str(run_id), "segments": len(segments)}
 
 
 @app.post("/shifts/{shift_id}/intake")
-def intake_text(shift_id: uuid.UUID, body: IntakeText, current_user: User = Depends(get_current_user)):
+def intake_text(shift_id: uuid.UUID, body: IntakeText, principal: AuthPrincipal = Depends(get_current_principal)):
     """Starts the intake graph (thread_id = shift_id). Returns either the briefing or the
     first interrupt question; answers flow back over the voice socket."""
     ...
 
 
 @app.post("/shifts/{shift_id}/intake/manifest")
-async def intake_manifest(shift_id: uuid.UUID, image: UploadFile, current_user: User = Depends(get_current_user)):
+async def intake_manifest(shift_id: uuid.UUID, image: UploadFile, principal: AuthPrincipal = Depends(get_current_principal)):
     """Photo of paper manifest -> vision extraction -> same intake graph with source='ocr'."""
     ...
 
 
 @app.get("/shifts/{shift_id}/stops")
-def list_stops(shift_id: uuid.UUID, status: str | None = None, current_user: User = Depends(get_current_user)):
+def list_stops(shift_id: uuid.UUID, status: str | None = None, principal: AuthPrincipal = Depends(get_current_principal)):
     ...
 
 
 @app.post("/shifts/{shift_id}/events:batch")
-def sync_events(shift_id: uuid.UUID, events: list[DeliveryEvent], current_user: User = Depends(get_current_user)):
+def sync_events(shift_id: uuid.UUID, events: list[DeliveryEvent], principal: AuthPrincipal = Depends(get_current_principal)):
     """Offline-first sync: INSERT ... ON CONFLICT (id) DO NOTHING; returns server cursor."""
     ...
 
@@ -79,7 +82,6 @@ async def voice(ws: WebSocket, shift_id: uuid.UUID):
                       {"type":"state","stop":...}
     """
     await ws.accept()
-    whispered: set[str] = set()
     try:
         while True:
             msg = await ws.receive_json()

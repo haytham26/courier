@@ -29,8 +29,7 @@ STREET_TYPES = {
     "grove": "Gr", "mews": "Mews", "quay": "Quay", "parade": "Pde", "highway": "Hwy",
 }
 NUM_WORDS = {w: str(i) for i, w in enumerate(
-    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen "
-    "fifteen sixteen seventeen eighteen nineteen twenty".split())}
+    ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"])}
 NUM_WORDS.update({"thirty": "30", "forty": "40", "fifty": "50", "sixty": "60",
                   "seventy": "70", "eighty": "80", "ninety": "90", "oh": "0"})
 
@@ -64,7 +63,8 @@ def _words_to_digits(text: str) -> str:
             buf.append(NUM_WORDS[tok])
             continue
         if buf:
-            out.append(_join_spoken_number(buf)); buf = []
+            out.append(_join_spoken_number(buf))
+            buf = []
         out.append(tok)
     if buf:
         out.append(_join_spoken_number(buf))

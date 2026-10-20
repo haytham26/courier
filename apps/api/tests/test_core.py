@@ -43,7 +43,9 @@ class FakeGeo:
 
 
 def test_intake_graph_interrupt_and_resume():
-    extract = lambda src, text: [{"raw": line} for line in text.splitlines()]
+    def extract(src, text):
+        return [{"raw": line} for line in text.splitlines()]
+
     graph = build_graph(extract, lambda problem, raw: f"Fix {raw}?", FakeGeo(), MemorySaver())
     cfg = {"configurable": {"thread_id": "shift-1"}}
     out = graph.invoke({"run_id": "r", "source": "voice",

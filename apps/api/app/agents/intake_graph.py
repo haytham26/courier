@@ -69,7 +69,8 @@ def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
                 p["parsed"] = pa.__dict__ | {"address_key": pa.address_key,
                                              "street_key": pa.street_key, "complete": pa.complete}
             if p.get("anomaly") == "set_aside":
-                out.append(p); continue
+                out.append(p)
+                continue
             pp, p["anomaly"] = p["parsed"], None
             if not pp["complete"] or pp["confidence"] < 0.6:
                 p["anomaly"] = "incomplete"
@@ -123,7 +124,8 @@ def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
         return {"parcels": s["parcels"]}
 
     def brief(s: IntakeState) -> IntakeState:
-        n_ok = len(s["ordered"]); aside = sum(p.get("anomaly") == "set_aside" for p in s["parcels"])
+        n_ok = len(s["ordered"])
+        aside = sum(p.get("anomaly") == "set_aside" for p in s["parcels"])
         msg = f"{n_ok} stops locked to your run."
         if aside:
             msg += f" {aside} set aside."

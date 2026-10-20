@@ -8,6 +8,8 @@ import os
 import re
 from dataclasses import dataclass
 
+import anthropic
+
 from ..prompts import EXECUTIVE_COPILOT
 
 MODEL = os.getenv("COPILOT_MODEL", "claude-haiku-5-5")
@@ -62,7 +64,6 @@ def fast_path(transcript: str) -> Intent | None:
 def interpret(transcript: str, state: dict, client=None, region: str = "Christchurch") -> Intent:
     if hit := fast_path(transcript):
         return hit
-    import anthropic
     client = client or anthropic.Anthropic()
     resp = client.messages.create(
         model=MODEL, max_tokens=200, tools=TOOLS, tool_choice={"type": "any"},
