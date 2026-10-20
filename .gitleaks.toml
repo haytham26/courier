@@ -1,18 +1,19 @@
 # Gitleaks configuration (V4 §7: zero findings).
 #
-# The default ruleset is used; the only exclusion is the auth service's test
-# fixtures, which contain fixed strings that look like credentials to the
-# generic-api-key rule. They are test inputs, never real secrets, and the
-# tests assert that the service refuses to start without a real one.
+# The default ruleset is used. The only exclusion is the auth service's test
+# fixtures: they contain fixed strings that look like credentials to the
+# generic-api-key rule. They are test inputs, never real secrets — the tests
+# assert that the service refuses to start without a real one.
 
 [extend]
 useDefault = true
 
 [[allowlists]]
-description = "Test-only constants in the auth service (not credentials)"
-paths = ['''services/auth/tests/''']
-rules = ["generic-api-key"]
-
-[[allowlists]]
-description = "The example values in the environment template"
-paths = ['''\.env\.example$''']
+description = "The fixed test strings of the auth service (they are not credentials)"
+regexTarget = "secret"
+regexes = [
+  '''a-secret-that-is-definitely-long-enough-32''',
+  '''test-only-value-not-a-real-credential-0000''',
+  '''test-secret-value-with-at-least-32-characters''',
+  '''server-test-secret-value-long-enough-32''',
+]

@@ -18,7 +18,7 @@ $patterns = @(
 )
 $paths = if ($args.Count -gt 0) { $args } else { @("apps", "packages", "services", "scripts", "db", "infra") }
 $files = Get-ChildItem -Path $paths -Recurse -File -ErrorAction SilentlyContinue |
-  Where-Object { $_.FullName -notmatch "node_modules|\\dist\\|\.turbo|\.expo|egg-info|\\build\\|\\\.venv\\|grep-banned\.ps1" }
+  Where-Object { $_.FullName -notmatch "node_modules|\\dist\\|\.turbo|\.expo|egg-info|\\build\\|\\\.venv\\|\\venv\\|grep-banned\.ps1|\\coverage\\" }
 $hits = Select-String -Path $files.FullName -Pattern $patterns -ErrorAction SilentlyContinue |
   ForEach-Object { "$($_.Path.Replace((Get-Location).Path + '\', '')):$($_.LineNumber): $($_.Line.Trim())" }
 if ($hits) {
