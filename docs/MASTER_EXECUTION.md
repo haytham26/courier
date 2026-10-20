@@ -69,3 +69,29 @@ V4 §9 + P1–P7 + every must-have in docs/SAAS_CHECKLIST.md and docs/COVERAGE_M
 8. **Success metrics** (track in QUALITY_SCORECARD + weekly report): time to load a 200-stop day (target < 5 min vs 1–2 h today), address auto-correct accuracy, voice command success rate, crash-free sessions ≥ 99.5%, offline-day completion without data loss, battery per hour, driver satisfaction (beta).
 9. **Data hygiene**: label photos and voice samples may contain personal data — redact/blur before any use in eval sets, never commit them, document consent.
 10. **Weekly founder report** (`docs/reports/YYYY-WW.md`, every 7 days of work): what shipped (with CI links), scorecard changes, Spoke gap status, risks, costs, founder actions needed — in plain language.
+
+## 8. Founder directives — design, backend rigor, decision rights, REA (binding)
+
+### 8.1 Design must be unique, modern, ultra-smooth — never "AI-looking"
+- Signature identity: a distinct courier visual language (own typography scale, motion personality, iconography details, map style, sounds/haptics) defined in `docs/design/SYSTEM.md` + a "brand board". Compare every screen against the mockups AND against Spoke/Circuit, Uber Driver, Apple/Google Maps, Linear, Arc — it must look premium and unmistakably ours.
+- Use the best **2025–2026** UI/motion libraries found in research (V4 §12): e.g. Reanimated 4 (shared values, layout animations, CSS-style animations), react-native-skia (shaders, blur, gradients, particle/3D-feel effects), Gesture Handler 3, FlashList 2, MapLibre 3D buildings/pitch, Lottie/Rive for micro-illustrations — verify each is current, maintained and New-Architecture ready.
+- Subtle **3D/depth**: tilted map with 3D buildings in driving mode, depth on sheets/cards, parallax and spring physics — always 60/120 fps, measured (frame-time traces in evidence); never at the cost of glanceability or battery.
+- Anti-AI-look checklist (fail the design gate if any): generic gradients/purple-blue AI palette, emoji icons, stock illustrations, centered hero cards everywhere, uniform rounded boxes, filler copy, inconsistent spacing. A human-design review role signs off each screen with screenshots.
+
+### 8.2 Backend: zero guessing, verified 100%
+- Every endpoint/job specified first (OpenAPI/JSON Schema + state machines); **contract tests** generated from the spec; **property-based tests** (Hypothesis / fast-check) for address, routing, sync, billing; **mutation score ≥ 80%** on these; **integration tests** against real Postgres/PostGIS, Valkey and services in docker (Testcontainers), not mocks; **load tests** (k6) at 10× expected peak; **chaos tests** (kill services, network loss, duplicated/out-of-order events) — zero data loss, idempotent.
+- Migrations: forward + rollback tested on a copy of realistic data. Every external call: timeout, retry with backoff, circuit breaker, idempotency key.
+- Numbers come only from CI runs with linked artifacts. Any unverified claim is NOT VERIFIED; any flaky test is a P1 bug.
+- Independent verification: the QA squad and the Security squad each re-run and sign off; the author can't approve their own work.
+
+### 8.3 Decision rights (who decides)
+- **CEO (you)**: priorities, plan order, trade-offs across squads, final merge decision after gates.
+- **Squad lead** (per module): technical choices inside the module — via research + benchmark + ADR.
+- **Architect**: cross-module interfaces, data model, ADRs that change locked decisions.
+- **Security lead**: veto on any change with a security risk. **QA lead**: veto when tests/evidence are missing.
+- **Design lead**: veto on screens failing §8.1 or the mockups.
+- **Founder**: only the approval gates in §7.3 and business choices (pricing, brand name, legal).
+Every decision is written (ADR or DECISIONS.md) with the reason; disagreements are resolved by data (benchmark/test), not opinion.
+
+### 8.4 REA (github.com/morluto/rea, MIT) — allowed uses
+Install `rea-agents` inside the repo workflow and use it for: (a) **our own APK and services** — security/reverse-engineering audit of what we ship (secrets, endpoints, obfuscation, tamper resistance) before every release; (b) **open-source projects we adopt or study** (their source is already public) to map architecture and behaviour quickly. Run it only inside the repo folder (`.study/`), never with cracked tools. Competitor apps (Spoke, etc.): study through public sources and by using the app as a normal user (screens, flows, features, timings) — do not decompile or extract their code/assets (their terms forbid it); record findings in docs/study/spoke/.
