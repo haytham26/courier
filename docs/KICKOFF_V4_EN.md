@@ -175,3 +175,40 @@ This gives every feature and idea while keeping Courier Copilot fully private.
 
 ### 11.3 Ongoing radar
 Each squad re-scans GitHub monthly for new 2026 projects in its niche (filters: release in last 6 months, permissive license, New Architecture ready, active issues/maintainers, no supply-chain incidents) and updates `docs/research/2026/<area>.md` with keep / adopt / watch / reject.
+
+---
+
+## 12. Research methodology — deep, exhaustive, evidence-based (applies to §3, §10, §11 and every research sprint)
+
+### 12.1 Coverage minimums per area
+- Find **≥ 30 candidates**, shortlist **≥ 10**, deep-review **top 5**, benchmark **top 2–3** on our eval set (critical areas).
+- Search window: everything maintained, with priority on 2025–2026 releases and repos created/trending in 2026.
+
+### 12.2 Search strategies (use ALL, record every query in the area file)
+1. `gh search repos "<keywords>" --sort stars` AND `--sort updated`, with `--language`, `--topic`, `pushed:>2026-04-01`, `created:>2025-01-01`, `stars:>50`.
+2. GitHub **topics** pages (e.g. `topic:maplibre`, `topic:vehicle-routing-problem`, `topic:speech-recognition`, `topic:react-native`, `topic:offline-first`, `topic:ocr`).
+3. **Awesome lists** for the area (awesome-react-native, awesome-maplibre, awesome-geospatial, awesome-speech, awesome-tts, awesome-ocr, awesome-selfhosted, awesome-logistics…).
+4. **Dependents / "Used by"** of the leaders (who builds on MapLibre RN, VisionCamera, sherpa-onnx, VROOM) → find real production apps and newer libs.
+5. **"Alternatives to X"** for every competitor/SaaS (Circuit, Route4Me, Onfleet, ElevenLabs, Wispr, Intercom…) on GitHub + openalternative.co + alternativeto.
+6. Official sources: release notes/changelogs (Expo, React Native, MapLibre, Valhalla, sherpa-onnx, Better Auth, Stripe), RFCs, conference talks 2025–2026.
+7. Model hubs for AI areas: Hugging Face (models + Spaces, filter by license, downloads, last updated), papers-with-code / arXiv 2025–2026 for SOTA, then find their GitHub implementations.
+8. npm / PyPI / Maven: weekly downloads, versions, maintainers, deprecations.
+9. Community signal: GitHub Discussions/Issues of the leaders, Reddit/HN threads for "best X 2026" — as leads only, always verified on the repo.
+
+### 12.3 Per-candidate evidence card (in `docs/research/2026/<area>.md`)
+repo URL · stars + 6-month star trend · created date · last release + date · release cadence · open/closed issues ratio + median response time · active maintainers (90 days) · license (code AND model weights/data) · New Architecture / Expo SDK 58 / Android API 34 support · bundle/model size · platform (on-device / server) · security advisories (GitHub/OSV) + supply-chain history · production users · docs quality · test coverage/CI status · what it does better than our current choice · risks · decision **KEEP / ADOPT / WATCH / REJECT** + reason.
+
+### 12.4 Deep review of the top 5 (actually open the code)
+Read the README, docs, architecture, main modules, tests, open critical issues, last 20 commits and PRs; run its example/demo inside `.study/` (gitignored, inside the repo only); note code quality, API ergonomics, extensibility, performance claims vs our measurements.
+
+### 12.5 Benchmark before adopting (critical areas)
+Same eval set, same device profile (CI emulator + one mid-range Android profile), same metrics as the squad targets; publish table + raw results in `docs/squads/<module>/benchmarks/`. Adopt only on measured win, permissive license, and healthy maintenance.
+
+### 12.6 Anti-bias & honesty rules
+- Don't stop at the first popular result; always include at least 3 newer/smaller challengers.
+- Every claim needs a link; star counts and dates copied from the repo page on the day of research (write the date).
+- Mark anything not verified as UNVERIFIED. No invented repos, numbers or benchmarks.
+- Copyleft (AGPL/GPL) → clean-room study list (§11.2), never code.
+
+### 12.7 Output of a research sprint
+Per area file + squad research/decisions updates + `docs/research/2026/SPRINT-SUMMARY.md` (stack changes, adopt/drop list, ADRs to write, updated T5–T7 plan, risks) + ADRs for any locked-decision change.
