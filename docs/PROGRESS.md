@@ -13,6 +13,8 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | PHASE2.4 cleanup + lint | **done** | feat/2.4-cleanup-and-lint | workspace 107 + api 48 | mobile lint still off (BUG-045) | — |
 | PHASE3.1 CI + emulator | **done** | feat/v4-company-bootstrap (PR #1) | workflows + Maestro + B.7 screen | the emulator job was still running at the last check | link a green run |
 | V4 bootstrap | **done** | feat/v4-company-bootstrap (PR #1) | CONSTRAINTS.md, PARITY.md, design/SYSTEM.md, 10 squads, PR template, floor/coverage/licence/audit gates | the mutation harness lands with the first squad task | T2 |
+| T2 Expo 58 decision | **done** | feat/t2-expo-58-decision | ADR-002 + research note | — | T3 |
+| T4 real LINZ data | **done** | feat/t2-expo-58-decision | 225,151 real addresses indexed, **98.3 % D8 accuracy** | the data stays local (gitignored) | weekly rebuild job |
 | 0.1 repo setup | partial | — | not verified | root package.json now pinned (2.1) | pin remaining ranges |
 | 0.3 docker infra | not verified | — | — | not run in audit | run docker compose |
 | 0.4 local secrets | partial | — | not verified | scripts/check-secrets not tested | test scripts |
@@ -65,10 +67,9 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 
 ## Next (in order)
 1. Merge PR #1 once the Android emulator job is green (the other gates are already green).
-2. T2 — the Expo version decision (D21): either the SDK 57 downgrade or the ADR that proves
-   SDK 58 with every native module, then DECISIONS.md.
+2. Open the PR for T2 + T4 (`feat/t2-expo-58-decision`): the Expo 58 ADR, the D21 update, the LINZ
+   fetcher and the address accuracy work.
 3. T3 — the emulator run green, the artifacts downloaded into `docs/evidence/b7/`, B.7 marked PASS.
-4. T4 — the real LINZ addresses (`scripts/fetch-linz.py`) and the ≥95 % accuracy report.
-5. T5 — the offline Canterbury PMTiles.
-6. T6 — the design to the approved mockups.
-7. T7 — the product itself (sync, routing, door memory, dictation, voice agent, web, billing, PIA).
+4. T5 — the offline Canterbury PMTiles.
+5. T6 — the design to the approved mockups.
+6. T7 — the product itself (sync, routing, door memory, dictation, voice agent, web, billing, PIA).
