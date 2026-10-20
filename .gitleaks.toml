@@ -2,17 +2,17 @@
 #
 # The default ruleset is used; the only exclusion is the auth service's test
 # fixtures, which contain fixed strings that look like credentials to the
-# generic-api-key rule. They are test inputs, never real secrets, and they are
-# asserted to be placeholders in the tests themselves.
+# generic-api-key rule. They are test inputs, never real secrets, and the
+# tests assert that the service refuses to start without a real one.
 
 [extend]
 useDefault = true
 
 [[allowlists]]
 description = "Test-only constants in the auth service (not credentials)"
-paths = ['''^services/auth/tests/.*$''']
-rules = ["generic-api-key", "test-secret"]
+paths = ['''services/auth/tests/''']
+rules = ["generic-api-key"]
 
 [[allowlists]]
 description = "The example values in the environment template"
-paths = ['''^\.env\.example$''']
+paths = ['''\.env\.example$''']
