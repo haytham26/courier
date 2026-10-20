@@ -1,6 +1,11 @@
 name: Android E2E (emulator + Maestro)
 
 on:
+  push:
+    # Temporary: the workflow does not exist on `main` yet, so a pull_request
+    # event would not trigger it. After the merge this narrows to `main` only,
+    # per MASTER_EXECUTION 7.1 (PRs to main + nightly + manual).
+    branches: ['**']
   pull_request:
     branches:
       - main
