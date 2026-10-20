@@ -52,8 +52,8 @@ export default function RegisterScreen() {
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
-          autoCompleteType="name"
-          disabled={isSubmitting}
+          autoComplete="name"
+          editable={!isSubmitting}
         />
         <TextInput
           style={styles.input}
@@ -62,8 +62,8 @@ export default function RegisterScreen() {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          autoCompleteType="email"
-          disabled={isSubmitting}
+          autoComplete="email"
+          editable={!isSubmitting}
         />
         <TextInput
           style={styles.input}
@@ -71,8 +71,8 @@ export default function RegisterScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          autoCompleteType="new-password"
-          disabled={isSubmitting}
+          autoComplete="new-password"
+          editable={!isSubmitting}
         />
         <TextInput
           style={styles.input}
@@ -80,11 +80,11 @@ export default function RegisterScreen() {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
-          autoCompleteType="new-password"
-          disabled={isSubmitting}
+          autoComplete="new-password"
+          editable={!isSubmitting}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={isSubmitting}>
+        <TouchableOpacity style={styles.button} onPress={handleRegister} editable={!isSubmitting}>
           {isSubmitting ? (
             <ActivityIndicator color={colors.textInverse} />
           ) : (

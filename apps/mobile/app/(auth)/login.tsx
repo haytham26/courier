@@ -42,7 +42,7 @@ export default function LoginScreen() {
           keyboardType="email-address"
           autoCapitalize="none"
           autoComplete="email"
-          disabled={isSubmitting}
+          editable={!isSubmitting}
         />
         <TextInput
           style={styles.input}
@@ -51,10 +51,10 @@ export default function LoginScreen() {
           onChangeText={setPassword}
           secureTextEntry
           autoComplete="password"
-          disabled={isSubmitting}
+          editable={!isSubmitting}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isSubmitting}>
+        <TouchableOpacity style={styles.button} onPress={handleLogin} editable={!isSubmitting}>
           {isSubmitting ? (
             <ActivityIndicator color={colors.textInverse} />
           ) : (

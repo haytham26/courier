@@ -59,5 +59,10 @@ default secrets; tests."
   bound to a port (no `POSTGRES` available in this environment). The `node:http`
   entry point (`services/auth/src/index.ts`) is therefore **NOT VERIFIED** at runtime.
 - Postgres-backed storage is **NOT VERIFIED** (tests use the in-memory adapter).
+- The mobile client (`apps/mobile/src/lib/auth-client.ts`, now using
+  `@better-auth/expo` + `expo-secure-store`) is **NOT VERIFIED**: `apps/mobile` has no
+  test runner installed and there is no emulator (PHASE 2.4 wires jest-expo + RNTL,
+  PHASE 3 runs the emulator on CI). Its TypeScript errors are all in the pre-existing
+  jest test file, which cannot compile until jest is installed.
 - A CI run for this branch does not exist yet: `.github/workflows/` is empty
   (PHASE 3 will add the emulator workflow; a CI workflow is still to be written).
