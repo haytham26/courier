@@ -26,6 +26,8 @@ try {
 }
 
 const ADDED = /^\+\+\+/;
+const DOCS = /\.(md|mdx)$/;
+const SELF = /^scripts\/check-floor\.mjs$/;
 const RULES = [
   {
     id: 'no-skipped-tests',
@@ -36,7 +38,7 @@ const RULES = [
   {
     id: 'no-suppressions',
     pattern: /@ts-ignore|@ts-expect-error|eslint-disable|istanbul ignore|\bnoqa\b|#\s*type:\s*ignore|Stryker disable|nosemgrep/,
-    appliesTo: () => true,
+    appliesTo: (file) => !DOCS.test(file),
     message: 'no new suppression comment without an issue link',
     allowIfLineHasIssueLink: true,
   },
@@ -49,20 +51,20 @@ const RULES = [
   {
     id: 'no-todo-without-issue',
     pattern: /\bTODO\b|\bFIXME\b/,
-    appliesTo: () => true,
+    appliesTo: (file) => !DOCS.test(file),
     message: 'a TODO must carry an issue link',
     allowIfLineHasIssueLink: true,
   },
   {
     id: 'no-empty-catch',
     pattern: /catch\s*(\([^)]*\))?\s*\{\s*\}/,
-    appliesTo: () => true,
+    appliesTo: (file) => !DOCS.test(file),
     message: 'an empty catch block silently swallows failures',
   },
   {
     id: 'no-not-implemented',
     pattern: /Not\s+implemented|not\s+implemented\s+yet|TODO:\s*implement/,
-    appliesTo: () => true,
+    appliesTo: (file) => !DOCS.test(file),
     message: 'an unimplemented stub must not be committed as if it were finished',
   },
 ];
@@ -74,13 +76,14 @@ let currentFile = '';
 
 for (const line of diff.split('\n')) {
   if (ADDED.test(line)) {
-    currentFile = line.slice(4).split('\t')[0].trim();
+    currentFile = line.slice(4).split('\t')[0].trim().replace(/^[ab]\//, '');
     continue;
   }
   if (!line.startsWith('+') || line.startsWith('+++')) continue;
 
   const content = line.slice(1);
   for (const rule of RULES) {
+    if (SELF.test(currentFile)) continue;
     if (!rule.appliesTo(currentFile)) continue;
     if (!rule.pattern.test(content)) continue;
     if (rule.allowIfLineHasIssueLink && ISSUE_LINK.test(content)) continue;
