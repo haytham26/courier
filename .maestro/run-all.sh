@@ -37,14 +37,24 @@ echo "::group::install the APK"
 adb install -r "${APK}"
 echo "::endgroup::"
 
+# The diagnostics every run leaves behind: what the app did, and the logcat.
+echo "::group::diagnostics"
+adb shell dumpsys activity activities | grep -i "mResumedActivity" || true
+adb shell pidof com.courier.copilot || echo "the app process is NOT running"
+adb logcat -d -t 800 > maestro-logcat.txt 2>/dev/null || true
+echo "::endgroup::"
+
 status=0
 for flow in .maestro/*.yaml; do
   echo "::group::${flow}"
-  if ! maestro test "${flow}"; then
+  if ! timeout 300 maestro test "${flow}"; then
     echo "flow failed: ${flow}"
     status=1
   fi
   echo "::endgroup::"
 done
+
+# The logcat after the flows shows a crash, if there was one.
+adb logcat -d -t 2000 > maestro-logcat-after.txt 2>/dev/null || true
 
 exit "${status}"
