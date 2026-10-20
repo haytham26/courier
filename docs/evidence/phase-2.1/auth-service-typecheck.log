@@ -1,0 +1,8 @@
+﻿cmd : $ tsc --noEmit
+At line:5 char:64
++ ... heck.log" { cmd /c "corepack pnpm --filter @courier/auth typecheck" } ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ tsc --noEmit:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+EXIT_CODE=0

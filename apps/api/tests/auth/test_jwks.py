@@ -7,6 +7,7 @@ expired, tampered, foreign and wrongly-scoped tokens.
 from __future__ import annotations
 
 import base64
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -109,7 +110,7 @@ def verifier(key_pair: tuple[Any, dict[str, Any]]) -> JwksVerifier:
 
 
 @pytest.fixture()
-def client(verifier: JwksVerifier) -> TestClient:
+def client(verifier: JwksVerifier) -> Iterator[TestClient]:
     app.dependency_overrides[get_verifier] = lambda: verifier
     with TestClient(app) as test_client:
         yield test_client

@@ -71,7 +71,7 @@ def sequence(stops: list[Stop], template: list[Segment]) -> list[Stop]:
 VAN_ZONES = ["REAR", "MID_RACK", "FL", "FR"]  # nearest-the-door first
 
 
-def assign_van_zones(ordered: list[Stop], sizes: dict[str, str]) -> dict[str, str]:
+def assign_van_zones(ordered: list[Stop], sizes: dict[str, str | None]) -> dict[str, str]:
     """Load in reverse delivery order: first stops near the door (REAR), late stops forward.
     Heavy/large items go to HEAVY_BASE regardless, so they never sit on top of satchels."""
     n = len(ordered)

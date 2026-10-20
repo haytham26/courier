@@ -42,6 +42,8 @@ export interface AuthConfig {
     enabled: boolean;
     window: number;
     max: number;
+    /** Stricter limits for the credential endpoints (per path). */
+    customRules: Record<string, { window: number; max: number }>;
   };
   /**
    * Headers that may carry the client IP. Only set this when the service runs
@@ -163,6 +165,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
       enabled: true,
       window: 60,
       max: values.AUTH_RATE_LIMIT_MAX ?? 100,
+      // Credential endpoints get the strict treatment (OWASP: ~10 attempts
+      // per 15 minutes); sign-up is even tighter because it is anonymous.
+      customRules: {
+        "/sign-up/email": { window: 3600, max: 10 },
+        "/sign-in/email": { window: 900, max: 10 },
+        "/forget-password": { window: 900, max: 5 },
+      },
     },
     ipAddressHeaders: parseCsv(values.AUTH_TRUSTED_IP_HEADERS),
     organization: {

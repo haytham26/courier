@@ -26,7 +26,7 @@ class AuthSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env.local", extra="ignore")
 
-    auth_jwks_url: str
+    auth_jwks_url: str = ""
     auth_jwt_audience: str = "courier-api"
     auth_jwt_issuer: str = ""
     auth_jwt_algorithms: str = "ES256"
@@ -142,9 +142,12 @@ security = HTTPBearer(auto_error=False)
 def get_auth_settings() -> AuthSettings:
     """Returns the validated settings, failing fast when they are missing."""
     try:
-        return AuthSettings()
+        settings = AuthSettings()
     except Exception as exc:  # pydantic ValidationError
         raise RuntimeError("Missing required env: AUTH_JWKS_URL — see .env.example") from exc
+    if not settings.auth_jwks_url:
+        raise RuntimeError("Missing required env: AUTH_JWKS_URL — see .env.example")
+    return settings
 
 
 @lru_cache(maxsize=1)

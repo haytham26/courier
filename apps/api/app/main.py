@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from fastapi import Depends, FastAPI, UploadFile, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
@@ -89,7 +90,7 @@ async def voice(ws: WebSocket, shift_id: uuid.UUID):
                 # repo.approaching(shift_id, lat, lon, 50) -> ST_DWithin(entry_point, pos, 50)
                 continue
             if msg["type"] == "transcript" and msg.get("final"):
-                state = {}  # repo.copilot_state(shift_id) | {"speed_kmh": msg["gps"]["speed"]}
+                state: dict[str, Any] = {}  # repo.copilot_state(shift_id) | {"speed_kmh": msg["gps"]["speed"]}
                 intent = copilot.interpret(msg["text"], state)
                 # repo.apply(shift_id, intent) -> delivery_event / stop mutation
                 if intent.speech:

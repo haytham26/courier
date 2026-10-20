@@ -8,7 +8,8 @@ decides where a parcel goes is plain code and PostGIS."""
 from __future__ import annotations
 
 import operator
-from typing import Annotated, Literal, Protocol, TypedDict
+from collections.abc import Callable
+from typing import Annotated, Any, Literal, Protocol, TypedDict
 
 from langgraph.graph import END, StateGraph
 from langgraph.types import interrupt
@@ -26,7 +27,7 @@ class Geo(Protocol):
 
 class Parcel(TypedDict, total=False):
     raw: str
-    parsed: dict
+    parsed: dict[str, Any]
     lat: float
     lon: float
     size_class: str | None
@@ -46,11 +47,11 @@ class IntakeState(TypedDict, total=False):
 
 
 def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
-    def ingest(s: IntakeState) -> IntakeState:
+    def ingest(s: IntakeState) -> dict[str, Any]:
         rows = llm_extract(s["source"], s["text"])            # list[{"raw":..., "size_class":...}]
         return {"parcels": [{"raw": r["raw"], "size_class": r.get("size_class")} for r in rows]}
 
-    def normalise(s: IntakeState) -> IntakeState:
+    def normalise(s: IntakeState) -> dict[str, Any]:
         out = []
         for p in s["parcels"]:
             pa = nz_address.parse(p["raw"])
@@ -59,7 +60,7 @@ def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
                                                      "complete": pa.complete}})
         return {"parcels": out}
 
-    def verify(s: IntakeState) -> IntakeState:
+    def verify(s: IntakeState) -> dict[str, Any]:
         for a in s.get("answers", []):                          # apply driver corrections
             s["parcels"][a["index"]]["raw"] = a["raw"]
         seen, questions, out = set(), [], []
@@ -88,7 +89,7 @@ def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
             out.append(p)
         return {"parcels": out, "pending_questions": questions}
 
-    def ask_driver(s: IntakeState) -> IntakeState:
+    def ask_driver(s: IntakeState) -> dict[str, Any]:
         # Pauses the graph; the voice socket speaks the question and resumes with
         # Command(resume={"index": i, "raw": corrected text} | {"index": i, "raw": None} for "pull it").
         idx, question = s["pending_questions"][0].split("|", 1)
@@ -104,7 +105,7 @@ def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
     def route_after_ask(s: IntakeState) -> str:
         return "ask_driver" if s.get("pending_questions") else "verify"
 
-    def sequence(s: IntakeState) -> IntakeState:
+    def sequence(s: IntakeState) -> dict[str, Any]:
         good = [p for p in s["parcels"] if p.get("anomaly") in (None, "duplicate")]
         stops: dict[str, sequencing.Stop] = {}
         for p in good:
@@ -114,7 +115,7 @@ def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
         ordered = sequencing.sequence(list(stops.values()), geo.template(s["run_id"]))
         return {"ordered": [st.location_id for st in ordered]}
 
-    def zone(s: IntakeState) -> IntakeState:
+    def zone(s: IntakeState) -> dict[str, Any]:
         sizes = {p["parsed"]["address_key"]: p.get("size_class") for p in s["parcels"] if "parsed" in p}
         dummy = [sequencing.Stop(k, "", 0, 0, 0) for k in s["ordered"]]
         zones = sequencing.assign_van_zones(dummy, sizes)
@@ -123,7 +124,7 @@ def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
                 p["van_zone"] = zones[k]
         return {"parcels": s["parcels"]}
 
-    def brief(s: IntakeState) -> IntakeState:
+    def brief(s: IntakeState) -> dict[str, Any]:
         n_ok = len(s["ordered"])
         aside = sum(p.get("anomaly") == "set_aside" for p in s["parcels"])
         msg = f"{n_ok} stops locked to your run."
@@ -132,9 +133,20 @@ def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
         return {"briefing": msg + " Load rear first."}
 
     g = StateGraph(IntakeState)
-    for name, fn in [("ingest", ingest), ("normalise", normalise), ("verify", verify),
-                     ("ask_driver", ask_driver), ("sequence", sequence), ("zone", zone), ("brief", brief)]:
-        g.add_node(name, fn)
+    nodes: list[tuple[str, Callable[[IntakeState], dict[str, Any]]]] = [
+        ("ingest", ingest),
+        ("normalise", normalise),
+        ("verify", verify),
+        ("ask_driver", ask_driver),
+        ("sequence", sequence),
+        ("zone", zone),
+        ("brief", brief),
+    ]
+    for name, fn in nodes:
+        # langgraph's add_node overloads do not accept a plain TypedDict
+        # callable, so the call is checked by mypy but the overload is not
+        # resolvable; the behaviour is covered by tests/test_core.py.
+        g.add_node(name, fn)  # type: ignore[call-overload]
     g.set_entry_point("ingest")
     g.add_edge("ingest", "normalise")
     g.add_edge("normalise", "verify")

@@ -15,7 +15,12 @@ export function testConfig(overrides: Partial<AuthConfig> = {}): AuthConfig {
   });
   return {
     ...config,
-    rateLimit: { ...config.rateLimit, max: 10_000 },
+    rateLimit: {
+      ...config.rateLimit,
+      enabled: false,
+      max: 10_000,
+      customRules: {},
+    },
     ...overrides,
   };
 }

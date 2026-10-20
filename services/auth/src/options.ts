@@ -32,10 +32,7 @@ export function buildAuthOptions(config: AuthConfig): BetterAuthOptions {
       enabled: config.rateLimit.enabled,
       window: config.rateLimit.window,
       max: config.rateLimit.max,
-      customRules: {
-        "/sign-up/email": { window: 60, max: 10 },
-        "/sign-in/email": { window: 60, max: 20 },
-      },
+      customRules: config.rateLimit.customRules,
     },
     telemetry: {
       enabled: config.telemetry.enabled,
