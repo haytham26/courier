@@ -41,7 +41,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View testID="register-screen" style={styles.container}>
       <Text style={styles.title}>Create Account</Text>
       <Text style={styles.subtitle}>Join Courier Copilot</Text>
 
@@ -56,6 +56,7 @@ export default function RegisterScreen() {
           editable={!isSubmitting}
         />
         <TextInput
+          testID="register-email"
           style={styles.input}
           placeholder="Email"
           value={email}
@@ -66,6 +67,7 @@ export default function RegisterScreen() {
           editable={!isSubmitting}
         />
         <TextInput
+          testID="register-password"
           style={styles.input}
           placeholder="Password"
           value={password}

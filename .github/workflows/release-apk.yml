@@ -1,0 +1,88 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    name: Build the preview APK and attach it to the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.14.0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install the dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Read the signing secrets
+        id: keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/courier.keystore"
+            echo "keystore_path=$RUNNER_TEMP/courier.keystore" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No signing key in the GitHub Secrets: building the unsigned debug APK. Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD to sign the release (see docs/FOUNDER_TODO.md)."
+          fi
+
+      - name: Build the APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          pnpm --filter mobile exec expo prebuild --platform android --no-install
+          cd apps/mobile/android
+          if [ "${{ steps.keystore.outputs.signed }}" = "true" ]; then
+            ./gradlew assembleRelease --no-daemon --stacktrace \
+              -Pandroid.injected.signing.store.file="${{ steps.keystore.outputs.keystore_path }}" \
+              -Pandroid.injected.signing.store.password="${ANDROID_KEYSTORE_PASSWORD}" \
+              -Pandroid.injected.signing.key.alias="${ANDROID_KEY_ALIAS}" \
+              -Pandroid.injected.signing.key.password="${ANDROID_KEY_PASSWORD}"
+          else
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          fi
+
+      - name: Collect the APK
+        id: apk
+        run: |
+          mkdir -p artifacts
+          if [ "${{ steps.keystore.outputs.signed }}" = "true" ]; then
+            cp app/build/outputs/apk/release/app-release.apk artifacts/courier.apk
+          else
+            cp app/build/outputs/apk/debug/app-debug.apk artifacts/courier-unsigned.apk
+          fi
+          echo "path=artifacts/$(ls artifacts)" >> "$GITHUB_OUTPUT"
+
+      - name: Attach the APK to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/mobile/android/${{ steps.apk.outputs.path }}
+          generate_release_notes: true

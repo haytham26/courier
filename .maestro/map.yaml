@@ -1,0 +1,22 @@
+appId: com.courier.copilot
+name: The map screen renders
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "login-screen"
+- tapOn: "Sign Up"
+- tapOn:
+    id: "register-email"
+- inputText: "map@example.co.nz"
+- tapOn:
+    id: "register-password"
+- inputText: "correct-horse-battery"
+- tapOn: "Create Account"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 20000
+- tapOn: "Map"
+- assertVisible:
+    id: "map-screen"

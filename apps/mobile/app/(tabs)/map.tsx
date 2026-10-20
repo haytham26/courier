@@ -56,7 +56,7 @@ export default function MapScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView testID="map-screen" style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Map View Placeholder */}
       <View style={styles.mapContainer}>
         <View style={[styles.mapPlaceholder, { backgroundColor: theme.colors.mapBackground }]}>

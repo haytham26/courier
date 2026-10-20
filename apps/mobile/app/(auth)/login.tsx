@@ -29,12 +29,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View testID="login-screen" style={styles.container}>
       <Text style={styles.title}>Welcome Back</Text>
       <Text style={styles.subtitle}>Sign in to continue</Text>
 
       <View style={styles.form}>
         <TextInput
+          testID="login-email"
           style={styles.input}
           placeholder="Email"
           value={email}
@@ -45,6 +46,7 @@ export default function LoginScreen() {
           editable={!isSubmitting}
         />
         <TextInput
+          testID="login-password"
           style={styles.input}
           placeholder="Password"
           value={password}
