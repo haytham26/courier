@@ -6,7 +6,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 AUTH_PORT=3001
-APK="apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk"
+APK="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
 
 echo "::group::start the auth service"
 export AUTH_DATABASE_URL="memory://"
