@@ -168,14 +168,18 @@ reader is npm `pmtiles`) · 8 commits/90 d, 2 humans · 10 open · **licence: BS
 implementations; the SPECIFICATION is public domain / CC0** (verbatim from the repo `LICENSE`) · npm
 `pmtiles` **4 324 961 dl/mo** · **tile terms**: the container is format-neutral — the data inside carries
 its own licence · **offline: yes, by design** — one single-file archive, one download, one
-`pmtiles://file://` URL, and v3 supports **diffs** for the weekly refresh without re-downloading ·
+`pmtiles://file://` URL, and v3 supports **diffs** for the weekly refresh without re-downloading (the
+**CLI** has no `diff` subcommand — incremental updates go through `pmtiles edit` / `makesync` / `sync`) ·
 better than ours: the format is public domain, so we may write our own reader if Protomaps stops shipping
 one · risks: **no commit since 2026-09-16 and no tagged release since 2021** — the format is stable, the
 reference repo is quiet · **DECISION: ADOPT (container format).**
 
 **M10 — `protomaps/go-pmtiles`** ⭐ https://github.com/protomaps/go-pmtiles — **615 ★** /83 f · created
 **2021-04-22** · **v1.31.2, 2026-07-22** · **1 commit/90 d, 1 human** · 19 open · **BSD-3-Clause** ·
-**offline: this is the tool that cuts the pack** (`pmtiles extract --bbox --min-zoom --max-zoom`) · better
+**offline: this is the tool that cuts the pack** — `pmtiles extract --bbox … --minzoom … --maxzoom …`
+for the Canterbury pack (the ≤ 50 MB size is still unmeasured: the Protomaps area-build URLs return 404)
+· the CLI's subcommands are show, tile, cluster, edit, extract, merge, convert, verify, makesync, sync,
+serve, upload, version · better
 than ours: it is the **only** way we have to produce a bbox-clipped, zoom-capped Canterbury pack ·
 risks: **one maintainer**; open issues [#269](https://github.com/protomaps/go-pmtiles/issues/269) "Timeout
 when using `pmtiles extract`" (2026-01-15) and [#276](https://github.com/protomaps/go-pmtiles/issues/276)
@@ -187,7 +191,8 @@ disk-space-constrained e…" (2026-08-24, **open**) — **the pack build is exac
 items describe** · **DECISION: ADOPT (build tool), pinned by SHA-256.**
 
 **M11 — `protomaps/basemaps`** ⭐ https://github.com/protomaps/basemaps — **760 ★** /106 f · created
-**2020-04-24** · last push **2026-09-11** · **no GitHub releases** · 5 commits/90 d, **1 human** · 43 open ·
+**2020-04-24** · last push **2026-09-11** · **2 GitHub releases** (2.1.0 @2023-04-26, 2.0.0 @2020-10-26) —
+none since 2023-04-26 · 5 commits/90 d, **1 human** · 43 open ·
 **licence: code BSD-3-Clause; visual design CC0; tilesets ODbL (OSM attribution mandatory); tangram icons
 MIT; the Daylight landcover layer = ESA WorldCover CC-BY 4.0 (needs its own credit)** · **offline: yes** —
 the style JSON and the tiles are what we pack · better than ours: **day and night from one generated
@@ -901,3 +906,5 @@ here so the two map files do not compete for numbers. The CEO owns the numbering
 - **The exact New Zealand OSM coverage quality** for **entrances** and **access restrictions** — the tags
   our courier layers depend on are community-validated and **spotty in NZ**; the extent is **UNVERIFIED**
   and is a T5.2 measurement.
+
+Corrected by the verifier pass of 2026-10-21 (VERIFICATION-C.md): 3 cards corrected.

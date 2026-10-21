@@ -143,15 +143,18 @@ OSV 0 · **Expo 58**: the Expo module is validated on **SDK 57 / RN 0.86** — w
 WATCH — the strongest challenger; it is the de-vendorisation of the RevenueCat pattern.**
 
 **P15 — `better-auth/better-auth` (Stripe plugin)** ⭐ https://github.com/better-auth/better-auth — **30 392 ★** /
-2 994 f · pushed 2026-10-20 · MIT · last release **v1.7.12 @ 2026-10-20** · npm **`@better-auth/stripe@1.7.12`,
-1 065 397 dl/30 d** · **OSV: 1 — GHSA-h3rm-78g3-j7cp (2026-07-24), "cross-organization billing tampering in
-organization subscription actions", fixed 1.6.21 / 1.7.0-beta.10** · **DECISION: WATCH — the plugin that would keep
+2 994 f · pushed 2026-10-20 · MIT · last release **v1.7.12 @ 2026-10-20** · **503 commits/90 d, 103 human
+maintainers** · npm **`@better-auth/stripe@1.7.12`, 1 065 397 dl/30 d** · **OSV: 1 on the `@better-auth/stripe`
+package — GHSA-h3rm-78g3-j7cp (2026-07-24), "cross-organization billing tampering in
+organization subscription actions", fixed 1.6.21 / 1.7.0-beta.10** · **the `better-auth` repository's own advisory
+list holds 37 — 3 critical, 22 high, 7 medium, 5 low (the npm package `better-auth` accounts for 22 of them)** ·
+**DECISION: WATCH — the plugin that would keep
 orgs and subscriptions in one system, but it carries exactly the tenant-isolation bug class V4 §10.3 demands we
 test.**
 
 **P16 — `polarsource/polar`** ⭐ https://github.com/polarsource/polar — **10 372 ★** /800 f · created 2023-01-26 ·
 pushed 2026-10-20 · **Apache-2.0** · last release **`@polar-sh/cli@3.0.0 @ 2026-10-16`** · **76 releases/6 m** ·
-**100 commits/90 d, 13 humans** · **68 open / 2 364 closed** · **DECISION: WATCH — the only full billing engine
+**1 831 commits/90 d, 14 humans** · **68 open / 2 364 closed** · **DECISION: WATCH — the only full billing engine
 with a clean permissive licence; a merchant-of-record model is attractive for GST (§4.3).**
 
 **P17 — `getlago/lago`** ⭐ https://github.com/getlago/lago — **10 697 ★** /773 f · created 2022-02-28 · pushed
@@ -172,7 +175,7 @@ pushed 2026-10-20 · **AGPL-3.0** · last release **v2.1.40 @ 2026-10-17** · **
 **100 commits/90 d, 13 humans** · **80 open / 35 closed** · **DECISION: REJECT — AGPL → clean-room study only.**
 
 **P21 — `dubinc/dub`** ⭐ https://github.com/dubinc/dub — **24 919 ★** /3 333 f · created 2022-08-27 · pushed
-2026-10-20 · licence **NOASSERTION** (source-available, directory-scoped) · **no GitHub releases** ·
+2026-10-20 · licence **AGPL-3.0 base licence with a directory-scoped proprietary overlay** — `LICENSE.md`: *"Portions of this software — namely all files that reside under the following directories of this repository — are licensed under the license defined in ee/LICENSE.md … Content outside of the above mentioned directories or restrictions above is available under the AGPLv3 license as defined below."* (GitHub's `license.spdx_id` is NOASSERTION) · **no GitHub releases** ·
 **100 commits/90 d, 6 humans** · **55 open / 825 closed** · **DECISION: REJECT — not a standard permissive licence,
 and it is a link/subscription product, not a payments engine.**
 
@@ -501,7 +504,7 @@ happened upstream once. The verdict:
 ### 3.5 `polarsource/polar` (P16) — the permissive billing engine
 
 **Read.** The card data: **10 372 ★** /800 f, created 2023-01-26, pushed 2026-10-20, **Apache-2.0**, last release
-**`@polar-sh/cli@3.0.0 @ 2026-10-16`**, **76 releases/6 m**, **100 commits/90 d, 13 humans**, **68 open / 2 364
+**`@polar-sh/cli@3.0.0 @ 2026-10-16`**, **76 releases/6 m**, **1 831 commits/90 d, 14 humans**, **68 open / 2 364
 closed**, repo 557 MB.
 
 **Why it matters.** It is the **only full billing engine in this pool with a clean permissive licence** and a
@@ -823,7 +826,9 @@ Airwallex** (a Kiwi card fallback; POLi's one-off bank transfer is wrong for aut
 **REJECT:** `stripe-react-native`/`stripe-android`/`stripe-ios` **for the subscription** (Play policy + the open
 New-Architecture and cold-start issues #2575/#2567) · `juspay/hyperswitch` (a router we do not need) ·
 `getlago/lago`, `meteroid-oss/meteroid`, `flexprice/flexprice`, `frappe/books` (AGPL-3.0 → clean-room study only)
-· `akaunting/akaunting` (BSL — banned by CONSTRAINTS.md) · `dubinc/dub`, `InvoicePlane`, `vendurehq/vendure`,
+· `akaunting/akaunting` (BSL — banned by CONSTRAINTS.md) · **`dubinc/dub` (AGPL-3.0 outside the `(ee)`
+directories, with a proprietary overlay inside them → clean-room study only under V4 §11.2, on the same footing as
+`lago`, `meteroid`, `flexprice` and `frappe/books`)** · `InvoicePlane`, `vendurehq/vendure`,
 `medusajs/medusa` (non-permissive licences) · `saleor`, `spree` (commerce) · `dj-stripe` (Django) ·
 `a-tokyo/react-native-stripe-checkout-webview` (Play-policy violation for digital goods) · `dooboolab/react-native-iap`
 (the repository is **archived**; use `expo-iap`).
@@ -915,3 +920,4 @@ Re-run on the first Monday of each month and update this file:
 - **The IRD-compliant invoice fields** (GST number, taxable period, GST amount) — not verified against an IRD
   checklist. **UNVERIFIED.**
 - **All benchmarks P1–P9** — **UNVERIFIED**; no eval set exists and no harness has run.
+- **Corrected by the verifier pass of 2026-10-21 (VERIFICATION-A/B/D.md): 3 cards corrected.**

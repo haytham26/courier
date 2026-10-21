@@ -194,11 +194,11 @@ GitHub facts were read **2026-10-21** through `scripts/gh.ps1` (the token in `.e
 
 **C6 — `fastlane/fastlane`** ⭐ https://github.com/fastlane/fastlane — **42 268 ★** /6 042 f · created **2014-12-02** · last release **2.241.1, 2026-10-15** · **12 releases/6 m** · trend proxy: **100+ commits/90 d, 6 humans** · issues **520 open / 12 826 closed** · **MIT** · **Relevance:** store metadata, screenshots and release notes for the Play/App Store submissions. A Ruby toolchain is a cost we do not need while `eas submit` exists. **DECISION: WATCH (only if the store metadata automation outgrows `eas submit`).**
 
-**C7 — `renovatebot/renovate`** ⭐ https://github.com/renovatebot/renovate — **22 812 ★** /3 377 f · created **2016-12-17** · last release **44.172.0, 2026-10-20** · **100+ releases/6 m** · trend proxy: **100+ commits/90 d, 8 humans** · issues **1 008 open / 6 014 closed** · **AGPL-3.0** (CI-only) · **Relevance:** dependency updates with a CI gate — V4 §7 "Renovate/Dependabot with CI gate". AGPL is fine here because it never enters the APK; it must be recorded in `docs/LICENSES.md`. **DECISION: ADOPT (CI-only).**
+**C7 — `renovatebot/renovate`** ⭐ https://github.com/renovatebot/renovate — **22 812 ★** /3 377 f · created **2016-12-17** · last release **44.173.0, 2026-10-21** · **100+ releases/6 m** · trend proxy: **100+ commits/90 d, 8 humans** · issues **1 008 open / 6 014 closed** · **AGPL-3.0** (CI-only) · **Relevance:** dependency updates with a CI gate — V4 §7 "Renovate/Dependabot with CI gate". AGPL is fine here because it never enters the APK; it must be recorded in `docs/LICENSES.md`. **DECISION: ADOPT (CI-only).**
 
 **C8 — `google-github-actions/auth`** ⭐ https://github.com/google-github-actions/auth — **1 405 ★** /304 f · created **2021-09-16** · last release **v3.0.0, 2025-08-28** · **0 releases/6 m** · trend proxy: **1 commit/90 d, 1 human** · issues **8 open / 216 closed** · **Apache-2.0** · **Relevance:** OIDC instead of a long-lived secret for cloud access (Oracle Cloud in P6). **DECISION: ADOPT (OIDC for the cloud deploy, not for CI).**
 
-**C9 — `sigstore/cosign`** ⭐ https://github.com/sigstore/cosign — **6 374 ★** /826 f · created **2021-02-04** · last release **v3.1.3, 2026-08-06** · **5 releases/6 m** · trend proxy: **69 commits/90 d, 23 humans** · issues **109 open / 1 112 closed** · **Apache-2.0** · **Relevance:** sign the release APK and attest the build — V4 §7 "signed release APK, provenance in GitHub Release". **DECISION: ADOPT (sign + attest).**
+**C9 — `sigstore/cosign`** ⭐ https://github.com/sigstore/cosign — **6 374 ★** /826 f · created **2021-02-04** · last release **v3.1.4, 2026-10-20** (published 2026-10-20T18:27Z) · **5 releases/6 m** · trend proxy: **69 commits/90 d, 23 humans** · issues **109 open / 1 112 closed** · **Apache-2.0** · **Relevance:** sign the release APK and attest the build — V4 §7 "signed release APK, provenance in GitHub Release". **DECISION: ADOPT (sign + attest).**
 
 **C10 — `anchore/syft`** ⭐ https://github.com/anchore/syft — **9 703 ★** /1 008 f · created **2020-05-07** · last release **v1.55.0, 2026-10-19** · **14 releases/6 m** · trend proxy: **100+ commits/90 d, 26 humans** · issues **516 open / 1 089 closed** · **Apache-2.0** · **Relevance:** the SBOM generator (CycloneDX) for the release. **DECISION: ADOPT (SBOM).**
 
@@ -263,7 +263,7 @@ GitHub facts were read **2026-10-21** through `scripts/gh.ps1` (the token in `.e
 | B1 | **`mobile-dev-inc/Maestro` `cli-2.11.0`** | **KEEP + extend** | 16 144 ★, Apache-2.0, 0 advisories, and a native `assertScreenshot` — one tool for E2E **and** visual regression, with no second vendor. |
 | B7 | **`reg-viz/reg-cli` 0.19.0-rc3** | **ADOPT (visual diff)** | MIT, 0 advisories, self-hosted: the courier's screenshot never leaves our CI artefacts. |
 | B13/B14 | **`stryker-js@10.0.0` + `mutmut 3.8.0`** | **ADOPT (install; the gate is written but not wired)** | CONSTRAINTS.md names both; neither is installed and there is no `mutation` script — a named-but-absent gate. |
-| C9–C11, C14, C25, C17 | **cosign 3.1.3 · syft 1.55.0 · grype 0.121.0 · scorecard 5.6.0 · osv-scanner-action 2.7.0 · harden-runner 2.22.2** | **ADOPT (supply chain)** | Exactly V4 §7: SBOM → scan → sign → attest → score, plus one line of runner hardening. |
+| C9–C11, C14, C25, C17 | **cosign 3.1.4 · syft 1.55.0 · grype 0.121.0 · scorecard 5.6.0 · osv-scanner-action 2.7.0 · harden-runner 2.22.2** | **ADOPT (supply chain)** | Exactly V4 §7: SBOM → scan → sign → attest → score, plus one line of runner hardening. |
 | B4 + C27 | **`@playwright/test@1.64.1` + `reactivecircus/android-emulator-runner`** | **ADOPT (web E2E + CI emulator)** | Playwright drives the dashboard and the Lighthouse job; the emulator action's own snapshot-caching recipe is the lever on our 17-minute build. |
 
 **Explicitly not shortlisted, with reasons:** `argos-ci/argos` (open **critical** advisory `GHSA-jw2w-wr3r-jp8w`, 2026-05-11) · `getsentry/sentry` (FSL-1.1) · `lost-pixel` (stale) · `mutpy` (dormant, unlicenced) · `wix/Detox` (Maestro is locked) · `appium` (heavier than we need) · `bugsnag-react-native` (dead since 2020) · `invertase/react-native-firebase` (hosted Google Crashlytics breaks the privacy rule) · `tajo/ladle` (dormant) · `slsa-github-generator` (near-dormant) · `PostHog/posthog-react-native` (dead; merged into `posthog-js`).
@@ -524,6 +524,7 @@ Run this on the **first working day of each month**, in this order. Anything tha
 - **Whether `expo-updates` works with our pnpm workspace's Metro resolution** — the same Metro layer that fails today on `@courier/design-tokens/themes`; UNVERIFIED until the release build is green.
 - **The iOS side of everything** — no iOS build, no iOS simulator, no iOS E2E in v1; every iOS card in §1 is scoped to post-v1.
 - **The `sentry-cli` and `highlight/highlight` issues-only counts** — the search API was rate-limited for those two; the repo objects' `open_issues_count` (which includes PRs) is quoted instead and is labelled as such.
+- **Corrected by the verifier pass of 2026-10-21 (VERIFICATION-A/B/D.md): 2 cards corrected.**
 
 ---
 

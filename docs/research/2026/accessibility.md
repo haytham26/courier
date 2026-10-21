@@ -97,7 +97,7 @@ criteria** (2.2 adds 9 net), levels A / AA / AAA · the criteria that bind a voi
 non-text content, **1.3.1** (A) info and relationships, **1.3.4** (AA) orientation, **1.4.1** (A) use of colour,
 **1.4.3** (AA) contrast minimum 4.5:1 / 3:1 large text, **1.4.4** (AA) resize text **200 %**, **1.4.10** (AA) reflow
 at 320 CSS px, **1.4.11** (AA) non-text contrast **3:1**, **1.4.12** (AA) text spacing, **2.1.1** (A) keyboard,
-**2.2.2** (A) pause/stop/hide, **2.3.3** (AAA) animation from interactions, **2.4.3** (A) focus order, **2.4.7** (A)
+**2.2.2** (A) pause/stop/hide, **2.3.3** (AAA) animation from interactions, **2.4.3** (A) focus order, **2.4.7** (AA)
 focus visible, **2.4.11** (AA) focus not obscured, **2.5.2** (A) pointer cancellation, **2.5.7** (AA) dragging
 movements, **2.5.8** (AA) target size minimum **24 × 24 CSS pixels**, **3.2.6** (A) consistent help, **3.3.2** (A)
 labels or instructions, **3.3.7** (A) redundant entry, **3.3.8** (AA) accessible authentication, **4.1.2** (A) name,
@@ -144,7 +144,7 @@ and RN 0.88 is a New-Architecture-first release · **our fit: the version that c
 `role`, `accessibilityActions` and `experimental_accessibilityOrder`** · **DECISION: KEEP (locked; D21).**
 
 **S5 — Expo SDK 58** — https://github.com/expo/expo — **52 874 ★** /14 665 f · pushed **2026-10-20** ·
-**100+ commits/90 d, 36 humans** · 928 open issues · **MIT** · our pinned SDK (`expo ~58.0.14`) · **a11y surface:
+**100+ commits/90 d, 36 humans** · 324 open issues (946 including pull requests) · **MIT** · our pinned SDK (`expo ~58.0.14`) · **a11y surface:
 `expo` ships no accessibility package of its own — the a11y primitives are all in RN core; what Expo adds is the
 config plugin surface** (`expo-build-properties` for the platform settings, `expo-localization` for RTL and
 locale, `expo-font` for the Figtree contract) · 2026 a11y-relevant PR in the monorepo: **#51632 "[ui] Add
@@ -262,8 +262,8 @@ created **2022-10-12** · last push **2023-10-26** · **MIT** · 0 open issues �
 `accessibilityHint` and `testID` to the community Slider)** · **DECISION: REJECT (a one-component library for a
 component we do not have; the Expo community Slider already got the a11y props in 2026-10).**
 
-**C8 — `zoontek/react-native-localize`** — https://github.com/zoontek/react-native-localize — **2 443 ★** /…
-· created (2019) · last release **3.7.2, 2026-09-15** · **16 commits/90 d, 3 humans** · 4 open issues · **MIT** ·
+**C8 — `zoontek/react-native-localize`** — https://github.com/zoontek/react-native-localize — **2 443 ★** /225 f
+· created **2017-08-01** · last release **3.7.2, 2026-09-15** · **16 commits/90 d, 3 humans** · 4 open issues · **MIT** ·
 New Architecture: yes · the RN localisation library (device locale, RTL detection, `getLocales`) · **our fit:
 SC 1.3.4/3.1.1 need the *device* locale and the *direction*; `expo-localization` 58.0.5 (2026-10-19) does the
 same inside the Expo SDK** · **DECISION: WATCH (prefer `expo-localization`; one localisation library, not two).**
@@ -292,13 +292,13 @@ support + portal accessibility across 22 components** (recorded in the sibling d
 
 **K3 — `gluestack/gluestack-ui`** — https://github.com/gluestack/gluestack-ui — **5 327 ★** /238 f · created
 **2023-01-11** · pushed **2026-09-02** · last release **v5.0.0, 2026-06-25** · **18 commits/90 d, 4 humans** ·
-12 open issues · **licence UNVERIFIED — the API reports no SPDX id and the repository's `LICENSE` file is empty**
-· **our fit: it has the best accessibility primitives in the kit pool, but it is Tailwind/NativeWind-shaped and its
+12 open issues · **licence UNVERIFIED — the API reports no SPDX id and the repository root contains no
+`LICENSE` file at all** · **our fit: it has the best accessibility primitives in the kit pool, but it is Tailwind/NativeWind-shaped and its
 release train has collapsed to one in six months** · **DECISION: WATCH (licence UNVERIFIED and wrong styling
 engine).**
 
 **K4 — `wix/react-native-ui-lib`** — https://github.com/wix/react-native-ui-lib — **7 155 ★** /752 f · created
-**2017-02-08** · pushed **2026-10-17** · **MIT** · 82 open issues · a large component library with an
+**2017-02-08** · pushed **2026-10-17** · **MIT** · 45 open issues (82 including pull requests) · a large component library with an
 accessibility layer · **our fit: a reference, not a dependency** · **DECISION: WATCH (read only).**
 
 ### 1.4 Test and automation tooling (T1–T9)
@@ -340,7 +340,7 @@ accessible name" (open, 2026-08-10); #3495 "iOS: transient viewHierarchy 500 abo
 it, so Maestro is the *harness*, not the *oracle*.**
 
 **T3 — `appium/appium`** — https://github.com/appium/appium — **22 111 ★** /6 295 f · created **2013-01-09** ·
-pushed **2026-10-20** · 66 open issues · **Apache-2.0** · the automation framework with the real accessibility
+pushed **2026-10-20** · 40 open issues (69 including pull requests) · **Apache-2.0** · the automation framework with the real accessibility
 drivers (UIAutomator2, XCUITest) · **our fit: it is the *only* open-source path to a real screen-reader session
 (UIAutomator2 can query the accessibility node tree; XCUITest can drive VoiceOver) — and it is the transport Deque's
 own RN automation uses** · risks: heavier than Maestro (a device farm, a server, a client) · **DECISION: WATCH (the
@@ -367,11 +367,11 @@ plugin was built on ("Building upon the foundation set down by eslint-plugin-jsx
 **our fit: the rules are HTML-shaped** · **DECISION: REJECT for mobile; keep it in the web app's ESLint config.**
 
 **T7 — `wix/Detox`** — https://github.com/wix/Detox — **12 040 ★** /1 909 f · created **2016-06-15** · pushed
-**2026-10-19** · 223 open issues · **MIT** · the other RN E2E framework · **our fit: Maestro is already our
+**2026-10-19** · 203 open issues (223 including pull requests) · **MIT** · the other RN E2E framework · **our fit: Maestro is already our
 runner (`.maestro/`, `android-e2e.yml`)** · **DECISION: REJECT (we have a runner).**
 
 **T8 — `GoogleChrome/lighthouse`** — https://github.com/GoogleChrome/lighthouse — **30 916 ★** /9 771 f · created
-**2016-03-08** · pushed **2026-10-20** · 461 open issues · **Apache-2.0** · it embeds `axe-core` and has an
+**2016-03-08** · pushed **2026-10-20** · 404 open issues (450 including pull requests) · **Apache-2.0** · it embeds `axe-core` and has an
 **accessibility** category · **our fit: the web dashboard's a11y gate (`apps/web`), where the bar in
 `docs/research/2026/web-dashboard-nextjs.md` is "Lighthouse ≥ 95 on performance and accessibility"** ·
 **DECISION: ADOPT for the web dashboard; irrelevant to the mobile app.**
@@ -767,8 +767,9 @@ On the first working day of each month, re-read exactly these and write one line
   those screens do not exist yet in their final form.
 - **The median first-response time** for any repository in this file — not sampled; maintenance claims are based on
   exact release dates, commit counts and maintainer counts only.
-- **The exact licence of `gluestack/gluestack-ui`** — the API reports no SPDX id and the `LICENSE` file is empty.
-  Treated as **UNVERIFIED** and not used.
+- **The exact licence of `gluestack/gluestack-ui`** — the API reports no SPDX id and the repository root contains
+  no `LICENSE` file at all. Treated as **UNVERIFIED** and not used.
+- **Corrected by the verifier pass of 2026-10-21 (VERIFICATION-A/B/D.md): 8 cards corrected.**
 
 ---
 

@@ -77,9 +77,10 @@ advisories from `POST https://api.osv.dev/v1/query`; everything else from `webse
 
 **C1 — `better-auth/better-auth`** ⭐ https://github.com/better-auth/better-auth — **30 392 ★** /2 994 f · created
 **2024-05-19** · pushed **2026-10-20** · **MIT** · last release **v1.7.12 @ 2026-10-20** (and **v1.8.0-beta.1 @
-2026-10-16**, prerelease) · **≥100 releases/6 m** (API page cap) · **≥100 commits/90 d, 32 distinct authors**
-(30 humans + 2 bots) · issues **381 open / 3 585 closed** · npm `better-auth@1.7.12`, **44 611 654 dl/30 d** ·
-**OSV: 22 advisories** (all fixed in ≤ 1.7.x — ledger in §5) · peerDeps accept our stack (`react ^18||^19` ✓ 19.3.0,
+2026-10-16**, prerelease) · **≥100 releases/6 m** (API page cap) · **503 commits/90 d, 103 distinct human authors** · issues **381 open / 3 585
+closed** · npm `better-auth@1.7.12`, **44 611 654 dl/30 d** · **OSV: 22 advisories on the npm package `better-auth`**
+(all fixed in ≤ 1.7.x — ledger in §5; the repository's own advisory list holds **37** — 3 critical, 22 high, 7 medium,
+5 low) · peerDeps accept our stack (`react ^18||^19` ✓ 19.3.0,
 `vitest ^2–^5` ✓ 4.1.11, `pg ^8` ✓ 8.23.1) · **Expo 58**: the first-class client lives here, but the guide still
 targets SDK 55 → our SDK is ahead of the documentation · **DECISION: ADOPT (locked) — but move 1.7.10 → 1.7.12.**
 
@@ -329,7 +330,7 @@ pushed 2026-04-21 · Apache-2.0 · 0 commits/90 d · **DECISION: KEEP as a readi
 
 | # | Candidate | Decision | One-line reason (verified 2026-10-21) |
 |---|---|---|---|
-| C1 | **better-auth/better-auth** | **ADOPT (locked)** | 30 392 ★, MIT, ≥100 releases/6 m, 30 humans/90 d, 44.6 M dl/30 d, and the only candidate with a first-class Expo client **and** an organisation+team model that matches D11. |
+| C1 | **better-auth/better-auth** | **ADOPT (locked)** | 30 392 ★, MIT, ≥100 releases/6 m, 103 humans/90 d, 44.6 M dl/30 d, and the only candidate with a first-class Expo client **and** an organisation+team model that matches D11. |
 | C2 | **@better-auth/expo** | **ADOPT (locked)** | 5.1 M dl/30 d, 0 advisories, and its peer ranges are satisfied by our Expo 58 pins. |
 | C42 | **expo/expo** (secure-store, linking, web-browser, constants, network) | **ADOPT (substrate)** | The storage and deep-link substrate; `expo@58.0.16` is one patch ahead of our `~58.0.14`. |
 | C33 | **panva/jose** | **KEEP** | 602 M dl/30 d, 0 open issues, 3 advisories that are JWE-only; the reference JOSE implementation and the only safe device-side verifier. |
@@ -552,7 +553,10 @@ the cookie is read from the device store — plus the locked-phone variant from 
 
 ## 4. The advisory ledger (OSV, queried 2026-10-21)
 
-`better-auth` — **22 advisories** (oldest 2024-12-30, newest 2026-07-24). `@better-auth/passkey` — **1**.
+`better-auth` — **22 advisories on the npm package `better-auth`** (oldest 2024-12-30, newest 2026-07-24). The
+repository's own advisory list holds **37** (3 critical, 22 high, 7 medium, 5 low) — the two numbers count different
+things (the npm package versus the repository), and the payments file carries the repository count.
+`@better-auth/passkey` — **1**.
 `@better-auth/stripe` — **1**. `jose` — **3** (all JWE-only). **0** for `@better-auth/expo`, `@better-auth/cli`,
 `expo-secure-store`, `expo-crypto`, `expo-linking`, `expo-network`.
 
@@ -708,7 +712,7 @@ the sourced document and wins; the rows below use the teardown.
 **KEEP (locked decision, unchanged): Better Auth as the single auth core, with the `organization` (teams) + `expo`
 + `jwt`/`jwks` plugin set, ES256 + JWKS, rate limits, secure cookies, and a resource-server-only API with zero
 shared secrets.** Reasons, all verified on 2026-10-21: it is MIT; it is the only candidate with a **first-class
-Expo client** (5.1 M dl/30 d) **and** an organisation+team model that matches D11; it moves fastest (30 humans/90 d,
+Expo client** (5.1 M dl/30 d) **and** an organisation+team model that matches D11; it moves fastest (103 humans/90 d,
 ≥100 releases/6 m, 44.6 M dl/30 d); and `services/auth` + `apps/api/app/auth/jwks.py` + the test suite already
 implement it correctly.
 
@@ -805,3 +809,4 @@ the mobile client.
 - **The rate limiter's behaviour under IPv6 rotation on our configuration** — upstream is patched since 1.4.17, our
   pin is above it, but **no test of ours proves it**. UNVERIFIED.
 - **The vendor-stated performance of every candidate** — no benchmark was run. UNVERIFIED.
+- **Corrected by the verifier pass of 2026-10-21 (VERIFICATION-A/B/D.md): 1 card corrected.**

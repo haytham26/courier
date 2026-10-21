@@ -123,7 +123,7 @@ package upgrade"** (an Android hardening blocker) · **DECISION: KEEP the 5.2.3 
 **C4 — `react-native-image-picker/react-native-image-picker`** https://github.com/react-native-image-picker/react-native-image-picker
 — **8 631 ★** /2 070 f · created **2015-06-08** · pushed **2026-10-13** · **MIT** · last release **v8.3.1 @
 2026-10-14** (**2 releases in 6 m**) · **5 commits/90 d, 3 humans** · npm **8.3.0 @ 2026-10-13**, **252 632
-downloads/week** · 100 open issues · New Architecture: yes (v8 is a TurboModule) · on-device ·
+downloads/week** · 305 open issues (352 including pull requests) · New Architecture: yes (v8 is a TurboModule) · on-device ·
 **better than ours**: it is the **standard "attach a photo" module** — it opens the system camera *or* the photo
 library, and it returns a file URI with a known type · risks: **it launches another app for the camera**, which
 is exactly what a courier must not do (two taps, another app, a lost context) — it is right for "attach an
@@ -141,7 +141,7 @@ stealing; the library is not).**
 **C6 — `bamlab/react-native-image-resizer`** https://github.com/bamlab/react-native-image-resizer — **1 660 ★**
 /361 f · created **2015-11-30** · pushed **2026-10-09** · **MIT** · last GitHub release **v3.0.11 @ 2024-11-26**
 (38 releases, **0 in 6 m**) · **0 commits/90 d** on the default branch · npm `react-native-image-resizer`
-**latest 1.4.5 @ 2021-06-16**, **17 911 downloads/week** · 3 open issues · on-device ·
+**latest 1.4.5 @ 2021-06-16**, **17 911 downloads/week** · 1 open issue (3 including pull requests) · on-device ·
 **better than ours**: the classic *"resize and compress in one native call"* module, which is the whole POD
 compression job in one line · risks: **the npm `latest` tag is four years behind the GitHub tag** — anyone who
 `npm i react-native-image-resizer` gets the 2021 build; the package also has **no New Architecture build** in the
@@ -150,7 +150,7 @@ old line · **DECISION: REJECT (stale, and `expo-image-manipulator` covers it in
 **C7 — `mrousavy/react-native-nitro-image`** ⭐ https://github.com/mrousavy/react-native-nitro-image — **653 ★**
 /41 f · created **2025-06-10** · pushed **2026-09-14** · **MIT** · last release **v0.15.2 @ 2026-08-21** (38
 releases, **4 in 6 m**) · **12 commits/90 d, 1 human** · npm **0.15.2 @ 2026-08-20**, **128 323 downloads/week**
-· 45 open issues · New Architecture: yes (**Nitro**, the same runtime as VisionCamera v5) · on-device ·
+· 20 open issues (45 including pull requests) · New Architecture: yes (**Nitro**, the same runtime as VisionCamera v5) · on-device ·
 **better than our choice**: it is the **2026 image library**: decode → crop → resize → **quality** →
 **Base64**, all on the **UI thread without a bridge hop**, by the **same author** as VisionCamera (Marc
 Rousavy) and on the **same Nitro runtime** — so it composes with the scanner pipeline and with our app's
@@ -189,7 +189,7 @@ nobody uses it; 6 months old; **DECISION: WATCH (the 2026 newcomer with the righ
 **C11 — `YanYuanFE/react-native-signature-canvas`** https://github.com/YanYuanFE/react-native-signature-canvas —
 **507 ★** /165 f · created **2018-08-13** · pushed **2026-09-12** · **MIT** · last release **v5.1.1 @ 2026-08-06**
 (7 releases, 1 in 6 m) · **2 commits/90 d, 1 human** · npm **5.1.1 @ 2026-08-06**, **129 662 downloads/week** ·
-17 open issues · **better than ours**: it is the **live** signature library (the popular one), and 2026 brought a
+81 open issues (97 including pull requests) · **better than ours**: it is the **live** signature library (the popular one), and 2026 brought a
 **security hardening commit** — `98f158d` 2026-07-05 "fix: harden string injection, prop handling, and WebView
 bridge" — and a rendering fix `369aa57` 2026-08-06 "fix: paint initial dataURL only once via ResizeObserver
 resize path" · risks: **it is a WebView** — a WebView inside the POD flow is heavy, it costs cold start, and the
@@ -202,7 +202,7 @@ call into JavaScript module method WebViewMessageHandler1.onMessage()" ·
 
 **C12 — `RepairShopr/react-native-signature-capture`** https://github.com/RepairShopr/react-native-signature-capture
 — **962 ★** /506 f · created **2015-07-09** · **last push 2024-07-17** · **last commit 2021-06-07** · **MIT** ·
-**no GitHub releases** · **0 commits/90 d** · 100 open issues · **better than ours**: none that survives the
+**no GitHub releases** · **0 commits/90 d** · 136 open issues (197 including pull requests) · **better than ours**: none that survives the
 maintenance check · risks: **#308 (2025-01-15) "New architecture support"** — the blocker for us; **#301
 (2024-03-17) "Signature capture crashing on ios 17.4"**; **#302 (2024-03-27) "iOS privacy manifest"** — an App
 Store rejection risk; **#304 (2024-05-22) "android dragging produces nothing"**; #300 (2024-02-26) save/clear
@@ -265,7 +265,7 @@ uploader · **DECISION: WATCH (the transfer-engine reference for our upload work
 
 **C21 — `KnifeLemon/Filee`** ⭐ (2026 newcomer) https://github.com/KnifeLemon/Filee — **7 647 ★** /462 f ·
 **created 2026-09-29** · pushed **2026-10-20** · **MIT** · last release **v1.12.0 @ 2026-10-19** (**27 releases in
-3 weeks**) · **100+ commits/90 d, 6 humans** · 77 open issues · **better than ours**: the **2026 image-file
+3 weeks**) · **100+ commits/90 d, 6 humans** · 57 open issues (66 including pull requests) · **better than ours**: the **2026 image-file
 utility** — it appeared at the top of `image upload created:>2026-01-01` with an implausible star count for a
 three-week-old project; it may be a **file/compression toolkit** that covers our POD path ·
 risks: **the stars are not explained by the commit history** (7 647★ and 6 humans in 3 weeks); we did not read
@@ -275,7 +275,7 @@ stars).**
 
 **C22 — `tus/tus-js-client`** https://github.com/tus/tus-js-client — **2 630 ★** /338 f · created **2015-04-06** ·
 pushed **2026-10-13** · **MIT** · last release **v5.0.0-pre3 @ 2026-09-30** (43 releases, 1 in 6 m) · **25
-commits/90 d, 5 humans** · 84 open issues · server/client library · **better than ours**: the **resumable
+commits/90 d, 5 humans** · 56 open issues (85 including pull requests) · server/client library · **better than ours**: the **resumable
 upload** protocol — a POD photo uploaded in a dead zone can resume from the byte offset instead of restarting,
 which is the difference between "the proof exists" and "the proof was lost" · risks: it needs a tus server (or
 an S3 adapter); the JS client is **not React Native** (it is browser/Node oriented) → we would implement the
@@ -283,7 +283,7 @@ protocol, not import it · **DECISION: WATCH (the protocol to specify; the serve
 
 **C23 — `op-engineering/op-sqlite`** https://github.com/op-engineering/op-sqlite — **1 049 ★** /92 f · created
 **2023-11-06** · pushed **2026-09-29** · **MIT** · last release **18.2.5 @ 2026-09-21** (100 releases, **30 in
-6 m**) · **76 commits/90 d, 7 humans** · 12 open issues · **our pin** (18.2.5) · on-device · **better than our
+6 m**) · **76 commits/90 d, 7 humans** · 8 open issues (12 including pull requests) · **our pin** (18.2.5) · on-device · **better than our
 choice**: it is already the **event-log store** that T7.1 depends on, so the POD queue needs **no new
 dependency** — the queue is a table of `pod_capture` rows with a `state` column (`queued → uploaded →
 confirmed`), and it is replayed by the same sync engine that already exists · risks: none material; the queue
@@ -291,7 +291,7 @@ must not store **image bytes** in SQLite (see §6) · **DECISION: KEEP (the queu
 
 **C24 — `mrousavy/react-native-mmkv`** https://github.com/mrousavy/react-native-mmkv — **8 518 ★** /345 f · created
 **2021-02-24** · pushed **2026-10-08** · **MIT** · last release **v4.3.2 @ 2026-06-22** (100 releases, 1 in 6 m) ·
-**8 commits/90 d, 3 humans** · 24 open issues · on-device · **better than our choice**: the fastest key-value
+**8 commits/90 d, 3 humans** · 24 open issues (including pull requests; the issue-only count was not re-read) · on-device · **better than our choice**: the fastest key-value
 store for the **queue metadata** (the photo path, the bytes, the retry count) · risks: **we already have
 op-sqlite for structured data** — two stores is worse than one · **DECISION: REJECT (op-sqlite is enough).**
 
@@ -387,7 +387,7 @@ leaving the device without consent" unless the driver chooses POD.
 | C7 | **`react-native-nitro-image` 0.15.2** | **WATCH (the 2026 decode/compress candidate)** | Nitro, same author as VisionCamera, 128 k downloads/week — but #173 (EXIF orientation), #175 (no load events) and #176 (decoded image not released) are open. |
 | C10 | **`react-native-media-toolkit` 2.4.2** | **WATCH (2026 newcomer)** | 16 releases/6 m, Nitro Android bindings, `ph://` support and a software-encoder fallback — but 816 downloads/week. |
 | C18/C20 | **`react-native-nitro-cloud-uploader` · `react-native-background-downloader`** | **WATCH (the upload worker reference)** | The 2026-native uploader and the fastest-moving transfer library; we write our own worker, but we should not write it blind. |
-| C11/C12 | **`react-native-signature-canvas` (YanYuanFE) · `react-native-signature-capture` (RepairShopr)** | **WATCH / REJECT** | The live one is a WebView with 17 open issues (#378 iOS not working, #369 duplicate signatures); the popular one has not been committed to since 2021 and has no New Architecture (#308). **We will draw our own signature surface.** |
+| C11/C12 | **`react-native-signature-canvas` (YanYuanFE) · `react-native-signature-capture` (RepairShopr)** | **WATCH / REJECT** | The live one is a WebView with 81 open issues (#378 iOS not working, #369 duplicate signatures); the popular one has not been committed to since 2021 and has no New Architecture (#308). **We will draw our own signature surface.** |
 | C4/C5/C9 | **`react-native-image-picker` · `react-native-image-crop-picker` · `react-native-photo-manipulator`** | **REJECT for the POD path / KEEP (one idea each)** | The picker launches another app (two taps, lost context); the crop-picker duplicates the camera stack; the photo-manipulator writes to the gallery, which we do not want by default. |
 | C6/C8/C19/C25/C24 | **`react-native-image-resizer` · `react-native-compressor` · `react-native-background-upload` · `react-native-fs` · `react-native-mmkv`** | **REJECT** | Stale (2021 npm tag, 2022 release, 2022 release, 2024 push) or redundant with `expo-image-manipulator` and `op-sqlite`. |
 | C15/C33 | **`react-native-cameraroll` · `hypersocialinc/shots`** | **WATCH (references, not dependencies)** | The gallery permission model is the reference for photo access; a 2026 screenshot-testing tool is the answer to "how do we test a camera screen". |
@@ -554,7 +554,7 @@ the **image** half of its API, which we did not read in detail → **UNVERIFIED*
 
 ### 3.5 `YanYuanFE/react-native-signature-canvas` (C11) — the signature decision
 
-**What I read.** The commit history (2026-06-28 → 2026-08-06), the 6 most recent PRs, and **17 open issues**.
+**What I read.** The commit history (2026-06-28 → 2026-08-06), the 6 most recent PRs, and **81 open issues**.
 
 **Commits:** `672274e` 2026-08-06 "5.1.1" · **`369aa57` 2026-08-06 "fix: paint initial dataURL only once via
 ResizeObserver resize path"** · `5d520b6` 2026-07-05 "Merge branch 'master' of yanyuan.github.com:…" · `d80b93f`
@@ -770,3 +770,7 @@ Re-run on the first working day of each month (V4 §11.3). A camera/image candid
   repository and in the npm metadata); the entry is stale, as is the repo URL (it moved from `mrousavy/` to
   `margelo/` on 2026-08-29, commit `91bae1f` / PR #4176). **The licence ledger must be corrected by the Platform
   squad; this role does not edit it.**
+- **The issue-only count for `mrousavy/react-native-mmkv` (C24)** — the verifier confirmed that the card's figure
+  of 24 is GitHub's `open_issues_count` (issues **and** pull requests); the issue-only number was not re-read, so
+  the card now labels the figure as pull-request-inclusive rather than inventing a new count.
+- **Corrected by the verifier pass of 2026-10-21 (VERIFICATION-A/B/D.md): 9 cards corrected.**

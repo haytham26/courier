@@ -96,7 +96,9 @@ by `expo install`) · production: every Expo app with push · docs: `docs.expo.d
 third-party SDK at all** — it covers local notifications, scheduled triggers, channels, badges, foreground
 handling and the FCM/APNs token, and in SDK 58 it **shows foreground notifications by default and no longer drops
 a notification when the handler is slow** (CHANGELOG 58.0.0, #49072) · risks: it is a monorepo (slow CI),
-the `expo-notifications` package has **zero** dependencies (good), and the **Expo push service itself is a third
+the `expo-notifications` package has **five** dependencies, all Expo-internal (`badgin`,
+`expo-constants`, `abort-controller`, `expo-application`, `@expo/image-utils`) — not zero, but not a
+third-party tree either, and the **Expo push service itself is a third
 party** — but `getDevicePushTokenAsync()` gives us the native FCM/APNs token so we can leave Expo's transport
 without touching the app code · **DECISION: ADOPT (the notification engine, local + remote).**
 
@@ -116,7 +118,7 @@ dependency).**
 with services provided by OneSignal"*) — GitHub's licensee reports **NOASSERTION**, npm metadata says **MIT**,
 the file itself says **Modified MIT with a use restriction** · last release **5.5.15 @ 2026-10-14** (**20 releases
 in 6 m**, 100 total) · npm `react-native-onesignal` **5.5.15 @ 2026-10-13**, **100 956 downloads/week** · **40
-commits/90 d, 7 humans** · 18 open issues · Expo SDK 58: the package is a plain RN module; **New Architecture:
+commits/90 d, 7 humans** · 15 open issues (18 including pull requests) · Expo SDK 58: the package is a plain RN module; **New Architecture:
 unverified** (v5 is a Nitro-free classic bridge; the SDK ships an `expo` sample app) · **better than ours**:
 push + in-app + email + SMS in one SDK, a **dashboard for per-device delivery state**, and the best-documented
 **OEM-delivery coaching** we have read (it tells you exactly how to make a Samsung/Xiaomi/Huawei device deliver) ·
@@ -194,8 +196,8 @@ APNs device-token lifecycle and the iOS 27 scene migration · risks: same as C11
 
 **C13 — `wix/react-native-notifications`** https://github.com/wix/react-native-notifications — **3 341 ★** /752 f ·
 created **2016-04-06** · pushed **2026-10-05** · **MIT** · **last release 5.1.0 @ 2023-09-14** (28 releases,
-**0 in 6 m**) · **0 commits/90 d** on the default branch (the 2026-10-05 push is not on `master`) · 7 open issues ·
-New Architecture: **unverified**; the last release predates the New Architecture era · **better than ours**: it
+**0 in 6 m**) · **0 commits/90 d** on the default branch (the 2026-10-05 push is not on `master`) · 3 open issues
+(7 including pull requests) · New Architecture: **unverified**; the last release predates the New Architecture era · **better than ours**: it
 is the most complete **local-notification** engine ever written (repeating triggers, iOS categories, Android
 channels, localisation, and the "notification centre" pattern) and it is the reference for a **local notification
 that is scheduled while the phone is offline** · risks: **3 years without a release** — the code is MIT and
@@ -217,7 +219,7 @@ ecosystem, used as a fallback by many apps · risks: iOS only, no Android channe
 
 **C16 — `evollu/react-native-fcm`** https://github.com/evollu/react-native-fcm — **1 728 ★** /659 f · created
 **2016-05-29** · last push **2022-12-06** · **MIT** · last release **v16.2.4 @ 2018-11-04** (98 releases, 0 in 6 m) ·
-**0 commits/90 d** · 100 open issues · **better than ours**: none · risks: stale, no New Arch · **DECISION: REJECT.**
+**0 commits/90 d** · 285 open issues (305 including pull requests) · **better than ours**: none · risks: stale, no New Arch · **DECISION: REJECT.**
 
 **C17 — `instamobile/react-native-firebase`** https://github.com/instamobile/react-native-firebase — **439 ★** /
 130 f · created **2020-05-18** · last push **2024-11-06** · **MIT** · no releases · 16 open issues · the abandoned
@@ -251,8 +253,8 @@ library for both).**
 
 **C21 — `Transistorsoft/react-native-background-fetch`** https://github.com/Transistorsoft/react-native-background-fetch
 — **1 611 ★** /196 f · created **2016-08-01** · last push **2026-04-22** · **MIT** · no GitHub releases; npm
-`react-native-background-fetch` **4.4.2 @ 2026-04-15** · **54 574 downloads/week** · 1 open issue · New
-Architecture: yes (v4 supports the New Architecture) · **better than ours**: the **de-facto** way an RN app wakes
+`react-native-background-fetch` **4.4.2 @ 2026-04-15** · **54 574 downloads/week** · 0 open issues (1 including
+pull requests) · New Architecture: yes (v4 supports the New Architecture) · **better than ours**: the **de-facto** way an RN app wakes
 up to flush a queue when the network returns, with a headless-JS task and an Android `HeadlessTask` ·
 risks: OEM schedulers (Android 12+ `WorkManager` quotas, Xiaomi/Huawei) still limit it; it is **not** a
 guaranteed real-time path · **DECISION: WATCH (the queue flush trigger; never the delivery path).**
@@ -287,7 +289,7 @@ app · **DECISION: KEEP (credential workflow for T7.10).**
 
 **C26 — `twilio/twilio-node`** https://github.com/twilio/twilio-node — **1 543 ★** /564 f · created **2013-02-19** ·
 pushed **2026-10-12** · **MIT** · last release **6.2.0 @ 2026-10-13** (**7 releases in 6 m**, 100 total) · **15
-commits/90 d, 4 humans** · 61 open issues · server · **better than ours**: the **webhook validation** helper
+commits/90 d, 4 humans** · 29 open issues (61 including pull requests) · server · **better than ours**: the **webhook validation** helper
 (`validateRequest`) is the reference for the **delivery-report webhook contract** — and in 2026 they hardened it
 (`fix(webhooks): validate the url as received before re-encoded variants` #1220, merged 2026-10-12, and
 `replace deprecated scmp with crypto.timingSafeEqual` #1218, merged 2026-10-07) · risks: our API is Python, so
@@ -322,7 +324,8 @@ not run it).**
 
 **C30 — `team-telnyx/telnyx-node`** https://github.com/team-telnyx/telnyx-node — **198 ★** /29 f · created
 **2019-08-02** · pushed **2026-10-19** · **MIT** · last release **v7.26.0 @ 2026-10-15** (**69 releases in 6 m** —
-the fastest release cadence of any SMS SDK in this file) · **33 commits/90 d, 2 humans** · 3 open issues · server ·
+the fastest release cadence of any SMS SDK in this file) · **33 commits/90 d, 2 humans** · 0 open issues (3 including
+pull requests) · server ·
 **better than ours**: the **webhook event model** is one of the cleanest in the market (one signed
 `telnyx-signature-ed25519` header per event, a stable event taxonomy, and idempotent event ids) — that is
 exactly the shape our DLR table wants; and Telnyx's published list price (**$0.004 per message part**, verified
@@ -357,13 +360,13 @@ we have not read its API · **DECISION: WATCH.**
 
 **C35 — `zackb/tether`** ⭐ (2026 newcomer) https://github.com/zackb/tether — **1 475 ★** /42 f · **created
 2026-04-12** · pushed **2026-10-20** · **MIT** · last release **v0.2.40 @ 2026-10-20** (**49 releases in 6
-months**) · **100+ commits/90 d, 6 humans** · 9 open issues · it surfaced in the `sms created:>2025-01-01` query,
+months**) · **100+ commits/90 d, 6 humans** · 7 open issues (10 including pull requests) · it surfaced in the `sms created:>2025-01-01` query,
 so it is in the messaging space · **its README and purpose were NOT read → what it is: UNVERIFIED** · risks:
 unknown shape · **DECISION: WATCH (read it next month; the release velocity is worth a look).**
 
 **C36 — `TryCaspian/caspian-sdk`** ⭐ (2026 newcomer) https://github.com/TryCaspian/caspian-sdk — **973 ★** /138 f ·
-**created 2026-07-20** · pushed **2026-08-25** · **AGPL-3.0** · first release **v0.1.2 @ 2026-07-21** · 33 open
-issues · **better than ours**: a new communications SDK in the messaging space · risks: **AGPL-3.0** →
+**created 2026-07-20** · pushed **2026-08-25** · **AGPL-3.0** · first release **v0.1.2 @ 2026-07-21** · 14 open
+issues (33 including pull requests) · **better than ours**: a new communications SDK in the messaging space · risks: **AGPL-3.0** →
 V4 §11.2 clean-room study only, never a dependency; and it is 3 months old · **DECISION: CLEAN-ROOM STUDY ONLY.**
 
 **C37 — `mirzemehdi/KMPNotifier`** https://github.com/mirzemehdi/KMPNotifier — **663 ★** /45 f · created
@@ -835,3 +838,4 @@ Re-run on the first working day of each month (V4 §11.3). A candidate stays on 
 - **`react-native-onesignal`'s npm licence field says "MIT" while the repository `LICENSE` says "Modified MIT"
   with a use restriction.** The file wins; the discrepancy is unresolved and must be settled with OneSignal in
   writing before any SDK use.
+- **Corrected by the verifier pass of 2026-10-21 (VERIFICATION-A/B/D.md): 9 cards corrected.**

@@ -107,8 +107,8 @@ Plus API reads: `repos/{o}/{r}` · `/releases` · `/releases?per_page=N` · `/co
 ### 1.1 Standards, frameworks and vendor controls (V1–V12)
 
 **V1 — OWASP Mobile Top 10 (2024)** — https://owasp.org/projects/mobile-top-10 · **final release v1.0, 2024-01-21**
-(`github.com/OWASP/www-project-mobile-top-10` — 132 ★, no licence file on the API, last push **2025-12-22**, 5 open
-issues) · **status: released, then quiet** · the ten: M1 Improper Credential Usage, M2 Inadequate Supply Chain
+(`github.com/OWASP/www-project-mobile-top-10` — 132 ★, no licence file on the API, last push **2025-12-22**, 3 open
+issues (5 including pull requests)) · **status: released, then quiet** · the ten: M1 Improper Credential Usage, M2 Inadequate Supply Chain
 Security, M3 Insecure Authentication/Authorization, M4 Insufficient Input/Output Validation, M5 Insecure
 Communication, M6 Inadequate Privacy Controls, M7 Insufficient Binary Protections, M8 Security Misconfiguration,
 M9 Insecure Data Storage, M10 Insufficient Cryptography · **what it mandates:** a narrative risk list, not a
@@ -155,7 +155,7 @@ do not quote its clause numbers in a gate** · **our fit: SAAS_CHECKLIST §A alr
 **DECISION: ADOPT (ASVS **5.0.0** L2 for the API — quote 5.0.0, not Bleeding Edge).**
 
 **V6 — OWASP Cheat Sheet Series** — https://cheatsheetseries.owasp.org/ · `github.com/OWASP/CheatSheetSeries` —
-**33 689 ★** /4 689 f · created **2018-12-21** · pushed **2026-10-20** · 21 open issues · **CC-BY-SA-4.0** ·
+**33 689 ★** /4 689 f · created **2018-12-21** · pushed **2026-10-20** · 15 open issues (27 including pull requests) · **CC-BY-SA-4.0** ·
 2 840 MB repo (docs + images) · includes the **Android**, **iOS**, **REST Security**, **Web Security**, **Secrets
 Management** and **Third Party JS Management** cheat sheets, and an `IndexMASVS` page that cross-links MASVS to
 the cheat sheets · **our fit: the cheapest way to write the implementation rules that MASVS and ASVS only name** ·
@@ -212,7 +212,7 @@ issues · **Apache-2.0** · MASVS v2.1.0 itself is published in CycloneDX, so th
 ### 1.2 Mobile code (C1–C12)
 
 **C1 — `expo/expo` → `packages/expo-secure-store`** — https://github.com/expo/expo — **52 874 ★** /14 665 f ·
-created **2016-08-15** · pushed **2026-10-20** · **100+ commits/90 d, 36 humans** · 928 open issues · **MIT** ·
+created **2016-08-15** · pushed **2026-10-20** · **100+ commits/90 d, 36 humans** · 324 open issues (946 including pull requests) · **MIT** ·
 **npm `expo-secure-store` 58.0.2 published 2026-10-01** · **Expo SDK 58: yes (it *is* SDK 58)** · New Architecture:
 **yes** (Expo Module) · on-device · **our current choice, already installed** · **better than our current choice:
 nothing to beat, but it is the only Keystore-backed store that needs no new native dependency, and it is the store
@@ -229,7 +229,7 @@ on the JS side** · **DECISION: ADOPT (add `expo-crypto`; generate the DB key wi
 
 **C3 — `OP-Engineering/op-sqlite`** ⭐ — https://github.com/OP-Engineering/op-sqlite — **1 049 ★** /92 f · created
 **2023-11-06** · pushed **2026-09-29** · last release **18.2.5, 2026-09-20** (our pin) · **76 commits/90 d, 7 humans**
-· 12 open issues · **MIT** · repo 1 089 MB · **New Architecture: yes** (Nitro) · **on-device** · README (read
+· 8 open issues (12 including pull requests) · **MIT** · repo 1 089 MB · **New Architecture: yes** (Nitro) · **on-device** · README (read
 2026-10-21): "**SQLCipher is supported as a compilation target**", plus FTS5, Rtree, `sqlite-vec`, reactive queries,
 `db.interrupt()`, a key-value store, and a Turso/libsql target · **the 2026 issue that matters to us: #466 "Android
 SQLCipher: track x86_64 OpenSSL dependency GNU_RELRO end-alignment failure" (open, 2026-10-05)** — i.e. the
@@ -291,7 +291,7 @@ risks: archived, no security patches, not New-Architecture-compatible · **DECIS
 
 **C11 — `react-native-device-info/react-native-device-info`** — https://github.com/react-native-device-info/react-native-device-info —
 **6 686 ★** /1 459 f · created **2015-09-16** · pushed **2026-10-15** · last release **v15.0.2, 2026-02-21** ·
-**0 commits/90 d on the default branch** (last commit 2026-02-21) · 32 open issues · **MIT** · New Architecture: yes
+**0 commits/90 d on the default branch** (last commit 2026-02-21) · 4 open issues (32 including pull requests) · **MIT** · New Architecture: yes
 · on-device · gives `isPinOrFingerprintSet`, `isEmulator`, `isTablet`, `deviceId` (which on Android 10+ is
 ANDROID_ID — a resettable identifier, and IPP 13 territory) · **our fit: `isEmulator` and `isPinOrFingerprintSet`
 are signal-only inputs** · **DECISION: WATCH — the emulator signal it gives is exactly what MASWE-0053 asks for;
@@ -353,7 +353,7 @@ requires **Redis** (a hard dependency) and wraps `slowapi` · **our fit: Redis i
 **DECISION: REJECT for now (it is A1 with a mandatory Redis dependency and a worse maintenance record); revisit
 when Redis exists for the queue.**
 
-**A3 — `tiangoli/fastapi`** — https://github.com/tiangolo/fastapi — **Apache-2.0** · the framework itself ·
+**A3 — `tiangoli/fastapi`** — https://github.com/tiangolo/fastapi — **MIT** (the repository `LICENSE` is the MIT licence; the API's `license.spdx_id` is `MIT`) · the framework itself ·
 `FastAPI()` ships **no CORS, no security headers, no trusted-host, no rate limiting** unless you add them ·
 `Starlette` underneath ships `TrustedHostMiddleware`, `HTTPSRedirectMiddleware` and `GZipMiddleware` · our
 `apps/api/app/main.py:18` adds **none** of them · **our fit: the SAAS_CHECKLIST §A API line names "CORS
@@ -362,7 +362,7 @@ allow-list, security headers, request size limits"** · **DECISION: ADOPT the bu
 a third-party header package for four lines).**
 
 **A4 — `PyCQA/bandit`** — https://github.com/PyCQA/bandit — **8 326 ★** /862 f · created **2018-04-26** · pushed
-**2026-10-19** · 264 open issues · **Apache-2.0** · 5 906 KB · the Python SAST that finds hard-coded passwords,
+**2026-10-19** · 199 open issues (264 including pull requests) · **Apache-2.0** · 5 906 KB · the Python SAST that finds hard-coded passwords,
 `assert` in production, `subprocess` with `shell=True`, and `requests` without a timeout · **our fit: our CI runs
 **Semgrep** with `p/default` and `p/owasp-top-ten` for both languages, but **Semgrep's Python rules are not a
 substitute for Bandit's Python-specific checks**; the reverse is also true (Semgrep's cross-file dataflow is
@@ -377,7 +377,7 @@ view we do not have** · **DECISION: WATCH — licence is not clearly permissive
 do not add a licence of unknown provenance to a repo with a licence gate.**
 
 **A6 — `zaproxy/zaproxy`** — https://github.com/zaproxy/zaproxy — **15 979 ★** /2 672 f · created **2015-06-03** ·
-pushed **2026-10-15** · 867 open issues · **Apache-2.0** · the DAST engine the SAAS_CHECKLIST names ("DAST against
+pushed **2026-10-15** · 807 open issues (867 including pull requests) · **Apache-2.0** · the DAST engine the SAAS_CHECKLIST names ("DAST against
 staging with OWASP ZAP") · **our fit: the only way to prove that the API's input validation, auth and headers hold
 against a real attacker, not a static guess** · risks: needs a running staging API with seeded data; a ZAP scan
 against a database-backed API can destroy data (it will try injections) · **DECISION: ADOPT (against a **staging**
@@ -422,7 +422,7 @@ mirror (a supply-chain tool that is itself a supply-chain risk) · **DECISION: A
 per release, commit it, and diff it in CI).**
 
 **S4 — `anchore/grype`** — https://github.com/anchore/grype — **13 056 ★** /922 f · created **2020-05-26** · pushed
-**2026-10-19** · 430 open issues · **Apache-2.0** · matches an SBOM against the vulnerability database · **our fit:
+**2026-10-19** · 330 open issues (430 including pull requests) · **Apache-2.0** · matches an SBOM against the vulnerability database · **our fit:
 syft (produce) + grype (match) is the standard pair, and grype can match a **CycloneDX SBOM** directly** ·
 **DECISION: WATCH — osv-scanner (S2) covers the lockfile case; grype earns its place when we scan the **APK and
 the container image**, not the source tree.**
@@ -438,7 +438,7 @@ memory — so "it has a valid signature" is no longer sufficient evidence of pro
 signature proves *who signed*, not *what was signed*).**
 
 **S6 — `sigstore/fulcio`** — https://github.com/sigstore/fulcio — **891 ★** /192 f · created **2021-02-23** · pushed
-**2026-10-19** · 35 open issues · **Apache-2.0** · the Sigstore certificate authority that issues the
+**2026-10-19** · 27 open issues (28 including pull requests) · **Apache-2.0** · the Sigstore certificate authority that issues the
 short-lived signing certificates keyless signing uses · **our fit: we are a *consumer* of Sigstore, not an
 operator** · **DECISION: NOT USED DIRECTLY (documented here so the team does not try to run it).**
 
@@ -633,7 +633,7 @@ build tools call it"; #463 (closed, 2026-09-27) "Expose error codes"; #461 (clos
 2026-09-20) "Bump sqlite/sqlcipher"**; #458 (closed, 2026-09-18) "Fix use after free in commit hook callback".
 
 **Maintenance health.** 1 049 ★, created 2023-11-06, pushed 2026-09-29, last release 18.2.5 on 2026-09-20 (our
-pin), **76 commits/90 d, 7 humans**, 12 open issues, **MIT**, 1 089 MB repo, New Architecture (Nitro).
+pin), **76 commits/90 d, 7 humans**, 8 open issues (12 including pull requests), **MIT**, 1 089 MB repo, New Architecture (Nitro).
 
 **What it decided for us.** The local DB is where the day's addresses, the door memory and the offline event log
 live — the highest-value PII on the device. op-sqlite is the only thing in our tree that can give us that DB
@@ -819,6 +819,7 @@ On the first working day of each month, re-read exactly these and write one line
 - **Whether our own CI is currently exposed** — the gates listed in `CONSTRAINTS.md` are the *documented* set; we
   have not audited the actual workflow YAML in `.github/workflows/` for unpinned actions, and no git commands were
   run in this task.
+- **Corrected by the verifier pass of 2026-10-21 (VERIFICATION-A/B/D.md): 10 cards corrected.**
 
 ---
 

@@ -284,11 +284,12 @@ created 2019-03-05 · pushed 2026-09-01 · **100 open issues** · **AGPL-3.0** �
 (copyleft) — clean-room study only.**
 
 **C22 — `argosopentech/argos-translate`** https://github.com/argosopentech/argos-translate — **6 584 ★**
-/502 f · created 2020-04-07 · pushed 2026-08-08 · **165 open issues** · last release **v1.4.0
-(2021-08-24)** · engine **MIT** · offline translation with CTranslate2 + a package index · risk: the
-release train is frozen since 2021 and **each translation package carries its own licence** (typically
-CC-BY-SA / NC — **UNVERIFIED** per package) · **DECISION: WATCH — only if we truly need server-side MT;
-for a UI catalogue, human translation is cheaper and safer.**
+/502 f · created 2020-04-07 · pushed 2026-08-08 · **165 open issues** · last release **v1.11.0
+(2026-02-02)** · engine **MIT** · offline translation using CTranslate2 + a package index · risk: the
+release cadence is low but the project is **not frozen** (v1.9.6 2024-04-30, v1.10.0 2025-10-21,
+v1.11.0 2026-02-02 — nothing since 2026-02-02) and **each translation package carries its own licence**
+(typically CC-BY-SA / NC — **UNVERIFIED** per package) · **DECISION: WATCH — only if we truly need
+server-side MT; for a UI catalogue, human translation is cheaper and safer.**
 
 **C23 — `LibreTranslate/LibreTranslate`** https://github.com/LibreTranslate/LibreTranslate — **17 127 ★**
 /1 784 f · created 2020-12-19 · pushed 2026-10-12 · **128 open issues** · **AGPL-3.0** · **DECISION:
@@ -1106,6 +1107,7 @@ is a gate, not a suggestion.**
     production-user count. **UNVERIFIED.**
 16. **Whether Spoke would ship a Pacific language** — TEARDOWN.md §14 lists their 19 languages as of
     2026-10-21; a future change is a radar item, not a fact.
+17. **Corrected by the verifier pass of 2026-10-21 (VERIFICATION-A/B/D.md): 1 card corrected.**
 
 ---
 

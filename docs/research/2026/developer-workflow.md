@@ -111,7 +111,7 @@ the open issues are all **Rust-rewrite edge cases** (EPIPE, SIGHUP, `turbo watch
 **DECISION: KEEP (locked).**
 
 **D2 — `nrwl/nx`** https://github.com/nrwl/nx — **29 426 ★** /3 015 f · created **2017-08-11** · last release
-**24.0.0-beta.4, 2026-10-19** (4 betas in 6 days) · ≥100 commits/90 d, **15 humans** · **475 open issues** ·
+**24.0.0-beta.4, 2026-10-19** (4 betas in 6 days) · ≥100 commits/90 d, **15 humans** · **288 open issues (471 including pull requests)** ·
 **MIT** · npm `nx` **41 847 491 dl/mo** · self-description: *"The Monorepo Platform that amplifies both
 developers and AI agents"* — a project graph, a plugin system and a **cloud control plane** · Expo SDK 58
 fit: plugin-based, so a Metro/Expo plugin would be needed · **better than ours**: `nx graph`, `nx affected`
@@ -119,21 +119,21 @@ and per-target CI splitting · **risks**: the 24.x line is in **beta**, the rele
 cadence, and the agent story is a **paid Nx Cloud feature** · **DECISION: WATCH (§3.2).**
 
 **D3 — `lerna/lerna`** https://github.com/lerna/lerna — **36 038 ★** /2 264 f · created **2015-12-04** ·
-**v10.1.1, 2026-10-12** · ≥100 commits/90 d, **6 humans** · 297 open · **MIT** · npm `lerna` **7 623 000
+**v10.1.1, 2026-10-12** · ≥100 commits/90 d, **6 humans** · 284 open issues (297 including pull requests) · **MIT** · npm `lerna` **7 623 000
 dl/mo** · better than ours: nothing we need (Turborepo runs the tasks; changesets versions) · risks:
 overlapping scope, an order of magnitude fewer downloads than Turborepo · **DECISION: WATCH (versioning
 only).**
 
 **D4 — `changesets/changesets`** https://github.com/changesets/changesets — **12 494 ★** /849 f · created
 **2019-03-21** · last release **`@changesets/get-release-plan@5.0.2`, 2026-09-14** · **85 commits/90 d,
-15 humans** · 277 open · **MIT** · npm `@changesets/cli` **22 665 494 dl/mo** · Expo SDK 58 fit: pure JS,
+15 humans** · 198 open issues (277 including pull requests) · **MIT** · npm `@changesets/cli` **22 665 494 dl/mo** · Expo SDK 58 fit: pure JS,
 no native surface · better than ours: we have **no versioning automation**; a changeset file per change is
 the D21 "no PASS without evidence" discipline applied to version numbers · risks: it wants to publish; in
 a private monorepo we would use `changeset version` only, never `changeset publish` ·
 **DECISION: ADOPT (versioning) — the one addition with no risk.**
 
 **D5 — `pnpm/pnpm`** https://github.com/pnpm/pnpm — **36 865 ★** /1 950 f · created **2016-01-28** ·
-**v12.14.0, 2026-10-15** (our exact pin) · ≥100 commits/90 d, **13 humans** · 188 open · **MIT** · npm
+**v12.14.0, 2026-10-15** (our exact pin) · ≥100 commits/90 d, **13 humans** · 0 open issues (187 including pull requests) · **MIT** · npm
 `pnpm` **849 798 668 dl/mo** — the most-installed package manager by a wide margin · better than ours: pnpm
 12 verifies the lockfile against its own supply-chain policy on every install (our `pnpm-workspace.yaml`
 comment already depends on that behaviour) · risks: pnpm 12 moved the settings out of `package.json`,
@@ -152,13 +152,13 @@ an early adopter · **DECISION: WATCH.**
 ours: nothing we need · risks: a Rust/webpack toolchain we do not use · **DECISION: REJECT.**
 
 **D8 — `pantsbuild/pants`** https://github.com/pantsbuild/pants — **3 846 ★** /730 f · created **2012-12-17**
-· **release_2.33.2rc1, 2026-10-20** · 75 commits/90 d, **20 humans** · 1 081 open · **Apache-2.0** · better
+· **release_2.33.2rc1, 2026-10-20** · 75 commits/90 d, **20 humans** · 1 001 open issues (1 081 including pull requests) · **Apache-2.0** · better
 than ours: **JVM/Python/JS in one graph** — the closest thing to our "one command, many languages" need ·
 risks: heavyweight and opinionated; replacing Turborepo means rewriting the whole `turbo.json` surface ·
 **DECISION: WATCH (only if the TS+Python split starts costing more than it saves).**
 
 **D9 — `expo/expo`** https://github.com/expo/expo — **52 874 ★** /14 665 f · created **2016-08-15** ·
-**expo@58.0.16, 2026-10-19** (our SDK line) · ≥100 commits/90 d, **36 humans** · 928 open · **MIT** ·
+**expo@58.0.16, 2026-10-19** (our SDK line) · ≥100 commits/90 d, **36 humans** · 324 open issues (946 including pull requests) · **MIT** ·
 better than ours: it **is** our SDK; its monorepo guide
 (https://docs.expo.dev/guides/monorepos/, page `modificationDate: October 16, 2026`) states that pnpm's
 default is isolated installs and that `nodeLinker: hoisted` is the escape hatch, and that from **SDK 55**
@@ -166,18 +166,18 @@ default is isolated installs and that `nodeLinker: hoisted` is the escape hatch,
 SDK 58 · risks: none material · **DECISION: KEEP (locked).**
 
 **D10 — `vercel-labs/skills`** https://github.com/vercel-labs/skills — **35 799 ★** /3 060 f · created
-**2026-01-14** · **v1.7.4, 2026-10-19** · ≥100 commits/90 d, **18 humans** · 1 170 open · **MIT** · better
+**2026-01-14** · **v1.7.4, 2026-10-19** · ≥100 commits/90 d, **18 humans** · 787 open issues (1 173 including pull requests) · **MIT** · better
 than ours: this is the **installer** for the skills system we already use — `npx skills add
 addyosmani/agent-skills` writes the `SKILL.md` files into `.claude/`, `.agents/`, `.codex-plugin/`,
 `.opencode/` and more; the README claims *"Supports OpenCode, Claude Code, Codex, Cursor, and 75 more"*
-and requires **Node.js 22.20+** (we pin Node ≥22) · risks: a **9-month-old project with 1 170 open
+and requires **Node.js 22.20+** (we pin Node ≥22) · risks: a **9-month-old project with 787 open
 issues**, and its `add` command **writes into the repo** — a supply-chain surface we do not yet control ·
 **DECISION: ADOPT (as the installer), sandboxed first (§6).**
 
 ### 1.2 Lint, format, test and hook stack (11)
 
 **D11 — `eslint/eslint`** https://github.com/eslint/eslint — **27 573 ★** /5 212 f · created **2013-06-29** ·
-**v10.13.0, 2026-10-16** (our exact pin) · ≥100 commits/90 d, **33 humans** · 129 open · **MIT** · npm
+**v10.13.0, 2026-10-16** (our exact pin) · ≥100 commits/90 d, **33 humans** · 98 open issues (129 including pull requests) · **MIT** · npm
 `eslint` **672 869 966 dl/mo** · Expo SDK 58 fit: our `packages/eslint-config` is `js.configs.recommended` +
 `tseslint.configs.recommendedTypeChecked` + `projectService: true` — type-aware linting over the RN 0.88
 tree, exactly what CONSTRAINTS.md demands ("zero errors, zero warnings, type-aware rules") · risks: ESLint
@@ -185,7 +185,7 @@ tree, exactly what CONSTRAINTS.md demands ("zero errors, zero warnings, type-awa
 **DECISION: KEEP (locked).**
 
 **D12 — `biomejs/biome`** https://github.com/biomejs/biome — **25 982 ★** /1 305 f · created **2023-07-27** ·
-**`@biomejs/biome@2.5.15`, 2026-09-30** · ≥100 commits/90 d, 13 humans · 471 open · **Apache-2.0** · npm
+**`@biomejs/biome@2.5.15`, 2026-09-30** · ≥100 commits/90 d, 13 humans · 278 open issues (474 including pull requests) · **Apache-2.0** · npm
 **70 746 787 dl/mo** · better than ours: **one binary that formats and lints**, one config file instead of
 `packages/eslint-config` + `.prettierrc` · risks: Biome's rule set is **not** ESLint's; swapping would lose
 the type-aware rules (`recommendedTypeChecked`, `no-floating-promises`, `consistent-type-imports`) that
@@ -205,20 +205,20 @@ better than ours: the migration lever for D13 · risks: version-locked to oxlint
 D13).**
 
 **D15 — `vitest-dev/vitest`** https://github.com/vitest-dev/vitest — **17 266 ★** /2 091 f · created
-**2021-12-03** · **v5.1.0-beta.1, 2026-10-19** · ≥100 commits/90 d, 12 humans · 346 open · **MIT** · npm
+**2021-12-03** · **v5.1.0-beta.1, 2026-10-19** · ≥100 commits/90 d, 12 humans · 332 open issues (349 including pull requests) · **MIT** · npm
 `vitest` **487 255 067 dl/mo** · better than ours: nothing; we are on **4.1.11** and 5.x is in **beta** ·
 risks: a beta major; we pin 4.x deliberately (the `tinypool` prototype-pollution fix landed in
 `vitest@4.1.11` per CONSTRAINTS.md) · **DECISION: KEEP on 4.x — do not move to 5.x until it is stable and
 the audit is re-run.**
 
 **D16 — `microsoft/playwright`** https://github.com/microsoft/playwright — **98 153 ★** /6 661 f · created
-**2019-11-15** · **v1.64.1, 2026-10-14** · ≥100 commits/90 d, 9 humans · 184 open · **Apache-2.0** · better
+**2019-11-15** · **v1.64.1, 2026-10-14** · ≥100 commits/90 d, 9 humans · 169 open issues (178 including pull requests) · **Apache-2.0** · better
 than ours: the web-dashboard E2E and the Lighthouse runner (the dashboard does not exist yet) · risks: 2.4
 GB of browsers in CI; irrelevant to the mobile app (Maestro owns that) · **DECISION: KEEP (web only; already
 decided in the CI/CD research file).**
 
 **D17 — `typicode/husky`** https://github.com/typicode/husky — **35 356 ★** /1 101 f · created **2014-06-23**
-· last release **v9.1.7, 2024-11-18** · **0 commits/90 d** (last push 2026-03-19) · 108 open · **MIT** · npm
+· last release **v9.1.7, 2024-11-18** · **0 commits/90 d** (last push 2026-03-19) · 81 open issues (108 including pull requests) · **MIT** · npm
 `husky` **148 511 717 dl/mo** · better than ours: the cheapest way to get a hook · risks: **quiet for two
 years, no v10**, and v9 needs a `prepare` script, which our `ignoreScripts: true` policy blocks ·
 **DECISION: REJECT — the ecosystem moved to `lefthook` (D19).**
@@ -229,14 +229,14 @@ years, no v10**, and v9 needs a `prepare` script, which our `ignoreScripts: true
 risks: **2 human maintainers**; needs a hook manager to trigger it · **DECISION: ADOPT (paired with D19).**
 
 **D19 — `evilmartians/lefthook`** https://github.com/evilmartians/lefthook — **8 928 ★** /323 f · created
-**2019-02-05** · **v2.2.2, 2026-10-13** · 61 commits/90 d, **26 humans** · 89 open · **MIT** · npm
+**2019-02-05** · **v2.2.2, 2026-10-13** · 61 commits/90 d, **26 humans** · 68 open issues (89 including pull requests) · **MIT** · npm
 **22 276 365 dl/mo** · better than ours: a **single binary**, no `prepare` script (so it works with
 `ignoreScripts: true`), parallel job groups, and it can run the **floor guard** (`node
 scripts/check-floor.mjs`) before a commit ever reaches CI · risks: it runs lint locally, so a slow lint
 would block commits — the job must be scoped to staged files · **DECISION: ADOPT (hook manager).**
 
 **D20 — `pre-commit/pre-commit`** https://github.com/pre-commit/pre-commit — **15 645 ★** /1 020 f · created
-**2014-03-13** · **v4.7.0, 2026-10-13** · 23 commits/90 d, 3 humans · 26 open · **MIT** · better than ours:
+**2014-03-13** · **v4.7.0, 2026-10-13** · 23 commits/90 d, 3 humans · 17 open issues (25 including pull requests) · **MIT** · better than ours:
 multi-language hooks, the oldest and most conservative choice · risks: **Python-first**, and the hook
 contract is clunkier than lefthook's · **DECISION: REJECT (lefthook covers it).**
 
@@ -248,7 +248,7 @@ would be redundant — pick one before adding the other · **DECISION: KEEP.**
 ### 1.3 Code-review bots and agent-in-the-loop PR review (20)
 
 **D22 — `coderabbitai/awesome-coderabbit`** https://github.com/coderabbitai/awesome-coderabbit — **546 ★** /82 f
-· created **2024-09-24** · last push **2026-09-29** · **6 commits/90 d, 3 humans** · 13 open · **CC0-1.0** ·
+· created **2024-09-24** · last push **2026-09-29** · **6 commits/90 d, 3 humans** · 9 open issues (13 including pull requests) · **CC0-1.0** ·
 better than ours: the **only public description of how CodeRabbit is configured** — starters, config
 examples, per-language rules · risks: documentation, not software; it cannot be run or benchmarked ·
 **DECISION: KEEP (reference).**
@@ -312,7 +312,7 @@ than ours: the same review as a **Claude Code plugin** — agent-in-the-loop by 
 no evidence of use · **DECISION: WATCH.**
 
 **D32 — `The-PR-Agent/pr-agent`** https://github.com/The-PR-Agent/pr-agent — **13 493 ★** /1 974 f · created
-**2023-07-05** · **v0.48.0, 2026-10-16** · ≥100 commits/90 d, **26 humans** · **27 open issues** · **MIT** ·
+**2023-07-05** · **v0.48.0, 2026-10-16** · ≥100 commits/90 d, **26 humans** · **13 open issues (36 including pull requests)** · **MIT** ·
 better than ours: **self-hostable** — the review runs in our own CI against our own model provider; the
 README states *"This project is not the Qodo free tier"* · risks: a large Python service; it wants model
 API keys · **DECISION: WATCH — the only self-hostable review engine in the pool, which matters for the
@@ -377,16 +377,16 @@ risks: an editor extension · **DECISION: WATCH (self-hosting angle only).**
 ### 1.4 Agent skills, agent rules, MCP servers and docs bots (22)
 
 **D42 — `anthropics/skills`** https://github.com/anthropics/skills — **182 430 ★** /21 614 f · created
-**2025-09-22** · last push **2026-10-09** · **no GitHub releases** · 16 commits/90 d, 4 humans · **1 424
-open issues** · **no licence detected by the API** (`LICENSE` absent) → **UNVERIFIED** · 20 skills
+**2025-09-22** · last push **2026-10-09** · **no GitHub releases** · 16 commits/90 d, 4 humans · **410
+open issues (1 425 including pull requests)** · **no licence detected by the API** (`LICENSE` absent) → **UNVERIFIED** · 20 skills
 (`claude-api`, `mcp-builder`, `skill-creator`, `webapp-testing`, `pdf`, `docx`, …) plus `spec/` and
 `template/` · better than ours: the **reference catalogue**; its `spec/agent-skills-spec.md` now points at
 **https://agentskills.io/specification** (read 2026-10-21) — the open spec every vendor now points at ·
-risks: **no licence file** and 1 424 open issues; do not vendor without the licence ·
+risks: **no licence file** and 410 open issues; do not vendor without the licence ·
 **DECISION: WATCH (reference for the spec; do not vendor).**
 
 **D43 — `anthropics/claude-code`** https://github.com/anthropics/claude-code — **152 836 ★** /27 199 f · created
-**2025-02-22** · **v2.1.304, 2026-10-19** · ≥100 commits/90 d, 8 humans · **15 427 open issues** ·
+**2025-02-22** · **v2.1.304, 2026-10-19** · ≥100 commits/90 d, 8 humans · **14 769 open issues (15 467 including pull requests)** ·
 **no licence detected** (the repo is mostly issues + plugins; the CLI is distributed on npm) · npm
 `@anthropic-ai/claude-code` **49 122 517 dl/mo** · Expo SDK 58 fit: it reads the repo, it does not build it ·
 risks: 15 k open issues; the licence of the repo contents is **UNVERIFIED** · **DECISION: KEEP (the tool
@@ -443,8 +443,8 @@ detected** → **UNVERIFIED** · better than ours: Vercel's own skill collection
 missing · **DECISION: WATCH (do not vendor).**
 
 **D52 — `openai/codex`** https://github.com/openai/codex — **130 322 ★** /20 523 f · created **2025-04-13** ·
-last release **rust-v0.164.0-alpha.7, 2026-10-20** · ≥100 commits/90 d, **35 humans** · **23 716 open
-issues** · **Apache-2.0** · npm `@openai/codex` **91 545 359 dl/mo** · Expo SDK 58 fit: it reads
+last release **rust-v0.164.0-alpha.7, 2026-10-20** · ≥100 commits/90 d, **35 humans** · **23 650 open
+issues (23 813 including pull requests)** · **Apache-2.0** · npm `@openai/codex` **91 545 359 dl/mo** · Expo SDK 58 fit: it reads
 `AGENTS.md` — the file we already write · better than ours: the **Rust rewrite** and a real terminal
 agent · risks: 23 k open issues · **DECISION: KEEP as the second agent (our `AGENTS.md` already targets it).**
 
@@ -462,7 +462,7 @@ better than ours: a CLI + SDK to *"find, validate, and fix security vulnerabilit
 what Semgrep lacks · risks: 3 months old · **DECISION: WATCH.**
 
 **D55 — `modelcontextprotocol/servers`** https://github.com/modelcontextprotocol/servers — **91 407 ★** /11 824
-f · created **2024-11-19** · **v2.0.0, 2026-10-19** · ≥100 commits/90 d, **2 humans** · 136 open · licence
+f · created **2024-11-19** · **v2.0.0, 2026-10-19** · ≥100 commits/90 d, **2 humans** · 115 open issues (138 including pull requests) · licence
 **NOASSERTION** (a multi-licensed collection — check per server) · better than ours: the reference server
 implementations · risks: only 2 human authors; the collection moved many servers to
 `modelcontextprotocol/servers-archived` (305 ★, archived 2025-05-28) · **DECISION: KEEP (reference).**
@@ -474,7 +474,7 @@ would use to expose the copilot's tools to an agent · risks: none material · *
 only for tools we already expose over HTTP.**
 
 **D57 — `github/github-mcp-server`** https://github.com/github/github-mcp-server — **33 794 ★** /5 412 f ·
-created **2025-03-04** · **v2.0.2, 2026-10-08** · ≥100 commits/90 d, **26 humans** · 380 open · **MIT** ·
+created **2025-03-04** · **v2.0.2, 2026-10-08** · ≥100 commits/90 d, **26 humans** · 193 open issues (381 including pull requests) · **MIT** ·
 better than ours: the **official** way for an agent to read and write GitHub — issue, PR and file access ·
 risks: an agent with write scope is an agent that can push to `main`; scope it to the fork ·
 **DECISION: ADOPT (read-mostly) — this is the tool our "agent-in-the-loop PR review" would use.**
@@ -485,7 +485,7 @@ better than ours: *semantic retrieval and editing* — an agent that reads the c
 grep; the "IDE for your agent" · risks: the licence is not machine-detectable · **DECISION: WATCH.**
 
 **D59 — `upstash/context7`** https://github.com/upstash/context7 — **63 359 ★** /3 119 f · created
-**2025-03-26** · **mcpb-v4.4.4, 2026-10-19** · ≥100 commits/90 d, 17 humans · 53 open · **MIT** · better than
+**2025-03-26** · **mcpb-v4.4.4, 2026-10-19** · ≥100 commits/90 d, 17 humans · 25 open issues (53 including pull requests) · **MIT** · better than
 ours: **up-to-date library documentation for agents** — this is the tool that makes the
 `source-driven-development` skill honest (fetch the official docs, not the model's memory) · risks: it
 indexes third-party docs, so a poisoned index is a supply-chain risk ·
@@ -493,7 +493,7 @@ indexes third-party docs, so a poisoned index is a supply-chain risk ·
 
 **D60 — `ChromeDevTools/chrome-devtools-mcp`** https://github.com/ChromeDevTools/chrome-devtools-mcp —
 **53 902 ★** /7 064 f · created **2025-09-11** · **chrome-devtools-mcp-v1.11.0, 2026-10-15** · ≥100
-commits/90 d, **21 humans** · 123 open · **Apache-2.0** · better than ours: the browser, driven by the
+commits/90 d, **21 humans** · 99 open issues (127 including pull requests) · **Apache-2.0** · better than ours: the browser, driven by the
 agent — the `browser-testing-with-devtools` skill we mirror is only a description; this is the server ·
 risks: it needs a browser · **DECISION: ADOPT (MCP) — pairs with the skill we already ship.**
 
@@ -1019,3 +1019,4 @@ Run this list on the **first working day of each month**; each row has a trigger
   finding, recorded in the maps file).
 - **`code-review-graph`'s "99 % fewer tokens"** and **`codebase-memory-mcp`'s "sub-ms queries"** — both are
   the projects' own claims; we have not reproduced either.
+- **Corrected by the verifier pass of 2026-10-21 (VERIFICATION-A/B/D.md): 23 cards corrected.**
