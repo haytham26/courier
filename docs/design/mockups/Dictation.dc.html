@@ -8,62 +8,31 @@
 <body>
 <x-dc>
 <helmet>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
 <style>
 body{margin:0;font-family:'Figtree',system-ui,sans-serif}
-a{color:#7CC4FF}a:hover{color:#B5DEFF}
+a{color:#5AB0FF}a:hover{color:#8CC8FF}
+@keyframes pulse{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.1);opacity:0}}
+@keyframes dash{to{stroke-dashoffset:-40}}
+
 </style>
 </helmet>
-<div style="width:390px;height:844px;box-sizing:border-box;background:#0E1418;color:#F2F5F7;font-family:'Figtree',system-ui,sans-serif;padding:60px 20px 30px;display:flex;flex-direction:column;gap:18px">
-  <div style="display:flex;flex-direction:column;gap:6px">
-    <span style="font-size:15px;font-weight:600;color:#9FB0BA;letter-spacing:.04em">DICTATION FINISHED</span>
-    <span style="font-size:34px;font-weight:800;line-height:1.1">212 stops added</span>
-    <span style="font-size:17px;color:#9FB0BA">I fixed 3 and need you to check 1.</span>
-  </div>
-
-  <div style="display:flex;gap:10px">
-    <div style="flex:1;background:#172026;border-radius:16px;padding:14px">
-      <div style="font-size:28px;font-weight:800;color:#5BD38A">208</div>
-      <div style="font-size:14px;color:#9FB0BA">Matched</div>
-    </div>
-    <div style="flex:1;background:#172026;border-radius:16px;padding:14px">
-      <div style="font-size:28px;font-weight:800;color:#7CC4FF">3</div>
-      <div style="font-size:14px;color:#9FB0BA">Corrected</div>
-    </div>
-    <div style="flex:1;background:#172026;border-radius:16px;padding:14px">
-      <div style="font-size:28px;font-weight:800;color:#F2B04B">1</div>
-      <div style="font-size:14px;color:#9FB0BA">Check</div>
-    </div>
-  </div>
-
-  <span style="font-size:15px;font-weight:700;color:#9FB0BA;letter-spacing:.04em;margin-top:4px">WHAT I CORRECTED</span>
-  <div style="display:flex;flex-direction:column;gap:10px">
-    <div style="background:#172026;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
-      <span style="font-size:16px;color:#8A9BA5;text-decoration:line-through">Rickerton Road</span>
-      <span style="font-size:20px;font-weight:700">Riccarton Road</span>
-      <span style="font-size:14px;color:#7CC4FF">Spelling · official LINZ name</span>
-    </div>
-    <div style="background:#172026;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
-      <span style="font-size:16px;color:#8A9BA5;text-decoration:line-through">1400 Harewood Road</span>
-      <span style="font-size:20px;font-weight:700">140 Harewood Road</span>
-      <span style="font-size:14px;color:#7CC4FF">Number 1400 doesn’t exist on this street</span>
-    </div>
-    <div style="background:#172026;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
-      <span style="font-size:16px;color:#8A9BA5;text-decoration:line-through">7 Sawyers Arms… no, 17</span>
-      <span style="font-size:20px;font-weight:700">17 Sawyers Arms Road</span>
-      <span style="font-size:14px;color:#7CC4FF">Kept your last correction</span>
-    </div>
-  </div>
-
-  <span style="font-size:15px;font-weight:700;color:#F2B04B;letter-spacing:.04em;margin-top:4px">PLEASE CHECK</span>
-  <div style="background:#2A2416;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px">
-    <span style="font-size:20px;font-weight:700">Smith Street — which suburb?</span>
-    <div style="display:flex;gap:10px">
-      <button type="button" style="flex:1;height:56px;border:0;border-radius:14px;background:#F2B04B;color:#1E1608;font:inherit;font-size:18px;font-weight:800;cursor:pointer">Redwood</button>
-      <button type="button" style="flex:1;height:56px;border:0;border-radius:14px;background:#3A3220;color:#F2F5F7;font:inherit;font-size:18px;font-weight:800;cursor:pointer">Belfast</button>
-    </div>
-    <span style="font-size:14px;color:#C9B78F">Or just say it.</span>
-  </div>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box;background:#07090C;color:#F3F5F7;font-family:'Figtree',system-ui,sans-serif;padding:56px 20px 24px;display:flex;flex-direction:column;gap:16px">
+<span style="font-size:13px;font-weight:700;letter-spacing:.12em;color:#CFFF4A">DICTATION FINISHED</span>
+<h1 style="margin:-6px 0 0;font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1.05">212 stops added</h1>
+<span style="font-size:16px;color:#9AA6B2">I fixed 3 and need you to check 1.</span>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+<div style="padding:14px;border-radius:18px;background:#0F1318;border:1px solid #26303B"><div style="font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;color:#CFFF4A">208</div><div style="font-size:13px;color:#9AA6B2">Matched</div></div>
+<div style="padding:14px;border-radius:18px;background:#0F1318;border:1px solid #26303B"><div style="font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;color:#5AB0FF">3</div><div style="font-size:13px;color:#9AA6B2">Corrected</div></div>
+<div style="padding:14px;border-radius:18px;background:#0F1318;border:1px solid #26303B"><div style="font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;color:#FFB547">1</div><div style="font-size:13px;color:#9AA6B2">Check</div></div></div>
+<span style="font-size:13px;font-weight:700;letter-spacing:.1em;color:#9AA6B2">WHAT I CORRECTED</span>
+<div style="padding:14px 16px;border-radius:18px;background:#0F1318;border:1px solid #26303B;display:flex;flex-direction:column;gap:5px"><span style="font-size:15px;color:#7E8A96;text-decoration:line-through">Rickerton Road</span><span style="font-size:19px;font-weight:700;display:flex;align-items:center;gap:8px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#CFFF4A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>Riccarton Road</span><span style="font-size:13px;color:#5AB0FF">Spelling · official LINZ name</span></div>
+<div style="padding:14px 16px;border-radius:18px;background:#0F1318;border:1px solid #26303B;display:flex;flex-direction:column;gap:5px"><span style="font-size:15px;color:#7E8A96;text-decoration:line-through">1400 Harewood Road</span><span style="font-size:19px;font-weight:700;display:flex;align-items:center;gap:8px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#CFFF4A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>140 Harewood Road</span><span style="font-size:13px;color:#5AB0FF">1400 doesn't exist on this street</span></div>
+<div style="padding:14px 16px;border-radius:18px;background:#0F1318;border:1px solid #26303B;display:flex;flex-direction:column;gap:5px"><span style="font-size:15px;color:#7E8A96;text-decoration:line-through">7 Sawyers Arms… no, 17</span><span style="font-size:19px;font-weight:700;display:flex;align-items:center;gap:8px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#CFFF4A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>17 Sawyers Arms Road</span><span style="font-size:13px;color:#5AB0FF">Kept your last correction</span></div>
+<div style="padding:16px;border-radius:20px;background:#241C0C;border:1px solid #4E3A14;display:flex;flex-direction:column;gap:12px">
+<span style="font-size:19px;font-weight:700">Smith Street — which suburb?</span>
+<div style="display:flex;gap:10px"><button type="button" style="height:54px;border:none;border-radius:16px;background:#CFFF4A;color:#0B0F05;font:inherit;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;flex:1;background:#FFB547">Redwood</button><button type="button" style="height:54px;border:none;border-radius:16px;background:#161C23;color:#F3F5F7;font:inherit;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;flex:1">Belfast</button></div>
+<span style="font-size:14px;color:#D8C49A">Or just say it.</span></div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
