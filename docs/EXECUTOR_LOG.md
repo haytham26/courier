@@ -542,3 +542,27 @@ against their real source, every area over the 20 % floor. The systematic
 defect: the research files quoted GitHub's `open_issues_count` (issues plus
 pull requests) as the number of open issues. 129 cards corrected, and the
 corrections are applied in the research files.
+
+### The seventh blocker, and the one that mattered: the app had never run
+
+The crash buffer said: "No filename found. This is likely a bug in
+expo-router", thrown while the router rendered its first screen.
+
+The bundle had **no route at all**: the entry was still the old `App.js` with
+a `<Slot />` rendered outside the router's context, so expo-router's route
+map was never built and every screen of the app was missing from the bundle.
+The app could never have opened on a phone. The fix:
+
+- the entry is `expo-router/entry` (the package main); the old `App.js` and
+  `index.js` are gone and the providers live in the root layout
+- the tabs and the sign-in group name their first screen, so the app opens
+  from the launcher without a deep link
+- the root layout has a not-found screen for a link the app does not know
+
+How it was found: the release bundle was unpacked from the APK and searched
+for the route files. The same check on a local `expo export` (a minute, no
+emulator) is now the way to prove a bundling change. The local loop found the
+same thing in seconds, after four 25-minute CI cycles.
+
+**The rule this teaches**: when a screen does not appear, look at the bundle
+before looking at the code. The bundle is the truth about what the app is.
