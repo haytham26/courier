@@ -16,11 +16,15 @@ name: B.7 compatibility screen and the voice permission prompt
       id: "settings-screen"
     timeout: 30000
 # The Diagnostics section is at the bottom of the settings.
-- scrollUntilVisible:
-    element:
-      id: "settings-compat"
-    direction: DOWN
-    timeout: 30000
+- swipe:
+    direction: UP
+    duration: 500
+- swipe:
+    direction: UP
+    duration: 500
+- swipe:
+    direction: UP
+    duration: 500
 - tapOn:
     id: "settings-compat"
 - extendedWaitUntil:
