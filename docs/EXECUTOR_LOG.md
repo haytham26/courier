@@ -489,3 +489,56 @@ are in <flow>/screenshots/, and maestro-logcat.txt holds the app's logcat).
 
 Everything is committed and pushed on eat/v4-company-bootstrap (PR #1) and
 eat/t2-expo-58-decision.
+
+### The startup crash, found through the crash buffer (the fifth blocker)
+
+The evidence artifact carries the crash buffer next to the main logcat (the
+main buffer is overwritten by the polling noise, which is why the first runs
+looked like a silent death):
+
+    FATAL EXCEPTION: main
+    Process: com.courier.copilot
+    java.lang.RuntimeException: Unable to get provider androidx.startup.InitializationProvider:
+    Caused by: Failed to create an instance of class androidx.work.impl.WorkDatabase
+
+WorkManager, which AndroidX pulls into every app through the startup provider,
+opens its own database through `androidx.sqlite`. The app stores its data in
+op-sqlite, which is a JSI module with its own SQLite build: the bundled SQLite
+takes the `sqlite3_*` symbols of the process before the platform library
+does, and the framework SQLite that WorkManager uses then fails. The app uses
+no background work at all, so the initializer is removed with the documented
+AndroidX recipe (`tools:node="remove"`), and the framework SQLite is added
+for the libraries that need it.
+
+### The three mistakes of the session, recorded so they are not repeated
+
+1. A revert that moved the pipeline out of PR #1 also took the
+   `babel-preset-expo` dev dependency with it: the release bundle failed
+   again with "Cannot find module babel-preset-expo".
+2. A commit that staged only `apps/mobile` left the lockfile behind: the
+   frozen install failed with "specifiers in the lockfile don't match
+   specifiers in package.json". The lockfile is a root file: `git add -A`, or
+   the file by name.
+3. The pipeline PR and the product PR drifted apart. The pipeline PR now
+   carries only the pipeline and the app fixes it needs to prove itself; the
+   product work stays in PR #1.
+
+### P5.1 Courier Sync, the first slice of the product
+
+- `apps/api/app/repo.py`: the Repo contract, the Postgres implementation
+  (SQLAlchemy + psycopg) and the in-memory one the tests use. The event id
+  comes from the phone, so a replayed batch is stored once.
+- `apps/api/db/schema.sql`: the shifts, the stops, the delivery events, the
+  corrected addresses, the door memory and the PostGIS point of every stop.
+- `POST /shifts/{shift_id}/events:batch` answers with the accepted count and
+  the cursor.
+- `apps/mobile/src/sync/`: the event log, the op-sqlite store (SQLCipher) and
+  the sync service that only confirms a batch after the server stored it.
+
+### P2, the verifier pass
+
+Four verification files (VERIFICATION-A/B/C/D.md): 271 of 941 cards re-checked
+against their real source, every area over the 20 % floor. The systematic
+defect: the research files quoted GitHub's `open_issues_count` (issues plus
+pull requests) as the number of open issues. 129 cards corrected, and the
+corrections are applied in the research files.
