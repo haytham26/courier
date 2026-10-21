@@ -18,6 +18,9 @@ import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { VoiceButton } from '@/voice/VoiceButton';
 import { useVoice } from '@/voice/useVoice';
+import { MorningBriefCard } from '@/voice/MorningBriefCard';
+import { useCourierVoice } from '@/voice/useCourierVoice';
+import { useOptionalAuth } from '@/providers/AuthProvider';
 import { hapticFor } from '@/motion/haptics';
 
 interface Stop {
@@ -79,7 +82,10 @@ const statusLabels: Record<Stop['status'], string> = {
 export default function HomeScreen() {
   const { theme } = useTheme();
   const router = useRouter();
-  const { state: voiceState, lastCommand, startListening, stopListening, isReady } = useVoice();
+  const { state: voiceState, lastCommand, startListening, stopListening, isReady, speak } =
+    useVoice();
+  const auth = useOptionalAuth();
+  const courierVoice = useCourierVoice({ driverId: auth?.user?.id ?? null });
 
   const pendingCount = mockStops.filter((s) => s.status === 'pending').length;
   const deliveredCount = mockStops.filter((s) => s.status === 'delivered').length;
@@ -182,7 +188,7 @@ export default function HomeScreen() {
           <View style={styles.headerActions}>
             <TouchableOpacity
               style={styles.iconButton}
-              onPress={() => router.push('/settings')}
+              onPress={() => router.push('/(tabs)/settings')}
               accessibilityRole="button"
               accessibilityLabel="Settings"
               accessibilityHint="Opens the settings"
@@ -192,6 +198,22 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* The morning brief */}
+        <MorningBriefCard
+          stops={mockStops.length}
+          newAddresses={0}
+          weather="dry"
+          spoken={courierVoice.brief?.text ?? null}
+          onSpeak={() => {
+            void (async () => {
+              const line = await courierVoice.refreshBrief();
+              if (line !== null && line.text.length > 0) {
+                await speak(line.text);
+              }
+            })();
+          }}
+        />
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
@@ -283,7 +305,7 @@ export default function HomeScreen() {
             Recent Stops
           </Text>
           <TouchableOpacity
-            onPress={() => router.push('/stops')}
+            onPress={() => router.push('/(tabs)/stops')}
             accessibilityRole="link"
             accessibilityLabel="See all stops"
             testID="today-see-all"
@@ -297,7 +319,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={stop.id}
               style={styles.stopItem}
-              onPress={() => router.push(`/stops/${stop.id}`)}
+              onPress={() => router.push('/(tabs)/stops')}
               accessibilityRole="button"
               accessibilityLabel={`Stop ${stop.sequence}, ${stop.address}, ${stop.suburb}, ${statusLabels[stop.status]}`}
               testID={`today-stop-${stop.id}`}
