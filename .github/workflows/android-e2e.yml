@@ -69,6 +69,12 @@ jobs:
       - name: Install the dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build the workspace packages
+        # The app bundles @courier/design-tokens from its built output: the
+        # package must exist before Metro can resolve it (dist/ is not
+        # committed).
+        run: pnpm --filter @courier/design-tokens build
+
       - name: The content hash of the build inputs
         id: hash
         run: |

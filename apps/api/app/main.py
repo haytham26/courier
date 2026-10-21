@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from .agents import copilot
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
+from .auth.websocket import get_websocket_principal
 
 # Fail fast when the API cannot verify tokens (no default secrets).
 get_auth_settings()
@@ -74,7 +75,7 @@ def sync_events(shift_id: uuid.UUID, events: list[DeliveryEvent], principal: Aut
 
 
 @app.websocket("/shifts/{shift_id}/voice")
-async def voice(ws: WebSocket, shift_id: uuid.UUID):
+async def voice(ws: WebSocket, shift_id: uuid.UUID, principal: AuthPrincipal = Depends(get_websocket_principal)):
     """Bidirectional voice channel.
     client -> server: {"type":"transcript","text":..., "final":true, "gps":{lat,lon,acc,speed}}
                       (STT runs on-device or via Deepgram streaming; we only receive finals)
