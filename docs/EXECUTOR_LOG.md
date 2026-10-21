@@ -619,3 +619,40 @@ bug a courier would have hit on the very first launch of the app.
 - The evidence artifact carries the crash buffer next to the main logcat. The
   main buffer is overwritten by the polling noise, which is why the first
   runs looked like a silent death.
+
+### The state of the emulator at the end of this session
+
+The pipeline works: the release APK builds, it installs, it starts, the first
+screen is detected, the Maestro flows run and the evidence is uploaded. The
+screenshot from the run shows the real screen (Good morning, Driver, the three
+stats, the Current Run card with 45 Papanui Road, the tab bar).
+
+What still fails: the **B.7 compatibility flow**. The deep link
+`courier:///compat` does not open the compatibility screen (no crash: the
+crash buffer is empty), while the other four flows (smoke, today list, map,
+stops) pass or run.
+
+The next session must, in this order:
+
+1. Find why the deep link does not open `/compat`. The app's intent filter
+   (the scheme `courier`) is in the generated manifest, and the route exists
+   (`app/compat.tsx`). Check the router's linking: with expo-router, the
+   scheme must also be known to `expo-linking` (the `Linking.createURL` /
+   `useURL` path) and the `app.json` "scheme" must be the one the manifest
+   was generated with. A quick local check: `npx expo start` and the deep
+   link, or a Maestro run with `--debug-output`.
+2. When the compat flow passes: the artifacts into `docs/evidence/b7/`,
+   B.7 PASS in `docs/PROGRESS.md`, merge PR #2 (the pipeline) and then PR #1
+   (the product), rebase the T2/T4 PR on main and open it.
+3. The flows are slow (the compat flow alone takes 65 s): the runner gives
+   each flow three minutes, which is enough, but the whole job has to stay
+   under the 40-minute budget with the APK build (19 min) in front of it.
+
+### The two branch rules that cost time today
+
+- The pipeline PR and the product PR drift apart. Check `git branch
+  --show-current` before every commit, and push with the branch name in the
+  command (`git push origin <branch>`) so the commit lands where it should.
+- The lockfile is a root file: `git add -A` or the file by name. A commit
+  that stages only `apps/mobile` leaves the lockfile behind and the frozen
+  install fails in CI.
