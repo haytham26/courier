@@ -146,3 +146,25 @@ Courier Voice is a co-driver that talks with the driver and follows the whole sh
 - **Memory**: remembers the day's context and the driver's preferences; learns runs over time (door spots, usual order, service times) — on-device first, privacy controls, forget-me.
 - **Offline vs online**: offline = on-device commands, dictation, proactive alerts from local data; online = richer conversation and server reasoning. Seamless switching; it tells the driver only if a capability is unavailable.
 - **Evaluation**: scripted full-shift simulations (voice + noise) in the eval set; targets per V4 §10.1; a beta driver satisfaction score for the companion.
+
+## 13. Design Studio — a world-class, original look (founder directive, binding; P4)
+The founder rejected both mockup sets (v1, v2 in `docs/design/mockups/`) as **looking AI-made**. Use them **only as a content/screen inventory** (which screens exist and what each must show), **never as the visual style**. Build a genuinely original, modern, premium identity that stands out internationally.
+
+### 13.1 Research (V4 §12 method), before any visual work
+- **≥ 50 design/animation/UI projects on GitHub (2025–2026)**: RN UI kits and design systems, motion/animation libs (Reanimated 4, Skia, Rive, Lottie, Moti, gesture/physics libs, shared-element, haptics), charts, map styling, typography/variable fonts, icon systems, SaaS dashboard kits, onboarding patterns. Evidence card each; shortlist 15.
+- **Reference products to study (screens + motion)**: Spoke/Circuit, Uber Driver, DoorDash Dasher, Amazon Flex, Apple Maps, Google Maps, Waze, Strava, Revolut, Monzo, Linear, Arc, Things 3, Airbnb, Duolingo, Nothing OS, Teenage Engineering, Apple Fitness — capture what makes each distinctive. Public material only; no copying of proprietary assets.
+- Write `docs/design/RESEARCH.md` (what's distinctive in 2026, what to avoid, what fits a courier's day).
+
+### 13.2 Explicit anti-"AI look" rules (design gate fails on any)
+No neon accent on black, no glow/bloom effects, no glassmorphism everywhere, no pulsing orbs, no purple/blue gradients, no "sparkle" icons for AI, no generic rounded cards stacked, no centered hero + two buttons cliché, no dark mode by default, no stock iconography without a system, no lorem-like filler, no emoji. Every screen must have a clear visual idea, real hierarchy and purposeful motion.
+
+### 13.3 Direction
+- **Light theme is the default** (daylight readability in a van); night theme is an adapted option (auto at sunset), not the identity.
+- Own the identity: distinctive typography pairing (licensed for app use), a signature colour system rooted in the product (e.g. NZ/Canterbury landscape, road signage, parcel/kraft materials — decide by research), a recognisable map style, a motion language (how things enter, confirm, complete), sound/haptic signatures, custom illustration or iconography details.
+- Produce **3 distinct directions** (mood board + 4 key screens each: Today, Driving with map, Copilot voice, Scanner) as real RN screens in a `design-lab` route/Storybook, light and night; record screen videos via the CI emulator. Write `docs/design/DIRECTIONS.md`. The founder picks one (approval gate §7.3) — meanwhile continue other work.
+
+### 13.4 Library test bench (≥ 50 candidates, top 15 prototyped)
+For motion, UI, charts, maps styling, icons, fonts: prototype each shortlisted lib in the design-lab, measure fps (UI/JS thread), bundle size, startup cost, New-Architecture compatibility, a11y and maintenance; publish `docs/design/LIBRARY-BENCH.md` with a table and the winners. Adopt only measured winners (ADR).
+
+### 13.5 Build to the chosen direction
+All 11+ screens (welcome, sign-in, onboarding, today, driving 2D/3D, Copilot voice, dictation, scanner, POD, route/templates, end of day/earnings, settings/map modes/downloads, team/dispatcher web) in the chosen direction, every state (loading/empty/error/offline), light + night, small/large phones, 200% text, RTL. Visual-regression baselines + screen videos as evidence. Human-design review sign-off per screen; scorecard UX ≥ 8/10 vs Spoke and the reference products.

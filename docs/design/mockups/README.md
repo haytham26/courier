@@ -1,5 +1,3 @@
-# Approved mockups v2 — full app, night theme (founder-approved target look)
-Live canvas: https://claude.ai/artifact/KixaotGGNLugEY5hpfwPuD
-Look: near-black ground #07090C, surfaces #0F1318/#161C23, signal lime #CFFF4A (primary actions, Copilot), route blue #5AB0FF, amber #FFB547 (warnings), red #FF7A6B (failed). Figtree for UI, Space Grotesk for numbers. Isometric/tilted 3D map with extruded buildings and a glowing animated route; glass sheets with blur; pulsing Copilot orb.
-Screens (390×844): Main (welcome), SignIn (Google, passkey, email; lockout + 2-step note), Today (Copilot brief, template run card with 3D mini map, Start run, Scan, Dictate), Driving (3D map, maneuver card + lanes, 3D/offline/weather chips, stop sheet with 78pt number, door/shelf/dog chips, 72pt Delivered, swipe hint), Voice (Copilot orb + waveform, conversation, proactive heads-up, quick actions, on-device badge), Dictation (report), Scanner (recipient-address crop highlight, batch counter, LINZ match, van shelf choice), StopDetail (POD photo/signature/voice note, failure reasons), Route (template, progress, timeline by street), EndOfDay (earnings by carrier, IRD km, Export to Xero), Settings (2D/3D/Satellite/Auto, layers, voice verbosity, downloads).
-The app's real screens must match these (V4 §5, MASTER §8.1). These replace v1.
+# Mockups v1/v2 — CONTENT INVENTORY ONLY (visual style rejected by the founder)
+These files show which screens exist and what each must contain. Their look (neon on black, glow, orbs) was rejected as "AI-looking". Do not copy their style. The real design comes from MASTER_EXECUTION §13 (Design Studio: research, 3 directions, founder pick, library bench).
+Canvas: https://claude.ai/artifact/KixaotGGNLugEY5hpfwPuD
