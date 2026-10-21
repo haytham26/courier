@@ -60,7 +60,41 @@ export type RunStatus = 'draft' | 'active' | 'completed' | 'archived';
 
 export interface TemplateSegment {
   street_key: string;
-  direction: 'asc' | 'desc' | 'odd_first' | 'even_first';
+  direction: 'asc' | 'desc' | 'odd_first' | 'even_first' | 'zigzag';
+}
+
+export interface TemplateUpdate {
+  template_id: string;
+  segments: TemplateSegment[];
+  stop_order: string[];
+}
+
+export interface RouteStop {
+  stop_id: string;
+  sequence: number;
+  lat: number;
+  lon: number;
+  arrival_at: string;
+  departure_at: string;
+  distance_m: number;
+  cumulative_distance_m: number;
+  late: boolean;
+}
+
+export interface Route {
+  shift_id: string;
+  run_id: string;
+  engine: string;
+  locked: boolean;
+  template_id: string | null;
+  total_distance_m: number;
+  total_duration_s: number;
+  parcels: number;
+  capacity_parcels: number | null;
+  over_capacity: boolean;
+  window_violations: number;
+  unroutable_stop_ids: string[];
+  stops: RouteStop[];
 }
 
 export interface VoiceCommand {

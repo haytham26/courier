@@ -12,7 +12,16 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const FORBIDDEN = ['AGPL', 'GPL', 'SSPL', 'Commons Clause', 'CC-NC', 'FSL', 'BUSL'];
-const ALLOW = ['MIT', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'ISC', '0BSD', 'Unlicense', 'CC0-1.0'];
+const ALLOW = [
+  'MIT',
+  'Apache-2.0',
+  'BSD-2-Clause',
+  'BSD-3-Clause',
+  'ISC',
+  '0BSD',
+  'Unlicense',
+  'CC0-1.0',
+];
 const OUTPUT = 'docs/LICENSES.md';
 
 const lock = readFileSync('pnpm-lock.yaml', 'utf8');
@@ -40,12 +49,34 @@ function licenceOf(name) {
 
 // The mobile app is what ships to the store: only its dependency closure matters.
 const mobileDeps = [
-  'react-native', 'react', 'expo', 'react-native-unistyles', 'react-native-reanimated',
-  'react-native-screens', 'react-native-safe-area-context', 'react-native-gesture-handler',
-  'react-native-sherpa-onnx', 'react-native-vision-camera', '@maplibre/maplibre-react-native',
-  '@op-engineering/op-sqlite', 'better-auth', '@better-auth/expo', 'expo-audio', 'expo-secure-store',
-  '@expo/vector-icons', 'expo-location', 'expo-router', 'expo-sqlite', 'expo-file-system',
-  'expo-constants', 'expo-linking', 'expo-network', 'expo-web-browser', 'react-native-nitro-modules',
+  'react-native',
+  'react',
+  'expo',
+  'react-native-unistyles',
+  'react-native-reanimated',
+  'react-native-screens',
+  'react-native-safe-area-context',
+  'react-native-gesture-handler',
+  'react-native-sherpa-onnx',
+  'react-native-vision-camera',
+  '@maplibre/maplibre-react-native',
+  '@op-engineering/op-sqlite',
+  'better-auth',
+  '@better-auth/expo',
+  'expo-audio',
+  'expo-secure-store',
+  '@expo/vector-icons',
+  'expo-location',
+  'expo-router',
+  'expo-sqlite',
+  'expo-file-system',
+  'expo-constants',
+  'expo-linking',
+  'expo-network',
+  'expo-web-browser',
+  'react-native-nitro-modules',
+  'expo-haptics',
+  'react-native-worklets',
 ];
 
 const rows = [];
@@ -53,7 +84,9 @@ let failures = 0;
 
 for (const name of mobileDeps) {
   const licence = licenceOf(name);
-  const forbidden = FORBIDDEN.find((needle) => licence.toUpperCase().includes(needle.toUpperCase()));
+  const forbidden = FORBIDDEN.find((needle) =>
+    licence.toUpperCase().includes(needle.toUpperCase()),
+  );
   const allowed = ALLOW.some((needle) => licence.toUpperCase().includes(needle));
   if (forbidden) {
     failures += 1;

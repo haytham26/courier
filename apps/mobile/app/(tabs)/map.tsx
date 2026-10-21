@@ -1,13 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import {
@@ -20,19 +12,22 @@ import {
 } from '@maplibre/maplibre-react-native';
 
 import { useTheme } from '@/providers/ThemeProvider';
-import { Badge } from '@/components/Badge';
 import { Button } from '@/components/Button';
+import { Sheet } from '@/components/Sheet';
 import { getConfiguredGlyphsUrl, getConfiguredTileUrl } from '@/maps/config';
 import { describe, resolveTileSource, type TileSource } from '@/maps/offlinePack';
 import { loadOfflinePack, localGlyphsUrl, type OfflinePackRuntime } from '@/maps/packFiles';
 import { ATTRIBUTION_LINES, getCourierStyle } from '@/maps/styles';
-import {
-  markerLabelColor,
-  mockStops,
-  statusColor,
-  stopsForMap,
-  type Stop,
-} from '@/maps/stops';
+import { markerLabelColor, mockStops, statusColor, stopsForMap, type Stop } from '@/maps/stops';
+
+/** The words of the status labels, so the screen reader reads a sentence. */
+const statusLabels: Record<Stop['status'], string> = {
+  delivered: 'Delivered',
+  pending: 'Pending',
+  active: 'Active',
+  failed: 'Failed',
+  skipped: 'Skipped',
+};
 
 /** Christchurch, the middle of the region the pack covers. */
 const MAP_CENTRE: [number, number] = [172.636, -43.533];
@@ -116,6 +111,8 @@ export default function MapScreen() {
   );
 
   const visibleStops = useMemo(() => stopsForMap(mockStops, bounds), [bounds]);
+
+  const activeStop = useMemo(() => mockStops.find((stop) => stop.status === 'active'), []);
 
   const handleRegionDidChange = useCallback(() => {
     const map = mapRef.current;
@@ -203,10 +200,18 @@ export default function MapScreen() {
 
         <View
           testID="map-pack-status"
-          style={[styles.packStatus, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+          style={[
+            styles.packStatus,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}
           pointerEvents="none"
         >
-          <Text style={[styles.packStatusText, { color: theme.colors.textSecondary }]}>{packLabel}</Text>
+          <Text style={[styles.packStatusText, { color: theme.colors.textSecondary }]}>
+            {packLabel}
+          </Text>
         </View>
 
         <View
@@ -215,7 +220,10 @@ export default function MapScreen() {
           pointerEvents="none"
         >
           {ATTRIBUTION_LINES.map((line) => (
-            <Text key={line} style={[styles.attributionText, { color: theme.colors.textSecondary }]}>
+            <Text
+              key={line}
+              style={[styles.attributionText, { color: theme.colors.textSecondary }]}
+            >
               {line}
             </Text>
           ))}
@@ -225,7 +233,10 @@ export default function MapScreen() {
       <View
         style={[
           styles.bottomControls,
-          { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border },
+          {
+            backgroundColor: theme.colors.surface,
+            borderTopColor: theme.colors.border,
+          },
         ]}
       >
         <View style={styles.controlRow}>
@@ -263,16 +274,30 @@ export default function MapScreen() {
         <View style={styles.controlRow}>
           <Button
             variant="secondary"
-            leftIcon={<MaterialCommunityIcons name="crosshairs-gps" size={18} color={theme.colors.textInverse} />}
+            leftIcon={
+              <MaterialCommunityIcons
+                name="crosshairs-gps"
+                size={20}
+                color={theme.colors.textPrimary}
+              />
+            }
             onPress={() => console.info('maps: centre the map on the courier')}
+            accessibilityLabel="My location"
           >
             My location
           </Button>
-          {mockStops.find((stop) => stop.status === 'active') ? (
+          {activeStop ? (
             <Button
               variant="primary"
-              leftIcon={<MaterialCommunityIcons name="arrow-right" size={18} color={theme.colors.textInverse} />}
-              onPress={() => handleNavigateToStop(mockStops.find((stop) => stop.status === 'active')!)}
+              leftIcon={
+                <MaterialCommunityIcons
+                  name="arrow-right"
+                  size={20}
+                  color={theme.colors.textInverse}
+                />
+              }
+              onPress={() => handleNavigateToStop(activeStop)}
+              accessibilityLabel="Next stop"
             >
               Next stop
             </Button>
@@ -280,83 +305,88 @@ export default function MapScreen() {
         </View>
       </View>
 
-      <Modal
-        visible={selectedStop !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setSelectedStop(null)}
+      <Sheet
+        isOpen={selectedStop !== null}
+        onClose={() => setSelectedStop(null)}
+        title={selectedStop ? `Stop ${selectedStop.sequence}` : undefined}
+        subtitle={selectedStop ? statusLabels[selectedStop.status] : undefined}
+        size="medium"
+        testID="map-stop-sheet"
       >
-        <View style={styles.modalOverlay} onTouchStart={() => setSelectedStop(null)}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <View style={[styles.modalHandle, { backgroundColor: theme.colors.border }]} />
-            {selectedStop ? (
-              <>
-                <View style={styles.modalHeader}>
-                  <View
-                    style={[
-                      styles.modalStatusBadge,
-                      { backgroundColor: statusColor(selectedStop.status, theme) },
-                    ]}
-                  />
-                  <Text style={[styles.modalStopNumber, { color: theme.colors.textPrimary }]}>
-                    Stop #{selectedStop.sequence}
-                  </Text>
-                  <Badge variant={selectedStop.status === 'delivered' ? 'success' : 'outline'}>
-                    {selectedStop.status}
-                  </Badge>
-                </View>
-                <View style={styles.modalBody}>
-                  <Text style={[styles.modalAddress, { color: theme.colors.textPrimary }]}>
-                    {selectedStop.address}
-                  </Text>
-                  <Text style={[styles.modalSuburb, { color: theme.colors.textSecondary }]}>
-                    {selectedStop.suburb}
-                  </Text>
-                  <View style={[styles.modalCoordinates, { borderTopColor: theme.colors.border }]}>
-                    <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary }]}>
-                      Coordinates:
-                    </Text>
-                    <Text style={[styles.modalCoordValue, { color: theme.colors.textSecondary }]}>
-                      {selectedStop.coordinates.lat.toFixed(6)}, {selectedStop.coordinates.lng.toFixed(6)}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.modalActions}>
-                  <Button
-                    variant={selectedStop.status === 'delivered' ? 'outline' : 'primary'}
-                    leftIcon={<MaterialCommunityIcons name="check" size={18} color={theme.colors.textPrimary} />}
-                    onPress={() => handleMarkDelivered(selectedStop)}
-                    disabled={selectedStop.status === 'delivered'}
-                    style={styles.modalActionButton}
-                  >
-                    Delivered
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    leftIcon={<MaterialCommunityIcons name="skip-next" size={18} color={theme.colors.textInverse} />}
-                    onPress={() => handleSkipStop(selectedStop)}
-                    style={styles.modalActionButton}
-                  >
-                    Skip
-                  </Button>
-                  <Button
-                    variant="outline"
-                    leftIcon={
-                      <MaterialCommunityIcons name="navigation-variant" size={18} color={theme.colors.textPrimary} />
+        {selectedStop ? (
+          <>
+            <View style={styles.modalBody}>
+              <Text style={[styles.modalAddress, { color: theme.colors.textPrimary }]}>
+                {selectedStop.address}
+              </Text>
+              <Text style={[styles.modalSuburb, { color: theme.colors.textSecondary }]}>
+                {selectedStop.suburb}
+              </Text>
+              <View style={[styles.modalCoordinates, { borderTopColor: theme.colors.border }]}>
+                <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary }]}>
+                  Coordinates
+                </Text>
+                <Text style={[styles.modalCoordValue, { color: theme.colors.textSecondary }]}>
+                  {selectedStop.coordinates.lat.toFixed(6)},{' '}
+                  {selectedStop.coordinates.lng.toFixed(6)}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.modalActions}>
+              <Button
+                variant={selectedStop.status === 'delivered' ? 'outline' : 'primary'}
+                leftIcon={
+                  <MaterialCommunityIcons
+                    name="check"
+                    size={20}
+                    color={
+                      selectedStop.status === 'delivered'
+                        ? theme.colors.textPrimary
+                        : theme.colors.textInverse
                     }
-                    onPress={() => handleNavigateToStop(selectedStop)}
-                    style={styles.modalActionButton}
-                  >
-                    Navigate
-                  </Button>
-                </View>
-              </>
-            ) : (
-              <ActivityIndicator />
-            )}
-          </View>
-        </View>
-      </Modal>
+                  />
+                }
+                onPress={() => handleMarkDelivered(selectedStop)}
+                disabled={selectedStop.status === 'delivered'}
+                style={styles.modalActionButton}
+                accessibilityLabel="Mark Delivered"
+              >
+                Delivered
+              </Button>
+              <Button
+                variant="secondary"
+                leftIcon={
+                  <MaterialCommunityIcons
+                    name="skip-next"
+                    size={20}
+                    color={theme.colors.textPrimary}
+                  />
+                }
+                onPress={() => handleSkipStop(selectedStop)}
+                style={styles.modalActionButton}
+                accessibilityLabel="Skip"
+              >
+                Skip
+              </Button>
+              <Button
+                variant="outline"
+                leftIcon={
+                  <MaterialCommunityIcons
+                    name="navigation-variant"
+                    size={20}
+                    color={theme.colors.textPrimary}
+                  />
+                }
+                onPress={() => handleNavigateToStop(selectedStop)}
+                style={styles.modalActionButton}
+                accessibilityLabel="Navigate"
+              >
+                Navigate
+              </Button>
+            </View>
+          </>
+        ) : null}
+      </Sheet>
     </SafeAreaView>
   );
 }
@@ -405,8 +435,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   controlLabel: { fontSize: 12, fontWeight: '500' },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 32, maxHeight: '85%' },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 32,
+    maxHeight: '85%',
+  },
   modalHandle: {
     width: 40,
     height: 5,
@@ -415,13 +454,24 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 20,
   },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 24, marginBottom: 16 },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
   modalStatusBadge: { width: 12, height: 12, borderRadius: 6 },
   modalStopNumber: { fontSize: 18, fontWeight: '600', flex: 1 },
   modalBody: { paddingHorizontal: 24, marginBottom: 24 },
   modalAddress: { fontSize: 20, fontWeight: '500', marginBottom: 4 },
   modalSuburb: { fontSize: 16, marginBottom: 12 },
-  modalCoordinates: { flexDirection: 'row', gap: 8, paddingTop: 12, borderTopWidth: 1 },
+  modalCoordinates: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
   modalCoordLabel: { fontSize: 13, fontWeight: '500' },
   modalCoordValue: { fontSize: 13 },
   modalActions: { flexDirection: 'row', gap: 8, paddingHorizontal: 24 },

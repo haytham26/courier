@@ -3,31 +3,32 @@
   "version": "0.1.0",
   "private": true,
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "default": "./dist/index.js"
     },
     "./tokens": {
       "types": "./dist/tokens.d.ts",
-      "import": "./dist/tokens.mjs",
-      "require": "./dist/tokens.js"
+      "default": "./dist/tokens.js"
     },
     "./themes": {
       "types": "./dist/themes.d.ts",
-      "import": "./dist/themes.mjs",
-      "require": "./dist/themes.js"
+      "default": "./dist/themes.js"
+    },
+    "./contrast": {
+      "types": "./dist/contrast.d.ts",
+      "default": "./dist/contrast.js"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.build.json --module ESNext --outDir dist --declarationDir dist --emitDeclarationOnly false --declaration true --declarationMap true --sourceMap true",
+    "build": "tsc -p tsconfig.build.json",
     "build:watch": "tsc --watch",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "contrast:report": "vitest run src/contrast.test.ts -t \"contrast table\""
   },
   "dependencies": {
     "zod": "4.6.7"

@@ -1,91 +1,112 @@
 /**
  * Design Tokens for Courier Copilot
- * Enterprise-grade design system (D7)
- * Supports day/night/high-contrast themes (D16)
- * Built for the Unistyles 3 + Style Dictionary pipeline
+ *
+ * The single source of truth for the visual language. `docs/design/SYSTEM.md`
+ * is the contract this file implements; the founder-approved mockups in
+ * `docs/design/mockups/` are the visual reference the colours come from.
+ *
+ * Rules the token package holds (SYSTEM.md §2):
+ * - Colour is semantic only (`textPrimary`, `surface`, `border`,
+ *   `statusDelivered`, ...). A component never writes a raw hex.
+ * - The type face is Figtree, body text is never smaller than 17 pt, and the
+ *   key numbers sit between 48 pt and 76 pt.
+ * - Touch targets are at least 56 pt; the primary action is 72 pt.
+ * - Spacing is on the 4-pt grid and only on the steps the contract names.
+ * - Motion is 150-250 ms, with spring physics for the sheets, and the
+ *   elevation scale has three levels and no shadow stacks.
+ *
+ * The measured contrast ratios of the three palettes live in `themes.ts`, and
+ * `contrast.test.ts` fails the build when a pair drops below the bar.
  */
 
-// Color Palette - Semantic tokens
+/**
+ * The colour ramps.
+ *
+ * The names are Style Dictionary references (`{neutral.500}`), so the ramps
+ * are the only place a hex is written. The neutral ramp is the cool ink grey
+ * of the approved mockups; the brand ramp is the blue of the "NEXT" badge and
+ * the links; the semantic ramps carry the delivery states.
+ */
 export const colors = {
-  // Brand colors - Courier Orange/Blue
+  // Brand colours - the courier blue
   brand: {
     primary: {
-      50: '#fff4ed',
-      100: '#ffe8d0',
-      200: '#ffd1a1',
-      300: '#ffb066',
-      400: '#ff8a33',
-      500: '#ff6b00',  // Primary brand orange
-      600: '#e65400',
-      700: '#cc4400',
-      800: '#b33300',
-      900: '#992600',
-      950: '#4d1300',
+      50: '#edf3fa',
+      100: '#d6e4f4',
+      200: '#afc9e8',
+      300: '#7fa9d8',
+      400: '#3e81c6',
+      500: '#0b5cad', // Primary brand blue
+      600: '#094c8c',
+      700: '#073f78',
+      800: '#062f59',
+      900: '#052440',
+      950: '#02121f',
     },
     secondary: {
-      50: '#eef7ff',
-      100: '#d0e8ff',
-      200: '#a1d1ff',
-      300: '#66adff',
-      400: '#3391ff',
-      500: '#0070e6',  // Primary brand blue
-      600: '#0059cc',
-      700: '#0044b3',
-      800: '#003399',
-      900: '#002680',
-      950: '#001340',
+      50: '#e4f2f5',
+      100: '#c7e4ea',
+      200: '#92cbd6',
+      300: '#58aebd',
+      400: '#2a92a5',
+      500: '#0e7490', // Primary brand teal
+      600: '#0a5468',
+      700: '#084253',
+      800: '#06313e',
+      900: '#04212a',
+      950: '#021116',
     },
   },
-  
-  // Semantic colors for status/feedback
+
+  // Semantic colours for status/feedback
   semantic: {
     success: {
-      light: '#10b981',
-      DEFAULT: '#059669',
-      dark: '#047857',
-      bg: '#ecfdf5',
-      border: '#a7f3d0',
+      light: '#2e9e68',
+      DEFAULT: '#16814c',
+      dark: '#0f5f38',
+      bg: '#e7f4ee',
+      border: '#a9dcc3',
     },
     warning: {
-      light: '#fbbf24',
-      DEFAULT: '#f59e0b',
-      dark: '#d97706',
-      bg: '#fffbeb',
-      border: '#fde68a',
+      light: '#d9a441',
+      DEFAULT: '#8a5a00',
+      dark: '#6b4500',
+      bg: '#fbf3e2',
+      border: '#e8d3a3',
     },
     error: {
-      light: '#f87171',
-      DEFAULT: '#ef4444',
-      dark: '#dc2626',
-      bg: '#fef2f2',
-      border: '#fecaca',
+      light: '#e06a62',
+      DEFAULT: '#b42318',
+      dark: '#8c1a12',
+      bg: '#fbe9e7',
+      border: '#f0bdb8',
     },
     info: {
-      light: '#60a5fa',
-      DEFAULT: '#3b82f6',
-      dark: '#2563eb',
-      bg: '#eff6ff',
-      border: '#bfdbfe',
+      light: '#3a9fb5',
+      DEFAULT: '#0e7490',
+      dark: '#0a5468',
+      bg: '#e4f2f5',
+      border: '#a9d8e2',
     },
   },
-  
-  // Neutral grays
+
+  // Neutral greys - the cool ink ramp of the mockups
   neutral: {
     0: '#ffffff',
-    50: '#fafafa',
-    100: '#f4f4f5',
-    200: '#e4e4e7',
-    300: '#d4d4d8',
-    400: '#a1a1aa',
-    500: '#71717a',
-    600: '#52525b',
-    700: '#3f3f46',
-    800: '#27272a',
-    900: '#18181b',
-    950: '#09090b',
+    50: '#f4f6f7',
+    100: '#e7ecee',
+    200: '#d5dcdf',
+    300: '#b7c1c6',
+    400: '#828d93', // Borders and controls (3:1 on the day surfaces)
+    500: '#63737c', // Tertiary text (4.5:1 on the day surfaces)
+    600: '#56656e', // Secondary text (5.5:1 on the day surfaces)
+    700: '#3a464d',
+    800: '#222c32',
+    900: '#11181c', // Primary text on the day theme
+    950: '#0e1418', // The night background
   },
-  
-  // Background colors (semantic)
+
+  // Background colours (semantic)
   background: {
     primary: '{neutral.0}',
     secondary: '{neutral.50}',
@@ -93,8 +114,8 @@ export const colors = {
     inverse: '{neutral.900}',
     overlay: 'rgba(0, 0, 0, 0.5)',
   },
-  
-  // Surface colors (cards, sheets, modals)
+
+  // Surface colours (cards, sheets, modals)
   surface: {
     primary: '{neutral.0}',
     secondary: '{neutral.50}',
@@ -102,87 +123,99 @@ export const colors = {
     elevated: '{neutral.0}',
     inverse: '{neutral.900}',
   },
-  
-  // Border colors
+
+  // Border colours
   border: {
     light: '{neutral.200}',
-    DEFAULT: '{neutral.300}',
-    dark: '{neutral.400}',
+    DEFAULT: '{neutral.400}',
+    dark: '{neutral.600}',
     focus: '{brand.primary.500}',
     error: '{semantic.error.DEFAULT}',
   },
-  
-  // Text colors
+
+  // Text colours
   text: {
     primary: '{neutral.900}',
     secondary: '{neutral.600}',
-    tertiary: '{neutral.400}',
+    tertiary: '{neutral.500}',
     inverse: '{neutral.0}',
-    link: '{brand.secondary.500}',
-    linkHover: '{brand.secondary.600}',
+    link: '{brand.primary.500}',
+    linkHover: '{brand.primary.700}',
     error: '{semantic.error.DEFAULT}',
     success: '{semantic.success.DEFAULT}',
     warning: '{semantic.warning.DEFAULT}',
   },
-  
-  // Icon colors
+
+  // Icon colours
   icon: {
     primary: '{neutral.700}',
-    secondary: '{neutral.400}',
+    secondary: '{neutral.500}',
     inverse: '{neutral.0}',
     brand: '{brand.primary.500}',
   },
-  
-  // Status colors for delivery states
+
+  // Status colours for delivery states
   status: {
-    pending: '{neutral.500}',
-    active: '{brand.secondary.500}',
+    pending: '{neutral.600}',
+    active: '{brand.primary.500}',
     delivered: '{semantic.success.DEFAULT}',
     failed: '{semantic.error.DEFAULT}',
     skipped: '{semantic.warning.DEFAULT}',
   },
 } as const;
 
-// Spacing scale (4px base)
+/**
+ * The spacing scale - the 4-pt grid, and only the steps the contract names
+ * (`4 8 12 16 24 32 48`).
+ *
+ * The keys are the scale index, not the pixel value: `spacing.4` is 16 px and
+ * `spacing.6` is 24 px. The steps that used to sit off the contract grid
+ * (20, 40, 64, 80 and 96 px) are gone; a component that needs a bigger gap
+ * uses the next step up.
+ */
 export const spacing = {
   0: '0',
   1: '4px',
   2: '8px',
   3: '12px',
   4: '16px',
-  5: '20px',
   6: '24px',
   8: '32px',
-  10: '40px',
   12: '48px',
-  16: '64px',
-  20: '80px',
-  24: '96px',
 } as const;
 
-// Typography
+/**
+ * Typography.
+ *
+ * Figtree is the family of the approved mockups. The scale has no step below
+ * 17 px: the contract says body text is at least 17 pt, and the smallest
+ * steps of the mockups (13-16 px metadata) are raised to 17 px so the
+ * hierarchy survives and the contract does not.
+ */
 export const typography = {
   fontFamilies: {
-    sans: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    sans: 'Figtree, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     mono: 'JetBrains Mono, Menlo, Monaco, Consolas, monospace',
-    display: 'Inter Display, Inter, system-ui, sans-serif',
+    display: 'Figtree, system-ui, sans-serif',
   },
   fontSizes: {
-    xs: '12px',
-    sm: '14px',
-    base: '16px',
-    lg: '18px',
-    xl: '20px',
-    '2xl': '24px',
-    '3xl': '30px',
-    '4xl': '36px',
-    '5xl': '48px',
+    xs: '17px', // The smallest step - captions, metadata, badges
+    sm: '19px', // Secondary lines
+    base: '20px', // Body
+    lg: '22px', // Subheadings and button labels
+    xl: '24px', // Headings - the WCAG large-text threshold
+    '2xl': '28px', // The address line
+    '3xl': '34px', // Screen titles
+    '4xl': '48px', // Key numbers
+    '5xl': '64px', // Key numbers
+    '6xl': '76px', // The stop number on the driving sheet
   },
   fontWeights: {
     normal: '400',
     medium: '500',
     semibold: '600',
     bold: '700',
+    extraBold: '800', // The weight of the key numbers in the mockups
   },
   lineHeights: {
     tight: '1.25',
@@ -196,51 +229,87 @@ export const typography = {
   },
 } as const;
 
-// Border radius
+/**
+ * The radii - `sm 4 / md 8 / lg 12 / xl 16 / full`.
+ *
+ * `DEFAULT` is the alias of `md`, kept because the components and the web
+ * dashboard both read it.
+ */
 export const borderRadius = {
   none: '0',
   sm: '4px',
   DEFAULT: '8px',
-  md: '12px',
-  lg: '16px',
-  xl: '24px',
+  md: '8px',
+  lg: '12px',
+  xl: '16px',
   full: '9999px',
 } as const;
 
-// Shadows
+/**
+ * The elevation scale - three levels and no shadow stacks.
+ *
+ * `elevation1`, `elevation2` and `elevation3` are the only real levels. The
+ * other names are kept so nothing that already reads them breaks, and each
+ * one points at the level that replaced it.
+ */
 export const shadows = {
   none: 'none',
-  xs: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-  sm: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
-  DEFAULT: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
-  md: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
-  lg: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-  xl: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-  inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
-  // Elevation shadows for Material-like depth
-  elevation1: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
-  elevation2: '0 3px 6px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.10)',
-  elevation3: '0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.10)',
-  elevation4: '0 14px 28px rgba(0,0,0,0.18), 0 3px 6px rgba(0,0,0,0.12)',
-  elevation5: '0 19px 38px rgba(0,0,0,0.20), 0 3px 6px rgba(0,0,0,0.15)',
+  // The three levels of the contract.
+  elevation1: '0 1px 2px rgba(16, 24, 28, 0.10), 0 1px 3px rgba(16, 24, 28, 0.08)',
+  elevation2: '0 3px 6px rgba(16, 24, 28, 0.12), 0 2px 4px rgba(16, 24, 28, 0.08)',
+  elevation3: '0 10px 20px rgba(16, 24, 28, 0.16), 0 3px 6px rgba(16, 24, 28, 0.10)',
+  // The old names, now aliases of the levels above.
+  xs: '0 1px 2px rgba(16, 24, 28, 0.10), 0 1px 3px rgba(16, 24, 28, 0.08)',
+  sm: '0 1px 2px rgba(16, 24, 28, 0.10), 0 1px 3px rgba(16, 24, 28, 0.08)',
+  DEFAULT: '0 1px 2px rgba(16, 24, 28, 0.10), 0 1px 3px rgba(16, 24, 28, 0.08)',
+  md: '0 3px 6px rgba(16, 24, 28, 0.12), 0 2px 4px rgba(16, 24, 28, 0.08)',
+  lg: '0 3px 6px rgba(16, 24, 28, 0.12), 0 2px 4px rgba(16, 24, 28, 0.08)',
+  xl: '0 10px 20px rgba(16, 24, 28, 0.16), 0 3px 6px rgba(16, 24, 28, 0.10)',
+  inner: 'none',
 } as const;
 
-// Animation / Motion
+/**
+ * Motion.
+ *
+ * Every duration sits in the 150-250 ms band of the contract; the only
+ * exception is `instant`, which is the reduce-motion branch. A sheet uses
+ * `springs.sheet` - a critically damped spring, so it settles without
+ * overshooting and the finger can carry the velocity into the dismissal.
+ */
 export const motion = {
   durations: {
     instant: '0ms',
     fast: '150ms',
-    normal: '250ms',
-    slow: '350ms',
-    slower: '500ms',
+    normal: '200ms',
+    slow: '250ms',
+    slower: '250ms',
   },
   easings: {
     linear: 'linear',
     easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
     easeOut: 'cubic-bezier(0, 0, 0.2, 1)',
     easeInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
-    // Spring-like for interactive elements
+    // A curve for the small, non-spring movements.
     spring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+  },
+  /**
+   * The spring configurations.
+   *
+   * `duration` is Reanimated's perceptual duration: the wall time of the
+   * animation is about 1.5 times it, so a 150 ms spring lands inside the
+   * 150-250 ms band. `dampingRatio: 1` is critically damped - no overshoot.
+   */
+  springs: {
+    sheet: { duration: 150, dampingRatio: 1 },
+    settle: { duration: 200, dampingRatio: 1 },
+  },
+  /**
+   * What "reduce motion" means for this product: the transition still happens,
+   * it simply has no duration. The transition is never removed, only made
+   * instant.
+   */
+  reducedMotion: {
+    duration: '0ms',
   },
 } as const;
 
@@ -269,20 +338,27 @@ export const breakpoints = {
   '2xl': '1536px',
 } as const;
 
-// Touch target sizes (accessibility)
+/**
+ * Touch target sizes.
+ *
+ * The contract sets 56 pt as the floor and 72 pt for the primary action; the
+ * floor is deliberately above the 24 px of WCAG 2.2 SC 2.5.8, because a
+ * courier wears gloves and the phone is in a van.
+ */
 export const touchTarget = {
-  minimum: '44px',
-  comfortable: '48px',
-  spacious: '56px',
+  minimum: '56px',
+  comfortable: '56px',
+  spacious: '72px',
+  primary: '72px',
 } as const;
 
 // Component-specific tokens
 export const components = {
   button: {
     height: {
-      sm: '36px',
-      DEFAULT: '44px',
-      lg: '52px',
+      sm: '56px',
+      DEFAULT: '56px',
+      lg: '72px',
     },
     paddingX: {
       sm: '{spacing.3}',
@@ -294,6 +370,8 @@ export const components = {
     fontWeight: '{typography.fontWeights.medium}',
   },
   input: {
+    // The minimum height. The component uses `minHeight`, so 200 % text grows
+    // the field instead of clipping the label.
     height: '{button.height.DEFAULT}',
     paddingX: '{spacing.4}',
     paddingY: '{spacing.2}',
@@ -310,58 +388,93 @@ export const components = {
   },
   badge: {
     paddingX: '{spacing.2}',
-    paddingY: '{spacing.0.5}',
+    paddingY: '{spacing.1}',
     borderRadius: '{borderRadius.full}',
     fontSize: '{typography.fontSizes.xs}',
     fontWeight: '{typography.fontWeights.medium}',
   },
+  list: {
+    // The smallest a tappable row may be.
+    itemMinHeight: '56px',
+    separator: '1px',
+  },
+  /**
+   * The elevation levels in the shape React Native wants.
+   *
+   * `shadows` above carries the CSS form for the web dashboard; these three
+   * are the same levels for the app, and they are the only ones a component
+   * may use.
+   */
+  elevation: {
+    level1: {
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
+      elevation: 1,
+    },
+    level2: {
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.12,
+      shadowRadius: 6,
+      elevation: 3,
+    },
+    level3: {
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.16,
+      shadowRadius: 20,
+      elevation: 8,
+    },
+  },
   // Map-specific tokens (D16 custom map style)
   map: {
-    // Day theme colors
+    // Day theme colours
     day: {
-      background: '#f8f9fa',
-      water: '#d6eaff',
-      land: '#f5f5f0',
+      background: '#f4f6f7',
+      water: '#cfe3ef',
+      land: '#edefea',
       road: '#ffffff',
-      roadOutline: '#e0e0e0',
-      highway: '#ff6b00',
-      highwayOutline: '#e65400',
-      building: '#e8e8e8',
-      park: '#d4edda',
-      text: '#18181b',
+      roadOutline: '#dde3e6',
+      highway: '#f2b04b',
+      highwayOutline: '#c98a22',
+      building: '#e4e8ea',
+      park: '#dde8dc',
+      text: '#11181c',
       textHalo: '#ffffff',
-      stopPin: '#ff6b00',
+      stopPin: '#0b5cad',
       stopPinHalo: '#ffffff',
-      routeLine: '#0070e6',
+      routeLine: '#0b5cad',
       routeLineWidth: '4px',
-      geofenceApproach: 'rgba(255, 107, 0, 0.3)',
-      geofenceImminent: 'rgba(255, 107, 0, 0.5)',
-      userLocation: '#0070e6',
-      userLocationHalo: 'rgba(0, 112, 230, 0.3)',
+      geofenceApproach: 'rgba(11, 92, 173, 0.18)',
+      geofenceImminent: 'rgba(11, 92, 173, 0.32)',
+      userLocation: '#0e7490',
+      userLocationHalo: 'rgba(14, 116, 144, 0.25)',
     },
-    // Night theme colors
+    // Night theme colours
     night: {
-      background: '#0f172a',
-      water: '#0c1a2e',
-      land: '#1e293b',
-      road: '#334155',
-      roadOutline: '#1e293b',
-      highway: '#ff8a33',
-      highwayOutline: '#ff6b00',
-      building: '#334155',
-      park: '#0f5132',
-      text: '#f1f5f9',
-      textHalo: '#0f172a',
-      stopPin: '#ff8a33',
-      stopPinHalo: '#0f172a',
-      routeLine: '#66adff',
+      background: '#121a1f',
+      water: '#0b2029',
+      land: '#18232a',
+      road: '#1e2a31',
+      roadOutline: '#141d23',
+      highway: '#f2b04b',
+      highwayOutline: '#c98a22',
+      building: '#18232a',
+      park: '#16301f',
+      text: '#f2f5f7',
+      textHalo: '#121a1f',
+      stopPin: '#7cc4ff',
+      stopPinHalo: '#0e1418',
+      routeLine: '#4fa8ff',
       routeLineWidth: '4px',
-      geofenceApproach: 'rgba(255, 138, 51, 0.3)',
-      geofenceImminent: 'rgba(255, 138, 51, 0.5)',
-      userLocation: '#66adff',
-      userLocationHalo: 'rgba(102, 173, 255, 0.3)',
+      geofenceApproach: 'rgba(124, 196, 255, 0.20)',
+      geofenceImminent: 'rgba(124, 196, 255, 0.35)',
+      userLocation: '#7cc4ff',
+      userLocationHalo: 'rgba(124, 196, 255, 0.25)',
     },
-    // High contrast theme colors
+    // High contrast theme colours
     highContrast: {
       background: '#000000',
       water: '#000080',

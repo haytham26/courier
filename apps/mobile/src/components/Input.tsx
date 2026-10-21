@@ -1,9 +1,15 @@
+/**
+ * The input.
+ *
+ * The contract: body text is at least 17 pt, a touch target is at least
+ * 56 pt, and the field has to grow with the text rather than clip it at
+ * 200 %. The field therefore has a **minimum** height, not a fixed one.
+ */
 import React from 'react';
 import { TextInput, View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../providers/ThemeProvider';
 
-interface InputProps
-  extends React.ComponentPropsWithoutRef<typeof TextInput> {
+interface InputProps extends React.ComponentPropsWithoutRef<typeof TextInput> {
   label?: string;
   error?: string;
   helperText?: string;
@@ -24,9 +30,11 @@ export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputP
       leftIcon,
       rightIcon,
       style,
+      accessibilityLabel,
+      accessibilityHint,
       ...props
     },
-    ref
+    ref,
   ) => {
     const { theme } = useTheme();
     const hasError = state === 'error' || !!error;
@@ -35,9 +43,9 @@ export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputP
     const getInputStyles = () => {
       const baseStyles = {
         flex: 1,
-        height: 44,
+        minHeight: 56,
         paddingHorizontal: 16,
-        fontSize: 16,
+        fontSize: 20,
         borderRadius: 8,
         borderWidth: 1,
         borderColor: theme.colors.border,
@@ -66,13 +74,12 @@ export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputP
     const getSizeStyles = () => {
       switch (size) {
         case 'sm':
-          return { height: 36, paddingHorizontal: 12, fontSize: 14 };
-        case 'md':
-          return { height: 44, paddingHorizontal: 16, fontSize: 16 };
+          return { minHeight: 56, paddingHorizontal: 12, fontSize: 19 };
         case 'lg':
-          return { height: 52, paddingHorizontal: 20, fontSize: 18 };
+          return { minHeight: 72, paddingHorizontal: 20, fontSize: 22 };
+        case 'md':
         default:
-          return { height: 44, paddingHorizontal: 16, fontSize: 16 };
+          return { minHeight: 56, paddingHorizontal: 16, fontSize: 20 };
       }
     };
 
@@ -84,20 +91,15 @@ export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputP
 
     return (
       <View style={styles.container}>
-        {label && (
-          <Text style={[
-            styles.label,
-            { color: theme.colors.textSecondary },
-          ]}>
-            {label}
-          </Text>
-        )}
+        {label ? (
+          <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{label}</Text>
+        ) : null}
         <View style={styles.inputWrapper}>
-          {leftIcon && (
-            <View style={styles.iconLeft}>
+          {leftIcon ? (
+            <View style={styles.iconLeft} importantForAccessibility="no-hide-descendants">
               <Text style={{ color: theme.colors.textTertiary }}>{leftIcon}</Text>
             </View>
-          )}
+          ) : null}
           <TextInput
             ref={ref}
             style={[
@@ -106,28 +108,33 @@ export const Input = React.forwardRef<React.ElementRef<typeof TextInput>, InputP
               sizeStyles,
               { paddingLeft: leftPadding, paddingRight: rightPadding },
               style,
-            ] as const}
+            ]}
             {...props}
-            accessibilityLabel={label}
-            accessibilityHint={helperText}
+            accessibilityLabel={accessibilityLabel ?? label}
+            accessibilityHint={accessibilityHint ?? helperText}
           />
-          {rightIcon && (
-            <View style={styles.iconRight}>
+          {rightIcon ? (
+            <View style={styles.iconRight} importantForAccessibility="no-hide-descendants">
               <Text style={{ color: theme.colors.textTertiary }}>{rightIcon}</Text>
             </View>
-          )}
+          ) : null}
         </View>
-        {hasHelper && (
-          <Text style={[
-            styles.helperText,
-            { color: hasError ? theme.colors.error : theme.colors.textTertiary },
-          ]}>
+        {hasHelper ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[
+              styles.helperText,
+              {
+                color: hasError ? theme.colors.error : theme.colors.textTertiary,
+              },
+            ]}
+          >
             {error || helperText}
           </Text>
-        )}
+        ) : null}
       </View>
     );
-  }
+  },
 );
 
 Input.displayName = 'Input';
@@ -137,9 +144,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   label: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '500',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -159,7 +166,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   helperText: {
-    fontSize: 12,
-    marginTop: 6,
+    fontSize: 17,
+    marginTop: 8,
   },
 });

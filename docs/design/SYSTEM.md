@@ -16,14 +16,14 @@ Single source of truth for the visual language (V4 §5). Tokens live in
 
 ## 2. Tokens
 
-| Group | Rule |
-|-------|-------|
-| Colour | semantic tokens only (`textPrimary`, `surface`, `border`, `statusDelivered`, …) — never a raw hex in a component |
-| Type | **Figtree**; tabular numerals for counts, ETAs and money; body ≥ 17 pt; key numbers 48–76 pt |
-| Spacing | 4-pt grid only (`4 8 12 16 24 32 48`) |
-| Radii | `sm 4 / md 8 / lg 12 / xl 16 / full` |
-| Elevation | three levels maximum; no shadow stacks |
-| Motion | 150–250 ms, spring for sheets, Reanimated 4 on the UI thread |
+| Group     | Rule                                                                                                             |
+| --------- | ---------------------------------------------------------------------------------------------------------------- |
+| Colour    | semantic tokens only (`textPrimary`, `surface`, `border`, `statusDelivered`, …) — never a raw hex in a component |
+| Type      | **Figtree**; tabular numerals for counts, ETAs and money; body ≥ 17 pt; key numbers 48–76 pt                     |
+| Spacing   | 4-pt grid only (`4 8 12 16 24 32 48`)                                                                            |
+| Radii     | `sm 4 / md 8 / lg 12 / xl 16 / full`                                                                             |
+| Elevation | three levels maximum; no shadow stacks                                                                           |
+| Motion    | 150–250 ms, spring for sheets, Reanimated 4 on the UI thread                                                     |
 
 The token package is the only place a value may be defined; a component that needs a new value adds a
 token first. A lint rule rejects raw hex, raw px and raw font names inside components.
@@ -31,6 +31,7 @@ token first. A lint rule rejects raw hex, raw px and raw font names inside compo
 ## 3. Screens (the three that matter)
 
 ### Today's list (the opening screen)
+
 - Big number first: **stops remaining** (48–76 pt, tabular), then the delivered count.
 - The next stop is the largest element: address in 28 pt semibold, two lines maximum, shrink-to-fit.
 - One primary action (72 pt): **Next stop**.
@@ -38,6 +39,7 @@ token first. A lint rule rejects raw hex, raw px and raw font names inside compo
   speaking, offline, muted, error) and its own earcon and haptic.
 
 ### Driving (night)
+
 - Near-black background (`#0A0A0A`–`#121212`), never pure black; no pure white text; low blue.
 - The address and the distance are the only bright things on screen.
 - The primary action is a 72 pt thumb-reachable button in the lower third; the hand never covers the
@@ -45,6 +47,7 @@ token first. A lint rule rejects raw hex, raw px and raw font names inside compo
 - Status is never colour-only: every stop carries a shape/label as well.
 
 ### Dictation report
+
 - "You said X → corrected Y" per line, with the correction and the reason (short).
 - Unresolved items are listed as **one question each**, with the options the driver can answer by
   voice.
@@ -52,15 +55,15 @@ token first. A lint rule rejects raw hex, raw px and raw font names inside compo
 
 ## 4. States (every screen has all of them)
 
-| State | Rule |
-|-------|------|
-| Loading | skeleton, never a spinner for more than 300 ms |
-| Empty | say what is missing and what to do next |
-| Error | a plain sentence + a recovery action |
-| Offline | a chip with the number of queued actions, never a blocking dialog |
-| Partial sync | the same chip, with "retry" |
-| Permission denied | one line, the system setting as the next step |
-| Long list | FlashList, 300+ stops without a frame drop |
+| State             | Rule                                                              |
+| ----------------- | ----------------------------------------------------------------- |
+| Loading           | skeleton, never a spinner for more than 300 ms                    |
+| Empty             | say what is missing and what to do next                           |
+| Error             | a plain sentence + a recovery action                              |
+| Offline           | a chip with the number of queued actions, never a blocking dialog |
+| Partial sync      | the same chip, with "retry"                                       |
+| Permission denied | one line, the system setting as the next step                     |
+| Long list         | FlashList, 300+ stops without a frame drop                        |
 
 ## 5. Motion
 
@@ -100,3 +103,19 @@ Every screen change ships with Maestro screenshots in `docs/evidence/design/`:
 - compared against the approved mockups (Driving night, Dictation report, Today's list).
 
 The gate is: no screenshot contradicts the mockup. Fix the screen, not the screenshot.
+
+## 10. Where this contract lives in the code
+
+| What                                                                        | Where                                                            |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| The tokens (colour, type, spacing, radii, elevation, motion, touch targets) | `packages/design-tokens/src/tokens.ts`                           |
+| The three palettes and their measured contrast ratios                       | `packages/design-tokens/src/themes.ts`                           |
+| The contrast maths and the gate that fails below the bar                    | `packages/design-tokens/src/contrast.ts`, `src/contrast.test.ts` |
+| The transitions, the reduce-motion branch and the haptics                   | `apps/mobile/src/motion/`                                        |
+| The spec of every screen                                                    | `docs/design/mockups/*.md`                                       |
+| The approved mockups                                                        | `docs/design/mockups/*.dc.html`                                  |
+
+The measured contrast table is printed by
+`pnpm --filter @courier/design-tokens contrast:report`, and the numbers in
+`themes.ts` are its output. A colour change that breaks the bar fails the
+build.

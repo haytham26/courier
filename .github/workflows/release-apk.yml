@@ -37,6 +37,12 @@ jobs:
       - name: Install the dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build the design tokens
+        # The app imports `@courier/design-tokens/themes` and
+        # `@courier/design-tokens/tokens`; Metro resolves them from the built
+        # `dist`, so the package has to be built before the bundle.
+        run: pnpm --filter @courier/design-tokens build
+
       - name: Read the signing secrets
         id: keystore
         env:

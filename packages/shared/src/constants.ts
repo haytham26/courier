@@ -147,6 +147,7 @@ export const API_ENDPOINTS = {
   STOPS: '/shifts/{shift_id}/stops',
   EVENTS_BATCH: '/shifts/{shift_id}/events:batch',
   TEMPLATE: '/runs/{run_id}/template',
+  ROUTE: '/shifts/{shift_id}/route',
   VOICE_WS: '/shifts/{shift_id}/voice',
 } as const;
 

@@ -45,7 +45,7 @@ export default function CompatScreen() {
   const update = useCallback((id: string, state: CheckState, detail: string) => {
     setResults((current) => ({
       ...current,
-      [id]: { ...current[id]!, state, detail },
+      [id]: { ...current[id], state, detail },
     }));
   }, []);
 
@@ -71,9 +71,15 @@ export default function CompatScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID="compat-screen">
       <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Compatibility (B.7)</Text>
       {MODULES.map((module) => {
-        const result = results[module.id]!;
+        const result = results[module.id];
         return (
-          <View key={module.id} style={styles.row} testID={`compat-row-${result.id}`}>
+          <View
+            key={module.id}
+            style={styles.row}
+            testID={`compat-row-${result.id}`}
+            accessible
+            accessibilityLabel={`${result.label}: ${result.state}${result.detail ? `. ${result.detail}` : ''}`}
+          >
             <Text style={[styles.label, { color: theme.colors.textPrimary }]}>{result.label}</Text>
             <Text
               testID={`compat-${result.id}`}
@@ -92,7 +98,11 @@ export default function CompatScreen() {
           </View>
         );
       })}
-      <Text testID="compat-running" style={[styles.detail, { color: theme.colors.textSecondary }]}>
+      <Text
+        testID="compat-running"
+        accessibilityLiveRegion="polite"
+        style={[styles.detail, { color: theme.colors.textSecondary }]}
+      >
         {running ? 'running' : 'done'}
       </Text>
       <ReanimatedProbe onResult={(state, detail) => update('reanimated', state, detail)} />
@@ -104,13 +114,13 @@ export default function CompatScreen() {
 function stateColor(state: CheckState, colors: Record<string, string>): string {
   switch (state) {
     case 'ok':
-      return colors.success ?? '#059669';
+      return colors.success ?? colors.textSecondary;
     case 'failed':
-      return colors.error ?? '#ef4444';
+      return colors.error ?? colors.textSecondary;
     case 'skipped':
-      return colors.warning ?? '#f59e0b';
+      return colors.warning ?? colors.textSecondary;
     default:
-      return colors.textSecondary ?? '#52525b';
+      return colors.textSecondary;
   }
 }
 
@@ -153,7 +163,11 @@ async function runMapLibre(update: (id: string, state: CheckState, detail: strin
     if (typeof maplibre.Map !== 'undefined') {
       // The offline PMTiles archive is built in a later phase; the native view
       // binding is what this gate proves for now.
-      update('maplibre', 'skipped', 'native Map component available; the PMTiles archive is not built yet');
+      update(
+        'maplibre',
+        'skipped',
+        'native Map component available; the PMTiles archive is not built yet',
+      );
       return;
     }
     update('maplibre', 'failed', 'Map is missing from @maplibre/maplibre-react-native');
@@ -171,7 +185,7 @@ async function runOpSqlite(update: (id: string, state: CheckState, detail: strin
     const result = await db.execute('SELECT value FROM compat LIMIT 1');
     const value = result.rows[0]?.value;
     if (value !== 'ok') {
-      update('opsqlite', 'failed', `read back ${String(value)}`);
+      update('opsqlite', 'failed', `read back ${JSON.stringify(value)}`);
       return;
     }
     update('opsqlite', 'ok', 'wrote a row and read it back');
@@ -181,28 +195,28 @@ async function runOpSqlite(update: (id: string, state: CheckState, detail: strin
 }
 
 /** Animates a shared value so the Reanimated native runtime has to be alive. */
-function ReanimatedProbe({
-  onResult,
-}: {
-  onResult: (state: CheckState, detail: string) => void;
-}) {
+function ReanimatedProbe({ onResult }: { onResult: (state: CheckState, detail: string) => void }) {
+  const { theme } = useTheme();
   const value = useSharedValue(0);
-  const animatedStyle = useAnimatedStyle(() => ({ opacity: 0.4 + value.value * 0.6 }));
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: 0.4 + value.value * 0.6,
+  }));
 
   useEffect(() => {
     value.value = withTiming(1, { duration: 250 });
     onResult('ok', 'withTiming scheduled on the UI runtime');
   }, [onResult, value]);
 
-  return <Animated.View testID="compat-reanimated-view" style={[styles.probe, animatedStyle]} />;
+  return (
+    <Animated.View
+      testID="compat-reanimated-view"
+      style={[styles.probe, { backgroundColor: theme.colors.textTertiary }, animatedStyle]}
+    />
+  );
 }
 
 /** Records a short clip so the expo-audio native module has to be alive. */
-function AudioProbe({
-  onResult,
-}: {
-  onResult: (state: CheckState, detail: string) => void;
-}) {
+function AudioProbe({ onResult }: { onResult: (state: CheckState, detail: string) => void }) {
   useEffect(() => {
     let cancelled = false;
 
@@ -263,6 +277,5 @@ const styles = StyleSheet.create({
   probe: {
     height: 24,
     width: 24,
-    backgroundColor: '#888888',
   },
 });

@@ -91,18 +91,15 @@ export function statusColor(status: StopStatus, theme: Theme): string {
 /**
  * The colour of the number on a stop marker.
  *
- * The disc is filled with the status colour, so the number has to read on it.
- * The day theme needs two label colours: the mid grey of a pending stop takes
- * the light label (4.8:1) and the blue of the active stop takes it too
- * (4.7:1), while the green (4.7:1), the red (4.7:1) and the amber (8.3:1)
- * take the dark one. The night and the high-contrast themes have light status
- * colours, so they all take the dark label (7.2:1 and above).
+ * The disc is filled with the status colour, so the number has to read on
+ * it. The day theme uses the white label on every status colour (the grey
+ * 6.03:1, the blue 6.67:1, the green 5.88:1, the red 6.57:1 and the amber
+ * 5.93:1), and the night and the high-contrast themes have light status
+ * colours, so they all take the dark label (8.13:1 and above).
  */
 export function markerLabelColor(status: StopStatus, theme: Theme): string {
   if (theme.name === 'day') {
-    return status === 'pending' || status === 'active'
-      ? theme.colors.textInverse
-      : theme.colors.textPrimary;
+    return theme.colors.textInverse;
   }
   return theme.colors.background;
 }

@@ -32,9 +32,9 @@ export const spacing = {
 
 export const borderRadius = {
   sm: px(radius.sm),
-  md: px(radius.DEFAULT),
-  lg: px(radius.md),
-  xl: px(radius.lg),
+  md: px(radius.md),
+  lg: px(radius.lg),
+  xl: px(radius.xl),
   full: px(radius.full),
 };
 
