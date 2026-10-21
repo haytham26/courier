@@ -9,8 +9,7 @@ name: B.7 compatibility screen and the voice permission prompt
     timeout: 60000
 # The compatibility screen is reached from the settings, the way a courier (or
 # a support agent on the phone) would reach it.
-- tapOn:
-    id: "open-settings"
+- tapOn: "Settings"
 - extendedWaitUntil:
     visible:
       id: "settings-screen"
