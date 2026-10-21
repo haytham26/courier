@@ -7,7 +7,10 @@ name: Today's list shows the day
     visible:
       id: "today-screen"
     timeout: 60000
-- assertVisible: "Delivered"
-- assertVisible: "Remaining"
-- assertVisible: "Success Rate"
+# The stat labels are upper case in the design, so the flow looks for them the
+# way the screen shows them.
+- assertVisible: "DELIVERED"
+- assertVisible: "REMAINING"
+- assertVisible: "SUCCESS RATE"
+- assertVisible: "Current Run"
 - takeScreenshot: "today-list"
