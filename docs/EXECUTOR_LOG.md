@@ -656,3 +656,130 @@ The next session must, in this order:
 - The lockfile is a root file: `git add -A` or the file by name. A commit
   that stages only `apps/mobile` leaves the lockfile behind and the frozen
   install fails in CI.
+
+## Session 2026-10-21 - the scanner evaluation set (V4 section 10.2, the second of the three eval sets)
+
+**Role:** Researcher + Engineer, scanner squad. **Branch:** `feat/v4-company-bootstrap` (no git
+commands were run in this step).
+
+**Skills applied:** using-agent-skills, context-engineering, source-driven-development,
+spec-driven-development, incremental-implementation, constraint-driven-development,
+security-and-hardening, documentation-and-adrs, code-review-and-quality, doubt-driven-development.
+
+### What was built
+
+- `docs/squads/scanner/eval/README.md` - what the set measures (the scanner metrics M1-M8), the
+  seven slices, the counts and the acceptance counts, the privacy rule, the licence ledger and
+  the regeneration commands.
+- `docs/squads/scanner/eval/manifest/labels.jsonl` - 370 label slots: 330 synthetic labels with
+  their ground truth (the field values, the parsed address in the shape `INGEST_EXTRACT` asks for,
+  the symbology and the gold block) and 40 slots that wait on the founder's photos, with no ground
+  truth because nobody has looked at a photo yet.
+- `docs/squads/scanner/eval/manifest/slices.json` - the slice ids, the minimums (310 in total), the
+  synthetic counts (330) and the founder slots (40). The floor is 300 labels and it counts only
+  the labels we can measure on today.
+- `docs/squads/scanner/eval/manifest/fields.json` - the field catalogue: the expected format per
+  field, the NZ address format, the normalisation rules, the acceptance rules, the carriers with
+  their verification, the GS1 symbologies, the layouts and the privacy tokens.
+- `docs/squads/scanner/eval/manifest/licence.csv` - 11 rows: our own drawings, the LINZ address
+  data (CC BY 4.0), the founder photos (pending) and the eight reference rows (GS1, NZ Post, Post
+  Haste, NZ Couriers, Aramex), each with the URL and the date it was read.
+- `scripts/build-scanner-eval.mjs`, `scripts/generate-synthetic-labels.mjs`,
+  `scripts/check-scanner-eval.mjs` - the builder (deterministic, byte-identical on a re-run), the
+  drawing of the synthetic labels as SVG into `data/labels/synthetic/` (gitignored) with the ground
+  truth beside them, and the integrity check. The check is wired into the floor guard job in
+  `.github/workflows/quality-gates.yml` next to the voice check.
+
+### What was verified and what was not
+
+- The carrier, the symbology and the label facts were read on 2026-10-21 from the carrier pages
+  and from GS1, and every one of them carries its URL and the date in the ledger.
+- **Unverified:** the Team-K Parcel carrier. A web search and a DuckDuckGo HTML search found no New
+  Zealand courier under that name, so no label is drawn for it and the founder has to confirm the
+  name and the format. The symbology of every carrier barcode is unverified (only the Code 128
+  merchant barcode on an NZ Post label is verified).
+- The barcode on a synthetic label is a deterministic pattern, not a scannable Code 128: there is
+  no image library and no barcode encoder in this workspace, so the barcode read rate has to be
+  measured on the founder photos and on a barcode-accurate renderer.
+- The synthetic labels hold no name of a real person, no real phone number and no real email
+  address; the check enforces it. The address is public LINZ address-point data under CC BY 4.0.
+- The real photos are not in the repository and never will be: the 40 founder slots carry a brief
+  and the redaction and the consent are the founder's to do.
+
+### The proof
+
+- `node scripts/build-scanner-eval.mjs` -> 370 slots (330 synthetic, 40 for the founder), 7 slices,
+  floor 300, slice minimums 310.
+- `node scripts/generate-synthetic-labels.mjs` -> 330 images with the ground truth beside them.
+- `node scripts/check-scanner-eval.mjs` -> sound: 330 labels we can measure on, 40 founder slots,
+  10 carriers, 8 layouts, 330 images drawn. The failure modes were tested on purpose: a licence
+  that is not in the ledger, a missing ground truth and a count under the floor all fail the check.
+
+## Session 2026-10-21 - P3 Courier Maps (T5): the offline map the courier drives with
+
+**Role:** Engineer, maps squad. **Branch:** `feat/v4-company-bootstrap` (no git commands were run in
+this step).
+
+**Skills applied:** using-agent-skills, context-engineering, source-driven-development,
+test-driven-development, incremental-implementation, api-and-interface-design,
+constraint-driven-development, documentation-and-adrs, code-review-and-quality,
+doubt-driven-development.
+
+### What was built
+
+- `apps/mobile/src/maps/styles.ts` - the courier style: one recipe generated from the design tokens
+  (day, night, high contrast), the Protomaps basemap schema v4 source layers, the house numbers at
+  z17, the attribution in the tile source and a style that stays valid with no tile source at all.
+- `apps/mobile/src/maps/offlinePack.ts` - the pack contract: the manifest schema, the format
+  version and the region check, the detection of the downloaded and the bundled pack, and the
+  fallback to the online source and to no source.
+- `apps/mobile/src/maps/packFiles.ts` - the file system adapter: the document directory and the
+  bundle, the copy of the bundled pack into place, the local glyph endpoint.
+- `apps/mobile/src/maps/config.ts` - the configurable tile source, and the refusal of the
+  OpenStreetMap Foundation tile servers whatever the configuration says.
+- `apps/mobile/src/maps/stops.ts` - the stops on the map, the marker colours with their contrast
+  and the marker cap.
+- `apps/mobile/app/(tabs)/map.tsx` - the real MapLibre map: the style, the pack when it is there,
+  the stop markers with their sequence numbers, the position puck, the attribution on the map and
+  the day, night and contrast switch. The `map-screen` test id is kept.
+- `scripts/build-pmtiles.mjs` - the pack build: the terms of the source are checked first, the
+  sources whose terms forbid our offline use are refused, the plan is printed and the script stops
+  unless `--execute` is given, and the licence and the attribution go into the manifest.
+- `docs/squads/maps/README.md`, `docs/squads/maps/STATUS.md`, `docs/squads/maps/decisions.md` and
+  `apps/mobile/assets/maps/README.md` - the decision, the pack layout, how to build the pack, the
+  licence of the data, the performance budget and the state of the squad.
+
+### What was verified and what was not
+
+- The licence text was read on 2026-10-21 from the pages themselves and every quote carries its URL
+  and the date: the OSMF Tile Usage Policy (https://operations.osmfoundation.org/policies/tiles/),
+  the OSM copyright page (https://www.openstreetmap.org/copyright), the OpenFreeMap terms
+  (https://openfreemap.org/tos/) and the LINZ attribution page
+  (https://www.linz.govt.nz/products-services/data/licensing-and-using-data/attributing-linz-data).
+  The Protomaps basemap layer list was read from https://docs.protomaps.com/basemaps/layers.
+- **Unverified:** the Geofabrik download terms. The host timed out from this machine on 2026-10-21,
+  so the build script says so on every run and the operator has to confirm the current terms before
+  the first production build. The ODbL of the data itself is verified.
+- **Unverified:** everything that needs a pack or a device - the pack size against the 50 MB
+  ceiling, the frame times against 60 fps, the tile read latency, and `pmtiles://file://` through
+  the RN binding (the upstream example only shows `pmtiles://https://`).
+- The glyph bundle does not exist yet, so the map draws no street names or house numbers until it
+  is built; the stop numbers are drawn on the markers, so they read without it.
+- The pack is not in the APK yet: the app reads it from the document directory, and the delivery
+  (install-time asset delivery, or a first run download on Wi-Fi) is the founder's call.
+
+### The proof
+
+- `corepack pnpm --filter mobile typecheck` - clean.
+- `corepack pnpm --filter mobile test` - 6 suites, 60 tests, all green; the new suites are
+  `src/maps/__tests__/styles.test.ts`, `src/maps/__tests__/offlinePack.test.ts`,
+  `src/maps/__tests__/config.test.ts` and `app/(tabs)/__tests__/map.test.tsx`. They need no device
+  and no network.
+- `node scripts/build-pmtiles.mjs --source geofabrik-nz` - the plan and the terms, then it stops.
+- `node scripts/build-pmtiles.mjs --source osm-foundation-tiles` - refused, with the policy quote.
+- `node scripts/build-pmtiles.mjs --source openfreemap-hosted` - refused until the conditions are
+  accepted word for word.
+- `node scripts/build-pmtiles.mjs --source somewhere-else` - refused: the terms are unknown.
+- `node scripts/build-pmtiles.mjs --source local --source-title ... --source-licence ...
+  --source-licence-url ... --source-attribution ... --confirm-offline-use` - the plan for a source
+  the founder supplies.

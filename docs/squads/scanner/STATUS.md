@@ -1,24 +1,34 @@
 ﻿# Label Scanner Squad - status
 
-Updated: 2026-10-20 (squad created, V4 bootstrap)
+Updated: 2026-10-21 (the evaluation set is built; the founder photos are still missing)
 
 ## Done (with evidence)
 
 - Squad skeleton, targets and evaluation plan created.
+- The evaluation set: `docs/squads/scanner/eval/` - the manifest (370 label slots, 330 of them
+  synthetic with their ground truth), the field catalogue with the acceptance rules, the licence
+  ledger, the builder, the drawing of the synthetic labels and the integrity check
+  (`node scripts/check-scanner-eval.mjs`, wired into the floor guard job in
+  `.github/workflows/quality-gates.yml`). The images live in `data/labels/synthetic/` and are not
+  committed.
 
 ## Metrics vs targets
 
 | Metric | Target | Today | Evidence |
 |--------|--------|-------|----------|
 | _(not measured yet)_ | see README | - | - |
+| evaluation set size | >= 300 labels | 330 synthetic labels, 40 slots for the founder | `docs/squads/scanner/eval/manifest/slices.json` |
 
 ## Next
 
-1. Build the evaluation dataset and the benchmark.
-2. Research the 2026 candidates (V4 §3) and record the decision.
+1. Build the benchmark (the harness that turns an engine's output into M1-M8).
+2. Get the 40 redacted label photos from the founder and annotate their ground truth.
 3. Measure the baseline and publish the first numbers.
 
 ## Risks
 
 - The evaluation data for some squads needs founder-provided material (redacted label photos, real
   shift days); until then the benchmark uses synthetic and public data and says so.
+- The synthetic labels hold no name of a real person and no real phone number, so they are less
+  realistic than a real label; the barcode on them is a drawn pattern, not a scannable symbol.
+  Both gaps close when the founder's photos arrive.
