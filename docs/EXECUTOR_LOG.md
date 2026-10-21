@@ -1188,3 +1188,49 @@ doubt-driven-development.
 - **No frame rate was measured.** There is no emulator on this machine, so every fps cell of the bench is UNVERIFIED and the performance budget of `CONSTRAINTS.md` stays open for this work. The emulator run of §13.5 fills it in.
 - **The device screenshots of the three directions do not exist yet.** The renders in `docs/design/directions/` are HTML, drawn from the same tokens; the day/night, small/large and 200 % text screenshots come from the CI emulator run.
 - **The founder has not picked yet.** Two of the three directions will not survive the pick, so the screen inventory of §13.5 is the next step and it waits for the answer.
+
+### The last fix of this shift, and where the run stands
+
+The run of 22:08 showed the flow reaching the settings and then failing on
+the scroll: "Scrolling DOWN until id: settings-compat is visible". The cause
+is React Native, not Maestro: a ScrollView does not put its off-screen
+children in the accessibility tree, so the element the flow looks for is not
+there yet and "scroll until visible" can never find it. The flow now swipes
+three times and taps the entry.
+
+**The rule this shift taught me twice**: after a merge, check the file that
+the merge touched - a merge takes one side of a conflict, and a file that was
+changed on both sides can silently lose a change. Copying a file between
+branches is worse: the pipeline branch ended up without the voice files and
+the release bundle failed on the import. Merge the branch and read the diff.
+
+### The state at the end of this shift
+
+- **PR #2 `feat/p1-emulator-pipeline`** (the pipeline): the two-job Android
+  E2E (the release APK cached by content hash, then the emulator that reuses
+  it), the readiness gates, the E2E mode on local mocks, the five Maestro
+  flows (smoke, today list, map, stops, compatibility), the permission
+  grants, the local runner script. The last run: every flow's assertions
+  pass except the compatibility screen, which was the scroll above.
+- **PR #1 `feat/v4-company-bootstrap`** (the product): the 24 research areas
+  with the verifier pass, Courier Voice (the service, the app, the eval), the
+  Design Studio (the research, the bench, the three directions), the map view
+  modes and the 3D buildings, the complete sign-in (MFA, passkeys, OAuth, the
+  teams, the offline session, the biometric unlock), StoreReady, the
+  deployment with the restore test, the P5.1 sync slice, the door memory,
+  the earnings, the routing, the two security fixes, the voice and the scanner
+  eval sets. Merged with main (D23 and D24 recorded, the mockups README
+  keeping main's inventory note at the top).
+- **The T2/T4 branch**: merged with main (a merge, never a rebase), ready
+  for its PR (ADR-002, ADR-003, ADR-004, the LINZ scripts, the 96.9 % D8
+  accuracy run over 656 044 real addresses).
+
+### The next shift, in order
+
+1. The emulator run in flight. If the compatibility flow passes: the
+   artefacts into `docs/evidence/b7/`, B.7 marked PASS in `docs/PROGRESS.md`,
+   merge PR #2 and then PR #1, and open the T2/T4 PR.
+2. P7: the release (the CHANGELOG, the v1.0.0 tag, the store listing draft,
+   the acceptance on the CI emulator) and `docs/FINAL_REPORT.md`.
+3. The two founder decisions (the look A/B/C, and the store ids and the
+   signing) are in FOUNDER_TODO.md; nothing is blocked on them.
