@@ -44,3 +44,9 @@
 - Cap — product demo/tutorial videos.
 - OpenSEO — website SEO.
 Each: license check (fine to self-host unmodified as separate tools; if we modify an AGPL one that users access over the network, we must offer those users its modified source), self-host plan, security review, added to COST_PLAN when adopted.
+
+## D25 — OmniRoute as the server LLM gateway (2026-10-21, founder decision; resolves D18)
+- Use **OmniRoute** (github.com/diegosouzapw/OmniRoute, MIT, self-hosted AI gateway: routing, load-balancing, fallback, caching, observability) as the single LLM gateway for Courier Voice's server brain and other server AI features (alongside/instead of LiteLLM — Platform squad decides by benchmark + ADR).
+- **Production deployment**: self-hosted on our server (Oracle Sydney), never the founder's PC; pinned version; secrets in the server secret manager; admin UI not exposed publicly; logs without PII.
+- **Production routing policy**: only providers/accounts whose terms allow commercial API use and that do **not** train on our data (driver/customer text/audio). Personal subscription logins (ChatGPT/Claude/Gemini consumer plans via OAuth), unofficial/free proxies and any provider that may train on inputs are **dev-only** and must be disabled for production traffic (separate OmniRoute instance/config for dev).
+- Cost guard (§7) applies: free/cheap tiers first, paid fallback with alerts and caps. App calls the gateway via one internal interface so the gateway can be swapped.
