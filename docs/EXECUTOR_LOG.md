@@ -561,3 +561,61 @@ we could not verify". The 259 gap rows are merged into `docs/PARITY.md`.
 2. **P2**: the verifier pass (>= 20 %) over the research, the eval sets (voice, scanner, routing).
 3. **P3-P7**: Courier Maps (T5) -> the design to the mockups (T6) -> the product (T7) ->
    launch readiness -> the v1.0.0 release.
+
+### The sixth blocker: the app crashed on the first launch, and the crash buffer named it
+
+With the WorkManager crash gone, the app started (the pid appeared) and then
+died with a JavaScript error:
+
+    com.facebook.react.common.JavascriptException: Error: No filename found.
+    This is likely a bug in expo-router.
+        at Slot (address at index.android.bundle:1:769686)
+        at ThemeProvider ... at App
+
+The app is opened from the launcher without a deep link, so the URL is empty
+and expo-router has to pick the first screen by itself: the tabs now name
+their first screen (`unstable_settings.initialRouteName = 'index'`), the
+sign-in group names its own (`login`), and the root layout has a not-found
+screen so an unknown link shows where to go instead of crashing. This is the
+bug a courier would have hit on the very first launch of the app.
+
+### The state of the two PRs
+
+- **PR #2 `feat/p1-emulator-pipeline`** (the pipeline, per the founder's
+  "work on a dedicated PR and do not push to it mid-run"): two jobs (the
+  release APK cached by content hash, then the emulator that reuses it), the
+  triggers are PR to main + nightly + manual with a paths filter, the actions
+  are SHA-pinned, the readiness gates are boot -> install -> am start -> pid ->
+  first-screen testID, the app runs in the E2E mode on local mocks, a smoke
+  flow runs first and the evidence is uploaded every run.
+- **PR #1 `feat/v4-company-bootstrap`** (the product): PHASE 2.1-3.1, the V4
+  system, the 24 research areas at the full depth with the verifier pass, the
+  259 parity rows, the two security fixes, the P5.1 sync slice.
+
+### The next actions, in order
+
+1. **P1**: when the run in flight finishes, read the evidence. If the first
+   screen appears, the flows run; copy the artifacts into
+   `docs/evidence/b7/`, write B.7 PASS in `docs/PROGRESS.md`, merge PR #2 and
+   then PR #1.
+2. **P1**: if the first screen still does not appear, the crash buffer says
+   why - that is now the fastest path (it named three of the six blockers).
+3. **P1**: the T2/T4 PR (`feat/t2-expo-58-decision`) has to be rebased on
+   main after PR #1 merges: ADR-002 (Expo 58), ADR-003 (LINZ), ADR-004 (the
+   voice licences), the LINZ scripts and the 96.9 % D8 accuracy run.
+4. **P2**: the eval sets (voice >= 500 utterances, scanner >= 300 labels, the
+   routing days of Christchurch).
+5. **P3-P7**: Courier Maps (T5) -> the design to the mockups (T6) -> the rest
+   of the product (T7) -> launch readiness -> the v1.0.0 release.
+
+### What the next session must not repeat
+
+- The pipeline PR and the product PR drift apart easily: when a fix belongs to
+  both, it is written on the product branch and copied to the pipeline branch,
+  and the lockfile is always committed (`git add -A`, the lockfile is a root
+  file).
+- Never push to the pipeline PR while its run is in flight: the run is
+  cancelled and the private Actions minutes are gone.
+- The evidence artifact carries the crash buffer next to the main logcat. The
+  main buffer is overwritten by the polling noise, which is why the first
+  runs looked like a silent death.
