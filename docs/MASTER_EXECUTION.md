@@ -124,3 +124,11 @@ When documents disagree, **this file wins, then the newest ADR/DECISIONS entry, 
 - Android E2E triggers: §7.1 (PRs to main + nightly + manual) supersedes "every push".
 - Definition of Done: §6 here (it includes V4 §9).
 Record any new conflict and its resolution in DECISIONS.md.
+
+## 11. Courier Maps view modes + ideas from God's Eye View (P3, binding)
+- **Driver-selectable map modes** (like Google Maps), remembered per driver, switchable by tap or voice ("3D on", "flat map"):
+  - **2D flat** (default for battery saver), **3D** (tilted, extruded buildings), **Satellite** (online only, licensed imagery provider if adopted via ADR), **Auto** (3D while driving in town, 2D in rural/low battery).
+  - Toggles: buildings on/off, traffic layer, road-closures layer, weather layer, labels size, night/day/auto.
+- **Free offline 3D buildings**: LINZ **NZ Building Outlines** (CC-BY 4.0, same LINZ key) + OSM building heights/levels (ODbL) → baked into the Canterbury PMTiles; MapLibre fill-extrusion with soft lighting/shadows. Attribute LINZ and OSM. Measure fps and battery in 2D vs 3D.
+- **Ideas to adopt from github.com/bilawalsidhu/gods-eye-view (MIT — code may be reused/adapted, keep its LICENSE notice)**: voice control of the map camera ("zoom to Riccarton", "show failed stops today"); follow-cam behind the vehicle (cockpit-style tilt); shader-based visual styles for night and high-contrast; live data layers framework (weather, closures from Waka Kotahi, traffic via a free-tier provider); shareable map-scene links for teams; a richer 3D live map for the dispatcher web dashboard and the marketing site.
+- **Not allowed**: Google Photorealistic 3D Tiles or Cesium ion used without a proper commercial licence/billing. If the founder wants Google 3D as an optional online "photo-real" mode, prepare a cost estimate (1,000 free sessions/month, then metered) as a founder approval gate (§7.3).
