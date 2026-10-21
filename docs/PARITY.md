@@ -14,7 +14,7 @@ Task ids: **T4** LINZ data · **T5** offline maps · **T6** design · **T7.x** t
 `docs/KICKOFF_V3_EN.md` · **T7.15** PIA, store assets, acceptance test, handover.
 
 | # | Family | Feature | Status | Spoke (2026-10-20) | Our edge | Task |
-|---|--------|---------|--------|----------|------|
+|---|---|---|---|---|---|---|
 | 1 | Stop import | CSV/Excel/Sheets import with column mapping | match - spreadsheet import (Spoke: Android only) | Planned (task) | voice-first; column mapping by LLM | T7.4 |
 | 2 | Stop import | Paste / messy text / email / manifest extraction | not documented by Spoke - we lead | Planned (task) | D8 address correction on every extracted stop | T7.4 |
 | 3 | Stop import | Camera label scan (OCR + barcode) | match - one label scan, cloud | Planned (task) | on-device, offline, NZ-address only, ≤ 1.5 s/label | T7.8 |
@@ -74,6 +74,350 @@ Task ids: **T4** LINZ data · **T5** offline maps · **T6** design · **T7.x** t
 3. **Door memory** — learned per LINZ address and read out on arrival.
 4. **Template-based daily rebuild** — the driver's own route and rules, rebuilt in one tap.
 5. **On-device privacy** — audio never leaves the phone by default; NZ Privacy Act 2020 PIA in T7.15.
+
+## Gaps found by the 2026 research
+
+The rows below come from the 2026 research files (one per area). The **Spoke** column is
+filled only where the research verified it in `docs/study/spoke/TEARDOWN.md`; where Spoke is
+silent the cell is empty.
+
+| # | Family | Feature | Status | Spoke (2026-10-20) | Our edge | Task |
+|---|---|---|---|---|---|---|
+| 50 | Design system | Motion tokens that encode **spring physics** (mass/damping/stiffness, or duration + damping ratio) for sheets | Planned |  | Tokens live only in `packages/design-tokens`; a component adds a token first | T6 |
+| 51 | Design system | Our token set says **Inter / JetBrains Mono** while `docs/design/SYSTEM.md` §2 locks **Figtree** | Planned |  | One font set, no fallback drift | T6 |
+| 52 | Accessibility | Touch targets: `touchTarget.minimum` is **44 px**; our bar is **≥ 56 pt** (72 pt primary) | Planned | "The developer has not yet indicated which accessibility features this app supports" (S13, S14) | 72 pt primary in the lower third, reachable one-handed in a mount | T6 |
+| 53 | Accessibility | Body text `fontSizes.base` is **16 px**; our bar is **≥ 17 pt** | Planned |  | Read at a glance in a moving van | T6 |
+| 54 | Motion | The app's own `Sheet` uses React Native `Animated.timing`, **not Reanimated 4 and not a spring** | Planned |  | 60/120 fps on the UI thread, spring physics for sheets | T6 |
+| 55 | Motion | The app's `Sheet` has **no drag-to-dismiss gesture** and **no reduce-motion branch** | Planned | swipe the stop left/right to mark Failed/Delivered, swipe again to undo (S9) | gesture that cannot fire on a cancelled pan, plus a spoken equivalent | T6, T7.7 |
+| 56 | Motion | **Haptics on confirm, deliver and error** — `expo-haptics` is not installed | Planned |  | never on scroll | T6, T7.5 |
+| 57 | Motion | **Shared-element transitions** are off by default in Reanimated 4.7.1 and default to 500 ms | Planned |  | a stop opening its sheet is the only transition that carries meaning; 200 ms | T6 |
+| 58 | Motion | **Reduce motion** — `useReducedMotion()` never re-renders, so we need our own subscription | Planned |  | transitions become instant, never removed | T6 |
+| 59 | Motion | **Night mode by sunset** — the theme follows the OS colour scheme only | Planned | theme Light/Dark/Automatic/Follow-system (S11) | night falls at the right hour in Christchurch, on the phone in a mount | T6, T5.2 |
+| 60 | Design system | Night theme background is **`#09090b`**; `docs/design/SYSTEM.md` §3 says `#0A0A0A`–`#121212`, never pure black | Planned |  | low-blue night palette for a windscreen | T6, T5.2 |
+| 61 | Performance | **FlashList is not installed** although §5 and `CONSTRAINTS.md` require 300 stops at 60 fps | Planned |  | 300+ stops without a frame drop | T6, T7.7 |
+| 62 | Driver tools | **Drag reorder of the stop list** with a voice equivalent | Planned | map + list, Refine → Manually order route → draw circles on the map (S7, S8) | voice reorder with the list as the primary surface | T7.7 |
+| 63 | Driver tools | **A rolling, glanceable number** for "stops remaining" (48–76 pt, tabular) | Planned |  | a digit-rolling counter with `Intl.NumberFormat` | T6, T7.7 |
+| 64 | Accessibility | **Screen-reader focus order and focus trapping** inside the stop sheet | Planned | no accessibility declaration in either store listing (S13, S14) | TalkBack/VoiceOver can reach every control inside a sheet | T6 |
+| 65 | Design system | **A token pipeline that actually runs** — the package claims Style Dictionary but ships plain TypeScript objects | Planned |  | one source of truth that also emits the web dashboard's CSS variables | T6 |
+| 66 | Accessibility | **Contrast gate** over all three themes (driving text ≥ 7:1, rest ≥ 4.5:1) measured in CI | Planned |  | above Spoke's published position by default | T6, T7.15 |
+| 67 | Driver tools | **Android Auto / CarPlay readiness** — a simplified projection of the driving screen | Planned | the phone projects a simplified Spoke to the head unit (S10) | the projection shows the next address and one primary action | T7.7, T7.15 |
+| 68 | Earnings | A **tabular-numeral money/ETA treatment** for the end-of-day summary | Planned | no earnings, mileage logbook or IRD export in either Spoke product (S2, S3, S5) | NZD with GST in the driver's own ledger | T7.11, T7.12 |
+| 69 | Driver tools | **A parcel-location code** the driver can read at a glance in the van | Planned | package finder with a code such as "Small Box BLS = Small Box Back, Left, Shelf" (S8) | ask the van where a parcel is, by voice | T7.2 |
+| 70 | Voice | **On-device speech**: STT/TTS/VAD/KWS running on the phone, audio never uploaded | Planned | "No on-device audio: the manifest OCR uploads to Spoke's servers (S27); voice dictation is cloud-shaped (S28)" | audio never leaves the phone by default; every core command works offline | T7.5 |
+| 71 | Voice | **Hands-free control of the app while driving** (spoken "delivered", re-order, next stop) | Planned | "No voice control of the app while driving; no spoken 'delivered'; no voice onboarding; no voice POD (S6–S9)" | D2: the driver runs the shift by voice; the screen is optional | T7.5, T7.7 |
+| 72 | Voice | **Wake word / hands-free activation** (no button press, no screen touch) | Planned |  | on-device open-vocabulary KWS, tuned to ≤ 1 FA/hour on our own van audio | T7.5 |
+| 73 | Voice | **NZ English + te reo Māori + Pacific NZ accents** in the STT/TTS models | Planned | 19 languages; "not supported: te reo Māori, Mandarin/Cantonese, Hindi/Punjabi, Samoan/Tongan" (S13) | our models are trained and measured on the Canterbury delivery workforce's accents | T7.5, T7.6 |
+| 74 | Voice | **Multilingual voice** (Arabic, Hindi/Punjabi, Mandarin, Samoan/Tongan) with on-device TTS | Planned | same 19-language list (S13) — no te reo, Mandarin, Hindi/Punjabi, Samoan/Tongan | Kokoro + Nabra Arabic + Qwen3-TTS, all licence-clean, downloadable as voice packs | T7.5, T7.6 |
+| 75 | Voice | **Multi-stop dictation with a correction report** ("you said X → corrected Y") | Better | bulk voice dictation shipped 2026-04-22, "Spoke flags addresses that look incorrect" (S28, S7) | we correct with an explanation (D8) instead of only flagging | T7.4 |
+| 76 | Voice | **Offline voice** (commands and dictation with no signal in the van) | Planned | "The saved route survives loss of signal; live traffic, disruption alerts, map updates and traffic-aware optimisation need data" (S2, S10) | every driving-day voice action works offline | T7.1, T7.5 |
+| 77 | Voice | **Low-drain listening** (adaptive wake duty cycle, ≤ 8 %/h) | Planned | battery saver mode exists on **Android only** (S10, S29) | measured battery-aware wake duty cycle across the shift | T7.1, T7.7 |
+| 78 | Voice | **End-of-turn / barge-in** (the driver interrupts the spoken reply) | Planned |  | smart-turn-style prosody endpointing so the assistant stops talking when the driver starts | T7.5 |
+| 79 | Voice | **Voice onboarding and spoken door memory on arrival** | Planned | "no voice onboarding; no spoken door note on arrival" (S6–S9, §17) | voice-guided first route + the door note read out on arrival | T7.5, T7.3 |
+| 80 | Compliance | **Licence ledger as a shipped surface** (engine + weights licence reported by the running build) | Planned |  | ADR-004: a non-commercial or unknown weight makes the engine unavailable, with the reason | T7.15 |
+| 81 | Voice | Hands-free control of the app **while driving** (spoken "delivered", "next", "skip", "reorder") | Planned |  | one command at a time, hands-free, on-device first, server cascade optional | T7.5 |
+| 82 | Voice | **Semantic end-of-turn detection** (audio-native, 23 languages, BSD-2, on-device) | Planned |  | Smart Turn v3.2 on the phone: 12 ms CPU, 8.68 MB, works with no network | T7.5 |
+| 83 | Voice | **Barge-in that does not trip on a cough, a radio or a passenger's "mm"** | Planned |  | adaptive-style interruption behind our own transport, benchmarked on 8 h of van audio | T7.5 |
+| 84 | Voice | **Voice control that survives a dropped connection mid-turn** (the turn is decided locally; the answer degrades) | Planned |  | local turn decision + on-device STT; the assistant says "I did not hear that" instead of going silent | T7.1, T7.5 |
+| 85 | Voice | **Voice POD / spoken delivery confirmation** | Planned |  | D4: the spoken word "delivered" is the proof; spoken on arrival | T7.9 |
+| 86 | Voice | **Spoken door note on arrival** (read the access note out when you arrive) | Planned |  | keyed to the LINZ address, learned over 2 deliveries | T7.3, T7.7 |
+| 87 | Voice | **Voice re-ordering / spoken rules engine** | Planned |  | one spoken command, never blocks driving | T7.2 |
+| 88 | Voice | **te reo Māori / Samoan / Tongan voice control** | Planned |  | D3: every language from the start; Smart Turn covers 23 languages but **not** these three | T7.5 |
+| 89 | Voice | **On-device audio** (nothing leaves the van) | Planned |  | sherpa-onnx STT/TTS/VAD/KWS on the phone; our own private service as the cascade | T7.1, T7.5 |
+| 90 | Voice | **Offline map of the driver's region** | Planned |  | the Canterbury map pack ships inside the app (D15) | T7.1, T7.7 |
+| 91 | Driver tools | **Spoken rules remembered across days** ("the pharmacy is always after 2pm") | Planned |  | learned rules survive the shift and the week | T7.2 |
+| 92 | Driver tools | **Template / route rebuild from yesterday in one tap** | Planned |  | the template rebuilds the day with the rules included | T7.2 |
+| 93 | Accessibility | **An accessibility declaration for the assistant** (large text, screen-reader, reduced motion, contrast) | Planned |  | our bar is above the published Spoke position by default | T7.5, T7.6 |
+| 94 | Languages | **Voice support for the NZ delivery workforce's languages** | Planned |  | every language from the start (D3) | T7.5 |
+| 95 | Cost | **A voice path whose marginal cost does not scale with shift length** | Planned |  | on-device turn decision; only the occasional model call is billed | T7.13 |
+| 96 | Driver tools | **Every app action as a typed tool the assistant can call** (mark delivered, reorder, reschedule, add stop, cancel stop, read the door note) | Planned |  | one catalogue, one schema, one allow-list; the spoken word is the command | T7.5, T7.6 |
+| 97 | Driver tools | **A confirmation gate before an irreversible action** ("cancel that stop", "reschedule to tomorrow") | Planned |  | the gate is in the tool layer, not in the prompt; 100 % compliance is a hard benchmark gate | T7.2, T7.5 |
+| 98 | Driver tools | **A refusal path** for a request that is not in the catalogue ("email the customer") | Planned |  | the assistant says it cannot, instead of inventing a tool | T7.5 |
+| 99 | Driver tools | **Clarification instead of guessing** when a required slot is missing ("the next one" with two matching stops) | Planned |  | D8: the assistant corrects addresses itself and asks only when unsure | T7.2, T7.4 |
+| 100 | Stop import | **Voice add stop with a correction report** ("you said X, corrected Y") | Parity |  | we correct, explain, and never guess a street number | T7.4 |
+| 101 | Stop import | **An NZ-specific address engine behind the tools** | Planned |  | LINZ data, te reo, RD/unit parsing, confidence and explanation | T4 |
+| 102 | Optimisation | **Natural-language constraints as tools** ("pharmacy after 2pm", "make this the last stop") | Parity |  | the rule is remembered across days and spoken in plain language | T7.2 |
+| 103 | Optimisation | **A tool that re-optimises without blocking driving** | Parity |  | one spoken command; the driver never waits | T7.2 |
+| 104 | Reliability | **A voice action that survives a dropped connection** (the tool run is checkpointed and resumes, it does not half-execute) | Planned |  | LangGraph checkpoints + an offline tool path that executes locally | T7.1 |
+| 105 | Reliability | **No irreversible action before the confirmation lands** | Planned |  | the tool marks the action as reversible until the confirmation is recorded | T7.1, T7.5 |
+| 106 | Support | **A help-centre agent grounded in our own documentation** | Parity |  | multilingual, grounded in our docs, private to the courier | T7.12 |
+| 107 | Dispatch | **A dispatcher tool the courier can invoke by voice** (skip optimisation, reverse, group, make-next) | Parity |  | the same control, spoken, and it never blocks driving | T7.14 |
+| 108 | Customer | **A spoken customer-notification tool** (optional, off by default, rate-limited) | Parity |  | D5: optional, opt-in by the courier | T7.10 |
+| 109 | Compliance | **An audit log of every tool call** (who asked, what was called, what was confirmed, what was executed) | Parity |  | the same log, for a solo courier, in our own storage | T7.15 |
+| 110 | Compliance | **A licence ledger that covers the model weights, not only the code** | Planned |  | ADR-004's rule made mechanical: an engine with an unknown licence is unavailable, with the reason | T7.15 |
+| 111 | Cost | **A tool-calling layer whose cost does not scale with shift length** | Planned |  | cents per courier-day on a small model, or $0 on device | T7.13 |
+| 112 | Cost | **A free-first → paid fallback chain that we own** | Planned |  | D12: the chain is in our code, one config line, and a provider may never train on driver data | T7.13 |
+| 113 | Accounts | Sign-in / sign-up on the phone with e-mail + password | Planned | Free tier with a 10-stop cap; Lite/Standard subscriptions gate the rest (S2, S5) | voice-first sign-in, no password typing while driving | T7.5 |
+| 114 | Accounts | Organisation + team model for a courier company | Planned | Dispatch has workspaces, unlimited dashboard members, driver settings and permissions (S3, S4) | org + team + `org_id` scoping on every query, proven by tenant-isolation tests | T7.14 |
+| 115 | Accounts | Session that survives a locked phone / background wake | Planned |  | `AFTER_FIRST_UNLOCK` device store so a courier's phone can be locked in the van | T7.1 |
+| 116 | Accounts | Server-side session revocation (driver loses the phone) | Planned |  | revoked server-side; the app degrades to a locked state, never to a "logged in" state it cannot prove | T7.15 |
+| 117 | Accounts | Passkeys on the phone | Planned |  | passkey sign-in without a password; no RN WebAuthn today, needs a native module | T7.15 |
+| 118 | Accounts | Organisation invitations that only the invited person can accept | Planned |  | invitation bound to a verified address (upstream GHSA-fmh4-wcc4-5jm3 class) | T7.14 |
+| 119 | Accounts | Rate limiting on the credential endpoints | Planned |  | IPv6-proof limiter plus an independent throttle at the API | T7.15 |
+| 120 | Accounts | JWT for the API, verified from a published JWKS | Planned |  | ES256 + JWKS, no shared secret, `apps/api` is a resource server only | T7.13 |
+| 121 | Accounts | Audit log of admin actions | Planned |  | an audit row per admin action, with NZ Privacy Act retention | T7.15 |
+| 122 | Accounts | Multilingual error and auth messages | Planned | 19 languages, phone-language driven; no te reo Māori, Mandarin, Hindi, Samoan or Tongan (S13) | all languages from day one (D3), errors localised at the auth layer | T7.15 |
+| 123 | Accounts | Accessibility declaration and behaviour | Planned | the NZ and AU listings state "The developer has not yet indicated which accessibility features this app supports" (S13, S14) | we declare and meet it; VoiceOver/TalkBack and 200 % text | T7.6 |
+| 124 | Accounts | Privacy: no driver PII leaves the device by default | Planned | no statement about where audio or photos are processed; the stores declare identifiers + usage data used to track (S13, S14) | audio and images stay on the phone; NZ Privacy Act 2020 PIA | T7.15 |
+| 125 | Accounts | Deep-link sign-in reachable from an e-mail client | Planned |  | HTTPS App Links for e-mail instead of a scheme-only deep link | T7.5 |
+| 126 | Accounts | Behavioural (black-box) test of the native session | Planned |  | sign in → kill → restart → session survives, proven on a device | T7.15 |
+| 127 | Pricing/Billing | GST-inclusive pricing and the GST component on the receipt | Planned | Play NZ listing states **"All prices include GST"** (S16) | the GST component computed with the IRD ×3÷23 method to 8 dp and shown separately | T7.13 |
+| 128 | Pricing/Billing | In-app purchase for the driver subscription | Planned | Spoke sells on both stores (its Play listing carries the in-app prices) (S13, S16) | a single entitlement model behind both stores, so the driver never sees two different answers | T7.13 |
+| 129 | Pricing/Billing | Web purchase at the same price as the store price | Planned |  | price parity enforced by a test, because the store rules require the same item to be purchasable in-app | T7.13 |
+| 130 | Pricing/Billing | Webhook idempotency (one state change per event) | Planned |  | a unique index on `stripe_event_id`, replay-safe, one audit row | T7.13 |
+| 131 | Pricing/Billing | Offline entitlement (the driver keeps working with no signal) | Planned |  | a signed, expiring offline entitlement with one grace rule across both purchase channels | T7.1 |
+| 132 | Pricing/Billing | Team plan with per-seat billing on one organisation | Planned | Dispatch has unlimited dashboard members and unlimited drivers (S3, S5) | org-scoped seats with a tenant-isolation test for every billing action | T7.14 |
+| 133 | Pricing/Billing | Subscription management in the app (upgrade, cancel, restore) | Planned |  | voice-driven: "cancel my plan", "what am I paying" | T7.6 |
+| 134 | Earnings | Client invoicing, quote engine, weekly GST invoice to the courier's client | Planned |  | no earnings, mileage logbook, IRD/GST export, invoicing or client statement in either Spoke product (S2, S3, S5) | weekly GST invoice per client, Stripe (and **not** in-app purchase, per Apple's 3.1.3(e)) |
+| 135 | Earnings | Mileage logbook + IRD-ready export | Planned |  | no mileage logbook in either Spoke product (S2, S3, S5) | IRD-ready NZ mileage rate from the GPS trace |
+| 136 | Earnings | GST and earnings summary for the driver | Planned |  | no earnings or GST export in either Spoke product (S2, S3, S5) | spoken weekly summary, on-device, no PII leaving the phone |
+| 137 | Support | Refunds and disputes handled for the driver | Planned | live chat support in every Dispatch plan (S3, S4) | one refund flow that works on both channels, with the store's refund window honoured | T7.15 |
+| 138 | Customer | Customer ETA / exception SMS with a tracking link | Parity | Dispatch offers "customised SMS + email notifications, custom SMS sender name" and "notification restricted periods" (S3/S5); **the solo plan has no SMS at all** (S2/S5) | optional and off by default (D5), NZ short-code compliant, UEMA-safe templates | T7.10 |
+| 139 | Customer | **Delivery report (DLR) shown to the driver** ("sent / delivered / failed") | Better |  | we own the DLR table; the driver hears "the customer got it" or "it failed" | T7.10 |
+| 140 | Customer | Quiet hours on customer messaging | Better | Spoke has "notification restricted periods" (S3/S4/S5) but **publishes no rules** | a hard NZ quiet-hours rule in our sender, enforced server-side | T7.10 |
+| 141 | Customer | Marketing SMS, consent capture and STOP handling | Skip | Spoke's customer notifications are Dispatch-only (S3) | we never send marketing SMS — parcel exceptions are **factual information about an ongoing relationship**, which UEMA does not cover (V12) | T7.10 |
+| 142 | Customer | Masked calls / masked SMS | Skip |  | deferred behind an ADR; no NZ provider path verified | T7.15 |
+| 143 | Driver | Push for a new stop, a reassignment or a route change | Planned |  | a **silent data push**: the app wakes, the list updates, **no banner** | T7.1 |
+| 144 | Driver | Android OEM delivery coaching (auto-launch, battery whitelist, One UI categories) | Better | Spoke ships a **battery saver mode (Android only, 2026-03-02)** (S29/S10) but **no delivery coaching** | detect the manufacturer once, coach in plain English and by voice, once | T7.1 |
+| 145 | Driver | Notification channels by urgency (job alert vs exception vs chatty) | Better |  | two channels only: "Exceptions" (audible) and "Everything else" (silent); never a third | T7.6 |
+| 146 | Driver | Local notifications generated while offline (next stop, shift end) | Planned |  | the whole day's plan is local, so local notifications work with no network | T7.1 |
+| 147 | Driver | Permission ask that a driver can understand | Better | **no accessibility declaration at all** — "The developer has not yet indicated which accessibility features this app supports" (S13/S14) | one question, one sentence, spoken; blocked state explained | T7.5 |
+| 148 | Compliance | SMS sender identification, consent and unsubscribe rules | Planned |  | a CI template lint that fails the build if a commercial SMS lacks the sender id, the contact details and a same-channel STOP | T7.15 |
+| 149 | Compliance | Privacy Act 2020 handling of notification data (numbers, addresses, delivery history) | Parity | Spoke lists "audit log and retention" and "data history 30 d / 1 y / 5 y" by plan (S3/S5) | one provable retention policy, a 30-day PII purge, IPP 3 notice in the app | T7.15 |
+| 150 | Reliability | Offline SMS queue with ordered retry and DLR reconciliation | Better |  | the outbox is part of the event log, so a queued SMS survives a crash and a reboot | T7.1 |
+| 151 | Analytics | Delivery and latency telemetry per channel | Planned | "performance analytics" exists on Dispatch (S3) but not for notifications | PostHog privacy-safe events: sent / accepted / delivered / failed, and the latency histogram | T7.12 |
+| 152 | Customer | Two-way replies parsed into an instruction (e.g. "leave it with the neighbour") | Better | the recipient "can leave delivery instructions for the driver" (S3/S4/S5), but **no reply parsing** is documented | parse the reply with the D8 engine and turn it into a door-memory entry | T7.10 |
+| 153 | Compliance | Harmful digital communications guardrail on driver-written SMS | Planned |  | the HDCA's 10 principles as a pre-send check on any free-text SMS | T7.15 |
+| 154 | POD | Photo POD with geo and timestamp | Parity |  | included in the **base tier, never paywayed**; our geo stamp is in our database, not only in the EXIF | T7.9 |
+| 155 | POD | Signature capture | Parity | "signature capture" is a Dispatch feature (S3/S5) | **we draw it ourselves** — no WebView, no orientation bug, offline-safe | T7.9 |
+| 156 | POD | Voice POD ("delivered" by voice) | Better | **no voice POD is documented** (S9) | **D4**: the default proof of delivery is the driver's word "delivered" | T7.9 |
+| 157 | POD | Offline POD capture with a queue | Better |  | the photo is durable on disk first, queued in the event log, reconciled later | T7.1, T7.9 |
+| 158 | POD | POD strictness control (how mandatory the photo is) | Parity | "strictness control (how mandatory the POD is)" is a Dispatch feature (S3/S5) | strictness **per client**, decided by the dispatcher | T7.9 |
+| 159 | POD | Proof of custody / cash on delivery | Parity | "proof of custody (Premium+)" and "cash on delivery (coming soon)" (S3/S5) | out of scope for v1 | — |
+| 160 | POD | Barcode scan to confirm the delivery | Parity | "barcode scanning" is a Dispatch driver-app feature (S5) | scanned and **announced by voice**, auto-matched to the stop | T7.8 |
+| 161 | Camera | Label scan that works on-device and offline | Better | Spoke's **manifest import/OCR "uploads and analyses the files" on their servers** (S7/S27) — it needs network at the moment it matters | fully on-device, NZ-address-only, ≤ 1.5 s, **no image ever uploaded** | T7.8 |
+| 162 | Camera | Manifest camera flow (a printed manifest, several pages) | Better | "Manifest scan → viewfinder → 'Scan route manifest' → photograph the list → Next → Done/Add +" (S7) — but **it uploads the file to Spoke's servers** (S27) | `expo-camera` `scanDocumentAsync` + our own on-device OCR; **multi-page**, offline | T7.8 |
+| 163 | Camera | Camera label scan on Android with a language picker | Parity | "Camera scan, one label — Android first, with a label-language picker; iOS uses Apple Live Text" (S35/S13/S14) | one on-device engine for both platforms, NZ English + te reo place names | T7.8 |
+| 164 | Camera | Parcel-location photo tag (front / middle / back shelf) | Parity | the package finder records "Front/Middle/Back, Left/Right, Floor/Shelf" as a **mnemonic code** (S8) | the same slots, set **by voice** | T7.2 |
+| 165 | Camera | A "readable photo" check before the shot is accepted | Better |  | a live blur/glare check; the app tells the driver "too dark, move to the light" instead of storing a black rectangle | T7.9 |
+| 166 | Camera | Camera permission asked in plain English, once | Better | **no accessibility declaration at all** (S13/S14) | one sentence, spoken, and the blocked-state path ("open Settings") explained | T7.5 |
+| 167 | Privacy | EXIF/GPS stripped from the uploaded photo; the coordinates kept in our own data | Better | **no statement about where photos are processed** (S13/S14) | strip EXIF by default; keep lat/long and the timestamp in **our** database, in NZ | T7.15 |
+| 168 | Privacy | A stated retention period for POD photos, per client | Parity | "data history 30 days / 1 year / 5 years" by plan (S3/S5) | one provable policy we can defend in a Privacy Act 2020 request (IPP 9) | T7.15 |
+| 169 | Reliability | Resumable upload, so a photo is never lost in a dead zone | Better |  | tus-style resume with a checksum (`File.digest()`), so a retry cannot duplicate | T7.9 |
+| 170 | Camera | Visual-regression baseline for camera screens | Better |  | a screenshot harness (Maestro + a 2026 snapshot tool) so the camera screen cannot silently change | T7.6 |
+| 171 | Reliability | **Crash reporting with a release tag and a symbolicated stack** (native + JS), crash-free session rate ≥ 99.5 % | Planned |  | on-device symbolication, no PII in the report, self-hosted so a courier's audio and addresses never leave our infrastructure | **T3.1** (Platform) |
+| 172 | Reliability | **A crash-free session dashboard and a rollback trigger** (a drop below 99.5 % over the last 24 h stops the rollout) | Planned |  | the kill-switch is a percentage rollout, not a store takedown | **T3.1**, **T7.12** |
+| 173 | Reliability | **A deliberate in-app crash report** a driver can trigger from the help menu (a "report a problem" button that captures the log and the state) | Planned | live chat, help guides, and share a screen recording of the issue (S15) | we capture the log, the release and the state locally and hand the driver one string to share | **T7.12** |
+| 174 | Observability | **Anonymous product events** (stops delivered, ETAs sent, templates used) — aggregated, no PII, no session replay | Planned |  | a pseudonymous installation id only; a courier's address never becomes an event | **T7.12** |
+| 175 | Observability | **Real-device startup measurement** (Time to First Render, Time to Interactive) against the 2 s cold-start budget | Planned |  | measured on the courier's own phone and network, not on our test rig | **T3** (cold start), **T7.12** |
+| 176 | Observability | **API distributed traces** with a request id from the app through the API to the LLM call | Planned |  | one trace per voice command, so "the action took 900 ms" is answerable | **T7.5** |
+| 177 | Observability | **LLM call tracing with prompt versioning** (which prompt, which model, which cost) | Planned |  | our prompts are ours; a driver's dictation is never used to train anyone | **T7.5**, **T7.15** |
+| 178 | Observability | **A feature-flag kill-switch** for a behaviour that must be off for some installs | Planned |  | one flag service, evaluated on device, offline-safe | **T7.6** |
+| 179 | Observability | **A driver-facing performance report** (battery %, cold start, stops per hour) | Planned | battery saver mode (Android only) (S10, S29) | we show the budget we set ourselves (≤ 8 %/h), not only a "power saving" toggle | **T7.12**, **T7.11** |
+| 180 | Release | **OTA updates** (a JS-only fix reaches a driver's phone without a store release) | Planned |  | the fix lands mid-shift instead of tomorrow | **T3.2** |
+| 181 | Release | **A per-update percentage rollout** (10 % → 50 % → 100 %) with staged promotion | Planned |  | a bad bundle reaches 10 % of drivers, not all of them | **T3.2** |
+| 182 | Release | **A one-command rollback** to the previous known-good bundle (and to the embedded build) | Planned |  | a rollback is a command, not a store review | **T3.2** |
+| 183 | Release | **End-to-end update code signing** (the client verifies the signature before applying a bundle) | Planned |  | neither the CDN nor Expo can tamper with what a driver runs | **T3.2** |
+| 184 | Release | **Two release channels** (production for drivers, preview for the team) with a per-build runtime version | Planned |  | the team tests on `preview` without touching the drivers' phones | **T3.2** |
+| 185 | Release | **A release pipeline that publishes a signed APK + a CycloneDX SBOM + provenance in the GitHub Release** | Planned |  |  | **P7** (`v1.0.0` GitHub Release with signed APK + SBOM), **T7.15** |
+| 186 | Release | **Store submission automation** (Play internal/closed testing, then production) with a staged rollout | Planned |  |  | **P6** (Google Play readiness), **P7** |
+| 187 | Quality | **Visual regression against committed baselines** (day/night, small/large, 200 % text) as a merge gate | Planned |  | the screenshots stay in our CI; no vendor sees a courier's screen | **T6** (design), **T3.3** |
+| 188 | Quality | **Mutation testing enforced on the core modules** (address engine, auth, routing, sync, billing) | Planned |  | the score is in CI, not in a document | **T3.3** (gate), **T8.2** (≥ 80 %) |
+| 189 | Quality | **A 50× backtest of the core logic in CI**, as a nightly job with a linked artefact | Planned |  | the flakiness number is published, not asserted | **T3.3** |
+| 190 | Quality | **The Maestro flows extended to every user-facing flow** (today 5: smoke, today-list, stops, map, compat) | Planned |  |  | **T7.x** (one flow per user-facing flow, V4 §2) |
+| 191 | Quality | **Property-based tests** for the address engine, routing, sync and billing | Planned |  | our parser is the D8 engine, not a regex | **T8.2** (Hypothesis) |
+| 192 | Quality | **Load tests at 10× the expected peak** against the API | Planned |  |  | **T8.2** (k6) |
+| 193 | Quality | **A licence gate that can actually fail** (every shipped package resolved to a real licence, no "unknown") | Planned |  |  | **T3.3** (`scripts/check-licenses.mjs`) |
+| 194 | Analytics | **Dispatcher-facing performance analytics** (on-time %, stops per hour, planned vs actual) | Planned | performance analytics, data history 30 d/1 y/5 y (S3/S4) | ours is per-driver and per-day and exportable for IRD | **T7.12** |
+| 195 | Security | **MASVS L2 mobile hardening**: SQLCipher local DB, Keystore keys, backup rules off, no exported components, no debug artefacts, R8 obfuscation | Planned |  | we map every control to a MASVS id and a test id, and publish the matrix | T7.16 |
+| 196 | Security | **Deep-link protection** for the `courier://` scheme (custom schemes are hijackable by any app) | Planned |  | we use an Android App Link / iOS Universal Link so only our app can open a route | T7.16 |
+| 197 | Security | **Certificate pinning** for our own API host (MASVS-NETWORK-2) | Planned |  | pinning plus a documented rotation procedure, so a pinned app cannot be bricked by an expiring cert | T7.16 |
+| 198 | Security | **App attestation** (Play Integrity standard requests / Apple App Attest) with a **server-side verdict** and a blank verdict treated as a signal, not a block | Planned |  | the CI emulator keeps working — the blank verdict is logged, not enforced | T7.16 |
+| 199 | Security | **Root / emulator / Frida signals** reported to the API as a risk score, never used to block | Planned |  | signals inform the risk score; they never stop a courier with a rooted spare phone from working | T7.16 |
+| 200 | Security | **Screenshot and screen-recording protection** on the screen that shows recipient data (POD, door notes, the customer list) | Planned |  | we protect the screen, not the data: a photo of the screen is useless without the on-device key | T7.16 |
+| 201 | Security | **Clipboard discipline**: door codes are never copied to the system clipboard; the clipboard is cleared after a paste | Planned |  | a gate code never sits in a clipboard another app can read | T7.16 |
+| 202 | Security | **Signed releases**: the release APK and the API container image are signed with Sigstore, and the SBOM is published per release | Planned |  | a courier's phone can verify the build came from us | T7.16 |
+| 203 | Security | **CI supply-chain hardening**: every action pinned to a commit SHA, runner credential persistence off, egress restricted | Planned |  | we harden the runner because the 2026 worms went for the runner, not for our code | T7.16 |
+| 204 | Security | **Cross-ecosystem dependency scanning** (npm + PyPI from one SBOM) and a **committed SBOM diff** per release | Planned |  | "are we affected?" is answered in minutes, not days | T7.16 |
+| 205 | Security | **API rate limiting** per route, per user and per IP, with a progressive delay and a lockout | Planned |  | the driver app is called hundreds of times a day; the limiter protects us without punishing a courier in a dead zone | T7.16 |
+| 206 | Security | **SSRF guard** on every server-side fetch (address geocoding, map tiles, webhooks): no private, loopback or link-local destinations; re-check on redirect | Planned |  | one shared `safe_fetch()` in the API, so no endpoint can be turned into a proxy into our own network | T7.16 |
+| 207 | Security | **PostGIS query safety**: every geometry and text query is parameterised; no string-built SQL anywhere in `apps/api` | Planned |  | we use one repository helper, so "no concatenated SQL" is a property of the code, not a review habit | T7.16 |
+| 208 | Security | **Tenant isolation proved by tests**: every query is scoped to the org; a test asserts driver A cannot read team B | Planned |  | the test is the proof, not the review | T7.14, T7.16 |
+| 209 | Security | **Security headers and a CORS allow-list** on the API, plus a trusted-host check and a request-size limit | Planned |  |  | T7.16 |
+| 210 | Security | **Nightly DAST** against a staging API with OWASP ZAP, and a weekly static + dynamic mobile scan of the release APK with MobSF | Planned |  | we scan the artefact we actually ship, not the source we wish we shipped | T7.16 |
+| 211 | Compliance | **NZ Privacy Act 2020 PIA** covering the voice transcripts, the GPS trace and the recipient data, and covering **IPP 3A** (indirect collection, in force 1 May 2026) | Planned | "No statement about where audio/photos are processed; the stores declare identifiers + usage data used to track, and third-party advertising use of usage data" | we publish where the audio goes (on the phone) and we collect nothing we do not need | T7.15 |
+| 212 | Compliance | **App-store privacy labels** (Google Play Data Safety + Apple privacy nutrition labels) generated from one data map and checked by a test against the privacy policy | Planned | "the stores declare identifiers + usage data used to track, and third-party advertising use of usage data" | we declare exactly what we collect — location, voice on device, no advertising | T7.15 |
+| 213 | Compliance | **`security.txt`**, a pen-test checklist before v1, and a breach-response runbook with the 72-hour clock | Planned |  |  | T7.15, T7.16 |
+| 214 | Security | **Enforced, signed OTA updates** so a security fix reaches a courier's phone the same day | Planned | "Manifest import and manifest OCR upload the file to Spoke's servers" (S7, S27) | our OTA is signed and staged; a fix is not a store rollout | T7.16 |
+| 215 | Accessibility | **A published accessibility statement** and the store accessibility declaration (VoiceOver, TalkBack, 200 % text, reduced motion, contrast) | Planned | "The developer has not yet indicated which accessibility features this app supports" (both the NZ and AU store listings) | we declare it and we can prove it, because every claim is backed by a CI check | T6, T7.16 |
+| 216 | Accessibility | **Dynamic type to 200 % with no clipping or truncation** on the three key screens, proved by Maestro screenshots at 1.0 / 1.5 / 2.0 | Planned |  | our layouts are built from the tokens, and the fixed-height inputs and buttons are replaced with min-heights | T6 |
+| 217 | Accessibility | **Touch targets: ≥ 56 pt everywhere, 72 pt for the primary action** (WCAG 2.2 SC 2.5.8 floor is 24 × 24 CSS px) | Planned |  | gloves, a moving van, and a tremor — our bar is 2.3× the WCAG floor | T6 |
+| 218 | Accessibility | **Colour-blind-safe status colours**, and status that is never carried by colour alone (shape + text label + spoken state) | Planned |  | the delivered count is spoken and labelled, not just green | T6 |
+| 219 | Accessibility | **Contrast: driving text ≥ 7:1, everything else ≥ 4.5:1, non-text ≥ 3:1, measured in all three themes** | Planned |  | the contrast ratio is computed by a script over the tokens and fails the build | T6 |
+| 220 | Accessibility | **Screen-reader support on every screen**: a role, a name, a value, a state, and a live region for every status change | Planned |  | our screen reader is a *first-class* path, not a fallback: the courier can run a delivery with the screen reader on | T6, T7.5 |
+| 221 | Accessibility | **Focus order and focus trapping** in the stop sheet and the route change (SC 2.4.3, 2.4.11) | Planned |  | focus is trapped in the sheet and the new screen is announced when the route changes | T6 |
+| 222 | Accessibility | **Reduced motion honoured**: transitions become instant, never removed, and the "reduce motion" system setting is respected | Planned |  | the assistant's animations never make a courier carsick or distract them at 100 km/h | T6 |
+| 223 | Accessibility | **RTL-ready layouts** (logical `start`/`end` everywhere), with the Arabic UI translated and not accidentally mirrored | Planned | 19 languages including Arabic, Dutch, French, German, Greek, Hebrew, Hungarian, Indonesian, Italian, Japanese, Malay, Polish, Portuguese, Romanian, Russian, Spanish, Thai, Turkish (S13) | we ship RTL correctness for the Arabic and Hebrew couriers Spoke already serves, and add the languages it does not (te reo Māori, Mandarin, Hindi, Samoan, Tongan) | T6, T7.6 |
+| 224 | Accessibility | **Accessibility actions** so a screen reader can activate a stop, a delivery outcome and the assistant — and a voice command for every one of them | Planned | "No voice control of the app while driving; no spoken 'delivered'; no voice onboarding; no voice POD" — Spoke has no voice control at all | our *voice* is the accessible path for a motor impairment, and the screen reader is the accessible path for a visual impairment: both reach the same action | T7.5, T7.6 |
+| 225 | Accessibility | **An accessibility check in CI** (a11y lint rules, RNTL accessibility matchers, a token-contrast script) | Planned |  | the check is a merge gate, not a checklist | T6 |
+| 226 | Accessibility | **A real-device screen-reader pass** on both platforms, with written transcripts, before v1 | Planned |  | Spoke's actual accessibility implementation is UNVERIFIED — only the store declaration is missing — so we cannot be sure they are better than us | T6, T7.15 |
+| 227 | Accessibility | **Motor-impairment path**: every action reachable by voice, one-handed, with a mounted phone, and with gloves | Planned |  | our whole app is voice-first, so the accessible path and the safe-driving path are the same path | T7.5, T7.6 |
+| 228 | Language | UI locale catalogue (full sentences, ICU plural, formatted) | Planned | 19 languages, phone-language driven, falls back to US English | our two-catalogue split: the UI catalogue and the ≤8-word voice catalogue never mix | T7.16 |
+| 229 | Language | Per-courier language preference (choose a language for a shift) | Planned | follows the phone language; falls back to US English | per-shift language override + OS per-app language via `supportedLocales` | T7.16 |
+| 230 | Language | Auto language detection + code-switch arbitration | Planned |  | two-tier LID (on-device first pass, server authority) with an explicit "not sure" | T7.16 |
+| 231 | Language | RTL layout (mirrored UI, RTL text) | Planned |  | design-system mirror + Maestro RTL matrix, not just a flipped `textAlign` | T7.16 |
+| 232 | Language | Te reo Māori voice (ASR **and** TTS) | Planned | not supported | the only shipping path we found with a clean licence (Omnilingual ASR, Apache-2.0) + our own synthesis | T7.16 |
+| 233 | Language | Samoan / Tongan voice | Planned | not supported | Samoan via Omnilingual; Tongan has **no** permissively-licensed model anywhere we could find | T7.16 |
+| 234 | Language | Cantonese (yue) voice | Planned | not supported (Mandarin/Cantonese absent) | sherpa-onnx already ships a Cantonese ASR (111.8 MB, 107 929 downloads) | T7.16 |
+| 235 | Language | Hindi / Punjabi voice | Planned | not supported (Hindi/Punjabi absent) | IndicConformer (MIT) is the clean-licence reference for `hi`/`pa` | T7.16 |
+| 236 | Language | NZ English accent voice | Planned |  | no en-NZ voice exists in Kokoro or Piper — we must train or clone one | T7.16 |
+| 237 | Language | Plural, date, number and NZD formatting per locale | Planned |  | distance unit derived from the phone language; the CLDR v48 rules asserted in CI, NZ date format dd/MM/y | T7.16 |
+
+Maintained per V4 §4. Base: `docs/COMPETITIVE_RESEARCH.md` and `docs/RESEARCH_2026_WAVE3.md`
+(the 49-service parity matrix), refreshed with the 2026 entrants (Circuit/Spoke, Route4Me, Upper,
+Routific, OptimoRoute, Onfleet, Beans.ai, MyRouteOnline, Straightaway, Zeo, Road Warrior, Google/Apple
+Maps multi-stop, the NZ carrier driver apps).
+
+**Status key** — `Have` (shipped) · `Better` (we do it better than the market) ·
+`Planned (task)` (in the V3 task list) · `Skip (reason)`.
+
+The **Spoke** column is mandatory (V4 §13.2): every family is compared with the number one NZ competitor, from docs/study/spoke/ (TEARDOWN, REVIEWS, BEAT-SPOKE, read 2026-10-20).
+
+Task ids: **T4** LINZ data · **T5** offline maps · **T6** design · **T7.x** the product list in
+`docs/KICKOFF_V3_EN.md` · **T7.15** PIA, store assets, acceptance test, handover.
+
+| # | Family | Feature | Status | Spoke (2026-10-20) | Our edge | Task |
+|---|---|---|---|---|---|---|
+| 1 | Stop import | CSV/Excel/Sheets import with column mapping | match - spreadsheet import (Spoke: Android only) | Planned (task) | voice-first; column mapping by LLM | T7.4 |
+| 2 | Stop import | Paste / messy text / email / manifest extraction | not documented by Spoke - we lead | Planned (task) | D8 address correction on every extracted stop | T7.4 |
+| 3 | Stop import | Camera label scan (OCR + barcode) | match - one label scan, cloud | Planned (task) | on-device, offline, NZ-address only, ≤ 1.5 s/label | T7.8 |
+| 4 | Stop import | Voice add stop (multi-stop dictation) | match - bulk voice dictation (2026-04) | Better | multi-stop dictation with a "you said X → corrected Y" report | T7.4 |
+| 5 | Stop import | Integrations (Shopify, WooCommerce, Zapier, NZ carriers, multi-client) | skip for v1 - Spoke has carrier links | Planned (task) | multi-client aggregation for NZ couriers | T7.14 |
+| 6 | Address | Autocomplete | match - Google-Maps search; ours is LINZ-biased | Planned (task) | biased to Christchurch, merged with door memory | T4 |
+| 7 | Address | Validation, error detection, auto-correction | match - Spoke flags a wrong pin, we explain | Better | D8 engine: corrects, explains, and only asks when unsure | T4 |
+| 8 | Address | Pin drop / manual location fix | match - pin drop; ours teaches door memory | Planned (task) | the fix becomes door memory | T7.3 |
+| 9 | Optimisation | Multi-stop optimisation (unlimited stops) | match - one-tap optimise, no stop cap | Better | no stop caps; the driver's own template and rules win | T7.2 |
+| 10 | Optimisation | Time windows | match - time windows per stop | Planned (task) | set by natural language ("pharmacy after 2pm") | T7.2 |
+| 11 | Optimisation | Priority / ASAP / first-last stop | match - first/auto/last priority | Planned (task) | rules remembered across days | T7.2 |
+| 12 | Optimisation | Start/end, round trip, service time per stop | match - time at stop, ours learns it | Planned (task) | learns the real dwell time per address | T7.2 |
+| 13 | Optimisation | Re-optimise mid-route / insert stop en route | match - Spoke separates update and reoptimise | Planned (task) | one voice command, never blocks driving | T7.2 |
+| 14 | Optimisation | Pickup-delivery pairing | match - pickup/delivery pairing | Planned (task) | voice-marked pickups, OR-Tools PD constraints | T7.2 |
+| 15 | Optimisation | Vehicle type, avoid tolls/highways, capacity | match - vehicle types, ours adds bike profiles | Planned (task) | bike/e-bike profiles (Valhalla) | T7.2 |
+| 16 | Optimisation | Zones / territories, multi-depot | match - custom zones in Dispatch | Planned (task) | PostGIS polygons over the real Canterbury data | T7.14 |
+| 17 | Driver tools | Map + list view, drag reorder | match - map + list; ours adds voice reorder | Better | voice reorder, and the list is the primary surface | T7.7 |
+| 18 | Driver tools | Package finder / load position | match - package finder with a van code | Planned (task) | ask the van where a parcel is | T7.2 |
+| 19 | Driver tools | Door memory (gate codes, dog, side door) | beat - Spoke has sticky text notes only | Better | keyed to the LINZ address, learned over 2 deliveries | T7.3 |
+| 20 | Driver tools | Live voice assistant (hands-free control of the whole app) | beat - Spoke voice is entry-only | Better | on-device first, server cascade optional, all languages | T7.5 |
+| 21 | Navigation | Navigation hand-off (Google/Apple/Waze) | match - hand-off to Google/Apple/Waze | Better | the assistant reads the door note on arrival | T7.7 |
+| 22 | Navigation | In-app turn-by-turn | skip - no in-app turn-by-turn | Skip (reason) | hand-off plus a voice-first overlay; Ferrostar behind a flag | — |
+| 23 | POD | Photo POD (geo + timestamp) | match - photo POD | Better | included in the base tier, never paywalled | T7.9 |
+| 24 | POD | Signature | match - signature | Planned (task) | offline-safe | T7.9 |
+| 25 | POD | Delivery outcomes / failed reasons / re-attempt | match - outcomes and failed reasons | Better | the reason is spoken; the retry is scheduled for tomorrow | T7.9 |
+| 26 | POD | Barcode scan to confirm delivery / reconcile | match - barcode scan | Planned (task) | auto-match to the stop, announced by voice | T7.8 |
+| 27 | Reliability | Offline mode (cached route, POD/edit queue) | beat - Spoke offline is partial, ours is not | Better | every driving-day action works with no network | T7.1 |
+| 28 | Sync | Cloud sync across devices and web | match - cloud sync | Planned (task) | event log, conflict rules tested | T7.1 |
+| 29 | History | Route history | match - route history | Planned (task) | searchable by voice | T7.12 |
+| 30 | History | Saved / recurring routes and templates | beat - Spoke copies a past route, we rebuild | Better | a template rebuilds the day in one tap, rules included | T7.2 |
+| 31 | Tracking | Driver location tracking (background GPS) | match - background GPS | Better | battery-aware adaptive pings (≤ 8 %/h) | T7.1 |
+| 32 | Tracking | Geofence auto-arrival / auto-complete | match - geofence arrival | Planned (task) | arrival triggers the spoken door memory | T7.3 |
+| 33 | Customer | Recipient ETA SMS + live tracking page | match - customer ETA SMS | Planned (task) | optional, off by default, rate-limited (D5) | T7.10 |
+| 34 | Customer | Recipient ratings / feedback | skip - not a driver tool | Skip (reason) | not a courier tool; a dispatcher concern at best | — |
+| 35 | Customer | Masked calls/SMS | skip - masked calls deferred by ADR | Skip (reason) | deferred behind an ADR (no NZ provider decided yet) | T7.15 |
+| 36 | Dispatch | Dispatcher web dashboard, multi-driver planning, live map | match - dispatcher dashboard and live map | Planned (task) | Team plan, live map, route hand-off | T7.12 |
+| 37 | Dispatch | Auto-dispatch, shifts, driver chat | match - driver chat and shifts | Planned (task) | voice notes, learned rules | T7.14 |
+| 38 | Earnings | Earnings tracking across platforms | match - earnings tracking | Planned (task) | multi-client ledger with NZ GST | T7.12 |
+| 39 | Earnings | Mileage logbook + CSV/PDF exports (IRD) | match - mileage logbook | Planned (task) | IRD-ready NZ mileage rate from the GPS trace | T7.11 |
+| 40 | Earnings | Client invoicing / payments, quote engine | match - client invoicing | Planned (task) | weekly GST invoice per client (Stripe) | T7.13 |
+| 41 | Analytics | Reports (on-time %, stops/hr), planned vs actual | match - dispatch analytics | Planned (task) | weekly voice summary | T7.12 |
+| 42 | API | Public REST API + signed webhooks | match - public API and webhooks | Planned (task) | FastAPI OpenAPI, HMAC-signed webhooks | T7.13 |
+| 43 | Pricing/Billing | Subscription plans, free tier, free trial | match - free trial and plans | Planned (task) | NZD, GST inclusive, POD never paywalled | T7.13 |
+| 44 | Onboarding | Onboarding tutorial | match - guided onboarding | Planned (task) | voice-guided first route | T7.5 |
+| 45 | Settings | Settings (units, nav app, default start, service time) | match - every setting by voice | Planned (task) | every setting changeable by voice | T7.6 |
+| 46 | Admin | Teams / roles / permissions | match - teams and roles | Planned (task) | owner / dispatcher / driver, RLS on every query | T7.14 |
+| 47 | Support | In-app support / help centre | match - in-app help | Planned (task) | multilingual AI agent grounded in our docs | T7.12 |
+| 48 | Safety | SOS / emergency button | match - SOS in the app | Planned (task) | voice SOS, calls 111 directly | T7.7 |
+| 49 | Compliance | Audit log, NZ Privacy Act 2020 retention, licence/WOF reminders | match - audit log and retention | Planned (task) | audit log for admin actions, 30-day PII purge | T7.15 |
+
+## Where we beat the market (the differentiators to protect)
+
+1. **Voice-first, hands-free** — the whole shift is runnable by voice (D2); the market's voice support
+   is one-shot dictation at best.
+2. **NZ address auto-correction with an explanation** — the D8 engine corrects, says what it changed
+   and asks only when unsure; no competitor does this for NZ addresses.
+3. **Door memory** — learned per LINZ address and read out on arrival.
+4. **Template-based daily rebuild** — the driver's own route and rules, rebuilt in one tap.
+5. **On-device privacy** — audio never leaves the phone by default; NZ Privacy Act 2020 PIA in T7.15.
+, `dd/MM/y` | T7.16 |
+| 238 | Language | Translation workflow for 10 locales × 2 catalogues | Planned |  | one catalogue source of truth in `packages/`, human review, **addresses never machine-translated** | T7.16 |
+| 239 | Language | Multilingual ASR/TTS **model ledger** (licence per shipped weight) | Planned |  | ADR-004 R2: the ledger is a shipped surface; a non-commercial weight makes the engine unavailable | T7.16, T7.15 |
+| 240 | Voice | Voice prompts ≤ 8 words, spoken in the driver's language | Planned | no voice control of the app while driving | the prompt catalogue is compiled and separate; never mixed with the UI strings | T7.5, T7.16 |
+| 241 | Language | Multilingual support agent grounded in our docs | Planned | in-app live chat support | our own docs, our own voice, on-device-first | T7.12 |
+| 242 | Dispatch | Dispatcher web console with a **timeline view** of the day (not just a map) | Planned | "multi-route planning on an interactive map with a **timeline view**" (TEARDOWN §9, S3/S4) | the timeline is driven by the driver's own spoken order, so it shows intent, not just position | T7.12 |
+| 243 | Dispatch | **Delivery zones as polygons** and unlimited depots | Planned | "delivery zones (polygon areas), depots, unlimited depots" (TEARDOWN §9, S3/S4) | PostGIS zones over the real Canterbury data, and a zone is a route template the driver can rebuild in one tap | T7.14 |
+| 244 | Dispatch | **Route properties** (max stops per route, vehicle type, driving speed, delivery speed) | Planned | "route properties (max stops per route, vehicle type, driving speed, delivery speed)" (TEARDOWN §9, S3/S4) | the same numbers are learned from the driver's own days instead of typed in | T7.12 |
+| 245 | Dispatch | **Driver permissions**: what a driver may change versus a dispatcher-created route | Planned | "driver settings and permissions (what drivers may change; may they edit dispatcher routes?)" (TEARDOWN §9, S3/S4) | a role model where the courier's own voice overrides the dispatcher's default, with the audit trail showing who won | T7.14 |
+| 246 | Dispatch | **Route manifest printing / PDF export** of a day's run sheet | Planned | "route manifests (print/PDF), customisable" (TEARDOWN §9 and §2.3, S3/S5) | the manifest is generated from the same event log as the settlement, so it cannot disagree with the invoice | T7.12 |
+| 247 | Dispatch | **Stop import from a spreadsheet** into the dispatcher's board | Planned | "stop import ('Add or import stops')" (TEARDOWN §9, S3/S4) | column mapping by voice, NZ addresses only, and the import is validated by the same address engine the app uses | T7.12 |
+| 248 | Admin | **SSO and directory sync** for a depot with many drivers | Skip | "SSO + Directory Sync (Expert only)" (TEARDOWN §2.3, S3/S5) | one Better Auth instance for the mobile app and the console, so an SSO user is the same person on both | T7.14 |
+| 249 | Admin | **Data history depth** by plan (30 days / 1 year / 5 years) | Planned | "Data history: 30 days (Starter), 1 year (Premium), 5 years (Expert)" (TEARDOWN §2.2, S3/S5) | the retention rule is written to the NZ Privacy Act 2020 and the IRD's 7-year record rule, not to a plan tier | T7.15 |
+| 250 | Admin | **Usage and export controls** in the admin console (what data the owner can export) | Planned | "data history and export" (TEARDOWN §9, S3/S4) | every export is audited, and an export that contains a courier's location history is a deliberate, logged act | T7.15 |
+| 251 | Analytics | **Per-courier performance analytics** for the owner | Planned | "performance analytics" (TEARDOWN §2.3, S3/S5) | the KPIs are computed from the delivery event log, so they survive a driver uninstalling the app | T7.12 |
+| 252 | Analytics | **Planned versus actual** reporting (the route as planned against the route as driven) | Planned | "performance analytics" (TEARDOWN §2.3, S3/S5) | planned versus actual is a first-class product concept for the driver too, so the same numbers appear in the voice summary | T7.12 |
+| 253 | Earnings | **Earnings ledger, mileage logbook, IRD/GST export, invoicing and client statements** | Planned | "No earnings, mileage logbook, IRD/GST export, invoicing or client statement in either product" (TEARDOWN §17, S2/S3/S5) | a gap the number one NZ competitor does not have at all; ours is map-matched km against the IRD's published kilometre rates | T7.11 |
+| 254 | Analytics | **Data warehouse** for the founder's own numbers (Postgres views first) | Planned |  | the first warehouse we have is the database the app already runs | T7.12 |
+| 255 | Analytics | **Privacy-safe product analytics** with a defined event taxonomy | Planned |  | no address, no name, no GPS ever leaves the device in an event property | T7.12 |
+| 256 | Support | **Help centre** in the web app | Planned | "live chat support in every Dispatch plan; a dedicated CSM only above $50k/yr" (TEARDOWN §2.3, S3/S5) | the help centre is searchable by voice in the app and by text on the web, from the same docs | T7.12 |
+| 257 | Admin | **Impersonation** into a driver's account, with a recorded reason and a time limit | Planned |  | the admin cannot see a courier's data until the courier consents or the reason is logged | T7.14 |
+| 258 | API | **Public REST API and signed webhooks** for depot customers | Planned | "Read/Write API, Webhook API, Zapier, Shopify" (TEARDOWN §10, S3/S4/S5); "no NZ carrier integration found in public sources" | the same API the app uses, org-scoped from the first line of code | T7.13 |
+| 259 | Onboarding | **Guided onboarding** for a new depot | Planned | "Dispatch onboarding is 'Free trial • Onboard in 5 minutes'; personalised onboarding is Expert-only" (TEARDOWN §15, S3/S4/S5); "no voice-guided onboarding found" | onboarding is the same script the driver gets by voice, so the depot owner can hear what the courier hears | T7.12 |
+| 260 | Admin | **Fleet view**: the depot owner sees every courier's live position and shift state on one map | Planned | "live driver tracking, live route status, stop assignment" (TEARDOWN §9, S3/S4) | the same map style and the same voice hand-off as the courier's app, so a hand-over is one tap | T7.12 |
+| 261 | Admin | **Settlement view**: what each courier is owed for a period, per client, per route | Planned | "No earnings, mileage logbook, IRD/GST export, invoicing or client statement in either product" (TEARDOWN §17, S2/S3/S5) | a settlement the courier can read and the owner can export, reconciled to the event log to the cent | T7.11 |
+| 262 | Earnings | **NZ GST reporting**: taxable supply information per client, 15% GST, a two-monthly or six-monthly return figure | Planned | none documented (TEARDOWN §17, S2/S3/S5) | NZ-first: the register is produced from the delivery events, not reconstructed from a spreadsheet | T7.11 |
+| 263 | Earnings | **IRD mileage logbook export**: a 90-day test period, odometer at start and end, and the date, distance and reason of every business journey | Planned | none documented (TEARDOWN §17, S2/S3/S5) | map-matched kilometres, so the logbook is the delivery log and not a separate diary | T7.11 |
+| 264 | Earnings | **The IRD kilometre-rate calculation** for the current income year | Planned | none documented (TEARDOWN §17, S2/S3/S5) | the rates are read from the published instrument each year and stamped on the export, so an old export still shows the rate that applied | T7.11 |
+| 265 | Analytics | **Per-courier KPIs**: on-time %, stops per hour, km, idle time, failure rate | Planned | "performance analytics" (TEARDOWN §2.3, S3/S5) | computed from the delivery event log, so they survive the app being uninstalled or the phone being lost | T7.12 |
+| 266 | Analytics | **Planned versus actual** per courier and per route | Planned | "performance analytics" (TEARDOWN §2.3, S3/S5) | the plan and the actual come from the same solver that built the route, so the comparison is exact rather than reconstructed | T7.12 |
+| 267 | Admin | **Audit log of every admin action and every export** | Planned | no audit log documented; "Data history: 30 days / 1 year / 5 years" by plan (TEARDOWN §2.2, S3/S5) | the audit log is a first-class table, not a log file, and it is what a Privacy Act access request is answered from | T7.15 |
+| 268 | Admin | **Cost per courier** visible to the owner: AI, SMS, map tiles, storage | Planned | not in the teardown (silent on any cost-per-courier view) | the squad's own target — "the admin can see AI/SMS cost per user" — is the product feature, not a vendor's billing page | T7.12 |
+| 269 | Privacy | **Location-history privacy**: a depot owner sees where a courier has been; the courier can see their own history and can ask for it | Planned | "driver live location tracking" (TEARDOWN §2.3 and §9, S3/S4); the Play listing for Spoke Dispatch declares "Shares location" (S18) | purpose limitation by default: the owner sees the current position and the shift, and the aggregate KPIs; the track is the courier's to see | T7.15 |
+| 270 | Privacy | **A written monitoring policy** for the depot owner, with the Privacy Act 2020 and the Employment Relations Act 2000 addressed and the staff consulted | Planned | not in the teardown (silent on any monitoring policy) | our standing bar: the OPC says a company must ensure employees know why location is collected and how it is used | T7.15 |
+| 271 | Compliance | **A retention rule that keeps the tax record 7 years and the location track 30 days** | Planned | "Data history: 30 days (Starter), 1 year (Premium), 5 years (Expert)" (TEARDOWN §2.2, S3/S5) | the IRD's 7-year rule applies to the _record of business use_ (date, distance, reason), not to the GPS track — so the two retention periods never have to collide | T7.15 |
+| 272 | Analytics | **A metrics layer**: one definition per KPI, versioned, tested | Planned |  | dbt-style models with tests; the same number appears in the app, the console and the export | T7.12 |
+| 273 | Analytics | **The founder's own dashboard**: acquisition, activation, retention | Planned |  | PostHog, EU cloud, with no address and no GPS in any event property | T7.12 |
+| 274 | Admin | **A data-export right for the courier** and a deletion path that honours the 7-year tax record | Planned | "data history and export" (TEARDOWN §9, S3/S4) | one export endpoint serves the courier's access request and the owner's request, and the audit log says who asked for what | T7.15 |
+| 275 | Analytics | **A weekly written summary** the founder and the depot owner can read without opening a tool | Planned | not in the teardown (silent on any written summary) | generated from the same KPI views, so the summary and the dashboard cannot disagree | T7.12 |
+| 276 | Engineering workflow | **Pre-commit gate**: the floor guard (`scripts/check-floor.mjs`) and the formatters run before a commit is created, not only in CI | Planned |  | a violation is caught in 2 seconds instead of 12 minutes | **T8.1** (new) |
+| 277 | Engineering workflow | **Hash-verified skill installs**: `skills-lock.json` that actually verifies, so a skill cannot be swapped silently | Planned |  | the lock is the supply-chain boundary for every agent that writes to this repo | **T8.2** (new) |
+| 278 | Engineering workflow | **Skill validation in CI** (`skills-ref validate` against the open Agent Skills spec) | Planned |  | our skills conform to a public format, not to a vendor's | **T8.3** (new) |
+| 279 | Engineering workflow | **Version automation for `packages/`** (changesets), so a published package's version is derived from a written change | Planned |  | the version number is evidence, like everything else in `docs/evidence/` | **T8.4** (new) |
+| 280 | Engineering workflow | **One workspace source of truth**: the dead `workspaces` array removed from `package.json`, and the `apps/web` entry removed or created | Planned |  | no drift between what CI installs and what the repo contains | **T8.5** (new) |
+| 281 | Engineering workflow | **An explicit pnpm `nodeLinker` decision** for the Expo SDK 58 tree (isolated vs hoisted), written down with the Expo guide cited | Planned |  | the founder's Windows machine and the CI runner install the same tree | **T8.6** (new) |
+| 282 | Engineering workflow | **`turbo.json` cache correctness**: `outputs` for `test`/`lint`/`typecheck`, `env`, `globalDependencies`, so a changed shared package cannot pass a stale cache | Planned |  | a green CI that did not run the tests is the worst outcome we could have | **T8.7** (new) |
+| 283 | Engineering workflow | **Agent-in-the-loop PR review we host ourselves**, with the agent's output treated as untrusted (the Codex PR #187 lesson) | Planned |  | driver-adjacent source never leaves our infrastructure | **T8.8** (new) |
+| 284 | Engineering workflow | **MCP servers pinned in the repo** (`.mcp.json` + a checksum), so an agent's tools are a reviewed file, not a machine's state | Planned |  | the tools an agent can call are part of the review | **T8.9** (new) |
+| 285 | Engineering workflow | **Docs as a build artefact** (a self-hosted wiki generator over this repo) instead of docs that drift | Planned |  | `docs/` is already the source of truth; a generator keeps it honest | **T8.10** (new) |
+| 286 | Engineering workflow | **An onboarding path for a new developer**: `CONTRIBUTING.md`, a first-PR checklist, and a measured time-to-first-green-PR | Planned |  | the repo must survive the founder stepping away (D10) | **T8.11** (new) |
+| 287 | Engineering workflow | **CI minutes per PR measured and published**, per job | Planned |  | cost is a first-class metric, not a surprise on the bill | **T8.12** (new) |
+| 288 | Engineering workflow | **Dependency update automation** (Renovate or Dependabot) with the pnpm 12 minimum-release-age policy respected | Planned |  | our own `minimum-release-age=10080` supply-chain rule is enforced by a bot, not by memory | **T8.13** (new) |
+| 289 | Engineering workflow | **Multi-agent packaging** for the skills (`.codex-plugin/`, `.opencode/`, `hooks/`, `evals/`) instead of a hand-mirrored `.claude` + `.agents` pair | Planned |  | one source, many agents, each pinned and verified | **T8.14** (new) |
+| 290 | Engineering workflow | **A PR template and an issue template** (none exist today) so every change states its evidence path | Planned |  | the D21 evidence rule is visible on the PR itself | **T8.15** (new) |
+| 291 | Offline maps | **Offline vector map for the whole of Canterbury**, read from a local file, working from the first launch with no internet | Planned | no offline map of the driver's region and no offline tile product (S2, S10) | D15: the map is bundled and refreshed weekly on Wi-Fi — not a paid download | **T5** |
+| 292 | Offline maps | **Weekly incremental tile refresh** (PMTiles v3 diffs) instead of a full re-download | Planned |  | the refresh is 1/50th of the traffic and works on a phone plan | **T5.5** |
+| 293 | Offline maps | **Day, night and high-contrast-sun styles generated from one theme source** | Planned |  | D16: our own professional style, one source, three variants | **T5.1** |
+| 294 | Offline maps | **Courier layers**: house numbers at z17, entrances, access restrictions | Planned |  | the map answers "which door", not just "which street" | **T5.2** |
+| 295 | Offline maps | **Style-driven pack reduction** so the pack fits the 50 MB ceiling with the courier layers kept | Planned |  | the size ceiling is met without dropping the layers the job needs | **T5.3** |
+| 296 | Offline maps | **Offline attribution**: "(c) OpenStreetMap contributors" + the ODbL notice, visible on the map **and** in ≥ 2 user-visible places, with links, working with no network | Planned |  | the licence is honoured in the one situation where the user has no internet to read it | **T5.4** |
+| 297 | Offline maps | **LINZ parcel boundaries, address points, contours and aerial** as basemap layers | Planned |  | NZ-native data: OSM's NZ data is LINZ-derived under CC BY 4.0, so the source is first-party | **T4** + **T5.6** |
+| 298 | Navigation | **In-app turn-by-turn with spoken guidance** (behind a flag) | Planned | match - internal navigation powered by Google Maps; no turn-by-turn engine of their own (S6, S10) | voice-first: the assistant reads the door note on arrival; the screen is optional (D2) | **T7.7** (Ferrostar behind a flag) |
+| 299 | Navigation | **Offline navigation in a dead spot** (routing inside the downloaded area with no signal) | Planned | no offline navigation of their own (S6) | a courier in a rural gully still gets to the next stop | **T7.7** + **T5** |
+| 300 | Navigation | **Vehicle profile in the router** (bike / scooter / car / small truck / large truck) | Planned | match - Bicycle, Scooter, Car, Small Truck, Large Truck (S11) | the profile is learned per driver and per run | **T7.2** |
+| 301 | Navigation | **Stop side of the road** (either / right only / left only), aware of NZ left-hand traffic | Planned | match - the setting exists but is generic (S11) | a left-hand-traffic-aware default is an NZ-only opening | **T7.3** |
+| 302 | Driver tools | **Satellite / aerial layer** for driveways and rural drop-offs | Planned | match - a satellite layer toggle in the map view (S9) | the aerial download is optional, so the data cost stays with the user who wants it (D15) | **T5.6** |
+| 303 | Earnings | **GPX / trace export** of the driven route for the IRD mileage logbook | Planned | match - mileage logbook (S11) | the km come from the same trace the router used | **T7.11** |
+| 304 | Tracking | **Geofence auto-arrival** driven by the map's own address and parcel data | Planned | match - geofence arrival (S2, S10) | arrival triggers the **spoken** door memory | **T7.3** |
+| 305 | Dispatch | **Self-hosted map + geocoder + routing for the web dashboard** (no key, no vendor bill) | Planned | match - dispatcher dashboard with an interactive map (S9) | the same stack the driver app uses, so dispatch and driver see one map | **T7.12** |
+| 306 | Offline maps | **A pack download manager with resume, a region list and progress** (the Organic Maps UX) | Planned |  | a 50 MB pack on a phone signal needs resume and a visible state | **T5.9** (new) |
+| 307 | QA | **A measured pack-size + frame-time benchmark published with the decision** | Planned |  | the map claim is a measurement, not a promise | **T5.8** |
+| 308 | Offline maps | **A map that stays correct when OSM changes** — a weekly rebuild with a diff, not a silent replacement | Planned |  | the pack updates without the driver re-downloading 50 MB | **T5.5** + **T7.1** |
 
 ## Rules
 
