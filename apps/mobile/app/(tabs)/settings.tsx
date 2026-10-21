@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Switch, ScrollView } from 'react-native';
+import { router } from 'expo-router';
 import { useTheme } from '@/providers/ThemeProvider';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
 import { cn } from '@/utils/cn';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 export default function SettingsScreen() {
   const { theme, themeName, setTheme, toggleTheme } = useTheme();
@@ -144,7 +146,7 @@ export default function SettingsScreen() {
               <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Sync Now</Text>
               <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Manually sync with server</Text>
             </View>
-            <Text style={{ fontSize: 20 }}>↻</Text>
+            <MaterialIcons name="sync" size={20} color={String(theme.colors.textTertiary)} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.settingRow} onPress={() => console.log('Offline maps')}>
@@ -152,7 +154,7 @@ export default function SettingsScreen() {
               <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Offline Maps</Text>
               <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Canterbury region - 45 MB (updated weekly)</Text>
             </View>
-            <Text style={{ fontSize: 20 }}>🗺️</Text>
+            <MaterialIcons name="map" size={20} color={String(theme.colors.textTertiary)} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.settingRow} onPress={() => console.log('Clear cache')}>
@@ -160,7 +162,24 @@ export default function SettingsScreen() {
               <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Clear Cache</Text>
               <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Remove temporary files and cached data</Text>
             </View>
-            <Text style={{ fontSize: 20 }}>🗑️</Text>
+            <MaterialIcons name="delete-outline" size={20} color={String(theme.colors.textTertiary)} />
+          </TouchableOpacity>
+        </Card>
+
+        {/* Diagnostics */}
+        <Card style={[styles.sectionCard, { backgroundColor: theme.colors.surface, marginTop: 16 }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Diagnostics</Text>
+
+          <TouchableOpacity
+            testID="settings-compat"
+            style={styles.settingRow}
+            onPress={() => router.push('/compat')}
+          >
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Compatibility</Text>
+              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>Check the voice, camera, map, database and audio modules</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={String(theme.colors.textTertiary)} />
           </TouchableOpacity>
         </Card>
 
