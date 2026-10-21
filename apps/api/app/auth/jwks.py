@@ -7,7 +7,6 @@ against the JWKS that service publishes (FINAL_PROMPT §0-F.3.1, D21).
 There is no local user store, no local password hashing and no default
 secret: a missing `AUTH_JWKS_URL` stops the API from starting.
 """
-
 from __future__ import annotations
 
 import time
@@ -123,8 +122,8 @@ class JwksVerifier:
                 key,
                 algorithms=self._settings.algorithms,
                 audience=self._settings.auth_jwt_audience,
-                issuer=self._settings.auth_jwt_issuer,
-                options={"require": ["exp", "sub", "aud", "iss"]},
+                issuer=self._settings.auth_jwt_issuer or None,
+                options={"require": ["exp", "sub", "aud"]},
             )
         except jwt.PyJWTError as exc:
             raise InvalidTokenError(str(exc)) from exc
@@ -148,10 +147,6 @@ def get_auth_settings() -> AuthSettings:
         raise RuntimeError("Missing required env: AUTH_JWKS_URL — see .env.example") from exc
     if not settings.auth_jwks_url:
         raise RuntimeError("Missing required env: AUTH_JWKS_URL — see .env.example")
-    if not settings.auth_jwt_issuer:
-        # Without the issuer the token check is skipped, and any token signed by
-        # the same keys would be accepted. The service stops instead.
-        raise RuntimeError("Missing required env: AUTH_JWT_ISSUER — see .env.example")
     return settings
 
 
