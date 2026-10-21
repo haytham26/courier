@@ -13,11 +13,15 @@ from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .door_memory import router as door_memory_router
 from .earnings_routes import router as earnings_router
+from .health import router as health_router
 
 # Fail fast when the API cannot verify tokens (no default secrets).
 get_auth_settings()
 
 app = FastAPI(title="Courier Copilot", version="0.1.0")
+
+# The health endpoints: the edge and the heartbeat ask them (infra/Caddyfile).
+app.include_router(health_router)
 
 # Include auth routes
 app.include_router(auth_router)

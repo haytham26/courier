@@ -1,0 +1,73 @@
+name: Restore test
+
+# A backup is only worth something when the restore works. This job runs the
+# real backup script and the real restore script against a scratch PostgreSQL
+# and proves that the data is back, table by table
+# (MASTER_EXECUTION P6, the platform squad's release gate).
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/restore-test.yml"
+  schedule:
+    # Nightly, so a broken backup is found before a courier needs it.
+    - cron: "43 4 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: restore-test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    name: Back up, restore, verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: courier
+          POSTGRES_PASSWORD: courier
+          POSTGRES_DB: courier
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U courier -d courier"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install the PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: The restore test
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: courier
+          PGPASSWORD: courier
+          PGDATABASE: courier
+          WORK_DIR: ${{ runner.temp }}/restore-test
+        run: bash infra/test-restore.sh --clean
+
+      - name: The evidence
+        if: always()
+        run: |
+          ls -la "${WORK_DIR:-/tmp}" || true
+          cat "${WORK_DIR}"/courier-*.manifest 2>/dev/null || true
+
+      - name: Upload the evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: restore-test
+          path: ${{ runner.temp }}/restore-test
+          if-no-files-found: ignore

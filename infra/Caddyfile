@@ -1,0 +1,99 @@
+# The edge of the Courier Copilot production stack.
+#
+# It terminates TLS (Caddy obtains the certificate and renews it by itself),
+# sets the security headers, limits the request rate and forwards the traffic
+# to the two services on the internal Docker network.
+#
+# The environment (the compose file sets both):
+#   COURIER_DOMAIN   the public name of the deployment
+#   ACME_EMAIL       the address Caddy sends the certificate notices to
+#
+# The rate limits need the caddy-ratelimit module. The image is built by
+# infra/caddy/Dockerfile, which adds the module to the official Caddy image.
+{
+	email {$ACME_EMAIL}
+
+	# The admin API stays on the loopback interface: nothing outside the
+	# container can reload the configuration.
+	admin localhost:2019
+}
+
+{$COURIER_DOMAIN} {
+	encode zstd gzip
+
+	# The access log lands in a file: the heartbeat counts the errors in it
+	# (infra/monitoring/heartbeat.sh). The error log stays on the console, so
+	# `docker compose logs caddy` shows what went wrong.
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+
+	# The security headers on every answer.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+		Permissions-Policy "geolocation=(self), camera=(), microphone=(self), payment=()"
+		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+		-Server
+	}
+
+	# The general limit: 120 requests a minute per address. The addresses of
+	# one IPv6 network share the bucket, so a caller cannot cycle through them.
+	rate_limit {
+		zone general {
+			key {remote_host}
+			events 120
+			window 1m
+			ipv6_prefix 64
+		}
+	}
+
+	# The health endpoints are for the edge and for the heartbeat, not for the
+	# public: the edge answers 404 so the version never leaks.
+	handle /health* {
+		respond 404
+	}
+
+	# The auth service keeps its own path and gets the strict limit: 20
+	# attempts a minute per address. The service applies its own, tighter
+	# limits per endpoint on top of this one.
+	handle /api/auth/* {
+		rate_limit {
+			zone auth {
+				key {remote_host}
+				events 20
+				window 1m
+				ipv6_prefix 64
+			}
+		}
+		reverse_proxy auth_a:3001 auth_b:3001 {
+			lb_policy round_robin
+			# A replica that is being replaced refuses the connection for a
+			# moment: the request is tried on the other one instead of failing.
+			lb_try_duration 5s
+			lb_try_interval 250ms
+			health_uri /health/ready
+			health_interval 10s
+			health_timeout 3s
+		}
+	}
+
+	# Everything else is the API.
+	handle {
+		reverse_proxy api_a:8000 api_b:8000 {
+			lb_policy round_robin
+			lb_try_duration 5s
+			lb_try_interval 250ms
+			health_uri /health/ready
+			health_interval 10s
+			health_timeout 3s
+		}
+	}
+}

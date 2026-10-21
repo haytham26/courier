@@ -1,0 +1,63 @@
+# The monitoring of the Courier Copilot production stack.
+#
+# It runs beside the production stack, not inside it: the heartbeat watches
+# the stack from the outside and posts to a webhook when something is wrong.
+#
+# Run it from the repository root:
+#   docker compose --env-file infra/prod.env -f infra/monitoring/compose.monitoring.yml up -d
+#
+# It joins the network of the production stack (courier-net), so it reaches
+# the health endpoints of the services by their names.
+
+name: courier-monitoring
+
+services:
+  heartbeat:
+    image: ${COURIER_HEARTBEAT_IMAGE:-courier-heartbeat:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      API_HEALTH_URL: http://api_a:8000/health/ready
+      AUTH_HEALTH_URL: http://auth_a:3001/health/ready
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+      HEARTBEAT_INTERVAL: ${HEARTBEAT_INTERVAL:-60}
+      ALERT_COOLDOWN: ${ALERT_COOLDOWN:-900}
+      BACKUP_DIR: /backups
+      ACCESS_LOG: /var/log/caddy/access.log
+      CERT_DIR: /caddy-data/caddy/certificates
+      DISK_PATH: /backups
+    volumes:
+      - heartbeat_state:/var/lib/courier-heartbeat
+      - caddy_logs:/var/log/caddy:ro
+      - caddy_data:/caddy-data:ro
+      # The backups live on the host: the backup script writes them there.
+      - ${BACKUP_DIR:-/var/backups/courier}:/backups:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128m
+    networks:
+      courier:
+        aliases:
+          - heartbeat
+
+volumes:
+  heartbeat_state:
+  # The volumes of the production stack, with the names the production
+  # compose file gives them: the monitoring sees the same files.
+  caddy_logs:
+    name: courier-caddy-logs
+    external: true
+  caddy_data:
+    name: courier-caddy-data
+    external: true
+
+networks:
+  courier:
+    name: ${COURIER_NETWORK:-courier-net}
+    external: true

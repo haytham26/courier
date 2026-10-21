@@ -17,7 +17,7 @@ export default function SettingsScreen() {
   const [hapticFeedback, setHapticFeedback] = useState(true);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView testID="settings-screen" style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>

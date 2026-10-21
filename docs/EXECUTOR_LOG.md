@@ -753,3 +753,46 @@ target, and the router ignored it. The stack now guards the two groups with
   emulator here), so the Maestro screenshots and the night/200 % text passes
   are still owed; the shift id is a client-made UUID, because the API has no
   endpoint yet that hands the app the shift it is in.
+---
+
+## 2026-10-22 - P6: the deployment as code, the backups, the monitoring and the runbook
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+|---|---|---|
+| The scope | `using-agent-skills`, `context-engineering` | Read `CONSTRAINTS.md`, `docs/MASTER_EXECUTION.md` (P6, sections 5, 6 and 7), `docs/SAAS_CHECKLIST.md` and the ADR convention before writing anything; the slice is the deployment, the backups, the monitoring and the documents. |
+| The health contract | `api-and-interface-design`, `test-driven-development` | One contract for both services (`/health`, `/health/live`, `/health/ready`), the same shape, the version in the answer and never a secret; the tests came first (8 for the API, 9 for the auth service). |
+| The secrets and the TLS | `security-and-hardening` | The secrets come from the environment only, the rate limits are on the edge, the headers are on every answer, the health paths are hidden from the public and a failing dependency is reported by the name of the error, never by its message. |
+| The scripts | `source-driven-development`, `incremental-implementation` | The versions of the images were checked against the official registries on 2026-10-21 (Caddy 2.10.2 and 2.11.7, the uv 0.13.1 image, Node 22, the PostGIS image, Alpine 3.22, PostgreSQL 16); the scripts refuse to run without the environment, print what they will do and delete nothing without a flag. |
+| The pipeline | `ci-cd-and-automation` | The restore test is a CI job against a PostgreSQL service container, and the release checklist names the gates the CI already has. |
+| Before the handoff | `code-review-and-quality`, `code-simplification`, `constraint-driven-development` | No suppression, no skipped test, no stub, no secret in the repository; the Caddyfile passes `caddy validate` and `caddy fmt`. |
+
+### Result
+
+- `infra/compose.prod.yml`: the production stack. The database, the cache, two replicas of the API, two of the auth service and the edge, with the volumes, the health checks, the resource limits, the restart policies, the fixed addresses and every secret read from the environment.
+- `infra/Caddyfile`: the TLS (Caddy gets and renews the certificate), the HSTS, the security headers, the rate limits (120 a minute for the API, 20 for the auth paths) and the proxy to the two services with the retry and the active health check.
+- `infra/caddy/Dockerfile`, `infra/postgres/Dockerfile`, `apps/api/Dockerfile`, `services/auth/Dockerfile`: the four images. All four were built here and run.
+- `infra/env.example`: every variable, with the reason it is needed and where the value comes from.
+- `infra/backup.sh`, `infra/restore.sh`, `infra/test-restore.sh`: the backup (the dump, the checksum, the manifest with the row count of every table), the restore that compares those counts, and the test that runs both against a scratch database.
+- `infra/zero-downtime.md`: the rolling swap over the two replicas, the rollback and the rules of the database change.
+- `infra/monitoring/`: the heartbeat (the health endpoints, the error rate of the edge, the age of the backup, the certificate, the disk), the compose profile that runs it and `ALERTS.md` with the seven rules and who is woken.
+- The health endpoints of the two services, and the migration of the tables of the auth service (Better Auth does not create them for a Kysely dialect, so the service would have refused the first sign-in).
+- `docs/operations/RUNBOOK.md`, `docs/operations/RELEASE-CHECKLIST.md`, `docs/squads/operations/`, `docs/adr/ADR-005-production-deployment.md`, `.github/workflows/restore-test.yml`.
+
+### Evidence (all on this machine, 2026-10-21)
+
+- The restore test passed against a real PostgreSQL 16: the backup wrote the dump and the manifest, the restore put the data back and the row counts of every table matched.
+- The four scripts pass `bash -n`.
+- The whole stack came up with `docker compose up -d`: the seven services are healthy, the edge answers 200, the security headers are on the answer, the rate limit answered 429 on the 21st request of the auth path and on the 121st of the general path.
+- The API image answers `/health/live` with the version and `/health/ready` with the database check; the auth image creates its ten tables, signs a courier up, publishes the JWKS, and the API reads the identity behind the token (200).
+- The heartbeat checked the running stack: the API ok, the auth service ok, the error rate counted, the certificate and the disk read.
+- The gates: `pnpm --filter @courier/auth test` (44 passed), `pnpm --filter @courier/auth typecheck` (clean), `pnpm --filter @courier/auth lint` (clean), `uv run --directory apps/api pytest` (137 passed), `ruff check` (clean), `ruff format --check` (clean for the new files), `mypy` (clean).
+- The Caddyfile: `caddy validate` says "Valid configuration" and `caddy fmt` is clean.
+
+### Not verified
+
+- The swap without downtime and the rollback were not measured under load: the two replicas and the retry are in place, but the numbers are still owed (the next item of the squad status).
+- The certificate of a real domain was not obtained: the local run used the internal certificate of Caddy for "localhost".
+- The nightly backup schedule, the offsite copy of the dumps and the cost guard of P6 are written down but not running.
+- The first run of the restore test in CI is still to come.
