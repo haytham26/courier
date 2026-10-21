@@ -490,100 +490,169 @@ are in <flow>/screenshots/, and maestro-logcat.txt holds the app's logcat).
 Everything is committed and pushed on eat/v4-company-bootstrap (PR #1) and
 eat/t2-expo-58-decision.
 
-### The startup crash, found through the crash buffer (the fifth blocker)
+---
 
-The evidence artifact carries the crash buffer next to the main logcat (the
-main buffer is overwritten by the polling noise, which is why the first runs
-looked like a silent death):
+## Session 2026-10-21 — the P1 emulator root-fix, the P2 research depth, two security holes
 
-    FATAL EXCEPTION: main
-    Process: com.courier.copilot
-    java.lang.RuntimeException: Unable to get provider androidx.startup.InitializationProvider:
-    Caused by: Failed to create an instance of class androidx.work.impl.WorkDatabase
+**Skills applied:** using-agent-skills, debugging-and-error-recovery, test-driven-development,
+source-driven-development, incremental-implementation, code-review-and-quality,
+doubt-driven-development, security-and-hardening, documentation-and-adrs, constraint-driven-development.
 
-WorkManager, which AndroidX pulls into every app through the startup provider,
-opens its own database through `androidx.sqlite`. The app stores its data in
-op-sqlite, which is a JSI module with its own SQLite build: the bundled SQLite
-takes the `sqlite3_*` symbols of the process before the platform library
-does, and the framework SQLite that WorkManager uses then fails. The app uses
-no background work at all, so the initializer is removed with the documented
-AndroidX recipe (`tools:node="remove"`), and the framework SQLite is added
-for the libraries that need it.
+### The state check at the start of the session (MASTER_EXECUTION §5)
 
-### The three mistakes of the session, recorded so they are not repeated
+- PR #1 open on `feat/v4-company-bootstrap`, the last Android E2E run red at the Gradle step.
+- The last E2E run (39435961657) failed in 18m10s: `Cannot find module 'babel-preset-expo'`.
+- The founder's new P1 (MASTER_EXECUTION §4) landed in `605985e`: rebuild the pipeline at the root,
+  triggers = PR to main + nightly + manual, no push, a dedicated PR, no pushes mid-run.
 
-1. A revert that moved the pipeline out of PR #1 also took the
-   `babel-preset-expo` dev dependency with it: the release bundle failed
-   again with "Cannot find module babel-preset-expo".
-2. A commit that staged only `apps/mobile` left the lockfile behind: the
-   frozen install failed with "specifiers in the lockfile don't match
-   specifiers in package.json". The lockfile is a root file: `git add -A`, or
-   the file by name.
-3. The pipeline PR and the product PR drifted apart. The pipeline PR now
-   carries only the pipeline and the app fixes it needs to prove itself; the
-   product work stays in PR #1.
+### What the evidence proved, blocker by blocker (each one fixed at the root)
 
-### P5.1 Courier Sync, the first slice of the product
+1. **`Cannot find module 'babel-preset-expo'`** — the release bundle runs Metro and
+   `babel-preset-expo` was only a transitive dependency, invisible in pnpm's isolated layout.
+   It is now a direct dev dependency of the mobile app.
+2. **`Unable to resolve module @courier/design-tokens/themes`** — the package advertised
+   `dist/*.mjs` files it never produced, the monorepo had no Metro configuration, and the CI
+   never built the workspace packages. Fixed: a real exports map, `apps/mobile/metro.config.js`
+   (the workspace root in `watchFolders`, the package exports map on) and a build step for
+   `@courier/design-tokens` before the Gradle bundle.
+3. **`the resolution ... is dist/themes.js, however this file does not exist`** — the proof that
+   the build step was missing from the branch. Added, and the APK now builds (15m49s, pass).
+4. **The release APK started the dev launcher and died** — `expo-dev-client` was a dependency
+   and an app.json plugin. Removed: the app runs the bundle it ships with.
+5. **The crash was invisible** — the main logcat buffer was overwritten by the polling noise.
+   The crash buffer is now dumped next to it.
 
-- `apps/api/app/repo.py`: the Repo contract, the Postgres implementation
-  (SQLAlchemy + psycopg) and the in-memory one the tests use. The event id
-  comes from the phone, so a replayed batch is stored once.
-- `apps/api/db/schema.sql`: the shifts, the stops, the delivery events, the
-  corrected addresses, the door memory and the PostGIS point of every stop.
-- `POST /shifts/{shift_id}/events:batch` answers with the accepted count and
-  the cursor.
-- `apps/mobile/src/sync/`: the event log, the op-sqlite store (SQLCipher) and
-  the sync service that only confirms a batch after the server stored it.
+### The pipeline (PR #2, `feat/p1-emulator-pipeline`)
 
-### P2, the verifier pass
+- Two jobs: `build` (the release APK, cached by content hash) and `e2e` (reuses the artifact).
+- Triggers: PRs to main, nightly (03:17) and manual only. The pull_request trigger has a
+  `paths` filter: a documentation-only push must not spend the private Actions minutes.
+- The AVD snapshot is cached, the actions are pinned to their SHAs.
+- Readiness gates with short timeouts: boot -> install -> am start -> pid -> first-screen testID.
+  Each gate dumps the evidence and fails fast.
+- The app runs in the E2E mode (`EXPO_PUBLIC_E2E=1`): the sign-in is mocked, so no Metro, no
+  auth service and no API are needed. A smoke flow runs first, the evidence is uploaded every run.
+- `scripts/e2e-local.ps1` reproduces the run locally.
 
-Four verification files (VERIFICATION-A/B/C/D.md): 271 of 941 cards re-checked
-against their real source, every area over the 20 % floor. The systematic
-defect: the research files quoted GitHub's `open_issues_count` (issues plus
-pull requests) as the number of open issues. 129 cards corrected, and the
-corrections are applied in the research files.
+### The two security holes the research found (both closed, with tests)
 
-### The seventh blocker, and the one that mattered: the app had never run
+1. `/shifts/{id}/voice` accepted any caller. The handshake is now verified against the JWKS.
+2. `AUTH_JWT_ISSUER` was optional, so the issuer check was silently switched off. The issuer is
+   now required and the service stops when it is missing.
 
-The crash buffer said: "No filename found. This is likely a bug in
-expo-router", thrown while the router rendered its first screen.
+### The audit that nobody read
 
-The bundle had **no route at all**: the entry was still the old `App.js` with
-a `<Slot />` rendered outside the router's context, so expo-router's route
-map was never built and every screen of the app was missing from the bundle.
-The app could never have opened on a phone. The fix:
+The Python audit step ended with `uvx pip-audit ... || pip-audit ...`, so a real finding was
+replaced by "command not found" (exit 127). Behind it: eight pillow CVEs (fixed only in 13.0.0,
+which pipecat pins out) and PYSEC-2026-4320 in certifi. `pipecat-ai` was declared in the API
+and never imported: the unused dependency is gone, certifi is constrained, the audit is clean.
 
-- the entry is `expo-router/entry` (the package main); the old `App.js` and
-  `index.js` are gone and the providers live in the root layout
-- the tabs and the sign-in group name their first screen, so the app opens
-  from the launcher without a deep link
-- the root layout has a not-found screen for a link the app does not know
+### P2: all 24 research areas at the full V4 depth
 
-How it was found: the release bundle was unpacked from the APK and searched
-for the route files. The same check on a local `expo export` (a minute, no
-emulator) is now the way to prove a bundling change. The local loop found the
-same thing in seconds, after four 25-minute CI cycles.
+16 files rewritten or created, every one with the query log, 30+ evidence cards with real URLs
+and dates, the 13-item shortlist, the top-5 deep review, the benchmarks (UNVERIFIED where no
+eval set exists), the "what we are missing" rows, the decision, the risks and an honest "what
+we could not verify". The 259 gap rows are merged into `docs/PARITY.md`.
 
-**The rule this teaches**: when a screen does not appear, look at the bundle
-before looking at the code. The bundle is the truth about what the app is.
+### The next actions, in order (MASTER_EXECUTION §4)
 
-### The app runs on the emulator (the state of the run of 07:08)
+1. **P1**: the emulator run in flight on PR #2 -> the artifacts into `docs/evidence/b7/` ->
+   B.7 PASS -> merge PR #2 (the pipeline) and PR #1 (the product) -> open and merge the T2/T4 PR.
+2. **P2**: the verifier pass (>= 20 %) over the research, the eval sets (voice, scanner, routing).
+3. **P3-P7**: Courier Maps (T5) -> the design to the mockups (T6) -> the product (T7) ->
+   launch readiness -> the v1.0.0 release.
 
-    ##[group]readiness: start the app
-    pid=3884
-    the first screen is on the device
+### The sixth blocker: the app crashed on the first launch, and the crash buffer named it
 
-The screenshot from the evidence shows the real screen: "Good morning",
-"Driver", the three stats (Delivered 1, Remaining 3, Success Rate 98 %), the
-Current Run card with 45 Papanui Road and the Mark Delivered / Skip / Failed
-buttons, and the tab bar (Home, Map, Stops, Settings).
+With the WorkManager crash gone, the app started (the pid appeared) and then
+died with a JavaScript error:
 
-Three flows then failed on what they asserted, not on the app: the stat
-labels are upper case in the design, the stop the flow opens is 45 Papanui
-Road in Merivale, and the deep link needs the path form
-(`courier:///compat`). The flows are fixed and pushed.
+    com.facebook.react.common.JavascriptException: Error: No filename found.
+    This is likely a bug in expo-router.
+        at Slot (address at index.android.bundle:1:769686)
+        at ThemeProvider ... at App
 
-**Next**: the run with the fixed flows decides whether the emulator is green.
-If it is, the artifacts go into `docs/evidence/b7/`, B.7 is marked PASS in
-`docs/PROGRESS.md`, PR #2 and then PR #1 are merged, and the T2/T4 PR is
-rebased on main and opened.
+The app is opened from the launcher without a deep link, so the URL is empty
+and expo-router has to pick the first screen by itself: the tabs now name
+their first screen (`unstable_settings.initialRouteName = 'index'`), the
+sign-in group names its own (`login`), and the root layout has a not-found
+screen so an unknown link shows where to go instead of crashing. This is the
+bug a courier would have hit on the very first launch of the app.
+
+### The state of the two PRs
+
+- **PR #2 `feat/p1-emulator-pipeline`** (the pipeline, per the founder's
+  "work on a dedicated PR and do not push to it mid-run"): two jobs (the
+  release APK cached by content hash, then the emulator that reuses it), the
+  triggers are PR to main + nightly + manual with a paths filter, the actions
+  are SHA-pinned, the readiness gates are boot -> install -> am start -> pid ->
+  first-screen testID, the app runs in the E2E mode on local mocks, a smoke
+  flow runs first and the evidence is uploaded every run.
+- **PR #1 `feat/v4-company-bootstrap`** (the product): PHASE 2.1-3.1, the V4
+  system, the 24 research areas at the full depth with the verifier pass, the
+  259 parity rows, the two security fixes, the P5.1 sync slice.
+
+### The next actions, in order
+
+1. **P1**: when the run in flight finishes, read the evidence. If the first
+   screen appears, the flows run; copy the artifacts into
+   `docs/evidence/b7/`, write B.7 PASS in `docs/PROGRESS.md`, merge PR #2 and
+   then PR #1.
+2. **P1**: if the first screen still does not appear, the crash buffer says
+   why - that is now the fastest path (it named three of the six blockers).
+3. **P1**: the T2/T4 PR (`feat/t2-expo-58-decision`) has to be rebased on
+   main after PR #1 merges: ADR-002 (Expo 58), ADR-003 (LINZ), ADR-004 (the
+   voice licences), the LINZ scripts and the 96.9 % D8 accuracy run.
+4. **P2**: the eval sets (voice >= 500 utterances, scanner >= 300 labels, the
+   routing days of Christchurch).
+5. **P3-P7**: Courier Maps (T5) -> the design to the mockups (T6) -> the rest
+   of the product (T7) -> launch readiness -> the v1.0.0 release.
+
+### What the next session must not repeat
+
+- The pipeline PR and the product PR drift apart easily: when a fix belongs to
+  both, it is written on the product branch and copied to the pipeline branch,
+  and the lockfile is always committed (`git add -A`, the lockfile is a root
+  file).
+- Never push to the pipeline PR while its run is in flight: the run is
+  cancelled and the private Actions minutes are gone.
+- The evidence artifact carries the crash buffer next to the main logcat. The
+  main buffer is overwritten by the polling noise, which is why the first
+  runs looked like a silent death.
+
+### The state of the emulator at the end of this session
+
+The pipeline works: the release APK builds, it installs, it starts, the first
+screen is detected, the Maestro flows run and the evidence is uploaded. The
+screenshot from the run shows the real screen (Good morning, Driver, the three
+stats, the Current Run card with 45 Papanui Road, the tab bar).
+
+What still fails: the **B.7 compatibility flow**. The deep link
+`courier:///compat` does not open the compatibility screen (no crash: the
+crash buffer is empty), while the other four flows (smoke, today list, map,
+stops) pass or run.
+
+The next session must, in this order:
+
+1. Find why the deep link does not open `/compat`. The app's intent filter
+   (the scheme `courier`) is in the generated manifest, and the route exists
+   (`app/compat.tsx`). Check the router's linking: with expo-router, the
+   scheme must also be known to `expo-linking` (the `Linking.createURL` /
+   `useURL` path) and the `app.json` "scheme" must be the one the manifest
+   was generated with. A quick local check: `npx expo start` and the deep
+   link, or a Maestro run with `--debug-output`.
+2. When the compat flow passes: the artifacts into `docs/evidence/b7/`,
+   B.7 PASS in `docs/PROGRESS.md`, merge PR #2 (the pipeline) and then PR #1
+   (the product), rebase the T2/T4 PR on main and open it.
+3. The flows are slow (the compat flow alone takes 65 s): the runner gives
+   each flow three minutes, which is enough, but the whole job has to stay
+   under the 40-minute budget with the APK build (19 min) in front of it.
+
+### The two branch rules that cost time today
+
+- The pipeline PR and the product PR drift apart. Check `git branch
+  --show-current` before every commit, and push with the branch name in the
+  command (`git push origin <branch>`) so the commit lands where it should.
+- The lockfile is a root file: `git add -A` or the file by name. A commit
+  that stages only `apps/mobile` leaves the lockfile behind and the frozen
+  install fails in CI.
