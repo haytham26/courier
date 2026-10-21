@@ -20,6 +20,9 @@ CC-NC/FSL/BUSL in the shipped app). The allow-list is MIT, Apache-2.0, BSD-2/3-C
 | @op-engineering/op-sqlite       | unknown |
 | better-auth                     | unknown |
 | @better-auth/expo               | unknown |
+| @better-auth/passkey            | unknown |
+| @simplewebauthn/browser         | unknown |
+| expo-local-authentication       | unknown |
 | expo-audio                      | unknown |
 | expo-secure-store               | unknown |
 | @expo/vector-icons              | unknown |
@@ -34,3 +37,16 @@ CC-NC/FSL/BUSL in the shipped app). The allow-list is MIT, Apache-2.0, BSD-2/3-C
 | react-native-nitro-modules      | unknown |
 | expo-haptics                    | unknown |
 | react-native-worklets           | unknown |
+
+## Adopted code and data (not npm dependencies)
+
+These are the projects we adapted and the data we ship. The licence of each one is
+here with its URL and the date it was read.
+
+| What                 | Upstream                                                     | Licence                                                    | Read on    | Where it is used                                                                                         |
+| -------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------- |
+| God's Eye View       | https://github.com/bilawalsidhu/gods-eye-view                | MIT (Copyright (c) 2026 Bilawal Sidhu)                     | 2026-10-22 | the spoken camera verbs in `apps/mobile/src/maps/cameraCommands.ts`; the MIT notice is kept in that file |
+| NZ Building Outlines | https://data.linz.govt.nz/layer/101290-nz-building-outlines/ | Creative Commons Attribution 4.0 International (CC BY 4.0) | 2026-10-22 | the footprints of the 3D buildings, baked into the offline pack                                          |
+| OpenStreetMap        | https://www.openstreetmap.org/copyright                      | Open Database License (ODbL)                               | 2026-10-21 | the roads, the building levels and the attribution of the offline pack                                   |
+
+The imagery providers that need a commercial licence are **not** adopted: Google Photorealistic 3D Tiles and Cesium ion are refused by `scripts/build-3d-buildings.mjs` (see `docs/adr/ADR-005-map-view-modes.md`).

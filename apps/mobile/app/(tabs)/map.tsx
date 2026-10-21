@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -7,6 +8,7 @@ import {
   Map,
   Marker,
   NativeUserLocation,
+  type CameraRef,
   type LngLatBounds,
   type MapRef,
 } from '@maplibre/maplibre-react-native';
@@ -14,11 +16,27 @@ import {
 import { useTheme } from '@/providers/ThemeProvider';
 import { Button } from '@/components/Button';
 import { Sheet } from '@/components/Sheet';
-import { getConfiguredGlyphsUrl, getConfiguredTileUrl } from '@/maps/config';
+import { subscribeToVoiceCommands } from '@/voice/commandChannel';
+import { getConfiguredGlyphsUrl, getConfiguredTileUrl, getSatelliteSource } from '@/maps/config';
 import { describe, resolveTileSource, type TileSource } from '@/maps/offlinePack';
 import { loadOfflinePack, localGlyphsUrl, type OfflinePackRuntime } from '@/maps/packFiles';
 import { ATTRIBUTION_LINES, getCourierStyle } from '@/maps/styles';
-import { markerLabelColor, mockStops, statusColor, stopsForMap, type Stop } from '@/maps/stops';
+import {
+  markerLabelColor,
+  mockStops,
+  statusColor,
+  stopsBounds,
+  stopsForMap,
+  type Stop,
+} from '@/maps/stops';
+import { LOOK_BACK_BEARING, TILTED_PITCH, cameraForMode } from '@/maps/cameraCommands';
+import { isInTown, isMoving, type MapPosition } from '@/maps/driving';
+import { MapSettingsSheet } from '@/maps/MapSettingsSheet';
+import { isOnline } from '@/maps/network';
+import { useDriverId } from '@/maps/useDriverId';
+import { useMapToggles } from '@/maps/useMapToggles';
+import { useMapViewMode } from '@/maps/useMapViewMode';
+import type { MapViewMode } from '@/maps/viewModes';
 
 /** The words of the status labels, so the screen reader reads a sentence. */
 const statusLabels: Record<Stop['status'], string> = {
@@ -32,20 +50,45 @@ const statusLabels: Record<Stop['status'], string> = {
 /** Christchurch, the middle of the region the pack covers. */
 const MAP_CENTRE: [number, number] = [172.636, -43.533];
 
-const THEME_CHOICES = [
-  { name: 'day', label: 'Day', icon: 'white-balance-sunny' },
-  { name: 'night', label: 'Night', icon: 'weather-night' },
-  { name: 'highContrast', label: 'Contrast', icon: 'contrast-circle' },
-] as const;
+/** The zoom the camera goes to when it is sent to the next stop. */
+const STOP_ZOOM = 17;
+
+/**
+ * The four map modes, in the order they are shown.
+ *
+ * The courier picks the mode with one tap, and the voice can pick it too
+ * ("3D on", "flat map", "satellite", "auto").
+ */
+const MODE_CHOICES: readonly {
+  mode: MapViewMode;
+  label: string;
+  icon: ComponentProps<typeof MaterialCommunityIcons>['name'];
+}[] = [
+  { mode: 'flat', label: 'Flat', icon: 'map-outline' },
+  { mode: '3d', label: '3D', icon: 'cube-outline' },
+  { mode: 'satellite', label: 'Satellite', icon: 'satellite-variant' },
+  { mode: 'auto', label: 'Auto', icon: 'auto-fix' },
+];
 
 export default function MapScreen() {
-  const { theme, themeName, setTheme } = useTheme();
+  const { theme, themeName, themePreference, setThemePreference } = useTheme();
+  const driverId = useDriverId();
   const [selectedStop, setSelectedStop] = useState<Stop | null>(null);
   const [pack, setPack] = useState<OfflinePackRuntime | null>(null);
   const [glyphsUrl, setGlyphsUrl] = useState<string | null>(null);
   const [bounds, setBounds] = useState<LngLatBounds | null>(null);
   const [locationAllowed, setLocationAllowed] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [online, setOnline] = useState(false);
+  const [position, setPosition] = useState<MapPosition | null>(null);
+  const [moving, setMoving] = useState(false);
+  const [tilted, setTilted] = useState<boolean | null>(null);
+  const [lookBack, setLookBack] = useState(false);
+  const [followMe, setFollowMe] = useState(false);
   const mapRef = useRef<MapRef | null>(null);
+  const cameraRef = useRef<CameraRef | null>(null);
+
+  const { toggles, setToggles } = useMapToggles({ driverId });
 
   // The offline pack and the glyph bundle are read once, when the screen
   // opens. Neither needs the network, and neither may take the screen down.
@@ -97,17 +140,101 @@ export default function MapScreen() {
     };
   }, []);
 
-  const tileSource: TileSource = useMemo(() => {
-    const online = getConfiguredTileUrl();
-    if (!pack) {
-      return online ? { kind: 'online', url: online } : { kind: 'none' };
+  // Whether the device has a network: the satellite mode needs one.
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      const state = await isOnline();
+      if (!cancelled) {
+        setOnline(state);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // The speed of the courier, which is what the auto mode watches.
+  useEffect(() => {
+    if (!locationAllowed) {
+      return;
     }
-    return resolveTileSource(pack.state, pack.locations, online);
+
+    let subscription: Location.LocationSubscription | null = null;
+
+    void (async () => {
+      try {
+        subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: 10,
+            timeInterval: 5000,
+          },
+          (result) => {
+            setPosition({ lat: result.coords.latitude, lng: result.coords.longitude });
+            setMoving(isMoving(result.coords.speed));
+          },
+        );
+      } catch (error) {
+        console.warn(`maps: the position could not be watched: ${describe(error)}`);
+      }
+    })();
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [locationAllowed]);
+
+  const tileSource: TileSource = useMemo(() => {
+    const onlineTiles = getConfiguredTileUrl();
+    if (!pack) {
+      return onlineTiles ? { kind: 'online', url: onlineTiles } : { kind: 'none' };
+    }
+    return resolveTileSource(pack.state, pack.locations, onlineTiles);
   }, [pack]);
 
+  // The satellite imagery is only ever used when the build names the
+  // provider and its licence.
+  const satelliteSource = useMemo(() => getSatelliteSource(), []);
+
+  // The pack says whether it carries the building outlines that make the 3D
+  // buildings possible.
+  const packHasBuildings =
+    pack?.state.status === 'ready' && pack.state.manifest.buildings?.present === true;
+
+  const townBounds = useMemo(() => stopsBounds(mockStops), []);
+  const inTown = useMemo(() => isInTown(position, townBounds), [position, townBounds]);
+
+  const { mode, decision, setMode } = useMapViewMode({
+    driverId,
+    batterySaver: toggles.batterySaver,
+    moving,
+    inTown,
+    online,
+    satelliteLicensed: satelliteSource !== null,
+    buildingsInPack: packHasBuildings,
+  });
+
   const style = useMemo(
-    () => getCourierStyle(themeName, tileSource.kind === 'none' ? null : tileSource.url, glyphsUrl),
-    [themeName, tileSource, glyphsUrl],
+    () =>
+      getCourierStyle(themeName, tileSource.kind === 'none' ? null : tileSource.url, glyphsUrl, {
+        labelSize: toggles.labelSize,
+        buildings: toggles.buildings,
+        buildings3d: decision.effective === '3d' && packHasBuildings,
+        satellite: decision.effective === 'satellite' ? satelliteSource : null,
+      }),
+    [
+      themeName,
+      tileSource,
+      glyphsUrl,
+      toggles.labelSize,
+      toggles.buildings,
+      decision.effective,
+      packHasBuildings,
+      satelliteSource,
+    ],
   );
 
   const visibleStops = useMemo(() => stopsForMap(mockStops, bounds), [bounds]);
@@ -145,6 +272,61 @@ export default function MapScreen() {
     setSelectedStop(null);
   }, []);
 
+  // The camera, in the mode the courier is in. The voice can tilt the map and
+  // turn it around; the mode decides what it is when nothing else has.
+  const modeCamera = cameraForMode(decision.effective);
+  const camera = useMemo(
+    () => ({
+      pitch: tilted === null ? modeCamera.pitch : tilted ? TILTED_PITCH : 0,
+      bearing: lookBack ? LOOK_BACK_BEARING : modeCamera.bearing,
+    }),
+    [lookBack, modeCamera, tilted],
+  );
+
+  const zoomToNextStop = useCallback(() => {
+    const stop = mockStops.find((entry) => entry.status === 'active') ?? mockStops[0];
+    if (!stop) {
+      return;
+    }
+    cameraRef.current?.easeTo({
+      center: [stop.coordinates.lng, stop.coordinates.lat],
+      zoom: STOP_ZOOM,
+      duration: 600,
+    });
+  }, []);
+
+  // The voice commands the map understands.
+  useEffect(() => {
+    const unsubscribe = subscribeToVoiceCommands((command) => {
+      switch (command.type) {
+        case 'set_map_mode':
+          setMode(command.mode);
+          break;
+        case 'tilt_map':
+          setTilted(command.on);
+          break;
+        case 'follow_me':
+          setFollowMe(command.on);
+          break;
+        case 'look_back':
+          setLookBack(true);
+          break;
+        case 'reset_camera':
+          setTilted(null);
+          setLookBack(false);
+          setFollowMe(false);
+          break;
+        case 'zoom_to_next_stop':
+          zoomToNextStop();
+          break;
+        default:
+          break;
+      }
+    });
+
+    return unsubscribe;
+  }, [setMode, zoomToNextStop]);
+
   const packLabel = useMemo(() => {
     if (!pack) {
       return 'Looking for the offline map';
@@ -171,7 +353,15 @@ export default function MapScreen() {
           style={styles.map}
           onRegionDidChange={handleRegionDidChange}
         >
-          <Camera initialViewState={{ center: MAP_CENTRE, zoom: 12 }} minZoom={4} maxZoom={19} />
+          <Camera
+            ref={cameraRef}
+            initialViewState={{ center: MAP_CENTRE, zoom: 12 }}
+            minZoom={4}
+            maxZoom={19}
+            pitch={camera.pitch}
+            bearing={camera.bearing}
+            trackUserLocation={followMe ? 'course' : undefined}
+          />
           {locationAllowed ? <NativeUserLocation /> : null}
           {visibleStops.map((stop) => (
             <Marker
@@ -240,12 +430,12 @@ export default function MapScreen() {
         ]}
       >
         <View style={styles.controlRow}>
-          {THEME_CHOICES.map((choice) => {
-            const selected = themeName === choice.name;
+          {MODE_CHOICES.map((choice) => {
+            const selected = mode === choice.mode;
             return (
               <TouchableOpacity
-                key={choice.name}
-                testID={`map-theme-${choice.name}`}
+                key={choice.mode}
+                testID={`map-mode-${choice.mode}`}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 accessibilityLabel={`${choice.label} map`}
@@ -256,7 +446,7 @@ export default function MapScreen() {
                     backgroundColor: selected ? theme.colors.background : theme.colors.surface,
                   },
                 ]}
-                onPress={() => setTheme(choice.name)}
+                onPress={() => setMode(choice.mode)}
               >
                 <MaterialCommunityIcons
                   name={choice.icon}
@@ -270,6 +460,15 @@ export default function MapScreen() {
             );
           })}
         </View>
+
+        {decision.message ? (
+          <Text
+            testID="map-mode-message"
+            style={[styles.modeMessage, { color: theme.colors.textSecondary }]}
+          >
+            {decision.message}
+          </Text>
+        ) : null}
 
         <View style={styles.controlRow}>
           <Button
@@ -302,8 +501,32 @@ export default function MapScreen() {
               Next stop
             </Button>
           ) : null}
+          <Button
+            variant="outline"
+            leftIcon={
+              <MaterialCommunityIcons
+                name="tune-variant"
+                size={20}
+                color={theme.colors.textPrimary}
+              />
+            }
+            onPress={() => setSettingsOpen(true)}
+            accessibilityLabel="Map settings"
+            testID="map-settings"
+          >
+            Settings
+          </Button>
         </View>
       </View>
+
+      <MapSettingsSheet
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        toggles={toggles}
+        onTogglesChange={setToggles}
+        themePreference={themePreference}
+        onThemePreferenceChange={setThemePreference}
+      />
 
       <Sheet
         isOpen={selectedStop !== null}
@@ -435,6 +658,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   controlLabel: { fontSize: 12, fontWeight: '500' },
+  modeMessage: { fontSize: 17, marginBottom: 12 },
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',

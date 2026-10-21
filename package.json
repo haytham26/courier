@@ -10,8 +10,9 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "test": "turbo run test && pnpm run test:api",
+    "test": "turbo run test && pnpm run test:api && pnpm run test:store-readiness",
     "test:api": "uv run --directory apps/api pytest -q",
+    "test:store-readiness": "node --test \"scripts/*.test.mjs\"",
     "lint": "turbo run lint && pnpm run lint:api",
     "lint:api": "uv run --directory apps/api ruff check .",
     "typecheck": "turbo run typecheck && pnpm run typecheck:api",

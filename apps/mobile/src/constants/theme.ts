@@ -13,6 +13,24 @@ import { themes, type Theme, type ThemeName } from '@courier/design-tokens/theme
 
 export { themes, type Theme, type ThemeName };
 
+/**
+ * What the courier chose about the theme.
+ *
+ * `auto` hands the choice to the device: the map is day in the daylight and
+ * night after dark. The day and the night are the two the courier can pin
+ * from the map, and the high contrast theme is the accessibility choice in
+ * the settings.
+ */
+export type ThemePreference = 'day' | 'night' | 'highContrast' | 'auto';
+
+/** The three theme choices on the map, in the order they are shown. */
+export const THEME_PREFERENCES: readonly ThemePreference[] = ['day', 'night', 'auto'];
+
+/** Whether a value is one of the theme choices. */
+export function isThemePreference(value: unknown): value is ThemePreference {
+  return value === 'day' || value === 'night' || value === 'highContrast' || value === 'auto';
+}
+
 export const colors = themes.day.colors;
 
 const space = themes.day.spacing;

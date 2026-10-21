@@ -3,11 +3,12 @@
  *
  * The native map and the icon font are mocked here: the point of these tests
  * is the wiring - the style, the tile source, the stop markers, the
- * attribution and the theme switch - and none of that needs a device, a map
- * server or a network.
+ * attribution, the map modes and the settings sheet - and none of that needs
+ * a device, a map server or a network.
  */
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ThemeProvider } from '@/providers/ThemeProvider';
 import MapScreen from '../map';
@@ -29,7 +30,10 @@ jest.mock('@maplibre/maplibre-react-native', () => {
       mockMapProps.mapStyle = props.mapStyle;
       return ReactActual.createElement(RN.View, { testID: props.testID }, props.children);
     },
-    Camera: () => null,
+    Camera: ReactActual.forwardRef(
+      (props: { testID?: string; children?: React.ReactNode }, _ref: unknown) =>
+        ReactActual.createElement(RN.View, { testID: props.testID }, props.children),
+    ),
     Marker: (props: { testID?: string; children?: React.ReactNode }) =>
       ReactActual.createElement(RN.View, { testID: props.testID }, props.children),
     NativeUserLocation: () => null,
@@ -48,6 +52,12 @@ jest.mock('@expo/vector-icons', () => {
 
 jest.mock('expo-location', () => ({
   getForegroundPermissionsAsync: jest.fn(async () => ({ granted: false, status: 'denied' })),
+  watchPositionAsync: jest.fn(async () => ({ remove: jest.fn() })),
+  Accuracy: { Balanced: 3 },
+}));
+
+jest.mock('expo-network', () => ({
+  getNetworkStateAsync: jest.fn(async () => ({ isConnected: true, isInternetReachable: true })),
 }));
 
 jest.mock('@/maps/packFiles', () => ({
@@ -58,11 +68,22 @@ jest.mock('@/maps/packFiles', () => ({
   localGlyphsUrl: jest.fn(() => null),
 }));
 
+// The preferences are kept in memory, so one test cannot leave a choice
+// behind for the next one.
+jest.mock('@/sync/preferenceFiles', () => {
+  const actual = jest.requireActual<typeof import('@/sync/storage')>('@/sync/storage');
+  return {
+    createFilePreferenceStore: () => actual.createMemoryPreferenceStore(),
+  };
+});
+
 async function renderScreen() {
   const view = render(
-    <ThemeProvider>
-      <MapScreen />
-    </ThemeProvider>,
+    <GestureHandlerRootView>
+      <ThemeProvider>
+        <MapScreen />
+      </ThemeProvider>
+    </GestureHandlerRootView>,
   );
 
   // The screen reads the pack and the location permission when it opens; the
@@ -99,6 +120,7 @@ describe('the map screen', () => {
   it('follows the theme when the courier switches to the night style', async () => {
     await renderScreen();
 
+    fireEvent.press(screen.getByTestId('map-settings'));
     fireEvent.press(screen.getByTestId('map-theme-night'));
 
     expect(mockMapProps.mapStyle?.name).toBe('courier-copilot-night');
@@ -124,5 +146,62 @@ describe('the map screen', () => {
     await renderScreen();
 
     expect(screen.getByText(/No map tiles/)).toBeTruthy();
+  });
+
+  describe('the map modes', () => {
+    it('offers the four modes', async () => {
+      await renderScreen();
+
+      expect(screen.getByTestId('map-mode-flat')).toBeTruthy();
+      expect(screen.getByTestId('map-mode-3d')).toBeTruthy();
+      expect(screen.getByTestId('map-mode-satellite')).toBeTruthy();
+      expect(screen.getByTestId('map-mode-auto')).toBeTruthy();
+    });
+
+    it('starts on the flat map', async () => {
+      await renderScreen();
+
+      expect(screen.getByTestId('map-mode-flat').props.accessibilityState.selected).toBe(true);
+    });
+
+    it('takes the mode the courier taps', async () => {
+      await renderScreen();
+
+      fireEvent.press(screen.getByTestId('map-mode-3d'));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('map-mode-3d').props.accessibilityState.selected).toBe(true),
+      );
+    });
+
+    it('says that the satellite imagery needs a network and a licence', async () => {
+      await renderScreen();
+
+      fireEvent.press(screen.getByTestId('map-mode-satellite'));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('map-mode-message').props.children).toContain(
+          'Satellite needs a network and a licence',
+        ),
+      );
+    });
+  });
+
+  describe('the settings sheet', () => {
+    it('holds the toggles of the map', async () => {
+      await renderScreen();
+
+      fireEvent.press(screen.getByTestId('map-settings'));
+
+      expect(screen.getByTestId('map-settings-sheet')).toBeTruthy();
+      expect(screen.getByTestId('map-toggle-buildings')).toBeTruthy();
+      expect(screen.getByTestId('map-toggle-traffic')).toBeTruthy();
+      expect(screen.getByTestId('map-toggle-closures')).toBeTruthy();
+      expect(screen.getByTestId('map-toggle-weather')).toBeTruthy();
+      expect(screen.getByTestId('map-toggle-battery-saver')).toBeTruthy();
+      expect(screen.getByTestId('map-label-size-small')).toBeTruthy();
+      expect(screen.getByTestId('map-label-size-normal')).toBeTruthy();
+      expect(screen.getByTestId('map-label-size-large')).toBeTruthy();
+    });
   });
 });

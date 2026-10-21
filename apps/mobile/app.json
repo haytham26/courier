@@ -12,10 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.courier.copilot",
       "infoPlist": {
-        "UIBackgroundModes": [
-          "location",
-          "audio"
-        ],
+        "UIBackgroundModes": ["location", "audio"],
         "NSLocationWhenInUseUsageDescription": "Needed for door memory and geofence whispers during deliveries",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Needed for background location tracking during shifts",
         "NSMicrophoneUsageDescription": "Needed for voice commands and live voice agent",
@@ -30,6 +27,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.courier.copilot",
+      "versionCode": 1,
+      "version": "0.1.0",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -57,6 +56,12 @@
         "expo-audio",
         {
           "microphonePermission": "Allow Courier Copilot to use microphone for voice commands."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Courier Copilot to use Face ID to unlock the app."
         }
       ],
       "@maplibre/maplibre-react-native",

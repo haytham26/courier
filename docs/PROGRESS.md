@@ -71,7 +71,7 @@ below is the authoritative list; each row is worked as a branch + PR with spec, 
 
 | ID | Item | Where it lands | Status |
 |---|---|---|---|
-| S1 | Google sign-in, magic link/OTP, email verification, password policy + HIBP, login-attempt limits, MFA, device binding, session list, refresh rotation, recovery | P5 auth (Better Auth) | Planned |
+| S1 | Google sign-in, magic link/OTP, email verification, password policy + HIBP, login-attempt limits, MFA, device binding, session list, refresh rotation, recovery | P5 auth (Better Auth) | **In progress** (2026-10-22, the security squad): Google, Apple, passkeys, email, MFA, the offline session, the biometric unlock and the teams are done (docs/squads/security/STATUS.md); magic link/OTP, e-mail verification, HIBP, device binding, the session list and the refresh rotation are still open |
 | S2 | Play Integrity, Billing policy decision, Data Safety, in-app updates + review, app signing, target API level | P6 launch readiness | Planned |
 | S3 | RBAC (driver/lead/dispatcher/admin/owner), tenant isolation tests, admin audit, OWASP ASVS L2 API rules, MASVS L2 mobile rules | P5 + P6 | Planned |
 | S4 | Encryption at rest/in transit, retention + deletion, export, consent, audio not stored, PIA, privacy policy, DPA, breach plan | P6 | Planned |

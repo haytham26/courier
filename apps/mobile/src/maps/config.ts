@@ -11,6 +11,8 @@
  *                                https://tiles.example.nz/{z}/{x}/{y}.pbf
  *   EXPO_PUBLIC_MAP_GLYPHS_URL   the glyph endpoint; without it the map draws
  *                                no text
+ *   EXPO_PUBLIC_MAP_SATELLITE_URL      the satellite imagery endpoint
+ *   EXPO_PUBLIC_MAP_SATELLITE_LICENCE  the licence of that provider
  *
  * Both can also be set in `app.json` under `expo.extra` as `mapTileUrl` and
  * `mapGlyphsUrl`.
@@ -74,6 +76,16 @@ function readGlyphsUrlFromConfig(): string {
   return fromEnv ?? readExtraString('mapGlyphsUrl') ?? '';
 }
 
+function readSatelliteUrlFromConfig(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_MAP_SATELLITE_URL;
+  return fromEnv ?? readExtraString('mapSatelliteUrl') ?? '';
+}
+
+function readSatelliteLicenceFromConfig(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_MAP_SATELLITE_LICENCE;
+  return fromEnv ?? readExtraString('mapSatelliteLicence') ?? '';
+}
+
 /**
  * The tile endpoint to use when there is no offline pack.
  *
@@ -109,4 +121,45 @@ export function getConfiguredTileUrl(raw?: string): string | null {
 export function getConfiguredGlyphsUrl(raw?: string): string | null {
   const url = (raw !== undefined ? raw : readGlyphsUrlFromConfig()).trim();
   return url.length > 0 ? url : null;
+}
+
+/**
+ * The satellite imagery and the licence that goes with it.
+ *
+ * The imagery comes from a provider we pay for, so the build has to say
+ * which one and under which licence:
+ *
+ *   EXPO_PUBLIC_MAP_SATELLITE_URL       the imagery endpoint
+ *   EXPO_PUBLIC_MAP_SATELLITE_LICENCE   the licence of that provider
+ *
+ * The endpoint on its own is refused: the app must never point the map at
+ * an imagery source whose licence we do not hold. Google Photorealistic 3D
+ * Tiles and Cesium ion are the two the founder has to approve before they
+ * may be used at all (MASTER_EXECUTION §11); they are not configured here,
+ * and the satellite mode says so rather than showing a broken map.
+ */
+export function getSatelliteSource(
+  rawUrl?: string,
+  rawLicence?: string,
+): { url: string; licence: string } | null {
+  const url = (rawUrl !== undefined ? rawUrl : readSatelliteUrlFromConfig()).trim();
+  const licence = (
+    rawLicence !== undefined ? rawLicence : readSatelliteLicenceFromConfig()
+  ).trim();
+
+  if (url.length === 0 || licence.length === 0) {
+    return null;
+  }
+
+  return { url, licence };
+}
+
+/**
+ * Whether a licensed satellite imagery provider is configured.
+ *
+ * The satellite mode is online only: without a provider and a licence the
+ * mode degrades to the flat map with a plain sentence.
+ */
+export function isSatelliteLicensed(rawUrl?: string, rawLicence?: string): boolean {
+  return getSatelliteSource(rawUrl, rawLicence) !== null;
 }

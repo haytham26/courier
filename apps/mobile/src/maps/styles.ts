@@ -21,20 +21,28 @@
 import { themes, type ThemeName } from '@courier/design-tokens/themes';
 import type {
   BackgroundLayerSpecification,
+  FillExtrusionLayerSpecification,
   FillLayerSpecification,
   FilterSpecification,
   LayerSpecification,
   LineLayerSpecification,
+  LightSpecification,
+  RasterLayerSpecification,
   SourceSpecification,
   StyleSpecification,
   SymbolLayerSpecification,
 } from '@maplibre/maplibre-react-native';
 
+import { MAP_LABEL_SCALE, type MapLabelSize } from './toggles';
+
 /** The version of the style recipe; it goes up when a layer changes. */
-export const COURIER_STYLE_VERSION = 1;
+export const COURIER_STYLE_VERSION = 2;
 
 /** The source id of the basemap vector tiles inside the style. */
 export const BASEMAP_SOURCE_ID = 'courier-basemap';
+
+/** The source id of the satellite imagery inside the style. */
+export const SATELLITE_SOURCE_ID = 'courier-satellite';
 
 /**
  * The font stack the glyph bundle has to provide. It is the name the
@@ -92,6 +100,26 @@ export interface CourierStyleOptions {
    * label layers are left out rather than failing to render.
    */
   glyphsUrl?: string | null;
+  /** How big the labels are. */
+  labelSize?: MapLabelSize;
+  /** Whether the buildings are drawn at all. */
+  buildings?: boolean;
+  /**
+   * Whether the buildings stand up.
+   *
+   * This is only true when the pack on the device carries the building
+   * outlines: a pack without them draws the flat buildings, which is the
+   * graceful 2D fallback.
+   */
+  buildings3d?: boolean;
+  /**
+   * The satellite imagery and the licence of the provider.
+   *
+   * The imagery is online only and it comes from a provider we pay for, so
+   * the app only ever gets here when the build names the provider **and** its
+   * licence. Without them the mode degrades to the flat map.
+   */
+  satellite?: { url: string; licence: string } | null;
 }
 
 // The landuse kinds that read as green in the Protomaps schema v4.
@@ -138,10 +166,23 @@ const addressFilter: FilterSpecification = ['==', ['get', 'kind'], 'address'];
 export function buildCourierStyle(options: CourierStyleOptions): StyleSpecification {
   const theme = themes[options.themeName];
   const map = theme.components.map[options.themeName];
+  const satellite = options.satellite ?? null;
   const hasTiles = options.tileUrl !== null;
+  const drawBuildings = options.buildings !== false;
+  const drawBuildings3d = options.buildings3d === true;
+  const labelScale = MAP_LABEL_SCALE[options.labelSize ?? 'normal'];
 
   const sources: Record<string, SourceSpecification> = {};
-  if (hasTiles) {
+  if (satellite) {
+    // The imagery is the map in the satellite mode, so the vector tiles are
+    // not loaded: the raster source carries the provider's own credit.
+    sources[SATELLITE_SOURCE_ID] = {
+      type: 'raster',
+      url: satellite.url,
+      tileSize: 256,
+      attribution: satellite.licence,
+    };
+  } else if (hasTiles) {
     sources[BASEMAP_SOURCE_ID] = {
       type: 'vector',
       url: options.tileUrl ?? undefined,
@@ -157,7 +198,15 @@ export function buildCourierStyle(options: CourierStyleOptions): StyleSpecificat
 
   const layers: LayerSpecification[] = [backgroundLayer];
 
-  if (hasTiles) {
+  if (satellite) {
+    const satelliteLayer: RasterLayerSpecification = {
+      id: 'satellite',
+      type: 'raster',
+      source: SATELLITE_SOURCE_ID,
+      paint: { 'raster-opacity': 1 },
+    };
+    layers.push(satelliteLayer);
+  } else if (hasTiles) {
     const landcoverLayer: FillLayerSpecification = {
       id: 'landcover',
       type: 'fill',
@@ -181,16 +230,6 @@ export function buildCourierStyle(options: CourierStyleOptions): StyleSpecificat
       source: BASEMAP_SOURCE_ID,
       'source-layer': 'water',
       paint: { 'fill-color': map.water },
-    };
-
-    const buildingLayer: FillLayerSpecification = {
-      id: 'building',
-      type: 'fill',
-      source: BASEMAP_SOURCE_ID,
-      'source-layer': 'buildings',
-      filter: buildingFilter,
-      minzoom: 13,
-      paint: { 'fill-color': map.building },
     };
 
     const roadCasingLayer: LineLayerSpecification = {
@@ -245,15 +284,53 @@ export function buildCourierStyle(options: CourierStyleOptions): StyleSpecificat
       landcoverLayer,
       landuseLayer,
       waterLayer,
-      buildingLayer,
       roadCasingLayer,
       roadFillLayer,
       majorRoadLayer,
       boundaryLayer,
     );
+
+    if (drawBuildings) {
+      if (drawBuildings3d) {
+        // The buildings stand up. The height comes from the pack: the
+        // outlines of LINZ and the levels of OpenStreetMap are baked into the
+        // tiles, so the map needs no network to draw them.
+        const building3dLayer: FillExtrusionLayerSpecification = {
+          id: 'building-3d',
+          type: 'fill-extrusion',
+          source: BASEMAP_SOURCE_ID,
+          'source-layer': 'buildings',
+          filter: buildingFilter,
+          minzoom: 13,
+          paint: {
+            'fill-extrusion-color': map.building,
+            'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 8],
+            'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+            'fill-extrusion-opacity': 0.9,
+            'fill-extrusion-vertical-gradient': true,
+          },
+        };
+        layers.push(building3dLayer);
+      } else {
+        // The graceful 2D fallback: a pack without the building outlines
+        // draws the buildings flat.
+        const buildingLayer: FillLayerSpecification = {
+          id: 'building',
+          type: 'fill',
+          source: BASEMAP_SOURCE_ID,
+          'source-layer': 'buildings',
+          filter: buildingFilter,
+          minzoom: 13,
+          paint: { 'fill-color': map.building },
+        };
+        layers.push(buildingLayer);
+      }
+    }
   }
 
-  if (options.glyphsUrl) {
+  // The labels come from the vector tiles, so they are only drawn when the
+  // vector tiles are the map.
+  if (options.glyphsUrl && !satellite) {
     const placeLabelLayer: SymbolLayerSpecification = {
       id: 'place-label',
       type: 'symbol',
@@ -267,14 +344,14 @@ export function buildCourierStyle(options: CourierStyleOptions): StyleSpecificat
           'match',
           ['get', 'kind'],
           'country',
-          18,
+          18 * labelScale,
           'region',
-          14,
+          14 * labelScale,
           'locality',
-          13,
+          13 * labelScale,
           'neighbourhood',
-          11,
-          10,
+          11 * labelScale,
+          10 * labelScale,
         ],
         'text-anchor': 'center',
       },
@@ -295,7 +372,7 @@ export function buildCourierStyle(options: CourierStyleOptions): StyleSpecificat
       layout: {
         'text-field': ['get', 'addr_house'],
         'text-font': COURIER_FONT_STACK,
-        'text-size': 11,
+        'text-size': 11 * labelScale,
         'text-allow-overlap': false,
       },
       paint: {
@@ -308,6 +385,17 @@ export function buildCourierStyle(options: CourierStyleOptions): StyleSpecificat
     layers.push(placeLabelLayer, houseNumberLayer);
   }
 
+  // The soft light of the 3D buildings. The colour is the sky of the theme,
+  // so the day buildings are lit by the day and the night buildings by the
+  // night. MapLibre does not draw shadows for the extruded buildings yet
+  // (the upstream issue is open), so the light is what carries the depth.
+  const light: LightSpecification = {
+    anchor: 'viewport',
+    color: map.background,
+    intensity: 0.5,
+    position: [1.15, 210, 30],
+  };
+
   return {
     version: 8,
     name: `courier-copilot-${options.themeName}`,
@@ -317,6 +405,7 @@ export function buildCourierStyle(options: CourierStyleOptions): StyleSpecificat
       'courier:styleBase': 'courier-copilot-style (fork of protomaps/basemaps)',
     },
     ...(options.glyphsUrl ? { glyphs: options.glyphsUrl } : {}),
+    ...(drawBuildings3d ? { light } : {}),
     sources,
     layers,
   };
@@ -327,12 +416,17 @@ export function buildCourierStyle(options: CourierStyleOptions): StyleSpecificat
  *
  * This is the entry point the map screen uses: the theme decides the colours
  * and the tile source decides whether there is a map under the courier
- * overlay.
+ * overlay. The toggles decide the label size and whether the buildings are
+ * drawn flat or standing up.
  */
 export function getCourierStyle(
   themeName: ThemeName,
   tileUrl: string | null,
   glyphsUrl: string | null = null,
+  options: Pick<
+    CourierStyleOptions,
+    'labelSize' | 'buildings' | 'buildings3d' | 'satellite'
+  > = {},
 ): StyleSpecification {
-  return buildCourierStyle({ themeName, tileUrl, glyphsUrl });
+  return buildCourierStyle({ themeName, tileUrl, glyphsUrl, ...options });
 }
