@@ -59,7 +59,8 @@
           "microphonePermission": "Allow Courier Copilot to use microphone for voice commands."
         }
       ],
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      "./plugins/withSqliteFramework"
     ],
     "experiments": {
       "typedRoutes": true
