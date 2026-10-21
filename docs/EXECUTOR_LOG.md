@@ -929,3 +929,28 @@ doubt-driven-development.
   the wiring follows the documented contract, but the setting has not been flipped on a phone.
 - **The haptics on a phone.** The mapping is unit-tested with `expo-haptics` mocked; the
   vibration itself has not been felt.
+
+### The run of 12:46: the app signed itself out, and the routes were gone
+
+The evidence of the run (the screenshot at the end) showed the sign-in
+screen, and two failures followed it: the compatibility screen never appeared
+and the next flow could not find the today's list.
+
+Two defects, both lost in the merge that brought the product work into the
+pipeline branch:
+
+1. **The E2E mock was gone from the auth client.** Without it the app talks
+   to the auth service, the session is null, the provider says "not signed
+   in", and the app falls back to the sign-in screen half way through the
+   run. The mock is back: in the E2E mode the sign-in is local, so the flows
+   drive the real UI with no Metro, no auth service and no API.
+2. **The root stack declared the two groups conditionally**, which left
+   every other route of the app (the compatibility screen) unregistered: the
+   push to /compat was ignored. The groups are now guarded with
+   `Stack.Protected`, which keeps the rest of the app routable.
+
+The lesson: a merge that takes one side of a file takes the whole file. The
+two branches had both touched the app, and the resolution silently dropped
+what only one side had. The gates did not catch it (the mock is only used
+when the E2E environment variable is set, and the route only when the app
+pushes to it) - the emulator did.
