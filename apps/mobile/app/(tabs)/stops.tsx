@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, FlatList, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, FlatList, Modal, ScrollView, useWindowDimensions } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { colors as tokenColors } from '@courier/design-tokens/tokens';
 import { useTheme } from '@/providers/ThemeProvider';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Badge } from '@/components/Badge';
+import { DoorMemorySection } from '@/doorMemory/DoorMemorySection';
+import { fontSize, radius, space, target } from '@/styles/tokens';
 
 interface Stop {
   id: string;
@@ -44,6 +48,7 @@ const statusLabels: Record<Stop['status'], string> = {
 
 export default function StopsScreen() {
   const { theme } = useTheme();
+  const { height: windowHeight } = useWindowDimensions();
   const [filter, setFilter] = useState<'all' | 'pending' | 'delivered' | 'failed' | 'skipped'>('all');
   const [selectedStop, setSelectedStop] = useState<Stop | null>(null);
 
@@ -55,37 +60,41 @@ export default function StopsScreen() {
 
   const renderItem = ({ item }: { item: Stop }) => (
     <TouchableOpacity
-      style={styles.stopItem}
+      style={[styles.stopItem, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
       testID={`stop-${item.id}`}
       onPress={() => setSelectedStop(item)}
+      accessibilityRole="button"
+      accessibilityLabel={`Stop ${item.sequence}, ${item.address}`}
     >
-      <View style={[
-        styles.stopStatusDot,
-        { backgroundColor: getStatusColor(item.status) }
-      ]} />
+      <View
+        style={[
+          styles.stopStatusDot,
+          { backgroundColor: getStatusColor(item.status) },
+        ]}
+      />
       <View style={styles.stopNumberContainer}>
-        <Text style={[styles.stopNumber, { color: theme.colors.textInverse, backgroundColor: getStatusColor(item.status) }]}>
+        <Text style={[styles.stopNumber, { color: theme.colors.textInverse, backgroundColor: getStatusColor(item.status), fontSize: fontSize.base }]}>
           #{item.sequence}
         </Text>
       </View>
       <View style={styles.stopInfo}>
-        <Text style={[styles.stopAddress, { color: theme.colors.textPrimary }]}>{item.address}</Text>
-        <Text style={[styles.stopSuburb, { color: theme.colors.textSecondary }]}>{item.suburb}</Text>
+        <Text style={[styles.stopAddress, { color: theme.colors.textPrimary, fontSize: fontSize.lg }]}>{item.address}</Text>
+        <Text style={[styles.stopSuburb, { color: theme.colors.textSecondary, fontSize: fontSize.lg }]}>{item.suburb}</Text>
       </View>
       <View style={styles.stopRight}>
         <Badge variant={item.status === 'delivered' ? 'success' : item.status === 'active' ? 'active' : item.status === 'failed' ? 'error' : item.status === 'skipped' ? 'warning' : 'default'}>
-  {statusLabels[item.status]}
-</Badge>
-        {item.deliveredAt && <Text style={[styles.deliveredTime, { color: theme.colors.textTertiary }]}>{item.deliveredAt}</Text>}
+          {statusLabels[item.status]}
+        </Badge>
+        {item.deliveredAt && <Text style={[styles.deliveredTime, { color: theme.colors.textTertiary, fontSize: fontSize.sm }]}>{item.deliveredAt}</Text>}
       </View>
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView testID="stops-screen" style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.textPrimary }]}>All Stops</Text>
-        <Text style={[styles.count, { color: theme.colors.textSecondary }]}>{filteredStops.length} stops</Text>
+      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+        <Text style={[styles.title, { color: theme.colors.textPrimary, fontSize: fontSize.xxl }]}>All Stops</Text>
+        <Text style={[styles.count, { color: theme.colors.textSecondary, fontSize: fontSize.lg }]}>{filteredStops.length} stops</Text>
       </View>
 
       {/* Filter Tabs */}
@@ -93,17 +102,21 @@ export default function StopsScreen() {
         {['all', 'pending', 'active', 'delivered', 'failed', 'skipped'].map((f) => (
           <TouchableOpacity
             key={f}
+            accessibilityRole="button"
+            accessibilityState={{ selected: filter === f }}
             style={[
               styles.filterTab,
               filter === f && { backgroundColor: theme.colors.brandPrimary },
-              { borderColor: theme.colors.border }
+              { borderColor: theme.colors.border },
             ]}
             onPress={() => setFilter(f as typeof filter)}
           >
-            <Text style={[
-              styles.filterTabText,
-              { color: filter === f ? theme.colors.textInverse : theme.colors.textSecondary }
-            ]}>
+            <Text
+              style={[
+                styles.filterTabText,
+                { color: filter === f ? theme.colors.textInverse : theme.colors.textSecondary, fontSize: fontSize.lg },
+              ]}
+            >
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </Text>
           </TouchableOpacity>
@@ -117,7 +130,7 @@ export default function StopsScreen() {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: theme.colors.textTertiary }]}>No stops found</Text>
+            <Text style={[styles.emptyText, { color: theme.colors.textTertiary, fontSize: fontSize.lg }]}>No stops found</Text>
           </View>
         }
       />
@@ -126,41 +139,48 @@ export default function StopsScreen() {
       <Modal visible={!!selectedStop} animationType="slide" transparent={true} onRequestClose={() => setSelectedStop(null)}>
         <View style={styles.modalOverlay} onTouchStart={() => setSelectedStop(null)}>
           <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.modalHandle} />
+            <View style={[styles.modalHandle, { backgroundColor: theme.colors.border }]} />
             {selectedStop && (
               <>
                 <View style={styles.modalHeader}>
-                  <View style={[
-                    styles.modalStatusBadge,
-                    { backgroundColor: getStatusColor(selectedStop.status) }
-                  ]} />
-                  <Text style={[styles.modalStopNumber, { color: theme.colors.textPrimary }]}>Stop #{selectedStop.sequence}</Text>
+                  <View
+                    style={[
+                      styles.modalStatusBadge,
+                      { backgroundColor: getStatusColor(selectedStop.status) },
+                    ]}
+                  />
+                  <Text style={[styles.modalStopNumber, { color: theme.colors.textPrimary, fontSize: fontSize.lg }]}>Stop #{selectedStop.sequence}</Text>
                   <Badge variant={selectedStop.status === 'delivered' ? 'success' : selectedStop.status === 'active' ? 'active' : selectedStop.status === 'failed' ? 'error' : selectedStop.status === 'skipped' ? 'warning' : 'default'}>
-  {statusLabels[selectedStop.status]}
-</Badge>
+                    {statusLabels[selectedStop.status]}
+                  </Badge>
                 </View>
-                <View style={styles.modalBody}>
-                  <Text style={[styles.modalAddress, { color: theme.colors.textPrimary }]}>{selectedStop.address}</Text>
-                  <Text style={[styles.modalSuburb, { color: theme.colors.textSecondary }]}>{selectedStop.suburb}</Text>
-                  <View style={styles.modalCoordinates}>
-                    <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary }]}>Coordinates:</Text>
-                    <Text style={[styles.modalCoordValue, { color: theme.colors.textSecondary }]}>
+                <ScrollView
+                  style={[styles.modalBody, { height: windowHeight * 0.45 }]}
+                  contentContainerStyle={styles.modalBodyContent}
+                >
+                  <Text style={[styles.modalAddress, { color: theme.colors.textPrimary, fontSize: fontSize.xl }]}>{selectedStop.address}</Text>
+                  <Text style={[styles.modalSuburb, { color: theme.colors.textSecondary, fontSize: fontSize.lg }]}>{selectedStop.suburb}</Text>
+                  <View style={[styles.modalCoordinates, { borderTopColor: theme.colors.border }]}>
+                    <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary, fontSize: fontSize.lg }]}>Coordinates:</Text>
+                    <Text style={[styles.modalCoordValue, { color: theme.colors.textSecondary, fontSize: fontSize.lg }]}>
                       {selectedStop.coordinates.lat.toFixed(6)}, {selectedStop.coordinates.lng.toFixed(6)}
                     </Text>
                   </View>
                   {selectedStop.deliveredAt && (
-                    <View style={styles.modalCoordinates}>
-                      <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary }]}>Delivered at:</Text>
-                      <Text style={[styles.modalCoordValue, { color: theme.colors.success }]}>{selectedStop.deliveredAt}</Text>
+                    <View style={[styles.modalCoordinates, { borderTopColor: theme.colors.border }]}>
+                      <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary, fontSize: fontSize.lg }]}>Delivered at:</Text>
+                      <Text style={[styles.modalCoordValue, { color: theme.colors.success, fontSize: fontSize.lg }]}>{selectedStop.deliveredAt}</Text>
                     </View>
                   )}
                   {selectedStop.failedReason && (
-                    <View style={styles.modalCoordinates}>
-                      <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary }]}>Failed reason:</Text>
-                      <Text style={[styles.modalCoordValue, { color: theme.colors.error }]}>{selectedStop.failedReason}</Text>
+                    <View style={[styles.modalCoordinates, { borderTopColor: theme.colors.border }]}>
+                      <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary, fontSize: fontSize.lg }]}>Failed reason:</Text>
+                      <Text style={[styles.modalCoordValue, { color: theme.colors.error, fontSize: fontSize.lg }]}>{selectedStop.failedReason}</Text>
                     </View>
                   )}
-                </View>
+
+                  <DoorMemorySection stopId={selectedStop.id} />
+                </ScrollView>
                 <View style={styles.modalActions}>
                   <Button
                     variant={selectedStop.status === 'delivered' ? 'outline' : 'primary'}
@@ -168,21 +188,22 @@ export default function StopsScreen() {
                     disabled={selectedStop.status === 'delivered'}
                     style={styles.modalActionButton}
                   >
-                    {selectedStop.status === 'delivered' ? '✅ Delivered' : '✅ Mark Delivered'}
+                    Mark Delivered
                   </Button>
                   <Button
                     variant="secondary"
                     onPress={() => { console.log('Skip', selectedStop.id); setSelectedStop(null); }}
                     style={styles.modalActionButton}
                   >
-                    ⏭️ Skip
+                    Skip
                   </Button>
                   <Button
                     variant="outline"
                     onPress={() => { console.log('Navigate', selectedStop.id); setSelectedStop(null); }}
                     style={styles.modalActionButton}
+                    leftIcon={<MaterialIcons name="navigation" size={18} color={theme.colors.textPrimary} />}
                   >
-                    🧭 Navigate
+                    Navigate
                   </Button>
                 </View>
               </>
@@ -196,36 +217,37 @@ export default function StopsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  title: { fontSize: 24, fontWeight: '700' },
-  count: { fontSize: 14, fontWeight: '500' },
-  filterTabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 8, overflow: 'hidden' },
-  filterTab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
-  filterTabText: { fontSize: 13, fontWeight: '600' },
-  listContent: { padding: 16, paddingBottom: 100, gap: 8 },
-  stopItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: space.lg, borderBottomWidth: 1 },
+  title: { fontWeight: '700' },
+  count: { fontWeight: '500' },
+  filterTabs: { flexDirection: 'row', gap: space.sm, paddingHorizontal: space.lg, paddingVertical: space.sm, overflow: 'hidden' },
+  filterTab: { paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radius.full, borderWidth: 1, minHeight: target.min, justifyContent: 'center' },
+  filterTabText: { fontWeight: '600' },
+  listContent: { padding: space.lg, paddingBottom: space.huge, gap: space.sm },
+  stopItem: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, borderWidth: 1 },
   stopStatusDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
   stopNumberContainer: { flexShrink: 0 },
-  stopNumber: { fontSize: 14, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, minWidth: 36, textAlign: 'center' },
+  stopNumber: { fontWeight: '700', paddingHorizontal: space.sm, paddingVertical: 2, borderRadius: radius.sm, minWidth: 36, textAlign: 'center' },
   stopInfo: { flex: 1, minWidth: 0 },
-  stopAddress: { fontSize: 16, fontWeight: '500' },
-  stopSuburb: { fontSize: 14 },
-  stopRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  deliveredTime: { fontSize: 12, fontWeight: '500', fontFamily: 'monospace' },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyText: { fontSize: 16 },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 32, maxHeight: '85%' },
-  modalHandle: { width: 40, height: 5, borderRadius: 2.5, backgroundColor: '#9ca3af', alignSelf: 'center', marginTop: 12, marginBottom: 20 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 24, marginBottom: 16, flexWrap: 'wrap' },
+  stopAddress: { fontWeight: '600' },
+  stopSuburb: {},
+  stopRight: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  deliveredTime: { fontWeight: '500' },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: space.xl },
+  emptyText: { fontWeight: '500' },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: tokenColors.background.overlay },
+  modalContent: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingBottom: space.xl, maxHeight: '85%' },
+  modalHandle: { width: 40, height: 5, borderRadius: 2.5, alignSelf: 'center', marginTop: space.md, marginBottom: space.lg },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.xl, marginBottom: space.lg, flexWrap: 'wrap' },
   modalStatusBadge: { width: 12, height: 12, borderRadius: 6 },
-  modalStopNumber: { fontSize: 18, fontWeight: '600' },
-  modalBody: { paddingHorizontal: 24, marginBottom: 24 },
-  modalAddress: { fontSize: 20, fontWeight: '500', marginBottom: 4 },
-  modalSuburb: { fontSize: 16, marginBottom: 12 },
-  modalCoordinates: { flexDirection: 'row', gap: 8, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#e5e7eb' },
-  modalCoordLabel: { fontSize: 13, fontWeight: '500' },
-  modalCoordValue: { fontSize: 13, fontFamily: 'monospace' },
-  modalActions: { flexDirection: 'row', gap: 8, paddingHorizontal: 24 },
+  modalStopNumber: { fontWeight: '600' },
+  modalBody: {},
+  modalBodyContent: { paddingHorizontal: space.xl, paddingBottom: space.lg },
+  modalAddress: { fontWeight: '600', marginBottom: space.xs },
+  modalSuburb: { marginBottom: space.md },
+  modalCoordinates: { flexDirection: 'row', gap: space.sm, paddingVertical: space.sm, borderTopWidth: 1 },
+  modalCoordLabel: { fontWeight: '600' },
+  modalCoordValue: { fontWeight: '500' },
+  modalActions: { flexDirection: 'row', gap: space.sm, paddingHorizontal: space.xl },
   modalActionButton: { flex: 1 },
 });

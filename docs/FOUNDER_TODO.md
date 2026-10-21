@@ -55,6 +55,7 @@
 |----------|--------|---------|--------|
 | SMS Provider Selection | **[OPEN]** | Twilio NZ, ClickSend, MessageBird, local NZ carrier | Team plan feature only |
 | Masked Calls Provider | **[OPEN]** | Twilio Voice, Plivo, Vonage, **[OPEN]** per ADR | Driver privacy feature |
+| Carrier rate card (per stop, per parcel) | **[OPEN]** | the rates a carrier really pays, GST-inclusive NZD | `RATE_CARD` in `apps/api/app/earnings.py` — the placeholder is $1.50 a stop and $0.20 a parcel | The money the courier sees in the app and the GST split on the end-of-day summary |
 | Pricing Tiers (Solo/Team) | Pending cost verification | TBD after real cost data | Business model |
 | Visual Identity Review | Async, provisional tokens | Designer review of design tokens | D7 compliance |
 | Legal Review (PIA, Privacy Act) | Async | NZ privacy lawyer | Pre-launch requirement |

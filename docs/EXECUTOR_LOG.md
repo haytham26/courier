@@ -672,3 +672,84 @@ The next session must, in this order:
 tabs and the sign-in group and nothing else. A deep link to `/compat` had no
 target, and the router ignored it. The stack now guards the two groups with
 `Stack.Protected`, which keeps every other route of the app registered.
+
+---
+
+## Shift 3 — 2026-10-21, P5.3 and P5.6: the API half of the door memory and the earnings
+
+**State check (read from the tree, not from memory):**
+- None of the API scaffolding this slice was supposed to extend existed: there
+  was no `apps/api/app/repo.py`, no `apps/api/app/routing.py`, no
+  `apps/api/db/schema.sql` and no `door_memory` table. The one schema is
+  `db/schema.sql` at the root (the compose file mounts it into PostgreSQL), so
+  it was extended there instead of starting a second schema.
+- The app half belongs to another agent, so this slice is the API only.
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+|---|---|---|
+| Session start and scope | `using-agent-skills`, `context-engineering` | Read `CONSTRAINTS.md`, the payments research and the existing auth and address code first; the slice stays inside `apps/api` and `db/schema.sql`. |
+| The money rules | `source-driven-development` | The GST rule comes from `docs/research/2026/payments-subscriptions.md` (IRD, GST guide IR375): the rate card is GST-inclusive and the GST component is the amount times three divided by twenty-three, which is 15 % of the GST-exclusive base. |
+| The store contract | `api-and-interface-design` | One `Repo` protocol and two implementations (`InMemoryRepo` for the tests and the dev server, `SqlRepo` for PostgreSQL); the routes only ever see the protocol. |
+| The tests | `test-driven-development`, `incremental-implementation` | 81 new tests in `tests/test_door_memory.py` and `tests/test_earnings.py`, the money first as pure functions and then through the routes. |
+| Money and other couriers' data | `security-and-hardening` | Every route needs the verified principal; a courier reads their own memory and their own shift only, and anything else is a 404 (never a 403 that would confirm that the record exists). |
+| Before the handoff | `code-review-and-quality`, `doubt-driven-development`, `code-simplification` | No float ever touches an amount, the JSON keeps two decimals, and the SQL implementation is exercised through a stand-in for PostgreSQL instead of being left unverified. |
+| The docs | `documentation-and-adrs` | The rate card and the place the founder changes it are written down in `docs/FOUNDER_TODO.md`. |
+
+### Result
+
+- `apps/api/app/repo.py`: the `Repo` contract, `InMemoryRepo` and `SqlRepo`.
+- `apps/api/app/earnings.py`: the rate card, the money and the end-of-day
+  summary, all `Decimal` (never a float).
+- `apps/api/app/earnings_routes.py` and `apps/api/app/door_memory.py`: the four
+  routes, each behind `get_current_principal`.
+- `db/schema.sql`: the `door_memory` table and `drivers.auth_subject`.
+- Gates in `apps/api`: `uv run pytest -q` (129 passed), `uv run ruff check .`
+  (clean), `uv run mypy .` (clean). The Python coverage of `apps/api/app` went
+  from 85 % to 90 %; the new modules are at 100 %.
+- Not verified: the SQL statements were never run against a real PostgreSQL
+  (no database and no Docker on this machine), and a database that already
+  exists needs the two schema changes applied by hand.
+
+
+---
+
+## 2026-10-21 � P5.3 / P5.6, the app half of the door memory and the earnings
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+|---|---|---|
+| Session start and scope | `using-agent-skills`, `context-engineering` | Read `CONSTRAINTS.md`, `docs/design/SYSTEM.md`, the token package and the API half (`apps/api/app/door_memory.py`, `earnings_routes.py`) before writing code; the slice stays inside `apps/mobile`. |
+| The contract | `api-and-interface-design` | The app types the four routes exactly as the API answers them (the money as strings, the summary with `average_delivery_seconds`, `success_rate` and `failed_stops`); no endpoint was invented on the app side. |
+| The queue and the screens | `test-driven-development`, `incremental-implementation` | The money first as pure functions, then the event log and the queue, then the two services, the hooks and the screens; 36 new tests, no device and no network. |
+| The offline behaviour | `debugging-and-error-recovery` | The two failures are told apart: an `HttpError` (the server answered) and a `NetworkError` (the phone is out of coverage). Only the second queues the note. |
+| The screens | `frontend-ui-engineering` | The design contract: the tokens only, no raw hex, no emoji, one icon set, 48 pt targets, the states (skeleton, empty, error, offline chip) and the a11y labels. |
+| Before the handoff | `code-review-and-quality`, `code-simplification`, `constraint-driven-development` | No float ever touches an amount, no suppression comments, no empty catch blocks, no skipped tests. |
+
+### Result
+
+- `apps/mobile/src/api/`: the HTTP transport (`HttpError` vs `NetworkError`), the
+  base URL and the token of the signed-in courier.
+- `apps/mobile/src/sync/`: the event log (append-only, on the device's disk),
+  the `add_location_note` event, the transport and the sync service (the queue
+  empties itself when `expo-network` says the network is back).
+- `apps/mobile/src/doorMemory/`: the service, the safe places and the sheet
+  section (the note, the safe place, the offline note).
+- `apps/mobile/src/earnings/`: the money (string in, string out), the service
+  (the last value it had, kept on the device) and the two hooks.
+- `apps/mobile/app/(tabs)/index.tsx`: the money card (net as the key number,
+  the gross and the GST under it) and the door-memory tip on the Current Run
+  card.
+- `apps/mobile/app/(tabs)/stops.tsx`: the door memory in the stop sheet.
+- `apps/mobile/app/earnings.tsx`: the earnings and the end-of-day summary.
+- Gates in `apps/mobile`: `pnpm --filter mobile typecheck` (clean) and
+  `pnpm --filter mobile test` (42 passed, 9 suites).
+- The wire values of the safe place are the ten plain phrases of the contract
+  (`side gate`, `under the mat`, `safe place` and the rest), so the API stores
+  the string it is given.
+- Not verified: the app was not run on a device or on the CI emulator (no
+  emulator here), so the Maestro screenshots and the night/200 % text passes
+  are still owed; the shift id is a client-made UUID, because the API has no
+  endpoint yet that hands the app the shift it is in.

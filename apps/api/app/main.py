@@ -11,6 +11,8 @@ from pydantic import BaseModel
 from .agents import copilot
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
+from .door_memory import router as door_memory_router
+from .earnings_routes import router as earnings_router
 
 # Fail fast when the API cannot verify tokens (no default secrets).
 get_auth_settings()
@@ -19,6 +21,10 @@ app = FastAPI(title="Courier Copilot", version="0.1.0")
 
 # Include auth routes
 app.include_router(auth_router)
+
+# The door memory and the earnings (the courier's own money and notes).
+app.include_router(door_memory_router)
+app.include_router(earnings_router)
 
 
 class IntakeText(BaseModel):
