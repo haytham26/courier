@@ -53,6 +53,12 @@ echo "booted"
 
 echo "::group::readiness: install"
 adb install -r "$APK" || fail "the APK could not be installed"
+
+# The permissions the compatibility screen exercises are granted up front: the
+# system dialog would sit on top of the screen the flow has to read.
+adb shell pm grant "$PKG" android.permission.RECORD_AUDIO >/dev/null 2>&1 || true
+adb shell pm grant "$PKG" android.permission.ACCESS_FINE_LOCATION >/dev/null 2>&1 || true
+adb shell pm grant "$PKG" android.permission.ACCESS_COARSE_LOCATION >/dev/null 2>&1 || true
 echo "::endgroup::"
 
 echo "::group::readiness: start the app"
