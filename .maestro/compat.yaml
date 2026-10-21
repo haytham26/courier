@@ -18,13 +18,28 @@ name: B.7 compatibility screen and the voice permission prompt
 # The Diagnostics section is at the bottom of the settings.
 - swipe:
     direction: UP
-    duration: 500
+    duration: 400
 - swipe:
     direction: UP
-    duration: 500
+    duration: 400
 - swipe:
     direction: UP
-    duration: 500
+    duration: 400
+- swipe:
+    direction: UP
+    duration: 400
+- swipe:
+    direction: UP
+    duration: 400
+- swipe:
+    direction: UP
+    duration: 400
+- swipe:
+    direction: UP
+    duration: 400
+- swipe:
+    direction: UP
+    duration: 400
 - tapOn:
     id: "settings-compat"
 - extendedWaitUntil:
