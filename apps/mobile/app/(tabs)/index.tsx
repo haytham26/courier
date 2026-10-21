@@ -188,7 +188,7 @@ export default function HomeScreen() {
           <View style={styles.headerActions}>
             <TouchableOpacity
               style={styles.iconButton}
-              onPress={() => router.push('/settings')}
+              onPress={() => router.push('/(tabs)/settings')}
               accessibilityRole="button"
               accessibilityLabel="Settings"
               accessibilityHint="Opens the settings"
@@ -305,7 +305,7 @@ export default function HomeScreen() {
             Recent Stops
           </Text>
           <TouchableOpacity
-            onPress={() => router.push('/stops')}
+            onPress={() => router.push('/(tabs)/stops')}
             accessibilityRole="link"
             accessibilityLabel="See all stops"
             testID="today-see-all"
@@ -319,7 +319,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={stop.id}
               style={styles.stopItem}
-              onPress={() => router.push(`/stops/${stop.id}`)}
+              onPress={() => router.push('/(tabs)/stops')}
               accessibilityRole="button"
               accessibilityLabel={`Stop ${stop.sequence}, ${stop.address}, ${stop.suburb}, ${statusLabels[stop.status]}`}
               testID={`today-stop-${stop.id}`}
