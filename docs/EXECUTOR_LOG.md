@@ -656,3 +656,19 @@ The next session must, in this order:
 - The lockfile is a root file: `git add -A` or the file by name. A commit
   that stages only `apps/mobile` leaves the lockfile behind and the frozen
   install fails in CI.
+
+---
+
+## Shift 2 — 2026-10-21, the state check and the B.7 deep link
+
+**State check (verified on GitHub, not from memory):**
+- PR #2 `feat/p1-emulator-pipeline`: OPEN, MERGEABLE. The pipeline runs the app and the first screen appears; the B.7 compat flow is the last red.
+- PR #1 `feat/v4-company-bootstrap`: OPEN, MERGEABLE, its CI is green (ci, quality gates, CodeQL).
+- The last E2E run (39562105218): the release APK built (18m58s), the app started, the first screen was detected, the flows ran; the compat flow failed on `id: compat-screen is visible`.
+- The T2/T4 branch is still based on the old main: it gets `git merge origin/main` (never a rebase, AGENTS.md).
+
+**The cause of the B.7 failure (found before burning another cycle):** the root
+`<Stack>` declared only the conditional screens, so the router registered the
+tabs and the sign-in group and nothing else. A deep link to `/compat` had no
+target, and the router ignored it. The stack now guards the two groups with
+`Stack.Protected`, which keeps every other route of the app registered.
