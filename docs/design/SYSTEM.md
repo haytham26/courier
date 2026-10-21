@@ -109,13 +109,20 @@ The gate is: no screenshot contradicts the mockup. Fix the screen, not the scree
 | What                                                                        | Where                                                            |
 | --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | The tokens (colour, type, spacing, radii, elevation, motion, touch targets) | `packages/design-tokens/src/tokens.ts`                           |
-| The three palettes and their measured contrast ratios                       | `packages/design-tokens/src/themes.ts`                           |
+| The palettes and their measured contrast ratios                             | `packages/design-tokens/src/themes.ts`                           |
+| The three Design Studio directions (the type scale of each)                 | `packages/design-tokens/src/directions.ts`                       |
 | The contrast maths and the gate that fails below the bar                    | `packages/design-tokens/src/contrast.ts`, `src/contrast.test.ts` |
 | The transitions, the reduce-motion branch and the haptics                   | `apps/mobile/src/motion/`                                        |
 | The spec of every screen                                                    | `docs/design/mockups/*.md`                                       |
-| The approved mockups                                                        | `docs/design/mockups/*.dc.html`                                  |
+| The three directions the founder chooses between                            | `docs/design/DIRECTIONS.md`, `docs/design/directions/`           |
 
 The measured contrast table is printed by
 `pnpm --filter @courier/design-tokens contrast:report`, and the numbers in
 `themes.ts` are its output. A colour change that breaks the bar fails the
 build.
+
+**The palettes today.** `day`, `night` and `highContrast` are the product
+themes. `roadbook`, `beacon` and `freight` are the three Design Studio
+directions of MASTER_EXECUTION §13.4: three light palettes and three type
+scales that wait for the founder to pick one. They use the same semantic
+roles as `day`, so no component ever grows a "roadbook" token.

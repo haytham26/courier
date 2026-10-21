@@ -36,46 +36,69 @@ const MODE_PATTERNS: readonly { pattern: RegExp; mode: MapViewMode }[] = [
   },
 ];
 
-/** The delivery verbs, in the shape the server catalogue uses. */
+/**
+ * The delivery verbs, in the shape the server catalogue uses.
+ *
+ * The patterns carry the case-insensitive flag and are matched against the
+ * sentence as it was said, so the words the courier spoke keep their case: an
+ * address ("5 Rimu Street") has to reach the address engine the way it was
+ * said.
+ */
 const DELIVERY_PATTERNS: readonly { pattern: RegExp; command: VoiceCommand }[] = [
   {
-    pattern: /^(?:delivered|done|dropped(?: it)?|tick)\.?$/,
+    pattern: /^(?:delivered|done|dropped(?: it)?|tick)\.?$/i,
     command: { type: 'mark_delivered', stopId: 'current' },
   },
   {
-    pattern: /^left\s+(?:at|by|in|on)\s+(?:the\s+)?(?<place>[\w\s]+?)\.?$/,
+    pattern: /^left(?:\s+it)?\s+(?:at|by|in|on)\s+(?:the\s+)?(?<place>[\w\s]+?)\.?$/i,
     command: { type: 'mark_delivered', stopId: 'current' },
   },
   {
-    pattern: /^(?:skip|come back(?: to it)?)\.?$/,
+    pattern: /^(?:skip|come back(?: to it)?)\.?$/i,
     command: { type: 'mark_skipped', stopId: 'current' },
   },
   {
-    pattern: /^(?:fail|failed|no access|could not deliver|not delivered)\.?$/,
+    pattern: /^(?:fail|failed|no access|could not deliver|not delivered)\.?$/i,
     command: { type: 'mark_failed', stopId: 'current', reason: 'voice' },
   },
   {
-    pattern: /^(?:repeat|say again|what)\??$/,
+    pattern: /^(?:add|also got|priority|urgent)\s+(?:stop\s+)?(?<address>.+)$/i,
+    command: { type: 'add_stop', rawAddress: '' },
+  },
+  {
+    pattern: /^start (?:a )?break(?: for (?<minutes>\d+) minutes?)?\.?$/i,
+    command: { type: 'start_break', minutes: null },
+  },
+  {
+    pattern: /^(?:end break|break'?s over|back to work)\.?$/i,
+    command: { type: 'end_break' },
+  },
+  {
+    pattern: /^(?:note|gate code is|watch the dog|side gate)\s*:?\s*(?<text>.+)$/i,
+    command: { type: 'add_location_note', kind: 'note', text: '' },
+  },
+  {
+    pattern: /^(?:repeat|say again|what)\??$/i,
     command: { type: 'repeat_instruction' },
   },
   {
-    pattern: /^where\s+am\s+i\b/,
+    pattern: /^where am i\b/i,
     command: { type: 'where_am_i' },
   },
   {
-    pattern: /^how\s+many\s+(?:left|stops left|to go)\b/,
+    pattern: /^how many\s+(?:left|stops left|to go)\b/i,
     command: { type: 'how_many_left' },
   },
   {
-    pattern: /^start\s+(?:my\s+)?shift\b/,
+    pattern: /^start\s+(?:my\s+)?shift\b/i,
     command: { type: 'start_shift' },
   },
   {
-    pattern: /^end\s+(?:my\s+)?shift\b/,
+    pattern: /^end\s+(?:my\s+)?shift\b/i,
     command: { type: 'end_shift' },
   },
   {
-    pattern: /^emergency\b/,
+    pattern: /^emergency\b/i,
     command: { type: 'emergency' },
   },
 ];
@@ -89,10 +112,8 @@ const DELIVERY_PATTERNS: readonly { pattern: RegExp; command: VoiceCommand }[] =
  * It returns null when the sentence is not a command of the catalogue.
  */
 export function parseVoiceCommand(transcript: string): VoiceCommand | null {
-  const said = transcript
-    .trim()
-    .toLowerCase()
-    .replace(/[.!?,]+$/, '');
+  const trimmed = transcript.trim().replace(/[.!?,]+$/, '');
+  const said = trimmed.toLowerCase();
   if (said.length === 0) {
     return null;
   }
@@ -122,9 +143,27 @@ export function parseVoiceCommand(transcript: string): VoiceCommand | null {
   }
 
   for (const entry of DELIVERY_PATTERNS) {
-    if (entry.pattern.test(said)) {
-      return entry.command;
+    // The sentence is matched as it was said, so the words the courier spoke
+    // keep their case: an address has to reach the address engine the way it
+    // was said.
+    const match = entry.pattern.exec(trimmed);
+    if (match === null) {
+      continue;
     }
+    const groups = match.groups ?? {};
+    if (groups.place !== undefined) {
+      return { type: 'mark_delivered', stopId: 'current' };
+    }
+    if (groups.address !== undefined) {
+      return { type: 'add_stop', rawAddress: groups.address.trim() };
+    }
+    if (groups.minutes !== undefined) {
+      return { type: 'start_break', minutes: Number.parseInt(groups.minutes, 10) };
+    }
+    if (groups.text !== undefined) {
+      return { type: 'add_location_note', kind: 'note', text: groups.text.trim() };
+    }
+    return entry.command;
   }
 
   return null;

@@ -19,6 +19,8 @@ manifest/
                     slots and the tags
   utterances.jsonl  840 planned audio files (the scripts times the noise
                     variants)
+  shift_sims.json   the scripted full-shift simulations: three shifts with
+                    the voice and the noise of a real day
   slices.json       the slice ids, the counts and the status
 ```
 
@@ -36,8 +38,39 @@ manifest/
 | `numbers_corrections` | 40 | the numbers a courier mishears ("seven, no, seventeen") |
 | `code_switch` | 60 | the mid-sentence switches, with the gold switch position |
 | `chatter` | 40 | the talk that is not a command (M9) |
+| `shift_sim` | 3 shifts, 24 turns | the whole shift: the morning brief, the commands, the questions, the barge-in, the offline switch and the end of the day |
 
-600 scripts is the plan; 500 is the floor (V4 §10.1).
+600 scripts is the plan; 500 is the floor (V4 §10.1). The shift simulations are
+the slice of the whole shift, and they are scored against the service itself.
+
+## The shift simulations
+
+`manifest/shift_sims.json` holds three scripted shifts:
+
+| id | the shift | the noise |
+|---|---|---|
+| `SIM-001` | a wet morning in the city: the brief, a delivery, the parcel for Mrs Smith, a barge-in, the next stop, a skip | the van in the rain, 5 dB |
+| `SIM-002` | a rural run with no signal: the commands, the question that needs the internet, the correction, the map mode, a note | gravel road, 0 dB |
+| `SIM-003` | the last hour: the day so far, the pay, the small talk, the end of the shift | quiet |
+
+Every turn carries what the courier said, how the turn was opened, how fast the
+van was going, what had the phone's attention, and what the service was expected
+to answer: the intent, the exact words and the word limit.
+
+## How to run the harness
+
+```
+uv run --directory services/courier-voice python -m app.eval_harness \
+  --manifest docs/squads/voice/eval/manifest/shift_sims.json \
+  --out docs/squads/voice/eval/results/shift-sim
+```
+
+The harness runs the simulations against the service and writes the three files
+of the contract (`summary.json`, `per_turn.csv`, `environment.json`). It scores
+the intent accuracy (M3), the false actions (M9), the eight word rule and the
+latency of the service. The metrics that need the audio or a device are written
+down as **not measured**, with the reason: a number that was not measured is
+never reported as a pass.
 
 ## How to regenerate
 

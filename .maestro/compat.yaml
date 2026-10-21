@@ -10,7 +10,7 @@ name: B.7 compatibility screen and the voice permission prompt
 # The compatibility screen is reached from the settings, the way a courier (or
 # a support agent on the phone) would reach it.
 - tapOn:
-    id: "open-settings"
+    id: "today-settings"
 - extendedWaitUntil:
     visible:
       id: "settings-screen"

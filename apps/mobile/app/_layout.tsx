@@ -36,6 +36,9 @@ function AuthNavigator() {
       <Stack.Protected guard={!isAuthenticated}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
+      {/* The design lab is outside the guard: the founder has to be able to
+          open the three directions without signing in first. */}
+      <Stack.Screen name="design" />
     </Stack>
   );
 }

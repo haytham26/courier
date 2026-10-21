@@ -67,6 +67,41 @@ describe('the voice command catalogue', () => {
         stopId: 'current',
       });
     });
+
+    it('takes the safe place of a delivery', () => {
+      expect(parseVoiceCommand('left it on the porch')).toEqual({
+        type: 'mark_delivered',
+        stopId: 'current',
+      });
+      expect(parseVoiceCommand('left at the side gate')).toEqual({
+        type: 'mark_delivered',
+        stopId: 'current',
+      });
+    });
+
+    it('adds a stop from a spoken address', () => {
+      expect(parseVoiceCommand('add stop 5 Rimu Street')).toEqual({
+        type: 'add_stop',
+        rawAddress: '5 Rimu Street',
+      });
+    });
+
+    it('starts and ends a break', () => {
+      expect(parseVoiceCommand('start break')).toEqual({ type: 'start_break', minutes: null });
+      expect(parseVoiceCommand('start break for 15 minutes')).toEqual({
+        type: 'start_break',
+        minutes: 15,
+      });
+      expect(parseVoiceCommand('end break')).toEqual({ type: 'end_break' });
+    });
+
+    it('keeps a note for the door', () => {
+      expect(parseVoiceCommand('note: the gate code is 4821')).toEqual({
+        type: 'add_location_note',
+        kind: 'note',
+        text: 'the gate code is 4821',
+      });
+    });
   });
 
   it('says nothing when the sentence is not a command', () => {

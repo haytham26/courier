@@ -18,7 +18,16 @@
 
 import { spacing, typography, borderRadius, shadows, motion, components } from './tokens';
 
-export type ThemeName = 'day' | 'night' | 'highContrast';
+/**
+ * The theme names.
+ *
+ * `day`, `night` and `highContrast` are the product themes the courier uses.
+ * The three names below are the **Design Studio directions** (MASTER_EXECUTION
+ * §13.4): three original looks for the founder to choose between. Each one is
+ * a light palette, because the founder's rule is that the day is the default
+ * and the night is the adapted option.
+ */
+export type ThemeName = 'day' | 'night' | 'highContrast' | 'roadbook' | 'beacon' | 'freight';
 
 export interface ThemeColors {
   background: string;
@@ -296,11 +305,234 @@ export const highContrastTheme: Theme = {
   },
 };
 
+/**
+ * The Roadbook direction (Design Studio §13.4, direction A).
+ *
+ * **Dense and operational.** The screen is a courier's paper run sheet:
+ * warm paper, black ink, one highway-amber accent and hairline rules
+ * instead of cards. Everything is aligned to a column grid, the numbers are
+ * tabular, and eight stops fit on a phone without scrolling.
+ *
+ * Measured contrast (background #F4F1EA / surface #FFFFFF / elevated #FBFAF6):
+ *   textPrimary      #16181A  15.78:1 / 17.80:1 / 17.04:1  (bar 4.5:1)
+ *   textSecondary    #4C5359   6.92:1 /  7.81:1 /  7.48:1  (bar 4.5:1)
+ *   textTertiary     #5C646A   5.34:1 /  6.02:1 /  5.77:1  (bar 4.5:1)
+ *   brandPrimary     #8A4B00   6.03:1 /  6.80:1 /  6.51:1  (bar 4.5:1)
+ *   brandSecondary   #2C5E6B   6.37:1 /  7.19:1 /  6.88:1  (bar 4.5:1)
+ *   success          #14653C   6.30:1 /  7.10:1 /  6.80:1  (bar 4.5:1)
+ *   warning          #8A5A00   5.25:1 /  5.93:1 /  5.67:1  (bar 4.5:1)
+ *   error            #A32018   6.70:1 /  7.56:1 /  7.24:1  (bar 4.5:1)
+ *   info             #2C5E6B   6.37:1 /  7.19:1 /  6.88:1  (bar 4.5:1)
+ *   statusPending    #4C5359   6.92:1 /  7.81:1 /  7.48:1  (bar 4.5:1)
+ *   statusActive     #8A4B00   6.03:1 /  6.80:1 /  6.51:1  (bar 4.5:1)
+ *   statusDelivered  #14653C   6.30:1 /  7.10:1 /  6.80:1  (bar 4.5:1)
+ *   statusFailed     #A32018   6.70:1 /  7.56:1 /  7.24:1  (bar 4.5:1)
+ *   statusSkipped    #8A5A00   5.25:1 /  5.93:1 /  5.67:1  (bar 4.5:1)
+ *   border           #7D7869   3.91:1 /  4.41:1 /  4.22:1  (bar 3:1, non-text)
+ * The label on a filled surface (textInverse #FFFFFF):
+ *   on brandPrimary 6.80:1 · on brandSecondary 7.19:1 · on success 7.10:1 ·
+ *   on warning 5.93:1 · on error 7.56:1 · on statusPending 7.81:1 ·
+ *   on statusActive 6.80:1 · on statusDelivered 7.10:1 · on statusFailed 7.56:1
+ * The badge tint (12.5 % of the colour over the surface):
+ *   brandPrimary 5.64:1 · brandSecondary 5.97:1 · success 5.88:1 ·
+ *   warning 4.95:1 · error 6.10:1 · info 5.97:1
+ */
+export const roadbookTheme: Theme = {
+  ...baseTheme,
+  name: 'roadbook',
+  displayName: 'Roadbook',
+  colors: {
+    background: '#f4f1ea',
+    surface: '#ffffff',
+    surfaceElevated: '#fbfaf6',
+    overlay: '#00000080',
+    border: '#7d7869',
+    textPrimary: '#16181a',
+    textSecondary: '#4c5359',
+    textTertiary: '#5c646a',
+    textInverse: '#ffffff',
+    brandPrimary: '#8a4b00',
+    brandSecondary: '#2c5e6b',
+    success: '#14653c',
+    warning: '#8a5a00',
+    error: '#a32018',
+    info: '#2c5e6b',
+    // Status
+    statusPending: '#4c5359',
+    statusActive: '#8a4b00',
+    statusDelivered: '#14653c',
+    statusFailed: '#a32018',
+    statusSkipped: '#8a5a00',
+    // Map
+    mapBackground: '#f4f1ea',
+    mapWater: '#dce9ec',
+    mapLand: '#efede6',
+    mapRoad: '#ffffff',
+    mapHighway: '#f0b357',
+    mapBuilding: '#e6e2d8',
+    mapPark: '#e4ead9',
+    mapText: '#16181a',
+    stopPin: '#8a4b00',
+    routeLine: '#8a4b00',
+    userLocation: '#2c5e6b',
+  },
+};
+
+/**
+ * The Beacon direction (Design Studio §13.4, direction B).
+ *
+ * **Calm and glanceable.** One thing on the screen at a time: the number of
+ * stops left, then the address, then the one action. The palette is a cool
+ * paper white with a deep sea teal, the rules are thin and the space is
+ * generous, so a courier reads it in one glance while the van is moving.
+ *
+ * Measured contrast (background #EDF1F2 / surface #FFFFFF / elevated #F7FAFA):
+ *   textPrimary      #111A1C  15.54:1 / 17.67:1 / 16.84:1  (bar 4.5:1)
+ *   textSecondary    #4A5A5E   6.33:1 /  7.20:1 /  6.86:1  (bar 4.5:1)
+ *   textTertiary     #586A6E   4.99:1 /  5.67:1 /  5.41:1  (bar 4.5:1)
+ *   brandPrimary     #0B5A61   6.97:1 /  7.93:1 /  7.55:1  (bar 4.5:1)
+ *   brandSecondary   #2E6F4E   5.28:1 /  6.00:1 /  5.72:1  (bar 4.5:1)
+ *   success          #12603C   6.68:1 /  7.60:1 /  7.24:1  (bar 4.5:1)
+ *   warning          #7A5200   6.09:1 /  6.92:1 /  6.59:1  (bar 4.5:1)
+ *   error            #A11F17   6.78:1 /  7.71:1 /  7.35:1  (bar 4.5:1)
+ *   info             #0B5A61   6.97:1 /  7.93:1 /  7.55:1  (bar 4.5:1)
+ *   statusPending    #4A5A5E   6.33:1 /  7.20:1 /  6.86:1  (bar 4.5:1)
+ *   statusActive     #0B5A61   6.97:1 /  7.93:1 /  7.55:1  (bar 4.5:1)
+ *   statusDelivered  #12603C   6.68:1 /  7.60:1 /  7.24:1  (bar 4.5:1)
+ *   statusFailed     #A11F17   6.78:1 /  7.71:1 /  7.35:1  (bar 4.5:1)
+ *   statusSkipped    #7A5200   6.09:1 /  6.92:1 /  6.59:1  (bar 4.5:1)
+ *   border           #6E7A80   3.88:1 /  4.41:1 /  4.20:1  (bar 3:1, non-text)
+ * The label on a filled surface (textInverse #FFFFFF):
+ *   on brandPrimary 7.93:1 · on brandSecondary 6.00:1 · on success 7.60:1 ·
+ *   on warning 6.92:1 · on error 7.71:1 · on statusPending 7.20:1 ·
+ *   on statusActive 7.93:1 · on statusDelivered 7.60:1 · on statusFailed 7.71:1
+ * The badge tint (12.5 % of the colour over the surface):
+ *   brandPrimary 6.48:1 · brandSecondary 5.03:1 · success 6.24:1 ·
+ *   warning 5.72:1 · error 6.20:1 · info 6.48:1
+ */
+export const beaconTheme: Theme = {
+  ...baseTheme,
+  name: 'beacon',
+  displayName: 'Beacon',
+  colors: {
+    background: '#edf1f2',
+    surface: '#ffffff',
+    surfaceElevated: '#f7fafa',
+    overlay: '#00000080',
+    border: '#6e7a80',
+    textPrimary: '#111a1c',
+    textSecondary: '#4a5a5e',
+    textTertiary: '#586a6e',
+    textInverse: '#ffffff',
+    brandPrimary: '#0b5a61',
+    brandSecondary: '#2e6f4e',
+    success: '#12603c',
+    warning: '#7a5200',
+    error: '#a11f17',
+    info: '#0b5a61',
+    // Status
+    statusPending: '#4a5a5e',
+    statusActive: '#0b5a61',
+    statusDelivered: '#12603c',
+    statusFailed: '#a11f17',
+    statusSkipped: '#7a5200',
+    // Map
+    mapBackground: '#edf1f2',
+    mapWater: '#dce8ec',
+    mapLand: '#e9eeec',
+    mapRoad: '#ffffff',
+    mapHighway: '#e0b36a',
+    mapBuilding: '#e2e8e6',
+    mapPark: '#dde8de',
+    mapText: '#111a1c',
+    stopPin: '#0b5a61',
+    routeLine: '#0b5a61',
+    userLocation: '#2e6f4e',
+  },
+};
+
+/**
+ * The Freight direction (Design Studio §13.4, direction C).
+ *
+ * **Expressive and branded.** The screen is a parcel label: hard corners, a
+ * kraft tint, a deep highway orange and a lot of black type. The brand shows
+ * through one block of colour and one oversized number, not through a
+ * gradient and not through a glassy panel.
+ *
+ * Measured contrast (background #FFFFFF / surface #FFFFFF / elevated #F7F3ED):
+ *   textPrimary      #0F1113  18.92:1 / 18.92:1 / 17.12:1  (bar 4.5:1)
+ *   textSecondary    #4A4F55   8.27:1 /  8.27:1 /  7.48:1  (bar 4.5:1)
+ *   textTertiary     #5B6169   6.25:1 /  6.25:1 /  5.66:1  (bar 4.5:1)
+ *   brandPrimary     #B03A0A   6.08:1 /  6.08:1 /  5.50:1  (bar 4.5:1)
+ *   brandSecondary   #7C2D12   9.37:1 /  9.37:1 /  8.48:1  (bar 4.5:1)
+ *   success          #166534   7.13:1 /  7.13:1 /  6.45:1  (bar 4.5:1)
+ *   warning          #92400E   7.09:1 /  7.09:1 /  6.41:1  (bar 4.5:1)
+ *   error            #B91C1C   6.47:1 /  6.47:1 /  5.85:1  (bar 4.5:1)
+ *   info             #0C6B85   6.07:1 /  6.07:1 /  5.49:1  (bar 4.5:1)
+ *   statusPending    #4A4F55   8.27:1 /  8.27:1 /  7.48:1  (bar 4.5:1)
+ *   statusActive     #B03A0A   6.08:1 /  6.08:1 /  5.50:1  (bar 4.5:1)
+ *   statusDelivered  #166534   7.13:1 /  7.13:1 /  6.45:1  (bar 4.5:1)
+ *   statusFailed     #B91C1C   6.47:1 /  6.47:1 /  5.85:1  (bar 4.5:1)
+ *   statusSkipped    #92400E   7.09:1 /  7.09:1 /  6.41:1  (bar 4.5:1)
+ *   border           #7A7F87   4.03:1 /  4.03:1 /  3.64:1  (bar 3:1, non-text)
+ * The label on a filled surface (textInverse #FFFFFF):
+ *   on brandPrimary 6.08:1 · on brandSecondary 9.37:1 · on success 7.13:1 ·
+ *   on warning 7.09:1 · on error 6.47:1 · on info 6.07:1 ·
+ *   on statusPending 8.27:1 · on statusActive 6.08:1 ·
+ *   on statusDelivered 7.13:1 · on statusFailed 6.47:1
+ * The badge tint (12.5 % of the colour over the surface):
+ *   brandPrimary 5.00:1 · brandSecondary 7.57:1 · success 5.90:1 ·
+ *   warning 5.83:1 · error 5.24:1 · info 5.08:1
+ */
+export const freightTheme: Theme = {
+  ...baseTheme,
+  name: 'freight',
+  displayName: 'Freight',
+  colors: {
+    background: '#ffffff',
+    surface: '#ffffff',
+    surfaceElevated: '#f7f3ed',
+    overlay: '#00000080',
+    border: '#7a7f87',
+    textPrimary: '#0f1113',
+    textSecondary: '#4a4f55',
+    textTertiary: '#5b6169',
+    textInverse: '#ffffff',
+    brandPrimary: '#b03a0a',
+    brandSecondary: '#7c2d12',
+    success: '#166534',
+    warning: '#92400e',
+    error: '#b91c1c',
+    info: '#0c6b85',
+    // Status
+    statusPending: '#4a4f55',
+    statusActive: '#b03a0a',
+    statusDelivered: '#166534',
+    statusFailed: '#b91c1c',
+    statusSkipped: '#92400e',
+    // Map
+    mapBackground: '#ffffff',
+    mapWater: '#d9e5ea',
+    mapLand: '#f2eee7',
+    mapRoad: '#ffffff',
+    mapHighway: '#b03a0a',
+    mapBuilding: '#e6e1d8',
+    mapPark: '#dfe7da',
+    mapText: '#0f1113',
+    stopPin: '#b03a0a',
+    routeLine: '#b03a0a',
+    userLocation: '#0c6b85',
+  },
+};
+
 // All themes
 export const themes: Record<ThemeName, Theme> = {
   day: dayTheme,
   night: nightTheme,
   highContrast: highContrastTheme,
+  roadbook: roadbookTheme,
+  beacon: beaconTheme,
+  freight: freightTheme,
 };
 
 // Default theme
@@ -312,7 +544,7 @@ export function getTheme(name: ThemeName): Theme {
 }
 
 export function getThemeNames(): ThemeName[] {
-  return ['day', 'night', 'highContrast'];
+  return ['day', 'night', 'highContrast', 'roadbook', 'beacon', 'freight'];
 }
 
 // CSS custom properties generator

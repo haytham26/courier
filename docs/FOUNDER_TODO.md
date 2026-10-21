@@ -34,6 +34,37 @@
 
 ---
 
+## Design Studio — the founder picks the look (approval gate, MASTER_EXECUTION §13.4)
+
+**Nothing is blocked by this.** The screens of all three directions are built and running; the
+work carries on while you decide. But the look of the app is your call, and the app cannot be
+built in the chosen direction until you make it.
+
+**Please pick one: A, B or C.**
+
+| | Direction  | Route in the app       | The one-line difference                                                        |
+|---|------------|------------------------|--------------------------------------------------------------------------------|
+| **A** | **Roadbook** — dense and operational | `/design/roadbook` | The paper run sheet: hairline rules, tabular numbers, six stops of the run on one screen. |
+| **B** | **Beacon** — calm and glanceable   | `/design/beacon`   | One thing at a time: the count, the address, the action, and a lot of quiet space. |
+| **C** | **Freight** — expressive and branded | `/design/freight` | The parcel label: hard corners, one block of highway orange, a number that fills the screen. |
+
+**How to look at them**
+
+1. The renders (open them in a browser, they are the same layout as the phone):
+   - `docs/design/directions/a-roadbook.html`
+   - `docs/design/directions/b-beacon.html`
+   - `docs/design/directions/c-freight.html`
+2. Or on the phone: the route `/design` opens the picker, and each direction opens the real
+   screen of the app. The emulator screenshots of the three come from the CI emulator run.
+3. The full spec of each one — the type scale, the colour roles, the spacing, the motion, the
+   accessibility notes and the anti-"AI look" checklist — is in
+   `docs/design/RESEARCH.md` → `docs/design/DIRECTIONS.md`.
+
+**Answer with "A", "B" or "C"** (or "A, but with the Beacon's number"), and we build the whole
+app in it.
+
+---
+
 ## Before Launch (Paid / Accounts) — Only Needed at Handover
 
 | Item | Provider / URL | Env Var | Cost | Notes |
@@ -94,7 +125,7 @@ still runs.
 | Masked Calls Provider | **[OPEN]** | Twilio Voice, Plivo, Vonage, **[OPEN]** per ADR | Driver privacy feature |
 | Carrier rate card (per stop, per parcel) | **[OPEN]** | the rates a carrier really pays, GST-inclusive NZD | `RATE_CARD` in `apps/api/app/earnings.py` — the placeholder is $1.50 a stop and $0.20 a parcel | The money the courier sees in the app and the GST split on the end-of-day summary |
 | Pricing Tiers (Solo/Team) | Pending cost verification | TBD after real cost data | Business model |
-| Visual Identity Review | Async, provisional tokens | Designer review of design tokens | D7 compliance |
+| Visual Identity Review | **[OPEN]** - see the section above | A (Roadbook), B (Beacon), C (Freight) - the three built directions | D7 compliance and the look of every screen of §13.5 |
 | Legal Review (PIA, Privacy Act) | Async | NZ privacy lawyer | Pre-launch requirement |
 | Translation Reviewers | Async | Community / paid reviewers | Remove `needs_review` tags |
 | **Offline map pack delivery** | **[OPEN]** | install-time asset delivery (Play Asset Delivery), a first run download on Wi-Fi, or both | D15: the map has to work from the first launch with no internet. The pack is about 50 MB and does not fit the 80 MB APK budget, so it cannot simply sit inside the APK. **Workaround:** the app reads the pack from its document directory and falls back to the online source. |
@@ -103,8 +134,8 @@ still runs.
 
 ---
 
-**Last Updated:** 2026-10-22 (security squad: the complete sign-in - the Google and Apple ids, the Apple team id, the passkey domain and the app store ids)
-**Next Action:** Founder paste free keys into `.env.local` and run `scripts/check-secrets`
+**Last Updated:** 2026-10-22 (design studio: the founder picks the look - A, B or C; and the security squad: the complete sign-in - the Google and Apple ids, the Apple team id, the passkey domain and the app store ids)
+**Next Action:** Founder picks the direction (A, B or C) and pastes the free keys into `.env.local`, then runs `scripts/check-secrets`
 ## Post-launch tools (D22)
 - [ ] Chatwoot (support chat) · [ ] WeKnora (help-centre AI) · [ ] Cal.com (demos) · [ ] Cap (videos) · [ ] OpenSEO (website SEO)
 - [ ] Confirm OmniVoice model-weights license allows commercial use (Hugging Face k2-fsa/OmniVoice).

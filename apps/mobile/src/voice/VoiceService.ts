@@ -49,11 +49,19 @@ export type VoiceState =
  * ones MASTER_EXECUTION §11 asks for: the courier can pick the map mode and
  * move the camera by voice, and the map screen listens on the voice channel
  * (`commandChannel.ts`).
+ *
+ * The catalogue grew with Courier Voice: the service speaks the names of the
+ * product's tools, and the app has a command for each of them, so a sentence
+ * the service understands does something on the phone.
  */
-export type VoiceCommand = 
+export type VoiceCommand =
   | { type: 'mark_delivered'; stopId: string }
   | { type: 'mark_skipped'; stopId: string }
   | { type: 'mark_failed'; stopId: string; reason: string }
+  | { type: 'add_stop'; rawAddress: string }
+  | { type: 'start_break'; minutes: number | null }
+  | { type: 'end_break' }
+  | { type: 'add_location_note'; kind: string; text: string }
   | { type: 'navigate_next' }
   | { type: 'navigate_previous' }
   | { type: 'repeat_instruction' }
@@ -67,7 +75,9 @@ export type VoiceCommand =
   | { type: 'tilt_map'; on: boolean }
   | { type: 'follow_me'; on: boolean }
   | { type: 'look_back' }
-  | { type: 'reset_camera' };
+  | { type: 'reset_camera' }
+  | { type: 'set_quiet_mode'; on: boolean }
+  | { type: 'set_verbosity'; verbosity: string };
 
 export interface VoiceCallbacks {
   onStateChange: (state: VoiceState) => void;

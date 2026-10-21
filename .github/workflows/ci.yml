@@ -45,6 +45,9 @@ jobs:
       - name: Install the API dependencies
         run: uv sync --directory apps/api --extra dev
 
+      - name: Install the voice service dependencies
+        run: uv sync --directory services/courier-voice --extra dev
+
       - name: Lint
         run: pnpm lint
 

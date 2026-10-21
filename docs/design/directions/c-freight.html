@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Direction C — Freight — Courier Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* The Freight theme of `packages/design-tokens/src/themes.ts`. */
+    --background: #ffffff;
+    --surface: #ffffff;
+    --surface-elevated: #f7f3ed;
+    --border: #7a7f87;
+    --text-primary: #0f1113;
+    --text-secondary: #4a4f55;
+    --text-tertiary: #5b6169;
+    --text-inverse: #ffffff;
+    --brand-primary: #b03a0a;
+    --status-delivered: #166534;
+    --status-failed: #b91c1c;
+    /* The type scale of `packages/design-tokens/src/directions.ts`. */
+    --metric: 64px;
+    --metric-leading: 64px;
+    --address: 28px;
+    --address-leading: 34px;
+    --row: 22px;
+    --row-leading: 28px;
+    --label: 17px;
+    --label-leading: 20px;
+    --body: 20px;
+    --body-leading: 28px;
+    --caption: 17px;
+    --caption-leading: 22px;
+    --title: 34px;
+    --title-leading: 38px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    background: #d8d9d6;
+    font-family: Figtree, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #0f1113;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--background);
+    border: 1px solid #9b9c98;
+    border-radius: 28px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .scroll { flex: 1; overflow: hidden; }
+
+  .brand { background: var(--text-primary); color: var(--text-inverse); padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .brand-top { display: flex; align-items: center; justify-content: space-between; }
+  .brand-top-right { display: flex; align-items: center; gap: 4px; }
+  .brand-run { font-size: var(--title); line-height: var(--title-leading); font-weight: 800; letter-spacing: -0.02em; text-transform: uppercase; }
+  .brand-strip { display: flex; align-items: center; gap: 8px; }
+  .brand-mark { width: 16px; height: 16px; background: var(--brand-primary); }
+  .icon-button { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; }
+
+  .label { font-size: var(--label); line-height: var(--label-leading); font-weight: 700; letter-spacing: 0.12em; }
+  .caption { font-size: var(--caption); line-height: var(--caption-leading); font-weight: 600; letter-spacing: 0.04em; }
+  .body { font-size: var(--body); line-height: var(--body-leading); font-weight: 500; }
+  .row { font-size: var(--row); line-height: var(--row-leading); font-weight: 600; letter-spacing: 0.02em; }
+  .address { font-size: var(--address); line-height: var(--address-leading); font-weight: 700; letter-spacing: -0.01em; }
+  .metric { font-size: var(--metric); line-height: var(--metric-leading); font-weight: 800; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+
+  .perforation { height: 0; border-top: 2px dashed var(--border); margin: 0 16px; }
+
+  .headline { display: flex; gap: 16px; padding: 20px 16px 8px; }
+  .metric-block { width: 116px; height: 116px; background: var(--brand-primary); display: flex; align-items: center; justify-content: center; }
+  .headline-text { flex: 1; display: flex; flex-direction: column; gap: 2px; justify-content: center; }
+
+  .list { padding: 8px 16px 0; display: flex; flex-direction: column; gap: 8px; }
+  .row-stop { display: flex; align-items: center; gap: 12px; min-height: 64px; }
+  .row-mark { width: 40px; height: 40px; background: var(--text-primary); color: var(--text-inverse); display: flex; align-items: center; justify-content: center; font-size: var(--caption); line-height: var(--caption-leading); font-weight: 600; letter-spacing: 0.04em; }
+  .row-mark.active { background: var(--brand-primary); }
+  .row-main { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .row-address { font-size: var(--row); line-height: var(--row-leading); font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-sub { font-size: var(--caption); line-height: var(--caption-leading); font-weight: 600; letter-spacing: 0.04em; color: var(--text-tertiary); }
+
+  .actions { padding: 12px 16px 8px; }
+  .primary {
+    height: 72px; width: 100%; border: 0; border-radius: 2px;
+    background: var(--brand-primary); color: var(--text-inverse);
+    font-family: inherit; font-size: 22px; font-weight: 600;
+  }
+
+  .voice {
+    height: 64px; display: flex; align-items: center; gap: 12px;
+    background: var(--text-primary); color: var(--text-inverse);
+    padding: 0 16px; margin-top: 4px;
+  }
+  .voice-mark { width: 12px; height: 12px; background: var(--brand-primary); }
+  .voice-queue { margin-left: auto; }
+
+  .caption-block { max-width: 640px; font-size: 15px; line-height: 22px; color: #3b3f42; }
+  .caption-block h1 { font-size: 22px; margin: 0 0 8px; }
+  .caption-block code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+  .swatch { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .chip { width: 22px; height: 22px; border-radius: 4px; border: 1px solid #00000022; }
+</style>
+</head>
+<body>
+
+  <div class="phone">
+    <div class="scroll">
+      <div class="brand">
+        <div class="brand-top">
+          <div class="label">COURIER COPILOT</div>
+          <div class="brand-top-right">
+            <div class="caption">MONDAY 10:38 · TANE RUA</div>
+            <div class="icon-button" role="img" aria-label="Settings">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="brand-run">Northwood AM</div>
+        <div class="brand-strip">
+          <div class="brand-mark"></div>
+          <div class="caption">18 STOPS LEFT · 6.4 KM TO DRIVE</div>
+        </div>
+      </div>
+
+      <div class="perforation"></div>
+
+      <div class="headline">
+        <div class="metric-block">
+          <div class="metric" style="color: var(--text-inverse)">18</div>
+        </div>
+        <div class="headline-text">
+          <div class="label" style="color: var(--brand-primary)">NEXT STOP</div>
+          <div class="address">14 Harewood Road</div>
+          <div class="body" style="color: var(--text-secondary)">Papanui · 10:42 · 3 parcels</div>
+          <div class="caption" style="color: var(--text-tertiary)">Side gate, small box in the rear rack</div>
+        </div>
+      </div>
+
+      <div class="list">
+        <div class="row-stop">
+          <div class="row-mark active">45</div>
+          <div class="row-main">
+            <div class="row-address">14 Harewood Road</div>
+            <div class="row-sub">Papanui · 10:42 · Next</div>
+          </div>
+        </div>
+        <div class="row-stop">
+          <div class="row-mark">46</div>
+          <div class="row-main">
+            <div class="row-address">22 Westminster Street</div>
+            <div class="row-sub">Merivale · 10:49 · Pending</div>
+          </div>
+        </div>
+        <div class="row-stop">
+          <div class="row-mark">47</div>
+          <div class="row-main">
+            <div class="row-address">3/120 Blenheim Road</div>
+            <div class="row-sub">Upper Riccarton · 11:02 · Pending</div>
+          </div>
+        </div>
+        <div class="row-stop">
+          <div class="row-mark">48</div>
+          <div class="row-main">
+            <div class="row-address">78 Main South Road</div>
+            <div class="row-sub">Sockburn · 11:14 · Pending</div>
+          </div>
+        </div>
+        <div class="row-stop">
+          <div class="row-mark">49</div>
+          <div class="row-main">
+            <div class="row-address">234 Colombo Street</div>
+            <div class="row-sub">Sydenham · 11:26 · Pending</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" type="button">Next stop</button>
+    </div>
+
+    <div class="voice">
+      <div class="voice-mark"></div>
+      <div class="caption">COURIER VOICE · LISTENING</div>
+      <div class="caption voice-queue">4 WAITING</div>
+    </div>
+  </div>
+
+  <div class="caption-block">
+    <h1>Direction C — Freight (expressive and branded)</h1>
+    <p>
+      The parcel label: hard corners, an ink band with the brand on it, one block of highway
+      orange and a number that fills its square. The metric is <code>64 px / 800 / tabular</code>,
+      the address is <code>28 px / 700</code>, the rows are <code>22 px / 600</code> and the
+      labels are <code>17 px / 700</code> with <code>0.12 em</code> of tracking. The corners are
+      <code>0-2 px</code>, the rule under the band is the perforated edge of a label, and the
+      movement is a <code>150 ms</code> wipe.
+    </p>
+    <p>
+      This file is a render of the screen, drawn with the tokens of
+      <code>packages/design-tokens/src/themes.ts</code> and the type scale of
+      <code>packages/design-tokens/src/directions.ts</code>. The device screenshots come from the
+      emulator run of the route <code>/design/freight</code>, not from this file.
+    </p>
+    <div class="swatches">
+      <div class="swatch"><span class="chip" style="background:#ffffff"></span> background #FFFFFF</div>
+      <div class="swatch"><span class="chip" style="background:#0f1113"></span> textPrimary #0F1113</div>
+      <div class="swatch"><span class="chip" style="background:#b03a0a"></span> brandPrimary #B03A0A</div>
+      <div class="swatch"><span class="chip" style="background:#f7f3ed"></span> surfaceElevated #F7F3ED</div>
+      <div class="swatch"><span class="chip" style="background:#166534"></span> statusDelivered #166534</div>
+      <div class="swatch"><span class="chip" style="background:#b91c1c"></span> statusFailed #B91C1C</div>
+    </div>
+  </div>
+
+</body>
+</html>

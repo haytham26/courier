@@ -17,6 +17,10 @@
       "types": "./dist/themes.d.ts",
       "default": "./dist/themes.js"
     },
+    "./directions": {
+      "types": "./dist/directions.d.ts",
+      "default": "./dist/directions.js"
+    },
     "./contrast": {
       "types": "./dist/contrast.d.ts",
       "default": "./dist/contrast.js"

@@ -1,0 +1,103 @@
+# Why each repository of the pool is in the Design Studio pool.
+#
+# `owner/name<TAB>the reason` - one line per repository. The table in
+# `docs/design/RESEARCH.md` is built by `scripts/build-design-research-tables.mjs`,
+# which joins this file with `docs/design/evidence/github-repos-<date>.tsv`, so
+# the numbers in the document cannot drift away from the API.
+#
+# The file is read in the order of the categories of the document.
+
+# --- A. React Native design systems and UI kits ---------------------------
+tamagui/tamagui	Compile-time token flattening and a shared web/native token model - the one idea worth stealing from a kit we do not adopt.
+callstack/react-native-paper	The only RN kit that shipped real accessibility work in 2026 (accessible modals, portal AT hiding, reduce-motion forwarding).
+akveo/react-native-ui-kitten	Theming and a codemod layer; a good example of a kit with one maintainer and a multi-package release train.
+wix/react-native-ui-lib	A long-lived kit with a real screen gallery - the closest thing the RN world has to a visual reference library.
+founded-labs/react-native-reusables	The only kit that ships both a NativeWind and a Unistyles-adjacent variant of every component, and it added reduced motion in 2026.
+heroui-inc/heroui-native	A 2025 kit on the newest stack, but it depends on NativeWind and expo-blur - both barred by our rules.
+GeekyAnts/NativeBase	The most-starred RN kit and the classic answer: the proof that popularity is not maintenance.
+gluestack/gluestack-ui	The best accessibility primitives in the pool and the proof that a Tailwind-shaped system cannot sit on our token source.
+satya164/react-native-tab-view	The pager every RN app used, archived in 2022: what happens to a library the community stops paying for.
+callstack/react-native-bottom-tabs	The modern tab bar with an animated shared indicator - the one piece of the tab bar we may want.
+Shopify/restyle	Theming without a CSS runtime: the theme object is a plain object, like ours.
+
+# --- B. Styling engines, tokens and colour ---------------------------------
+jpudysz/react-native-unistyles	Our styling engine: the only one that keeps the tokens as plain TypeScript and needs no build step.
+uni-stack/uniwind	The credible NativeWind replacement: Tailwind v4 in RN with a Metro transform worker.
+style-dictionary/style-dictionary	The industry token pipeline; our token package is written as if it were built by it, so we should know what it would change.
+radix-ui/colors	Reference accessible colour scales - a check on our hand-rolled 50-950 ramp.
+google/material-design-icons	The source of the Material Symbols we use as the one icon set of the product.
+
+# --- C. Motion, animation and haptics --------------------------------------
+software-mansion/react-native-reanimated	Our motion engine: the only one that runs on the UI thread and keeps the frame budget.
+software-mansion/react-native-worklets	The runtime Reanimated 4 runs on; the separate repository is a placeholder, which is a lesson in reading the README.
+nandorojo/moti	The declarative Reanimated wrapper most people reach for first - and the example of a big install base with no release since 2025.
+wcandillon/react-native-skia	The vector engine for custom work: shaders, blur and gradients - most of which our own rules forbid.
+wcandillon/react-native-skia	The same project under the name npm still installs from; the naming history is a maintenance warning.
+lottie-react-native/lottie-react-native	The design-file animation runtime: the benchmark for "a picture of an animation" against a real interaction.
+airbnb/lottie-android	The Android runtime of the same, and the origin of the Lottie file format.
+rive-app/rive-react-native	Interactive vector animation with a state machine: the only one of the two that can respond to a delivery.
+motiondivision/motion	The web motion standard; it is what the web dashboard should feel like, and it has dropped RN support.
+wcandillon/react-native-redash	The reference animation toolbox - helpers worth reading, a dependency we should not take.
+appandflow/react-native-ease	Platform-native animations with no JS overhead, from a maintainer we already depend on.
+Rednegniw/number-flow-react-native	Rolling counters: exactly the "stops remaining" number, if we ever want it to roll.
+LegendApp/legend-motion	A declarative animation API with a NativeWind peer dependency - barred, but a useful reference.
+dohooo/react-native-reanimated-carousel	A real Reanimated 4 carousel: the shape of the onboarding carousel we may want.
+SchroederNathan/react-native-motion	A 2026 animation library with no release and no licence file - the two failures that kill a dependency.
+mkuczera/react-native-haptic-feedback	The haptic patterns of the platform behind one API; our confirm/deliver/error language belongs here.
+
+# --- D. Sheets, gestures, lists and shared elements ------------------------
+software-mansion/react-native-gesture-handler	Our gesture engine: gestures are recognised on the UI thread, which is the basis of the no-jank budget.
+gorhom/react-native-bottom-sheet	The incumbent sheet: 11.9 million downloads a month and no commit since May 2026.
+software-mansion-labs/react-native-bottom-sheet	The 2026 challenger: a Fabric sheet with a critically damped spring on both platforms, by construction.
+lodev09/react-native-true-sheet	The best-maintained sheet in the pool: twelve releases in six months and two open issues.
+computerjazz/react-native-draggable-flatlist	The classic long-press drag list, built on the Reanimated 2 API.
+entropyconquers/react-native-reanimated-dnd	Drag-and-drop reorder for Reanimated 4 - the shape of "voice plus drag" for the route editor.
+omahili/react-native-reorderable-list	A small, active reorderable list with a stable API.
+esthor/react-native-swipeable-list	The swipe-to-reveal row every delivery app copies, including ours.
+azimgd/shadowlist	A Fabric list with three hundred commits in ninety days and no release since 2024.
+Glazzes/react-native-zoom-toolkit	Pinch and zoom on Reanimated - the map gesture, if we need our own.
+jeremybarbet/react-native-modalize	The classic modal sheet with drag-to-dismiss, dormant since 2024.
+osdnk/react-native-reanimated-bottom-sheet	The original Reanimated sheet, superseded by gorhom's.
+
+# --- E. Icons, fonts, accessibility and the platform ------------------------
+oblador/react-native-vector-icons	The single Material Symbols source - our one-icon-set rule.
+software-mansion/react-native-svg	The vector layer under any custom icon or route ribbon.
+expo/google-fonts	The Figtree source: our type face, licensed OFL.
+google/fonts	The font repository itself, and the licence file every app store asks about.
+ArturKalach/react-native-a11y	Screen-reader helpers for React Native: announcements, focus order, focus trapping.
+ArturKalach/react-native-a11y-order	Explicit focus order and focus trapping on Android and iOS.
+FormidableLabs/eslint-plugin-react-native-a11y	The lint rules for accessibility that our ESLint config does not have yet.
+dequelabs/axe-core	The accessibility engine of the web; there is no React Native package for it, which is the reason our a11y gate is a manual review.
+Shopify/flash-list	The list that keeps 300 stops at 60 fps; Expo SDK 58 bundles it.
+software-mansion/react-native-screens	The navigator we build on.
+appandflow/react-native-safe-area-context	The insets of the device, and the layout of every screen that has to clear the notch.
+margelo/react-native-mmkv	Fast storage for the offline queue; the New Architecture bridge under it.
+margelo/nitro	The native-module bridge Unistyles 3 and MMKV sit on.
+zoontek/react-native-localize	The localisation layer, and the right-to-left dependency behind the Arabic build.
+
+# --- F. Maps, map styling and the routing we draw on ----------------------
+maplibre/maplibre-native	The map engine of the app: it draws our own style, offline, with no proprietary SDK.
+maplibre/maplibre-gl-js	The same engine for the web: one style spec, one colour system, two platforms.
+maplibre/maplibre-style-spec	The style spec itself - the contract between our palette and the map.
+maplibre/maputnik	The editor for the style: the way the courier map style is built and reviewed.
+protomaps/basemaps	The basemap style we build the Canterbury pack from, and the reference for "a map that reads in daylight".
+protomaps/PMTiles	The tile format of the offline pack.
+maptiler/tileserver-gl	A tile server that renders any vector style; the way the style is published.
+openmaptiles/maptiler-basic-gl-style	A complete GL style: the fastest way to read how a good map style is put together.
+openmaptiles/openmaptiles	The vector tile schema our style is built on.
+mapbox/mapbox-gl-native	The proprietary engine we do not use; archived, and the reason the licence of the map SDK matters.
+tyrasd/overpass-turbo	The tool that answers "is this address in OSM", used by the address engine.
+Project-OSRM/osrm-backend	The routing engine behind the road geometry of the day.
+graphhopper/graphhopper	The routing engine that handles the vehicle profile and the turn-by-turn.
+GIScience/openrouteservice	The routing and the isochrones for the "is it worth walking" decisions; GPL, so clean-room only.
+
+# --- G. The open-source work of the reference products ---------------------
+monzo/docs	What a bank publishes about its own API: the plainest possible product language.
+primer/react	GitHub's design system: how a large product documents its components and its motion.
+microsoft/fluentui	The Fluent design language in code: the density and the keyboard rules of a desktop tool.
+adobe/react-spectrum	The accessibility-first component library: the reference for focus behaviour.
+mantinedev/mantine	A complete open-source design system with a documented scale and a dark mode done properly.
+chakra-ui/chakra-ui	The Tailwind-era system: what "a component library" means in 2026.
+grafana/grafana	The dashboard density that an operations screen should never reach - and the boundary we must not cross.
+recharts/recharts	The charting library for the earnings and the end-of-day card.
+expo/expo	The platform we build on: the SDK 58 bundle table that decides what we can use.

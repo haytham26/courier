@@ -1,13 +1,13 @@
 # EXECUTOR_LOG
 
-## 2026-10-20 — PHASE 0 summary (new lead executor)
+## 2026-10-20 â€” PHASE 0 summary (new lead executor)
 
 1. Product: Courier Copilot, voice-first SaaS for independent NZ parcel couriers on fixed runs in Canterbury/Christchurch.
-2. Binding spec: docs/FINAL_PROMPT.md (§0, 0-A..0-F bind); DECISIONS.md D1–D21 override everything.
+2. Binding spec: docs/FINAL_PROMPT.md (Â§0, 0-A..0-F bind); DECISIONS.md D1â€“D21 override everything.
 3. Stack (candidates, pinned only via ADR-001): Expo SDK 57 (locked), React Native, Unistyles 3, MapLibre v11 + PMTiles, VisionCamera, sherpa-onnx, op-sqlite (SQLCipher+FTS5), Reanimated 4, FastAPI backend, Better Auth (Node, JWKS to FastAPI), Pipecat + LiveKit voice, Hatchet jobs, Valhalla+VROOM routing, Postgres+PostGIS, Next.js web.
 4. Banned: NativeWind, Supabase, munim-maps, expo-av, expo-background-fetch, Redis>=7.4, PowerSync, Arq, gpt4free outside sandbox, LiteLLM 1.82.7/1.82.8.
 5. Real state (from RESUME.md, unverified until PHASE 1): auth is a fake Python implementation; theme.ts uses var(--); C.2 correction engine (D8) missing; B.7 compat test NOT VERIFIED; most steps not started.
-6. Repo: branch main, HEAD 9fbece5. Untracked services/auth/ exists (from previous executor) — to be audited.
+6. Repo: branch main, HEAD 9fbece5. Untracked services/auth/ exists (from previous executor) â€” to be audited.
 7. Rules: evidence in docs/evidence/<step>/; no PASS without logs; no force-push/rebase; git pull before push; no destructive commands.
 8. Local data: LINZ data expected in data/linz/ (gitignored); not present at audit start.
 9. Android SDK/emulator status: to be checked in PHASE 1/3.
@@ -15,10 +15,10 @@
 
 Not yet read in PHASE 0: PRODUCT_SPEC, PROJECT_BRIEF, DRIVER_INTERVIEW_1, research docs, PLAN_REVIEW (to be skimmed during PHASE 1).
 
-## 2026-10-20 — PHASE 2 plan (lead executor, KICKOFF_V2_EN)
+## 2026-10-20 â€” PHASE 2 plan (lead executor, KICKOFF_V2_EN)
 
-1. Read: KICKOFF_V2_EN, KICKOFF_PROMPT_EN, FINAL_PROMPT §0/0-A/0-F, DECISIONS D1–D21, AUDIT, PROGRESS, RESUME, TECH_STACK.
-2. Product: Courier Copilot — voice-first SaaS for Canterbury/Christchurch couriers; driver runs the whole shift by voice.
+1. Read: KICKOFF_V2_EN, KICKOFF_PROMPT_EN, FINAL_PROMPT Â§0/0-A/0-F, DECISIONS D1â€“D21, AUDIT, PROGRESS, RESUME, TECH_STACK.
+2. Product: Courier Copilot â€” voice-first SaaS for Canterbury/Christchurch couriers; driver runs the whole shift by voice.
 3. Binding order: DECISIONS.md > COST_PLAN.md > FINAL_PROMPT.md > research docs; D21 forbids PASS without evidence in docs/evidence/<step>/.
 4. Safety: work only inside C:\Users\DCL\projects\courier; no destructive commands; no local emulator (CI only); no secrets in git; no emoji icons; no banned deps.
 5. Verified real state: `services/auth` does not exist at all; `apps/api/app/auth/better_auth.py` is a fake Python auth with a hardcoded default secret; `data/linz/` is empty; `openspec/`, `tests/golden/`, `.github/workflows/` are empty; no ESLint flat config; root package.json pins "latest".
@@ -26,9 +26,9 @@ Not yet read in PHASE 0: PRODUCT_SPEC, PROJECT_BRIEF, DRIVER_INTERVIEW_1, resear
 7. Task 1 (PHASE 2.1): real Better Auth Node service in `services/auth` (plugins organization, expo, jwt), fail-fast on missing BETTER_AUTH_SECRET, JWKS endpoint, vitest tests for sign-up/sign-in/session/org/JWKS/expired+invalid token.
 8. Task 2 (PHASE 2.1 cont.): FastAPI verifies JWTs via JWKS only (PyJWT) and the fake Python auth + its fake test are deleted; banned deps (redis, arq, passlib, python-jose, anthropic) removed from apps/api/pyproject.toml; mobile moves to @better-auth/expo.
 9. Task 3 (PHASE 2.2): Unistyles 3 light/night themes generated from packages/design-tokens hex values, every `var(--` removed from apps/mobile and packages/design-tokens (7 files).
-10. Task 4 (PHASE 2.3): D8 address-correction engine `{original, corrected, reason, confidence, needs_question, options[]}` with a committed Christchurch fixture subset (LINZ data absent → FOUNDER_TODO); then PHASE 2.4 cleanup (egg-info, cleanup_avd.py, duplicate test-imports, exact version pins, ESLint flat config) and PHASE 2.5 mockup-accurate design; one feature branch + commit + push per item, evidence under docs/evidence/phase-2.x/.
+10. Task 4 (PHASE 2.3): D8 address-correction engine `{original, corrected, reason, confidence, needs_question, options[]}` with a committed Christchurch fixture subset (LINZ data absent â†’ FOUNDER_TODO); then PHASE 2.4 cleanup (egg-info, cleanup_avd.py, duplicate test-imports, exact version pins, ESLint flat config) and PHASE 2.5 mockup-accurate design; one feature branch + commit + push per item, evidence under docs/evidence/phase-2.x/.
 
-## 2026-10-20 — PHASE 2.1 (branch `feat/2.1-better-auth-service`)
+## 2026-10-20 â€” PHASE 2.1 (branch `feat/2.1-better-auth-service`)
 
 ### Skills applied (AGENTS.md map)
 
@@ -39,11 +39,11 @@ Not yet read in PHASE 0: PRODUCT_SPEC, PROJECT_BRIEF, DRIVER_INTERVIEW_1, resear
 | Library choices (Better Auth, PyJWT, pydantic-settings, kysely)                                                                                 | `source-driven-development`                                                  | Read the installed `better-auth@1.7.10` type definitions and implementation (`dist/plugins/jwt`, `dist/plugins/organization`, `@better-auth/expo` package) instead of relying on memory; pinned versions from the npm/PyPI registries with publish dates.                                                                                                       |
 | Auth service + verifier logic                                                                                                                   | `test-driven-development`, `incremental-implementation`                      | Wrote the failing suites first (auth, organisation/team, JWKS/JWT, rate limit, config fail-fast, API verifier/routes) and then the implementation; 31 + 23 tests.                                                                                                                                                                                               |
 | Token verification contract between the two services                                                                                            | `api-and-interface-design`                                                   | One contract only: the JWKS document (ES256, `kid`) and the claims (`iss`, `aud`, `exp`, `sub`); the API is a pure resource server.                                                                                                                                                                                                                             |
-| Secrets, keys, rate limiting, JWKS trust                                                                                                        | `security-and-hardening`                                                     | No default secret anywhere; fail-fast on `BETTER_AUTH_SECRET` / `AUTH_JWKS_URL`; strict limits on the credential endpoints (10/h sign-up, 10 per 15 min sign-in) with a test proving a burst is stopped; `AUTH_TRUSTED_IP_HEADERS` empty unless a trusted proxy is configured; generic 401s; `pnpm audit` triage (vitest 2.1.9 → 3.2.7 to clear the criticals). |
+| Secrets, keys, rate limiting, JWKS trust                                                                                                        | `security-and-hardening`                                                     | No default secret anywhere; fail-fast on `BETTER_AUTH_SECRET` / `AUTH_JWKS_URL`; strict limits on the credential endpoints (10/h sign-up, 10 per 15 min sign-in) with a test proving a burst is stopped; `AUTH_TRUSTED_IP_HEADERS` empty unless a trusted proxy is configured; generic 401s; `pnpm audit` triage (vitest 2.1.9 â†’ 3.2.7 to clear the criticals). |
 | Failures hit during the phase (pnpm zod hoisting, in-memory adapter transaction clone, ESLint flat config, ruff `FUR` selector, mypy overloads) | `debugging-and-error-recovery`                                               | Reproduced each failure, found the root cause (single hoisted `zod@3` shadowing Better Auth's `zod@4`; `structuredClone` of a Proxy; `--ext` removed in ESLint 9; `bun:sqlite` in Better Auth's type union) and fixed the cause instead of the symptom.                                                                                                         |
 | Pre-commit review of the branch                                                                                                                 | `code-review-and-quality`, `doubt-driven-development`, `code-simplification` | Checked the diff for banned items, secret defaults, unverified claims and unnecessary code; removed the dead `apps/api/package.json`, the unused `whispered` local and the duplicated test-imports path; every "done" claim below is tied to a log in `docs/evidence/phase-2.1/`.                                                                               |
 | Branch, commits, merge from main, push                                                                                                          | `git-workflow-and-versioning`                                                | One feature branch, atomic Conventional Commits, `git merge origin/main` (never rebase, never force-push), push at least every 30 minutes.                                                                                                                                                                                                                      |
-| Evidence + status docs                                                                                                                          | `documentation-and-adrs`                                                     | Wrote `docs/evidence/phase-2.1/README.md` with the command → result → log table, rewrote `docs/PROGRESS.md` to match reality, updated `.env.example`.                                                                                                                                                                                                           |
+| Evidence + status docs                                                                                                                          | `documentation-and-adrs`                                                     | Wrote `docs/evidence/phase-2.1/README.md` with the command â†’ result â†’ log table, rewrote `docs/PROGRESS.md` to match reality, updated `.env.example`.                                                                                                                                                                                                           |
 
 ### Result
 
@@ -73,7 +73,7 @@ Not yet read in PHASE 0: PRODUCT_SPEC, PROJECT_BRIEF, DRIVER_INTERVIEW_1, resear
 PHASE 2.2 (Unistyles 3 light/night themes, remove every `var(--`), then 2.3, 2.4, 2.5, then
 PHASE 3 (CI + Android emulator on GitHub Actions).
 
-## 2026-10-20 — PHASE 2.2 (branch `feat/2.2-unistyles-themes`)
+## 2026-10-20 â€” PHASE 2.2 (branch `feat/2.2-unistyles-themes`)
 
 ### Skills applied (AGENTS.md map)
 
@@ -83,7 +83,7 @@ PHASE 3 (CI + Android emulator on GitHub Actions).
 | Theme contract between the token package and the app                                                                   | `api-and-interface-design`                                                   | `packages/design-tokens` stays the single source of truth; the app derives `colors`/`spacing`/`borderRadius`/`typography` from it instead of duplicating values, and the theme shape is identical across day/night/high-contrast (a test now enforces it).                                                                                                                                                 |
 | Unistyles 3 API                                                                                                        | `source-driven-development`                                                  | Read the installed `react-native-unistyles@3.5.3` typings and the official v3 theming/configuration guides: `StyleSheet.configure({ themes, settings })`, `light`/`dark` reserved names for adaptive themes, `UnistylesRuntime.setTheme`, and the mandatory babel plugin + nitro modules.                                                                                                                  |
 | Guards and verification                                                                                                | `test-driven-development`                                                    | Added failing-then-passing tests: 8 new design-token tests (hex only, no `var(`, identical keys, near-black night) and the mobile auth suite rewritten against the real client API.                                                                                                                                                                                                                        |
-| Failures hit (broken `node_modules` layout, jest/babel `LRUCache` crash, expo CLI crash, RN 0.88 `Libraries/` missing) | `debugging-and-error-recovery`                                               | Root cause for all four was the same: the workspace `node_modules` was left half-deleted by the earlier failed install, so pnpm skipped re-extracting packages and hoisted the wrong versions (`zod@3` for Better Auth, `lru-cache@10` for Babel, a truncated `react-native` without `Libraries/`). Fixed by removing `node_modules` with a full literal path and reinstalling — not by patching symptoms. |
+| Failures hit (broken `node_modules` layout, jest/babel `LRUCache` crash, expo CLI crash, RN 0.88 `Libraries/` missing) | `debugging-and-error-recovery`                                               | Root cause for all four was the same: the workspace `node_modules` was left half-deleted by the earlier failed install, so pnpm skipped re-extracting packages and hoisted the wrong versions (`zod@3` for Better Auth, `lru-cache@10` for Babel, a truncated `react-native` without `Libraries/`). Fixed by removing `node_modules` with a full literal path and reinstalling â€” not by patching symptoms. |
 | Pre-commit review                                                                                                      | `code-review-and-quality`, `code-simplification`, `doubt-driven-development` | Removed the duplicated `global.css` NativeWind leftover and the duplicated spacing/typography tables; every claim below is tied to a log in `docs/evidence/phase-2.2/`.                                                                                                                                                                                                                                    |
 | Branch and push                                                                                                        | `git-workflow-and-versioning`                                                | Feature branch off the 2.1 branch, atomic commit, merge from `origin/main`, no rebase, no force-push.                                                                                                                                                                                                                                                                                                      |
 
@@ -104,14 +104,14 @@ PHASE 3 (CI + Android emulator on GitHub Actions).
 
 - The Unistyles native runtime is **NOT VERIFIED** (no emulator locally, no CI workflow yet).
 - `apps/mobile` typecheck still shows 3 pre-existing expo-router layout typings
-  (`Stack`/`Tabs` demanding an `id` prop) — untouched files, scheduled for PHASE 2.4.
+  (`Stack`/`Tabs` demanding an `id` prop) â€” untouched files, scheduled for PHASE 2.4.
 
 ### Next
 
 PHASE 2.3 (D8 address correction), then 2.4 (cleanup, ESLint flat config for every package),
 2.5 (design), then PHASE 3 (CI + emulator).
 
-## 2026-10-20 — PHASE 2.3 (branch `feat/2.3-address-correction`)
+## 2026-10-20 â€” PHASE 2.3 (branch `feat/2.3-address-correction`)
 
 ### Skills applied (AGENTS.md map)
 
@@ -119,16 +119,16 @@ PHASE 2.3 (D8 address correction), then 2.4 (cleanup, ESLint flat config for eve
 | ------------------------------------------------------------------ | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The engine and its contract                                        | `api-and-interface-design`                              | One result type (`Correction`) with the D8 keys, a `AddressStore` protocol so the engine works against the LINZ FTS slice, a fixture store or Postgres, and `SqliteAddressStore` for the offline slice.         |
 | Rule-by-rule implementation                                        | `spec-driven-development`                               | Every case in the phase (non-existent number, misspelling, self-correction, multi-suburb, units/flats, RD) is a named test before the code that satisfies it.                                                   |
-| Implementation                                                     | `incremental-implementation`, `test-driven-development` | 24 tests grew in slices: contract → exact match → misspelling → number handling → self-correction → ambiguity → units → RD → accuracy; each slice was green before the next.                                    |
-| Factual grounding                                                  | `source-driven-development`                             | R23 (FINAL_PROMPT §1) and the D8 contract (§0-F.3.3, §5.1) were read from the binding docs; the existing `nz_address.py` and the worker's LINZ loader were read before the engine was written.                  |
+| Implementation                                                     | `incremental-implementation`, `test-driven-development` | 24 tests grew in slices: contract â†’ exact match â†’ misspelling â†’ number handling â†’ self-correction â†’ ambiguity â†’ units â†’ RD â†’ accuracy; each slice was green before the next.                                    |
+| Factual grounding                                                  | `source-driven-development`                             | R23 (FINAL_PROMPT Â§1) and the D8 contract (Â§0-F.3.3, Â§5.1) were read from the binding docs; the existing `nz_address.py` and the worker's LINZ loader were read before the engine was written.                  |
 | Failures hit (suffix/unit, self-correction regex, unit preference) | `debugging-and-error-recovery`                          | Each failure was reproduced in a single test, traced to a cause (R23 violation in the parser, a greedy marker regex, an unordered candidate list) and fixed at the cause.                                       |
 | Review before commit                                               | `code-review-and-quality`, `doubt-driven-development`   | Adversarially checked the engine: the fixture uses placeholder ids, so the accuracy number is explicitly **not** claimed as LINZ accuracy; the limits are in the evidence README and in `docs/FOUNDER_TODO.md`. |
 | Docs                                                               | `documentation-and-adrs`                                | `docs/FOUNDER_TODO.md` (LINZ export entry), `docs/BUGS.md` (BUG-041..044).                                                                                                                                      |
 
 ### Result
 
-- `apps/api/app/address_correction.py`: the D8 engine — contract, fuzzy road matching, house-number
-  verification, non-existent-number correction ("1400" → 140), spoken self-correction, multi-suburb
+- `apps/api/app/address_correction.py`: the D8 engine â€” contract, fuzzy road matching, house-number
+  verification, non-existent-number correction ("1400" â†’ 140), spoken self-correction, multi-suburb
   question with options, units/flats, rural delivery numbers, and an `SqliteAddressStore` for the
   offline FTS slice.
 - `apps/api/app/nz_address.py`: `42B` is now number 42 + suffix B (R23); a unit is only ever `2/14`.
@@ -137,11 +137,11 @@ PHASE 2.3 (D8 address correction), then 2.4 (cleanup, ESLint flat config for eve
 
 ### Not verified
 
-- Accuracy against real LINZ ids: **NOT VERIFIED** — `data/linz/` is empty, so the fixture uses
+- Accuracy against real LINZ ids: **NOT VERIFIED** â€” `data/linz/` is empty, so the fixture uses
   placeholder ids. The founder entry is in `docs/FOUNDER_TODO.md`.
 - The engine is not yet exposed through the API routes (the `/v1` surface is still a stub).
 
-## 2026-10-20 — V4 bootstrap + T1 (PR #1)
+## 2026-10-20 â€” V4 bootstrap + T1 (PR #1)
 
 ### Skills applied (AGENTS.md map)
 
@@ -151,17 +151,17 @@ PHASE 2.3 (D8 address correction), then 2.4 (cleanup, ESLint flat config for eve
 | The gate wiring         | `ci-cd-and-automation`                                                       | The gates run in separate jobs so a slow one never blocks the fast feedback: floor, coverage, licences, audits, Semgrep, CodeQL (weekly + per PR), the emulator E2E, the release workflow.                                                                                                                                                                                                                            |
 | Dependency hygiene      | `source-driven-development`                                                  | The two critical advisories in the tree (`tinypool` prototype pollution through the test runner) are **fixed** by moving to `vitest@4.1.11`; the two remaining highs are build-time only, have no upstream patch, and are documented as accepted with a review date.                                                                                                                                                  |
 | Parity and the market   | `api-and-interface-design`                                                   | `docs/PARITY.md` gives every one of the 49 feature families a status and the task that delivers it, so "planned" is never a vague word.                                                                                                                                                                                                                                                                               |
-| The design contract     | `frontend-ui-engineering`                                                    | `docs/design/SYSTEM.md` fixes the tokens, the seven states, the motion budget, the contrast ratios and the screenshot gate — the mockups stay the contract.                                                                                                                                                                                                                                                           |
+| The design contract     | `frontend-ui-engineering`                                                    | `docs/design/SYSTEM.md` fixes the tokens, the seven states, the motion budget, the contrast ratios and the screenshot gate â€” the mockups stay the contract.                                                                                                                                                                                                                                                           |
 | Squads                  | `planning-and-task-breakdown`                                                | Ten squads, each with a mission, measurable targets, an evaluation dataset and a status; a squad is not "done" until its benchmark is met on the CI emulator.                                                                                                                                                                                                                                                         |
 | Security of the change  | `security-and-hardening`                                                     | The GitHub Actions are pinned to their commit SHA, the Maestro installer is downloaded and shown instead of piped into a shell, the containers run with `no-new-privileges`, the gitleaks allow-list names the exact test strings, and the SAST exclusions are listed with their reason (W3, W4).                                                                                                                     |
 | Review before merge     | `code-review-and-quality`, `doubt-driven-development`, `code-simplification` | The PR body carries the story, the research, the parity rows, the evidence links, the risk and the rollback; the code review found the Semgrep-blocking `child_process` calls, the unpinned actions and the audit findings, all fixed before the merge.                                                                                                                                                               |
-| Branch and PR           | `git-workflow-and-versioning`                                                | One feature branch, atomic Conventional Commits, no force-push, no rebase, `gh pr create` → CI → `gh pr merge --merge`.                                                                                                                                                                                                                                                                                               |
+| Branch and PR           | `git-workflow-and-versioning`                                                | One feature branch, atomic Conventional Commits, no force-push, no rebase, `gh pr create` â†’ CI â†’ `gh pr merge --merge`.                                                                                                                                                                                                                                                                                               |
 
 ### Result
 
 - **V4 bootstrap**: `CONSTRAINTS.md`, `docs/PARITY.md`, `docs/design/SYSTEM.md`, ten squad folders, the PR
   template, the floor/coverage/licence/audit gates, CodeQL, the `.semgrepignore` and the `.gitleaks.toml`.
-- **T1**: PR #1 (`feat/v4-company-bootstrap` → `main`) carries PHASE 2.1 → 3.1 and the V4 system.
+- **T1**: PR #1 (`feat/v4-company-bootstrap` â†’ `main`) carries PHASE 2.1 â†’ 3.1 and the V4 system.
 - Green on the PR: `lint, typecheck, test` (107 + 48 tests), the floor guard, the coverage ratchet
   (81.7 % overall, 88.6 % for the auth service), the licence inventory, the dependency audits, Semgrep,
   CodeQL (JS) and gitleaks.
@@ -180,18 +180,18 @@ PHASE 2.3 (D8 address correction), then 2.4 (cleanup, ESLint flat config for eve
 T2 (the Expo 58 decision with the ADR), T3 (the emulator green), T4 (the real LINZ addresses), T5
 (the offline map), T6 (the design), then T7 (the product).
 
-## 2026-10-20 — PHASE 2.4 (branch `feat/2.4-cleanup-and-lint`)
+## 2026-10-20 â€” PHASE 2.4 (branch `feat/2.4-cleanup-and-lint`)
 
 ### Skills applied (AGENTS.md map)
 
 | Step                              | Skills read and followed                              | How they changed the work                                                                                                                                                                                                                                                                                                                    |
 | --------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Removing dead code                | `deprecation-and-migration`                           | `cleanup_avd.py` (local AVD work that AGENTS.md now forbids), the duplicate `apps/mobile/test-imports.js`, the obsolete `apps/api/package.json` and the tracked `*.egg-info` were removed instead of being "kept just in case"; nothing that is still referenced was touched (`scripts/compat-test.js` still uses `compat-test-imports.js`). |
-| One lint config for the workspace | `code-simplification`                                 | Instead of five near-identical flat configs, the rules live once in `packages/eslint-config` and each package imports it — one place to change a rule.                                                                                                                                                                                       |
+| One lint config for the workspace | `code-simplification`                                 | Instead of five near-identical flat configs, the rules live once in `packages/eslint-config` and each package imports it â€” one place to change a rule.                                                                                                                                                                                       |
 | Version pinning                   | `source-driven-development`                           | Every version was resolved from the registry (with publish dates) and pinned exactly; the Expo-managed packages keep their `~` range because `npx expo install --check` is what guards them.                                                                                                                                                 |
 | Fixing the findings               | `debugging-and-error-recovery`                        | The lint failures were real code smells (unused imports, an `any` leak in `deepClone`, an `async` function without `await`, zod 4's two-argument `z.record`) and were fixed at the cause, not silenced.                                                                                                                                      |
 | Review before commit              | `code-review-and-quality`, `doubt-driven-development` | The mobile app's ~45 lint findings were **not** papered over: lint stays off there, the app now runs `typecheck` (green), and the backlog is tracked as BUG-045 next to the voice-module work (BUG-040).                                                                                                                                     |
-| Quality gate                      | `constraint-driven-development`                       | `pnpm lint` / `pnpm typecheck` / `pnpm test` now also run the Python API (ruff, mypy, pytest) — one command proves the whole workspace, and the thresholds were not lowered.                                                                                                                                                                 |
+| Quality gate                      | `constraint-driven-development`                       | `pnpm lint` / `pnpm typecheck` / `pnpm test` now also run the Python API (ruff, mypy, pytest) â€” one command proves the whole workspace, and the thresholds were not lowered.                                                                                                                                                                 |
 | Branch and push                   | `git-workflow-and-versioning`                         | Feature branch, atomic commit, merge from `origin/main`, no rebase, no force-push.                                                                                                                                                                                                                                                           |
 
 ### Result
@@ -211,9 +211,9 @@ T2 (the Expo 58 decision with the ADR), T3 (the emulator green), T4 (the real LI
 ### Next
 
 PHASE 2.5 (design to the approved mockups), then PHASE 3 (CI + Android emulator on GitHub
-Actions), then the product phases C → G.
+Actions), then the product phases C â†’ G.
 
-## 2026-10-20 — PHASE 3.1 (branch `feat/3.1-ci-and-android-e2e`)
+## 2026-10-20 â€” PHASE 3.1 (branch `feat/3.1-ci-and-android-e2e`)
 
 ### Skills applied (AGENTS.md map)
 
@@ -235,13 +235,13 @@ Actions), then the product phases C → G.
 - `.maestro/`: `login`, `today-list`, `map`, `delivered`, `compat` + `run-all.sh` (starts the auth
   service with an in-memory database so the app can really sign up).
 - `apps/mobile/app/compat.tsx`: the B.7 screen (sherpa-onnx, VisionCamera, MapLibre v11, op-sqlite,
-  expo-audio, Reanimated) — a module that cannot run yet reports `skipped` with the reason, never a
+  expo-audio, Reanimated) â€” a module that cannot run yet reports `skipped` with the reason, never a
   false `ok`.
 
 ### Not verified
 
 - The CI run and the emulator run were **not observed** from this machine (`gh` is installed but
-  not authenticated — the `GITHUB_TOKEN` is a founder item). B.7 stays NOT VERIFIED until a green run
+  not authenticated â€” the `GITHUB_TOKEN` is a founder item). B.7 stays NOT VERIFIED until a green run
   is linked from `docs/evidence/b7/README.md` and the artifacts are downloaded.
 
 ---
@@ -253,15 +253,15 @@ Actions), then the product phases C → G.
 | Branch                         | Content                                                                                                                                                                                                                                                       | Evidence                                        |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | `feat/2.1-better-auth-service` | real Better Auth (Node) service in `services/auth` (organization + expo + jwt plugins, ES256 JWKS, no default secrets, 31 tests); the fake Python auth deleted; FastAPI verifies tokens via JWKS (PyJWT, 23 tests); banned deps removed; root versions pinned | `docs/evidence/phase-2.1/`                      |
-| `feat/2.2-unistyles-themes`    | Unistyles 3 themes from the design tokens, every `var(--` gone, `global.css` deleted, emoji icons replaced, mobile jest set up (6 tests) — **banned-item grep: 0 hits**                                                                                       | `docs/evidence/phase-2.2/`                      |
+| `feat/2.2-unistyles-themes`    | Unistyles 3 themes from the design tokens, every `var(--` gone, `global.css` deleted, emoji icons replaced, mobile jest set up (6 tests) â€” **banned-item grep: 0 hits**                                                                                       | `docs/evidence/phase-2.2/`                      |
 | `feat/2.3-address-correction`  | the D8 engine (`{original, corrected, reason, confidence, needs_question, options[]}`) with the R23 suffix/unit fix and an 87-address Christchurch fixture (24 tests)                                                                                         | `docs/evidence/phase-2.3/`                      |
 | `feat/2.4-cleanup-and-lint`    | shared ESLint flat config for every package, `*.egg-info`/`.turbo` untracked, `cleanup_avd.py` and the duplicate `test-imports.js` deleted, every version pinned, `pnpm lint/typecheck/test` now cover the Python API too                                     | `docs/evidence/phase-2.4/`                      |
 | `feat/3.1-ci-and-android-e2e`  | CI workflow, Android emulator workflow with Maestro, release workflow, the B.7 compatibility screen                                                                                                                                                           | `docs/evidence/phase-3.1/`, `docs/evidence/b7/` |
 
 ### Current state of the quality gate
 
-`pnpm lint` → 4 JS packages + ruff ✅ · `pnpm typecheck` → 6 packages + mypy ✅ ·
-`pnpm test` → 107 JS/TS tests + 48 API tests ✅ · banned-item grep → 0 hits ✅
+`pnpm lint` â†’ 4 JS packages + ruff âœ… Â· `pnpm typecheck` â†’ 6 packages + mypy âœ… Â·
+`pnpm test` â†’ 107 JS/TS tests + 48 API tests âœ… Â· banned-item grep â†’ 0 hits âœ…
 
 ### In progress
 
@@ -271,17 +271,17 @@ Nothing is half-finished in the working tree: `git status` is clean on every bra
 
 1. **Watch the CI runs** on the five pushed branches and merge them into `main` once they are green
    (`main` must stay green; the merge is the founder's call because `gh` is not authenticated here).
-2. **PHASE 2.5** — design to the approved mockups: Figtree font, big numbers, 72 px primary buttons,
+2. **PHASE 2.5** â€” design to the approved mockups: Figtree font, big numbers, 72 px primary buttons,
    the SVG icon set (no emoji), the calm night theme. The mockups themselves are not in the repository,
-   so the written spec in FINAL_PROMPT §8 is the contract; the founder's visual review stays
-   asynchronous (§8, `docs/FOUNDER_TODO.md`).
-3. **PHASE 3 follow-up** — link the green emulator run and the artifacts into
+   so the written spec in FINAL_PROMPT Â§8 is the contract; the founder's visual review stays
+   asynchronous (Â§8, `docs/FOUNDER_TODO.md`).
+3. **PHASE 3 follow-up** â€” link the green emulator run and the artifacts into
    `docs/evidence/b7/README.md`, then B.7 can be marked PASS.
-4. **The product itself**, in the order of `docs/KICKOFF_PROMPT_EN.md` §12: maps (Canterbury PMTiles)
-   → sync (op-sqlite event log) → routing (Valhalla + VROOM + OR-Tools) → door memory → dictation
-   mode → live voice agent → the full voice tool catalogue → driving mode → OCR label scan → POD
-   photos → optional SMS → IRD logbook PDF → web dashboard → admin → Stripe NZD → team features →
-   NZ Privacy Act PIA → store assets → acceptance test → `docs/HANDOVER.md`.
+4. **The product itself**, in the order of `docs/KICKOFF_PROMPT_EN.md` Â§12: maps (Canterbury PMTiles)
+   â†’ sync (op-sqlite event log) â†’ routing (Valhalla + VROOM + OR-Tools) â†’ door memory â†’ dictation
+   mode â†’ live voice agent â†’ the full voice tool catalogue â†’ driving mode â†’ OCR label scan â†’ POD
+   photos â†’ optional SMS â†’ IRD logbook PDF â†’ web dashboard â†’ admin â†’ Stripe NZD â†’ team features â†’
+   NZ Privacy Act PIA â†’ store assets â†’ acceptance test â†’ `docs/HANDOVER.md`.
 
 ### Context notes for the next session
 
@@ -289,10 +289,10 @@ Nothing is half-finished in the working tree: `git status` is clean on every bra
   broken. The repo-local `node_modules/.bin/pnpm` shim was repaired with `node node_modules/pnpm/install.js`.
 - The workspace `node_modules` had to be deleted and reinstalled once (see BUG-041): a half-deleted
   tree made pnpm resolve the wrong versions.
-- `data/linz/` is still empty → the D8 accuracy against real LINZ ids is NOT VERIFIED.
-- `gh` is not authenticated → no PR, no run link, no artifact download from this machine.
+- `data/linz/` is still empty â†’ the D8 accuracy against real LINZ ids is NOT VERIFIED.
+- `gh` is not authenticated â†’ no PR, no run link, no artifact download from this machine.
 
-## 2026-10-20 — session handoff (the newest section)
+## 2026-10-20 â€” session handoff (the newest section)
 
 ### Where the work stands
 
@@ -369,7 +369,7 @@ Nothing is half-finished in the working tree: `git status` is clean on every bra
 - 10 squad `decisions.md` files rewritten as decision tables with date, candidate, source file and status.
 - Nothing in `docs/PARITY.md` was changed: a row may only leave `Planned` with evidence in `docs/evidence/`, and no evidence exists for these rows yet.
 
-## 2026-10-20 — the research sprint (V4 §12) and the scorecard (V4 §12.8)
+## 2026-10-20 â€” the research sprint (V4 Â§12) and the scorecard (V4 Â§12.8)
 
 ### Skills applied
 
@@ -402,24 +402,24 @@ Nothing is half-finished in the working tree: `git status` is clean on every bra
   first honest fact.
 - The 6-month star trend of every candidate (the token has no stargazer scope).
 
-## 2026-10-20 — read of the new execution contract (MASTER_EXECUTION)
+## 2026-10-20 â€” read of the new execution contract (MASTER_EXECUTION)
 
-I read docs/MASTER_EXECUTION.md (§0 the CEO loop, §1 precedence, §2 the founder decisions D23/D24,
-§3 the real state, §4 the P1-P7 plan, §5 the autopilot rules, §6 the Definition of Done, §7 the
-senior-review fixes, §8 the founder directives, §9 touch-complete parity and the innovation backlog,
-§10 the conflict resolution), docs/SAAS_CHECKLIST.md (the security squad as a merge gate, the
+I read docs/MASTER_EXECUTION.md (Â§0 the CEO loop, Â§1 precedence, Â§2 the founder decisions D23/D24,
+Â§3 the real state, Â§4 the P1-P7 plan, Â§5 the autopilot rules, Â§6 the Definition of Done, Â§7 the
+senior-review fixes, Â§8 the founder directives, Â§9 touch-complete parity and the innovation backlog,
+Â§10 the conflict resolution), docs/SAAS_CHECKLIST.md (the security squad as a merge gate, the
 driver-app runtime essentials, the SaaS business essentials and the "SaaS brain" automation, with the
 rule that every line becomes a task), docs/COVERAGE_MAP.md (the twelve coverage areas and the
-audit rule that runs at the start of every phase) and docs/KICKOFF_V4_EN.md §13 (the founder
+audit rule that runs at the start of every phase) and docs/KICKOFF_V4_EN.md Â§13 (the founder
 directives after the research sprint: the depth audit, the Spoke teardown, online AND offline, the
 voice model path and the per-module application). From here docs/MASTER_EXECUTION.md is my only
-instruction file; the earlier prompts are background, and the conflicts it lists in §10 are applied
-(Expo SDK 58 per ADR-002, mutation score >= 80% on the core modules, the voice weights per V4 §13.6
+instruction file; the earlier prompts are background, and the conflicts it lists in Â§10 are applied
+(Expo SDK 58 per ADR-002, mutation score >= 80% on the core modules, the voice weights per V4 Â§13.6
 and D23 with ADR-004 updated accordingly, and the Android E2E triggers reduced to PRs to main,
 nightly and manual). The merged main brought the MASTER_EXECUTION contract, the SaaS checklist,
 the coverage map and the approved mockups; nothing was dropped in the merge.
 
-## 2026-10-20 — handoff (P1 in progress)
+## 2026-10-20 â€” handoff (P1 in progress)
 
 ### Where the company stands
 
@@ -430,7 +430,7 @@ the coverage map and the approved mockups; nothing was dropped in the merge.
   remaining unknown.
 - **T2/T4** (eat/t2-expo-58-decision): ADR-002 (Expo 58), ADR-004 (voice licences, updated for
   D23), the LINZ fetcher, 656,044 real Canterbury addresses indexed and the D8 accuracy at
-  **96.9 %** (1745/1800) — report in docs/evidence/phase-2.3/linz-accuracy.md. Its PR is not open yet.
+  **96.9 %** (1745/1800) â€” report in docs/evidence/phase-2.3/linz-accuracy.md. Its PR is not open yet.
 - The research sprint (16 areas, 5 clean-room studies, the scorecard, the task register) is merged into
   PR #1.
 
@@ -440,16 +440,16 @@ the coverage map and the approved mockups; nothing was dropped in the merge.
    --job 118618431796 --log-failed (the job id is in the run above). The run now leaves the
    diagnostics: the resumed activity, the app pid and the logcat in docs/evidence/b7/. The likely
    cause is that the app never renders (the AuthNavigator returns null while the session request is
-   in flight, and the auth service may not be reachable on 10.0.2.2:3001 at that moment) — the
+   in flight, and the auth service may not be reachable on 10.0.2.2:3001 at that moment) â€” the
    compat flow then waits for compat-screen until its 60 s timeout.
 2. **Make the flows honest about the app**: the login screen must render even when the session
    request fails (the AuthProvider should time out the pending state), and the flows should assert on
    text, not only on testIDs.
 3. **Then**: artifacts into docs/evidence/b7/, B.7 PASS in docs/PROGRESS.md, merge PR #1, open
    and merge the T2/T4 PR, and continue with P2 (the research depth audit, the Spoke teardown and
-   the eval sets) per docs/MASTER_EXECUTION.md §4.
+   the eval sets) per docs/MASTER_EXECUTION.md Â§4.
 
-## 2026-10-20 — handoff 2 (P1: the emulator)
+## 2026-10-20 â€” handoff 2 (P1: the emulator)
 
 ### What the failed run actually showed (the diagnosis is done)
 
@@ -475,7 +475,7 @@ If the flows still fail, the artifacts carry the answer:
 gh run download 39427774817 --name maestro-artifacts --dir .local-backup/maestro (the screenshots
 are in <flow>/screenshots/, and maestro-logcat.txt holds the app's logcat).
 
-### The next actions, in order (MASTER_EXECUTION §4)
+### The next actions, in order (MASTER_EXECUTION Â§4)
 
 1. **P1**: emulator green -> the artifacts into docs/evidence/b7/ -> B.7 PASS in
    docs/PROGRESS.md -> merge PR #1 -> open and merge the T2/T4 PR.
@@ -492,34 +492,34 @@ Everything is committed and pushed on eat/v4-company-bootstrap (PR #1) and
 
 ---
 
-## Session 2026-10-21 — the P1 emulator root-fix, the P2 research depth, two security holes
+## Session 2026-10-21 â€” the P1 emulator root-fix, the P2 research depth, two security holes
 
 **Skills applied:** using-agent-skills, debugging-and-error-recovery, test-driven-development,
 source-driven-development, incremental-implementation, code-review-and-quality,
 doubt-driven-development, security-and-hardening, documentation-and-adrs, constraint-driven-development.
 
-### The state check at the start of the session (MASTER_EXECUTION §5)
+### The state check at the start of the session (MASTER_EXECUTION Â§5)
 
 - PR #1 open on `feat/v4-company-bootstrap`, the last Android E2E run red at the Gradle step.
 - The last E2E run (39435961657) failed in 18m10s: `Cannot find module 'babel-preset-expo'`.
-- The founder's new P1 (MASTER_EXECUTION §4) landed in `605985e`: rebuild the pipeline at the root,
+- The founder's new P1 (MASTER_EXECUTION Â§4) landed in `605985e`: rebuild the pipeline at the root,
   triggers = PR to main + nightly + manual, no push, a dedicated PR, no pushes mid-run.
 
 ### What the evidence proved, blocker by blocker (each one fixed at the root)
 
-1. **`Cannot find module 'babel-preset-expo'`** — the release bundle runs Metro and
+1. **`Cannot find module 'babel-preset-expo'`** â€” the release bundle runs Metro and
    `babel-preset-expo` was only a transitive dependency, invisible in pnpm's isolated layout.
    It is now a direct dev dependency of the mobile app.
-2. **`Unable to resolve module @courier/design-tokens/themes`** — the package advertised
+2. **`Unable to resolve module @courier/design-tokens/themes`** â€” the package advertised
    `dist/*.mjs` files it never produced, the monorepo had no Metro configuration, and the CI
    never built the workspace packages. Fixed: a real exports map, `apps/mobile/metro.config.js`
    (the workspace root in `watchFolders`, the package exports map on) and a build step for
    `@courier/design-tokens` before the Gradle bundle.
-3. **`the resolution ... is dist/themes.js, however this file does not exist`** — the proof that
+3. **`the resolution ... is dist/themes.js, however this file does not exist`** â€” the proof that
    the build step was missing from the branch. Added, and the APK now builds (15m49s, pass).
-4. **The release APK started the dev launcher and died** — `expo-dev-client` was a dependency
+4. **The release APK started the dev launcher and died** â€” `expo-dev-client` was a dependency
    and an app.json plugin. Removed: the app runs the bundle it ships with.
-5. **The crash was invisible** — the main logcat buffer was overwritten by the polling noise.
+5. **The crash was invisible** â€” the main logcat buffer was overwritten by the polling noise.
    The crash buffer is now dumped next to it.
 
 ### The pipeline (PR #2, `feat/p1-emulator-pipeline`)
@@ -554,7 +554,7 @@ and dates, the 13-item shortlist, the top-5 deep review, the benchmarks (UNVERIF
 eval set exists), the "what we are missing" rows, the decision, the risks and an honest "what
 we could not verify". The 259 gap rows are merged into `docs/PARITY.md`.
 
-### The next actions, in order (MASTER_EXECUTION §4)
+### The next actions, in order (MASTER_EXECUTION Â§4)
 
 1. **P1**: the emulator run in flight on PR #2 -> the artifacts into `docs/evidence/b7/` ->
    B.7 PASS -> merge PR #2 (the pipeline) and PR #1 (the product) -> open and merge the T2/T4 PR.
@@ -862,7 +862,7 @@ doubt-driven-development.
 
 | Step                           | Skills read and followed                                  | How they changed the work                                                                                                                                                                                                                                                      |
 | ------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Session start, skill selection | `using-agent-skills`, `context-engineering`               | Read the contract first (`docs/design/SYSTEM.md`, `docs/KICKOFF_V4_EN.md` §5, the two research files) and worked from it, not from the code as it was.                                                                                                                         |
+| Session start, skill selection | `using-agent-skills`, `context-engineering`               | Read the contract first (`docs/design/SYSTEM.md`, `docs/KICKOFF_V4_EN.md` Â§5, the two research files) and worked from it, not from the code as it was.                                                                                                                         |
 | The tokens                     | `constraint-driven-development`, `documentation-and-adrs` | The contract was not weakened to make a change pass: where the palette could not reach 4.5:1, the palette changed and the measured ratios were written down.                                                                                                                   |
 | The contrast gate              | `test-driven-development`                                 | `contrast.test.ts` measures every pair of the three themes and fails the build below the bar; the numbers in `themes.ts` are the output of that test.                                                                                                                          |
 | The motion                     | `source-driven-development`, `test-driven-development`    | The Reanimated 4, gesture-handler and expo-haptics APIs were read in the installed packages (the spring contract, the `useReducedMotion` caveat, the haptic enums) instead of from memory; the rules live in `src/motion/transitions.ts` and are unit-tested without a device. |
@@ -1091,25 +1091,100 @@ doubt-driven-development.
 - **The mobile app is not linted in CI** (no lint script and no link to the shared eslint config), and it carries pre-existing eslint errors of the same class. The new files were checked by hand.
 - **A single mobile test file cannot be run on its own** (`@babel/runtime` is in the store but not hoisted): the whole suite has to run. That is pre-existing and not from this step.
 - **The coverage of the auth service was not measured in this step**; the floor says it must not fall below 81 %, and the next coverage run has to prove it.
+## 2026-10-22 - MASTER_EXECUTION section 12 - Courier Voice (D23): the shift companion
 
-### The coverage audit of the new sections, and what they changed
+### Skills applied (AGENTS.md map)
 
-I applied the new binding sections of MASTER_EXECUTION (11 Courier Maps, 12
-Courier Voice, 13 the Design Studio, 14 the complete sign-in, 15 StoreReady),
-ran the coverage audit against them and turned every item into a task in
-PROGRESS.md. The sections are not a document change: the map modes, the 3D
-buildings, the voice service, the design studio, the sign-in and the release
-checker are all built, tested and committed on the product branch (the
-sections 11-15 work: 221 mobile, 432 token, 166 voice, 140 API and 59 auth
-tests are green, and the licence ledger, the floor guard and the store
-readiness check pass). What the audit found is narrower than I expected: only
-two pieces are left - the map pack itself (it needs the LINZ outlines and the
-OSM extract downloaded) and the optional on-device brain pack (it needs a
-commercially licensed 1-4B model) - and both are a data and a licence step,
-not a code step. The founder's three decisions are in FOUNDER_TODO.md and
-nothing is blocked on them: the look (A, B or C), the store ids and the
-signing, and the background-location video.
+| Step | Skills read and followed | How they changed the work |
+| ---- | ------------------------ | ------------------------ |
+| Session start, skill selection | `using-agent-skills`, `context-engineering` | MASTER_EXECUTION section 12 (the binding behaviour spec), section 7 (the founder's fixes), section 10 (the conflict rules), DECISIONS D22-D25 and the ADR-004 ledger were read first; the voice squad's own decisions (`OWN-MODEL.md`, `EVAL.md`) and the two research notes came next, so nothing was invented on top of them. |
+| The shape of the service | `api-and-interface-design`, `source-driven-development` | One port (`VoiceEngine`: capabilities, transcribe, synthesise, reason), two engines, one router, four HTTP calls and two publications (the engines and the licence ledger). The versions and the licences of the libraries were read from the installed metadata of the tree, not from memory; the model licences come from the cards and the licence files already recorded in ADR-004 and the research. |
+| The behaviour | `test-driven-development`, `incremental-implementation` | The rules were written as code with tests beside them: the eight word rule, the barge-in, the silence timeout, the proactive wording, the small talk bounds, the corrections, the memory and the offline switch. The harness runs the three scripted shifts against the service and scores them against the acceptance counts of `EVAL.md`. |
+| The screens | `frontend-ui-engineering` | The morning brief card and the voice settings follow the contract of the app: one card, the numbers first, plain NZ English, no emoji, every control with a role and a label, and the touch path works without the voice. |
+| The licences | `constraint-driven-development`, `documentation-and-adrs` | Every model and every library of the voice service is in `docs/LICENSES.md` with its provenance and its obligations, the blocked weights are blocked in code, and the service publishes the ledger itself. The ledger lives in `scripts/check-licenses.mjs`, so the next run of the gate keeps it. |
+| Before the merge | `code-review-and-quality`, `doubt-driven-development`, `code-simplification`, `code-review-and-quality` | The diff was checked for the floor rules (no `any`, no skipped test, no suppression, no empty catch), the coverage of the new service is measured and ratcheted (92.4 % against a floor of 85 %), and every number that could not be measured is written down as **not measured**. |
 
-Both branches are now merged with main (a merge, never a rebase) with D23 and
-D24 added to DECISIONS.md and the mockups README keeping main's inventory
-note at the top and the eight screen specifications below it.
+### What changed
+
+- `services/courier-voice/` - the service: FastAPI, the JWKS principal of the Courier API, the run read from the Courier API with the courier's own token.
+  - `app/engine.py` - the `VoiceEngine` port: `capabilities`, `transcribe`, `synthesise`, `reason`. The seam D23 asks for.
+  - `app/engines/on_device.py` - the on-device engine: the phone holds sherpa-onnx (Apache-2.0), the Kokoro voice pack (Apache-2.0) and the Smart Turn v3 end-of-turn model (BSD-2-Clause); the service answers from the run the phone has.
+  - `app/engines/omniroute.py` - the server brain behind the OmniRoute gateway (MIT, D25): the provider allow-list travels with the call, an empty allow-list means the brain is unavailable, a provider that is not allowed is refused, the cost guard caps the day, and the logs hold no transcript, no address and no name.
+  - `app/engines/router.py` - the switch: offline, online or automatic, with a fallback the courier does not notice and one sentence ("I need the internet for that") when a capability is missing.
+  - `app/turns.py` - the turn taking: the wake word or the earbud opens the turn, the barge-in stops the reply for words and for commands but not for the fillers, and the silence timeout closes a turn that never gets a word.
+  - `app/safety.py` - the driving-safe rules in code: eight words while moving, never a screen tap while moving, the quiet mode, the essentials mode, a call wins, the music and the navigation make the voice wait.
+  - `app/proactive.py` - the proactive lines with the trigger and the exact wording of MASTER_EXECUTION section 12 (the morning brief, the next stop, the approach, the hazard, the parcel, the schedule, the break, the route change, the end of the day).
+  - `app/conversation.py` - the questions about the run and the courier's own data, the follow-ups and the corrections.
+  - `app/smalltalk.py` - the bounded small talk: what it answers, what it refuses and what needs the internet.
+  - `app/memory.py` - the day's context, the preferences and the learned runs (on-device first), the privacy controls and the forget-me.
+  - `app/licences.py` - the ledger as a shipped surface; an unknown or non-commercial licence makes an engine unavailable, with the reason.
+  - `app/eval_harness.py` - the harness of the shift simulations and the three result files of the evaluation contract.
+- `apps/mobile/src/voice/` - the app side, extended and not replaced: `courierVoiceClient.ts` (the client, the timeouts, the retry, the translation of the service's actions into the commands of the app), `settings.ts` (the settings of the courier, validated and kept per driver), `useCourierVoice.ts` (the wiring of the service, the on-device speech and the command channel, with the local parser as the offline path), `MorningBriefCard.tsx` (the card of the brief).
+- `apps/mobile/src/voice/VoiceService.ts` - the command catalogue grew with the tools of the product (`add_stop`, `start_break`, `end_break`, `add_location_note`, `set_quiet_mode`, `set_verbosity`), so a sentence the service understands does something on the phone.
+- `apps/mobile/app/(tabs)/index.tsx` and `settings.tsx` - the morning brief on the way screen, the voice settings (the verbosity, the voice, the speed, the quiet mode, the essentials mode) on the settings screen.
+- `docs/squads/voice/eval/manifest/shift_sims.json` - the shift simulations: three scripted shifts with the voice and the noise of a real day, with the expectation of every turn.
+- `docs/squads/voice/eval/` - the README and the slices of the set; `scripts/check-voice-eval.mjs` checks the simulations too.
+- `docs/adr/ADR-007-courier-voice-service.md` - the ADR of the service and of the engine interface; `docs/DECISIONS.md` D23 carries the note of what was built.
+- `docs/LICENSES.md` - the models and the libraries of the voice service, with their provenance and their obligations; the blocked weights are named as blocked.
+- `docs/squads/voice/README.md` and `STATUS.md` - the squad's status with the numbers and the list of what is not measured.
+- The gates: `package.json` (the voice service is in `pnpm test`, `pnpm lint` and `pnpm typecheck`), `.github/workflows/ci.yml` (the dependencies of the service are installed), `scripts/run-coverage.mjs` and `scripts/check-coverage.mjs` (the coverage of the voice service is measured and ratcheted at 85 %), `.gitignore`.
+
+### The gates
+
+- `uv run --directory services/courier-voice pytest -q` - 166 tests, all green (the contracts, the eight word rule, the barge-in, the silence timeout, the proactive wording, the settings, the memory, the offline switch, the licence ledger, the gateway policy, the cost guard, the token, the harness).
+- `uv run --directory services/courier-voice ruff check .` and `mypy .` - clean.
+- The harness over the shift simulations - 24 turns, the intent accuracy 100 % (M3 >= 97 %), the false actions 0 % (M9 <= 1 %), the eight word rule 100 %, the latency of the service 0.0 ms p95; the metrics that need the audio or a device are written down as not measured.
+- `pnpm --filter mobile test` - 22 suites, 211 tests, all green (the new ones: the client of the service and the voice settings).
+- `pnpm typecheck` and `pnpm lint` - clean for the six packages, the API and the voice service.
+- `node scripts/check-licenses.mjs` - 31 packages, no forbidden licence; the ledger of the voice service is in `docs/LICENSES.md`.
+- `node scripts/check-voice-eval.mjs` - 600 scripts, 840 planned files, 240 addresses, 3 shift simulations.
+- `node scripts/check-floor.mjs` - clean.
+- `node scripts/run-coverage.mjs` - the voice service at 92.4 % against a floor of 85 %; every other threshold is met.
+
+### What was not verified
+
+- **The voice has not been heard.** No audio was generated: the on-device pack (Kokoro int8) and the wake model are not in the tree, so the wake word, the barge-in on a real recording, the WER and the battery are not measured. The turn taking is proven by the state machine and the simulations, not by a microphone.
+- **The metrics of the audio are not measured.** M1 (the word error rate), M2 (the address accuracy) and M8 (the intelligibility of the voice) need the audio of the set, which is not generated yet; M4 and M5 need the non-speech corpus, which does not exist; M7 (the battery) needs a device. The harness says so in every run instead of claiming a number.
+- **The service has never run against a real gateway.** OmniRoute is not deployed yet: the calls are made against a fake gateway in the tests, with the D25 policy (the allow-list, the refusal of an unknown provider, the cost guard, the PII-safe logs) proven as behaviour and not as a live integration.
+- **The run of the day has never come from the live API.** The Courier API's `GET /shifts/{id}/stops` is still a stub, so the service falls back to the phone's own context; the client and the fallback are tested, the live read is not.
+- **The app has not spoken to the service on a device.** The client, the settings and the wiring are unit-tested with a fake fetch; the token, the timeout and the retry on a real network are not.
+- **The on-device LLM pack (the optional offline brain of the spec) is not built.** The port is ready for it; the pack is the next piece of the voice squad, with the licences in `OWN-MODEL.md`.
+- **The design lab's own tests were red in the middle of this step** (another squad's files were being changed in the same tree) and are green again now; nothing of the voice touches them.
+
+## 2026-10-22 - MASTER_EXECUTION §13: the Design Studio (research, bench, three directions)
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+|---|---|---|
+| The scope of §13 (research, bench, three directions, the founder's pick) | `using-agent-skills`, `context-engineering`, `planning-and-task-breakdown` | Split the section into four independently verifiable pieces: the evidence (research), the bench, the three screens, and the founder's entry. Every piece has its own command that proves it. |
+| The evidence (89 repositories, 56 packages, 31 reference URLs) | `source-driven-development` | Every number came from the live GitHub API, the npm registry or the product's own site on 2026-10-22, through scripts that are in the repository (`scripts/fetch-design-evidence.ps1`, `scripts/fetch-design-npm-evidence.ps1`, `scripts/check-design-reference-urls.ps1`). Nothing was carried over from memory; two URLs that did not resolve were removed and replaced. |
+| The anti-"AI look" rules as a gate | `constraint-driven-development` | The rules of §13.2 became a checklist per direction, and the "no emoji" rule became a test that fails the build. The bar was not weakened to make a change pass. |
+| The three themes in the token package | `test-driven-development`, `api-and-interface-design` | The palettes were measured before they were written: every pair of every theme is asserted by `packages/design-tokens/src/contrast.test.ts` (371 tests per palette, six palettes), and the type scale is asserted by `packages/design-tokens/src/directions.test.ts`. The freight orange was darkened from `#C2410C` to `#B03A0A` because the badge contrast was 4.31:1. |
+| The three screens | `frontend-ui-engineering`, `incremental-implementation` | One screen per direction, built on the tokens, the shared components (`Button`, `Badge`, the voice bar) and Reanimated 4, each with its labels, its roles and its testIDs. A theme scope (`ThemeScope`) hands a palette to the shared components without touching the theme the courier chose. |
+| The motion of each direction | `source-driven-development`, `code-simplification` | The entering animation is a function of the direction and of the reduce-motion setting; "reduce motion" makes it instant and never removes it. The durations come from the token package. |
+| The bench of 56 libraries | `doubt-driven-development`, `observability-and-instrumentation` | Every number that could not be measured is marked UNVERIFIED - every frame rate, because there is no emulator on this machine. The npm unpacked size is labelled a proxy. The bench is generated from the registry snapshot, so a version cannot be wrong without the snapshot changing. |
+| The founder's entry | `documentation-and-adrs` | The ask is one clear question ("pick A, B or C") with the three paths to look at; nothing is blocked while the answer is pending. |
+| Before the merge | `code-review-and-quality`, `git-workflow-and-versioning` | `pnpm typecheck`, `pnpm lint`, `pnpm test` and the design-tokens tests were run; the diff was checked for raw hex in components, for emoji and for the banned dependencies. |
+
+### What was done
+
+- `docs/design/RESEARCH.md` - 83 evidence cards (stars, last release and its date, licence, maintenance, why it is in the pool; 89 repositories in the snapshot), the reference products with what to take and what to avoid, and the anti-"AI look" rules applied to each of them. The tables are generated from `docs/design/evidence/`.
+- `docs/design/BENCH.md` - 56 libraries scored on ten dimensions, with the recommendation, the registry facts and UNVERIFIED wherever a number could not be measured.
+- `docs/design/DIRECTIONS.md` - the three directions in full: the idea, the type scale, the colour roles, the spacing, the motion character, the icon set, the accessibility notes and the anti-"AI look" checklist.
+- `packages/design-tokens/src/themes.ts` - three new light palettes (`roadbook`, `beacon`, `freight`), every pair measured; `packages/design-tokens/src/directions.ts` - the three type scales, the spacing and the motion character.
+- `apps/mobile/app/design/` - the picker and the three screens as real routes; `apps/mobile/src/design/` - the screens, the shared run content, the voice bar and the entering animation.
+- `docs/design/directions/` - the renders of the three screens (HTML, the real type scale, the real tokens). The device screenshots come from the emulator run.
+- `docs/FOUNDER_TODO.md` - the founder's pick: A, B or C, with the three paths.
+
+### The gates
+
+- `pnpm --filter @courier/design-tokens test` - 432 tests, all green (371 contrast assertions per palette, the direction contract, the token contract).
+- `pnpm --filter mobile test` - 22 suites, 211 tests, all green (20 of them new: the three directions).
+- `pnpm typecheck` and `pnpm lint` - clean for the six packages, the API and the voice service.
+
+### What was not verified
+
+- **No frame rate was measured.** There is no emulator on this machine, so every fps cell of the bench is UNVERIFIED and the performance budget of `CONSTRAINTS.md` stays open for this work. The emulator run of §13.5 fills it in.
+- **The device screenshots of the three directions do not exist yet.** The renders in `docs/design/directions/` are HTML, drawn from the same tokens; the day/night, small/large and 200 % text screenshots come from the CI emulator run.
+- **The founder has not picked yet.** Two of the three directions will not survive the pick, so the screen inventory of §13.5 is the next step and it waits for the answer.

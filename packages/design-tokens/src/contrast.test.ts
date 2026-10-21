@@ -165,8 +165,15 @@ describe('the night theme, the driving screen', () => {
 });
 
 describe('the contrast table', () => {
-  it('prints the measured ratios of the three palettes', () => {
-    const names: ThemeName[] = ['day', 'night', 'highContrast'];
+  it('prints the measured ratios of every palette', () => {
+    const names: ThemeName[] = [
+      'day',
+      'night',
+      'highContrast',
+      'roadbook',
+      'beacon',
+      'freight',
+    ];
 
     for (const name of names) {
       const theme = themes[name];
@@ -204,6 +211,33 @@ describe('the contrast table', () => {
       console.log(`\n===== ${name} =====\n${rows.join('\n')}`);
     }
 
-    expect(names).toHaveLength(3);
+    expect(names).toHaveLength(6);
+  });
+});
+
+describe('the three Design Studio directions', () => {
+  it('are light palettes, because the day is the default', () => {
+    for (const name of ['roadbook', 'beacon', 'freight'] as const) {
+      const theme = themes[name];
+      const luminance = relativeLuminance(theme.colors.background);
+
+      // The night theme is the dark one; a direction that is dark by default
+      // breaks the founder's rule that the day is the identity.
+      expect(luminance, `${name} is not a light palette`).toBeGreaterThan(0.5);
+      expect(theme.colors.background).not.toBe('#000000');
+    }
+  });
+
+  it('are three different palettes, not three colours of the same one', () => {
+    const palettes = (['roadbook', 'beacon', 'freight'] as const).map((name) =>
+      [
+        themes[name].colors.background,
+        themes[name].colors.surface,
+        themes[name].colors.brandPrimary,
+        themes[name].colors.textPrimary,
+      ].join(' '),
+    );
+
+    expect(new Set(palettes).size).toBe(3);
   });
 });
