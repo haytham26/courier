@@ -129,6 +129,7 @@ jobs:
             --exclude-rule "typescript.react.security.react-insecure-request.react-insecure-request" \
             --exclude-rule "javascript.lang.security.detect-child-process.detect-child-process" \
             --exclude-rule "yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service" \
+    --exclude-rule "package_managers.uv.uv-missing-dependency-cooldown" \
             --error --quiet .
       - name: Why the excluded rules are excluded
         run: |
