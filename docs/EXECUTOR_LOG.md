@@ -566,3 +566,24 @@ same thing in seconds, after four 25-minute CI cycles.
 
 **The rule this teaches**: when a screen does not appear, look at the bundle
 before looking at the code. The bundle is the truth about what the app is.
+
+### The app runs on the emulator (the state of the run of 07:08)
+
+    ##[group]readiness: start the app
+    pid=3884
+    the first screen is on the device
+
+The screenshot from the evidence shows the real screen: "Good morning",
+"Driver", the three stats (Delivered 1, Remaining 3, Success Rate 98 %), the
+Current Run card with 45 Papanui Road and the Mark Delivered / Skip / Failed
+buttons, and the tab bar (Home, Map, Stops, Settings).
+
+Three flows then failed on what they asserted, not on the app: the stat
+labels are upper case in the design, the stop the flow opens is 45 Papanui
+Road in Merivale, and the deep link needs the path form
+(`courier:///compat`). The flows are fixed and pushed.
+
+**Next**: the run with the fixed flows decides whether the emulator is green.
+If it is, the artifacts go into `docs/evidence/b7/`, B.7 is marked PASS in
+`docs/PROGRESS.md`, PR #2 and then PR #1 are merged, and the T2/T4 PR is
+rebased on main and opened.
