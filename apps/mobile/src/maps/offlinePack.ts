@@ -45,6 +45,50 @@ export const PACK_SOURCE_DIRECTORY = 'assets/maps';
 export const PACK_MANIFEST_SCHEMA = 'courier-copilot/offline-pack';
 
 /**
+ * The licence of one input that went into the 3D buildings.
+ *
+ * Every input is recorded, not only the first one: the buildings come from
+ * the LINZ outlines (CC BY 4.0) **and** from the OpenStreetMap levels
+ * (ODbL), and the app has to be able to show both credits with no network.
+ */
+export interface PackBuildingInput {
+  /** The id of the input in the build script. */
+  id: string;
+  /** Where the input came from. */
+  source: string;
+  /** The licence of the input. */
+  licence: string;
+  /** Where that licence is published. */
+  licenceUrl: string;
+  /** The credit the input requires. */
+  attribution: string;
+}
+
+/**
+ * What the pack says about the 3D buildings it carries.
+ *
+ * The outlines come from the LINZ NZ Building Outlines (CC BY 4.0) and the
+ * building levels from OpenStreetMap (ODbL), and the licence of every input
+ * is written into the pack so the app can show the credit without a network.
+ */
+export interface PackBuildings {
+  /** The outlines are in the pack, so the buildings can stand up. */
+  present: boolean;
+  /** Where the outlines came from. */
+  source: string;
+  /** The licence of the outlines. */
+  licence: string;
+  /** Where that licence is published. */
+  licenceUrl: string;
+  /** The credit the app shows. */
+  attribution: string;
+  /** How many buildings the pack carries. */
+  count: number;
+  /** The licence of every input that went into the buildings. */
+  inputs?: PackBuildingInput[];
+}
+
+/**
  * The manifest of one offline pack.
  *
  * `sourceLicence` and `attribution` are the strings the pack build writes
@@ -64,6 +108,8 @@ export interface OfflinePackManifest {
   maxZoom: number;
   bytes: number;
   sha256: string;
+  /** The 3D buildings the pack carries, when it carries any. */
+  buildings?: PackBuildings;
 }
 
 export type PackManifestError =
@@ -227,6 +273,17 @@ export function parsePackManifest(raw: string): PackManifestResult {
     };
   }
 
+  // The buildings section is optional: a pack without 3D buildings is a pack
+  // from before the buildings were baked in, and it is still a good pack.
+  const buildings = readBuildings(parsed.buildings);
+  if (buildings === null) {
+    return {
+      ok: false,
+      error: 'bad-field',
+      detail: 'the manifest has a buildings section of the wrong shape',
+    };
+  }
+
   return {
     ok: true,
     manifest: {
@@ -242,8 +299,98 @@ export function parsePackManifest(raw: string): PackManifestResult {
       maxZoom,
       bytes,
       sha256,
+      ...(buildings ? { buildings } : {}),
     },
   };
+}
+
+/**
+ * Reads the buildings section of a manifest.
+ *
+ * It returns null when the section is there but is not a buildings section,
+ * and undefined when the pack simply carries none.
+ */
+function readBuildings(value: unknown): PackBuildings | null | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const present = value.present;
+  const source = readString(value, 'source');
+  const licence = readString(value, 'licence');
+  const licenceUrl = readString(value, 'licenceUrl');
+  const attribution = readString(value, 'attribution');
+  const count = readNumber(value, 'count');
+
+  if (
+    typeof present !== 'boolean' ||
+    source === null ||
+    licence === null ||
+    licenceUrl === null ||
+    attribution === null ||
+    count === null
+  ) {
+    return null;
+  }
+
+  const inputs = readBuildingInputs(value.inputs);
+  if (inputs === null) {
+    return null;
+  }
+
+  return {
+    present,
+    source,
+    licence,
+    licenceUrl,
+    attribution,
+    count,
+    ...(inputs ? { inputs } : {}),
+  };
+}
+
+/**
+ * Reads the licence of every input of the buildings.
+ *
+ * It returns null when the list is there but is not a list of inputs, and
+ * undefined when the pack was built before the inputs were recorded.
+ */
+function readBuildingInputs(value: unknown): PackBuildingInput[] | null | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const inputs: PackBuildingInput[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) {
+      return null;
+    }
+    const id = readString(entry, 'id');
+    const source = readString(entry, 'source');
+    const licence = readString(entry, 'licence');
+    const licenceUrl = readString(entry, 'licenceUrl');
+    const attribution = readString(entry, 'attribution');
+    if (
+      id === null ||
+      source === null ||
+      licence === null ||
+      licenceUrl === null ||
+      attribution === null
+    ) {
+      return null;
+    }
+    inputs.push({ id, source, licence, licenceUrl, attribution });
+  }
+
+  return inputs;
 }
 
 /**

@@ -63,6 +63,8 @@ const mobileDeps = [
   '@op-engineering/op-sqlite',
   'better-auth',
   '@better-auth/expo',
+  '@better-auth/passkey',
+  '@simplewebauthn/browser',
   'expo-audio',
   'expo-secure-store',
   '@expo/vector-icons',
@@ -76,6 +78,7 @@ const mobileDeps = [
   'expo-web-browser',
   'react-native-nitro-modules',
   'expo-haptics',
+  'expo-local-authentication',
   'react-native-worklets',
 ];
 
@@ -98,6 +101,29 @@ for (const name of mobileDeps) {
   rows.push({ name, licence });
 }
 
+/**
+ * The ledger of the code we adapted and the data we ship.
+ *
+ * It is written here, not by hand in the output file, so the next run of
+ * this script keeps it: the provenance of every adopted project has to
+ * survive the regeneration of the table above.
+ */
+const ADOPTED = [
+  '## Adopted code and data (not npm dependencies)',
+  '',
+  'These are the projects we adapted and the data we ship. The licence of each one is',
+  'here with its URL and the date it was read.',
+  '',
+  '| What | Upstream | Licence | Read on | Where it is used |',
+  '| ---- | -------- | ------- | ------- | --------------- |',
+  "| God's Eye View | https://github.com/bilawalsidhu/gods-eye-view | MIT (Copyright (c) 2026 Bilawal Sidhu) | 2026-10-22 | the spoken camera verbs in `apps/mobile/src/maps/cameraCommands.ts`; the MIT notice is kept in that file |",
+  '| NZ Building Outlines | https://data.linz.govt.nz/layer/101290-nz-building-outlines/ | Creative Commons Attribution 4.0 International (CC BY 4.0) | 2026-10-22 | the footprints of the 3D buildings, baked into the offline pack |',
+  '| OpenStreetMap | https://www.openstreetmap.org/copyright | Open Database License (ODbL) | 2026-10-21 | the roads, the building levels and the attribution of the offline pack |',
+  '',
+  "The imagery providers that need a commercial licence are **not** adopted: Google Photorealistic 3D Tiles and Cesium ion are refused by `scripts/build-3d-buildings.mjs` (see `docs/adr/ADR-005-map-view-modes.md`).",
+  '',
+];
+
 const body = [
   '# Licences — the mobile app dependency closure',
   '',
@@ -109,6 +135,7 @@ const body = [
   '|---------|---------|',
   ...rows.map((row) => `| ${row.name} | ${row.licence} |`),
   '',
+  ...ADOPTED,
 ].join('\n');
 
 if (process.argv.includes('--write')) {

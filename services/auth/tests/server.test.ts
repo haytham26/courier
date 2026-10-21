@@ -32,7 +32,7 @@ describe("the auth service over HTTP", () => {
         AUTH_DATABASE_URL: 'memory://',
         BETTER_AUTH_SECRET: 'test-only-value-not-a-real-credential-0000',
         BETTER_AUTH_URL: BASE_URL,
-        AUTH_TRUSTED_ORIGINS: 'exp://',
+        AUTH_TRUSTED_ORIGINS: 'exp://,courier://',
         AUTH_TRUSTED_IP_HEADERS: 'x-forwarded-for',
       },
       stdio: 'pipe',
@@ -58,14 +58,14 @@ describe("the auth service over HTTP", () => {
   it('serves the sign-up and sign-in endpoints', async () => {
     const signUp = await fetch(`${BASE_URL}/api/auth/sign-up/email`, { // nosemgrep: loopback only (W4)
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'expo-origin': 'courier://' },
       body: JSON.stringify({ email: 'http@example.co.nz', password: 'correct-horse-battery', name: 'HTTP Driver' }),
     });
     expect(signUp.status).toBe(200);
 
     const signIn = await fetch(`${BASE_URL}/api/auth/sign-in/email`, { // nosemgrep: loopback only (W4)
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'expo-origin': 'courier://' },
       body: JSON.stringify({ email: 'http@example.co.nz', password: 'correct-horse-battery' }),
     });
     expect(signIn.status).toBe(200);

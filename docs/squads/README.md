@@ -14,6 +14,7 @@ targets are met on the CI emulator and recorded.
 | [sync](sync/) | op-sqlite event log ↔ Postgres, conflict rules | `packages/sync`, `apps/api/app/sync` | V4 §10.3 |
 | [design](design/) | The design system, motion and the visual gate | `packages/design-tokens`, `apps/mobile/src/components` | V4 §5 |
 | [payments](payments/) | Better Auth, Stripe NZD, entitlements, teams | `services/auth`, `apps/api/app/billing` | V4 §10.3 |
+| [security](security/) | The complete sign-in: Google, Apple, passkeys, email, MFA, the offline session, the biometric unlock | `services/auth`, `apps/mobile/src/lib`, `apps/mobile/app/(auth)` | MASTER_EXECUTION §14 |
 | [web](web/) | Driver dashboard, dispatcher console, admin | `apps/web` | V4 §10.3 |
 | [platform](platform/) | CI/CD, emulator E2E, OTA, observability, SBOM, releases | `.github`, `scripts`, `infra` | V4 §7, §10.3 |
 

@@ -27,6 +27,10 @@
 | LINZ LDS API Key (duplicate?) | data.linz.govt.nz | `LINZ_LDS_API_KEY` | `.env.local` → GitHub Secrets → Server env | LINZ address imports (worker). **Workaround:** tests/fixtures/canterbury-sample.csv | No |
 | **LINZ local address export** | data.linz.govt.nz → LDS download (GeoPackage / Shapefile / CSV of *NZ Addresses* and *NZ Roads Addresses*) | — (files, not a key) | `data/linz/` (gitignored) | Address correction accuracy (D8) and the offline FTS slice. **Workaround:** the committed fixture `apps/api/tests/address/fixtures/christchurch_addresses.json` (87 real Christchurch streets/suburbs, placeholder ids). **Needed for:** the ≥95% accuracy claim on real LINZ ids and the weekly rebuild. | No |
 | Postgres for the auth service | local Docker (agent generates) or Neon free | `DATABASE_URL` | `.env.local` | `services/auth` user/session storage. **Workaround:** the in-memory adapter in tests (`AUTH_DATABASE_URL=memory://`). | No |
+| **Google OAuth client ids** | Google Cloud Console -> APIs & Services -> Credentials -> OAuth client | `AUTH_GOOGLE_CLIENT_ID`, `AUTH_GOOGLE_CLIENT_SECRET` | `.env.local` -> GitHub Secrets -> the auth service | **Sign in with Google** (MASTER_EXECUTION §14). The Android client needs the **SHA-1 and SHA-256 of the Play App Signing key**, not the debug key; the iOS client needs the bundle id `com.courier.copilot`. **Workaround:** the service starts without the provider and the app disables the Google button with a plain reason. | No |
+| **Apple Sign in with Apple** | developer.apple.com -> Certificates, Identifiers & Profiles -> Services | `AUTH_APPLE_CLIENT_ID`, `AUTH_APPLE_CLIENT_SECRET`, `APPLE_TEAM_ID` | `.env.local` -> GitHub Secrets -> the auth service | **Sign in with Apple** (required on iOS once any social login is offered). The client secret is a JWT signed with the Apple private key (`APPLE_STORE_CONNECT_KEY_P8_BASE64`); it expires, so it has to be regenerated. The team id also goes into the app build. **Workaround:** the service starts without the provider and the app disables the Apple button with a plain reason. | No |
+| **Passkey domain** | a domain we control (e.g. `auth.example.co.nz`) with an HTTPS certificate | `AUTH_PASSKEY_RP_ID`, `AUTH_PASSKEY_ORIGIN` | `.env.local` -> GitHub Secrets -> the auth service, and the DNS of the domain | **Passkeys** (WebAuthn). The domain is the relying party id; iOS needs the associated domain (`webcredentials:auth.example.co.nz`) and the `apple-app-site-association` file; Android needs the SHA-256 of the signing certificate (`android:apk-key-hash:`). **Workaround:** the passkey plugin stays off and the app disables the passkey button with a plain reason. | No |
+| **App store ids** | Apple Developer + Google Play Console | `APPLE_TEAM_ID`, `APP_STORE_CONNECT_KEY_ID/ISSUER_ID/KEY_P8_BASE64`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64` | `.env.local` -> GitHub Secrets | The store builds and the in-app updates. **Workaround:** the local builds run without them. | No |
 
 ---
 
@@ -49,6 +53,39 @@
 
 ---
 
+## The release secrets (the store check reads them by name)
+
+The `Store readiness` workflow (`.github/workflows/store-ready.yml`) reads these
+from the GitHub Secrets. The names are here; the values never go into the
+repository, the log or an artefact. **A missing secret never fails the
+pipeline**: the lane is skipped with a clear message and the Google Play check
+still runs.
+
+| Secret (GitHub Secrets)                   | What it is for                                                                     | Which lane needs it                              | Without it                                                              |
+| ----------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------- |
+| `ANDROID_KEYSTORE_BASE64`                 | the upload key of the release (base64 of the keystore)                             | the signed release build and the APK measurement | the release build makes the unsigned debug APK and the workflow says so |
+| `ANDROID_KEYSTORE_PASSWORD`               | the password of that keystore                                                      | the signed release build                         | the same                                                                |
+| `ANDROID_KEY_ALIAS`                       | the key alias in that keystore                                                     | the signed release build                         | the same                                                                |
+| `ANDROID_KEY_PASSWORD`                    | the password of that key                                                           | the signed release build                         | the same                                                                |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64` | the Play Console service account (for the upload, the tracks and the live listing) | the submission itself                            | the release is prepared but not uploaded                                |
+| `APP_STORE_CONNECT_KEY_ID`                | the App Store Connect key (the Apple lane of StoreReady)                           | the App Store Connect metadata check             | that lane is skipped with a clear message                               |
+| `APP_STORE_CONNECT_ISSUER_ID`             | the issuer of that key                                                             | the same                                         | the same                                                                |
+| `APP_STORE_CONNECT_KEY_P8_BASE64`         | the private key of that key (base64)                                               | the same                                         | the same                                                                |
+| `APP_STORE_CONNECT_APP_ID`                | the App Store Connect app id (**a repository variable, not a secret**)             | the same                                         | the same                                                                |
+
+### The other things the founder has to supply for the first submission
+
+| Item                                                          | Where it goes                                                           | Notes                                                                                                       |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| The Play account (a Google account with the Play Console)     | play.google.com/console                                                 | $25 once. The app has to be created with the package `com.courier.copilot` and the name "Courier Copilot"   |
+| The domain for the privacy policy                             | the privacy policy URL in the listing, the data safety form and the app | The policy is drafted in `docs/operations/PRIVACY-POLICY.md`                                                |
+| The background location video                                 | the Play permissions declaration                                        | The answers are drafted in `docs/operations/PLAY-PERMISSIONS-DECLARATION.md`; the video is the founder item |
+| The store assets (the feature graphic, the phone screenshots) | the Play listing                                                        | The listing draft is `docs/operations/STORE-LISTING.md`                                                     |
+| The legal review of the privacy policy and the terms          | `docs/operations/PRIVACY-POLICY.md`                                     | A lawyer, not us. Until then the drafts say so                                                              |
+| The account deletion web link                                 | the Play data safety form and the app                                   | The in-app deletion is ours to build                                                                        |
+
+---
+
 ## Decisions Needed from Founder (Non-blocking, async)
 
 | Decision | Status | Options | Impact |
@@ -66,7 +103,7 @@
 
 ---
 
-**Last Updated:** 2026-10-21 (maps squad: the pack, the styles and the map screen)
+**Last Updated:** 2026-10-22 (security squad: the complete sign-in - the Google and Apple ids, the Apple team id, the passkey domain and the app store ids)
 **Next Action:** Founder paste free keys into `.env.local` and run `scripts/check-secrets`
 ## Post-launch tools (D22)
 - [ ] Chatwoot (support chat) · [ ] WeKnora (help-centre AI) · [ ] Cal.com (demos) · [ ] Cap (videos) · [ ] OpenSEO (website SEO)

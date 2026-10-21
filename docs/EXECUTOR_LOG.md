@@ -930,27 +930,164 @@ doubt-driven-development.
 - **The haptics on a phone.** The mapping is unit-tested with `expo-haptics` mocked; the
   vibration itself has not been felt.
 
-### The run of 12:46: the app signed itself out, and the routes were gone
+## 2026-10-21 - MASTER_EXECUTION section 15 - StoreReady as the primary pre-submission checker
 
-The evidence of the run (the screenshot at the end) showed the sign-in
-screen, and two failures followed it: the compatibility screen never appeared
-and the next flow could not find the today's list.
+### Skills applied (AGENTS.md map)
 
-Two defects, both lost in the merge that brought the product work into the
-pipeline branch:
+| Step                           | Skills read and followed                    | How they changed the work                                                                                                                                                                                                                          |
+| ------------------------------ | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session start, skill selection | `using-agent-skills`, `context-engineering` | Read section 15, section 7 (the gates, the CI budget) and section 10 (the conflict rules) of `docs/MASTER_EXECUTION.md` first, then the workflows and the release documents.                                                                       |
+| The tool (what it really is)   | `source-driven-development`                 | StoreReady was verified from the source, not from memory: the repository, the release v0.1.0, the CLI, the JSON report and the credential path were read in the tool's own code, and the SHA-256 of the release asset was checked on this machine. |
+| The workflow                   | `ci-cd-and-automation`                      | The trigger follows the CI budget (the release tag, a release branch and on demand, never every push), every action is SHA-pinned like the other workflows, the report goes to the job summary and the artefact has a short retention.             |
+| The local check                | `test-driven-development`                   | The test came first: the fixture app has to pass, the same app without the privacy policy has to fail, the version strings have to match, the APK has to carry the 64-bit libraries.                                                               |
+| The secrets                    | `security-and-hardening`                    | The names only, the values never in the repository, the log or an artefact; a missing secret skips the lane instead of failing the pipeline; the key never enters the workspace.                                                                   |
+| The decisions and the docs     | `documentation-and-adrs`                    | D27 records the decision and the reason; the checklist, the runbook and the store documents say what the check reads.                                                                                                                              |
 
-1. **The E2E mock was gone from the auth client.** Without it the app talks
-   to the auth service, the session is null, the provider says "not signed
-   in", and the app falls back to the sign-in screen half way through the
-   run. The mock is back: in the E2E mode the sign-in is local, so the flows
-   drive the real UI with no Metro, no auth service and no API.
-2. **The root stack declared the two groups conditionally**, which left
-   every other route of the app (the compatibility screen) unregistered: the
-   push to /compat was ignored. The groups are now guarded with
-   `Stack.Protected`, which keeps the rest of the app routable.
+### What changed
 
-The lesson: a merge that takes one side of a file takes the whole file. The
-two branches had both touched the app, and the resolution silently dropped
-what only one side had. The gates did not catch it (the mock is only used
-when the E2E environment variable is set, and the route only when the app
-pushes to it) - the emulator did.
+- `.github/workflows/store-ready.yml` - the new workflow: StoreReady v0.1.0 (pinned version,
+  pinned SHA-256), the Android project generated so the tool reads the real manifest, the
+  Google Play checkup, the local check, the App Store Connect lane (skipped with a clear
+  message when the key is not set), the report as the job summary and the report as an
+  artefact with seven day retention.
+- `scripts/check-store-readiness.mjs` - the local pre-submission check: the version and the
+  version code, the permissions against the Play policy, the background location declaration
+  and the in-app disclosure, the 80 MB base APK budget, the 64-bit requirement, the target
+  API level, the privacy policy, the data safety notes, the icons, the signing configuration
+  (never the key), the version strings in the store listing and the licence ledger. It
+  prints a report and exits 1 on a blocking problem.
+- `scripts/check-store-readiness.test.mjs` and `scripts/store-ready-summary.test.mjs` - the
+  node tests (the runner of the repository, no new dependency).
+- `scripts/store-ready-summary.mjs` - the StoreReady report as markdown for the job summary.
+- `docs/operations/RELEASE-CHECKLIST.md`, `RUNBOOK.md`, `STORE-LISTING.md`,
+  `PRIVACY-POLICY.md`, `DATA-SAFETY.md`, `PLAY-PERMISSIONS-DECLARATION.md` - the release
+  documents the check reads.
+- `apps/mobile/src/constants/legal.ts` - the in-app disclosure and the privacy policy URL.
+- `apps/mobile/app.json` - the explicit Android version code and version name.
+- `docs/FOUNDER_TODO.md` - the names of the release secrets and the founder items.
+- `docs/DECISIONS.md` - D27.
+
+### The gates
+
+- `node --test "scripts/*.test.mjs"` - 9 tests, all green.
+- `corepack pnpm typecheck` - 6 packages clean, mypy clean on 24 files.
+- `corepack pnpm lint` - 4 packages clean, ruff clean.
+- `corepack pnpm test` - 5 tasks green; the mobile app is 16 suites and 143 tests, all green.
+- `node scripts/check-floor.mjs` - clean.
+- `node scripts/check-store-readiness.mjs` - 0 blockers, 4 warnings (the data sync foreground
+  service, the unknown licences in the ledger, the APK that was not measured and the
+  account deletion that is not built yet).
+
+### What was not verified
+
+- **The mobile jest suite was red in the middle of the session** (two suites could not run
+  and one test failed). Taking this change out gave the same three failures, so they were
+  not from this work; they went green with the maps and voice work that ran next to this
+  one in the same tree.
+- **The workflow on the runner.** The workflow file parses and the shell steps were read
+  line by line, but this machine has no Linux runner, so the run itself is not evidence yet.
+  The first `workflow_dispatch` run is the proof.
+- **The tool against our app.** The Linux binary was downloaded and its SHA-256 checked on
+  this machine, but it does not run on Windows, so the findings on our manifest are not
+  evidence yet either. The prebuild step has to run on the runner first.
+- **The signed release APK.** There is no signed artefact here, so the 80 MB budget and the
+  64-bit requirement are still a warning on this machine.
+
+## 2026-10-22 - MASTER_EXECUTION section 11 - the courier map view modes, the free offline 3D buildings and the voice camera
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+| ---- | ------------------------ | ------------------------ |
+| Session start, skill selection | `using-agent-skills`, `context-engineering` | Read section 11 and section 10 of `docs/MASTER_EXECUTION.md` first, then the squad's own README and STATUS, the design contract, the tokens and the licence research, so the decision follows the rules that are already written down. |
+| The licences and the data | `source-driven-development` | The licence of God's Eye View was read from its own `LICENSE` (raw.githubusercontent.com, 2026-10-22), the LINZ attribution wording was read from the LINZ page (2026-10-22) and the LDS layer of the outlines (101290) from the LINZ catalogue, and the MapLibre camera and style APIs were read from the installed `@maplibre/maplibre-react-native@11.3.7` source rather than from memory. |
+| The boundaries of the modules | `api-and-interface-design` | The rule is a pure function (`viewModes.ts`), the storage is an interface with a memory and a file implementation (`sync/storage.ts`), and the voice catalogue is the one the app already had: the map never imports the voice engine, and the voice never imports the map at runtime. |
+| The tests | `test-driven-development` | The state machine, the storage per driver, the toggles, the voice parsing and the licence gate of the builder are all covered without a device, without a map server and without a network; the builder is tested by running it as a program, so the gate is the real one. |
+| The screen | `frontend-ui-engineering` | The mode row and the sheet use the tokens, every control has a role, a label and a test id, the touch targets are 56 pt and the copy is plain NZ English with no emoji. |
+| The decisions and the docs | `documentation-and-adrs` | `docs/adr/ADR-005-map-view-modes.md` follows the format of ADR-001 and ADR-004 (Status, Date, Context, Decision, Consequences, Risks, Verification), and the licence ledger keeps the provenance of the adopted code and the shipped data. |
+
+### What changed
+
+- `apps/mobile/src/maps/viewModes.ts` - the four modes and the rule: the battery saver wins, the satellite mode needs a network and a licence, the auto mode tilts the map while the courier is driving in a town and keeps it flat when they stop, on a rural road and on the battery saver.
+- `apps/mobile/src/maps/useMapViewMode.ts` - the hook: the mode is read from the driver's preferences and written back.
+- `apps/mobile/src/sync/storage.ts`, `apps/mobile/src/sync/preferenceFiles.ts`, `apps/mobile/src/sync/driverSession.ts` - the app's storage for the settings of a driver: one small JSON file per driver in the document directory, and the session published without pulling the auth client into the map screen.
+- `apps/mobile/src/maps/toggles.ts`, `apps/mobile/src/maps/useMapToggles.ts`, `apps/mobile/src/maps/MapSettingsSheet.tsx` - the sheet under the map: the buildings, the traffic, the road closures, the weather, the label size, the battery saver and the day/night/auto theme.
+- `apps/mobile/src/maps/cameraCommands.ts` - the spoken camera verbs, adapted from God's Eye View (MIT) with its notice kept in the file.
+- `apps/mobile/src/voice/commands.ts`, `apps/mobile/src/voice/commandChannel.ts`, `apps/mobile/src/voice/VoiceService.ts` - the map commands in the voice catalogue, the offline parser and the channel the map listens on.
+- `apps/mobile/src/maps/styles.ts` - the fill-extrusion layer, the soft light of the theme, the label size, the buildings toggle and the satellite raster source.
+- `apps/mobile/src/maps/offlinePack.ts` - the `buildings` section of the manifest, with the licence of every input of the bake.
+- `apps/mobile/src/maps/config.ts` - the satellite imagery and the licence of its provider: the endpoint on its own is refused.
+- `apps/mobile/src/maps/driving.ts`, `apps/mobile/src/maps/stops.ts` - what the app knows about the courier while they drive: the speed and the box of the day's stops.
+- `apps/mobile/app/(tabs)/map.tsx` - the four modes, the settings sheet, the camera and the voice.
+- `scripts/build-3d-buildings.mjs` - the plan and the builder of the 3D buildings: it checks the licence of every input, refuses Google Photorealistic 3D Tiles and Cesium ion by name, refuses an unknown source, prints the plan and stops, and writes the licence and the credit of every input into the manifest.
+- `scripts/check-licenses.mjs`, `docs/LICENSES.md` - the ledger keeps the provenance of the adopted code and the shipped data across the next regeneration.
+- `docs/adr/ADR-005-map-view-modes.md`, `docs/squads/maps/README.md`, `docs/squads/maps/STATUS.md` - the decision, the rules, the metrics and the next.
+
+### The gates
+
+- `npx tsc --noEmit` in `apps/mobile` - clean.
+- `npx jest` in `apps/mobile` - 16 suites, 143 tests, all green (the new ones: the view modes, the storage per driver, the toggles, the voice parsing and the licence gate of the builder).
+- `node --test "scripts/*.test.mjs"` - 9 tests, all green.
+- `node scripts/build-3d-buildings.mjs --source linz-nz-building-outlines` - the plan, with the licence of every input; `--source google-photorealistic-3d-tiles` and `--source cesium-ion` are refused with exit 1; `--source somewhere-else` is refused as unregistered.
+- The floor rules were checked on the new lines: no suppression, no skipped test, no `any`, no TODO, no empty catch. `node scripts/check-floor.mjs` itself diffs `origin/main...HEAD`, and this work is not committed yet, so it cannot see it.
+
+### What was not verified
+
+- **The 3D buildings have never been drawn.** The pack has never been built, so the fill-extrusion, the soft light and the 2D fallback are unit-tested in the style, not seen on a device. The pack size with the outlines in it is unknown, and it is the 50 MB ceiling that decides whether the outlines go in from z13 or from z15.
+- **The frame times and the battery of the 2D map against the 3D map are unknown.** Both are in the performance budget and both need the pack and a device.
+- **The LINZ outlines have not been downloaded.** The layer id (101290) comes from the LINZ catalogue, but the download with the key and the shape of the file the planetiler overlay expects are not verified.
+- **The voice commands are not heard on a device yet.** The catalogue and the parser are done and tested; the sherpa-onnx engine and the server brain are P5 work, so the map listens on the channel but nothing publishes to it in a build without the voice engine.
+- **The satellite mode has never run with a provider.** It is refused today because no provider is licensed, which is the point, but the raster path has only been reasoned about.
+- **The location watch that feeds the auto mode has not run on a phone.** The rule is tested with the facts given to it.
+- **The mobile app is not linted in CI** (no lint script and no link to the shared eslint config), and it carries 80 pre-existing eslint errors. The new files were checked with the shared config through a temporary one and add none of that class.
+
+## 2026-10-22 - MASTER_EXECUTION section 14 - the complete sign-in (Google, Apple, passkeys, email, MFA, the offline session, the biometric unlock, teams)
+
+### Skills applied (AGENTS.md map)
+
+| Step | Skills read and followed | How they changed the work |
+| ---- | ------------------------ | ------------------------ |
+| Session start, skill selection | `using-agent-skills`, `context-engineering` | Section 14 and section 10 of `docs/MASTER_EXECUTION.md` were read first, then the auth research note, the decisions D21-D26, `CONSTRAINTS.md`, `docs/SAAS_CHECKLIST.md` and the existing `services/auth` code, so the work follows the rules that are already written down. |
+| The versions and the licences | `source-driven-development` | What Better Auth 1.7.10 supports was read from the installed packages, not from memory: the `twoFactor` plugin (TOTP, backup codes, the account lockout), the `organization` plugin (the three default roles owner, admin, member), the social providers of the core (Google, Apple) and the `@better-auth/passkey` 1.7.10 plugin with the WebAuthn verification of `@simplewebauthn/server` 13.3.3. The Expo client source was read for the `expo-origin` header and the storage contract, and `expo-local-authentication` 58.0.2 and `expo-secure-store` 58.0.2 were read for their APIs. |
+| The boundaries | `api-and-interface-design` | The service publishes one endpoint (`GET /api/auth/sign-in-methods`) and the app asks it; the offline session, the biometric unlock and the device store are three small modules with one job each; the screen never talks to the service directly. |
+| The tests | `test-driven-development` | The MFA challenge, the passkey registration and sign-in (a fake authenticator that plays the phone: a P-256 key pair, the CBOR attestation, the signature), the OAuth start, the team creation and the rate limits are covered on the service; the method list, the second factor, the offline session and the biometric unlock are covered on the app, without a device. |
+| The screen | `frontend-ui-engineering` | The methods, the second factor and the team picker follow the design contract (one primary action, 56 pt targets, the loading, empty and error states with a recovery, plain NZ English, no emoji). |
+| The decisions and the docs | `documentation-and-adrs` | `docs/adr/ADR-006-complete-sign-in.md`, `docs/squads/security/` (README, STATUS, decisions, benchmarks) and the founder items in `docs/FOUNDER_TODO.md`. |
+| Before the merge | `code-review-and-quality`, `doubt-driven-development`, `code-simplification`, `constraint-driven-development` | The floor rules were checked on the new lines, the coverage of the auth service was not allowed to fall, and the tests were written so that a broken promise (a missing founder id, a device without a scanner) shows up as a plain message and not as a crash. |
+
+### What changed
+
+- `services/auth/src/config.ts` - the environment for the sign-in methods: the Google and Apple ids and secrets, the Apple bundle id, the passkey relying party, the MFA issuer, the backup codes, the lockout. A provider is switched on only when its id is here; nothing has a default value.
+- `services/auth/src/options.ts` - the plugins: `organization` (owner, admin, member), `twoFactor` (TOTP with encrypted backup codes and the account lockout), `passkey` (only when the relying party is set), `expo`, `jwt` and the social providers of the core. The origin check is switched on explicitly so it runs in the test suite too.
+- `services/auth/src/sign-in-methods.ts` - the endpoint that tells the app which methods are live, with a plain reason for every method that is off.
+- `services/auth/tests/` - the new suites: `mfa.test.ts` (the enrolment, the time code, the backup code, the lockout), `passkey.test.ts` (the ceremony, the other origin), `social.test.ts` (the OAuth start, the methods), `webauthn.ts` and `totp.ts` (the test doubles), plus the team roles and the rate limits in the existing suites.
+- `apps/mobile/src/lib/session-storage.ts` - one device store wrapper with `AFTER_FIRST_UNLOCK`, shared by every client.
+- `apps/mobile/src/lib/offline-session.ts` - the receipt of the last confirmed session, bounded to twelve hours.
+- `apps/mobile/src/lib/biometric.ts` - the fingerprint unlock, a convenience and never a lock-out.
+- `apps/mobile/src/lib/sign-in-methods.ts` - the app side of the methods endpoint.
+- `apps/mobile/src/lib/passkey-support.ts` - whether this device can do a passkey ceremony at all.
+- `apps/mobile/src/lib/auth-client.ts` - the client plugins: the second factor, the passkeys, the teams and the Expo store.
+- `apps/mobile/src/providers/AuthProvider.tsx` - the session states (`signed-in`, `offline`, `signed-out`), the sign-in steps (the second factor, the team picker), the teams and the biometric unlock.
+- `apps/mobile/src/components/BiometricUnlock.tsx` - the unlock screen with "Not now".
+- `apps/mobile/app/(auth)/login.tsx` - the sign-in screen: the four ways in, the second factor step, the team picker, the error with a way out, the test ids.
+- `apps/mobile/app/_layout.tsx` - the offline banner and the offer of the fingerprint unlock.
+- `apps/mobile/package.json` - `expo-local-authentication` 58.0.2 and `@better-auth/passkey` 1.7.10.
+- `docs/squads/security/` (README, STATUS, decisions, benchmarks), `docs/adr/ADR-006-complete-sign-in.md`, `.env.example`, `docs/FOUNDER_TODO.md`.
+
+### The gates
+
+- `pnpm --filter @courier/auth test` - 9 suites, 59 tests, all green (the new ones: the MFA challenge, the passkey ceremony, the OAuth start, the methods, the team roles, the rate limits).
+- `pnpm --filter mobile test` - 19 suites, 167 tests, all green (the new ones: the method list, the second factor, the team picker, the error, the offline session, the biometric unlock).
+- `pnpm --filter @courier/auth typecheck` and `pnpm --filter mobile typecheck` - clean.
+- `pnpm --filter @courier/auth lint` - clean. The new mobile files were checked with the shared eslint config through a temporary one and are clean as well.
+- The API tests were not touched by this step; `apps/api/app/auth/jwks.py` is unchanged.
+
+### What was not verified
+
+- **The passkey ceremony has never run on a phone.** The service side is proven with the real WebAuthn verification, but React Native has no WebAuthn API: the ceremony needs the platform authenticator, so the button on the phone says so and stays disabled. The native module is the next decision (ADR-006, D3).
+- **The OAuth starts have never been opened.** The service answers with a real authorization URL (PKCE, no secret in the browser) and the test checks it; no browser has been opened against Google or Apple, because the founder's client ids do not exist yet.
+- **The biometric unlock has never run on a device.** The module is mocked in the tests (`expo-local-authentication` has no native module in a test run), so the prompt itself is unverified.
+- **The offline session has not been seen on a phone with no signal.** The rule (twelve hours, the receipt, the banner) is unit-tested; the behaviour of the real secure store on a locked phone is not.
+- **The mobile app is not linted in CI** (no lint script and no link to the shared eslint config), and it carries pre-existing eslint errors of the same class. The new files were checked by hand.
+- **A single mobile test file cannot be run on its own** (`@babel/runtime` is in the store but not hoisted): the whole suite has to run. That is pre-existing and not from this step.
+- **The coverage of the auth service was not measured in this step**; the floor says it must not fall below 81 %, and the next coverage run has to prove it.

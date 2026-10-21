@@ -19,9 +19,16 @@ function main(): void {
   });
 
   server.listen(config.port, () => {
+    const methods = [
+      "email",
+      ...(config.socialProviders.google === null ? [] : ["google"]),
+      ...(config.socialProviders.apple === null ? [] : ["apple"]),
+      ...(config.passkey.enabled ? ["passkey"] : []),
+    ].join(", ");
     console.log(
       `[auth] listening on ${config.baseURL} (jwks ${config.jwks.path}, db ${config.database.provider})`,
     );
+    console.log(`[auth] sign-in methods: ${methods}; mfa: on; team roles: ${config.organization.roles.join(", ")}`);
   });
 
   const shutdown = () => {

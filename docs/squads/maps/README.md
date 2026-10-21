@@ -2,9 +2,90 @@
 
 **Mission:** The whole of Canterbury offline, day and night, at 60 fps.
 
-**Code:** `apps/mobile/src/maps`, `apps/mobile/app/(tabs)/map.tsx`, `scripts/build-pmtiles.mjs`
+**Code:** `apps/mobile/src/maps`, `apps/mobile/app/(tabs)/map.tsx`, `scripts/build-pmtiles.mjs`, `scripts/build-3d-buildings.mjs`
 
-**Tasks:** T5 offline PMTiles, T7.7 driving mode
+**Tasks:** T5 offline PMTiles, T7.7 driving mode, the view modes of MASTER_EXECUTION §11
+
+## The view modes (MASTER_EXECUTION §11, ADR-005)
+
+The courier picks the map the way they pick the radio station: once, with one
+tap or one sentence, and it is theirs until they change it.
+
+| Mode        | What the map does                                                                       | When it is refused                                       |
+| ----------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `flat`      | the flat 2D map - the default                                                           | never                                                    |
+| `3d`        | the map tilts and the buildings stand up                                                | never - a pack without the outlines draws flat buildings |
+| `satellite` | the imagery of a licensed provider, online only                                         | without a network or without a licensed provider         |
+| `auto`      | 3D while driving in a town, flat when stopped, on a rural road and on the battery saver | never                                                    |
+
+The rule is one pure function (`apps/mobile/src/maps/viewModes.ts`), and it is
+applied in this order:
+
+1. **the battery saver wins** - the map stays flat, whatever was asked for, and
+   the courier is told why;
+2. **satellite needs a network and a licence** - without either, the map stays
+   flat and the courier is told why: _"Satellite needs a network and a licence.
+   Showing the flat map."_ The app never points the map at a source it has no
+   right to use;
+3. **auto** tilts the map while the courier is moving inside the box of the
+   day's stops - a town is where the deliveries are - and keeps it flat when
+   they stop or when they are on a rural road.
+
+The mode is **remembered per driver**: one small JSON file per driver in the
+document directory (`apps/mobile/src/sync/storage.ts`), because a shared van
+phone can carry more than one driver. The theme choice is kept the same way.
+
+The toggles live in the sheet under the map
+(`apps/mobile/src/maps/MapSettingsSheet.tsx`): the buildings, the traffic, the
+road closures, the weather, the label size, the battery saver and the
+day/night/auto theme. The three online layers are **remembered but not
+drawn** until their provider is configured, and the sheet says so in plain
+words.
+
+The voice picks the mode and moves the camera: "3D on", "flat map",
+"satellite", "auto", "zoom to the next stop", "tilt the map", "follow me",
+"look back". The catalogue is in `apps/mobile/src/voice/commands.ts` and the
+camera verbs in `apps/mobile/src/maps/cameraCommands.ts`, which are adapted
+from **God's Eye View** (MIT, read 2026-10-22) with its notice kept.
+
+## The 3D buildings are free and offline
+
+| Input                                        | Licence   | Credit                                                                                                                     |
+| -------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| LINZ NZ Building Outlines (LDS layer 101290) | CC BY 4.0 | "Sourced from the LINZ Data Service and licensed for reuse under the CC BY 4.0 licence"                                    |
+| OpenStreetMap building heights and levels    | ODbL      | "© OpenStreetMap contributors. Contains information from OpenStreetMap, available under the Open Database License (ODbL)." |
+
+`scripts/build-3d-buildings.mjs` is the gate on the licence of **every**
+input: it refuses the sources whose terms forbid our offline use, it refuses a
+source that is not registered at all, it prints the plan and stops unless
+`--execute` is given, and it writes the licence and the credit of every input
+into the `buildings` section of the pack manifest.
+
+```bash
+# the plan: the terms are checked, the steps are printed, nothing happens
+node scripts/build-3d-buildings.mjs --source linz-nz-building-outlines
+
+# the manifest that would be written, with the licence of every input
+node scripts/build-3d-buildings.mjs --source linz-nz-building-outlines --print-manifest
+
+# the build: the inputs have to be on the machine already
+node scripts/build-3d-buildings.mjs --source linz-nz-building-outlines --execute \
+  --outlines data/linz/building-outlines.geojson \
+  --extract data/linz/newzealand-latest.osm.pbf
+```
+
+The app draws the buildings with MapLibre's fill-extrusion: a storey is 3 m,
+the height on the building wins when it has one, and a building with neither
+is 4 m. The soft light is the sky of the theme, so the day buildings are lit
+by the day and the night buildings by the night. MapLibre does not draw
+shadows for the extruded buildings yet (the upstream issue is open), so the
+light carries the depth. A pack **without** the outlines draws the flat
+buildings - the graceful 2D fallback.
+
+The imagery providers that need a commercial licence are refused by name:
+Google Photorealistic 3D Tiles and Cesium ion. An optional photo-real mode is
+a founder approval gate (MASTER_EXECUTION §7.3), and ADR-005 records the
+preparation and the cost estimate.
 
 ## Targets (the release gate)
 
@@ -15,14 +96,14 @@
 
 ## The decision (T5, taken 2026-10-21)
 
-| Piece | Choice | Why |
-|---|---|---|
-| Renderer | `@maplibre/maplibre-react-native` 11.3.7, upgrade to 11.5.0 is still open | the only RN binding with New Architecture codegen, Expo 58 peers and a file-backed PMTiles reader underneath |
-| Container | PMTiles v3 | one single-file archive, a public-domain specification, and a native reader that takes `pmtiles://file://` |
-| Style | our own courier style, generated from the design tokens, on the Protomaps basemap schema v4 | one recipe, three themes, so day, night and the sun variant cannot drift apart |
-| Pack | we build it ourselves from an OSM extract | the OSMF tile servers forbid offline use, so there is no other free route |
-| Fallback | our own hosted tiles, configured per build | the OpenStreetMap Foundation servers are refused by the app itself |
-| Attribution | on the map, in About and in the main menu, with the ODbL and LINZ notices, offline | the licence has to be honoured in the one situation where the user has no internet to read it |
+| Piece       | Choice                                                                                      | Why                                                                                                          |
+| ----------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Renderer    | `@maplibre/maplibre-react-native` 11.3.7, upgrade to 11.5.0 is still open                   | the only RN binding with New Architecture codegen, Expo 58 peers and a file-backed PMTiles reader underneath |
+| Container   | PMTiles v3                                                                                  | one single-file archive, a public-domain specification, and a native reader that takes `pmtiles://file://`   |
+| Style       | our own courier style, generated from the design tokens, on the Protomaps basemap schema v4 | one recipe, three themes, so day, night and the sun variant cannot drift apart                               |
+| Pack        | we build it ourselves from an OSM extract                                                   | the OSMF tile servers forbid offline use, so there is no other free route                                    |
+| Fallback    | our own hosted tiles, configured per build                                                  | the OpenStreetMap Foundation servers are refused by the app itself                                           |
+| Attribution | on the map, in About and in the main menu, with the ODbL and LINZ notices, offline          | the licence has to be honoured in the one situation where the user has no internet to read it                |
 
 The sources are the research files in this repository:
 `docs/research/2026/oss-maps-courier.md`,
@@ -74,7 +155,31 @@ The manifest is the contract between the build and the app:
   "minZoom": 6,
   "maxZoom": 17,
   "bytes": 41943040,
-  "sha256": "..."
+  "sha256": "...",
+  "buildings": {
+    "present": true,
+    "source": "LINZ NZ Building Outlines with OpenStreetMap building heights and levels",
+    "licence": "Creative Commons Attribution 4.0 International (CC BY 4.0) and Open Database License (ODbL)",
+    "licenceUrl": "https://www.linz.govt.nz/products-services/data/licensing-and-using-data/attributing-linz-data",
+    "attribution": "Sourced from the LINZ Data Service and licensed for reuse under the CC BY 4.0 licence. © OpenStreetMap contributors. Contains information from OpenStreetMap, available under the Open Database License (ODbL).",
+    "count": 412000,
+    "inputs": [
+      {
+        "id": "linz-nz-building-outlines",
+        "source": "LINZ NZ Building Outlines",
+        "licence": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+        "licenceUrl": "https://www.linz.govt.nz/products-services/data/licensing-and-using-data/attributing-linz-data",
+        "attribution": "Sourced from the LINZ Data Service and licensed for reuse under the CC BY 4.0 licence"
+      },
+      {
+        "id": "osm-building-heights",
+        "source": "OpenStreetMap building heights and levels",
+        "licence": "Open Database License (ODbL)",
+        "licenceUrl": "https://www.openstreetmap.org/copyright",
+        "attribution": "© OpenStreetMap contributors. Contains information from OpenStreetMap, available under the Open Database License (ODbL)."
+      }
+    ]
+  }
 }
 ```
 
@@ -97,11 +202,11 @@ of the source into the manifest so the app can show them without a network.
 
 The tools are the ones the research chose, each pinned by SHA-256:
 
-| Step | Tool | Licence |
-|---|---|---|
-| tileset from the extract | `onthegomap/planetiler` (`--area=christchurch`) | Apache-2.0 |
-| cut to the region and the zooms | `protomaps/go-pmtiles` (`pmtiles extract`) | BSD-3-Clause |
-| the style-driven size cut | `versatiles-org/versatiles-rs` (`reduce --style`) | MIT |
+| Step                            | Tool                                              | Licence      |
+| ------------------------------- | ------------------------------------------------- | ------------ |
+| tileset from the extract        | `onthegomap/planetiler` (`--area=christchurch`)   | Apache-2.0   |
+| cut to the region and the zooms | `protomaps/go-pmtiles` (`pmtiles extract`)        | BSD-3-Clause |
+| the style-driven size cut       | `versatiles-org/versatiles-rs` (`reduce --style`) | MIT          |
 
 ## The licence of the data
 
@@ -142,6 +247,22 @@ Two rules the app enforces rather than trusts:
   2026-10-21 at https://openfreemap.org/tos/). The Protomaps hosted API is
   "free for non-commercial use. For commercial use, become a GitHub Sponsor."
   The build script treats both as a conditional or a forbidden source.
+- **The imagery that needs a commercial licence is refused by name.**
+  `scripts/build-3d-buildings.mjs` registers Google Photorealistic 3D Tiles
+  and Cesium ion with `offlineUse: 'forbidden'` and refuses them whatever the
+  operator asks for. The satellite mode of the app is online only and only
+  works when the build names the provider **and** its licence; without them
+  the courier is told plainly and the map stays flat.
+
+The **3D buildings** add a second credit to the pack, and the manifest records
+the licence of every input of the bake, not only the first one:
+
+- **LINZ** - the NZ Building Outlines (LDS layer 101290) are "Almost all data
+  from the LINZ Data Service is provided under the Creative Commons
+  Attribution 4.0 International licence" (read 2026-10-22 at
+  https://www.linz.govt.nz/products-services/data/licensing-and-using-data/attributing-linz-data).
+- **OpenStreetMap** - the building levels and heights carry the ODbL, with the
+  same two duties as above.
 
 Still open, and a question for the founder and counsel: whether an on-device
 cached OSM tile set is a "Produced Work" that has to be ODbL-licensed itself.
@@ -150,17 +271,20 @@ wording requires.
 
 ## The performance budget
 
-| Measure | Target | Where it is set | Status |
-|---|---|---|---|
-| pan and zoom | 60 fps, p95 frame time under 16.7 ms, no drop of more than two frames | `docs/squads/maps/eval/frame-traces/` | **UNVERIFIED** - no trace exists |
-| pack size | 50 MB for the whole of Canterbury | the build script fails over the ceiling | **UNVERIFIED** - no pack has been built |
-| tile read from the local file | p95 under 50 ms | the eval harness | **UNVERIFIED** |
-| markers | at most 40 native views on the map at once | `MAX_MAP_MARKERS` in `apps/mobile/src/maps/stops.ts` | in place |
-| APK | 80 MB without the map and voice packs | `CONSTRAINTS.md` | **UNVERIFIED** |
+| Measure                       | Target                                                                | Where it is set                                      | Status                                                 |
+| ----------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------ |
+| pan and zoom                  | 60 fps, p95 frame time under 16.7 ms, no drop of more than two frames | `docs/squads/maps/eval/frame-traces/`                | **UNVERIFIED** - no trace exists                       |
+| pack size                     | 50 MB for the whole of Canterbury                                     | the build script fails over the ceiling              | **UNVERIFIED** - no pack has been built                |
+| tile read from the local file | p95 under 50 ms                                                       | the eval harness                                     | **UNVERIFIED**                                         |
+| markers                       | at most 40 native views on the map at once                            | `MAX_MAP_MARKERS` in `apps/mobile/src/maps/stops.ts` | in place                                               |
+| APK                           | 80 MB without the map and voice packs                                 | `CONSTRAINTS.md`                                     | **UNVERIFIED**                                         |
+| the 2D map against the 3D map | the same frame budget, and no more than 8 % an hour of battery        | the eval harness                                     | **UNVERIFIED** - the 3D map has never been on a device |
 
 The style is built for the frame budget: the layers are flat fills and lines,
-there is no 3D, and the labels only appear when the glyph bundle is on the
-device.
+the 3D buildings are only in the pack from z13, and the labels only appear
+when the glyph bundle is on the device. The battery saver keeps the map flat
+whatever the mode is, and the auto mode only tilts while the courier is
+driving in a town.
 
 ## Evaluation dataset / benchmark
 

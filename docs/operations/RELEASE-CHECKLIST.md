@@ -1,111 +1,109 @@
-# The release checklist of Courier Copilot
+# Release checklist - Google Play
 
-Every release, from the branch to the running stack. A step is only ticked
-when the evidence is there. The gates are the gates of the CI: nothing is
-added here and nothing is taken away.
+Two checkers stand between the app and the Play Store. The first one is the
+primary checker and the second one is its local copy.
 
-The runbook of the day-to-day operations is `docs/operations/RUNBOOK.md`.
+## The primary checker: StoreReady
 
-## The gates of the CI
+**StoreReady is the primary pre-submission checker** (MASTER_EXECUTION section 15).
+The tool is https://github.com/MaTriXy/StoreReady (MPL-2.0), by MaTriXy (Yossi
+Elkrief), a friend of the founder. The latest release is **v0.1.0**, published
+on **8 March 2026**, and it was read on **2026-10-21**. The workflow that runs it
+is `.github/workflows/store-ready.yml`, and it runs:
 
-The required checks of a pull request. They are the ones in
-`.github/workflows/`:
+- on the release trigger (a `v*` tag) and on a `release/**` branch,
+- on demand from the Actions tab (workflow dispatch),
+- never on every push, because the private Actions minutes are limited (section 7.1).
 
-| Gate                  | The workflow        | The job    | What it proves                                                    |
-| --------------------- | ------------------- | ---------- | ----------------------------------------------------------------- |
-| lint, typecheck, test | `ci.yml`            | `quality`  | the types are right, the linter is quiet, the tests pass          |
-| no secrets in git     | `ci.yml`            | `secrets`  | gitleaks finds no secret in the history                           |
-| Floor guard           | `quality-gates.yml` | `floor`    | no new suppression, no skipped test, no stub, no `any`            |
-| Coverage ratchet      | `quality-gates.yml` | `coverage` | the coverage did not fall                                         |
-| Licence inventory     | `quality-gates.yml` | `licences` | no copyleft in the shipped app                                    |
-| Dependency audits     | `quality-gates.yml` | `audits`   | no high or critical advisory in the JavaScript or the Python tree |
-| Static analysis       | `quality-gates.yml` | `sast`     | Semgrep finds nothing high                                        |
-| Code scanning         | `codeql.yml`        | `analyse`  | CodeQL finds no high alert                                        |
-| Android E2E           | `android-e2e.yml`   | `e2e`      | the Maestro flows pass on the emulator                            |
-| Restore test          | `restore-test.yml`  | `restore`  | a backup can be put back and the data is there                    |
+What it does:
 
-A release may not start while one of them is red.
+1. it generates the Android project (`expo prebuild`) so the tool reads the real
+   manifest and the real Gradle files,
+2. it installs StoreReady v0.1.0 with a pinned version and a checked SHA-256,
+3. it runs `storeready playstore-checkup` on the app and writes the JSON report,
+4. it prints the report as the job summary, so the founder reads the findings
+   without downloading anything,
+5. it fails the job when the tool finds a blocking (CRITICAL) finding,
+6. it uploads the report as an artefact with a seven day retention.
 
-## 1. The branch
+A CRITICAL finding is a release blocker. A WARN is a task. The report also lists
+the Play Console review the tool cannot do on its own (the permissions
+declaration, the data safety answers, the account deletion).
 
-- [ ] The work is on a branch of its own, not on `main`.
-- [ ] The pull request is open and every required check above is green. The
-      link to the run is in the pull request.
-- [ ] The reviewer is not the author (the QA squad and the Security squad
-      sign off, V4 section 2).
-- [ ] The floor guard is green: no new suppression, no skipped test.
+## The local copy: the script the release manager runs
 
-## 2. The build
+**`scripts/check-store-readiness.mjs` is the developer's copy of the check.** It
+runs on the machine, in seconds, and reads the things the tool cannot know:
 
-- [ ] The images are built from the commit of the release and pushed to the
-      registry. The tag is the tag of the release (`v1.2.3`).
-- [ ] The digest of each image is written down in the release notes. The
-      stack runs the digest, not the tag.
-- [ ] The release APK was built by the `Release APK` workflow and is
-      attached to the release. The link to the artefact is in the notes.
+```bash
+node scripts/check-store-readiness.mjs --apk apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+```
 
-## 3. The backup before the deploy
+The options are `--repo` (the repository folder), `--app` (the app folder,
+`apps/mobile` by default), `--apk` (the release artefact) and `--json` (where to
+write the machine report). It prints the report and exits 1 when it finds a
+blocking problem.
 
-- [ ] A fresh backup exists and is not older than the last one:
-      `bash infra/backup.sh`.
-- [ ] The dump and its checksum are in the backup folder, and the manifest
-      carries the row count of every table.
-- [ ] A copy of the dump is off the server.
-- [ ] The restore test is green: the `Restore test` workflow, or
-      `bash infra/test-restore.sh --clean` on the server. The link to the
-      run is in the notes.
+Run it before every release, and run it in CI as well: the workflow does both.
 
-## 4. The deploy
+## The order of a release
 
-The founder approves the deploy of the production stack (MASTER_EXECUTION
-section 7). The approval is written down in `docs/FOUNDER_TODO.md`.
+1. **The version.** Raise `expo.version`, `expo.android.version` and
+   `expo.android.versionCode` in `apps/mobile/app.json`. The version code has
+   to go up with every upload. Put the same numbers in
+   `docs/operations/STORE-LISTING.md`.
+2. **The local check.** `node scripts/check-store-readiness.mjs --apk <apk>`.
+   No blockers, and every warning is either fixed or written down.
+3. **The CI check.** Push the release branch or tag the release. The
+   `Store readiness` workflow has to be green, and the job summary has to be
+   read.
+4. **The Play Console.** Upload the bundle, fill in the listing from
+   `docs/operations/STORE-LISTING.md`, answer the data safety questions from
+   `docs/operations/DATA-SAFETY.md`, and do the permissions declaration from
+   `docs/operations/PLAY-PERMISSIONS-DECLARATION.md`.
+5. **The founder's approval.** The submission to Google Play is a founder gate
+   (section 7.3). The founder says yes in the founder report.
 
-- [ ] The environment file of the server holds the version and the images of
-      the release.
-- [ ] The images are pulled: `docker compose ... pull`.
-- [ ] The API is swapped, one replica at a time, and both replicas answer
-      `200` on `/health/ready` (`infra/zero-downtime.md`).
-- [ ] The auth service is swapped, one replica at a time, and both replicas
-      answer `200` on `/health/ready`.
-- [ ] The health endpoint of every replica reports the new version.
-- [ ] The edge still answers: `curl -I https://$COURIER_DOMAIN/`.
-- [ ] The heartbeat is quiet: no new alert in the channel.
-- [ ] The log of the edge has no burst of `502`.
+## What the local check enforces
 
-## 5. After the deploy
+| Check                                                                                   | Blocking                                |
+| --------------------------------------------------------------------------------------- | --------------------------------------- |
+| The app version is a version number                                                     | yes                                     |
+| The Android version code is set                                                         | yes                                     |
+| The version strings in the store listing match the app                                  | yes                                     |
+| The background location declaration exists                                              | yes                                     |
+| The in-app background location disclosure and the privacy policy URL exist              | yes                                     |
+| The foreground service types for the location and the microphone are declared           | yes                                     |
+| The permissions Play only allows with a review are not in the manifest                  | yes                                     |
+| The privacy policy and the data safety notes exist                                      | yes                                     |
+| The target API level is the level Play requires (36, from 31 August 2026)               | yes                                     |
+| The base APK stays inside the 80 MB budget                                              | yes                                     |
+| The APK carries the 64-bit libraries                                                    | yes                                     |
+| The app icon is a square PNG of at least 512 pixels, and the adaptive icon images exist | yes                                     |
+| The release workflow reads the signing secrets, and no key is in the repository         | yes                                     |
+| The licence ledger lists the packages of the shipped app                                | yes                                     |
+| The data sync foreground service type is declared                                       | no (a warning)                          |
+| The licences in the ledger are known                                                    | no (a warning)                          |
+| The release APK was measured                                                            | no (a warning, unless the APK is given) |
+| The app has an in-app account deletion                                                  | no (a warning, Play asks for it)        |
 
-- [ ] A courier can sign in and can record a delivery (the smoke test, on
-      the test account).
-- [ ] The error rate of the edge is back to normal (the access log of the
-      last minutes).
-- [ ] The database is not filling up faster than before
-      (`docker stats --no-stream`).
-- [ ] The release is written down in `docs/EXECUTOR_LOG.md` with the link to
-      the CI run, the digests of the images and the time of the deploy.
-- [ ] `docs/PROGRESS.md` and the status of the squad that owns the change
-      are up to date.
+## The founder's part
 
-## 6. The rollback, ready before the deploy
+The founder supplies the accounts, the keys and the legal sign-off. They are all
+in `docs/FOUNDER_TODO.md`. The names of the secrets the workflow reads are
+there too; the workflow skips those lanes with a clear message when a secret is
+missing, so a missing secret never fails the pipeline.
 
-- [ ] The image of the version before is on the server (`docker images`) or
-      can be pulled again.
-- [ ] The two commands of the rollback are written down in the notes of the
-      release.
+## The upstream work
 
-## The evidence of a release
+StoreReady v0.1.0 does not know about the checks our app needs. The list to
+raise with its author (github.com/MaTriXy/StoreReady, MPL-2.0):
 
-The evidence lives with the release, and the notes of the release point at
-it:
+- the background location declaration and the in-app disclosure,
+- the foreground service types (the location, the microphone and the data sync),
+- the account deletion,
+- the data safety answers,
+- the Play Console API, so the live listing can be compared with the draft.
 
-| What                       | Where                                              |
-| -------------------------- | -------------------------------------------------- |
-| The CI run of the commit   | the link in the pull request and in the notes      |
-| The images                 | the digests in the notes of the release            |
-| The APK                    | the artefact of the `Release APK` workflow         |
-| The restore test           | the link to the run of the `Restore test` workflow |
-| The Android E2E            | the artefact `android-e2e-evidence` of the run     |
-| The coverage               | the artefact `coverage` of the run                 |
-| The evidence of the deploy | the output of the health endpoints, in the notes   |
-
-A number without a link to a run is not verified (MASTER_EXECUTION section
-7). It does not go into the notes.
+Report them as issues on the repository of the tool and keep this list until they
+are in a release.

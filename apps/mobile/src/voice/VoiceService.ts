@@ -18,6 +18,9 @@ import {
   GeneratedAudio
 } from 'react-native-sherpa-onnx/tts';
 
+import type { MapViewMode } from '@/maps/viewModes';
+import { publishVoiceCommand } from './commandChannel';
+
 export interface VoiceConfig {
   sttModelPath: string;
   ttsModelPath: string;
@@ -39,6 +42,14 @@ export type VoiceState =
   | 'speaking'
   | 'error';
 
+/**
+ * The command catalogue.
+ *
+ * Every command the app understands is in this list. The map commands are the
+ * ones MASTER_EXECUTION §11 asks for: the courier can pick the map mode and
+ * move the camera by voice, and the map screen listens on the voice channel
+ * (`commandChannel.ts`).
+ */
 export type VoiceCommand = 
   | { type: 'mark_delivered'; stopId: string }
   | { type: 'mark_skipped'; stopId: string }
@@ -50,7 +61,13 @@ export type VoiceCommand =
   | { type: 'how_many_left' }
   | { type: 'start_shift' }
   | { type: 'end_shift' }
-  | { type: 'emergency' };
+  | { type: 'emergency' }
+  | { type: 'set_map_mode'; mode: MapViewMode }
+  | { type: 'zoom_to_next_stop' }
+  | { type: 'tilt_map'; on: boolean }
+  | { type: 'follow_me'; on: boolean }
+  | { type: 'look_back' }
+  | { type: 'reset_camera' };
 
 export interface VoiceCallbacks {
   onStateChange: (state: VoiceState) => void;
@@ -150,18 +167,29 @@ class VoiceService {
     }
   }
 
+  /**
+   * Hands a command to the app.
+   *
+   * The command goes on the voice channel as well, so a screen that only
+   * wants to hear the map commands does not have to hold the voice engine.
+   */
+  private emitCommand(command: VoiceCommand): void {
+    publishVoiceCommand(command);
+    this.callbacks?.onCommand(command);
+  }
+
   private handleEarbudEvent(event: EarbudEvent): void {
     this.callbacks?.onEarbudEvent(event);
 
     switch (event.type) {
       case 'single':
-        this.callbacks?.onCommand({ type: 'mark_delivered', stopId: 'current' });
+        this.emitCommand({ type: 'mark_delivered', stopId: 'current' });
         break;
       case 'double':
-        this.callbacks?.onCommand({ type: 'mark_skipped', stopId: 'current' });
+        this.emitCommand({ type: 'mark_skipped', stopId: 'current' });
         break;
       case 'triple':
-        this.callbacks?.onCommand({ type: 'mark_failed', stopId: 'current', reason: 'earbud_triple' });
+        this.emitCommand({ type: 'mark_failed', stopId: 'current', reason: 'earbud_triple' });
         break;
       case 'long':
         this.startListening();

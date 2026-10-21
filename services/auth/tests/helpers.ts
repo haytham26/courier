@@ -4,15 +4,29 @@ import { createAuth, type AuthInstance } from "../src/server.js";
 export const TEST_SECRET = "test-only-value-not-a-real-credential-0000";
 export const BASE_URL = "http://localhost:3001";
 
-export function testConfig(overrides: Partial<AuthConfig> = {}): AuthConfig {
-  const config = loadConfig({
+/**
+ * The environment every test starts from.
+ *
+ * The extra variables switch on the sign-in methods that the founder has not
+ * supplied yet; a test that needs one of them passes its own value.
+ */
+export function testEnv(extra: Record<string, string> = {}): Record<string, string> {
+  return {
     BETTER_AUTH_SECRET: TEST_SECRET,
     BETTER_AUTH_URL: BASE_URL,
     AUTH_DATABASE_URL: "memory://",
-    AUTH_TRUSTED_ORIGINS: "exp://",
+    AUTH_TRUSTED_ORIGINS: "exp://,courier://",
     AUTH_TRUSTED_IP_HEADERS: "x-forwarded-for",
     NODE_ENV: "test",
-  });
+    ...extra,
+  };
+}
+
+export function testConfig(
+  overrides: Partial<AuthConfig> = {},
+  extraEnv: Record<string, string> = {},
+): AuthConfig {
+  const config = loadConfig(testEnv(extraEnv));
   return {
     ...config,
     rateLimit: {
@@ -31,8 +45,11 @@ export class AuthTestClient {
 
   private readonly cookies = new Map<string, string>();
 
-  constructor(overrides: Partial<AuthConfig> = {}) {
-    this.auth = createAuth(testConfig(overrides));
+  constructor(
+    overrides: Partial<AuthConfig> = {},
+    extraEnv: Record<string, string> = {},
+  ) {
+    this.auth = createAuth(testConfig(overrides, extraEnv));
   }
 
   async request(path: string, init: RequestInit = {}): Promise<Response> {
@@ -42,6 +59,11 @@ export class AuthTestClient {
     }
     if (!headers.has("x-forwarded-for")) {
       headers.set("x-forwarded-for", "127.0.0.1");
+    }
+    // The app sends this header on every request; the `expo` plugin turns it
+    // into the `origin` header the CSRF check reads.
+    if (!headers.has("expo-origin")) {
+      headers.set("expo-origin", "courier://");
     }
     if (this.cookies.size > 0) {
       headers.set(
@@ -120,6 +142,27 @@ export async function signUp(
   });
   if (status !== 200) {
     throw new Error(`sign-up failed with ${status}: ${JSON.stringify(data)}`);
+  }
+  return data;
+}
+
+export interface SignInResponse {
+  token: string;
+  user: { id: string; email: string; name?: string };
+}
+
+/** Signs a courier who already has an account back in. */
+export async function signIn(
+  client: AuthTestClient,
+  email = "driver@example.co.nz",
+  password = "correct-horse-battery",
+): Promise<SignInResponse> {
+  const { status, data } = await client.post<SignInResponse>("/api/auth/sign-in/email", {
+    email,
+    password,
+  });
+  if (status !== 200) {
+    throw new Error(`sign-in failed with ${status}: ${JSON.stringify(data)}`);
   }
   return data;
 }

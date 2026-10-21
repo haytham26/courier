@@ -128,3 +128,34 @@ export function stopsForMap(stops: Stop[], bounds: LngLatBounds | null): Stop[] 
   const ordered = active ? [active, ...others] : others;
   return ordered.slice(0, MAX_MAP_MARKERS);
 }
+
+/**
+ * The box the day's stops sit in.
+ *
+ * It is how the app works out whether the courier is in a town: a town is
+ * where the deliveries are. It is null when there are no stops at all.
+ */
+export function stopsBounds(stops: Stop[]): {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+} | null {
+  if (stops.length === 0) {
+    return null;
+  }
+
+  let west = Number.POSITIVE_INFINITY;
+  let south = Number.POSITIVE_INFINITY;
+  let east = Number.NEGATIVE_INFINITY;
+  let north = Number.NEGATIVE_INFINITY;
+
+  for (const stop of stops) {
+    west = Math.min(west, stop.coordinates.lng);
+    east = Math.max(east, stop.coordinates.lng);
+    south = Math.min(south, stop.coordinates.lat);
+    north = Math.max(north, stop.coordinates.lat);
+  }
+
+  return { west, south, east, north };
+}
