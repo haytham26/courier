@@ -30,6 +30,8 @@ jobs:
           node-version: 22
       - name: Check the diff against the floor
         run: node scripts/check-floor.mjs ${{ github.event.pull_request.base.sha || 'origin/main' }}
+      - name: Check the voice evaluation set
+        run: node scripts/check-voice-eval.mjs
 
   coverage:
     name: Coverage ratchet
