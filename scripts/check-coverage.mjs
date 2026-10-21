@@ -24,6 +24,7 @@ const THRESHOLDS = [
   { label: 'packages/ and services/ (overall)', floor: 81, groups: ['packages', 'services'] },
   { label: 'the address engine', floor: 81, files: ['app/address_correction.py'] },
   { label: 'the auth service', floor: 88, files: ['services/auth/src'] },
+  { label: 'the voice service', floor: 85, files: ['services/courier-voice/app'] },
   { label: 'sync', floor: 90, files: ['app/sync', 'services/sync'], optional: true },
   { label: 'billing', floor: 90, files: ['app/billing', 'services/billing'], optional: true },
 ];
@@ -39,6 +40,7 @@ function readJson(path) {
 
 const jsSummary = readJson('coverage/coverage-summary.json');
 const pySummary = readJson('apps/api/coverage.json');
+const voiceSummary = readJson('services/courier-voice/coverage.json');
 
 if (!jsSummary && !pySummary) {
   console.error('check-coverage: no coverage summary found — run `pnpm coverage` first');
@@ -55,10 +57,22 @@ function entries(summary) {
     files.push({ file: file.replace(/\\/g, '/'), covered: data.lines.covered ?? 0, total: data.lines.total ?? 0 });
   }
 
-  const pyFiles = pySummary?.files ?? {};
-  for (const [file, data] of Object.entries(pyFiles)) {
+  for (const summary of [pySummary]) {
+    const pyFiles = summary?.files ?? {};
+    for (const [file, data] of Object.entries(pyFiles)) {
+      files.push({
+        file: file.replace(/\\/g, '/'),
+        covered: data.summary?.covered_lines ?? 0,
+        total: data.summary?.num_statements ?? 0,
+      });
+    }
+  }
+
+  // The voice service runs from its own directory, so its paths are relative
+  // to it: they carry the directory of the service, so the thresholds find them.
+  for (const [file, data] of Object.entries(voiceSummary?.files ?? {})) {
     files.push({
-      file: file.replace(/\\/g, '/'),
+      file: `services/courier-voice/${file.replace(/\\/g, '/')}`,
       covered: data.summary?.covered_lines ?? 0,
       total: data.summary?.num_statements ?? 0,
     });

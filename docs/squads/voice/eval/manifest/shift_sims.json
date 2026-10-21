@@ -1,0 +1,343 @@
+{
+  "generated": "2026-10-22",
+  "generator": "the voice squad, written by hand from the Christchurch shift days",
+  "licence": "our own script bank; no real driver audio, no personal data",
+  "slices": [
+    {
+      "id": "shift_sim",
+      "description": "the scripted full-shift simulations: the voice and the noise of a whole shift",
+      "audio": "the turns are the text of a shift; the audio is generated from these scripts with a licence-clean voice and the licence-checked noise beds (EVAL.md section 5)",
+      "simulations": [
+        {
+          "id": "SIM-001",
+          "name": "a wet morning in the city",
+          "noise": {
+            "bed": "van_rain",
+            "snr_db": 5,
+            "source": "our own van recording (we own it)",
+            "licence": "ours"
+          },
+          "environment": {
+            "expected_stops": 214,
+            "new_addresses": 3,
+            "weather": "rain after 2"
+          },
+          "stops": [
+            {
+              "id": "s1",
+              "sequence": 1,
+              "number": "42",
+              "street": "Main North Road",
+              "suburb": "Papanui",
+              "status": "delivered"
+            },
+            {
+              "id": "s2",
+              "sequence": 2,
+              "number": "14",
+              "street": "Harewood",
+              "suburb": "Bishopdale",
+              "status": "active",
+              "tip": "side gate",
+              "size_class": "small",
+              "van_zone": "mid-rack"
+            },
+            {
+              "id": "s3",
+              "sequence": 3,
+              "number": "3",
+              "street": "Kowhai Street",
+              "suburb": "Bishopdale",
+              "status": "pending"
+            },
+            {
+              "id": "s4",
+              "sequence": 4,
+              "number": "9",
+              "street": "Rimu Street",
+              "suburb": "Saint Albans",
+              "status": "pending",
+              "parcel_for": "Mrs Smith",
+              "size_class": "large",
+              "van_zone": "front"
+            }
+          ],
+          "proactive": [
+            {
+              "event": "shift_start",
+              "expect": "214 stops, 3 new addresses, rain after 2"
+            },
+            {
+              "event": "approach",
+              "expect": "next: 14 Harewood, side gate, small box mid-rack"
+            }
+          ],
+          "turns": [
+            {
+              "transcript": "good morning",
+              "trigger": "wake_word",
+              "speed_kmh": 0,
+              "expect_intent": "chat",
+              "expect_speech": "Morning. Let's get through it."
+            },
+            {
+              "transcript": "how many left?",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "expect_intent": "how_many_left",
+              "expect_speech": "213 stops left."
+            },
+            {
+              "transcript": "delivered",
+              "trigger": "earbud",
+              "speed_kmh": 0,
+              "expect_intent": "mark_delivered",
+              "expect_speech": "Delivered."
+            },
+            {
+              "transcript": "left it on the porch",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "expect_intent": "mark_delivered",
+              "expect_speech": "Delivered."
+            },
+            {
+              "transcript": "where's the parcel for Mrs Smith?",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "expect_intent": "question",
+              "expect_speech": "large box front, 9 Rimu Street."
+            },
+            {
+              "transcript": "mm",
+              "trigger": "push_to_talk",
+              "speed_kmh": 40,
+              "expect_intent": "chat",
+              "expect_speech": "",
+              "expect_barge_in": false,
+              "expect_ended_turn": false
+            },
+            {
+              "transcript": "wait, hold on there",
+              "trigger": "push_to_talk",
+              "speed_kmh": 40,
+              "expect_intent": "chat",
+              "expect_speech": "",
+              "expect_barge_in": true
+            },
+            {
+              "transcript": "what's next?",
+              "trigger": "push_to_talk",
+              "speed_kmh": 60,
+              "max_words": 8,
+              "expect_intent": "question",
+              "expect_speech": "next: 14 Harewood, then 3 Kowhai Street."
+            },
+            {
+              "transcript": "skip",
+              "trigger": "earbud",
+              "speed_kmh": 0,
+              "expect_intent": "skip_stop",
+              "expect_speech": "Skipped."
+            },
+            {
+              "transcript": "the radio is playing",
+              "trigger": "push_to_talk",
+              "speed_kmh": 50,
+              "max_words": 8,
+              "expect_intent": "chat",
+              "expect_speech": ""
+            }
+          ]
+        },
+        {
+          "id": "SIM-002",
+          "name": "a rural run with no signal",
+          "noise": {
+            "bed": "road_gravel",
+            "snr_db": 0,
+            "source": "our own van recording (we own it)",
+            "licence": "ours"
+          },
+          "environment": {
+            "expected_stops": 12,
+            "new_addresses": 0,
+            "weather": "dry"
+          },
+          "stops": [
+            {
+              "id": "r1",
+              "sequence": 1,
+              "number": "5",
+              "street": "Rimu Street",
+              "suburb": "Saint Albans",
+              "status": "pending"
+            },
+            {
+              "id": "r2",
+              "sequence": 2,
+              "number": "7",
+              "street": "Cranmer Street",
+              "suburb": "Addington",
+              "status": "pending"
+            }
+          ],
+          "proactive": [
+            {
+              "event": "shift_start",
+              "expect": "12 stops, dry"
+            }
+          ],
+          "turns": [
+            {
+              "transcript": "delivered",
+              "trigger": "earbud",
+              "speed_kmh": 0,
+              "online": false,
+              "expect_intent": "mark_delivered",
+              "expect_speech": "Delivered."
+            },
+            {
+              "transcript": "add stop 5 Rimu Street",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "online": false,
+              "expect_intent": "add_stop",
+              "expect_speech": "Stop added."
+            },
+            {
+              "transcript": "what's the weather like?",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "online": false,
+              "expect_intent": "chat",
+              "expect_speech": "I need the internet for that."
+            },
+            {
+              "transcript": "how many left?",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "online": false,
+              "expect_intent": "how_many_left",
+              "expect_speech": "12 stops left."
+            },
+            {
+              "transcript": "no, twelve",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "online": false,
+              "expect_intent": "chat",
+              "expect_speech": "twelve stops left."
+            },
+            {
+              "transcript": "3D on",
+              "trigger": "push_to_talk",
+              "speed_kmh": 30,
+              "max_words": 8,
+              "expect_intent": "set_map_mode",
+              "expect_speech": "3D on."
+            },
+            {
+              "transcript": "note: the gate code is 4821",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "online": false,
+              "expect_intent": "add_location_note",
+              "expect_speech": "Note saved."
+            }
+          ]
+        },
+        {
+          "id": "SIM-003",
+          "name": "the last hour and the end of the day",
+          "noise": {
+            "bed": "quiet",
+            "snr_db": null,
+            "source": "no noise bed",
+            "licence": "not needed"
+          },
+          "environment": {
+            "expected_stops": 8,
+            "new_addresses": 0,
+            "returns_in_van": 1
+          },
+          "stops": [
+            {
+              "id": "e1",
+              "sequence": 1,
+              "number": "12",
+              "street": "Bealey Avenue",
+              "suburb": "Edgeware",
+              "status": "delivered"
+            },
+            {
+              "id": "e2",
+              "sequence": 2,
+              "number": "88",
+              "street": "Hills Road",
+              "suburb": "Shirley",
+              "status": "failed"
+            }
+          ],
+          "proactive": [
+            {
+              "event": "shift_end",
+              "expect": "1 delivered, 1 failed, 1 returns in the van"
+            }
+          ],
+          "turns": [
+            {
+              "transcript": "delivered",
+              "trigger": "earbud",
+              "speed_kmh": 0,
+              "expect_intent": "mark_delivered",
+              "expect_speech": "Delivered."
+            },
+            {
+              "transcript": "how's the day going?",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "expect_intent": "question",
+              "expect_speech": "2 done, 6 to go."
+            },
+            {
+              "transcript": "cheers",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "expect_intent": "chat",
+              "expect_speech": "No worries."
+            },
+            {
+              "transcript": "how much did I earn today?",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "expect_intent": "question",
+              "expect_speech": "I can't see today's pay yet."
+            },
+            {
+              "transcript": "should I take this painkiller for the back?",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "expect_intent": "chat",
+              "expect_speech": "that's a call for a doctor, not me"
+            },
+            {
+              "transcript": "are you an AI?",
+              "trigger": "push_to_talk",
+              "speed_kmh": 0,
+              "expect_intent": "chat",
+              "expect_speech": "I'm Courier Voice, your shift companion"
+            },
+            {
+              "transcript": "end my shift",
+              "trigger": "earbud",
+              "speed_kmh": 0,
+              "expect_intent": "end_shift",
+              "expect_speech": "Shift ended."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

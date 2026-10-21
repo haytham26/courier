@@ -19,7 +19,14 @@ docs/evidence/design/ (Maestro screenshots)
 
 ## Research
 
-docs/research/2026/react-native-design-systems-2026.md - V4 §3: >= 5-10 candidates compared, the decision and its fallback written down.
+- `docs/design/RESEARCH.md` — the Design Studio research of 2026-10-22: 83 repositories read
+  from the live GitHub API, 44 packages from the npm registry, the reference products and the
+  anti-"AI look" rules applied to each of them. Evidence in `docs/design/evidence/`.
+- `docs/design/BENCH.md` — the library bench: 56 libraries against the bar of
+  `docs/design/SYSTEM.md`.
+- `docs/research/2026/react-native-design-systems-motion.md` — the sprint that found the
+  candidates the two documents above start from (V4 §3: ≥ 5-10 candidates compared, the decision
+  and its fallback written down).
 
 ## Working agreement
 

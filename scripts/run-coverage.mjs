@@ -77,6 +77,27 @@ if (apiStatus !== 0) {
   process.exit(apiStatus);
 }
 
+console.log('\n=== coverage: the voice service ===');
+const voiceStatus =
+  spawnSync(
+    'uv',
+    [
+      'run',
+      '--directory',
+      'services/courier-voice',
+      'pytest',
+      '--cov=app',
+      '--cov-report=json:coverage.json',
+      '--cov-report=term-missing:skip-covered',
+      '-q',
+    ],
+    { stdio: 'inherit' },
+  ).status ?? 1;
+if (voiceStatus !== 0) {
+  console.error('the voice service coverage run failed');
+  process.exit(voiceStatus);
+}
+
 console.log('\n=== check-coverage ===');
 const gate = spawnSync(process.execPath, ['scripts/check-coverage.mjs'], { stdio: 'inherit' });
 process.exit(gate.status ?? 1);

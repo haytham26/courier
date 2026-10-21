@@ -6,7 +6,7 @@
  * the data rows say what they do. There is no emoji: the icons come from
  * the one icon set of the app.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -22,12 +22,42 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { setHapticsEnabled } from '@/motion/haptics';
+import { createFilePreferenceStore } from '@/sync/preferenceFiles';
+import { useOptionalAuth } from '@/providers/AuthProvider';
+import { useCourierVoice } from '@/voice/useCourierVoice';
+import {
+  VOICE_IDS,
+  VOICE_VERBOSITIES,
+  type VoiceSettings,
+  type VoiceVerbosity,
+} from '@/voice/settings';
 
 const THEME_CHOICES = [
   { name: 'day', label: 'Day', icon: 'white-balance-sunny' },
   { name: 'night', label: 'Night', icon: 'weather-night' },
   { name: 'highContrast', label: 'High Contrast', icon: 'contrast-circle' },
 ] as const;
+
+/** The speaking speeds the courier can pick. */
+const SPEED_CHOICES = [
+  { label: 'Slow', speed: 0.8 },
+  { label: 'Normal', speed: 1 },
+  { label: 'Fast', speed: 1.2 },
+] as const;
+
+/** The words the voice choices carry. */
+const VOICE_LABELS: Record<string, string> = {
+  nz: 'New Zealand',
+  en_au: 'Australian',
+  en_gb: 'British',
+  en_us: 'American',
+};
+
+const VERBOSITY_LABELS: Record<VoiceVerbosity, string> = {
+  minimal: 'Minimal',
+  normal: 'Normal',
+  chatty: 'Chatty',
+};
 
 export default function SettingsScreen() {
   const { theme, themeName, setTheme } = useTheme();
@@ -36,9 +66,18 @@ export default function SettingsScreen() {
   const [autoNavigate, setAutoNavigate] = useState(true);
   const [hapticFeedback, setHapticFeedback] = useState(true);
 
+  const auth = useOptionalAuth();
+  const store = useMemo(() => createFilePreferenceStore(), []);
+  const courierVoice = useCourierVoice({ driverId: auth?.user?.id ?? null, store });
+  const voiceSettings = courierVoice.settings;
+
   const onHapticFeedbackChange = (value: boolean) => {
     setHapticFeedback(value);
     setHapticsEnabled(value);
+  };
+
+  const changeVoiceSettings = (change: Partial<VoiceSettings>) => {
+    void courierVoice.saveSettings({ ...voiceSettings, ...change });
   };
 
   return (
@@ -203,6 +242,206 @@ export default function SettingsScreen() {
               accessibilityLabel="Haptic Feedback"
               accessibilityHint="Vibrate when a voice command is understood"
               testID="settings-haptics"
+            />
+          </View>
+        </Card>
+
+        {/* Courier Voice */}
+        <Card
+          style={[styles.sectionCard, { backgroundColor: theme.colors.surface, marginTop: 16 }]}
+        >
+          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
+            Courier Voice
+          </Text>
+          <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary }]}>
+            How much the voice says, which voice it uses and when it is quiet
+          </Text>
+
+          <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
+            Verbosity
+          </Text>
+          <View
+            style={styles.themeSelector}
+            accessibilityRole="radiogroup"
+            accessibilityLabel="How much the voice says"
+          >
+            {VOICE_VERBOSITIES.map((verbosity) => {
+              const selected = voiceSettings.verbosity === verbosity;
+              return (
+                <TouchableOpacity
+                  key={verbosity}
+                  style={[
+                    styles.themeOption,
+                    selected
+                      ? {
+                          borderColor: theme.colors.brandPrimary,
+                          borderWidth: 2,
+                          backgroundColor: `${theme.colors.brandPrimary}20`,
+                        }
+                      : { borderColor: theme.colors.border },
+                  ]}
+                  onPress={() => changeVoiceSettings({ verbosity })}
+                  accessibilityRole="radio"
+                  accessibilityLabel={VERBOSITY_LABELS[verbosity]}
+                  accessibilityState={{ selected }}
+                  testID={`settings-voice-verbosity-${verbosity}`}
+                >
+                  <Text
+                    style={[
+                      styles.themeOptionText,
+                      {
+                        color: selected
+                          ? theme.colors.brandPrimary
+                          : theme.colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    {VERBOSITY_LABELS[verbosity]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Voice</Text>
+          <View
+            style={styles.themeSelector}
+            accessibilityRole="radiogroup"
+            accessibilityLabel="The voice the courier hears"
+          >
+            {VOICE_IDS.map((voice) => {
+              const selected = voiceSettings.voice === voice;
+              return (
+                <TouchableOpacity
+                  key={voice}
+                  style={[
+                    styles.themeOption,
+                    selected
+                      ? {
+                          borderColor: theme.colors.brandPrimary,
+                          borderWidth: 2,
+                          backgroundColor: `${theme.colors.brandPrimary}20`,
+                        }
+                      : { borderColor: theme.colors.border },
+                  ]}
+                  onPress={() => changeVoiceSettings({ voice })}
+                  accessibilityRole="radio"
+                  accessibilityLabel={VOICE_LABELS[voice] ?? voice}
+                  accessibilityState={{ selected }}
+                  testID={`settings-voice-voice-${voice}`}
+                >
+                  <Text
+                    style={[
+                      styles.themeOptionText,
+                      {
+                        color: selected
+                          ? theme.colors.brandPrimary
+                          : theme.colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    {VOICE_LABELS[voice] ?? voice}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
+            Speaking speed
+          </Text>
+          <View
+            style={styles.themeSelector}
+            accessibilityRole="radiogroup"
+            accessibilityLabel="How fast the voice speaks"
+          >
+            {SPEED_CHOICES.map((choice) => {
+              const selected = voiceSettings.speed === choice.speed;
+              return (
+                <TouchableOpacity
+                  key={choice.label}
+                  style={[
+                    styles.themeOption,
+                    selected
+                      ? {
+                          borderColor: theme.colors.brandPrimary,
+                          borderWidth: 2,
+                          backgroundColor: `${theme.colors.brandPrimary}20`,
+                        }
+                      : { borderColor: theme.colors.border },
+                  ]}
+                  onPress={() => changeVoiceSettings({ speed: choice.speed })}
+                  accessibilityRole="radio"
+                  accessibilityLabel={choice.label}
+                  accessibilityState={{ selected }}
+                  testID={`settings-voice-speed-${choice.label.toLowerCase()}`}
+                >
+                  <Text
+                    style={[
+                      styles.themeOptionText,
+                      {
+                        color: selected
+                          ? theme.colors.brandPrimary
+                          : theme.colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    {choice.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
+                Quiet mode
+              </Text>
+              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
+                The voice says nothing but what keeps you safe
+              </Text>
+            </View>
+            <Switch
+              value={voiceSettings.quietMode}
+              onValueChange={(value) => changeVoiceSettings({ quietMode: value })}
+              thumbColor={
+                voiceSettings.quietMode ? theme.colors.brandPrimary : theme.colors.textTertiary
+              }
+              trackColor={{
+                true: `${theme.colors.brandPrimary}33`,
+                false: theme.colors.border,
+              }}
+              accessibilityLabel="Quiet mode"
+              accessibilityHint="The voice says nothing but what keeps you safe"
+              testID="settings-voice-quiet-mode"
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
+                Only essentials
+              </Text>
+              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
+                The voice speaks the next stop and the warnings, and no more
+              </Text>
+            </View>
+            <Switch
+              value={voiceSettings.essentialsOnly}
+              onValueChange={(value) => changeVoiceSettings({ essentialsOnly: value })}
+              thumbColor={
+                voiceSettings.essentialsOnly
+                  ? theme.colors.brandPrimary
+                  : theme.colors.textTertiary
+              }
+              trackColor={{
+                true: `${theme.colors.brandPrimary}33`,
+                false: theme.colors.border,
+              }}
+              accessibilityLabel="Only essentials"
+              accessibilityHint="The voice speaks the next stop and the warnings, and no more"
+              testID="settings-voice-essentials-only"
             />
           </View>
         </Card>

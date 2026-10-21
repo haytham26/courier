@@ -75,6 +75,14 @@
       "target": 40,
       "files": 40,
       "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "shift_sim",
+      "scripts": 24,
+      "target": 24,
+      "files": 24,
+      "simulations": 3,
+      "status": "the shifts run against the service; the audio is to generate"
     }
   ]
 }

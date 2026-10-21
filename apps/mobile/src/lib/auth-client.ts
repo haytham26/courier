@@ -84,6 +84,19 @@ export const signOut = authClient.signOut;
 export const getSession = authClient.getSession;
 export const useSession = authClient.useSession;
 
+/**
+ * The courier's access token.
+ *
+ * The token is the one the auth service signs with its JWKS key pair, so the
+ * other services (the Courier API, the voice service) can check who is asking
+ * without a session of their own. It is null when there is no session.
+ */
+export async function sessionToken(): Promise<string | null> {
+  const result = await authClient.getSession();
+  const token = result.data?.session?.token;
+  return typeof token === 'string' && token.length > 0 ? token : null;
+}
+
 /** True when the app runs against the local mocks (the CI emulator run). */
 export const isE2EMode = isE2E;
 

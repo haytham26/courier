@@ -16,12 +16,18 @@ export const appThemes = {
   light: themes.day,
   dark: themes.night,
   highContrast: themes.highContrast,
+  roadbook: themes.roadbook,
+  beacon: themes.beacon,
+  freight: themes.freight,
 };
 
 export type AppThemes = {
   light: typeof themes.day;
   dark: typeof themes.day;
   highContrast: typeof themes.day;
+  roadbook: typeof themes.day;
+  beacon: typeof themes.day;
+  freight: typeof themes.day;
 };
 
 declare module 'react-native-unistyles' {
@@ -33,8 +39,10 @@ export const unistylesThemeNames = {
   day: 'light',
   night: 'dark',
   highContrast: 'highContrast',
+  roadbook: 'roadbook',
+  beacon: 'beacon',
+  freight: 'freight',
 } as const;
-
 StyleSheet.configure({
   themes: appThemes,
   settings: {

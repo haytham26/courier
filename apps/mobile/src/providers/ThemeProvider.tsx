@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { UnistylesRuntime } from 'react-native-unistyles';
-import { themes as baseThemes, type ThemeName } from '@courier/design-tokens/themes';
+import { themes as baseThemes, type Theme, type ThemeName } from '@courier/design-tokens/themes';
 
 import { unistylesThemeNames } from '@/unistyles';
 import { isThemePreference, type ThemePreference } from '@/constants/theme';
@@ -47,7 +47,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const store = useMemo(() => createFilePreferenceStore(), []);
   /** Puts a theme on the screen, whichever way the courier chose it. */
   const applyPreference = useCallback(
-    (preference: ThemePreference) => {
+    (preference: ThemeName | 'auto') => {
       if (preference === 'auto') {
         // The device decides: day in the daylight, night after dark.
         UnistylesRuntime.setAdaptiveThemes(true);
@@ -110,7 +110,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback(
     (name: ThemeName) => {
-      setThemePreferenceState(name);
+      // The three Design Studio directions are palettes, not a choice the
+      // courier makes: they are never written to the preferences.
+      if (isThemePreference(name)) {
+        setThemePreferenceState(name);
+      }
       applyPreference(name);
     },
     [applyPreference],
@@ -151,6 +155,39 @@ export function useTheme() {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
+}
+
+/**
+ * A theme scope.
+ *
+ * The design lab (MASTER_EXECUTION §13.4) shows the same screen in three
+ * directions. A scope hands one palette to everything below it - the shared
+ * `Button`, `Card` and `Badge` read the theme from this context, so they
+ * follow the scope - without touching the theme the courier has chosen and
+ * without writing the theme to the device.
+ *
+ * The setters do nothing: a scope is a palette, not a choice.
+ */
+export function ThemeScope({
+  theme,
+  children,
+}: {
+  theme: Theme;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  const value = useMemo<ThemeContextType>(
+    () => ({
+      theme,
+      themeName: theme.name,
+      setTheme: () => undefined,
+      toggleTheme: () => undefined,
+      themePreference: 'day',
+      setThemePreference: () => undefined,
+    }),
+    [theme],
+  );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export { themes, type ThemeName };

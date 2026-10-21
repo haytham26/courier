@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Direction A — Roadbook — Courier Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* The Roadbook theme of `packages/design-tokens/src/themes.ts`.
+       Every value below is a token; nothing here is invented. */
+    --background: #f4f1ea;
+    --surface: #ffffff;
+    --surface-elevated: #fbfaf6;
+    --border: #7d7869;
+    --text-primary: #16181a;
+    --text-secondary: #4c5359;
+    --text-tertiary: #5c646a;
+    --text-inverse: #ffffff;
+    --brand-primary: #8a4b00;
+    --status-delivered: #14653c;
+    --status-failed: #a32018;
+    --status-active: #8a4b00;
+    /* The type scale of `packages/design-tokens/src/directions.ts`. */
+    --metric: 48px;
+    --metric-leading: 52px;
+    --address: 22px;
+    --address-leading: 28px;
+    --row: 20px;
+    --row-leading: 26px;
+    --label: 17px;
+    --label-leading: 22px;
+    --body: 19px;
+    --body-leading: 26px;
+    --caption: 17px;
+    --caption-leading: 22px;
+    --title: 34px;
+    --title-leading: 40px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 32px 16px 64px;
+    background: #d8d9d6;
+    font-family: Figtree, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #16181a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--background);
+    border: 1px solid #9b9c98;
+    border-radius: 28px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .scroll { flex: 1; overflow: hidden; }
+
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 2px; }
+  .header-right { display: flex; align-items: center; gap: 4px; }
+  .clock { font-size: var(--row); line-height: var(--row-leading); font-weight: 500; }
+  .icon-button { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; }
+
+  .label { font-size: var(--label); line-height: var(--label-leading); font-weight: 600; letter-spacing: 0.06em; }
+  .caption { font-size: var(--caption); line-height: var(--caption-leading); font-weight: 500; letter-spacing: 0.02em; }
+  .body { font-size: var(--body); line-height: var(--body-leading); font-weight: 400; }
+  .row { font-size: var(--row); line-height: var(--row-leading); font-weight: 500; }
+  .address { font-size: var(--address); line-height: var(--address-leading); font-weight: 600; letter-spacing: -0.01em; }
+  .metric { font-size: var(--metric); line-height: var(--metric-leading); font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .rule { height: 1px; background: var(--border); margin: 0 16px; }
+
+  .ledger { display: flex; padding: 12px 16px; }
+  .ledger-main { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .ledger-stats { width: 132px; border-left: 1px solid var(--border); padding-left: 16px; }
+  .stat-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
+  .stat-row + .stat-row { border-top: 1px solid var(--border); }
+
+  .next { padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; }
+
+  .list-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 4px; }
+
+  .row-stop {
+    display: flex; align-items: center; gap: 12px;
+    min-height: 56px; padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sequence { width: 28px; font-size: var(--row); line-height: var(--row-leading); font-weight: 500; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+  .row-main { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .row-address { font-size: var(--row); line-height: var(--row-leading); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-address.active { font-weight: 700; }
+  .row-suburb { font-size: var(--caption); line-height: var(--caption-leading); font-weight: 500; letter-spacing: 0.02em; color: var(--text-tertiary); }
+  .eta { font-size: var(--row); line-height: var(--row-leading); font-weight: 500; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .status { width: 72px; text-align: right; font-size: var(--caption); line-height: var(--caption-leading); font-weight: 500; letter-spacing: 0.02em; }
+
+  .actions { padding: 12px 16px 8px; }
+  .primary {
+    height: 72px; width: 100%; border: 0; border-radius: 4px;
+    background: var(--brand-primary); color: var(--text-inverse);
+    font-family: inherit; font-size: 22px; font-weight: 600; letter-spacing: 0;
+  }
+
+  .voice {
+    height: 64px; display: flex; align-items: center; gap: 8px;
+    padding: 0 16px 8px; border-top: 1px solid var(--border); margin-top: 4px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--brand-primary); }
+  .voice-queue { margin-left: auto; color: var(--text-tertiary); }
+
+  .caption-block { max-width: 640px; font-size: 15px; line-height: 22px; color: #3b3f42; }
+  .caption-block h1 { font-size: 22px; margin: 0 0 8px; }
+  .caption-block code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+  .swatch { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .chip { width: 22px; height: 22px; border-radius: 4px; border: 1px solid #00000022; }
+</style>
+</head>
+<body>
+
+  <div class="phone">
+    <div class="scroll">
+      <div class="header">
+        <div class="header-left">
+          <div class="label" style="color: var(--text-secondary)">MONDAY · NORTHWOOD AM</div>
+          <div class="caption" style="color: var(--text-tertiary)">Tane Rua</div>
+        </div>
+        <div class="header-right">
+          <div class="clock tabular">10:38</div>
+          <div class="icon-button" role="img" aria-label="Settings">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16181a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="ledger">
+        <div class="ledger-main">
+          <div class="metric">18</div>
+          <div class="label" style="color: var(--text-secondary)">STOPS LEFT</div>
+        </div>
+        <div class="ledger-stats">
+          <div class="stat-row">
+            <div class="caption" style="color: var(--text-secondary)">Delivered</div>
+            <div class="row tabular" style="color: var(--status-delivered)">42</div>
+          </div>
+          <div class="stat-row">
+            <div class="caption" style="color: var(--text-secondary)">Failed</div>
+            <div class="row tabular" style="color: var(--status-failed)">2</div>
+          </div>
+          <div class="stat-row">
+            <div class="caption" style="color: var(--text-secondary)">To drive</div>
+            <div class="row tabular">6.4 km</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="next">
+        <div class="label" style="color: var(--brand-primary)">NEXT STOP</div>
+        <div class="address">14 Harewood Road</div>
+        <div class="body" style="color: var(--text-secondary)">Papanui · 10:42 · 3 parcels</div>
+        <div class="caption" style="color: var(--text-tertiary)">Side gate, small box in the rear rack</div>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="list-head">
+        <div class="label" style="color: var(--text-secondary)">STOPS</div>
+        <div class="caption" style="color: var(--text-tertiary)">8 shown</div>
+      </div>
+
+      <div class="row-stop">
+        <div class="sequence">45</div>
+        <div class="row-main">
+          <div class="row-address active">14 Harewood Road</div>
+          <div class="row-suburb">Papanui</div>
+        </div>
+        <div class="eta">10:42</div>
+        <div class="status" style="color: var(--status-active)">Next</div>
+      </div>
+      <div class="row-stop">
+        <div class="sequence">46</div>
+        <div class="row-main">
+          <div class="row-address">22 Westminster Street</div>
+          <div class="row-suburb">Merivale</div>
+        </div>
+        <div class="eta">10:49</div>
+        <div class="status" style="color: var(--text-tertiary)">Pending</div>
+      </div>
+      <div class="row-stop">
+        <div class="sequence">47</div>
+        <div class="row-main">
+          <div class="row-address">3/120 Blenheim Road</div>
+          <div class="row-suburb">Upper Riccarton</div>
+        </div>
+        <div class="eta">11:02</div>
+        <div class="status" style="color: var(--text-tertiary)">Pending</div>
+      </div>
+      <div class="row-stop">
+        <div class="sequence">48</div>
+        <div class="row-main">
+          <div class="row-address">78 Main South Road</div>
+          <div class="row-suburb">Sockburn</div>
+        </div>
+        <div class="eta">11:14</div>
+        <div class="status" style="color: var(--text-tertiary)">Pending</div>
+      </div>
+      <div class="row-stop">
+        <div class="sequence">49</div>
+        <div class="row-main">
+          <div class="row-address">234 Colombo Street</div>
+          <div class="row-suburb">Sydenham</div>
+        </div>
+        <div class="eta">11:26</div>
+        <div class="status" style="color: var(--text-tertiary)">Pending</div>
+      </div>
+      <div class="row-stop">
+        <div class="sequence">50</div>
+        <div class="row-main">
+          <div class="row-address">9 Cashel Street</div>
+          <div class="row-suburb">Addington</div>
+        </div>
+        <div class="eta">11:41</div>
+        <div class="status" style="color: var(--text-tertiary)">Pending</div>
+      </div>
+      <div class="row-stop">
+        <div class="sequence">51</div>
+        <div class="row-main">
+          <div class="row-address">41 Cranmer Street</div>
+          <div class="row-suburb">Halswell</div>
+        </div>
+        <div class="eta">11:55</div>
+        <div class="status" style="color: var(--text-tertiary)">Pending</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" type="button">Next stop</button>
+    </div>
+
+    <div class="voice">
+      <div class="dot"></div>
+      <div class="caption" style="color: var(--text-secondary)">Listening</div>
+      <div class="caption voice-queue">4 waiting</div>
+    </div>
+  </div>
+
+  <div class="caption-block">
+    <h1>Direction A — Roadbook (dense and operational)</h1>
+    <p>
+      The paper run sheet on the phone: warm paper, black ink, one highway-amber accent and
+      hairline rules instead of cards. Six stops of the run are on the screen without scrolling.
+      The metric is <code>48 px / 800 / tabular</code>, the address is <code>22 px / 600</code>, the
+      rows are <code>20 px / 500</code> and the labels are <code>17 px / 600</code> with wide
+      tracking. The corners are <code>4 px</code>, the spacing runs on the 4-pt grid, and the
+      movement is a <code>150 ms</code> fade with no slide.
+    </p>
+    <p>
+      This file is a render of the screen, drawn with the tokens of
+      <code>packages/design-tokens/src/themes.ts</code> and the type scale of
+      <code>packages/design-tokens/src/directions.ts</code>. The device screenshots come from the
+      emulator run of the route <code>/design/roadbook</code>, not from this file.
+    </p>
+    <div class="swatches">
+      <div class="swatch"><span class="chip" style="background:#f4f1ea"></span> background #F4F1EA</div>
+      <div class="swatch"><span class="chip" style="background:#16181a"></span> textPrimary #16181A</div>
+      <div class="swatch"><span class="chip" style="background:#8a4b00"></span> brandPrimary #8A4B00</div>
+      <div class="swatch"><span class="chip" style="background:#7d7869"></span> border #7D7869</div>
+      <div class="swatch"><span class="chip" style="background:#14653c"></span> statusDelivered #14653C</div>
+      <div class="swatch"><span class="chip" style="background:#a32018"></span> statusFailed #A32018</div>
+    </div>
+  </div>
+
+</body>
+</html>

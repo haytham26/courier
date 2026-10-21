@@ -1,0 +1,46 @@
+# The public material the Design Studio studies for the reference products.
+#
+# One URL per line. `#` starts a comment. The script
+# `scripts/check-design-reference-urls.ps1` fetches every line and records
+# the HTTP status, so no link in `docs/design/RESEARCH.md` is a guess.
+
+# --- The NZ and the delivery competitors -----------------------------------
+https://www.spoke.co.nz/
+https://www.spoke.co.nz/help
+https://www.uber.com/global/en/driver/
+https://www.uber.com/help/
+https://dasher.doordash.com/
+https://dasherhelp.doordash.com/
+https://www.amazon.com/flex
+https://www.amazon.com/gp/help/customer/display.html?nodeId=201956230
+
+# --- The map products -------------------------------------------------------
+https://www.apple.com/maps/
+https://developer.apple.com/design/human-interface-guidelines/
+https://maps.google.com/
+https://developers.google.com/maps/documentation/android-sdk
+https://m3.material.io/
+https://www.waze.com/
+https://www.strava.com/
+
+# --- The financial and productivity products -------------------------------
+https://www.revolut.com/
+https://monzo.com/
+https://monzo.github.io/
+https://linear.app/
+https://linear.app/method
+https://culturedcode.com/things/
+https://www.airbnb.com/
+
+# --- The character-defining products ----------------------------------------
+https://www.duolingo.com/
+https://nothing.tech/
+https://teenage.engineering/
+https://www.apple.com/watchos/
+https://arc.net/
+
+# --- The open-source material we can actually read --------------------------
+https://github.com/google/material-design-icons
+https://github.com/google/fonts/tree/main/ofl/figtree
+https://github.com/lottie-react-native/lottie-react-native
+https://developer.apple.com/fonts/system-fonts/

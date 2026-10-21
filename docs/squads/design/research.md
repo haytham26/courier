@@ -1,5 +1,16 @@
 # Design System & Motion Squad - research
 
+**Area:** React Native UI kits, design systems, motion/animation, gestures, accessibility
+
+| Research | Date | Where |
+| --- | --- | --- |
+| The UI kits, motion and gestures of 2026 (sprint #1) | 2026-10-20 | `docs/research/2026/react-native-design-systems-motion.md` (below) |
+| **The Design Studio research** — 83 repositories, the reference products, the anti-"AI look" rules | **2026-10-22** | **`docs/design/RESEARCH.md`** (evidence: `docs/design/evidence/`) |
+| **The library bench** — 56 libraries against the bar of `docs/design/SYSTEM.md` | **2026-10-22** | **`docs/design/BENCH.md`** (evidence: `docs/design/evidence/npm-packages-2026-10-22.tsv`) |
+
+The two new documents are the current ones for this squad; the note below is the sprint that
+found the candidates they start from.
+
 **Area:** React Native UI kits, design systems, motion/animation, gestures, accessibility **Research date:** 2026-10-20 · **Source file:** `docs/research/2026/react-native-design-systems-motion.md`
 
 ## Queries that found the candidates

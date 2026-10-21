@@ -56,11 +56,14 @@ describe('Design Tokens', () => {
 });
 
 describe('Themes', () => {
-  it('has three themes', () => {
-    expect(Object.keys(themes)).toHaveLength(3);
+  it('has the three product themes and the three Design Studio directions', () => {
+    expect(Object.keys(themes)).toHaveLength(6);
     expect(themes.day).toBeDefined();
     expect(themes.night).toBeDefined();
     expect(themes.highContrast).toBeDefined();
+    expect(themes.roadbook).toBeDefined();
+    expect(themes.beacon).toBeDefined();
+    expect(themes.freight).toBeDefined();
   });
 
   it('day theme has correct colors', () => {

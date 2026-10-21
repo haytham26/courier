@@ -21,6 +21,7 @@ dist/
 coverage/
 .coverage
 apps/api/coverage.json
+services/courier-voice/coverage.json
 *.tsbuildinfo
 # IDE
 .vscode/

@@ -1,5 +1,22 @@
 # Mockups v1/v2 ÔÇö CONTENT INVENTORY ONLY (visual style rejected by the founder)
 These files show which screens exist and what each must contain. Their look (neon on black, glow, orbs) was rejected as "AI-looking". Do not copy their style. The real design comes from MASTER_EXECUTION ┬º13 (Design Studio: research, 3 directions, founder pick, library bench).
+
+**The look is now decided in three places, and the founder is choosing between them:**
+
+| What                                                        | Where                                                                     |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| The three directions (the founder picks A, B or C)          | `docs/design/DIRECTIONS.md`                                               |
+| The renders of the three screens                            | `docs/design/directions/a-roadbook.html`, `b-beacon.html`, `c-freight.html` |
+| The real screens in the app                                  | `/design/roadbook`, `/design/beacon`, `/design/freight`                  |
+| The research behind them (83 repositories, the competitors)  | `docs/design/RESEARCH.md`                                                 |
+| The library bench (56 libraries against our bar)             | `docs/design/BENCH.md`                                                    |
+
+Until the founder picks, **the tokens of `packages/design-tokens` hold all three palettes**
+(`roadbook`, `beacon`, `freight` in `themes.ts`) and all three type scales
+(`packages/design-tokens/src/directions.ts`), each measured against the contrast bars by
+`packages/design-tokens/src/contrast.test.ts`. The day theme and the night theme stay exactly
+as they are: the night theme is the adapted option, never the identity.
+
 Canvas: https://claude.ai/artifact/KixaotGGNLugEY5hpfwPuD
 
 ---
@@ -8,29 +25,33 @@ Canvas: https://claude.ai/artifact/KixaotGGNLugEY5hpfwPuD
 
 The specifications below are what every screen of the app must contain: the states, the
 night and day behaviour, the motion, the copy and the accessibility notes. The look itself
-is not decided yet: MASTER_EXECUTION section 13 (the Design Studio) decides it.
+is decided by MASTER_EXECUTION section 13 (the Design Studio): three directions are built and
+the founder picks one of them.
 
 # The mockups and the screen specifications
 
-## The approved mockups (the founder-approved target look)
+## The rejected mockups (content only — the look was rejected by the founder)
 
-- `Main.dc.html` - 1 Â· Driving mode (night): turn card, offline-map chip, bottom sheet with stop number (76 pt), street, suburb, door note + parcel location chips, 72 pt green "Delivered" + skip, listening indicator.
-- `Dictation.dc.html` - 2 Â· Dictation report: counts (matched / corrected / check), "what I corrected" cards (struck original â†’ corrected + reason), "please check" question with 2 big choices + "or just say it".
-- `DayList.dc.html` - 3 Â· Today's list (day): run name, progress bar, segmented filters, stops grouped by street, NEXT badge, "Corrected from â€¦" note.
-- Viewport 390Ã—844. Font Figtree. Colours/sizes in the inline styles are the reference for docs/design/SYSTEM.md tokens. Open the files in a browser (inline styles render without the support script).
+These three files are the **content** of the screens. Their look — neon on black, glow, orbs,
+glass — was rejected as "AI-looking" and **must not be copied**.
+
+- `Main.dc.html` - 1 · Driving mode (night): turn card, offline-map chip, bottom sheet with stop number (76 pt), street, suburb, door note + parcel location chips, 72 pt green "Delivered" + skip, listening indicator.
+- `Dictation.dc.html` - 2 · Dictation report: counts (matched / corrected / check), "what I corrected" cards (struck original → corrected + reason), "please check" question with 2 big choices + "or just say it".
+- `DayList.dc.html` - 3 · Today's list (day): run name, progress bar, segmented filters, stops grouped by street, NEXT badge, "Corrected from …" note.
+- Viewport 390×844. Font Figtree. Open the files in a browser (inline styles render without the support script).
 - Live preview: https://claude.ai/artifact/KixaotGGNLugEY5hpfwPuD
 
-The colours of the mockups are the colours of the token package: the day
-theme is `DayList.dc.html`, the night theme is `Main.dc.html`, and the
-dictation report is `Dictation.dc.html`. The one change the contract forced
-is the type scale: the mockups use 13-16 px for the small metadata, and the
-contract says body text is at least 17 pt, so the smallest step of the token
-scale is 17 px.
+The type scale of the contract still wins over the inline styles of those files: the mockups
+use 13-16 px for the small metadata and the contract says the body is at least 17 pt, so the
+smallest step of the token scale is 17 px. The colours of the mockups are **not** the colours
+of the app: the palettes are the six in `packages/design-tokens/src/themes.ts`.
 
 ## The screen specifications
 
 Every screen of the app, written against the contract in
-`docs/design/SYSTEM.md` and the founder-approved mockups in this folder.
+`docs/design/SYSTEM.md` and against the **content** of the mockups in this folder. The **look**
+is the one of the direction the founder picks (§13.4 above): the content inventory below stays,
+the visual style of the `.dc.html` files does not.
 
 | Spec                                 | Screen                            | Mockup                 | Route                       | Maestro flow               |
 | ------------------------------------ | --------------------------------- | ---------------------- | --------------------------- | -------------------------- |

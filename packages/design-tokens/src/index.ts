@@ -5,4 +5,5 @@
 
 export * from './tokens';
 export * from './themes';
+export * from './directions';
 export * from './contrast';
