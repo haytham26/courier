@@ -12,6 +12,8 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | PHASE2.3 address engine | **done** | feat/2.3-address-correction | api 48/48 (24 address tests) | LINZ accuracy NOT VERIFIED (data/linz empty) | — |
 | PHASE2.4 cleanup + lint | **done** | feat/2.4-cleanup-and-lint | workspace 107 + api 48 | mobile lint still off (BUG-045) | — |
 | PHASE3.1 CI + emulator | **done** | feat/v4-company-bootstrap (PR #1) | workflows + Maestro + B.7 screen | the emulator job was still running at the last check | link a green run |
+| P1 emulator root-fix | in progress | feat/p1-emulator-pipeline (PR #2) | the release APK builds (15m49s, pass) | the first screen did not appear: the APK started the dev launcher | the dev-client is removed, the run is in flight |
+| P2 research depth | **done** | feat/v4-company-bootstrap (PR #1) | 24 areas, 16 files rewritten or created | the verifier pass (>= 20 %) is still to come | the eval sets |
 | V4 bootstrap | **done** | feat/v4-company-bootstrap (PR #1) | CONSTRAINTS.md, PARITY.md, design/SYSTEM.md, 10 squads, PR template, floor/coverage/licence/audit gates | the mutation harness lands with the first squad task | T2 |
 | 0.1 repo setup | partial | — | not verified | root package.json now pinned (2.1) | pin remaining ranges |
 | 0.3 docker infra | not verified | — | — | not run in audit | run docker compose |
@@ -43,6 +45,7 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | apps/api ruff | PASS | phase-2.4/lint.log |
 | apps/api mypy | PASS 16 files | phase-2.4/typecheck.log |
 | pnpm audit | 3 critical cleared (vitest 2.1.9 → 3.2.7); remaining are build-time only (metro/vite/esbuild) | phase-2.1/pnpm-audit.json |
+| Python audit (pip-audit) | **PASS**: "No known vulnerabilities found" (the step itself was broken and hid the findings) | 2026-10-21 session |
 | banned-item grep | **0 hits** (was 41) | phase-2.4/banned-grep.log |
 
 ## PHASE 2.1 what changed

@@ -489,3 +489,75 @@ are in <flow>/screenshots/, and maestro-logcat.txt holds the app's logcat).
 
 Everything is committed and pushed on eat/v4-company-bootstrap (PR #1) and
 eat/t2-expo-58-decision.
+
+---
+
+## Session 2026-10-21 — the P1 emulator root-fix, the P2 research depth, two security holes
+
+**Skills applied:** using-agent-skills, debugging-and-error-recovery, test-driven-development,
+source-driven-development, incremental-implementation, code-review-and-quality,
+doubt-driven-development, security-and-hardening, documentation-and-adrs, constraint-driven-development.
+
+### The state check at the start of the session (MASTER_EXECUTION §5)
+
+- PR #1 open on `feat/v4-company-bootstrap`, the last Android E2E run red at the Gradle step.
+- The last E2E run (39435961657) failed in 18m10s: `Cannot find module 'babel-preset-expo'`.
+- The founder's new P1 (MASTER_EXECUTION §4) landed in `605985e`: rebuild the pipeline at the root,
+  triggers = PR to main + nightly + manual, no push, a dedicated PR, no pushes mid-run.
+
+### What the evidence proved, blocker by blocker (each one fixed at the root)
+
+1. **`Cannot find module 'babel-preset-expo'`** — the release bundle runs Metro and
+   `babel-preset-expo` was only a transitive dependency, invisible in pnpm's isolated layout.
+   It is now a direct dev dependency of the mobile app.
+2. **`Unable to resolve module @courier/design-tokens/themes`** — the package advertised
+   `dist/*.mjs` files it never produced, the monorepo had no Metro configuration, and the CI
+   never built the workspace packages. Fixed: a real exports map, `apps/mobile/metro.config.js`
+   (the workspace root in `watchFolders`, the package exports map on) and a build step for
+   `@courier/design-tokens` before the Gradle bundle.
+3. **`the resolution ... is dist/themes.js, however this file does not exist`** — the proof that
+   the build step was missing from the branch. Added, and the APK now builds (15m49s, pass).
+4. **The release APK started the dev launcher and died** — `expo-dev-client` was a dependency
+   and an app.json plugin. Removed: the app runs the bundle it ships with.
+5. **The crash was invisible** — the main logcat buffer was overwritten by the polling noise.
+   The crash buffer is now dumped next to it.
+
+### The pipeline (PR #2, `feat/p1-emulator-pipeline`)
+
+- Two jobs: `build` (the release APK, cached by content hash) and `e2e` (reuses the artifact).
+- Triggers: PRs to main, nightly (03:17) and manual only. The pull_request trigger has a
+  `paths` filter: a documentation-only push must not spend the private Actions minutes.
+- The AVD snapshot is cached, the actions are pinned to their SHAs.
+- Readiness gates with short timeouts: boot -> install -> am start -> pid -> first-screen testID.
+  Each gate dumps the evidence and fails fast.
+- The app runs in the E2E mode (`EXPO_PUBLIC_E2E=1`): the sign-in is mocked, so no Metro, no
+  auth service and no API are needed. A smoke flow runs first, the evidence is uploaded every run.
+- `scripts/e2e-local.ps1` reproduces the run locally.
+
+### The two security holes the research found (both closed, with tests)
+
+1. `/shifts/{id}/voice` accepted any caller. The handshake is now verified against the JWKS.
+2. `AUTH_JWT_ISSUER` was optional, so the issuer check was silently switched off. The issuer is
+   now required and the service stops when it is missing.
+
+### The audit that nobody read
+
+The Python audit step ended with `uvx pip-audit ... || pip-audit ...`, so a real finding was
+replaced by "command not found" (exit 127). Behind it: eight pillow CVEs (fixed only in 13.0.0,
+which pipecat pins out) and PYSEC-2026-4320 in certifi. `pipecat-ai` was declared in the API
+and never imported: the unused dependency is gone, certifi is constrained, the audit is clean.
+
+### P2: all 24 research areas at the full V4 depth
+
+16 files rewritten or created, every one with the query log, 30+ evidence cards with real URLs
+and dates, the 13-item shortlist, the top-5 deep review, the benchmarks (UNVERIFIED where no
+eval set exists), the "what we are missing" rows, the decision, the risks and an honest "what
+we could not verify". The 259 gap rows are merged into `docs/PARITY.md`.
+
+### The next actions, in order (MASTER_EXECUTION §4)
+
+1. **P1**: the emulator run in flight on PR #2 -> the artifacts into `docs/evidence/b7/` ->
+   B.7 PASS -> merge PR #2 (the pipeline) and PR #1 (the product) -> open and merge the T2/T4 PR.
+2. **P2**: the verifier pass (>= 20 %) over the research, the eval sets (voice, scanner, routing).
+3. **P3-P7**: Courier Maps (T5) -> the design to the mockups (T6) -> the product (T7) ->
+   launch readiness -> the v1.0.0 release.
