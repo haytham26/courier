@@ -1,68 +1,45 @@
 /**
- * The event log: the actions the courier took while the phone had no network.
+ * The event log: the courier's phone is the source of truth while offline.
  *
- * The log is append-only. An event is written when the courier does
- * something, and it is removed only once the server has taken it. Nothing in
- * here talks to the network, so a screen never waits for the server.
+ * Nothing here talks to the network. The log accepts an event, keeps it until
+ * the server confirms it, and hands the waiting events to the sync service.
  */
-import { parseSyncEvent, type SyncEvent } from './events';
-import type { KeyValueStore } from './storage';
+import type { DeliveryEvent, EventStore } from './types';
 
-const LOG_KEY = 'sync.event-log.v1';
+export const DEFAULT_BATCH_SIZE = 50;
 
 export class EventLog {
-  private readonly store: KeyValueStore;
-  private readonly key: string;
+  constructor(private readonly store: EventStore) {}
 
-  constructor(store: KeyValueStore, key: string = LOG_KEY) {
-    this.store = store;
-    this.key = key;
+  /** Records an event. The same id twice is ignored. */
+  async record(event: DeliveryEvent): Promise<void> {
+    if (!event.id) {
+      throw new Error('a delivery event needs an id');
+    }
+    if (!event.stopId) {
+      throw new Error('a delivery event needs a stop');
+    }
+    await this.store.append(event);
   }
 
-  /** Adds an event to the end of the log. */
-  async append(event: SyncEvent): Promise<void> {
-    const events = await this.list();
-    events.push(event);
-    await this.store.set(this.key, JSON.stringify(events));
+  /** The batch to send next, oldest first. */
+  async nextBatch(limit: number = DEFAULT_BATCH_SIZE): Promise<DeliveryEvent[]> {
+    if (limit <= 0) {
+      return [];
+    }
+    return this.store.pending(limit);
   }
 
-  /** Every event still waiting to be sent, oldest first. */
-  async list(): Promise<SyncEvent[]> {
-    const raw = await this.store.get(this.key);
-    if (raw === null) {
-      return [];
-    }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return [];
-    }
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed
-      .map((entry) => parseSyncEvent(entry))
-      .filter((entry): entry is SyncEvent => entry !== null);
-  }
-
-  /** Takes one event out of the log (the server has it now). */
-  async remove(id: string): Promise<void> {
-    const events = await this.list();
-    const kept = events.filter((event) => event.id !== id);
-    if (kept.length === events.length) {
+  /** Marks the events the server has stored. */
+  async confirm(events: DeliveryEvent[]): Promise<void> {
+    if (events.length === 0) {
       return;
     }
-    await this.store.set(this.key, JSON.stringify(kept));
+    await this.store.markSynced(events.map((event) => event.id));
   }
 
-  /** How many actions are still waiting to be sent. */
-  async count(): Promise<number> {
-    return (await this.list()).length;
-  }
-
-  /** Throws the log away (only the tests and "clear everything" use it). */
-  async clear(): Promise<void> {
-    await this.store.remove(this.key);
+  /** How many events are still waiting to reach the server. */
+  async pendingCount(): Promise<number> {
+    return this.store.pendingCount();
   }
 }

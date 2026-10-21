@@ -7,28 +7,14 @@ import { createServer } from "node:http";
 import { toNodeHandler } from "better-auth/node";
 
 import { loadConfig } from "./config.js";
-import { handleHealth, healthPath } from "./health.js";
-import { prepareDatabase } from "./migrate.js";
 import { createAuth } from "./server.js";
 
-async function main(): Promise<void> {
+function main(): void {
   const config = loadConfig(process.env);
-  // The tables have to be there before the service is built, or the first
-  // sign-in is refused.
-  await prepareDatabase(config);
   const auth = createAuth(config);
   const handler = toNodeHandler(auth);
-  const version = process.env.APP_VERSION ?? "0.1.0";
-  const startedAt = Date.now();
 
   const server = createServer((req, res) => {
-    // The health endpoints never reach the auth handler: the edge and the
-    // heartbeat ask them, and they must answer even when the database is down.
-    const path = healthPath(req.url);
-    if (path) {
-      void handleHealth(res, path, config, version, startedAt);
-      return;
-    }
     void handler(req, res);
   });
 
@@ -46,7 +32,7 @@ async function main(): Promise<void> {
 }
 
 try {
-  await main();
+  main();
 } catch (error) {
   console.error(`[auth] failed to start: ${(error as Error).message}`);
   process.exit(1);

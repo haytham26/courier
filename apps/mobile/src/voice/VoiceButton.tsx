@@ -1,14 +1,29 @@
 /**
  * Voice Button Component
- * Large touch target for voice activation while driving
- * Supports earbud button protocol and visual feedback
+ *
+ * The button that starts the voice assistant. It is large (the contract sets
+ * 56 pt as the floor and 72 pt for a primary action), it says what the voice
+ * engine is doing, and it is the one place the driver can act without
+ * looking.
+ *
+ * The movement runs on the UI thread through Reanimated 4, and the ring
+ * pings **once** when the microphone opens - the contract forbids decorative
+ * loops, and a courier's battery is the reason.
  */
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { tokens } from '@courier/design-tokens/tokens';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useTheme } from '../providers/ThemeProvider';
 import { useVoice } from './useVoice';
 import type { VoiceState } from './VoiceService';
+import { hapticFor } from '../motion/haptics';
 
 interface VoiceButtonProps {
   size?: 'small' | 'medium' | 'large';
@@ -16,6 +31,33 @@ interface VoiceButtonProps {
   showLabel?: boolean;
   disabled?: boolean;
 }
+
+const sizes = {
+  small: { width: 56, height: 56, fontSize: 24, labelSize: 17 },
+  medium: { width: 72, height: 72, fontSize: 32, labelSize: 19 },
+  large: { width: 96, height: 96, fontSize: 40, labelSize: 19 },
+} as const;
+
+/** The word for each state of the voice engine. */
+const stateLabels: Record<VoiceState, string> = {
+  idle: 'Tap to Speak',
+  listening: 'Listening',
+  processing: 'Thinking',
+  speaking: 'Speaking',
+  error: 'Error - Tap to retry',
+};
+
+/** The icon for each state of the voice engine. */
+const stateIcons: Record<
+  VoiceState,
+  'microphone' | 'microphone-off' | 'volume-high' | 'brain' | 'alert-circle'
+> = {
+  idle: 'microphone',
+  listening: 'microphone',
+  processing: 'brain',
+  speaking: 'volume-high',
+  error: 'alert-circle',
+};
 
 export const VoiceButton: React.FC<VoiceButtonProps> = ({
   size = 'large',
@@ -25,63 +67,49 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
 }) => {
   const { theme } = useTheme();
   const { state, startListening, stopListening, isReady } = useVoice();
-  const [scale, setScale] = useState(new Animated.Value(1));
-  const [pulseAnim] = useState(new Animated.Value(0));
+  const [pressed, setPressed] = useState(false);
 
-  const sizes = {
-    small: { width: 56, height: 56, fontSize: 24, labelSize: 12 },
-    medium: { width: 72, height: 72, fontSize: 32, labelSize: 14 },
-    large: { width: 96, height: 96, fontSize: 40, labelSize: 16 },
-  };
+  // The press and the ring live on the UI thread.
+  const scale = useSharedValue(1);
+  const ping = useSharedValue(0);
 
   const { width, height, fontSize, labelSize } = sizes[size];
 
-  // Pulse animation when listening
+  // The ring pings once when the microphone opens.
   useEffect(() => {
     if (state === 'listening') {
-      Animated.loop(
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        })
-      ).start();
-    } else {
-      pulseAnim.stopAnimation();
-      pulseAnim.setValue(0);
+      ping.value = 0;
+      ping.value = withTiming(1, {
+        duration: 250,
+        easing: Easing.out(Easing.quad),
+      });
     }
-  }, [state, pulseAnim]);
+  }, [state, ping]);
 
-  // Scale animation on press
   const handlePressIn = useCallback(() => {
-    Animated.timing(scale, {
-      toValue: 0.9,
-      duration: 100,
-      useNativeDriver: true,
-    }).start();
+    setPressed(true);
+    scale.value = withTiming(0.92, { duration: 150 });
   }, [scale]);
 
   const handlePressOut = useCallback(() => {
-    Animated.timing(scale, {
-      toValue: 1,
-      duration: 100,
-      useNativeDriver: true,
-    }).start();
+    setPressed(false);
+    scale.value = withTiming(1, { duration: 150 });
   }, [scale]);
 
   const handlePress = useCallback(async () => {
-    if (disabled || !isReady) return;
-    
+    if (disabled || !isReady) {
+      return;
+    }
+
     if (state === 'listening') {
       await stopListening();
     } else {
+      hapticFor('voice');
       await startListening();
     }
     onPress?.();
   }, [disabled, isReady, state, startListening, stopListening, onPress]);
 
-  // Determine button colors based on state
   const getButtonColors = () => {
     switch (state) {
       case 'listening':
@@ -89,35 +117,30 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
           background: theme.colors.brandPrimary,
           border: theme.colors.brandPrimary,
           icon: theme.colors.textInverse,
-          pulse: theme.colors.brandPrimary,
         };
       case 'speaking':
         return {
           background: theme.colors.info,
           border: theme.colors.info,
           icon: theme.colors.textInverse,
-          pulse: theme.colors.info,
         };
       case 'processing':
         return {
           background: theme.colors.warning,
           border: theme.colors.warning,
           icon: theme.colors.textInverse,
-          pulse: theme.colors.warning,
         };
       case 'error':
         return {
           background: theme.colors.error,
           border: theme.colors.error,
           icon: theme.colors.textInverse,
-          pulse: theme.colors.error,
         };
       default:
         return {
           background: theme.colors.surface,
           border: theme.colors.brandPrimary,
           icon: theme.colors.brandPrimary,
-          pulse: theme.colors.brandPrimary,
         };
     }
   };
@@ -125,94 +148,72 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
   const colors = getButtonColors();
   const isActive = state === 'listening' || state === 'speaking' || state === 'processing';
 
-  // Get icon based on state
-  const getIcon = () => {
-    switch (state) {
-      case 'listening':
-        return '🎙️';
-      case 'speaking':
-        return '🔊';
-      case 'processing':
-        return '⏳';
-      case 'error':
-        return '⚠️';
-      default:
-        return '🎤';
-    }
-  };
+  const containerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
-  const animatedStyle = {
-    transform: [
-      { scale },
-      { scale: pulseAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [1, 1.1],
-      })},
-    ],
-  };
-
-  const pulseStyle = {
-    ...StyleSheet.absoluteFill,
-    borderRadius: width / 2,
-    backgroundColor: colors.pulse,
-    opacity: pulseAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.4, 0],
-    }),
-  };
+  const pingStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + ping.value * 0.5 }],
+    opacity: (1 - ping.value) * 0.4,
+    backgroundColor: theme.colors.brandPrimary,
+  }));
 
   return (
-    <View style={{ alignItems: 'center' }}>
-      <Animated.View style={[styles.container, { width, height }, animatedStyle]}>
-        {/* Pulse ring when active */}
-        {isActive && <Animated.View style={pulseStyle} />}
-        
-        <TouchableOpacity
+    <View style={styles.container}>
+      <Animated.View style={[styles.container, { width, height }, containerStyle]}>
+        {/* The ring pings once when the microphone opens. */}
+        {state === 'listening' ? <Animated.View style={[styles.ping, pingStyle]} /> : null}
+
+        <Pressable
           style={[
             styles.button,
-            { width, height, backgroundColor: colors.background, borderColor: colors.border },
-            isActive && styles.active,
+            {
+              width,
+              height,
+              backgroundColor: colors.background,
+              borderColor: colors.border,
+            },
+            isActive ? styles.active : null,
+            pressed ? styles.pressed : null,
           ]}
           onPress={handlePress}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           disabled={disabled || !isReady}
-          activeOpacity={0.8}
           accessibilityLabel={state === 'listening' ? 'Stop listening' : 'Start voice command'}
           accessibilityRole="button"
-          accessibilityState={{ selected: state === 'listening' }}
+          accessibilityState={{
+            selected: state === 'listening',
+            disabled: disabled || !isReady,
+          }}
+          testID="voice-button"
         >
-          <Text style={[styles.icon, { fontSize, color: colors.icon }]}>
-            {getIcon()}
-          </Text>
-        </TouchableOpacity>
+          <MaterialCommunityIcons name={stateIcons[state]} size={fontSize} color={colors.icon} />
+        </Pressable>
       </Animated.View>
 
-      {showLabel && (
+      {showLabel ? (
         <Text
           style={[
             styles.label,
             { fontSize: labelSize, marginTop: 8 },
-            state === 'listening' && { color: theme.colors.brandPrimary, fontWeight: '600' },
-            disabled && { color: theme.colors.textTertiary },
+            state === 'listening' ? { color: theme.colors.brandPrimary, fontWeight: '600' } : null,
+            disabled ? { color: theme.colors.textTertiary } : null,
           ]}
+          accessibilityLiveRegion="polite"
         >
-          {state === 'listening' ? 'Listening...' : 
-           state === 'speaking' ? 'Speaking...' :
-           state === 'processing' ? 'Thinking...' :
-           state === 'error' ? 'Error - Tap to retry' :
-           'Tap to Speak'}
+          {stateLabels[state]}
         </Text>
-      )}
+      ) : null}
 
       {/* Earbud hint */}
-      {size === 'large' && !disabled && (
+      {size === 'large' && !disabled ? (
         <View style={styles.hintContainer}>
           <Text style={[styles.hintText, { color: theme.colors.textTertiary }]}>
-            Earbuds: 1× Delivered · 2× Skip · 3× Fail · Hold Talk
+            Earbuds: 1x Delivered, 2x Skip, 3x Fail, hold to talk
           </Text>
         </View>
-      )}
+      ) : null}
     </View>
   );
 };
@@ -227,19 +228,16 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
   },
   active: {
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    ...tokens.component.elevation.level2,
   },
-  icon: {
-    lineHeight: 1,
+  pressed: {
+    opacity: 0.85,
+  },
+  ping: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 9999,
   },
   label: {
     textAlign: 'center',
@@ -250,9 +248,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   hintText: {
-    fontSize: 11,
+    fontSize: 17,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 24,
   },
 });
 

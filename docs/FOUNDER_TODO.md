@@ -60,10 +60,13 @@
 | Visual Identity Review | Async, provisional tokens | Designer review of design tokens | D7 compliance |
 | Legal Review (PIA, Privacy Act) | Async | NZ privacy lawyer | Pre-launch requirement |
 | Translation Reviewers | Async | Community / paid reviewers | Remove `needs_review` tags |
+| **Offline map pack delivery** | **[OPEN]** | install-time asset delivery (Play Asset Delivery), a first run download on Wi-Fi, or both | D15: the map has to work from the first launch with no internet. The pack is about 50 MB and does not fit the 80 MB APK budget, so it cannot simply sit inside the APK. **Workaround:** the app reads the pack from its document directory and falls back to the online source. |
+| **ODbL status of the pack on a courier's phone** | **[OPEN]** | NZ counsel | Whether an on-device cached OSM tile set is a "Produced Work" that has to be ODbL-licensed itself. The app shows the attribution in every case, which is what the Protomaps wording requires. |
+| **Geofabrik download terms** | **[OPEN]** | read the terms page and confirm | The build machine could not reach download.geofabrik.de on 2026-10-21 (the host timed out), so the ODbL of the data is verified but the host's own terms are not. `scripts/build-pmtiles.mjs` says so on every run. |
 
 ---
 
-**Last Updated:** 2026-10-19 00:53:00 +13:00
+**Last Updated:** 2026-10-21 (maps squad: the pack, the styles and the map screen)
 **Next Action:** Founder paste free keys into `.env.local` and run `scripts/check-secrets`
 ## Post-launch tools (D22)
 - [ ] Chatwoot (support chat) · [ ] WeKnora (help-centre AI) · [ ] Cal.com (demos) · [ ] Cap (videos) · [ ] OpenSEO (website SEO)

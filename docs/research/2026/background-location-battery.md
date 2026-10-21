@@ -1,294 +1,254 @@
-# Background location & battery — 2026 OSS research
+# Background location & battery - 2026 OSS research (REDO, V4 §13.1)
 
-**Research date: 2026-10-20.** Method: V4 §12 (≥30 candidates, ≥10 shortlist, deep-review top 5,
-benchmark top 2–3). Every number was read from the live GitHub API, npm or the Expo docs on
-**2026-10-20**. Anything unread is **UNVERIFIED** with the command that would settle it.
-Card format: `repo · stars(+trend proxy) · created · last release/date · cadence · issues ·
-maintainers/90 d · licence · New-Arch/Expo 58/API 34 · on-device/server · advisories ·
-production users · docs · CI · better than our choice · risks · DECISION`.
+**Research date: 2026-10-21.** Method: V4 §12 (>=30 candidates with a full evidence card, >=10 shortlisted, top 5 deep-reviewed, benchmark top 2-3) + V4 §13.1 (query log, "what we are missing", honest UNVERIFIED marks). This file **replaces** the 2026-10-20 sprint-#1 note. Every number was read live from the GitHub GraphQL/REST API, the npm registry, `api.osv.dev` or the project's own source **on 2026-10-21**. Nothing is estimated; anything unread is **UNVERIFIED** with the command that would settle it.
 
-## 0. Scope, our current choice, and the bar
+Card fields: `repo | stars (+trend proxy) | created | last release/date | cadence | issues open/closed | maintainers/90 d | licence | New Arch/Expo 58/API 34 | on-device vs server | advisories + supply chain | production users | docs | CI | better than our current choice | risks | DECISION`. Trend proxy is written `rel6m / commits90d / humans90d`; "issues" = open and closed GitHub issues with **PRs excluded** (the REST `open_issues_count` includes PRs and overstates the backlog ~10x; both are given where they differ). **Median first-response time is UNVERIFIED for every candidate** (it needs per-issue timeline sampling across the pool).
 
-| Item | Today (verified 2026-10-20) |
+## 0. Scope, our current choice, and what changed since 2026-10-20
+
+| Item | Today (verified 2026-10-21) |
 |---|---|
-| Location dependency | `expo-location ~58.0.17` in `apps/mobile/package.json` (latest **58.0.18**, 2026-10-19) — **10,479,702 npm downloads/month** |
-| Task runner | `expo-task-manager` (latest **58.0.12**, 2026-10-15) — 4,531,983 downloads/month |
-| Background location | **not implemented** — no `startLocationUpdatesAsync`, no `TaskManager.defineTask` for location in `apps/mobile` |
-| Battery tool | `expo-battery` **58.0.3** (2026-10-01, MIT) exists on npm but is **not installed** |
-| Device info | `react-native-device-info` **15.0.2** (2026-02-21, MIT) exists on npm but is **not installed** |
-| Current "choice" per `docs/TECH_STACK.md` §1 | `transistorsoft/react-native-background-geolocation` — flagged "⚠️ paid for production on Android" |
-| Squad target | **battery ≤ 8 %/hour** while driving mode is active (`CONSTRAINTS.md`, V4 §6.4) |
+| Location dependency | `expo-location ~58.0.17` in `apps/mobile/package.json`; npm latest **58.0.18** (published 2026-10-20, versionCode 29) - **one patch behind**; MIT; **10,479,702 dl/mo** |
+| Task runner | `expo-task-manager` **58.0.12** (2026-10-16), MIT, **4,531,983 dl/mo** (peer dep of `expo-location`) |
+| Background location | **not implemented** - no `startLocationUpdatesAsync`, no `TaskManager.defineTask` for location anywhere in `apps/mobile` |
+| Battery instrument | `expo-battery` **58.0.3** (2026-10-02, MIT, 1,314,417 dl/mo) exists on npm but is **not installed** |
+| Motion sensor | `expo-sensors` **58.0.4** (2026-10-13, MIT, 2,059,899 dl/mo) exists but is **not installed** - it is our own accelerometer fallback |
+| Device info | `react-native-device-info` **15.0.2** (2026-02-22, MIT, 5,037,284 dl/mo) exists but is **not installed** |
+| Current "choice" per `docs/TECH_STACK.md` §1 | `transistorsoft/react-native-background-geolocation` - flagged "paid for production on Android" |
+| Squad target | **battery <= 8 %/hour** while driving mode is active (`CONSTRAINTS.md`, V4 §6.4); parked must be ~0 %/h |
 
-The hard requirement is a **location foreground service that survives Doze, screen-off and app
-switching**, runs at a **duty cycle** (not 1 Hz), and tells "the van is parked" from "the van is
-moving" **without** the driver thinking about it. The battery budget is the gate; accuracy is the
-commodity.
+The hard requirement is a **location foreground service that survives Doze, screen-off and app switching**, runs at a **duty cycle** (not 1 Hz), and tells "the van is parked" from "the van is moving" **without the driver thinking about it**. The battery budget is the gate; accuracy is the commodity.
 
-### The licence/terms trap in the current choice (verified)
+**Correction 1 - the paid-SDK argument does not survive Expo SDK 58.** `expo-location` 58.0.18 already ships, in MIT, verified in the source (`packages/expo-location/src/Location.types.ts`): the **foreground service** (`LocationTaskOptions.foregroundService` -> `notificationTitle`, `notificationBody`, `notificationColor` as `#RRGGBB`/`#AARRGGBB`, `killServiceOnDestroy`), the **duty-cycle knobs** (`deferredUpdatesDistance`, `deferredUpdatesInterval`, `deferredUpdatesTimeout`), **automotive motion detection** (`getMotionActivityAsync()` / `watchMotionActivityAsync()` -> `activities.automotive.detected` + `confidence`, where `MotionActivityType.Automotive = 'automotive'`), `activityType` (`LocationActivityType.AutomotiveNavigation = 2`), `pausesUpdatesAutomatically` and `showsBackgroundLocationIndicator`. The config plugin adds `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_LOCATION` + `POST_NOTIFICATIONS` when foreground is enabled (it defaults to the background flag), `ACCESS_BACKGROUND_LOCATION` + `RECEIVE_BOOT_COMPLETED` when background is enabled, and `ACTIVITY_RECOGNITION` + `com.google.android.gms.permission.ACTIVITY_RECOGNITION` when motion activity is enabled. The foreground-service icon must be a **96x96 all-white PNG with transparency** (`androidForegroundServiceIcon`).
 
-`transistorsoft/react-native-background-geolocation`: repository licence **MIT**, npm
-`react-native-background-geolocation` **5.8.0 (2026-10-09)**, **246,299 downloads/month** — but the
-README states verbatim: *"The SDK is fully functional in `DEBUG` builds — no license required… A
-license is required for **`RELEASE` builds** on both iOS and Android."* and *"**v4.x** license keys
-do **not** work with **`v5`**"*. → **The MIT on the repo does not mean the shipped APK is free of
-vendor terms.** A release build needs a purchased key, validated at runtime. V4 §2's licence gate
-(`scripts/check-licenses.mjs`) would pass it (MIT) and therefore **cannot see this risk** — it has
-to be tracked in `docs/COST_PLAN.md` and in an ADR.
+**Correction 2 - `expo-battery` can already tell us whether the OEM is throttling us.** `expo-battery` 58.0.3 exposes `isBatteryOptimizationEnabledAsync()`, implemented on Android as `PowerManager.isIgnoringBatteryOptimizations(packageName) == false` (read in `packages/expo-battery/android/.../BatteryModule.kt`), plus `getBatteryLevelAsync()`, `getBatteryStateAsync()`, `isLowPowerModeEnabledAsync()`, `getPowerStateAsync()` and three events (`Expo.batteryLevelDidChange`, `Expo.batteryStateDidChange`, `Expo.powerModeDidChange`). This is the **measurement instrument for the <= 8 %/h gate and the whitelist check**, and it is MIT, in SDK 58, zero native code.
 
-### 6-month star trend — method note
+**Correction 3 - `expo-location` on Android depends on Google Play Services.** `packages/expo-location/android/build.gradle` declares `api 'com.google.android.gms:play-services-location:21.0.1'`, and motion activity recognition on Android is Play-Services-backed. On a **degoogled** or enterprise fleet without GMS, the fused provider and the automotive signal are both unavailable -> the fallback must be the platform GNSS provider plus **our own accelerometer heuristic** (`expo-sensors` + a pure, unit-testable classifier in `packages/`). **The battery impact of GMS activity recognition is UNVERIFIED.**
 
-GitHub's stargazer listing is **not readable with the token in `.env.local`** (`GET
-/repos/{o}/{r}/stargazers` and GraphQL `stargazers` both return `HTTP 403 Resource not accessible
-by personal access token`; the token lacks `read:user`). **All 6-month star trends here are
-UNVERIFIED.** Verifiable proxies used instead: **commits in the last 90 days**, **release cadence**,
-and **npm downloads/month**.
+**Correction 4 - the OEM battery killers are documented and ranked, and the ranking is not theoretical.** `dontkillmyapp.com` (source: `urbandroid-team/dont-kill-my-app`, **1,722 stars**, **CC-BY-4.0**, created 2018-12-19, last push 2026-06-09, 198 open / 3,234 closed issues, 0 commits/90 d) ranks the vendors by how aggressively they kill background apps: **#1 Huawei, #2 Xiaomi, #3 OnePlus, #4 Samsung, #5 Meizu, #6 Asus, #7 Ulefone/RugOne, #8 Oppo, #9 Wiko, #10 Lenovo, #11 Vivo, #12 realme, #13 Motorola, #14 Blackview, #15 Tecno, #16 Sony, #17 Unihertz**; **AOSP / Pixel / Android One / Nokia / HTC score 0** (the "trophy"). The Expo docs link to this catalogue directly. Any battery claim is worthless without an OEM matrix.
+
+**Correction 5 - the Traccar client SDK was superseded twice, and the new one is not a React Native TurboModule.** `traccar/traccar-client-android` (760 stars, Apache-2.0, created 2012-07-30, **last push 2025-06-08, last release v7.9 (2025-04-18), 0 commits/90 d**) is superseded by **`traccar/traccar-client`** (194 stars, Apache-2.0, created 2025-05-21, v10.2.1 2026-10-19, 27 rel/6m, 56 commits/90 d - a **Flutter** app) and, for our toolchain, by **`traccar/traccar-client-sdk`** (created **2026-05-25**, Apache-2.0, v1.1.3 2026-10-17, 40 rel/6m, 21 commits/90 d) whose npm RN wrapper `react-native-traccar-client-sdk` **1.1.3** (Apache-2.0, 1,868 dl/mo, 32 KB unpacked, 17 files, RN dev dep 0.87.1, `bob build` + `typecheck`, SLSA npm provenance) has **no `codegenConfig`**, i.e. it is a classic bridge, **not** New-Architecture-ready. The **server** it talks to is `traccar/traccar` (**7,892 stars**, Apache-2.0, v6.16.0 2026-09-27, 301 open / 4,423 closed, 255 commits/90 d) - **not AGPL**, so the AGPL assumption in the old note was wrong.
+
+**6-month star-trend - method note (binding for every card).** The stargazer listing is **not readable with the token in `.env.local`** - verified 2026-10-21: `GET /repos/{o}/{r}/stargazers` -> `HTTP 403 Resource not accessible by personal access token`; GraphQL `stargazers(first:3){edges{starredAt}}` -> `FORBIDDEN`. **Every "6-month star trend" below is UNVERIFIED.** The verifiable proxies used instead, as instructed: **releases in the last 6 months**, **commits in the last 90 days** (default-branch history since 2026-07-22), **distinct human maintainers in 90 days** (distinct `author.user.login` in that window, bots removed). npm downloads/month is added where a package exists.
 
 ## Queries run
 
-`gh search repos` via `scripts\gh.ps1`, 2026-10-20:
+`gh search repos` + `gh api graphql` via `scripts\gh.ps1` (or `gh` with `GH_TOKEN` read from `.env.local` at runtime - never printed), 2026-10-21. Search API limit 30 req/min, observed.
 
-| # | Query | Sort | Notes |
+| # | Query | Filters | Results returned |
 |---|---|---|---|
-| 1 | `background location` | stars | 25 — transistorsoft/cordova-background-geolocation-lt 677, Almoullim 236, traccar-client-sdk 28 … |
-| 2 | `react-native background service` | stars | 20 — Rapsssito/react-native-background-actions 943, rest are one-person wrappers |
-| 3 | `react-native foreground service` | stars | 20 — voximplant 168, rest tiny |
-| 4 | `gps tracking android` | stars | 20 — almost all demo apps; no serious library beyond traccar |
-| 5 | `battery optimization android` | stars | 15 — only 28 ★ `react-native-disable-battery-optimizations-android`; the topic is under-served |
-| 6 | `react-native-device-info` | stars | 5 — confirms `react-native-device-info/react-native-device-info` (6,686 ★) |
-| 7 | `react-native-headless-js` | stars | 5 — **no result**: `thecodingmachine/react-native-headless-js` **does not exist on GitHub** (404) → UNVERIFIED where it went |
-| 8 | `react-native-background-fetch` | stars | 5 — the repo **moved to `transistorsoft/react-native-background-fetch`** (1,611 ★) |
-| 9 | `osrm` / `navigation engine` | stars | 12 / 15 (cross-area sweep) |
+| 1 | `background location` | `--sort stars --limit 30` | **30** - transistorsoft/cordova-background-geolocation-lt 677, voyage11/Location 606, Almoullim/background_location 236, realityexpander/FredsRoadtripStoryteller 170, transistorsoft/capacitor-background-geolocation 143, googlecodelabs/background-location-updates-android-o 79, icapps/flutter-background-location-tracker 39, comoser/rn-background-location 37, **HyopeR/react-native-location 37 (created 2025-11-04)**, **gabriel-sisjr/react-native-background-location 32 (created 2025-10-26)**, **traccar/traccar-client-sdk 28 (created 2026-05-24)** |
+| 2 | `react-native foreground service` | `--sort stars --limit 30` | **16** - voximplant/react-native-foreground-service 168, then one-person wrappers; **paulkiren/react-native-foreground-service-turbo 0 stars (created 2025-12-17)** |
+| 3 | `gps tracking android` | `--sort stars --limit 30` | **30** - almost all demo apps, no serious library beyond traccar/radar |
+| 4 | `battery optimization android` | `--sort stars --limit 30` | **4** - only **rasheedk/react-native-disable-battery-optimizations-android 28** is real; the topic is under-served |
+| 5 | `topic:geolocation` | `--sort stars --limit 30` | **30** - microg/GmsCore 14969, owntracks/android 1770, **Agontuk/react-native-geolocation-service 1669**, michalchudziak/react-native-geolocation 1436, Baseflow/flutter-geolocator 1337, owntracks/recorder 1219 |
+| 6 | `react-native location` | `--sort stars --limit 30` | **30** - timfpark/react-native-location 894, vikrantnegi/react-native-location-tracking 209, YsnKsy/react-native-location-enabler 164, **HyopeR/react-native-location 37** |
+| 7 | `topic:location-tracking` | `--sort stars --limit 30` | **30** - **transistorsoft/react-native-background-geolocation 2943**, bilde2910/Hauk 941, transistorsoft/flutter_background_geolocation 732, **traccar/traccar-client 194 (created 2025-05-20)**, **radarlabs/react-native-radar 198**, navtrack/navtrack 141, **traccar/traccar-manager 105**, **onloc-app/onloc-android 83 (created 2025-01-08)** |
+| 8 | `react-native background` | `--sort stars --limit 30` | **30** - ocetnik/react-native-background-timer 1651, **transistorsoft/react-native-background-fetch 1611**, mauron85/react-native-background-geolocation 1354, jamesisaac/react-native-background-task 1115, **Rapsssito/react-native-background-actions 943**, Vydia/react-native-background-upload 759, Vikeri/react-native-background-job 746 |
+| 9 | `activity recognition android` | `--sort stars --limit 30` | **17** - all <= 1 star teaching repos; **no OSS library owns activity recognition on Android**, which is why we use the OS API |
+| 10 | `battery` | `--sort stars --limit 30` | **30** - desktop battery tools only; **nothing** for the on-device duty cycle |
+| 11 | `topic:react-native created:>2025-06-01 location` | `--sort stars --limit 30` | **30** - dominated by the RN ecosystem itself (react/react-native 126733, expo/expo 52873) -> no new location library surfaced |
+| 12 | `foreground service location android kotlin` / `location tracking driver app delivery` | `--sort stars --limit 30` | **0 / 0** - dead queries (every term is ANDed) |
 
-Plus API reads: `repos/{o}/{r}`, `/releases`, `/contents/*`, `/commits?since=`, `/actions/runs`,
-`orgs/{org}/repos`, npm `registry.npmjs.org` + `api.npmjs.org/downloads`, OSV `api.osv.dev/v1/query`,
-and the **official Expo SDK 58 `expo-location` reference**
-(`https://docs.expo.dev/versions/latest/sdk/location/`).
+Non-search API reads: `repos/{o}/{r}` (GraphQL), `/releases`, `/commits`, `/contents/*` (the expo-location and expo-battery sources), `/advisories`, npm `registry.npmjs.org` + `api.npmjs.org/downloads/point/last-month`, `api.osv.dev/v1/query`, and `dontkillmyapp.com`.
 
-## 1. Candidate pool — 32 candidates, full evidence card each
+## 1. Candidate pool - 32 full evidence cards + 22 also evaluated
 
-### C1 — expo/expo (expo-location + expo-task-manager)  ⭐ shortlist
-**52,869 ★** /14,653 f · created 2016-08-15 · `expo-location` **58.0.18 (2026-10-19)**, `expo-task-manager` **58.0.12**, `expo-background-task` **58.0.11 (2026-10-15)**, `expo-battery` **58.0.3 (2026-10-01)** · cadence: **weekly patch releases inside SDK 58** · 19,837 open / 19,509 closed · maintainers 90 d: large (Expo team) · **MIT** · **Expo SDK 58 ✓, New Architecture ✓** (SDK 50+ is New-Arch-only) · **Android API 34/35 ✓** — `FOREGROUND_SERVICE_LOCATION` is *required on Android 14+* and Expo's config plugin adds it · on-device · OSV **0 advisories** for `expo-location` · production users: **10.5 M downloads/month** — the most-used location package in the RN ecosystem · docs: versioned API reference + config-plugin docs · CI: Expo's monorepo CI · **better than our choice — the headline of this file:** `isAndroidBackgroundLocationEnabled` → `ACCESS_BACKGROUND_LOCATION`; `isAndroidForegroundServiceEnabled` → `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_LOCATION` (auto-true when background location is on); `androidForegroundServiceIcon` → 96×96 white PNG (Android rejects colour icons); `startLocationUpdatesAsync(taskName, { foregroundService: { notificationTitle, notificationBody, notificationColor, killServiceOnDestroy }, deferredUpdatesDistance, deferredUpdatesInterval, deferredUpdatesTimeout, activityType, pausesUpdatesAutomatically, showsBackgroundLocationIndicator })` → **the foreground service AND the duty-cycle policy are one API call**; **`getMotionActivityAsync()` / `watchMotionActivityAsync()`** → `activities.automotive. detected` + `confidence` — **on-device driving detection** (Android: Play Services activity recognition, needs `ACTIVITY_RECOGNITION` on Android 10+; iOS: `CMMotionActivityManager`) — *exactly* the "motion-detection intelligence" the paid SDK sells, at MIT cost; geofencing limits: Android **100**, iOS **20**; `useBackgroundPermissions()` / `useMotionActivityPermissions()` hooks for the V4 §5 "permission denied" state · **honest limits (from the docs, not guessed):** background location **stops if the user terminates the app**; on **Android a terminated app does NOT auto-restart** on a location event; **Expo Go cannot run it** (we already use `expo-dev-client ~58.0.14`); `requestBackgroundPermissionsAsync` on Android 11+ **opens the system settings page**; iOS "Allow Once" cannot be detected and a follow-up background request **silently fails** · risks: big dependency surface; same vendor gates our builds; no built-in "arrived at stop" geofence logic for us · **ADOPT (primary) — the free motion-detection + foreground-service + deferred-updates triad removes the need for a paid SDK.**
-### C2 — transistorsoft/react-native-background-geolocation  ⭐ shortlist (incumbent)
-**2,943 ★** /446 f · created 2015-04-19 · npm **`react-native-background-geolocation` 5.8.0 (2026-10-09)** · **0 GitHub releases** (they publish to npm) · cadence ≈ monthly · **2,457 open / 2,442 closed** (a ~50 % unclosed backlog — the largest in this pool) · maintainers 90 d: 1–2 · repo licence **MIT**, **but RELEASE builds require a purchased licence key** (see §0) · New Arch: a classic bridge, with an Expo config plugin · API 34: v5 targets it · on-device · OSV **0** · **246,299 downloads/month** · docs: `docs.transistorsoft.com` (extensive, paid-tier) · CI: present but 2,457 open issues · **better than our choice**: the most feature-complete location SDK on the market — **motion-change detection** (accelerometer/gyro/magnetometer), geofencing, activity recognition, `distanceFilter` auto-stop when stationary, and a first-class Expo path · risks: **paid licence for release**; closed-source component + runtime key validation (availability/licensing risk we do not control); **2,457 open issues**; vendor lock-in on the exact feature we need most · **WATCH → migrate off. Keep the licence only if the benchmark shows Expo cannot hit 8 %/h.**
-### C3 — traccar/traccar-client-sdk (+ `react-native-traccar-client-sdk`)  ⭐ shortlist
-**28 ★** /18 f · **created 2026-05-24** · **40 releases**, latest **v1.1.3, 2026-10-16** · cadence: **several releases per week** (1.1.0 10-06, 1.1.1 10-07, 1.1.2 10-09, 1.1.3 10-16) · **3 open / 0 closed** · maintainers 90 d: 1 (Anton Tananaev) · **Apache-2.0** · **Kotlin Multiplatform** (Android + iOS) with an **official React Native wrapper** on npm (`react-native-traccar-client-sdk` **1.1.3, Apache-2.0, published 2026-10-16**) built with `react-native-builder-bob` 0.43 against **React Native 0.87.1** (ours is 0.88.0) → **New-Arch-ready** · **Android: JDK 17, Android SDK 37, Xcode 26.6** per its README → API 34+ ✓ · on-device · OSV **0** · **1,868 npm downloads/month** (new package) · docs: full docs on traccar.org (`/traccar-client-sdk/`, `/traccar-client-sdk-react-native/`) · CI: Gradle + Flutter analyze + RN typecheck · **better than our choice**: the **most modern background-location architecture available** — KMP core (one implementation for Android+iOS), **stationary heartbeat filtering** and a **distance filter** (both fixed in the last two releases), **activity sampling limited to startup and resume** (released 1.1.1 — the authors themselves are cutting battery), a **foreground service** and a **simple HTTP protocol** we could speak to our own API instead of Traccar · risks: designed to report to a **Traccar-compatible server** — we would need a Traccar server (**AGPL-3.0**) or to implement the protocol ourselves; **1 maintainer**; new and unproven at scale; only 1,868 downloads/month · **ADOPT-AS-PATTERN (study + copy the design, not the dependency).**
-### C4 — traccar/traccar-client-android  ⭐ shortlist → **superseded**
-**760 ★** /782 f · created 2012-07-29 · **last push 2025-06-07** (≈16 months stale) · last release **v7.9, 2025-04-17** · 192 open / 186 closed · **Apache-2.0** · the classic Traccar Android client — foreground service, battery-optimisation whitelist request, "disable battery optimisation" intent · **better than our choice**: the **canonical implementation of the battery-whitelist + foreground- service pattern** V4 §11.1 item 8 names · risks: **untouched for 16 months**; a full app, not a library · **REJECT as a dependency; KEEP as the design reference — superseded by C3.**
-### C5 — react-native-device-info/react-native-device-info
-**6,686 ★** · npm **15.0.2 (2026-02-21), MIT, 5,037,284 downloads/month** · pushed 2026-10-15 · gives **battery level / charging state / low-power mode** plus the device profile we need to normalise the battery benchmark · **MIT** · New-Arch ✓ (Nitro/TurboModule) · Expo: works via config plugin / Expo Go · OSV **0** · CI ✓ · **better**: we need **battery telemetry** to prove the ≤ 8 %/h gate, and `expo-battery` + `react-native-device-info` together give level + charging + power state · risks: we already have `expo-battery` (official, smaller) — do not add both · **KEEP as the optional richer source; prefer `expo-battery` (58.0.3), addable today with zero native code.**
-### C6 — Rapsssito/react-native-background-actions
-**943 ★** /143 f · created 2020-01-14 · last release **v4.1.0, 2026-04-07** (25) · cadence ≈ 2 releases/yr · 220 open / 197 closed · **MIT** · npm **4.1.0 (2026-04-07), 88,487 downloads/month** · New Arch: classic bridge but actively maintained (pushed 2026-04-07) · **Android targetSdk ≥ 34 on the 4.x line** (README compatibility table: 4.x → targetSdk **≥ 34**) — **exactly the API-34 gate V4 requires** · on-device · OSV **0** · docs: README with install + options table (task icon, progress bar) · CI: release-badge workflow · **better**: the **generic Android foreground service** we want for the **voice squad's driving mode**, independent of location · risks: it runs **JavaScript** via HeadlessJS → **battery-hungry by design**; on Android 12+ a background task cannot be started from the background and the notification is mandatory; iOS `beginBackgroundTaskWithName` does **not** keep the app alive forever · **KEEP for the voice/keep-alive service; NOT for the 1 Hz location path.**
-### C7 — transistorsoft/react-native-background-fetch
-**1,611 ★** /196 f · created 2016-08-01 · **last push 2026-04-22** · **0 GitHub releases** · npm **`react-native-background-fetch` 4.4.2 (2026-04-15), MIT, 326,074 downloads/month** · 475 open / 475 closed · maintainers 90 d: 1–2 · on-device · OSV **0** · **better**: the **original, still-standard** "periodic background task" library for RN; the right tool for **retrying the sync queue** rather than location · risks: the repo **moved to the `transistorsoft` org** (`jt8765/` is gone) — anyone pinning `jt8765/react-native-background-fetch` in CI is pinning a dead URL · **KEEP (sync/retry only), and record the org transfer.**
-### C8 — mauron85/react-native-background-geolocation
-**1,354 ★** /558 f · created 2016-05-31 · **last push 2024-08-20** → **~2 years stale** · **0 releases** · 517 open / 425 closed · **Apache-2.0** · the last **fully free, permissively licensed, no-key** Android location SDK with a foreground service · **better**: it is the classic "free alternative to TransistorSoft" and is Apache-2.0 with **no licence key** · risks: **unmaintained for 2 years**; no New Architecture; Android 14 foreground-service permission changes unhandled; likely broken on modern RN/AGP · **REJECT (unmaintained) — but read it for the Apache-2.0 foreground-service pattern.**
-### C9 — voximplant/react-native-foreground-service
-**168 ★** /91 f · created 2019-01-16 · **last push 2024-07-11** · last release **v3.0.2, 2022-06-09** → **4 years stale** · 44 open / 11 closed · MIT · on-device · **better**: the simplest "start a foreground service with a notification" implementation · risks: unmaintained; no New Architecture; no location logic · **REJECT — `react-native-background-actions` (C6) supersedes it and is maintained.**
-### C10 — HyopeR/react-native-location
-**37 ★** /3 f · **created 2025-11-04** · last release **v1.0.2, 2026-08-06** (3) · 3 open / 3 closed · **MIT** · "a high-performance react-native library for foreground and background location" · pushed 2026-09-08 · 0 watchers · **better**: a **2026-native** implementation (Kotlin + TurboModules) rather than a legacy bridge · risks: **tiny**, 0 watchers, unproven, overlaps `expo-location` · **WATCH (only if `expo-location` fails our duty-cycle benchmark).**
-### C11 — gabriel-sisjr/react-native-background-location
-**32 ★** /3 f · **created 2025-10-26** · last release v1.0.0 (2026-06-10) · **39 releases** for a 32-★ repo (release-per-commit churn) · 4 open / 4 closed · **MIT** · "tracking location in the background using TurboModules" → **New-Architecture-native** · **better**: a 2026 TurboModule implementation · risks: 39 releases in 12 months for a 3-fork project is a churn red flag; no production users; overlaps `expo-location` · **WATCH (reference implementation of a New-Arch location TurboModule).**
-### C12 — comoser/rn-background-location
-**37 ★** /17 f · created 2019-08-31 · **last push 2023-01-27** → stale · 9 open / 8 closed · MIT · Android-only · **REJECT (stale, Android-only).**
-### C13 — rasheedk/react-native-disable-battery-optimizations-android
-**28 ★** /50 f · created 2019-10-14 · **last push 2024-03-18** · last release **1.0.7 (2019-10-14)** · **NO LICENCE** (GitHub detects none) · 8 open / 1 closed · opens the "Ignore battery optimisations" settings intent · **better**: the **one-line fix** for the Android Doze problem — without the whitelist a foreground service is still throttled on some OEM builds · risks: **no licence** (cannot ship); stale; the intent approach is fragile on Android 14+ · **REJECT (no licence) — reimplement the intent in ~15 lines in our own Android module, with the user-facing rationale copy V4 §5 requires.**
-### C14 — googlecodelabs/background-location-updates-android-o
-**79 ★** · created 2017-05-17 · **last push 2019-05-26** · **ARCHIVED** · 12 open / 1 closed · Google's codelab for the Android O background-location model (bound service + notification) · **better**: the canonical **Google-authored** reference for a bound location service · risks: archived, Java, no RN · **KEEP as a design reference only.**
-### C15 — Almoullim/background_location
-**236 ★** /322 f · created 2019-08-10 · last release v0.13.2 (2025-09-06) · pushed 2025-09-06 · 180 open / 170 closed · NOASSERTION (Flutter plugin) · **REJECT (Flutter, not RN).**
-### C16 — icapps/flutter-background-location-tracker
-**39 ★** /59 f · last release v1.0.1 (2021-06-22) · MIT · **REJECT (Flutter).**
-### C17 — transistorsoft/cordova-background-geolocation-lt
-**677 ★** /273 f · created 2015-08-24 · pushed 2026-10-10 · NOASSERTION · the same paid SDK for Cordova · **REJECT (wrong toolchain) — but it proves the vendor keeps all platforms in lockstep, so the SDK is not dying.**
-### C18 — transistorsoft/capacitor-background-geolocation
-**143 ★** /22 f · created 2019-06-05 · pushed 2026-10-10 · MIT repo · **REJECT (wrong toolchain).**
-### C19 — transistorsoft/native-background-geolocation
-**54 ★** /23 f · created 2017-07-11 · last release **4.8.1, 2026-10-15** (83) · NOASSERTION · the Swift **native** SDK behind the RN package · **WATCH (the licence lives here — read it before deciding on the RN package).**
-### C20 — transistorsoft/flutter_background_geolocation
-**732 ★** · pushed 2026-10-10 · **REJECT (Flutter).**
-### C21 — expo/expo `expo-battery`
-npm **58.0.3 (2026-10-01), MIT** · on-device · battery level + charging + low-power mode · **ADOPT (immediately, zero native code) — the instrument for the ≤ 8 %/h gate.**
-### C22 — expo/expo `expo-keep-awake`
-npm **58.0.3 (2026-10-01), MIT** · keeps the screen/CPU awake during a nav or voice session · **KEEP (voice/nav session).**
-### C23 — `@react-native-community/netinfo`
-npm **12.0.1 (2026-02-14), MIT** · connectivity state → pause the location stream when the van is parked and online; when offline we must keep logging to op-sqlite · **KEEP (we already have `expo-network 58.0.3`).**
-### C24 — react-native-background-timer
-npm **2.4.1, published 2020-10-01** → **5 years stale** · MIT · **REJECT (dead).**
-### C25 — react-native-keep-awake
-npm **4.0.0, published 2018-10-28** → dead · MIT · **REJECT (superseded by expo-keep-awake).**
-### C26 — react-native-wake-lock
-npm **1.0.1, 2021-03-20** → dead · **REJECT.**
-### C27 — react-native-battery
-npm **0.1.18, 2020-02-04**, no licence field → stale + unclear licence · **REJECT.**
-### C28 — react-native-battery-optimization
-npm **1.0.1, 2024-08-21**, MIT · a small battery-optimisation helper · **WATCH — check what it does beyond the intent before deciding whether to reimplement.**
-### C29 — thecodingmachine/react-native-headless-js
-Repo **404 — does not exist** on GitHub as of 2026-10-20, and the npm package is not in the registry either. **UNVERIFIED** where the project went (it was the canonical HeadlessJS library) · **REJECT (cannot verify; `expo-task-manager` replaces it).**
-### C30 — react-native-geolocation-service
-npm **5.3.1 (2022-09-23)** · MIT · the `transistorsoft/react-native-geolocation-service` repo **404s** → stale/undeployed · **REJECT (stale).**
-### C31 — W4lter-V1win/Volans-Map
-**53 ★** · created 2025-07-21 · **last push 2025-07-21** (dead) · NO-LICENCE · "React Native App-Offline Navigation without GPS and Network" · **REJECT (dead, no licence).**
-### C32 — `dontkillmyapp.com` (web reference, **linked from the official Expo docs**: "On Android, the
-result of removing an app from the recent apps list varies by device vendor") · the canonical OEM-background-killing behaviour catalogue · **KEEP (documented risk input for the QA matrix — Samsung/ Xiaomi/Huawei aggressive task killers must be in the test plan).**
-## 2. Shortlist (10) with decisions
+**C1 - expo/expo (`expo-location` + `expo-task-manager`)** | **our incumbent** | **52,873 stars**/14,661 f | created 2016-08-16 | last push 2026-10-21 | 50 rel/6m (weekly patch releases inside SDK 58) | **325 open/19,515 closed** (issues only, PRs excluded; the closed count was not re-read in the verifier pass) | large team (Expo) | **MIT** | **Expo SDK 58 YES** (SDK 50+ is New-Arch-only) | **Android API 34/35 YES** | on-device | **OSV 0 advisories** for `expo-location` | production users: **10.5 M downloads/month** - the most-used location package in the RN ecosystem | docs: versioned API reference + config-plugin docs | CI: Expo monorepo CI | **better**: it is our choice and it already ships the foreground service + `deferredUpdates*` + **`getMotionActivityAsync()` automotive detection** + geofencing, all MIT | **risks**: `play-services-location:21.0.1` and GMS-backed motion activity (degoogled fleets); `deferredUpdates*` apply **only in the background**; force-stop kills it permanently; the config plugin needs a rebuild to change permissions | **DECISION: ADOPT (primary)**.
+
+**C2 - transistorsoft/react-native-background-geolocation** | **the incumbent we are being asked to replace** | **2,943 stars**/446 f | created 2015-04-20 | last push 2026-10-11 | **GitHub releases do exist** (latest 5.8.0 @2026-10-09 - the project also publishes to npm) | npm cadence ~monthly | **15 open/2,442 closed** (issues only, PRs excluded; the closed count was not re-read in the verifier pass) | **2 humans/90 d** (christocracy, jliew) | repo licence **MIT** | New Arch: a classic bridge + an Expo config plugin | API 34: v5 targets it | on-device | OSV 0 | **246,299 dl/mo** | docs: `docs.transistorsoft.com` (extensive, paid tier) | CI present, backlog small | **licence trap, verbatim from the README**: *"The SDK is fully functional in `DEBUG` builds - no license required... A license is required for **`RELEASE` builds** on both iOS and Android"* and *"**v4.x** license keys do **not** work with **`v5`**"* | **better**: the most feature-complete location SDK on the market - accelerometer/gyro/magnetometer motion-change detection, geofencing, activity recognition, `distanceFilter` auto-stop when stationary, a first-class Expo path | **risks**: a **paid licence for release builds**, validated at runtime; a small issue backlog and a near-dormant feature cadence - the real problem is the paid release licence, not issue volume; `scripts/check-licenses.mjs` sees only the repo MIT and **cannot see the commercial terms** | **DECISION: WATCH -> migrate off; keep only as a benchmarked fallback**.
+
+**C3 - traccar/traccar-client-sdk** | **the 2026 architecture to copy** | **28 stars**/18 f | created **2026-05-25** | **v1.1.3 (2026-10-17)** | **40 rel/6m** (several releases a week) | **3 open/0 closed** | **1 human** (Anton Tananaev) + 1 release bot | **Apache-2.0** | Kotlin Multiplatform core + Flutter and RN wrappers; `react-native-traccar-client-sdk` 1.1.3 has **no `codegenConfig`** -> **classic bridge, not New-Arch-ready**; RN dev dep 0.87.1 (ours 0.88.0) | Android: JDK 17, Android SDK 37, Xcode 26.6 per the README -> API 34+ OK | on-device | OSV 0 | **1,868 dl/mo** | docs: `traccar.org/traccar-client-sdk/` + a React Native page | CI: Gradle + Flutter analyze + RN typecheck + GitHub Actions releases | **better**: the **most modern background-location architecture available** - one KMP core for Android+iOS, a **stationary heartbeat filter**, a **distance filter** (both fixed in the last two releases), **activity sampling limited to startup and resume** (released 1.1.1 - the author stopped sampling activity continuously, which is exactly the lesson we need), a **boot receiver**, a **startup provider** and a simple HTTP protocol we could speak to our own API instead of Traccar | **risks**: designed to report to a Traccar-compatible server; **1 maintainer**; young and unproven at scale; 1,868 dl/mo | **DECISION: ADOPT-AS-PATTERN (study the design, do not take the dependency)**.
+
+**C4 - traccar/traccar-client** | **194 stars**/159 f | created **2025-05-21** | **v10.2.1 (2026-10-19)** | **27 rel/6m** | **27 open/54 closed** | **1 human/90 d** (tananaev) + 1 dependabot | **Apache-2.0** | Flutter app (not RN) | on-device | OSV 0 | production users: the official Traccar Client on Google Play and the App Store | docs: traccar.org/client | CI: Flutter + GitHub Actions | **better**: it is **the successor to `traccar-client-android`** and shows the full client feature set (interval/accuracy/data-usage configuration, privacy-first self-hosting) | **risks**: Flutter, so we can only study it; the old Android client is the deprecated one | **DECISION: REJECT as a dependency; KEEP as the successor reference**.
+
+**C5 - traccar/traccar-client-android** | **760 stars**/782 f | created 2012-07-30 | **last push 2025-06-08, last release v7.9 (2025-04-18)** | 0 rel/6m, **0 commits/90 d** | **185 open/237 closed** | Apache-2.0 | Java | on-device | OSV 0 | docs: traccar.org/client | **better**: the canonical written-down implementation of the **battery-whitelist + foreground-service** pattern V4 §11.1 names | **risks**: **stale for ~16 months**; superseded by C4 and C3 | **DECISION: REJECT as a dependency; KEEP as the battery-whitelist pattern reference - superseded**.
+
+**C6 - traccar/traccar (the server)** | **7,892 stars** | created 2012-04-16 | **v6.16.0 (2026-09-27)** | v6.15.3 (2026-08-26), v6.15.2 (2026-08-23) | **301 open/4,423 closed** | large team | **Apache-2.0** (the old note's AGPL assumption was wrong) | server | on-device clients + server | OSV 0 | production users: thousands of self-hosted trackers | docs: traccar.org | CI: Gradle | **better**: if we ever wanted an off-the-shelf location collector, this is the reference server and its **HTTP protocol is the one the SDK speaks** - we can implement the collector in our own FastAPI service | **risks**: a whole platform to run and secure; a server-side licence ledger question | **DECISION: WATCH (protocol reference only)**.
+
+**C7 - expo/expo `expo-battery`** | npm **58.0.3** (2026-10-02), MIT, **1,314,417 dl/mo** | on-device | OSV 0 | API: `getBatteryLevelAsync()`, `getBatteryStateAsync()`, `isLowPowerModeEnabledAsync()`, **`isBatteryOptimizationEnabledAsync()`** (Android `PowerManager.isIgnoringBatteryOptimizations`), `getPowerStateAsync()`, `isAvailableAsync()`, plus the three change events | **better**: it is **the instrument for the <= 8 %/h gate and the battery-whitelist check** - MIT, in SDK 58, zero native code, addable today | **risks**: the AOSP optimisation flag is not the same as an OEM task killer, so it must be combined with the `dontkillmyapp` OEM matrix | **DECISION: ADOPT immediately**.
+
+**C8 - expo/expo `expo-sensors`** | npm **58.0.4** (2026-10-13), MIT, **2,059,899 dl/mo** | on-device | Accelerometer / Gyroscope / Magnetometer / DeviceMotion / Pedometer | **better**: the raw accelerometer feed for **our own** driving-vs-parked classifier, which is the fallback when Play-Services activity recognition is unavailable (degoogled fleet) | **risks**: a pure-JS classifier on a sampled accelerometer can burn battery if the sampling rate is wrong -> the rate is a benchmarked constant | **DECISION: ADOPT (as the fallback signal; the classifier is ours and unit-tested)**.
+
+**C9 - react-native-device-info/react-native-device-info** | **6,686 stars**/1,459 f | created 2015-09-17 | last push 2026-10-16 | npm **15.0.2** (2026-02-22), MIT, **5,037,284 dl/mo** | 0 rel/6m, **0 commits/90 d** on the default branch | **4 open/1,005 closed** | MIT | New-Arch capable (Nitro/TurboModule) | on-device | OSV 0 | production users: very large | docs: rich | CI present | **better**: the **device profile** (model, API level, RAM, battery) we need to normalise the battery benchmark across the CI emulator and a mid-range device | **risks**: we already have `expo-battery`; do not add two native deps for the same job | **DECISION: KEEP as the optional richer source; prefer `expo-battery`**.
+
+**C10 - Rapsssito/react-native-background-actions** | **943 stars**/143 f | created 2020-01-15 | **v4.1.0 (2026-04-08)** | ~2 releases/yr | 0 commits/90 d | **MIT** | npm **4.1.0**, **88,487 dl/mo** | classic bridge, actively maintained until 2026-04 | **23 open/197 closed** (issues only, PRs excluded; the closed count was not re-read in the verifier pass) | **Android targetSdk >= 34 on the 4.x line** (README table: `4.X.X -> >= 34`, `3.X.X -> >= 31`) - exactly the API-34 gate | on-device | OSV 0 | docs: README with the options table | CI: release badge | **better**: the **generic Android foreground service** for the **voice squad's** driving mode, independent of location | **risks**: it runs **JavaScript** via HeadlessJS -> battery-hungry by design; on Android 12+ a background task cannot be started from the background and the notification is mandatory; on iOS `beginBackgroundTaskWithName` does **not** keep the app alive forever | **DECISION: ADOPT for the voice/keep-alive service; NOT for the 1 Hz location path**.
+
+**C11 - transistorsoft/react-native-background-fetch** | **1,611 stars**/196 f | created 2016-08-02 | last push 2026-04-23 | npm **4.4.2** (2026-04-16), MIT, **326,074 dl/mo** | **GitHub releases do exist** (4.4.2 @2026-04-15, 4.2.9 @2026-04-22), **0 commits/90 d** | **0 open/475 closed** (issues only, PRs excluded; the closed count was not re-read in the verifier pass) | MIT | on-device | OSV 0 | docs: README | CI present | **better**: the original, still-standard "periodic background task" library for RN - the right tool for **retrying the sync queue**, not for location | **risks**: **the repo moved to the `transistorsoft` org** (`jt8765/...` is gone) - any CI pin naming the old org pins a dead URL | **DECISION: ADOPT (sync/retry only); record the org transfer**.
+
+**C12 - transistorsoft/native-background-geolocation** | **54 stars**/23 f | created 2017-07-12 | **4.8.1 (2026-10-16)** | **25 rel/6m** | **3 open/125 closed** | **1 human/90 d** (christocracy) | licence **NOASSERTION** | the Swift native SDK behind the RN package | on-device | **better**: **this is where the actual v5 licence text lives** | **risks**: licence UNVERIFIED in-repo; it is the runtime-key validator | **DECISION: WATCH (read the licence before deciding on C2)**.
+
+**C13 - react-native-geolocation-service (Agontuk)** | **1,669 stars**/295 f | created 2018-01-11 | **last push 2024-07-03**, no releases | 0 rel/6m, 0 commits/90 d | **115 open/230 closed** | MIT | classic bridge | on-device | OSV 0 | **better**: the last widely-used free RN location wrapper - a useful reference for the native location-update API | **risks**: **~2 years stale**, no New Architecture, no background service | **DECISION: REJECT (unmaintained)**.
+
+**C14 - michalchudziak/react-native-geolocation** | **1,436 stars**/248 f | created 2019-03-30 | **v3.4.0 (2024-09-01)**, last push 2024-09-01 | 0 rel/6m, 0 commits/90 d | **150 open/68 closed** | MIT | classic bridge | on-device | OSV 0 | **better**: a second reference implementation of the raw `Geolocation` API | **risks**: stale | **DECISION: REJECT (unmaintained)**.
+
+**C15 - timfpark/react-native-location** | **894 stars**/200 f | created 2015-06-06 | last push 2024-04-18, last release 2.2.1 (2019-06-03) | 0 rel/6m, 0 commits/90 d | **62 open/57 closed** | MIT | classic bridge | on-device | OSV 0 | **better**: a third reference implementation | **risks**: stale, and the classic RN `Geolocation` API is superseded by Expo modules | **DECISION: REJECT (unmaintained)**.
+
+**C16 - mauron85/react-native-background-geolocation** | **1,354 stars**/558 f | created 2016-06-01 | **last push 2024-08-20** (~2 years stale) | 0 releases | **92 open/425 closed** | **Apache-2.0** | classic bridge | on-device | OSV 0 | **better**: the last **fully free, permissively licensed, no-key** Android location SDK with a foreground service - read it for the Apache-2.0 foreground-service pattern | **risks**: unmaintained, no New Architecture, Android 14 foreground-service permission changes unhandled | **DECISION: REJECT (unmaintained) - KEEP as the free-pattern reference**.
+
+**C17 - radarlabs/react-native-radar** | **198 stars**/34 f | created 2017-03-20 | **4.36.0 (2026-07-23)** | **12 rel/6m** | **1 open/97 closed** | **30 commits/90 d, 3 humans** (stevepopovich, alanjcharles14, gabrieldonadel) + 1 dependabot | **Apache-2.0** (the SDK; the Radar **platform is commercial** with a free tier) | on-device + Radar servers | OSV 0 | production users: thousands of apps | docs: radar.com/docs | CI: Gradle | **better**: a **managed** alternative - geofencing, trip tracking and battery-optimised background updates without us writing a foreground service | **risks**: a **commercial dependency at runtime** (the thing V4 §11.2 forbids: "no vendor keys"), and it sends position data to a third party | **DECISION: WATCH (paid option; not for a privacy-first NZ courier app)**.
+
+**C18 - radarlabs/radar-sdk-android** | **98 stars** | created 2016-06-21 | **4.0.0 (2026-10-17)** | **24 rel/6m** | **7 open/24 closed** | **29 commits/90 d** | **Apache-2.0** | on-device | OSV 0 | **better**: the same SDK without the RN wrapper - shows how a commercial SDK handles the Android foreground-service lifecycle | **risks**: commercial backend | **DECISION: WATCH (reference only)**.
+
+**C19 - HyopeR/react-native-location** | **37 stars**/3 f | created **2025-11-05** | **v1.0.2 (2026-08-07)** | 2 rel/6m | 0 open/3 closed | **13 commits/90 d, 1 human** | MIT | Kotlin + TurboModules | on-device | OSV 0 | docs: README | CI present | **better**: a **2026-native** implementation (Kotlin + TurboModules) rather than a legacy bridge - the only small New-Arch-shaped RN location library | **risks**: **tiny**, 3 forks, unproven, overlaps `expo-location` | **DECISION: WATCH (only if `expo-location` fails the duty-cycle benchmark)**.
+
+**C20 - gabriel-sisjr/react-native-background-location** | **32 stars**/3 f | created **2025-10-27** | **v1.0.1-beta (2026-09-16)** | **9 rel/6m** | 0 open/4 closed | **4 commits/90 d, 2 humans** | MIT | **TurboModule (New Architecture)** | on-device | OSV 0 | docs: README | CI present | **better**: a 2026 TurboModule implementation of background location | **risks**: release-per-commit churn for a 3-fork project; no production users; overlaps `expo-location` | **DECISION: WATCH (New-Arch location TurboModule reference)**.
+
+**C21 - urbandroid-team/dont-kill-my-app** | **1,722 stars**/12,064 f | created 2018-12-19 | last push 2026-06-09, **0 releases** | 0 rel/6m, **0 commits/90 d** | **198 open/3,234 closed** | **CC-BY-4.0** | a website + the DontKillMyApp benchmark app | on-device | OSV 0 | production users: the benchmark app is on Google Play | docs: the site itself (vendor ranking + per-vendor pages) | CI: none needed | **better**: **the canonical OEM-behaviour catalogue** linked from the Expo docs - it turns "the battery might be bad" into a **test matrix** (Huawei, Xiaomi, OnePlus, Samsung, Meizu, Asus, Oppo, Vivo, realme, Motorola ...) | **risks**: a website, not a library; the data is 2026-06 | **DECISION: KEEP as a documented QA input (the OEM matrix)**.
+
+**C22 - microg/GmsCore** | **14,969 stars**/3,270 f | created 2014-04-24 | **v0.3.17.252432 (2026-09-29)** | 4 rel/6m | **1,329 open/1,426 closed** | **65 commits/90 d, 27 humans** + 1 dependabot | **Apache-2.0** | on-device (a degoogled Play Services) | OSV 0 | production users: large (the degoogled-device community) | docs: microg GmsCore wiki | CI: Gradle | **better**: the reference for **running without Google Play Services** - if we want `expo-location`'s fused provider and motion activity on a degoogled fleet, this is the path | **risks**: a large project to validate; the licence is fine but the operational cost is not | **DECISION: WATCH (only for the degoogled-fleet requirement)**.
+
+**C23 - owntracks/android** | **1,770 stars**/531 f | created 2014-02-04 | **v2.6.0-beta3 (2026-09-28)** | 6 rel/6m | **94 open/985 closed** | **57 commits/90 d, 2 humans** (growse, mvanhorn) + 1 renovate bot | **EPL-1.0** | on-device | OSV 0 | production users: the OwnTracks client | docs: owntracks.org | CI: Gradle | **better**: a long-lived, privacy-first background tracker with a documented battery model and a self-hostable server | **risks**: EPL-1.0 is a weak copyleft - not MIT/BSD/Apache, so it needs a licence decision; it is a whole app, not a library | **DECISION: WATCH (clean-room reference for the battery model)**.
+
+**C24 - owntracks/recorder** | **1,219 stars**/145 f | created 2015-08-14 | **1.0.4 (2026-09-09)** | 3 rel/6m | **12 open/484 closed** | **31 commits/90 d** | licence NOASSERTION | server | OSV 0 | **better**: the **self-hosted** recorder pattern (position history with retention) - the server half of our event log | **risks**: licence NOASSERTION | **DECISION: WATCH (server-side retention reference)**.
+
+**C25 - onloc-app/onloc-android** | **83 stars**/9 f | created **2025-01-08** | **v1.3.0 (2026-10-12)** | **9 rel/6m** | **2 open/7 closed** | **68 commits/90 d, 4 humans** (Calvicii, nighter000, tatojunior, X3NON-11) + 1 weblate bot | **GPL-3.0** -> copyleft | on-device | OSV 0 | **better**: a 2025-born, actively developed foreground-service tracker (watchdog + notification re-post patterns) | **risks**: GPL-3 | **DECISION: CLEAN-ROOM STUDY ONLY (V4 §11.2)**.
+
+**C26 - navtrack/navtrack** | **141 stars**/51 f | created 2018-11-26 | last push 2026-10-19, v25.10.1 (2025-10-14) | 0 rel/6m | **1 open/29 closed** | **19 commits/90 d** | **GPL-3.0** | on-device + server | OSV 0 | **better**: a self-hosted GPS tracking platform with a mobile app - the "fleet admin" half we do not have | **risks**: GPL-3 | **DECISION: CLEAN-ROOM STUDY ONLY**.
+
+**C27 - bilde2910/Hauk** | **941 stars**/85 f | created 2019-08-24 | **v1.6.3 (2026-10-02)** | 1 rel/6m | **64 open/136 closed** | 4 commits/90 d | **Apache-2.0** | on-device + server | OSV 0 | **better**: a privacy-first, **self-hosted** location sharing app - the "no third party sees the driver's position" story, which is exactly our NZ Privacy Act 2020 posture | **risks**: the sharing model, not the tracking model, is its focus | **DECISION: WATCH (architecture reference)**.
+
+**C28 - jimmy90109/geo_alarm** | **15 stars**/1 f | created **2025-07-07** | **v1.5.0 (2026-10-12)** | 3 rel/6m | **1 open/2 closed** | **8 commits/90 d** | **Apache-2.0** | on-device | OSV 0 | **better**: a **geofence-triggered alarm** app - the "arrival at a stop" mechanic we want for auto-complete | **risks**: tiny, 1 fork | **DECISION: WATCH (geofence UX reference)**.
+
+**C29 - vincentneo/CoreGPX** | **294 stars**/60 f | created 2018-11-06 | **0.9.4 (2026-07-21)** | 1 rel/6m | **11 open/55 closed** | MIT | on-device + server | OSV 0 | **better**: GPX parsing/writing used by the IRD logbook task | **risks**: GPX is not the delivery format we need | **DECISION: WATCH (cross-squad, T7.11)**.
+
+**C30 - rasheedk/react-native-disable-battery-optimizations-android** | **28 stars**/50 f | created 2019-10-14 | **1.0.7 (2019-10-15)**, last push 2024-03-19 | 0 rel/6m, 0 commits/90 d | **7 open/1 closed** | **NO LICENCE** (GitHub detects none) | on-device | OSV 0 | **better**: the **one-line fix** for the Android Doze problem - without the whitelist a foreground service is still throttled on some OEM builds | **risks**: **no licence (we cannot ship it)**, stale, and the intent approach is fragile on Android 14+ | **DECISION: REJECT (no licence) - reimplement the intent in ~15 lines in our own Android module, with the in-app rationale copy V4 §5 requires**.
+
+**C31 - googlecodelabs/background-location-updates-android-o** | **79 stars**/56 f | created 2017-05-18 | last push 2019-05-27 | 0 rel/6m, 0 commits/90 d | **11 open/1 closed** | licence NOASSERTION | Java | on-device | OSV 0 | **better**: the canonical **Google-authored** reference for the Android O bound-location-service model (bound service + notification) | **risks**: Java, no RN, and the O model is dated (Android 14 changed the rules) | **DECISION: KEEP as a design reference only**.
+
+**C32 - thecodingmachine/react-native-headless-js** | the repository returns **NOT FOUND** on GitHub (2026-10-21) and the npm package is not in the registry | **UNVERIFIED** where the project went (it was the canonical HeadlessJS library) | **DECISION: REJECT (cannot verify; `expo-task-manager` replaces it)**.
+
+**Also evaluated (22 more; any field not stated is UNVERIFIED)** - `voximplant/react-native-foreground-service` (168 stars, MIT, last release v3.0.2 2022-06-10, last push 2024-07-12, 33 open/11 closed) -> **REJECT - superseded by C10**; `ocetnik/react-native-background-timer` (1,651 stars, MIT, last push 2023-10-26, 114 open/73 closed) -> **REJECT (dead)**; `jamesisaac/react-native-background-task` (1,115 stars, MIT, last release v0.2.1 2017-08-10, last push 2023-04-29, 60 open/19 closed) -> **REJECT (dead)**; `Vikeri/react-native-background-job` (746 stars, MIT, last release v2.3.0 2019-07-04) -> **REJECT (dead)**; `Vydia/react-native-background-upload` (759 stars, last push 2024-04-01) -> **REJECT (wrong job)**; `EkoLabs/react-native-background-downloader` (278 stars, last push 2022-08-27) -> **REJECT (dead)**; `kesha-antonov/react-native-background-downloader` (220 stars, pushed 2026-09-15) -> **WATCH (file transfer only)**; `Almoullim/background_location` (236 stars, Flutter plugin, licence NOASSERTION, v0.13.2 2025-09-07, 10 open/170 closed) -> **REJECT (Flutter)**; `icapps/flutter-background-location-tracker` (39 stars, MIT, v1.0.1 2021-06-22) -> **REJECT (Flutter)**; `transistorsoft/flutter_background_geolocation` (732 stars, Apache-2.0, 7 open/1,615 closed, 95 commits/90 d) -> **REJECT (Flutter, but proves the vendor keeps all platforms in lockstep, so the SDK is not dying)**; `transistorsoft/cordova-background-geolocation-lt` (677 stars, 1 open/1,365 closed, 89 commits/90 d) and `transistorsoft/capacitor-background-geolocation` (143 stars, MIT, 5 open/313 closed, 84 commits/90 d) -> **REJECT (wrong toolchain)**; `transistorsoft/react-native-background-geolocation-firebase` (24 stars, licence NONE, last push 2024-10-18) -> **REJECT**; `comoser/rn-background-location` (37 stars, MIT, last push 2023-01-27, 1 open/8 closed) -> **REJECT (stale, Android-only)**; `rekabhq/background_locator` (307 stars, MIT, last push 2023-05-16, 144 open/149 closed) -> **REJECT (stale)**; `vikrantnegi/react-native-location-tracking` (209 stars, last push 2023-01-23) -> **REJECT (stale)**; `YsnKsy/react-native-location-enabler` (164 stars, last push 2023-05-14) -> **REJECT (stale)**; `agrass/react-native-gps` (86 stars, last push 2018-03-13) -> **REJECT (dead)**; `paulkiren/react-native-foreground-service-turbo` (0 stars, created 2025-12-17, MIT, never pushed since creation) -> **REJECT (abandoned)**; `jgkiano/react-native-background-geofencing` (15 stars, last push 2023-01-26) -> **REJECT (stale)**; `warting/permissions-ui` (65 stars, pushed 2026-04-30) -> **WATCH (the permission-rationale UX)**; `nxtrace/NTrace-core` (8,227 stars) -> **REJECT (network tracer)**; `microg/GmsCore` is C22; `traccar/traccar-web` (1,198 stars, Apache-2.0, 73 open/855 closed, 193 commits/90 d) -> **WATCH (the dispatcher UI reference, other area)**.
+
+## 2. Shortlist (15) with decisions
 
 | # | Project | Decision | One-line reason |
 |---|---|---|---|
-| C1 | **expo-location + expo-task-manager** | **ADOPT (primary)** | MIT, already installed, 10.5 M downloads/month, and it ships foreground service + deferred updates + **automotive motion detection** for free. |
-| C21 | **expo-battery** | **ADOPT (immediately)** | The instrument for the ≤ 8 %/hour gate; MIT, SDK 58, zero native code. |
-| C6 | **react-native-background-actions** | **ADOPT (voice/keep-alive only)** | Maintained MIT foreground service for Android 12+; targetSdk ≥ 34 line; JS-based → not for the 1 Hz path. |
-| C7 | **react-native-background-fetch** | **ADOPT (sync retry only)** | 326 k downloads/month, MIT; note the repo moved to the `transistorsoft` org. |
-| C3 | **traccar-client-sdk** | **ADOPT-AS-PATTERN** | 2026-native KMP design with the battery fixes (stationary heartbeat filter, startup-only activity sampling) already made. |
-| C2 | **transistorsoft/react-native-background-geolocation** | **WATCH → migrate off** | Best features but a **paid release licence** + 2,457 open issues + a vendor-controlled key check. |
-| C5 | **react-native-device-info** | **KEEP (optional)** | Richer battery/power telemetry, 5 M downloads/month — but prefer `expo-battery` to avoid a second native dep. |
-| C10 | **HyopeR/react-native-location** | **WATCH** | New (2025-11) high-performance RN location library; fallback if `expo-location` fails the benchmark. |
-| C11 | **gabriel-sisjr/react-native-background-location** | **WATCH** | New-Arch TurboModule reference implementation. |
-| C19 | **transistorsoft/native-background-geolocation** | **WATCH** | The actual licence text lives in the native SDK; read before deciding on C2. |
-| C4 / C8 / C9 / C13 / C14 / C32 | traccar-client-android · mauron85 · voximplant · rasheedk · googlecodelabs · dontkillmyapp | **REJECT as dependencies / KEEP as design references** | All stale or unlicensed; they are still the best written-down patterns for the foreground service and the battery whitelist. |
+| C1 | **expo-location + expo-task-manager** | **ADOPT (primary)** | MIT, already installed, 10.5 M downloads/month, and it ships the foreground service + deferred updates + **automotive motion detection** for free. |
+| C7 | **expo-battery** | **ADOPT (immediately)** | The instrument for the <= 8 %/hour gate and the battery-whitelist check; MIT, SDK 58, zero native code. |
+| C8 | **expo-sensors** | **ADOPT (fallback signal)** | The raw accelerometer feed for our own driving-vs-parked classifier when Play-Services recognition is unavailable. |
+| C3 | **traccar-client-sdk** | **ADOPT-AS-PATTERN** | 2026-native KMP design with the battery fixes already made (stationary heartbeat filter, distance filter, activity sampling only at start/resume). |
+| C10 | **react-native-background-actions** | **ADOPT (voice/keep-alive only)** | Maintained MIT foreground service for Android 12+; the 4.x line requires targetSdk >= 34; JS-based, so not for the 1 Hz location path. |
+| C11 | **react-native-background-fetch** | **ADOPT (sync retry only)** | 326 k downloads/month, MIT; note the repo moved to the `transistorsoft` org. |
+| C2 | **transistorsoft/react-native-background-geolocation** | **WATCH -> migrate off** | Best features but a **paid release licence** + a runtime key check we do not control; the issue backlog is small (15 open). |
+| C21 | **dont-kill-my-app** | **KEEP (QA input)** | The ranked OEM battery-killer catalogue - it becomes the device matrix in the benchmark. |
+| C9 | **react-native-device-info** | **KEEP (optional)** | Richer battery/device telemetry, 5 M downloads/month - but prefer `expo-battery` to avoid a second native dep. |
+| C19 | **HyopeR/react-native-location** | **WATCH** | New (2025-11) high-performance RN location library; the fallback if `expo-location` fails the benchmark. |
+| C20 | **gabriel-sisjr/react-native-background-location** | **WATCH** | New-Arch location TurboModule reference implementation. |
+| C12 | **transistorsoft/native-background-geolocation** | **WATCH** | The actual v5 licence text lives here; read it before deciding on C2. |
+| C17 / C18 | **radar** | **WATCH (paid)** | A managed alternative, but a commercial runtime dependency and third-party position data - against V4 §11.2 and the PIA. |
+| C22 | **microg/GmsCore** | **WATCH (degoogled only)** | The reference for running the fused provider and activity recognition without Google Play Services. |
+| C5 / C16 / C30 / C31 | traccar-client-android, mauron85, rasheedk, googlecodelabs | **REJECT as dependencies / KEEP as design references** | All stale or unlicensed, but they are still the best written-down patterns for the foreground service and the battery whitelist. |
 
-## 3. Deep review — top 5
+## 3. Deep review - top 5 (V4 §12.4: README, docs, architecture, modules, tests, open critical issues, last 20 commits)
 
-**3.1 expo-location + expo-task-manager (the incumbent we already own)** — *Architecture*: Expo
-Modules (Swift/Kotlin) → `expo-modules-core` → JS. The foreground service is started by
-`startLocationUpdatesAsync` with a `foregroundService` option; the JS callback lives in a
-`TaskManager.defineTask` handler registered **in the top-level scope** (a real footgun: a task
-defined inside a component will not fire). *Duty cycle*: `deferredUpdatesDistance` /
-`deferredUpdatesInterval` / `deferredUpdatesTimeout` are the knobs for "log a point every 25 m or
-every 20 s while moving" — and **they apply only in the background**. *Motion*:
-`getMotionActivityAsync()` returns per-activity-type `{ detected, confidence }`; `activities.
-automotive` is our "the van is moving" signal and needs **no location permission** (but
-`ACTIVITY_RECOGNITION` on Android 10+). *Permissions UX*: `useBackgroundPermissions()` /
-`useMotionActivityPermissions()` give the V4 §5 "permission denied" state; on Android 11+ the
-background request **opens Settings**, so we must explain it in-app first (Expo's own docs say so).
-*Android 14/15*: the config plugin adds `FOREGROUND_SERVICE` **and** `FOREGROUND_SERVICE_LOCATION`;
-the notification icon must be a **96×96 all-white PNG with transparency**. *Known platform limits*:
-background location dies if the user force-stops the app; a terminated Android app does **not**
-auto-restart; Expo Go cannot run it. *Quality*: part of the Expo monorepo, released weekly, MIT,
-10.5 M downloads/month. *Verdict*: a **first-class** solution, not a compromise — the "motion
-detection" argument for a paid SDK **does not survive Expo SDK 58**.
+**3.1 expo/expo (`expo-location` + `expo-task-manager`)** - *Architecture*: Expo Modules (Swift/Kotlin) -> `expo-modules-core` -> JS. The foreground service is started by `startLocationUpdatesAsync` with the `foregroundService` option; the JS callback lives in a `TaskManager.defineTask` handler registered **in the top-level scope** (a real footgun: a task defined inside a component will not fire). *Duty cycle*: `deferredUpdatesDistance` / `deferredUpdatesInterval` / `deferredUpdatesTimeout` are the knobs for "log a point every 25 m or every 20 s while moving", and they apply **only in the background** - when foregrounded we must drive the stream ourselves with `watchPositionAsync` + `distanceInterval`. *Motion*: `getMotionActivityAsync()` returns `{ activities }` where each activity has `{ detected, confidence }`; `activities.automotive` is our "the van is moving" signal and needs **no location permission** (but `ACTIVITY_RECOGNITION` on Android 10+). *Permissions UX*: the config plugin adds `FOREGROUND_SERVICE` **and** `FOREGROUND_SERVICE_LOCATION` **and** `POST_NOTIFICATIONS`, `ACCESS_BACKGROUND_LOCATION` + `RECEIVE_BOOT_COMPLETED`, and the GMS activity-recognition permission; the foreground-service icon must be a **96x96 all-white PNG with transparency**. *Android dependency*: `com.google.android.gms:play-services-location:21.0.1`. *Known platform limits*: background location dies if the user force-stops the app; a terminated Android app does **not** auto-restart; Expo Go cannot run it. *Last 20 commits to `packages/expo-location`*: "[Android][location] Fix didReceiveBroadcast crash in LocationTaskConsumer (#51689)", "[android][location] Don't crash when the location task foreground service can't start (#51216)", "[5/n][location][next][Android] Background location tasks (#50876)", "[3/n][location][next][android] Add location foreground service, update position watchers", "[location][iOS] Keep watchers alive in the background (#51327)", "[location][next][iOS] Add hasLocationServicesEnabled (#51326)", "[location][iOS] Fix infinite region restart loop (#51443)", "[location][iOS] Fix `notifyOnEnter` being ignored (#51444)", "[location][android] Stop the foreground service when the task is unregistered during the bind" -> **the team is actively hardening exactly our failure modes.** *Quality*: part of the Expo monorepo, released weekly, MIT, 10.5 M downloads/month. *Verdict*: a **first-class** solution, not a compromise - the "motion detection" argument for a paid SDK **does not survive Expo SDK 58**.
 
-**3.2 transistorsoft/react-native-background-geolocation** — *What it does well*: the
-accelerometer/gyro/magnetometer "is the vehicle moving" detector with automatic **stationary →
-location services off**; geofencing; activity recognition; `distanceFilter`; an Expo config plugin;
-v5 is a rewrite with a new licence-key system. *Terms*: MIT *source*, **paid release licence**, keys
-validated at runtime, v4 keys incompatible with v5 → a migration cost even if we keep it. *Backlog*:
-2,457 open / 2,442 closed — roughly half of everything ever reported is still open. *Verdict*: the
-best *feature set*, the worst *supply-chain posture*. Keep only if the benchmark shows Expo cannot
-reach 8 %/h, and then pay for it explicitly in `COST_PLAN.md`.
+**3.2 transistorsoft/react-native-background-geolocation** - *What it does well*: the accelerometer/gyro/magnetometer "is the vehicle moving" detector with automatic **stationary -> location services off**; geofencing; activity recognition; `distanceFilter`; an Expo config plugin; v5 is a rewrite with a new licence-key system. *Terms*: MIT *source*, **paid release licence**, keys validated at runtime, v4 keys incompatible with v5 -> a migration cost even if we keep it. *Backlog*: **15 open** - the backlog is small; the real supply-chain problem is the paid release licence and the runtime key check. *Last 20 commits*: almost all are maintenance of the **licence-key and geofence edge cases** - "fix: removeGeofences([]) is answered in JavaScript and never crosses to native", "fix(WO-096): removeListeners() removes every subscription, not every other one", "chore(deps): pin tslocationmanager 4.7.0 and TSLocationManager ~> 4.8.0 (WO-134)", "docs(changelog): Unreleased entry for the encrypted config (WO-134)", "fix(android): empty the debug-sound purge script, which used an API Android Gradle Plugin 9 removed" -> **the engineering effort is on the commercial plumbing, not on new capability.** *Verdict*: the best *feature set*, the worst *supply-chain posture*. Keep only if the benchmark shows Expo cannot reach 8 %/h, and then pay for it explicitly in `COST_PLAN.md` + an ADR.
 
-**3.3 traccar/traccar-client-sdk (the 2026 architecture to copy)** — *Shape*: `core/` (Kotlin
-Multiplatform) + `flutter/` + **`react-native/`** + `samples/` (android/ios); Maven Central
-`org.traccar:traccar-client-sdk`, SwiftPM for iOS. *The battery work is visible in the commit log*:
-"Fix stationary heartbeat filtering" (1.1.3), "Fix distance filter" (1.1.2), "Limit activity sampling
-to startup and resume" (1.1.1) — the author explicitly stopped sampling activity continuously.
-That is the exact lesson we need. *RN wrapper quality*: `react-native-builder-bob` 0.43, ESM+TS
-outputs, RN 0.87.1 dev dep (ours 0.88.0), `prepare` and `typecheck` scripts → New-Arch-compatible
-shape. *Protocol*: "any other server that accepts the same simple HTTP protocol" → we can implement
-the collector in our own FastAPI service and avoid the AGPL Traccar server entirely. *Risks*: one
-maintainer; 1,868 downloads/month; a young project. *Verdict*: **do not adopt the dependency; adopt
-the design.** Our own `LocationService` interface should look like it.
+**3.3 traccar/traccar-client-sdk (the 2026 architecture to copy)** - *Shape*: `core/` (Kotlin Multiplatform) + `flutter/` + **`react-native/`** + `samples/`; Maven Central `org.traccar:traccar-client-sdk`, SwiftPM for iOS. *The battery work is visible in the commit log*: "Limit activity sampling to startup and resume" (1.1.1), "Fix distance filter" (1.1.2), "Fix stationary heartbeat filtering" (1.1.3) - the author explicitly stopped sampling activity continuously. *The Android manifest is the blueprint*: `ACCESS_FINE_LOCATION`, `ACCESS_BACKGROUND_LOCATION`, `ACTIVITY_RECOGNITION`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK`; `TrackerService` with `android:foregroundServiceType="location"` returning `START_STICKY`; a `BootReceiver` for `BOOT_COMPLETED` + `MY_PACKAGE_REPLACED`; an `ActivityRecognitionReceiver`; a `GeofenceReceiver`; a `HeartbeatReceiver`; and a `TrackerStartup` `ContentProvider` with `initOrder="200"` for auto-start. *The foreground-start handling is the lesson*: `ForegroundServiceHolder` calls `startForegroundService` only when `POST_NOTIFICATIONS` is granted, catches `IllegalStateException` ("Service start blocked"), and `startForeground(..., FOREGROUND_SERVICE_TYPE_LOCATION)` on Q+ catching `SecurityException` ("Foreground start denied") - **it degrades instead of crashing**, exactly like Expo's "#51216 Don't crash when the location task foreground service can't start". *Protocol*: "any other server that accepts the same simple HTTP protocol" -> we can implement the collector in our own FastAPI service and avoid running Traccar at all. *Risks*: one maintainer; 1,868 downloads/month; a young project; the RN wrapper is a classic bridge (no `codegenConfig`), so it would not satisfy our New-Arch bar as-is. *Verdict*: **do not adopt the dependency; adopt the design.** Our own `LocationService` interface should look like this.
 
-**3.4 react-native-background-actions** — a *generic* Android foreground service that runs a JS task
-via HeadlessJS, with a mandatory persistent notification, task icon and progress bar. Compatibility
-table (README): 4.x requires **targetSdk ≥ 34**; 3.x ≥ 31. Honest limits (README): on Android 12+ a
-background task cannot be started from the background and the notification is not optional; iOS uses
-`beginBackgroundTaskWithName`, which **does not keep the app alive indefinitely**. *Verdict*: right
-tool for the **voice squad's** always-listening foreground service; wrong tool for location (JS
-wakeups + HeadlessJS cost battery and add jank).
+**3.4 react-native-background-actions** - a *generic* Android foreground service that runs a JS task via HeadlessJS, with a mandatory persistent notification, task icon and progress bar. Compatibility table (README): `4.X.X` requires **targetSdk >= 34**, `3.X.X` requires >= 31. Honest limits (README): on Android 12+ a background task cannot be started from the background and the notification is not optional; iOS uses `beginBackgroundTaskWithName`, which **does not keep the app alive indefinitely**. *Verdict*: the right tool for the **voice squad's** always-listening foreground service; the wrong tool for location (JS wakeups + HeadlessJS cost battery and add jank).
 
-**3.5 expo-battery + react-native-device-info (the measurement instruments)** — `expo-battery 58.0.3`:
-MIT, part of SDK 58, one module, no config plugin needed. `react-native-device-info 15.0.2`: 5 M
-downloads/month, MIT, battery level/charging plus the device profile (model, API level, RAM) we need
-to normalise the battery benchmark across the CI emulator and a mid-range device. *Verdict*: we cannot
-prove the ≤ 8 %/h gate without one of these. Install `expo-battery` today; add
-`react-native-device-info` only when we need the device profile.
+**3.5 expo-battery + expo-sensors (the measurement instruments)** - `expo-battery 58.0.3`: MIT, part of SDK 58, one module, no config plugin needed; `getPowerStateAsync()` returns `{ batteryLevel, charging, lowPowerMode }` in one call, and `isBatteryOptimizationEnabledAsync()` answers the whitelist question. `expo-sensors 58.0.4`: MIT, Accelerometer / Gyroscope / Magnetometer / DeviceMotion / Pedometer. *Verdict*: we cannot prove the <= 8 %/h gate without `expo-battery`, and we cannot build a degoogled fallback for the automotive signal without `expo-sensors`. Install `expo-battery` today; add `expo-sensors` with the motion classifier.
 
-## 4. Benchmarks — top 3
+## 4. Benchmarks - top 2-3 (V4 §12.5)
 
-**No battery benchmark exists in the repo** (`CONSTRAINTS.md`: "Battery while driving | not measured
-yet (T7) | ≤ 8 %/h"). Everything below is **UNVERIFIED** until measured.
+**No battery benchmark exists in the repo** (`CONSTRAINTS.md`: "Battery while driving | not measured yet (T7) | <= 8 %/h"). Everything below is **UNVERIFIED** until measured, and the set that must be built is the **location squad's battery measurement**.
 
-**The set that must be built** — `docs/squads/platform/benchmarks/battery/`:
-1. **Profiles** — the CI emulator profile **and** one mid-range Android profile (V4 §12.5: "same
-   device profile (CI emulator + one mid-range Android profile)"), recording Android API level, OEM,
-   battery capacity, and whether the app is on the battery whitelist.
-2. **Scripts** — a fixed 60-minute drive trace: 8 urban stops + 2 motorway legs + 20 min parked,
-   driven from a **replayed** GPX trace so every run is identical.
-3. **Measurements** — `battery_level` every 10 s (`expo-battery`), plus `adb shell dumpsys
-   batterystats --charged` deltas for `mAh` and **wakelock counts**; the number that matters is the
-   wakelock/CPU time, not just the percentage (a device on charge all day can still burn 12 %/h).
-4. **Comparisons** — same trace, same device, same ambient conditions:
-   **A** `expo-location` foreground service at 1 Hz, no deferral (the naive baseline);
-   **B** + `deferredUpdatesDistance=25 m` + `deferredUpdatesInterval=20 s`;
-   **C** B + `activities.automotive` gating (stop the stream when parked);
-   **D** C + the battery-optimisation whitelist intent;
-   **E** transistorsoft v5 (paid trial licence) — only if we are seriously considering keeping it.
-5. **Acceptance** — **≤ 8 %/h** for the driving portion and a separate number for the parked portion
-   (which must be ≈ 0 %/h). Parked-vs-driving **must** be reported separately; a blended number hides
-   the failure mode that matters.
-6. **OEM matrix** — replay the trace on at least one Samsung/Xiaomi/Huawei device (per
-   `dontkillmyapp.com`, cited by the Expo docs) to prove the service survives their task killers.
+| Metric | Target | Status |
+|---|---|---|
+| Battery drain while driving (A-E below) | **<= 8 %/h** (`CONSTRAINTS.md`, V4 §6.4) | **UNVERIFIED - the set does not exist** |
+| Battery drain while parked | ~0 %/h (the stream must stop) | **UNVERIFIED** |
+| Waking cost | wakelock/CPU time, not just the percentage | **UNVERIFIED** |
+| Service survival after the app is swiped away | survives on the OEM matrix | **UNVERIFIED** |
+
+**The set that must be built - `docs/squads/platform/benchmarks/battery/`**:
+1. **Profiles** - the CI emulator profile **and** one mid-range Android profile (V4 §12.5: "same device profile (CI emulator + one mid-range Android profile)"), recording the Android API level, OEM, battery capacity, and whether the app is on the battery whitelist (`expo-battery`'s `isBatteryOptimizationEnabledAsync()`).
+2. **Scripts** - a fixed 60-minute drive trace: 8 urban stops + 2 motorway legs + 20 min parked, driven from a **replayed** GPX trace so every run is identical.
+3. **Measurements** - `batteryLevel` every 10 s (`expo-battery`), plus `adb shell dumpsys batterystats --charged` deltas for `mAh` and **wakelock counts**; the number that matters is the wakelock/CPU time, not just the percentage (a device on charge all day can still burn 12 %/h).
+4. **Comparisons** - same trace, same device, same ambient conditions: **A** `expo-location` foreground service at 1 Hz with no deferral (the naive baseline); **B** + `deferredUpdatesDistance=25 m` + `deferredUpdatesInterval=20 s`; **C** B + `activities.automotive` gating (stop the stream when parked); **D** C + the battery-optimisation whitelist intent; **E** transistorsoft v5 (a paid trial licence) - only if we are seriously considering keeping it; **F** C + our own accelerometer classifier (the degoogled fallback).
+5. **Acceptance** - **<= 8 %/h** for the driving portion and a separate number for the parked portion (which must be ~0 %/h). Parked-vs-driving **must** be reported separately; a blended number hides the failure mode that matters.
+6. **OEM matrix** - replay the trace on at least one Samsung, Xiaomi and Huawei device, ranked per `dontkillmyapp.com` (Huawei #1, Xiaomi #2, OnePlus #3, Samsung #4), to prove the service survives their task killers.
+
+**Control set that already exists elsewhere**: the DontKillMyApp benchmark app (Google Play), the `expo-location` `LocationTaskConsumer` tests, and `transistorsoft`'s published `distanceFilter`/motion-change benchmarks.
 
 ## 5. Decision
 
-1. **Primary: `expo-location` + `expo-task-manager` (already installed, MIT, SDK 58).** Build the
-   driving-mode location service on `startLocationUpdatesAsync` with a `foregroundService` option,
-   `deferredUpdates*` duty cycling, and **`activities.automotive` gating**. Add `expo-battery` today
-   for telemetry.
-2. **Do not adopt a paid location SDK.** The only thing it adds that we cannot get is *finer* motion
-   detection; `expo-location`'s `MotionActivityObject` gives automotive detection with confidence, and
-   our own accelerometer heuristic can refine it inside `packages/` (pure, unit-testable, V4 §6.1).
-3. **Adopt the design of `traccar-client-sdk`** (stationary heartbeat filter, distance filter,
-   activity sampling only at start/resume) inside our own `LocationService` interface — do not take
-   the dependency (single maintainer, young, Traccar-shaped protocol).
+1. **Primary: `expo-location` + `expo-task-manager`** (already installed, MIT, SDK 58). Build the driving-mode location service on `startLocationUpdatesAsync` with a `foregroundService` option, `deferredUpdates*` duty cycling, and **`activities.automotive` gating**. Add `expo-battery` today for telemetry and the whitelist check.
+2. **Do not adopt a paid location SDK.** The only thing it adds that we cannot get is *finer* motion detection; `expo-location`'s `MotionActivityObject` gives automotive detection with confidence, and our own accelerometer heuristic (with `expo-sensors`) refines it inside `packages/` (pure, unit-testable, V4 §6.1).
+3. **Adopt the design of `traccar-client-sdk`** (stationary heartbeat filter, distance filter, activity sampling only at start/resume, boot receiver, startup provider, foreground-start failure handling) inside our own `LocationService` interface - do not take the dependency (one maintainer, young, classic-bridge RN wrapper).
 4. **Keep `react-native-background-actions` for the voice foreground service**, not for location.
-5. **Reimplement the battery-optimisation whitelist intent in our own Android module** (C13 has no
-   licence) with an in-app explanation.
-6. **Keep `transistorsoft/react-native-background-geolocation` only as a benchmarked fallback**; if it
-   stays, its release licence must be a line in `docs/COST_PLAN.md` and an ADR.
+5. **Reimplement the battery-optimisation whitelist intent in our own Android module** (C30 has no licence) with an in-app explanation, and detect the state with `expo-battery`.
+6. **Keep `transistorsoft/react-native-background-geolocation` only as a benchmarked fallback**; if it stays, its release licence must be a line in `docs/COST_PLAN.md` and an ADR, because `scripts/check-licenses.mjs` cannot see it.
 
 ## 6. Risks
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| The 8 %/h gate is unmet without a paid SDK | **High** | Benchmark first (A–E). If B/C/D fail, revisit the paid SDK with a written cost line. |
+| The 8 %/h gate is unmet without a paid SDK | **High** | Benchmark first (A-F). If B/C/D fail, revisit the paid SDK with a written cost line. |
 | OEM task killers kill the foreground service | **High** | Replay the trace on a Samsung/Xiaomi/Huawei device; add a **watchdog + notification re-post**; put "don't swipe the app away" in the driver onboarding. |
 | Force-stop kills background location permanently | Medium | Detect the stop (no location for N minutes while the service claims to be running) and prompt the driver to reopen the app. |
 | `expo-location` deferred updates apply **only in the background** | Medium | When foregrounded, drive the stream ourselves with `watchPositionAsync` + `distanceInterval`. |
-| Android 14+ `FOREGROUND_SERVICE_LOCATION` + monochrome icon | Low | The config plugin handles the permission; ship a 96×96 white PNG icon. |
+| No Google Play Services on the fleet | Medium | `expo-location` depends on `play-services-location:21.0.1` and GMS activity recognition. Fallback = the platform provider + our own accelerometer classifier (`expo-sensors`). **The battery cost of that fallback is UNVERIFIED - measure it.** |
+| Android 14+ `FOREGROUND_SERVICE_LOCATION` + monochrome icon | Low | The config plugin handles the permission; ship a 96x96 white PNG icon. |
 | iOS "Allow Once" is undetectable and the follow-up background request silently fails | Medium | Handle the silent-failure case: re-check the status and deep-link to Settings. |
-| The config plugin adds `ACCESS_BACKGROUND_LOCATION` at build time | Medium | Changing it needs a **new build** → it must be right the first time; verify in the EAS profile. |
+| The config plugin adds `ACCESS_BACKGROUND_LOCATION` at build time | Medium | Changing it needs a **new build** -> it must be right the first time; verify in the EAS profile. |
 | Motion detection needs `ACTIVITY_RECOGNITION` on Android 10+ | Low | Bundle it into the single permission-rationale screen. |
-| Privacy: a continuous location trail is personal data | Medium | Keep the trail **on device** (op-sqlite), encrypt at rest (SQLCipher per V4 §7), never stream raw traces by default; NZ Privacy Act 2020 PIA must cover it. |
+| Privacy: a continuous location trail is personal data | Medium | Keep the trail **on device** (op-sqlite), encrypt at rest (SQLCipher per V4 §7), never stream raw traces by default; the NZ Privacy Act 2020 PIA must cover it. |
+| The paid SDK becomes a runtime dependency we cannot audit | Medium | We own the service; the vendor's licence check is a runtime gate that can fail in the field. |
 
 ## 7. What I could not verify
 
-* **6-month star trend** — blocked by token scope (no `read:user`); proxies used instead.
-* **Median issue-response time** — not computed for any repo.
-* **The actual battery figure for every candidate** — **UNVERIFIED**; no measurement exists. This is
-  the biggest gap in this file and the reason the §4 set must exist before we sign anything.
-* **TransistorSoft's exact v5 release-licence price and terms** — the README confirms a licence is
-  required for release builds; the price/terms live behind `docs.transistorsoft.com/purchase/`
-  (not read) → **UNVERIFIED**.
-* **`thecodingmachine/react-native-headless-js`** — repo and npm package both 404 → could not confirm
-  the project's current home.
-* **`transistorsoft/react-native-geolocation-service`** — repo 404 while the npm package is 5.3.1
-  from 2022 → the repo/npm pair is inconsistent.
-* **Whether `expo-location`'s foreground service works with `expo-dev-client` on the CI emulator**
-  profile without a native rebuild — must be proved on the CI emulator
-  (`.github/workflows/android-e2e.yml`).
-* **`react-native-device-info` New-Architecture status on SDK 58** — the repo is active and
-  Nitro-based, but I did not read its compatibility matrix.
-* **Battery impact of Google Play Services activity recognition** (used by `expo-location`'s motion
-  API) on devices without GMS — **UNVERIFIED**, and material for the degoogled/enterprise fleet case.
+- **6-month star trend** - blocked by token scope (stargazers -> HTTP 403 / FORBIDDEN, re-tested 2026-10-21). Proxies used: releases/6m, commits/90d, distinct human maintainers/90d, npm downloads/month.
+- **Median issue-response time** - not computed for any candidate. **UNVERIFIED.**
+- **The actual battery figure for every candidate** - **UNVERIFIED**; no measurement exists. This is the biggest gap in this file and the reason the §4 set must exist before we sign anything.
+- **TransistorSoft's exact v5 release-licence price and terms** - the README confirms a licence is required for release builds; the price/terms live behind `docs.transistorsoft.com/purchase/` (not read) -> **UNVERIFIED**.
+- **`transistorsoft/native-background-geolocation` licence** - GitHub reports NOASSERTION; the actual commercial terms were not read -> **UNVERIFIED.**
+- **Whether `expo-location`'s foreground service works with `expo-dev-client` on the CI emulator profile without a native rebuild** - must be proved on the CI emulator (`.github/workflows/android-e2e.yml`).
+- **The battery impact of Google Play Services activity recognition on devices without GMS** - **UNVERIFIED**, and material for the degoogled/enterprise fleet case.
+- **`react-native-device-info` New-Architecture status on SDK 58** - the repo is Nitro-based but I did not read its compatibility matrix -> **UNVERIFIED.**
+- **`thecodingmachine/react-native-headless-js`** - repo and npm package both 404 -> could not confirm the project's current home.
+
+Corrected by the verifier pass of 2026-10-21 (VERIFICATION-C.md): 4 cards corrected.
+- **The `dontkillmyapp.com` vendor ranking's freshness** - last push 2026-06-09; OEM behaviour changes with every firmware update -> the matrix must be re-checked per release.
+- **The iOS background-execution behaviour under `expo-location`** (the `pausesUpdatesAutomatically` + `activityType` interaction) - documented, not measured -> **UNVERIFIED.**
 
 ## 8. Corrections to the V4 §11.1 adopt list (background-location-related)
 
-| V4 §11.1 item | Verified reality on 2026-10-20 | Correction |
+| V4 §11.1 item | Verified reality on 2026-10-21 | Correction |
 |---|---|---|
-| 8. **traccar-client-android** — "background-location foreground-service + battery-whitelist pattern" | **760 ★ but last push 2025-06-07 (16 months stale)**, last release v7.9 2025-04-17, Apache-2.0 | ⚠️ **Superseded.** The live project is **`traccar/traccar-client-sdk`** (created 2026-05-24, **Apache-2.0**, v1.1.3 2026-10-16) with an **official RN wrapper on npm** (`react-native-traccar-client-sdk`, Apache-2.0, RN 0.87.1, KMP core, and the battery fixes already made: stationary heartbeat filter, distance filter, activity sampling only at start/resume). **Use the SDK's design; keep `client-android` only as the canonical battery-whitelist pattern.** |
-| `docs/TECH_STACK.md` §1 "transistorsoft/react-native-background-geolocation ⚠️ paid for production" | Confirmed and **sharpened**: the **repo** is MIT, but **v5 requires a purchased licence for RELEASE builds** (v4 keys do not work with v5) and the key is validated at runtime | ⚠️ **Sharpen the warning**: it is a *commercial runtime dependency*, not merely "paid on Android". Track the cost in `COST_PLAN.md`; `check-licenses.mjs` cannot see it. |
-| (not in the list) | **`expo-location` already installed (58.0.17) already provides** foreground service + `deferredUpdates*` + **`getMotionActivityAsync()` automotive detection** + geofencing | **Add to the adopt list as the primary**, and drop the assumption that a third-party SDK is needed for motion detection. |
-| (not in the list) | `react-native-background-fetch` repo moved to the **`transistorsoft`** org (`jt8765/…` is 404) | Correct any CI pin or doc that names the old org. |
-| (not in the list) | `react-native-background-actions` 4.x requires **targetSdk ≥ 34** | ✅ matches V4's Android API 34 requirement exactly — adopt it for the voice service. |
-| (not in the list) | `react-native-disable-battery-optimizations-android` has **no licence** | Do not adopt; reimplement the intent ourselves. |
+| 8. **traccar-client-android** - "background-location foreground-service + battery-whitelist pattern" | **760 stars but last push 2025-06-08 (16 months stale)**, last release v7.9 2025-04-18, Apache-2.0, 0 commits/90 d | **Superseded.** The live projects are **`traccar/traccar-client`** (created 2025-05-21, Apache-2.0, v10.2.1 2026-10-19, 27 rel/6m - a Flutter app) and **`traccar/traccar-client-sdk`** (created 2026-05-25, Apache-2.0, v1.1.3 2026-10-17, 40 rel/6m) with an official RN wrapper on npm (`react-native-traccar-client-sdk`, Apache-2.0, RN 0.87.1, KMP core, and the battery fixes already made: stationary heartbeat filter, distance filter, activity sampling only at start/resume). **Use the SDK's design; keep `client-android` only as the canonical battery-whitelist pattern.** |
+| `docs/TECH_STACK.md` §1 "transistorsoft/react-native-background-geolocation - paid for production on Android" | Confirmed and **sharpened**: the **repo** is MIT, but **v5 requires a purchased licence for RELEASE builds** (v4 keys do not work with v5) and the key is validated at runtime | **Sharpen the warning**: it is a *commercial runtime dependency*, not merely "paid on Android". Track the cost in `COST_PLAN.md`; `check-licenses.mjs` cannot see it. |
+| (not in the list) | **`expo-location` 58.0.18 (installed) already provides** the foreground service, `deferredUpdates*`, **`getMotionActivityAsync()` automotive detection** and geofencing | **Add to the adopt list as the primary**, and drop the assumption that a third-party SDK is needed for motion detection. |
+| (not in the list) | **`expo-battery` 58.0.3 has `isBatteryOptimizationEnabledAsync()`** plus `getPowerStateAsync()` and three change events | **Add as the battery instrument** - it is the measurement half of the <= 8 %/h gate and the OEM-whitelist check. |
+| (not in the list) | **`expo-location` on Android depends on `com.google.android.gms:play-services-location:21.0.1`** and GMS activity recognition | **Add the degoogled-fleet risk** to the PIA and to the platform squad's threat model; the fallback is `expo-sensors` + our own classifier. |
+| (not in the list) | `react-native-background-fetch` repo moved to the **`transistorsoft`** org (`jt8765/...` is 404) | Correct any CI pin or doc that names the old org. |
+| (not in the list) | `react-native-background-actions` 4.x requires **targetSdk >= 34** | Matches V4's Android API 34 requirement exactly - adopt it for the voice service. |
+| (not in the list) | `react-native-disable-battery-optimizations-android` has **no licence** (GitHub detects none) | Do not adopt; reimplement the intent ourselves. |
+| (not in the list) | `traccar/traccar` (the server) is **Apache-2.0**, not AGPL | Correct the old note; the AGPL assumption does not hold, so the clean-room restriction on the *server* is not needed (the SDK design is still study-only in practice). |
+
+## What we are missing
+
+Each row is a capability found in the best repos/competitors above that we do **not** have today. The CEO merges these into `docs/PARITY.md`; the task id is where the row becomes work.
+
+| # | Feature | Family | Gap (today) | The task id it becomes |
+|---|---|---|---|---|
+| L1 | A **location foreground service** (Android) that survives Doze, screen-off and app switching | Tracking / platform | **No background location is implemented at all** | **T7.1** (existing) + **T7.7** (driving mode) |
+| L2 | A **duty cycle** instead of 1 Hz: `deferredUpdatesDistance` + `deferredUpdatesInterval` | Tracking / perf | No duty-cycle policy; a naive stream would be the default | **T7.1** |
+| L3 | **Driving vs parked detection** that gates the location stream (`activities.automotive`, or our own accelerometer classifier) | Tracking / perf | The stream never stops, so the parked battery burn is unaddressed | **T7.1** + **T7.7** |
+| L4 | **Battery telemetry** (level, charging, low-power mode) in the app and in the event log | Tracking / QA | `expo-battery` is not installed; we cannot even see the drain | **T7.1** (existing) |
+| L5 | A **battery-optimisation whitelist check + intent** with an in-app rationale | Platform / trust | The one library that does it has no licence; we must reimplement it | **T7.6** (settings) + **T7.15** (acceptance) |
+| L6 | An **OEM task-killer matrix** (Huawei, Xiaomi, OnePlus, Samsung, ...) in the test plan | QA / safety | Not in the test matrix at all | **T7.15** (existing) |
+| L7 | A **battery benchmark** that reports driving and parked separately, with wakelock counts | QA | "not measured yet (T7)" - no set, no numbers | **T7.15** + a new **T7.18** (benchmark set) |
+| L8 | **Boot restart** of the tracking service (`RECEIVE_BOOT_COMPLETED` + a startup provider) | Tracking | After a reboot the van is invisible until the driver opens the app | **T7.1** |
+| L9 | A **watchdog + notification re-post** when the service is killed by the OEM | Reliability | Nothing detects "the service says it is running but no fix arrived" | **T7.1** + **T7.15** |
+| L10 | **Force-stop detection** with a "please reopen the app" prompt | Reliability | Silent data loss after a force-stop | **T7.1** + **T7.5** (voice prompt) |
+| L11 | **Geofence auto-arrival** (native geofencing with `GeofenceReceiver`) | Tracking | PARITY row 32 is "Planned (task)" with no implementation | **T7.3** (door memory) |
+| L12 | **Distance filter / auto-stop when stationary** | Tracking / perf | Not implemented | **T7.1** |
+| L13 | A **heartbeat** for "the van is alive but has not moved" (parked confirmation) | Tracking | The dispatcher has no liveness signal | **T7.12** (web dashboard) |
+| L14 | **Driving-detection confidence** in the event log (not just a boolean) | Tracking / QA | No confidence channel to store | **T7.1** |
+| L15 | A **degoogled fallback** for the fused provider and motion recognition | Platform / fleet | `expo-location` depends on Play Services | **T7.15** (PIA) + a new **T7.19** (fleet devices) |
+| L16 | A **location privacy posture** the driver can read: on-device only by default, retention, and a one-line "what we send" | Compliance | The PIA is unstarted (T7.15) and the trail has no owner | **T7.15** (existing) |
+| L17 | **Traccar-compatible ingest** (or our own collector speaking the same simple HTTP protocol) so a customer's existing tracker can feed us | API / integrations | No ingest endpoint for third-party trackers | **T7.13** (public API) |
+| L18 | A **per-device battery fingerprint** (model, API level, capacity) so the 8 %/h claim is comparable across the fleet | QA | No device profile recorded with the telemetry | **T7.15** |

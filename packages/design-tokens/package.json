@@ -2,7 +2,6 @@
   "name": "@courier/design-tokens",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -17,6 +16,10 @@
     "./themes": {
       "types": "./dist/themes.d.ts",
       "default": "./dist/themes.js"
+    },
+    "./contrast": {
+      "types": "./dist/contrast.d.ts",
+      "default": "./dist/contrast.js"
     }
   },
   "scripts": {
@@ -24,7 +27,8 @@
     "build:watch": "tsc --watch",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "contrast:report": "vitest run src/contrast.test.ts -t \"contrast table\""
   },
   "dependencies": {
     "zod": "4.6.7"

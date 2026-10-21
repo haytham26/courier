@@ -1,350 +1,464 @@
-"""Persistence for the Courier Copilot API.
+"""The persistence layer of the API.
 
-One contract, two implementations: `InMemoryRepo` (the test double and the
-local dev server) and `SqlRepo` (PostgreSQL 16 + PostGIS, see
-`db/schema.sql`). The routes ask the repository for the records they need and
-never touch a database themselves.
+The API owns the delivery history. A courier works offline for hours, so the
+phone keeps the truth in its own event log and replays it here. Replay must be
+idempotent: the event id is generated on the phone, and the same event can
+arrive twice (a retry after a dropped connection).
 
-A courier is the auth subject (`sub` of the verified token). The database
-stores that subject on the driver row, so a shift always knows which courier
-owns it.
+`SqlAlchemyRepo` is the production implementation. `InMemoryRepo` is the one
+the tests use: the same contract, no database.
 """
-
 from __future__ import annotations
 
-import uuid
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass
-from datetime import UTC, date, datetime
+import json
+import os
+from dataclasses import dataclass, field
+from datetime import datetime
 from functools import lru_cache
-from typing import Protocol, cast
+from typing import Any, Protocol
+from uuid import UUID
 
-import psycopg
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
 
-from .nz_address import parse as parse_address
+from .routing import PlannedStop, RoutePlan, RunTemplate
+from .sequencing import Segment
+
+
+def _parse_segments(document: object) -> tuple[Segment, ...]:
+    """The template segments as they come back from the database."""
+    if not isinstance(document, list):
+        return ()
+    segments: list[Segment] = []
+    for item in document:
+        if not isinstance(item, dict):
+            continue
+        street_key = item.get("street_key")
+        if not isinstance(street_key, str):
+            continue
+        direction = item.get("direction")
+        segments.append(
+            Segment(street_key=street_key, direction=direction if isinstance(direction, str) else "asc")
+        )
+    return tuple(segments)
+
+
+def _parse_stop_order(document: object) -> tuple[UUID, ...]:
+    """The locked order as it comes back from the database."""
+    if not isinstance(document, list):
+        return ()
+    stop_ids: list[UUID] = []
+    for item in document:
+        if not isinstance(item, str):
+            continue
+        try:
+            stop_ids.append(UUID(item))
+        except ValueError:
+            continue
+    return tuple(stop_ids)
 
 
 @dataclass(frozen=True)
-class DoorMemory:
-    """What one courier remembers about one address."""
+class DeliveryEventRow:
+    """One event as the database stores it."""
 
-    address_key: str
-    note: str | None
-    safe_place: str | None
-    updated_at: datetime
-
-
-@dataclass(frozen=True)
-class StopRecord:
-    """A stop, the address it is at and the courier who owns it."""
-
-    id: uuid.UUID
-    shift_id: uuid.UUID
-    address_key: str
-    courier_id: str | None
-    parcel_count: int
-
-
-@dataclass(frozen=True)
-class ShiftRecord:
-    """A working day of one courier."""
-
-    id: uuid.UUID
-    courier_id: str | None
-    shift_date: date
-
-
-@dataclass(frozen=True)
-class ShiftEvent:
-    """One event the courier recorded on a stop."""
-
-    stop_id: uuid.UUID
+    id: UUID
+    shift_id: UUID
+    stop_id: UUID
     kind: str
+    utterance: str | None
+    safe_place: str | None
+    lat: float | None
+    lon: float | None
+    accuracy_m: float | None
     occurred_at: datetime
-    parcel_count: int
-    reason: str | None
+
+
+@dataclass(frozen=True)
+class RunRecord:
+    """The run: one courier's day, one van, one shift."""
+
+    id: UUID
+    shift_id: UUID
+    courier_id: str
+    name: str
+    depot_lat: float
+    depot_lon: float
+    capacity_parcels: int | None
+    speed_kmh: float
+    start_at: datetime
+
+
+@dataclass(frozen=True)
+class RouteStopRow:
+    """A stop of the run, with the constraints the routing engine needs."""
+
+    id: UUID
+    lat: float | None
+    lon: float | None
+    priority: bool
+    parcels: int
+    service_time_s: int | None
+    window_start: datetime | None
+    window_end: datetime | None
 
 
 class Repo(Protocol):
-    """The store the API needs: stops, shifts, events and the door memory."""
+    """What the API needs from the database."""
 
-    def get_stop(self, stop_id: uuid.UUID) -> StopRecord | None:
-        """The stop, or None when the API has never heard of it."""
-        ...
+    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> int:
+        """Stores the events, ignoring the ones already stored.
 
-    def get_shift(self, shift_id: uuid.UUID) -> ShiftRecord | None:
-        """The shift, or None when the API has never heard of it."""
-        ...
+        Returns:
+            The number of events that were new.
+        """
 
-    def list_shift_events(self, shift_id: uuid.UUID) -> list[ShiftEvent]:
-        """Every event recorded on the stops of a shift, oldest first."""
-        ...
+    def cursor(self, shift_id: UUID) -> int:
+        """The number of events stored for the shift (the sync cursor)."""
 
-    def get_door_memory(self, courier_id: str, address_key: str) -> DoorMemory | None:
-        """What this courier remembers about this address, if anything."""
-        ...
+    def get_run(self, run_id: UUID) -> RunRecord | None:
+        """The run, when the run exists."""
 
-    def save_door_memory(
-        self,
-        courier_id: str,
-        address_key: str,
-        note: str | None,
-        safe_place: str | None,
-    ) -> DoorMemory:
-        """Writes the courier's memory of an address and hands it back."""
-        ...
+    def get_run_for_shift(self, shift_id: UUID) -> RunRecord | None:
+        """The run of the shift, when the shift has one."""
+
+    def get_run_stops(self, run_id: UUID) -> list[RouteStopRow]:
+        """The stops of the run, in the order the manifest gave them."""
+
+    def put_run_template(self, run_id: UUID, template: RunTemplate) -> None:
+        """Stores the locked template and replaces the run's street order.
+
+        The stored plan is dropped, because the order it was built on has
+        changed.
+        """
+
+    def get_run_template(self, run_id: UUID) -> RunTemplate | None:
+        """The locked template of the run, when the run has one."""
+
+    def put_run_route(self, run_id: UUID, plan: RoutePlan) -> None:
+        """Stores the plan: the ordered stops with the arrival times."""
+
+    def get_run_route(self, run_id: UUID) -> RoutePlan | None:
+        """The stored plan of the run, when there is one."""
 
 
+@dataclass
 class InMemoryRepo:
-    """The in-memory repository: the test double and the local dev server.
+    """The repository the tests use: the same contract, no database."""
 
-    It keeps the same rules as the database: an address is stored under the
-    normalised address key, and the door memory is keyed by the courier and
-    the address so a second courier never reads the first one's notes.
-    """
+    events: dict[UUID, DeliveryEventRow] = field(default_factory=dict)
+    by_shift: dict[UUID, list[UUID]] = field(default_factory=dict)
+    runs: dict[UUID, RunRecord] = field(default_factory=dict)
+    run_stops: dict[UUID, list[RouteStopRow]] = field(default_factory=dict)
+    templates: dict[UUID, RunTemplate] = field(default_factory=dict)
+    routes: dict[UUID, RoutePlan] = field(default_factory=dict)
 
-    def __init__(self) -> None:
-        self._shifts: dict[uuid.UUID, ShiftRecord] = {}
-        self._stops: dict[uuid.UUID, StopRecord] = {}
-        self._events: list[ShiftEvent] = []
-        self._memories: dict[tuple[str, str], DoorMemory] = {}
+    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> int:
+        stored = 0
+        for event in events:
+            if event.id in self.events:
+                continue
+            self.events[event.id] = event
+            self.by_shift.setdefault(shift_id, []).append(event.id)
+            stored += 1
+        return stored
 
-    # --- seeding: the dev server and the tests build the store this way ---
+    def cursor(self, shift_id: UUID) -> int:
+        return len(self.by_shift.get(shift_id, []))
 
-    def add_shift(self, shift_id: uuid.UUID, courier_id: str, shift_date: date) -> None:
-        """Registers a shift for a courier."""
-        self._shifts[shift_id] = ShiftRecord(
-            id=shift_id, courier_id=courier_id, shift_date=shift_date
-        )
+    def get_run(self, run_id: UUID) -> RunRecord | None:
+        return self.runs.get(run_id)
 
-    def add_stop(
-        self,
-        stop_id: uuid.UUID,
-        shift_id: uuid.UUID,
-        address: str,
-        parcels: int = 1,
-    ) -> None:
-        """Registers a stop; the address is normalised the way the database stores it."""
-        shift = self._shifts.get(shift_id)
-        if shift is None:
-            raise KeyError(f"unknown shift {shift_id}")
-        self._stops[stop_id] = StopRecord(
-            id=stop_id,
-            shift_id=shift_id,
-            address_key=parse_address(address).address_key,
-            courier_id=shift.courier_id,
-            parcel_count=parcels,
-        )
+    def get_run_for_shift(self, shift_id: UUID) -> RunRecord | None:
+        for run in self.runs.values():
+            if run.shift_id == shift_id:
+                return run
+        return None
 
-    def add_event(
-        self,
-        stop_id: uuid.UUID,
-        kind: str,
-        occurred_at: datetime,
-        reason: str | None = None,
-    ) -> None:
-        """Records an event on a stop (arrival, delivery, failure, skip)."""
-        stop = self._stops.get(stop_id)
-        if stop is None:
-            raise KeyError(f"unknown stop {stop_id}")
-        self._events.append(
-            ShiftEvent(
-                stop_id=stop_id,
-                kind=kind,
-                occurred_at=occurred_at,
-                parcel_count=stop.parcel_count,
-                reason=reason,
-            )
-        )
+    def get_run_stops(self, run_id: UUID) -> list[RouteStopRow]:
+        return list(self.run_stops.get(run_id, []))
 
-    # --- the contract ---
+    def put_run_template(self, run_id: UUID, template: RunTemplate) -> None:
+        self.templates[run_id] = template
+        self.routes.pop(run_id, None)
 
-    def get_stop(self, stop_id: uuid.UUID) -> StopRecord | None:
-        return self._stops.get(stop_id)
+    def get_run_template(self, run_id: UUID) -> RunTemplate | None:
+        return self.templates.get(run_id)
 
-    def get_shift(self, shift_id: uuid.UUID) -> ShiftRecord | None:
-        return self._shifts.get(shift_id)
+    def put_run_route(self, run_id: UUID, plan: RoutePlan) -> None:
+        self.routes[run_id] = plan
 
-    def list_shift_events(self, shift_id: uuid.UUID) -> list[ShiftEvent]:
-        stop_ids = {stop.id for stop in self._stops.values() if stop.shift_id == shift_id}
-        events = [event for event in self._events if event.stop_id in stop_ids]
-        return sorted(events, key=lambda event: event.occurred_at)
-
-    def get_door_memory(self, courier_id: str, address_key: str) -> DoorMemory | None:
-        return self._memories.get((courier_id, address_key))
-
-    def save_door_memory(
-        self,
-        courier_id: str,
-        address_key: str,
-        note: str | None,
-        safe_place: str | None,
-    ) -> DoorMemory:
-        memory = DoorMemory(
-            address_key=address_key,
-            note=note,
-            safe_place=safe_place,
-            updated_at=datetime.now(UTC),
-        )
-        self._memories[(courier_id, address_key)] = memory
-        return memory
+    def get_run_route(self, run_id: UUID) -> RoutePlan | None:
+        return self.routes.get(run_id)
 
 
-Row = Sequence[object]
-QueryRunner = Callable[[str, Sequence[object]], list[Row]]
+class SqlAlchemyRepo:
+    """The production repository: Postgres through SQLAlchemy."""
 
+    def __init__(self, engine: Engine) -> None:
+        self._engine = engine
 
-def _psycopg_runner(dsn: str) -> QueryRunner:
-    """Runs a query on PostgreSQL; the connection commits when the block ends."""
-
-    def run(query: str, params: Sequence[object]) -> list[Row]:
-        with psycopg.connect(dsn) as connection, connection.cursor() as cursor:
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-        return [tuple(row) for row in rows]
-
-    return run
-
-
-class SqlRepo:
-    """The PostgreSQL repository (PostgreSQL 16 + PostGIS, see db/schema.sql).
-
-    Every statement goes through one runner, so the tests can answer the
-    queries without a database.
-    """
-
-    def __init__(self, dsn: str, run: QueryRunner | None = None) -> None:
-        self._dsn = dsn
-        self._run = run if run is not None else _psycopg_runner(dsn)
-
-    def get_stop(self, stop_id: uuid.UUID) -> StopRecord | None:
-        rows = self._run(
+    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> int:
+        if not events:
+            return 0
+        statement = text(
             """
-            SELECT s.id, s.shift_id, l.address_key, d.auth_subject,
-                   (SELECT count(*) FROM stop_parcels sp WHERE sp.stop_id = s.id)
+            INSERT INTO delivery_events
+                (id, shift_id, stop_id, kind, utterance, safe_place,
+                 lat, lon, accuracy_m, occurred_at)
+            VALUES (:id, :shift_id, :stop_id, :kind, :utterance, :safe_place,
+                    :lat, :lon, :accuracy_m, :occurred_at)
+            ON CONFLICT (id) DO NOTHING
+            """
+        )
+        parameters: list[dict[str, Any]] = [
+            {
+                "id": event.id,
+                "shift_id": shift_id,
+                "stop_id": event.stop_id,
+                "kind": event.kind,
+                "utterance": event.utterance,
+                "safe_place": event.safe_place,
+                "lat": event.lat,
+                "lon": event.lon,
+                "accuracy_m": event.accuracy_m,
+                "occurred_at": event.occurred_at,
+            }
+            for event in events
+        ]
+        with self._engine.begin() as connection:
+            result = connection.execute(statement, parameters)
+            return int(result.rowcount or 0)
+
+    def cursor(self, shift_id: UUID) -> int:
+        statement = text("SELECT count(*) FROM delivery_events WHERE shift_id = :shift_id")
+        with self._engine.connect() as connection:
+            return int(connection.execute(statement, {"shift_id": shift_id}).scalar_one())
+
+    def get_run(self, run_id: UUID) -> RunRecord | None:
+        statement = text(
+            """
+            SELECT id, shift_id, courier_id, name, depot_lat, depot_lon,
+                   capacity_parcels, speed_kmh, start_at
+            FROM runs
+            WHERE id = :run_id
+            """
+        )
+        with self._engine.connect() as connection:
+            row = connection.execute(statement, {"run_id": run_id}).mappings().one_or_none()
+        if row is None:
+            return None
+        return RunRecord(
+            id=row["id"],
+            shift_id=row["shift_id"],
+            courier_id=row["courier_id"],
+            name=row["name"],
+            depot_lat=row["depot_lat"],
+            depot_lon=row["depot_lon"],
+            capacity_parcels=row["capacity_parcels"],
+            speed_kmh=row["speed_kmh"],
+            start_at=row["start_at"],
+        )
+
+    def get_run_for_shift(self, shift_id: UUID) -> RunRecord | None:
+        statement = text(
+            """
+            SELECT id, shift_id, courier_id, name, depot_lat, depot_lon,
+                   capacity_parcels, speed_kmh, start_at
+            FROM runs
+            WHERE shift_id = :shift_id
+            """
+        )
+        with self._engine.connect() as connection:
+            row = connection.execute(statement, {"shift_id": shift_id}).mappings().one_or_none()
+        if row is None:
+            return None
+        return RunRecord(
+            id=row["id"],
+            shift_id=row["shift_id"],
+            courier_id=row["courier_id"],
+            name=row["name"],
+            depot_lat=row["depot_lat"],
+            depot_lon=row["depot_lon"],
+            capacity_parcels=row["capacity_parcels"],
+            speed_kmh=row["speed_kmh"],
+            start_at=row["start_at"],
+        )
+
+    def get_run_stops(self, run_id: UUID) -> list[RouteStopRow]:
+        statement = text(
+            """
+            SELECT s.id, s.latitude, s.longitude, s.priority, s.parcels,
+                   s.service_time_s, s.time_window_start, s.time_window_end
             FROM stops s
-            JOIN locations l ON l.id = s.location_id
-            JOIN shifts sh ON sh.id = s.shift_id
-            JOIN runs r ON r.id = sh.run_id
-            JOIN drivers d ON d.id = r.driver_id
-            WHERE s.id = %s
-            """,
-            (stop_id,),
-        )
-        if not rows:
-            return None
-        row = rows[0]
-        return StopRecord(
-            id=uuid.UUID(str(row[0])),
-            shift_id=uuid.UUID(str(row[1])),
-            address_key=str(row[2]),
-            courier_id=None if row[3] is None else str(row[3]),
-            parcel_count=int(cast(int, row[4])),
-        )
-
-    def get_shift(self, shift_id: uuid.UUID) -> ShiftRecord | None:
-        rows = self._run(
+            JOIN runs r ON r.shift_id = s.shift_id
+            WHERE r.id = :run_id
+            ORDER BY s.sequence
             """
-            SELECT sh.id, sh.shift_date, d.auth_subject
-            FROM shifts sh
-            JOIN runs r ON r.id = sh.run_id
-            JOIN drivers d ON d.id = r.driver_id
-            WHERE sh.id = %s
-            """,
-            (shift_id,),
         )
-        if not rows:
-            return None
-        row = rows[0]
-        return ShiftRecord(
-            id=uuid.UUID(str(row[0])),
-            shift_date=cast(date, row[1]),
-            courier_id=None if row[2] is None else str(row[2]),
-        )
-
-    def list_shift_events(self, shift_id: uuid.UUID) -> list[ShiftEvent]:
-        rows = self._run(
-            """
-            SELECT e.stop_id, e.kind, e.occurred_at, e.utterance,
-                   (SELECT count(*) FROM stop_parcels sp WHERE sp.stop_id = e.stop_id)
-            FROM delivery_events e
-            JOIN stops s ON s.id = e.stop_id
-            WHERE s.shift_id = %s
-            ORDER BY e.occurred_at
-            """,
-            (shift_id,),
-        )
+        with self._engine.connect() as connection:
+            rows = connection.execute(statement, {"run_id": run_id}).mappings().all()
         return [
-            ShiftEvent(
-                stop_id=uuid.UUID(str(row[0])),
-                kind=str(row[1]),
-                occurred_at=cast(datetime, row[2]),
-                parcel_count=int(cast(int, row[4])),
-                reason=None if row[3] is None else str(row[3]),
+            RouteStopRow(
+                id=row["id"],
+                lat=row["latitude"],
+                lon=row["longitude"],
+                priority=row["priority"],
+                parcels=row["parcels"],
+                service_time_s=row["service_time_s"],
+                window_start=row["time_window_start"],
+                window_end=row["time_window_end"],
             )
             for row in rows
         ]
 
-    def get_door_memory(self, courier_id: str, address_key: str) -> DoorMemory | None:
-        rows = self._run(
+    def put_run_template(self, run_id: UUID, template: RunTemplate) -> None:
+        statement = text(
             """
-            SELECT address_key, note, safe_place, updated_at
-            FROM door_memory
-            WHERE courier_id = %s AND address_key = %s
-            """,
-            (courier_id, address_key),
+            INSERT INTO run_templates (run_id, template_id, segments, stop_order)
+            VALUES (:run_id, :template_id, CAST(:segments AS jsonb), CAST(:stop_order AS jsonb))
+            ON CONFLICT (run_id) DO UPDATE SET
+                template_id = EXCLUDED.template_id,
+                segments = EXCLUDED.segments,
+                stop_order = EXCLUDED.stop_order,
+                updated_at = now()
+            """
         )
-        if not rows:
+        parameters = {
+            "run_id": run_id,
+            "template_id": template.id,
+            "segments": json.dumps(
+                [{"street_key": segment.street_key, "direction": segment.direction} for segment in template.segments]
+            ),
+            "stop_order": json.dumps([str(stop_id) for stop_id in template.stop_order]),
+        }
+        with self._engine.begin() as connection:
+            connection.execute(statement, parameters)
+            connection.execute(
+                text("DELETE FROM run_route_stops WHERE run_id = :run_id"), {"run_id": run_id}
+            )
+            connection.execute(text("DELETE FROM run_routes WHERE run_id = :run_id"), {"run_id": run_id})
+
+    def get_run_template(self, run_id: UUID) -> RunTemplate | None:
+        statement = text(
+            "SELECT template_id, segments, stop_order FROM run_templates WHERE run_id = :run_id"
+        )
+        with self._engine.connect() as connection:
+            row = connection.execute(statement, {"run_id": run_id}).mappings().one_or_none()
+        if row is None:
             return None
-        row = rows[0]
-        return DoorMemory(
-            address_key=str(row[0]),
-            note=cast(str | None, row[1]),
-            safe_place=cast(str | None, row[2]),
-            updated_at=cast(datetime, row[3]),
+        return RunTemplate(
+            id=row["template_id"],
+            segments=_parse_segments(row["segments"]),
+            stop_order=_parse_stop_order(row["stop_order"]),
         )
 
-    def save_door_memory(
-        self,
-        courier_id: str,
-        address_key: str,
-        note: str | None,
-        safe_place: str | None,
-    ) -> DoorMemory:
-        rows = self._run(
+    def put_run_route(self, run_id: UUID, plan: RoutePlan) -> None:
+        header = text(
             """
-            INSERT INTO door_memory (courier_id, address_key, note, safe_place, updated_at)
-            VALUES (%s, %s, %s, %s, now())
-            ON CONFLICT (courier_id, address_key) DO UPDATE
-            SET note = EXCLUDED.note,
-                safe_place = EXCLUDED.safe_place,
-                updated_at = EXCLUDED.updated_at
-            RETURNING address_key, note, safe_place, updated_at
-            """,
-            (courier_id, address_key, note, safe_place),
+            INSERT INTO run_routes (run_id, engine, total_distance_m, total_duration_s,
+                                    parcels, capacity_parcels, over_capacity, window_violations)
+            VALUES (:run_id, :engine, :total_distance_m, :total_duration_s,
+                    :parcels, :capacity_parcels, :over_capacity, :window_violations)
+            """
         )
-        row = rows[0]
-        return DoorMemory(
-            address_key=str(row[0]),
-            note=cast(str | None, row[1]),
-            safe_place=cast(str | None, row[2]),
-            updated_at=cast(datetime, row[3]),
+        legs = text(
+            """
+            INSERT INTO run_route_stops (run_id, position, stop_id, lat, lon, arrival_at,
+                                         departure_at, distance_m, cumulative_distance_m, late)
+            VALUES (:run_id, :position, :stop_id, :lat, :lon, :arrival_at,
+                    :departure_at, :distance_m, :cumulative_distance_m, :late)
+            """
+        )
+        parameters = {
+            "run_id": run_id,
+            "engine": plan.engine,
+            "total_distance_m": plan.total_distance_m,
+            "total_duration_s": plan.total_duration_s,
+            "parcels": plan.parcels,
+            "capacity_parcels": plan.capacity_parcels,
+            "over_capacity": plan.over_capacity,
+            "window_violations": plan.window_violations,
+        }
+        rows = [
+            {
+                "run_id": run_id,
+                "position": stop.sequence,
+                "stop_id": stop.stop_id,
+                "lat": stop.lat,
+                "lon": stop.lon,
+                "arrival_at": stop.arrival_at,
+                "departure_at": stop.departure_at,
+                "distance_m": stop.distance_m,
+                "cumulative_distance_m": stop.cumulative_distance_m,
+                "late": stop.late,
+            }
+            for stop in plan.stops
+        ]
+        with self._engine.begin() as connection:
+            connection.execute(text("DELETE FROM run_route_stops WHERE run_id = :run_id"), {"run_id": run_id})
+            connection.execute(text("DELETE FROM run_routes WHERE run_id = :run_id"), {"run_id": run_id})
+            connection.execute(header, parameters)
+            if rows:
+                connection.execute(legs, rows)
+
+    def get_run_route(self, run_id: UUID) -> RoutePlan | None:
+        header = text(
+            """
+            SELECT engine, total_distance_m, total_duration_s, parcels, capacity_parcels,
+                   over_capacity, window_violations
+            FROM run_routes
+            WHERE run_id = :run_id
+            """
+        )
+        legs = text(
+            """
+            SELECT stop_id, position, lat, lon, arrival_at, departure_at, distance_m,
+                   cumulative_distance_m, late
+            FROM run_route_stops
+            WHERE run_id = :run_id
+            ORDER BY position
+            """
+        )
+        with self._engine.connect() as connection:
+            head = connection.execute(header, {"run_id": run_id}).mappings().one_or_none()
+            if head is None:
+                return None
+            rows = connection.execute(legs, {"run_id": run_id}).mappings().all()
+        return RoutePlan(
+            stops=tuple(
+                PlannedStop(
+                    stop_id=row["stop_id"],
+                    sequence=row["position"],
+                    lat=row["lat"],
+                    lon=row["lon"],
+                    arrival_at=row["arrival_at"],
+                    departure_at=row["departure_at"],
+                    distance_m=row["distance_m"],
+                    cumulative_distance_m=row["cumulative_distance_m"],
+                    late=row["late"],
+                )
+                for row in rows
+            ),
+            total_distance_m=head["total_distance_m"],
+            total_duration_s=head["total_duration_s"],
+            parcels=head["parcels"],
+            capacity_parcels=head["capacity_parcels"],
+            over_capacity=head["over_capacity"],
+            window_violations=head["window_violations"],
+            engine=head["engine"],
         )
 
 
-class RepoSettings(BaseSettings):
-    """Where the API keeps its data (no secret lives here)."""
-
-    model_config = SettingsConfigDict(env_file=".env.local", extra="ignore")
-
-    database_url: str = ""
+def get_engine(database_url: str | None = None) -> Engine:
+    """The engine for the database, from the environment."""
+    url = database_url or os.environ.get("DATABASE_URL", "")
+    if not url:
+        raise RuntimeError("Missing required env: DATABASE_URL — see .env.example")
+    return create_engine(url, pool_pre_ping=True, future=True)
 
 
 @lru_cache(maxsize=1)
 def get_repo() -> Repo:
-    """The repository the routes use: PostgreSQL when one is configured."""
-    settings = RepoSettings()
-    if settings.database_url:
-        return SqlRepo(settings.database_url)
-    return InMemoryRepo()
+    """The repository the API writes to."""
+    return SqlAlchemyRepo(get_engine())

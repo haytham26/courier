@@ -1,0 +1,636 @@
+{
+  "generated": "2026-10-21",
+  "generator": "scripts/build-scanner-eval.mjs",
+  "contract": {
+    "source": "apps/api/app/prompts.py (the INGEST_EXTRACT prompt)",
+    "note": "the intake contract reads raw, unit, number, street, suburb, size_class and barcode out of a label; the scanner is address-only (V4 section 10.2), so the sender, the names, the phone numbers and the marketing are distractors and are annotated, not scored"
+  },
+  "fields": [
+    {
+      "id": "address",
+      "scored": true,
+      "expected_format": "<number>[suffix] <street name> <street type>",
+      "example": "42B Main North Road",
+      "normalisation": [
+        "case-fold",
+        "collapse the inner whitespace",
+        "drop the trailing punctuation"
+      ],
+      "acceptance": "the number, the street and the suburb must all equal the gold after normalisation; a transposed number is a miss; a wrong block is a miss whatever the string is",
+      "source": "the printed recipient block"
+    },
+    {
+      "id": "suburb",
+      "scored": true,
+      "expected_format": "<suburb name>",
+      "example": "Richmond",
+      "normalisation": [
+        "case-fold",
+        "collapse the inner whitespace",
+        "strip \"Suburb:\" and the punctuation"
+      ],
+      "acceptance": "equal to the gold after normalisation; a suburb from the sender block is a miss",
+      "source": "the printed recipient block"
+    },
+    {
+      "id": "unit",
+      "scored": true,
+      "expected_format": "<unit number>, printed as \"Unit 6\", \"Flat 6\" or \"6/12\"",
+      "example": "Unit 6",
+      "normalisation": [
+        "case-fold",
+        "drop the \"unit\", \"flat\", \"apartment\" and \"apt\" words",
+        "keep the number"
+      ],
+      "acceptance": "equal to the gold after normalisation; a missing unit on a label that has one is a miss; a label without a unit is scored as \"no unit\", not as a miss",
+      "source": "the printed recipient block"
+    },
+    {
+      "id": "sender",
+      "scored": false,
+      "expected_format": "<business name> / <street> / <suburb>",
+      "example": "Kea Outdoor / 12 Madras Street / Christchurch Central",
+      "normalisation": [
+        "case-fold",
+        "collapse the inner whitespace"
+      ],
+      "acceptance": "not scored: the scanner is address-only (V4 section 10.2). The sender block is the wrong-block distractor, so it is annotated, never read",
+      "source": "the printed sender block"
+    },
+    {
+      "id": "receiver",
+      "scored": false,
+      "expected_format": "<role token> or a customer reference",
+      "example": "RECEIVER",
+      "normalisation": [
+        "case-fold"
+      ],
+      "acceptance": "not scored: the product returns the delivery address, never the name. The block is annotated so the classifier has to find it",
+      "source": "the printed recipient block"
+    },
+    {
+      "id": "barcode",
+      "scored": true,
+      "expected_format": "the carrier barcode, linear or 2D, with the human-readable form under it",
+      "example": "PE09999658",
+      "normalisation": [
+        "strip the whitespace",
+        "upper-case"
+      ],
+      "acceptance": "the decoded payload must equal the gold; a 2D symbol must decode to the same payload as the human-readable form; a missing decode is a miss",
+      "source": "the printed barcode"
+    },
+    {
+      "id": "date",
+      "scored": true,
+      "expected_format": "DD/MM/YYYY",
+      "example": "21/10/2026",
+      "normalisation": [
+        "parse the date",
+        "compare as an ISO date (YYYY-MM-DD)"
+      ],
+      "acceptance": "the same calendar day; a missing field is a miss",
+      "source": "the printed despatch or print date"
+    },
+    {
+      "id": "tracking",
+      "scored": true,
+      "expected_format": "the carrier tracking or ticket number",
+      "example": "LH1602541",
+      "normalisation": [
+        "strip the whitespace",
+        "upper-case"
+      ],
+      "acceptance": "equal to the gold after normalisation",
+      "source": "the printed tracking number"
+    },
+    {
+      "id": "weight",
+      "scored": true,
+      "expected_format": "<number> kg",
+      "example": "2.4 kg",
+      "normalisation": [
+        "strip the unit",
+        "parse the number",
+        "compare in kilograms"
+      ],
+      "acceptance": "the same weight in kilograms; a missing field is a miss",
+      "source": "the printed weight"
+    },
+    {
+      "id": "fragile",
+      "scored": true,
+      "expected_format": "the word FRAGILE, or nothing",
+      "example": "FRAGILE",
+      "normalisation": [
+        "case-fold"
+      ],
+      "acceptance": "the flag is present or it is not; a label without the flag is scored as \"not fragile\", not as a miss",
+      "source": "the printed flag"
+    }
+  ],
+  "address_format": {
+    "lines": [
+      "<unit> - optional, printed on its own line above the street line (Unit 6, Flat 6, 6/12)",
+      "<number>[suffix] <street name> <street type> - the street line (42B Main North Road)",
+      "<suburb> - the suburb (Richmond)",
+      "<town> <postcode> - optional, on some carriers"
+    ],
+    "examples": [
+      "42B Main North Road\nRichmond",
+      "Unit 6\n12 Durham Street South\nPapanui"
+    ],
+    "note": "the shape the address engine in packages/nz-address parses; the street type is compared on the long form (the table in packages/nz-address/src/constants.ts), a macron is significant, and the suburb is never guessed from the street name",
+    "source": "the NZ Post labelling standards ask for one block of text, left aligned, with the sender and the receiver marked (To and From); the shape above is the shape our own parser reads"
+  },
+  "normalisation": {
+    "global": [
+      "case-fold the text",
+      "collapse the runs of whitespace into one space",
+      "strip the leading and trailing punctuation",
+      "never change a macron: the Maori place names are significant"
+    ],
+    "street_types": "the street type is compared on the long form, using the table in packages/nz-address/src/constants.ts (Rd is Road, St is Street, Tce is Terrace and so on)",
+    "unit": "the words unit, flat, apartment and apt are dropped; the number is what is compared",
+    "date": "the printed date is parsed and compared as an ISO calendar day",
+    "weight": "the printed weight is parsed and compared in kilograms",
+    "tracking_and_barcode": "the whitespace is stripped and the text is upper-cased"
+  },
+  "acceptance": {
+    "address": "the address counts as read when the number, the street and the suburb all equal the gold after the normalisation, and the block that was read is the recipient block",
+    "wrong_block": "a read of the sender block, of the marketing or of the barcode text is a wrong-block failure, whatever the string is; the sender block looks exactly like an address, which is the point of the slice",
+    "unit": "a label without a unit is scored as \"no unit\"; a label with a unit and no unit read is a miss",
+    "barcode": "the decoded payload has to equal the gold; a 2D symbol that decodes to the same payload as the human-readable form counts as read",
+    "partial": "a field that is on the label but was not read is a miss for that field; it never makes the address read",
+    "no_guessing": "a field that cannot be read is null, never a guess (the same rule as the intake contract)"
+  },
+  "carriers": [
+    {
+      "id": "courierpost",
+      "name": "CourierPost (NZ Post)",
+      "verified": true,
+      "verification": "the label standard, the size and the layout rules: https://www.nzpost.co.nz/business/shipping-in-nz/labelling-standards (read 2026-10-21); the carrier id COURIERPOST and the address fields: the ParcelLabel API (read 2026-10-21)",
+      "symbology": "gs1-128",
+      "symbology_note": "Code 128 is verified for the merchant barcode on an NZ Post label (the ParcelLabel API allows code128-A, code128-B and code128-C); the symbology of the carrier barcode itself is unverified",
+      "layout": "nzpost_174x100",
+      "note": "the courier service of NZ Post; the standard label is 174 mm by 100 mm, black typed font on white, the address block left aligned and marked To and From"
+    },
+    {
+      "id": "nzpost",
+      "name": "NZ Post (ParcelPost and PACE)",
+      "verified": true,
+      "verification": "the carrier ids COURIERPOST and PACE, the label sizes and the address fields: the ParcelLabel API (read 2026-10-21); the 2D data matrix on the labels: https://nz-post.canny.io/changelog/shipping-labels-new-2d-barcode (read 2026-10-21)",
+      "symbology": "gs1-128",
+      "symbology_note": "the 2D data matrix is verified as a rollout (the changelog shows the 2x2 and the 4x4 symbol); the symbology of the carrier barcode itself is unverified",
+      "layout": "4x6_thermal",
+      "note": "the network label; the ParcelLabel API lists the service codes (IWXOLP and the add-ons CPSR, CPOLRD, CPOLOED, CPOLSED, CPOLSAT, CPOLDG)"
+    },
+    {
+      "id": "posthaste",
+      "name": "Post Haste Couriers",
+      "verified": true,
+      "verification": "the ticket product code and the ticket number, the satchel sizes and the service names: https://www.posthaste.co.nz/tracktrace.html and https://posthaste.co.nz/ (read 2026-10-21)",
+      "symbology": "gs1-128",
+      "symbology_note": "unverified: the track and trace page shows a barcode and asks for the numbers under it, but it does not name the symbology",
+      "layout": "satchel_ticket",
+      "note": "a courier with branches in Canterbury; the Express Pack Satchel comes in the SML, MED, LGE and XL sizes"
+    },
+    {
+      "id": "nzcouriers",
+      "name": "NZ Couriers",
+      "verified": true,
+      "verification": "the ticket product code and number, the charge label number and the international consignment number: https://nzcouriers.co.nz/tools/track-a-parcel/ (read 2026-10-21)",
+      "symbology": "gs1-128",
+      "symbology_note": "unverified: the page shows the barcode but does not name the symbology",
+      "layout": "4x6_thermal",
+      "note": "a courier with an international desk; the examples on the tracking page are LH1602541, 03258847 and 521440236"
+    },
+    {
+      "id": "aramex",
+      "name": "Aramex New Zealand",
+      "verified": true,
+      "verification": "the electronic label (aramexConnect), the satchels, the Parcel Connect service and the Canterbury depot: https://www.aramex.co.nz/ and https://www.aramex.co.nz/tools/aramexconnect/ (read 2026-10-21)",
+      "symbology": "gs1-128",
+      "symbology_note": "unverified: the public pages do not name the symbology of the label barcode",
+      "layout": "4x6_thermal",
+      "note": "the franchise courier with the Blu driver app; the labels are printed from aramexConnect"
+    },
+    {
+      "id": "nzpost_international",
+      "name": "NZ Post International (UPU)",
+      "verified": true,
+      "verification": "the UW parcel-reference prefix on the international labels: https://support.nzpost.co.nz/s/article/Why-doesn-t-my-New-Zealand-Post-international-tracking-number-show-any-tracking (read 2026-10-21)",
+      "symbology": "gs1-128",
+      "symbology_note": "unverified: the symbology of the international label barcode",
+      "layout": "international_customs",
+      "note": "the international mail and parcel service; the Economy labels carry a UW parcel reference that is not a trackable service"
+    },
+    {
+      "id": "dhl",
+      "name": "DHL",
+      "verified": false,
+      "verification": "named in the repo research (docs/research/2026/ocr-label-scanning.md, 2026-10-21) as a NZ carrier layout; the label format was not read today, so it is unverified",
+      "symbology": "gs1-128",
+      "symbology_note": "unverified",
+      "layout": "international_customs",
+      "note": "the label is drawn as a generic international carrier label; the founder must supply a real DHL label photo before the layout can be trusted"
+    },
+    {
+      "id": "fedex",
+      "name": "FedEx",
+      "verified": false,
+      "verification": "unverified: no source was read for the label format; the layout is generic",
+      "symbology": "gs1-128",
+      "symbology_note": "unverified",
+      "layout": "international_customs",
+      "note": "the founder must supply a real FedEx label photo"
+    },
+    {
+      "id": "ups",
+      "name": "UPS",
+      "verified": false,
+      "verification": "unverified: no source was read for the label format; the layout is generic",
+      "symbology": "gs1-128",
+      "symbology_note": "unverified",
+      "layout": "international_customs",
+      "note": "the founder must supply a real UPS label photo"
+    },
+    {
+      "id": "team_k",
+      "name": "Team-K Parcel",
+      "verified": false,
+      "verification": "unverified: a web search and a DuckDuckGo HTML search on 2026-10-21 found no New Zealand courier under this name. No label is generated for this carrier",
+      "symbology": "gs1-128",
+      "symbology_note": "unverified",
+      "layout": "4x6_thermal",
+      "note": "the founder must confirm the carrier name and the label format before this carrier is used"
+    },
+    {
+      "id": "generic",
+      "name": "Unbranded courier label",
+      "verified": true,
+      "verification": "our own layout: no carrier is named on it",
+      "symbology": "gs1-128",
+      "symbology_note": "the symbology is our choice for the drawing; a real label has to come from the founder",
+      "layout": "4x6_thermal",
+      "note": "the courier stationery: a dot-matrix manifest, a pouch sticker and a handwritten docket"
+    }
+  ],
+  "symbologies": [
+    {
+      "id": "gs1-128",
+      "name": "GS1-128 (Code 128)",
+      "symbol_id": "]C1",
+      "capacity": "48 alphanumeric",
+      "supports": "all the GS1 keys, and the attributes",
+      "verified": true,
+      "source": "https://www.gs1.org/standards/barcodes/1d-general-distribution (read 2026-10-21)"
+    },
+    {
+      "id": "itf-14",
+      "name": "ITF-14",
+      "symbol_id": "]I1",
+      "capacity": "14 numeric",
+      "supports": "the GTIN only, no attributes",
+      "verified": true,
+      "source": "https://www.gs1.org/standards/barcodes/1d-general-distribution (read 2026-10-21)"
+    },
+    {
+      "id": "gs1-datamatrix",
+      "name": "GS1 DataMatrix",
+      "symbol_id": "]d2",
+      "capacity": "3116 numeric, 2335 alphanumeric",
+      "supports": "the GS1 element string syntax, all the keys and the attributes",
+      "verified": true,
+      "source": "https://www.gs1.org/barcodes/2d (read 2026-10-21)"
+    },
+    {
+      "id": "qr",
+      "name": "QR Code (GS1 Digital Link URI)",
+      "symbol_id": "]Q1",
+      "capacity": "7089 numeric, 4296 alphanumeric",
+      "supports": "the GS1 Digital Link URI syntax, all the keys and the attributes",
+      "verified": true,
+      "source": "https://www.gs1.org/barcodes/2d (read 2026-10-21)"
+    },
+    {
+      "id": "pdf417",
+      "name": "PDF417",
+      "symbol_id": "n/a",
+      "capacity": "not read",
+      "supports": "not read",
+      "verified": false,
+      "source": "unverified: the GS1 2D page (read 2026-10-21) says GS1 has standards for five 2D barcodes but the page we read names QR Code and GS1 DataMatrix only. No PDF417 label is drawn"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "nzpost_174x100",
+      "name": "NZ Post standard label",
+      "width_mm": 174,
+      "height_mm": 100,
+      "verified": true,
+      "source": "the NZ Post labelling standards (read 2026-10-21): the ideal label size is 174 mm by 100 mm"
+    },
+    {
+      "id": "4x6_thermal",
+      "name": "4x6 thermal label",
+      "width_mm": 152,
+      "height_mm": 102,
+      "verified": false,
+      "source": "unverified: the 4x6 thermal is named in the repo research; the exact size was not read from a carrier"
+    },
+    {
+      "id": "a4_dot_matrix",
+      "name": "A4 dot-matrix manifest",
+      "width_mm": 297,
+      "height_mm": 210,
+      "verified": false,
+      "source": "unverified: the dot-matrix manifest is our own stationery"
+    },
+    {
+      "id": "a4_laser_sheet",
+      "name": "A4 laser shipping sheet",
+      "width_mm": 210,
+      "height_mm": 297,
+      "verified": false,
+      "source": "unverified: the laser sheet is our own stationery"
+    },
+    {
+      "id": "pouch_sticker",
+      "name": "Pouch sticker",
+      "width_mm": 100,
+      "height_mm": 50,
+      "verified": false,
+      "source": "unverified: the pouch sticker is our own stationery"
+    },
+    {
+      "id": "satchel_ticket",
+      "name": "Pre-paid satchel ticket",
+      "width_mm": 102,
+      "height_mm": 76,
+      "verified": false,
+      "source": "unverified: the ticket shape is ours; the Post Haste Express Pack Satchel sizes (SML, MED, LGE, XL) are verified"
+    },
+    {
+      "id": "handwritten_docket",
+      "name": "Handwritten docket",
+      "width_mm": 150,
+      "height_mm": 100,
+      "verified": false,
+      "source": "unverified: the docket is our own stationery"
+    },
+    {
+      "id": "international_customs",
+      "name": "International customs declaration",
+      "width_mm": 210,
+      "height_mm": 148,
+      "verified": false,
+      "source": "unverified: the customs form layout is generic"
+    }
+  ],
+  "label_types": [
+    {
+      "id": "thermal",
+      "name": "Thermal label",
+      "look": "printed on a thermal printer: the letters are dark on a warm off-white paper, the edges of the letters are soft, and the print fades to pale grey after a week in the sun",
+      "note": "the everyday courier label"
+    },
+    {
+      "id": "laser",
+      "name": "Laser-printed label",
+      "look": "printed on a laser printer: crisp letter edges, a true black toner on a white background, no dot pattern, and the toner cracks where the paper has been folded, so a crease through a line of text leaves that line unreadable",
+      "note": "the reprint from a desktop printer and the courier own stationery"
+    },
+    {
+      "id": "handwritten",
+      "name": "Handwritten docket",
+      "look": "written by the courier in ballpoint: uneven baselines, the letters joined, the pen pressure changing across a line",
+      "note": "the synthetic ones are drawn in a script font with a per-character jitter; they are not scans of handwriting"
+    },
+    {
+      "id": "sticker",
+      "name": "Sticker",
+      "look": "a small adhesive label: a thin die-cut border, a small print area, often rubbed at one corner where it was pulled off a parcel",
+      "note": "the pouch sticker and the small ticket"
+    }
+  ],
+  "conditions": [
+    {
+      "id": "clean",
+      "name": "Clean",
+      "note": "flat, dry, in good light"
+    },
+    {
+      "id": "low_light",
+      "name": "Low light",
+      "note": "the van at dusk, the porch at night"
+    },
+    {
+      "id": "glare",
+      "name": "Glare",
+      "note": "a reflection across the label"
+    },
+    {
+      "id": "crumpled",
+      "name": "Crumpled",
+      "note": "the label has been folded or crushed"
+    },
+    {
+      "id": "thermal_fade",
+      "name": "Thermal fade",
+      "note": "the thermal print has gone pale"
+    },
+    {
+      "id": "over_sticker",
+      "name": "Over-sticker",
+      "note": "another label or a piece of tape is stuck over part of it"
+    },
+    {
+      "id": "torn",
+      "name": "Torn",
+      "note": "the edge of the label is missing"
+    },
+    {
+      "id": "plastic_sleeve",
+      "name": "Plastic sleeve",
+      "note": "the label is under a clear sleeve"
+    },
+    {
+      "id": "plastic_bag",
+      "name": "Plastic bag",
+      "note": "the label is under a poly bag"
+    }
+  ],
+  "barcode_rules": {
+    "courierpost": {
+      "prefix": "CP",
+      "digits": 10,
+      "format": "CP + 10 digits",
+      "verified": false,
+      "note": "the CourierPost tracking number format is unverified"
+    },
+    "nzpost": {
+      "prefix": "NP",
+      "digits": 10,
+      "format": "NP + 10 digits",
+      "verified": false,
+      "note": "the ParcelPost tracking number format is unverified"
+    },
+    "posthaste": {
+      "prefix": "PE",
+      "digits": 8,
+      "format": "<product code> + 8 digits, for example PE 09999658",
+      "verified": true,
+      "note": "the product code and the ticket number are verified on the track and trace page"
+    },
+    "nzcouriers": {
+      "prefix": "LH",
+      "digits": 7,
+      "format": "<product code> + 7 digits, for example LH1602541",
+      "verified": true,
+      "note": "the ticket number is verified on the tracking page"
+    },
+    "aramex": {
+      "prefix": "ARX",
+      "digits": 9,
+      "format": "ARX + 9 digits",
+      "verified": false,
+      "note": "the Aramex tracking number format is unverified"
+    },
+    "nzpost_international": {
+      "prefix": "UW",
+      "digits": 9,
+      "format": "UW + 9 digits",
+      "verified": false,
+      "note": "the UW parcel-reference prefix is verified; the length is unverified"
+    },
+    "dhl": {
+      "prefix": "DHL",
+      "digits": 10,
+      "format": "DHL + 10 digits",
+      "verified": false,
+      "note": "unverified"
+    },
+    "fedex": {
+      "prefix": "FDX",
+      "digits": 10,
+      "format": "FDX + 10 digits",
+      "verified": false,
+      "note": "unverified"
+    },
+    "ups": {
+      "prefix": "1Z",
+      "digits": 12,
+      "format": "1Z + 12 digits",
+      "verified": false,
+      "note": "unverified"
+    },
+    "generic": {
+      "prefix": "CC",
+      "digits": 10,
+      "format": "CC + 10 digits",
+      "verified": false,
+      "note": "our own ticket numbers"
+    }
+  },
+  "service_names": {
+    "courierpost": [
+      "COURIERPOST",
+      "COURIERPOST",
+      "CPOLP"
+    ],
+    "nzpost": [
+      "PARCELPOST",
+      "PACE"
+    ],
+    "posthaste": [
+      "EXPRESS PACK SATCHEL",
+      "COURIER TICKET"
+    ],
+    "nzcouriers": [
+      "COURIER TICKET",
+      "CHARGE LABEL"
+    ],
+    "aramex": [
+      "DOMESTIC COURIER",
+      "SATCHEL"
+    ],
+    "nzpost_international": [
+      "INTERNATIONAL ECONOMY",
+      "INTERNATIONAL COURIER"
+    ],
+    "dhl": [
+      "EXPRESS WORLDWIDE",
+      "ECONOMY SELECT"
+    ],
+    "fedex": [
+      "INTERNATIONAL PRIORITY",
+      "ECONOMY"
+    ],
+    "ups": [
+      "UPS STANDARD",
+      "UPS EXPRESS"
+    ],
+    "generic": [
+      "PARCEL",
+      "COURIER"
+    ]
+  },
+  "privacy": {
+    "rule": "No personal data in this repository. The synthetic labels carry no name of a real person, no real phone number, no real email address and no customer reference. The real photos are redacted before use and are never committed.",
+    "receiver_tokens": [
+      "RECEIVER",
+      "RECIPIENT",
+      "CONSIGNEE",
+      "DELIVER TO",
+      "TO",
+      "CUSTOMER",
+      "DELIVERY CARE",
+      "C/O DELIVERY"
+    ],
+    "senders": [
+      "Kea Outdoor",
+      "South Island Supply Co",
+      "Harbour Goods Ltd",
+      "Fernway Online",
+      "Aotearoa Trade",
+      "Willow Lane Retail",
+      "Kea Outdoor Ltd",
+      "Southern Freight",
+      "Tuatara Home",
+      "River Road Traders"
+    ],
+    "foreign_senders": [
+      "Haiyan Trading Co\n88 Jianguo Road\nShanghai, CHINA",
+      "Pacific Rim Electronics\n22 Harbour Street\nSingapore, SINGAPORE",
+      "Seongjin Wholesale\n45 Sejong-daero\nSeoul, KOREA",
+      "Nordlicht Import\n7 Hafenstrasse\nHamburg, GERMANY",
+      "Sakura Trading\n3-12 Chuo\nOsaka, JAPAN"
+    ],
+    "phone": "00 000 0000",
+    "email_domain": "example.invalid",
+    "customer_reference_prefix": "CUST ",
+    "note": "the address itself is public LINZ address-point data (the street name, the house number and the suburb); no name, no phone number and no email address of a real person is attached to it anywhere in this set"
+  },
+  "verification": {
+    "read_on": "2026-10-21",
+    "method": "every carrier, symbology and label fact was read from the source in the ledger, or it is marked unverified",
+    "verified_carriers": [
+      "courierpost",
+      "nzpost",
+      "posthaste",
+      "nzcouriers",
+      "aramex",
+      "nzpost_international",
+      "generic"
+    ],
+    "unverified_carriers": [
+      "dhl",
+      "fedex",
+      "ups",
+      "team_k"
+    ],
+    "note": "the barcode the drawing puts on the label is a deterministic pattern, not a scannable symbol: the barcode read rate is measured on the founder photos and on a barcode-accurate renderer, not on the synthetic drawings"
+  }
+}

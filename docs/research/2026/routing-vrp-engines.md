@@ -1,293 +1,294 @@
-# Routing & VRP engines — 2026 OSS research
+# Routing & VRP engines — 2026 OSS research (redone, V4 §13.1)
 
-**Research date: 2026-10-20.** Method: V4 §12 (≥30 candidates, ≥10 shortlist, deep-review top 5,
-benchmark top 2–3). Every number was read from the live GitHub API, PyPI or npm on **2026-10-20**.
-Anything unread is **UNVERIFIED** with the command that would settle it.
-Card format: `repo · stars(+trend proxy) · created · last release/date · cadence · issues ·
-maintainers/90 d · licence · on-device/server · advisories · production users · docs · CI ·
-better than our choice · risks · DECISION`.
+**Research date: 2026-10-21.** Method: V4 §12 (≥30 candidates with full evidence cards, ≥10 shortlisted, top 5 deep-reviewed, benchmarks only where an eval set exists) + §12.6 anti-bias (≥3 newer/smaller challengers). Every number was read from the live GitHub API, PyPI, crates.io or OSV on 2026-10-21 unless the card says **UNVERIFIED**. Nothing is estimated and nothing is carried over unread — sprint #1 was wrong on several counts (§9).
 
-## 0. Scope, our current choice, and the bar
+**Card fields:** repo URL · stars + 6-month trend proxy · created · last release + date · cadence · open/closed issues + median first response · maintainers (90 d) · licence (code + weights/data) · New Arch / Expo SDK 58 / API 34 · size · on-device vs server · advisories + supply chain · production users · docs · CI · better than our current choice · risks · **DECISION**.
 
-| Item | Today (verified 2026-10-20) |
-|---|---|
-| Routing service | **none built** — `services/routing` does not exist; `docs/squads/routing/README.md`: "to be created" |
-| Proposed stack (`docs/TECH_STACK.md` §3) | `valhalla/valhalla` + `VROOM-Project/vroom` + `google/or-tools` |
-| V4 §11.1 item 6 | "**PyVRP** — benchmark vs VROOM on real 80–150-stop Christchurch days; keep the winner (or ensemble)" |
-| Squad targets | **within 5 % of the best-known solution** on the benchmark sets · **200 stops ≤ 5 s** · a template rebuilds a day in one tap |
-| Python runtime | `apps/api` is Python (FastAPI); `uv.lock` + `pyproject.toml` present |
+## 0. Scope, our current choice, the bar
 
-Two separable things must not be conflated: the **routing engine** (graph → matrix, route,
-map-matching: Valhalla / OSRM / GraphHopper) and the **VRP solver** (order the stops, split them
-across vehicles/days, respect time windows: VROOM / PyVRP / OR-Tools / cuOpt / Timefold).
-A courier day needs **both**, and the 200-stops-in-5-seconds budget belongs to the **VRP solver**
-(once the matrix exists), not to the router.
+| Item                                            | Verified 2026-10-21                                                                                                                               |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Routing service                                 | **none** — `services/routing` does not exist; `apps/api/pyproject.toml` has **no routing dependency at all** (FastAPI + LangGraph + Pipecat only) |
+| Our choice (FINAL_PROMPT §3.3)                  | **Valhalla + VROOM + OR-Tools**; OSRM for matrices (SPRINT-SUMMARY)                                                                               |
+| Squad targets (`docs/squads/routing/README.md`) | within **5 % of best-known** · **200 stops ≤ 5 s** · template rebuilds a day in one tap                                                           |
+| Runtime                                         | `apps/api` is Python **≥3.11,<3.13**, FastAPI, `uv`                                                                                               |
 
-### 6-month star trend — method note
+Two things must not be conflated. The **routing engine** (graph → matrix, route, map-matching) and the **VRP solver** (order the stops, split them across vehicles/days, honour time windows) are different products with different licences, runtimes and maintainers; a courier day needs both. The **200-stops-in-5-seconds** budget belongs to the **VRP solver** (once the matrix exists) and to the **matrix build**, not to the router.
 
-GitHub's stargazer listing is **not readable with the token in `.env.local`** (`GET
-/repos/{o}/{r}/stargazers` and GraphQL `stargazers` both return `HTTP 403 Resource not accessible
-by personal access token`; the token lacks `read:user`). **All 6-month star trends here are
-UNVERIFIED.** Proxies used instead: **commits in the last 90 days**, **release cadence**, and
-**PyPI/npm downloads per month**.
+### 6-month star trend — method note (proxy, as V4 §12.3 permits)
+
+The **star timeline** is not readable with the token in `.env.local`: `GET /repos/{o}/{r}/stargazers` returns **HTTP 403 "Resource not accessible by personal access token"** (re-verified 2026-10-21; GraphQL `stargazerCount` works but returns only the cumulative total). **Every "stars gained in 6 months" figure is therefore UNVERIFIED.** The proxy used throughout is the one §12.3 prescribes: **releases in the last 6 months · commits in the last 90 days · distinct human maintainers in 90 days** (bot/dependabot excluded), plus **package downloads/month** where a registry exists.
 
 ## Queries run
 
-`gh search repos` via `scripts\gh.ps1`, 2026-10-20:
+`gh search repos` through `scripts\gh.ps1` (2026-10-21). Filters are the literal query strings.
 
-| # | Query | Sort | Notes |
-|---|---|---|---|
-| 1 | `topic:vehicle-routing-problem` | stars | 30 hits — Vroom 1892, timefold-solver 1836, jsprit 1835, rl4co 916, PyVRP 714 … |
-| 2 | `vehicle routing` | stars | 20 hits — surfaced OR-Tools 14234, HGS-CVRP 448, VRPSolverEasy 169 |
-| 3 | `map matching` | stars | 15 hits — fmm 1059, graphhopper/map-matching 808, barefoot 693 (needed for the IRD km target) |
-| 4 | `delivery route optimization` | stars | 15 hits — all ≤ 33 ★; no serious OSS competitor to VROOM (the market is closed-source SaaS) |
-| 5 | `routing engine openstreetmap` | stars | **0** (dead query — GitHub ANDs every term) |
-| 6 | `osrm` | stars | 12 hits — osrm-backend 8156, routingpy 351, python-osrm 147 |
-| 7 | `navigation engine` | stars | 15 hits (no VRP content; sweep) |
-| 8 | `textualinstructions` | stars | **0** (dead query) |
-| 9 | `lightning solver scheduling` | stars | **0** (dead query; PyPI `lightning` is **PyTorch Lightning**, not the Microsoft scheduler — that VRP repo could not be located via the API → UNVERIFIED) |
+| #   | Query (filters)                                       | Sort / limit | Results | What it produced                                                                       |
+| --- | ----------------------------------------------------- | ------------ | ------- | -------------------------------------------------------------------------------------- |
+| 1   | `topic:vehicle-routing-problem`                       | stars / 25   | 25      | Vroom 1 893, timefold-solver 1 836, jsprit 1 835, rl4co 916, PyVRP 714, VRPLIB 131     |
+| 2   | `vehicle routing solver`                              | stars / 20   | 19      | only small repos + the 2026 newcomers `thiagomoretto/volare`, `fknop/hermes`           |
+| 3   | `VRPTW`                                               | stars / 20   | 20      | `iRB-Lab/py-ga-VRPTW` 664, `timefold-solver-python` 57                                 |
+| 4   | `topic:routing-engine`                                | stars / 20   | 20      | OSRM 8 157, GraphHopper 6 737, Valhalla 6 347, ORS 1 985, **MOTIS 613 (new to us)**    |
+| 5   | `route optimization optimization created:>2025-01-01` | stars / 25   | 25      | **dead query** — LLM-traffic routers, nothing for VRP                                  |
+| 6   | `distance matrix routing engine`                      | stars / 20   | **0**   | **dead query** (GitHub ANDs every term)                                                |
+| 7   | `map matching`                                        | stars / 15   | 15      | `fmm` 1 059, `barefoot` 693, `TrackIt` 291, `mappymatch` 129 (IRD km reference)        |
+| 8   | `topic:openstreetmap topic:routing`                   | stars / 15   | 15      | confirms OSRM/GraphHopper/Valhalla; `openfreemap` 6 238                                |
+| 9   | `traveling salesman solver language:python`           | stars / 20   | 20      | `som-tsp` 3 931, `elkai` 199 (LKH wrapper), `pylkh` 41                                 |
+| 10  | `last mile delivery routing optimization`             | stars / 20   | 18      | **all ≤ 1 ★** — the OSS last-mile market is empty; the market is closed SaaS           |
+| 11  | `vehicle routing created:>2026-01-01`                 | stars / 25   | 25      | **`punnerud/mpee` (2026-05), `0nyr/kayros` (2026-07)**, `bucket-graph-spprc` (2026-03) |
+| 12  | `routing engine created:>2025-06-01`                  | stars / 25   | 25      | **dead query** — "routing engine" now means LLM request routing                        |
+| 13  | `pickup delivery problem`                             | stars / 20   | 9       | no serious OSS PDPTW solver outside VROOM/PyVRP                                        |
+| 14  | `topic:openrouteservice OR topic:osrm`                | stars / 15   | 15      | `routingpy` 351 — the only client that speaks to both                                  |
+| 15  | `routing matrix api openstreetmap`                    | stars / 20   | **0**   | **dead query**                                                                         |
 
-Plus API reads: `repos/{o}/{r}`, `/releases`, `/contents/*`, `/commits?since=`, `/actions/runs`,
-`/license`, `search/code`, PyPI JSON API, pypistats, OSV.
+Plus API reads: `repos/{o}/{r}` · `/releases` · `/commits?sha=<default>&since=90d` · `/actions/runs` · `/actions/workflows` · `/issues` (issues-only counts — the API's `open_issues_count` includes PRs) · `/issues/{n}/timeline` (median first response) · `/contents/*` · `/pulls/{n}` · `search/code` · PyPI JSON + pypistats · npm registry + downloads API · crates.io API · **OSV `/v1/query`**.
 
-## 1. Candidate pool — 36 candidates, full evidence card each
+## 1. Candidate pool — 30 cards (every one a full evidence card)
 
-### C1 — VROOM-Project/vroom  ⭐ shortlist
-**1,892 ★** /445 f · created 2015-09-05 · **last release v1.15.0, 2026-03-12** (20) · **last commit 2026-03-17 → the release train has been quiet for ~7 months** · 1,016 open / 976 closed · maintainers 90 d **1 human** (jcoupey / Julien Coupey, Verso) · **BSD-2-Clause** · C++20, server-side binary (`vroom`) + `vroom-express` + `vroom-docker` · no mobile/Expo angle · OSV n/a (binary; the PyPI `vroom` package is a **2018** binding, 1.0.2 — we must run the C++ binary or Docker) · production users: the Verso Premium API is built on it; public demo at map.vroom-project.org · docs: wiki + `docs/API.md` + worked examples · CI: only **2 workflows** (`vroom.yml`, `vroom_libosrm.yml`) — **thin matrix** · **better than our choice**: solves **TSP, CVRP, VRPTW, MDHVRPTW and PDPTW simultaneously**, models *jobs* and *shipments* (pickup+delivery pairs) with skills, priorities, per-vehicle breaks and working hours, and drives **OSRM, Openrouteservice or Valhalla** natively — or a custom cost matrix from any source (how we feed our own matrices) · risks: single maintainer; 7-month release gap; the README is a sales funnel for Verso Premium; 1,016 open issues; **no GraphHopper in the engine list** · **ADOPT (primary VRP solver) — pair with PyVRP and watch the cadence.**
-### C2 — PyVRP/PyVRP  ⭐ shortlist
-**714 ★** /161 f · created 2022-11-14 · **last release v0.14.1, 2026-10-16** (39) · cadence **≈ bi-weekly** · 403 open / 372 closed · maintainers 90 d **2 humans** (Niels Wouda ×20, Leon Lan ×14; 35 commits total) · **MIT** · PyPI **`pyvrp` 0.14.1** (2026-10-16), Python **≥ 3.11**, **76,753 downloads/month** · server-side Python · OSV **0 advisories** · production users: published in **INFORMS Journal on Computing 36(4):943-955 (2024)** · docs: **pyvrp.org** + 9 tutorials + an algorithm explainer + Sphinx · CI **exemplary**: gcc13/gcc14/clang16/clang20 × Python 3.12/3.15, actions **pinned by commit SHA**, `uv` toolchain, pre-commit, coverage to codecov with `fail_ci_if_error: true`, and a **Valgrind memcheck** on `tests/data/RC208.vrp` · **better than our choice**: MIT, pure-Python `Model → solve()` that drops into our FastAPI service, supporting **time windows, release times, multiple depots, reloading, prize collecting, client groups, shipments, heterogeneous fleets, profiles and access restrictions** — "profiles + access restrictions" is exactly "no entry through the back lane" · risks: **Enterprise-only** features (break planning, compatibility and sequencing constraints, fairness, clustering); 2-person maintainership; C++ extension (Meson) so wheels must exist for our CI Python · **ADOPT (co-primary with VROOM; the one to benchmark against).**
-### C3 — google/or-tools  ⭐ shortlist
-**14,234 ★** /2,528 f · created 2015-02-21 · **last release v9.15, 2026-01-12** (52) · the default branch is `stable`; **development happens on `main`: 100 commits in the last 90 days, 84 by Corentin Le Molgat** — the "1 commit/90 d" reading of the default branch is misleading · 3,262 open / 3,162 closed · **Apache-2.0** · PyPI **`ortools` 9.15.6755** (2026-01-14), **6,170,996 downloads/month** · server-side; the Android/Java/iOS build is enormous and not shippable · OSV **0** · production users: essentially every logistics company · docs: extensive (developers.google.com/optimization) · CI: Bazel + CMake matrices on Linux/macOS/Windows · **better**: the `routing` library supports **dimension-typed capacities, multi-vehicle, time windows, penalties, arc costs**, and **CP-SAT** is the only first-class SAT path here — the right tool for "if the door code is wrong, the next stop takes 12 min" · risks: heavy Python wheel (protobuf/abseil); verbose API; CP-SAT does not scale to 200-stop VRPTW; `stable` releases every few months · **KEEP (third engine + the fallback solver for small re-optimisations).**
-### C4 — graphhopper/graphhopper  ⭐ shortlist
-**6,737 ★** /1,961 f · created 2012-02-18 · **last release 11.1, 2026-09-29** (47) · cadence ≈ quarterly · 1,703 open / 1,511 closed · maintainers 90 d **5 humans** (Peter ×63, ratrun ×4, easbar ×3 + 2) · **Apache-2.0** · Java server · **an in-tree `navigation/` module** (route → instructions → voice) and a **`map-matching/` module** (HMM) · OSV n/a · production users: graphhopper.com (the commercial hosted API; the core is free) · docs: versioned per release (11.x), `CHANGELOG.md` tracks Java API changes · CI: Build and Test + Publish + a **"Trigger Benchmarks"** workflow · **better**: the **only mature engine that gives routing + map-matching + a navigation instruction engine in one Apache-2.0 codebase**, and `graphhopper-navigation-example` shows the MapLibre-Android combination · risks: Java service; quarterly releases; the commercial Directions API is the paid product · **ADOPT as the routing engine (Valhalla = Plan B) — it beats Valhalla for map-matching and instructions; keep Valhalla for OSM geometry-free speed and `trace_attributes`.**
-### C5 — valhalla/valhalla  ⭐ shortlist
-**6,343 ★** /1,010 f · created 2016-01-19 · **last release 3.9.1, 2026-10-06** (68) · cadence ≈ monthly · 2,850 open / 2,026 closed · maintainers 90 d **5+** (Christian Beiwinkel ×26, Stefan Kizim ×17, Nils ×8, Kyle Brooks ×4, M393 ×4; 82 commits) · **MIT** (`COPYING`: "The MIT License (MIT) Copyright (c) 2018 Valhalla contributors / 2015-2017 Mapillary AB, Mapzen") · C++ server + `libvalhalla` + Python bindings · **`trace_attributes` confirmed** (`src/thor/trace_attributes_action.cc`, `proto/descriptors/api.proto`), recently extended with **`stop_impact`** (PR #6368) → exactly the IRD-logbook km and per-segment speed learning need · OSV n/a · production users: the **FOSS routing engine behind many production navigation apps** · docs: `docs/docs/api/**` (mdbook), contributing guides, data-source licence notes · CI: linux/osx/windows + codecov + a published **timezone-db** artifact (tzdb 2026e) · **better**: the best **truck** cost model (height/weight/surface/access, `destonly` zones), **isochrones**, **time-dependent costs**, `/locate`, `/tile`, `/matrix`, plus `valhalla_service` for on-device · risks: 2,850 open issues; an explicit **AI-contribution policy** (human-written PR descriptions; contrarian AI code gets rewritten) we must comply with · **ADOPT (routing engine, paired with GraphHopper) — and the TBT instruction source.**
-### C6 — Project-OSRM/osrm-backend
-**8,156 ★** /3,978 f · created 2011-09-22 · **last release v26.10.0, 2026-10-01** (46) · cadence ≈ monthly · 4,784 open / 4,428 closed · **BSD-2-Clause** · C++ server (CHIPS) · **the fastest OSM router and the de-facto `/route` + `/match` + `/nearest` API** · OSV n/a · production users: enormous (Mapbox, Organic Maps, thousands of apps) · docs: the wiki is the documentation · CI: mature · **better**: **the fastest matrix** (a 200×200 matrix well under a second) and battle-tested `/match` HMM map-matching · risks: **car profile only** (no truck cost model, no time windows, no isochrones, no `trace_attributes`); 4,784 open issues · **KEEP as the matrix accelerator / Plan-B router; not the primary VRP or TBT engine.**
-### C7 — NVIDIA/cuopt  ⭐ shortlist (2026 challenger)
-**1,066 ★** /245 f · **created 2025-04-08** · **last release v26.10.00, 2026-10-14** (9) · cadence ≈ monthly since creation · 579 open / 392 closed · maintainers 90 d: NVIDIA team · **Apache-2.0** · **CUDA** → **GPU-accelerated VRP/TSP/VRPTW** · **better than our choice**: the only candidate that could re-solve a **200-stop VRPTW in seconds** on a GPU, and new enough (2025) to change the comparison · risks: **requires an NVIDIA GPU** (our server is CPU-only; a GPU is a real cost); CUDA build chain in CI; 579 open issues · **WATCH** (benchmark only if we get a GPU runner; `cuopt-examples` — 472 ★, Apache-2.0, last release 22.12 (2022-12-15) — is the usage reference).
-### C8 — TimefoldAI/timefold-solver
-**1,836 ★** /239 f · created 2023-03-28 · **last release v2.7.1, 2026-10-06** (55) · 525 open / 425 closed · **Apache-2.0** · Java (OptaPlanner's successor) · **better**: a **constraint-solver** approach — put "no stop after 17:00", "one van", "door code required" into a constraint stream instead of VRP features · risks: JVM service; heavier than we need; OptaPlanner's churn history · **WATCH** (only if we hit a constraint VRPTW cannot express).
-### C9 — graphhopper/jsprit
-**1,835 ★** /640 f · created 2013-03-27 · pushed 2026-09-14 · **last release v1.9.0-beta.1, 2020-04-21** (19) — the *code* is alive, the *releases* are stale · 396 open / 394 closed · **Apache-2.0** · Java, the reference rich-VRP research toolkit (premiums, time windows, sequences, capacities) · **better**: the constraint model is richer than VROOM's · risks: Java, stale releases · **WATCH** (research reference for constraint modelling; not production).
-### C10 — reinterpretcat/vrp
-**509 ★** /101 f · created 2020-02-05 · pushed 2026-10-14 · **last release v1.25.0, 2024-11-10** (54) · 125 open / 79 closed · **Apache-2.0** · **Rust** VRP solver · **better**: Rust = one static binary, trivial deploy, no JVM/Python runtime; CVRP + time windows + multi-vehicle · risks: stale tagged release; smaller feature set · **WATCH** (the "one binary" option if we want to avoid the Python extension build).
-### C11 — ai4co/rl4co — **916 ★**, MIT, created 2023-02-23, **v0.7.0 2026-09-14**, 106 open / 101
-closed · PyTorch library for RL-based combinatorial optimisation (NARLO/POMO) · **REJECT for production** (we need *provably good* routes within 5 %, not a learned policy that can be 20 % off on a new city) — **KEEP as a research reference**.
-### C12 — OptMLGroup/VRP-RL — **710 ★**, **NO LICENCE** (GitHub detects none), last push 2021-05-05 ·
-**REJECT** (no licence + dead).
-### C13 — N-Wouda/ALNS — **661 ★**, MIT, last push 2025-02-25, last release v7.0.0 (2024-10-21) ·
-Adaptive Large Neighbourhood Search library in Python · **WATCH** (the *fallback heuristic* if the exact solver is too slow; the repo is quiet).
-### C14 — vidalt/HGS-CVRP — **448 ★**, MIT, last push 2025-03-26, last release v2.0.0 (2022-05-09) ·
-Hybrid Genetic Search for CVRP (state of the art on the CVRP benchmark) · **WATCH** (the reference algorithm for maximum CVRP quality; not time-window capable).
-### C15 — inria-UFF/VRPSolverEasy — 169 ★, MIT, last push 2026-01-22, last release 0.1.4 (2023-11-11) ·
-Pyomo wrapper around exact MILP solvers (CBC, CPLEX, Gurobi) · **REJECT** (an exact MIP will not hit 200 stops ≤ 5 s).
-### C16 — RoutingKit/RoutingKit — **482 ★**, BSD-2-Clause, last push 2026-04-13, **0 releases** · C++
-shortest-path toolkit (CH, ALT, contraction hierarchies) · **better**: **CH/ALT gives a matrix generator an order of magnitude faster than on-demand routing** — a good way to build the 200×200 duration matrix inside the 5 s budget · **WATCH** (matrix acceleration).
-### C17 — opentripplanner/OpenTripPlanner — **2,762 ★**, NOASSERTION (**LGPL-3.0**), last release
-v2.10.0 2026-09-09, pushed 2026-10-20 · transit-first planner with routing + itineraries · **REJECT** (transit-first; LGPL is not on our allow-list).
-### C18 — apache/incubator-kie (Drools / OptaPlanner successor) — **6,339 ★**, Apache-2.0, last
-release 10.2.0 2026-04-28 · **WATCH** (same family as C8; JVM).
-### C19 — PyVRP/VRPLIB — **131 ★**, MIT, last release v2.2.0 2026-04-06 · Python reader/writer for
-standard VRP instance formats (Solomon, CVRP, RC208 …) · **ADOPT (tooling — converts the published benchmark instances into the format our harness reads).**
-### C20 — VROOM-Project/vroom-docker — **122 ★**, BSD-2-Clause, last push 2026-03-17 · containerised
-Vroom + OSRM + Valhalla + Nominatim + tileserver-gl · **KEEP (the fastest way to get a working VRP stack in CI while `services/routing` is built).**
-### C21 — VROOM-Project/vroom-express — **86 ★**, BSD-2-Clause, last push 2025-10-17, last release
-v0.12.0 (2023-11-16) · thin HTTP wrapper around libvroom · **KEEP (reference for the HTTP contract we will expose).**
-### C22 — routingpy/routingpy — **351 ★**, Apache-2.0, created 2019-04-13, last push 2026-09-01,
-**0 releases** · Python client for OSRM/Valhalla/GraphHopper/ORS/BRouter + isochrones + map matching · PyPI **13,680 downloads/month** · **better**: one Python API over every router, so the API service can switch engines behind a flag · risks: no releases → pin a commit · **ADOPT (client library for `services/routing`)** — it makes V4 §6.1 ("adapters behind interfaces") cheap.
-### C23 — ustroetz/python-osrm — **147 ★**, MIT, last push 2024-01-19 · thin OSRM client ·
-**WATCH** (subsumed by routingpy).
-### C24 — Project-OSRM/osrm-text-instructions — **107 ★**, BSD-2-Clause, pushed 2026-10-17 · the
-**turn-by-turn phrase library** (instruction code → English text) · **KEEP (cross-reference for TBT phrasing; see navigation-turn-by-turn.md).**
-### C25 — GIScience/openrouteservice — **1,985 ★**, **GPL-3.0**, last release v10.1.0 2026-10-14 ·
-**CLEAN-ROOM STUDY ONLY (V4 §11.2) — GPL; never in our repo, never quote its code.** Note: VROOM lists ORS as a supported engine — we must NOT ship ORS.
-### C26 — osm-search/Nominatim — **4,522 ★**, **GPL-3.0**, v5.3.3 2026-10-14 ·
-**CLEAN-ROOM STUDY ONLY** (geocoder, not a VRP engine).
-### C27 — fleetbase/fleetbase — **4,369 ★**, **AGPL-3.0**, v0.7.72 2026-10-20 ·
-**CLEAN-ROOM STUDY ONLY** (dispatcher UX reference — already in V4 §11.2).
-### C28 — fleetbase/navigator-app — **116 ★**, **AGPL-3.0**, v2.0.12 2026-10-19 ·
-**CLEAN-ROOM STUDY ONLY** (already in V4 §11.2).
-### C29 — hove-io/navitia — **457 ★**, **AGPL-3.0**, v15.119.0 2026-10-05 ·
-**CLEAN-ROOM STUDY ONLY** (transit routing + journey planning).
-### C30 — Project-OSRM/osrm-frontend — **380 ★**, BSD-2-Clause, pushed 2026-10-18 · the debug UI ·
-**WATCH** (dev tool for inspecting matrix quality).
-### C31 — optapy/optapy — **307 ★**, Apache-2.0, **last push 2023-10-02** · **REJECT (stale)**.
-### C32 — hubbs5/or-gym — **454 ★**, MIT, **last push 2023-10-12** · **REJECT (stale)**.
-### C33 — yorak/VeRyPy — **287 ★**, MIT, **last push 2023-12-02** (15 classical VRP heuristics) ·
-**WATCH** (a cheap baseline for the benchmark harness).
-### C34 — skatsuta/vrp-solver — **104 ★**, MIT, last push 2024-03-20 · **REJECT (stale)**.
-### C35 — ahottung/NLNS — **112 ★**, pushed 2026-09-14 · Neural LNS for CVRP (paper code) ·
-**WATCH** (research reference; model licence UNVERIFIED).
-### C36 — optframe/optframe — 91 ★, MIT, pushed 2025-09-15 · C++ optimisation framework ·
-**REJECT (a framework, not a VRP solver).** `ai4co/routefinder` (128 ★), `wouterkool/attention-learn-to-route` (1,389 ★, MIT, last push 2024-08-04 — research only), `mck-/Open-VRP` (330 ★, Common Lisp), `Vidalt/HGS-CVRP`, `gmcl/*`, `VRP-REP/*`.
-*Also surveyed and rejected without a card:* `henry-yeh/DeepACO` (200 ★, Jupyter, research), `ai4co/routefinder` (128 ★), `wouterkool/attention-learn-to-route` (1,389 ★, MIT, last push 2024-08-04 — research only), `mck-/Open-VRP` (330 ★, Common Lisp), `Vidalt/HGS-CVRP`, `gmcl/*`, `VRP-REP/*`.
+**C1 — `VROOM-Project/vroom`** ⭐ https://github.com/VROOM-Project/vroom — **1 893 ★** /445 f · created **2015-09-06** · last release **v1.15.0, 2026-03-13** (20 releases) · **cadence 26 months** (v1.14.0 2024-01-17 → v1.15.0; 0 in 6 m) · trend proxy: **0 commits/90 d on `master`** (last commit `07be776` 2026-03-18, all `jcoupey`); PRs #1340/#1350/#1354/#1356/#1357 **closed unmerged** 2026-09-06→08 · issues **40 open / 976 closed** (issues only, PRs excluded; 48 incl. PRs) · median first response **51.4 h** (n=15, 0–2 354 h) · maintainers 90 d **0 commits** (bus factor 1, Verso) · **BSD-2-Clause**; no weights/data · New Arch/Expo 58/API 34
+**n/a** (C++20 server binary) · repo 4.0 MB · **server** (`vroom` CLI, `vroom-express`, Docker) · OSV n/a — the PyPI `vroom` package is **1.0.2, 2018-06-30** (stale, do not use) · production: the **Verso Premium API**, map.vroom-project.org · docs: `docs/API.md` + wiki + 3 examples, no ADR log · CI: **2 workflows**, last 20 runs 11 ok / 9 fail · **better than ours**: the richest MIT/BSD constraint model in OSS — TSP/CVRP/VRPTW/**MDHVRPTW**/**PDPTW** in one run, **driver breaks**, **skills**, multi-depot, heterogeneous fleet, and it takes a **cost matrix from any source** (our own Valhalla matrix works) · risks:
+stalled upstream, 1 maintainer, the README is a sales funnel · **DECISION: ADOPT (co-primary, pinned `v1.15.0`) — adopt the model, not the momentum; PyVRP is the default until the benchmark says otherwise.**
 
-## 2. Shortlist (12) with decisions
+**C2 — `PyVRP/PyVRP`** ⭐ https://github.com/PyVRP/PyVRP — **714 ★** /161 f · created **2022-11-14** · last release **v0.14.1, 2026-10-17** (39 releases) · **cadence ≈ quarterly** (v0.13.4 2026-05-20, v0.14.0 2026-08-20, v0.14.1 2026-10-17 → 3 in 6 m; a `v1.0.0a0` bump landed 2026-08-20) · trend proxy: **35 commits/90 d, 3 humans** (Niels Wouda, Leon Lan, airen1986) · issues **31 open / 372 closed** (issues only, PRs excluded; 33 incl. PRs) · median first response **1.5 h** (n=10) · **MIT**; no weights/data · n/a for mobile · repo 13.6 MB · PyPI `pyvrp` **0.14.1**, **33 wheels + 1 sdist, 45.6 MB**, `requires-python >=3.11` (main bumped the
+floor to **3.12** in #1206) · **76 753 downloads/month** · **OSV: 0 advisories** · production: published in **INFORMS J. Computing** (DOI 10.1287/ijoc.2023.0055); Applied Routing sells Enterprise · docs: **pyvrp.org** + 9 tutorials + an algorithm explainer · CI: **5 workflows**, last 20 runs **17 ok / 0 fail** · **better than ours**: MIT, pure-Python `Model → solve()`, covering time windows, release times, **multi-depot, reloading (multi-trip), pickups+deliveries/backhaul, optional clients with prizes, mutually exclusive groups, heterogeneous fleets, profiles + access restrictions** ("profiles" _is_ "no entry
+through the back lane"), with `seed`/`max_runtime`/DIMACS output → **reproducible runs** for the harness · risks: **break planning, compatibility/sequencing, fairness and soft clustering are Enterprise-only**; no time-dependent VRP (#867 open); 2-person core team · **DECISION: ADOPT (primary VRP solver) — the best licence, CI and installability in OSS.**
 
-| # | Project | Decision | One-line reason |
-|---|---|---|---|
-| C2 | **PyVRP/PyVRP** | **ADOPT (primary)** | MIT, actively released (v0.14.1, 2026-10-16), 76 k PyPI downloads/month, exemplary CI, pure-Python API. |
-| C1 | **VROOM-Project/vroom** | **ADOPT (primary)** | Best-in-class multi-constraint VRPTW/PDPTW, BSD-2, drives OSRM/ORS/Valhalla — but 1 maintainer and a 7-month release gap. |
-| C4 | **graphhopper/graphhopper** | **ADOPT (router)** | One Apache-2.0 codebase gives routing + HMM map-matching + a navigation instruction engine. |
-| C5 | **valhalla/valhalla** | **ADOPT (router + TBT + IRD)** | MIT, truck cost model, `trace_attributes` with `stop_impact`, monthly releases, 5+ maintainers. |
-| C3 | **google/or-tools** | **KEEP (third)** | Apache-2.0, 6.2 M PyPI downloads/month; CP-SAT is right for small re-optimisations. |
-| C22 | **routingpy/routingpy** | **ADOPT (client)** | One Python API over OSRM/Valhalla/GraphHopper → the adapter layer V4 §6.1 asks for. |
-| C19 | **PyVRP/VRPLIB** | **ADOPT (tooling)** | Converts standard benchmark instances into our harness format. |
-| C20 | **VROOM-Project/vroom-docker** | **KEEP (CI)** | Working VRP stack in one container while `services/routing` is built. |
-| C6 | **Project-OSRM/osrm-backend** | **KEEP (matrix)** | Fastest 200×200 matrix; car profile only. |
-| C7 | **NVIDIA/cuopt** | **WATCH** | The only GPU VRP solver; needs a GPU runner to be worth it. |
-| C8 | **TimefoldAI/timefold-solver** | **WATCH** | Constraint-solver escape hatch for rules VRPTW cannot express. |
-| C9 | **graphhopper/jsprit** | **WATCH** | Richest constraint model, but stale releases and JVM. |
-| C25–C29 | ORS / Nominatim / Fleetbase / navigator-app / navitia | **CLEAN-ROOM ONLY** | AGPL/GPL — study the behaviour, never the code (V4 §11.2). |
+**C3 — `google/or-tools`** ⭐ https://github.com/google/or-tools — **14 238 ★** /2 528 f · created **2015-02-21** · last release **v9.15, 2026-01-12** (52 releases) · **cadence ≈ every few months**, 0 in 6 m · trend proxy: the default branch `stable` has **1 commit/90 d** (a dummy `release.yml`, 2026-09-18) but **`main` has 100+ commits/90 d from 8 humans** (Corentin Le Molgat, Benoît Legat, Mizux Seiha, …) — the quiet default branch is a release branch, not abandonment · issues **75 open / 12 closed** (131 incl. PRs) · median response **UNVERIFIED** (2 samples) · **Apache-2.0**; no weights/data · n/a for mobile ·
+repo **1.29 GB** (largest here) · PyPI `ortools` **9.15.6755** (2026-01-15), **838 MB wheel**, `>=3.9`, **6 170 996 downloads/month** · **OSV: 0 advisories** · production: effectively every logistics company · docs: developers.google.com/optimization + the OR-Tools guides · CI: **30 workflows** (Bazel/CMake × 15 platforms, CodeQL), last 20 runs 9 ok / 7 fail · **better than ours**: **CP-SAT** — the right tool for "the door code is wrong, this stop now costs 12 min"; the `routing` library is dimension-typed with multi-vehicle, time windows, penalties and arc costs · risks: the 838 MB wheel, verbose API, CP-SAT
+does not scale to a 200-stop VRPTW, open perf-regression **#4166** (v9.7→v9.11, 56 comments, open since 2024), `Loader.loadNativeLibraries()` slow on macOS M1 (#4580) · **DECISION: KEEP (third engine) — CP-SAT for single-stop re-optimisation only, never for the 200-stop day.**
 
-## 3. Deep review — top 5
+**C4 — `graphhopper/graphhopper`** ⭐ https://github.com/graphhopper/graphhopper — **6 737 ★** /1 961 f · created **2012-02-19** · last release **11.1, 2026-09-29** (47 releases) · **cadence ≈ quarterly** (1 in 6 m) · trend proxy: **72 commits/90 d, 5 humans** (Peter ×63, ratrun, easbar, dev_Hakaze, otbutz) · issues **192 open / 1,511 closed** (issues only, PRs excluded; 243 incl. PRs) · median response **143 h** (n=6, spread 5 h–3.5 y — unreliable at this sample size) · **Apache-2.0**; no weights/data · n/a for mobile · repo 143.6 MB · **server** (Java) · OSV n/a · production: graphhopper.com (the hosted API is the paid product; the core is
+free) · docs: versioned per release (11.x), `CHANGELOG.md` tracks API changes · CI: **8 workflows** incl. a **"Trigger Benchmarks"** job; last 20 runs **19 ok / 1 fail** · **better than ours**: the only Apache-2.0 codebase giving **routing + HMM map-matching + a navigation instruction engine** (`core/`, `map-matching/`, `navigation/`, `reader-gtfs/`, `web-api/`, `benchmark/`), and PR **#3414 "customizable contraction hierarchies"** (merged 2026-10-19) makes the **matrix** cheaper — that is where our 5 s budget is won · risks: a Java service; quarterly releases; #2053/#82/#2130 are 5-year-old architecture debts ·
+**DECISION: ADOPT (routing engine + map-matching + instruction engine).**
 
-**3.1 VROOM** — *Problem coverage*: TSP, CVRP, VRPTW, **MDHVRPTW** (multi-depot heterogeneous) and
-**PDPTW** (pickup-and-delivery with time windows) solved *simultaneously*; that matters for a courier
-who collects returns and delivers parcels in one loop. *Model*: `vehicles` (capacity on arbitrary
-metrics, skills, working hours, **driver breaks**, per-vehicle start/end, open trips) and `jobs` /
-`shipments` (time windows, service duration, skills, priority, arbitrary load dimensions) — skills
-model "only this van serves this suburb". *Routing engines*: OSRM, Openrouteservice (⚠ GPL —
-unusable for us), Valhalla; **or a custom cost matrix from any source** — how we feed our own
-Valhalla/GraphHopper matrices. *Delivery surface*: `vroom` CLI, `vroom-express` (HTTP), `libvroom`
-(C++), `vroom-docker`; `docs/API.md` + `example_1..3.json` give the JSON contract — **the HTTP shape
-our FastAPI service should mirror**. *Benchmarking discipline* (the good part): the README states
-academic, custom and real-life benchmark sets run on **every release** to catch solution-quality and
-runtime regressions — the discipline our squad must copy. *Code quality*: C++20, clang-format, only
-two CI workflows, one primary maintainer, 1,016 open issues — **the weakest engineering hygiene of
-the three ADOPTs.**
+**C5 — `valhalla/valhalla`** ⭐ https://github.com/valhalla/valhalla — **6 347 ★** /1 012 f · created **2016-01-20** · last release **3.9.1, 2026-10-06** (68 releases) · **cadence ≈ monthly** (7 in 6 m, 3 in 90 d) · trend proxy: **78 commits/90 d, 17 humans** (Christian Beiwinkel, Stefan Kizim, Nils, Kyle Brooks, M393, …) · issues **824 open / 2,026 closed** (issues only, PRs excluded; 944 incl. PRs) · median response **0.8 h** (n=10) · **MIT** — `COPYING` read 2026-10-21: "The MIT License (MIT) / Copyright (c) 2018 Valhalla contributors / (c) 2015-2017 Mapillary AB, Mapzen" (the API says NOASSERTION only because the file is not named LICENSE)
+· n/a for mobile · repo 129.3 MB · **server** (C++) + `valhalla_service` (on-device) · OSV n/a · production: the FOSS engine behind many production nav apps · docs: `docs/docs/api/**` (mdbook) · CI: **24 workflows**, last 20 runs 13 ok / 1 fail · **better than ours**: the best **truck cost model** (height/width/weight, surface, access, `destonly`), **isochrones**, `/matrix`, **`/trace_attributes`** (the IRD km logbook, V4 §11.1 item 7), and it reads the OSM **`driving_side`** tag and adapts ramp/exit wording to the driving side (PR #1990) — decisive for NZ · risks: 824 open issues (issues only, PRs excluded); C++ build time; the
+PyPI `valhalla` bindings (0.1.4, 2014) are stale → use HTTP · **DECISION: ADOPT (routing engine — truck costs, matrix, isochrones, IRD trace, driving side).**
 
-**3.2 PyVRP** — *API ergonomics*: `Model → Data → solve()`; the README's nine tutorials map onto
-courier concepts (load dimensions, time windows, **profiles + access restrictions**, optional clients,
-mutually exclusive groups, reloading, shipments). The `profiles` feature encodes "a van with a ladder
-profile cannot use the stairs". *Algorithm*: iterated local search (HGS family) with a dedicated
-explain page; `max_runtime`, `seed`, `round_func dimacs` are first-class CLI options → **deterministic,
-reproducible runs**, exactly what our benchmark harness needs. *Code quality*: ~30 pytest modules
-mirroring the domain model (`test_Client.py`, `test_Shipment.py`, `test_IteratedLocalSearch.py`,
-`test_CostEvaluator.py` …), a `benchmarks/` micro-benchmark that runs **in CI on every push**,
-CodSpeed, coverage to codecov with `fail_ci_if_error`, and a **Valgrind memcheck** in CI — best in
-class. *Data*: `tests/data/` ships the standard families `C201R0.25.vrp`, `PR01/PR11A.vrp`,
-`RC208.vrp`, `lrc206.vrp`, `X-n101-50-k13.vrp`, `X115-HVRP.vrp`, `p06-2-50.vrp`; `instances/` is a
-git submodule with the full SINTEF set. *Extensibility*: a thin Python layer over a C++ extension
-built with Meson — we must confirm **prebuilt wheels for our CI Python** (≥ 3.11) or build from
-source (gcc13/clang16 are the tested minimums). *Gap*: break planning, compatibility/sequencing
-constraints, fairness and clustering are **Enterprise-only**; we may implement breaks ourselves (we
-own the driver rules anyway).
+**C6 — `Project-OSRM/osrm-backend`** https://github.com/Project-OSRM/osrm-backend — **8 157 ★** /3 978 f · created **2011-09-22** · last release **v26.10.0, 2026-10-01** (46 releases) · **cadence ≈ monthly** (14 in 6 m) · trend proxy: **63 commits/90 d, 7 humans** (Dennis Luxen, julcnx, Niko Fellner, …) · issues **356 open / 4,428 closed** (issues only, PRs excluded; 373 incl. PRs) · median response **12 025 h** (n=3 — the slowest here; stale issues are closed in bulk) · **BSD-2-Clause**; no weights/data · n/a for mobile · repo 52.6 MB · **server** (C++ CHIPS) · OSV n/a · production: Mapbox, Organic Maps, thousands of apps · docs: the wiki +
+`docs/http.md` · CI: **16 workflows** (monthly release, vcpkg-smoke, Python bindings); last 20 runs 14 ok / 4 fail · **better than ours**: the **fastest matrix** (200×200 in well under a second) and the de-facto `/route` `/match` `/nearest` API — the lingua franca every other tool here speaks · risks: **car profile only** (no truck model, no time windows, no isochrones, no `trace_attributes`); slow issue triage · **DECISION: KEEP (matrix accelerator + Plan-B router).**
 
-**3.3 OR-Tools** — *Strength*: the `routing` library is dimension-typed with multi-vehicle, time
-windows, penalties and arc costs; **CP-SAT** covers disjunctive/logic constraints. *Strength*:
-Apache-2.0, 6.2 M PyPI downloads/month, the most battle-tested code in the list. *Weakness*: heavy
-Python wheel, verbose API, CP-SAT does not scale to 200-stop VRPTW, `stable` releases only every few
-months. *Fit*: the **single-stop re-optimisation** ("add a parcel at 14:20, put it back in today's
-route"), where a fast near-exact answer beats a big heuristic run.
+**C7 — `NVIDIA/cuopt`** ⭐ (2026 newcomer) https://github.com/NVIDIA/cuopt — **1 067 ★** /245 f · **created 2025-04-09** · last release **v26.10.00, 2026-10-15** (9 releases; newer tag `v26.12.00a` @2026-10-15) · **cadence ≈ monthly** (26.02 2026-02-12, 26.04, 26.06, 26.08, 26.10 → 3 in 6 m) · trend proxy: **100 commits/90 d, 18 humans** (Trevor McKay, Ramakrishna Prabhu, James Lamb, …) · issues **186 open / 393 closed** (issues only, PRs excluded; 247 incl. PRs) · median response **1.75 h** (n=2) · **Apache-2.0**; no weights/data · n/a for mobile · repo 45.2 MB · **GPU (CUDA) server**; C API + Python API + Server API · OSV n/a · production: NVIDIA's own fleet;
+docs.nvidia.com/cuopt; Docker images; a Colab launcher · docs: **docs.nvidia.com/cuopt** (user guide + tutorials) · CI: **21 workflows** (SonarQube, nightly, multi-GPU, image matrix); last 20 runs 5 ok / 1 fail · **better than ours**: the only candidate that could re-solve a **200-stop VRPTW in seconds on a GPU**; PRs
+#2036 (distance-matrix inputs) and #2123 (chunked VRP upload over gRPC) show the matrix path being
+productised; `NVIDIA/cuopt-examples` (**472 ★**, Apache-2.0, last release 22.12/2022-12-15, 18 commits/90 d, 2 open/11 closed) is the usage reference · risks: **needs an NVIDIA GPU** (our server is CPU-only — a real `COST_PLAN.md` line); open **bug #904 "VRP solver ignores `min_vehicles` when fixed costs are included"** (19 comments, open since 2026-02-25 — exactly the "one van per zone" feature a courier fleet needs),
+#438 segfault, a hard cap of **16 384 pickup-delivery requests** (#730); the MIP solver is beta ·
+**DECISION: WATCH — benchmark only with a GPU runner, and only after #904 is fixed.**
 
-**3.4 GraphHopper** — *Modules*: `core`, `map-matching/`, `navigation/`, `reader-gtfs/`, `web-api/`,
-`web/`, `client-hc/`, `benchmark/`. The **`benchmark/` module** matters (GraphHopper ships its own
-harness, and CI has a **"Trigger Benchmarks"** workflow we can mirror). *API ergonomics*: a YAML
-`config.yml` drives the whole server; the Java API is stable and versioned (11.x docs,
-`CHANGELOG.md` for API changes). *Map-matching*: a dedicated HMM module with its own forum → the
-answer to "how do we turn a 5 Hz GPS trace into a road distance for the IRD logbook". *Risks*: Java
-service, quarterly releases, the commercial Directions API is the supported product (the core is
-Apache-2.0 and fine for us).
+**C8 — `TimefoldAI/timefold-solver`** https://github.com/TimefoldAI/timefold-solver — **1 836 ★** /239 f · created **2023-03-29** · last release **v1.35.0, 2026-10-15** (55 releases) · **cadence ≈ monthly** (11 in 6 m, 7 in 90 d) · trend proxy: **100 commits/90 d, 18 humans** · issues **82 open / 5 closed** (118 incl. PRs) · median response **0 h** (n=2) · **Apache-2.0**; no weights/data · n/a for mobile · repo 275.6 MB · **server** (Java/Kotlin) · OSV n/a · production: the OptaPlanner successor · docs: Quarkus docs + quickstarts · CI: **15 workflows** (CodeQL, downstream model build); last 20 runs 10 ok / 3 fail
+· **better than ours**: a **constraint-stream** model — "no stop after 17:00", "one van", "door code needed" become constraints, not VRP features; employee rostering in the same engine · risks: a JVM service; heavier than we need · **DECISION: WATCH — the escape hatch when a courier rule cannot be expressed as a VRP feature.**
 
-**3.5 Valhalla** — *Cost model*: the strongest **truck** model of the candidates (height/width/
-weight, surface, access restrictions, `emergency only` access, `destonly` zones) → the courier style's
-access restrictions map directly onto it. *APIs*: `/route`, `/matrix`, `/isochrone`, `/locate`,
-`/tile`, **`/trace_attributes`**, `/status`, `/optimized_route` (its own TSP), `valhalla_service`
-(on-device). *`trace_attributes`* returns per-edge attributes for a matched shape and recently gained
-`stop_impact` — the mechanism for the **IRD logbook km** and **per-segment speed learning** (V4
-§11.1 item 7). **The claim in the shortlist is correct.** *Engineering hygiene*: `SECURITY.md`,
-`codecov.yml`, `.clang-tidy`, pre-commit, an explicit **AI-contribution policy**, a pinned timezone-db
-artifact (2026e); 5+ active maintainers and ~82 commits/90 d. *Risks*: 2,850 open issues; C++ build
-time; the PyPI `valhalla` bindings (0.1.4, 2014) are stale → use the HTTP API or build them ourselves.
+**C9 — `graphhopper/jsprit`** https://github.com/graphhopper/jsprit — **1 835 ★** /640 f · created **2013-03-28** · last release **v1.9.0-beta.12, 2024-11-19** (19) · **cadence stopped** (0 in 6 m) · trend proxy: **1 commit/90 d** (`oblonski`) · issues **2 open / 48 closed** (5 incl. PRs) · median response UNVERIFIED (no sample) · **Apache-2.0**; no weights/data · n/a · repo 11.3 MB · **server** (Java) · OSV n/a · production: the academic reference for rich-VRP research · docs: Javadoc + papers · CI: not sampled · **better than ours**: the richest _research_ constraint model (premiums, sequences, capacities, time
+windows) · risks: stale releases; JVM · **DECISION: WATCH (constraint-modelling reference; never in production).**
 
-## 4. Benchmarks — top 3 (V4 §12.5)
+**C10 — `reinterpretcat/vrp`** https://github.com/reinterpretcat/vrp — **509 ★** /101 f · created **2020-02-06** · last release **v1.25.0, 2024-11-10** (54) · **stale tags, live code** (0 in 6 m) · trend proxy: **96 commits/90 d, 1 human** (`reinterpretcat`) · issues **46 open / 76 closed** (56 incl. PRs) · median response **76 h** (n=15) · **Apache-2.0**; no weights/data · n/a · repo 10.3 MB · **server** (Rust crate) · OSV n/a · production: unknown · docs: README + docs.rs · CI: **10 workflows** incl. _Security audit_ and _Measure code coverage_; last 20 runs 18 ok / 2 fail · **better than ours**: **Rust = one
+static binary** — no JVM, no Python extension, no runtime; CVRP + time windows + multi-vehicle + precedence · risks: bus factor 1; releases lag the code · **DECISION: WATCH — the "one binary, zero runtime" option if the CI extension build hurts.**
 
-**I did not run a benchmark.** No eval set exists yet
-(`docs/squads/routing/benchmarks/README.md`: "Harness: _to be created with the first
-implementation_"), the runners are not provisioned, and running VROOM/OR-Tools/Valhalla here would not
-be a measurement on our target hardware. Everything below is **UNVERIFIED** with the set that must
-be built.
+**C11 — `N-Wouda/ALNS`** https://github.com/N-Wouda/ALNS — **661 ★** /153 f · created **2019-06-03** · last release **v7.0.0, 2024-10-21** (40) · 0 in 6 m · trend proxy: **0 commits/90 d**, last push 2025-02-25 (602 d) · issues **5 open / 49 closed** · median response UNVERIFIED · **MIT**; no weights/data · n/a · repo 4.5 MB · **library** (Python) · OSV n/a · production: unknown · docs: README + a notebook · CI: none sampled · **better than ours**: a composable **ALNS** library (destroy/repair operators, SA acceptance) — the building block PyVRP itself uses · risks: quiet repo · **DECISION: WATCH (fallback
+heuristic reference; PyVRP's ILS supersedes it).**
 
-**The set that must be built (per `docs/squads/routing/README.md`):**
-1. **`bench/` — published instances.** Use the **SINTEF/VROOM families** that PyVRP and VROOM both
-   ship: `RC208`, `lrc206`, `C201R0.25`, `PR01/PR11A`, `X-n101-50-k13`, `X115-HVRP`, `p06-2-50`
-   (all present in `PyVRP/PyVRP/tests/data/`) plus the **Solomon R1/R2/C1** instances via
-   `PyVRP/VRPLIB`. Reference result tables: the **VROOM wiki "Benchmarks" page** (236 KB of result
-   tables, live on 2026-10-20) — that page *is* our "best-known solution" baseline for the paper
-   instances.
-2. **`christchurch/` — one real day.** 80–150 stops (per V4 §11.1) with real coordinates from the
-   Address squad, plus a **second** day of 200 stops to exercise the ≤ 5 s gate. Needs time windows,
-   priorities, capacities and skills — the model, not just points.
-3. **`christchurch-2d/` — the same day with a 2× zoomed-in bbox**, to separate "the solver is slow"
-   from "the matrix is slow".
-4. **`harness/` — the runner.** Same machine, same matrix, same time limit, same seed; record
-   `objective`, `wall_time`, `feasible?`, `vehicles_used`, `max_violation`.
+**C12 — `iRB-Lab/py-ga-VRPTW`** https://github.com/iRB-Lab/py-ga-VRPTW — **664 ★** /173 f · created **2016-05-16** · **no releases** · 0 in 6 m · trend proxy: **2 commits/90 d, 1 human** · issues **0 open / 16 closed** · median response UNVERIFIED · **MIT**; no weights/data · n/a · repo 9.1 MB · **library** (Python) · OSV n/a · production: unknown (a teaching repo) · docs: README + notebooks · CI: none sampled · **better than ours**: a clean, readable **genetic-algorithm VRPTW** — the best possible _reference_ baseline for the harness · risks: not a product; no industrial features; unmaintained · **DECISION: KEEP
+as the readable control in the harness; not a solver we ship.**
 
-| Metric | Gate | Source of truth |
-|---|---|---|
-| Solution quality | **within 5 % of best-known** on the published instances | VROOM wiki benchmark tables (best-known column) |
-| Runtime | **200 stops ≤ 5 s** | our harness, CI profile + one mid-range profile |
-| Re-optimisation | one added stop re-solved in **≤ 2 s** | our harness |
-| Determinism | same seed → same objective | harness assertion |
-| Constraint violations | **zero** (time windows, capacity, skills) | harness assertion — a fast but infeasible route is a FAIL |
+**C13 — `PyVRP/VRPLIB`** ⭐ https://github.com/PyVRP/VRPLIB — **131 ★** /16 f · created **2022-04-17** · last release **v2.2.0, 2026-04-06** (16) · 0 in 6 m · trend proxy: **0 commits/90 d** · issues **8 open / 46 closed** · median response UNVERIFIED · **MIT**; no weights/data · n/a · repo 21.2 MB · **tooling** (Python) · OSV n/a · production: the PyVRP project itself · docs: README · CI: not sampled · **better than ours**: reads/writes the **standard instance formats** (Solomon, CVRP, RC208 …) — the bridge from published benchmarks to our harness · risks: quiet · **DECISION: ADOPT (tooling — the instance loader
+for §4).**
 
-**The benchmark I would run first:** the **SINTEF `RC208` / `lrc206` / `C201R0.25`** instances already
-exist inside PyVRP's repo and already run under Valgrind in its CI — a ready-made control set. The
-**"best-known" column must come from the VROOM wiki**, not from a re-run, because "within 5 % of
-best-known" is a claim about the *published* best.
+**C14 — `motis-project/motis`** ⭐ (challenger) https://github.com/motis-project/motis — **613 ★** /165 f · created **2020-04-15** · last release **v2.11.3, 2026-09-10** (100) · **cadence ≈ fortnightly** (7 in 6 m, 4 in 90 d) · trend proxy: **75 commits/90 d, 9 humans** (Felix Gündling, krkk, mority, …) · issues **60 open / 23 closed** (155 incl. PRs) · median response **9.2 h** (n=11) · **MIT**; no weights/data · n/a · repo 30.2 MB · **server** (C++/Rust) · OSV n/a · production: **Transitous** runs a public instance (api.transitous.org); a MOTIS client ships on npm · docs: **OpenAPI spec** + generated clients + a
+Matrix community · CI: **2 workflows** (CI, GPU Validation); last 20 runs 5 ok / 4 fail · **better than ours**: **one MIT service that does routing + geocoding + reverse-geocoding + tiles**, with a car profile and an OpenAPI we generate a client from — it could collapse "router" and "geocoder" into one binary · risks: transit-first (GTFS/NeTEx/GBFS dominate); a young team · **DECISION: WATCH — Plan-B "routing + geocoding in one MIT service".**
 
-## 5. Decision
+**C15 — `0nyr/kayros`** ⭐ (2026 newcomer) https://github.com/0nyr/kayros — **11 ★** /0 f · **created 2026-07-05** · last release **v1.6.1, 2026-10-14** (**17 releases in 4 months**) · 9 in 90 d · trend proxy: **38 commits/90 d, 1 human** · issues **0 open / 0 closed** · median response: no samples · **MIT** (`LICENSE` present); no weights/data · n/a · repo 2.6 MB · PyPI `kayros` **1.6.1** (2026-10-15), 86 MB, 4 wheels, `>=3.11,<3.15`, **239 downloads/month** · **OSV: 0 advisories** · production: none (beta) · docs: a long README (status, model, certification protocol) + CHANGELOG + CITATION · CI: **2 workflows**;
+last 20 runs 19 ok / 1 fail · **better than ours**: the only OSS solver here that is **time-dependent** — _when_ a route departs is a decision, i.e. **traffic-aware routing**; it also has an **exact** branch-price-and-cut mode with audited certificates and beats published best-known solutions on the MAMUT TD families · risks: **a PhD beta with one maintainer**; needs a C++23 compiler + CMake + Boost + HiGHS from source · **DECISION: WATCH — the reference for time-dependent VRP (PyVRP #867 is still open on this).**
 
-1. **VRP solver: run VROOM *and* PyVRP on the same instances and keep the winner** (per the squad
-   README). VROOM wins on constraint expressiveness (breaks, skills, PDPTW, multi-depot); PyVRP wins
-   on engineering hygiene, licence cleanliness (MIT), installability (pure Python + wheels) and
-   reproducibility. **Do not choose one before the harness exists.**
-2. **Router: GraphHopper (instructions + map-matching) + Valhalla (truck costs, `trace_attributes`,
-   TBT)**, with OSRM only as the matrix accelerator. GraphHopper wins map-matching; Valhalla wins the
-   truck/access-restriction model.
-3. **Client layer: `routingpy`** behind our own `RoutingClient` interface (V4 §6.1) so the engine is
-   swappable and fake-able in tests.
-4. **Third engine: OR-Tools** for small re-optimisations where CP-SAT beats a heuristic.
-5. **Never ship ORS, Nominatim, Fleetbase or navitia** — clean-room study material only.
+**C16 — `punnerud/mpee`** ⭐ (2026 newcomer) https://github.com/punnerud/mpee — **19 ★** /0 f · **created 2026-05-12** · **no releases** · 0 in 6 m · trend proxy: **10 commits/90 d, 2 humans** · issues **1 open / 0 closed** · median response: no sample · **licence UNVERIFIED — the repo has NO LICENSE/COPYING file (API: NOASSERTION); only the PyPI metadata for `mpee` 0.4.5 (2026-05-27) says MIT — do not vendor before the file exists** · n/a · repo 106.8 MB · PyPI `mpee` 0.4.5, 6.8 MB, 1 wheel + sdist, **26 downloads/month** · **server + WASM/WebGPU** (the whole engine compiles to the browser) · **OSV: 0
+advisories** · production: none · docs: a long README, `docs/`, `INTEGRATION.md`, a live browser demo · CI: **2 workflows**; last 20 runs **20 ok / 0 fail** · **better than ours**: **one Rust engine that replaces OSRM+VROOM** — routing _and_ VRP in one process, fully offline, with a streaming matrix that never materialises N×N ("~500 MB vs ~10 GB" for 50 000×50 000) and a cost-aware matrix broker that learns a day of traffic to replay offline; claims a 50 000-customer fleet solved in **29.5 s on CPU+GPU** — **vendor claim, UNVERIFIED by us** · risks: one author; no licence file; claims unmeasured · **DECISION:
+WATCH — the most interesting 2026 newcomer; re-check only after a LICENSE file lands.**
 
-## 6. Risks
+**C17 — `thiagomoretto/volare`** (2026 newcomer) https://github.com/thiagomoretto/volare — **3 ★** /0 f · **created 2026-08-19** · last release **v0.2.2, 2026-09-08** (4) · 4 in 6 m · trend proxy: **100 commits/90 d, 1 human** · issues **5 open / 3 closed** · median response **0.1 h** (n=2) · **Apache-2.0**; no weights/data · n/a · repo 0.7 MB · **server** (Rust, zero dependencies) · OSV n/a · production: none · docs: README + a benchmark runner; CVRPLIB/Solomon readers · CI: **4 workflows**; last 20 runs 20 ok / 0 fail · **better than ours**: a **zero-dependency Rust** CVRP solver with hard time windows,
+optional nodes, per-vehicle node exclusion and in-route ordering, plus a benchmark runner reading the formats we already load · risks: "Early days" by its own README — **no soft windows, no pickup-and-delivery, no multi-depot**; 1 author · **DECISION: WATCH — a cheap Rust baseline for the harness, not the production solver.**
 
-| Risk | Severity | Mitigation |
-|---|---|---|
-| VROOM bus factor = 1 and a 7-month release gap | **High** | Pin `v1.15.0`; keep PyVRP as a live alternative; raise an upstream maintenance question. |
-| PyVRP build toolchain (Meson/C++ extension) in CI | Medium | Verify a wheel exists for our Python; else build in the CI image with gcc13. |
-| 200 stops ≤ 5 s is unproven for both | **High** | Build the harness *first* (squad agreement #1); the matrix must be precomputed, not requested per pair. |
-| ORS in the VROOM engine list is GPL | Medium | Configure VROOM with OSRM/Valhalla only; add a CI check that no `openrouteservice` URL appears in the routing config. |
-| Time-window semantics differ between solvers | Medium | Define our own canonical model in `packages/` and write adapters; assert identical feasibility. |
-| ODbL/OSM attribution for the matrices | Medium | Matrices derived from OSM are derived data → attribution required in the API and the app. |
-| cuOpt needs a GPU | Low (now) | Keep on the radar; adopt only with a GPU runner and a measurable win. |
+**C18 — `RoutingKit/RoutingKit`** https://github.com/RoutingKit/RoutingKit — **482 ★** /125 f · created **2016-04-28** · **0 releases** · 0 in 6 m · trend proxy: **0 commits/90 d**, last push 2026-04-14 (189 d) · issues **38 open / 31 closed** (43 incl. PRs) · median response UNVERIFIED · **BSD-2-Clause**; no weights/data · n/a · repo 0.3 MB · **C++ library** · OSV n/a · production: unknown · docs: a README tutorial · CI: not sampled · **better than ours**: **CH/ALT contraction hierarchies** — the standard way to build a huge duration matrix far faster than on-demand routing, i.e. the cheapest way to buy the
+200-stop budget · risks: no releases; quiet · **DECISION: WATCH (matrix acceleration) — GraphHopper's customizable CH (#3414) covers the same need with a service we already run.**
 
-## 7. What I could not verify
+**C19 — `routingpy/routingpy`** ⭐ https://github.com/routingpy/routingpy — **351 ★** /33 f · created **2019-04-14** · **3 GitHub releases** (latest 1.3.0 @2023-08-03 — none since 2023-08-03); PyPI `routingpy` **1.3.0 released 2023-08-03** · 0 in 6 m · trend proxy: **1 commit/90 d, 1 human** (`nilsnolde` — same author as the archived docker-valhalla) · issues **7 open / 29 closed** (13 incl. PRs) · median response **1 948 h** (n=7) · **Apache-2.0**; no weights/data · n/a · repo 26.6 MB · **client library** (Python) · **OSV: 0 advisories** · **13 680 downloads/month** · production: unknown · docs: README + a hosted demo · CI: **5 workflows**; last run 2026-09-02
+success · **better than ours**: **one Python API over OSRM, Valhalla, GraphHopper, ORS and BRouter** + isochrones + map matching → the adapter layer V4 §6.1 asks for, in ~300 lines · risks: **no release since 2023-08-03** (pin a commit); bus factor 1 · **DECISION: ADOPT (client adapter) — pinned to a commit, behind our own `RoutingClient` interface so a stale upstream cannot block us.**
 
-* **6-month star trend** — blocked by token scope (no `read:user`); proxies used instead.
-* **Median issue-response time** — not computed for any repo (needs per-issue timeline sampling).
-* **Whether PyVRP publishes wheels for our exact Python** — UNVERIFIED; check
-  `https://pypi.org/pypi/pyvrp/0.14.1/json` → `urls[].filename`.
-* **The Microsoft "Lightning" VRP solver** — the PyPI package `lightning` is **PyTorch Lightning**,
-  not the scheduler; I could not find the Microsoft VRP repo through the GitHub API → UNVERIFIED,
-  dropped from the shortlist.
-* **`pyvalhalla`** — the PyPI `valhalla` package (0.1.4, 2014) is stale; the real bindings are built
-  from source. UNVERIFIED whether the 3.9.1 tree still exposes a Python build.
-* **VROOM's "best-known" numbers** — the wiki page exists (236 KB) but I did not transcribe the
-  tables; the harness must do that at run time.
-* **Actual solution quality of either solver on a Christchurch day** — no instance exists → UNVERIFIED.
-* **The `vroom` PyPI package (1.0.2, 2018)** — stale; the C++ binary/Docker is the deployment path.
+**C20 — `VROOM-Project/vroom-docker` + `vroom-express`** https://github.com/VROOM-Project/vroom-docker · https://github.com/VROOM-Project/vroom-express — `vroom-docker`: **122 ★** /68 f · created **2020-03-10** · **no releases** · 0 in 6 m · trend proxy: **0 commits/90 d**, last push 2026-03-18 · issues **1 open / 62 closed** · **BSD-2-Clause**; no weights/data · n/a · repo 0.07 MB · **container images** (Vroom + OSRM + Valhalla + Nominatim + tileserver-gl) · OSV n/a · production: the reference CI stack · docs: a README per image · CI: none sampled · **better than our choice**: a **working VRP stack in one
+container** while `services/routing` is built · risks: unmaintained since the VROOM release train stopped; the bundled Nominatim is GPL (clean-room: do not read it) · **KEEP (CI bootstrap only; rebuild our own images from pinned upstream)**. `vroom-express`: **86 ★** /64 f · last release **v0.12.0, 2023-11-16** · 0 commits/90 d · issues **3 open / 67 closed** · repo 0.12 MB · a Node HTTP wrapper around libvroom · **KEEP (reference for the HTTP JSON contract our FastAPI service should mirror)**.
 
-## 8. Corrections to the V4 §11.1 adopt list (routing-related)
+**C21 — `Vidalt/HGS-CVRP`** https://github.com/Vidalt/HGS-CVRP — **448 ★** /98 f · created **2020-11-24** · last release **v2.0.0, 2022-05-09** (2) · 0 in 6 m · trend proxy: **0 commits/90 d**, last push 2025-03-27 (572 d) · issues **2 open / 19 closed** · median response UNVERIFIED · **MIT**; no weights/data · n/a · repo 0.6 MB · **C++ library** · OSV n/a · production: the CVRP literature · docs: a README with the algorithm description · CI: none sampled · **better than our choice**: the **reference implementation of Hybrid Genetic Search** — the algorithm behind the best-known CVRP solutions and inside PyVRP's
+ILS · risks: no time windows; research code · **DECISION: WATCH (algorithm reference; PyVRP ships the same family).**
 
-| V4 §11.1 item | Verified reality on 2026-10-20 | Correction |
-|---|---|---|
-| 6. **PyVRP** — "benchmark vs VROOM on real 80–150-stop Christchurch days" | 714 ★, **MIT**, v0.14.1 (2026-10-16), 76,753 PyPI downloads/month, **bi-weekly releases**, CI with Valgrind + codecov `fail_ci_if_error` | ✅ keep — and it is **stronger than the shortlist assumed**: MIT is a real advantage over VROOM's fine print, and it ships wheels + a benchmark suite. |
-| 7. **Valhalla `trace_attributes`** | Endpoint **confirmed** (`src/thor/trace_attributes_action.cc`, `proto/descriptors/api.proto`); `stop_impact` added in the unreleased changelog | ✅ keep. **Correction:** the routing engine we actually want is **GraphHopper** for map-matching + instructions, with Valhalla for truck costs — V4 names GraphHopper only as "Plan B". |
-| (shortlist "Also evaluate: traccar server") | `traccar/traccar` is **AGPL-3.0** | Keep on the clean-room list if studied. |
-| (not in the list) | **NVIDIA/cuopt** — 1,066 ★, Apache-2.0, created 2025-04-08, monthly releases, GPU VRP/VRPTW | **New 2026 entry → WATCH.** It changes the "VROOM vs PyVRP" framing. |
-| (not in the list) | **graphhopper/jsprit** 1,835 ★, Apache-2.0 (stale releases) and **TimefoldAI/timefold-solver** 1,836 ★, Apache-2.0 | **Add → WATCH** (constraint-modelling references). |
-| (not in the list) | **routingpy/routingpy** — 351 ★, Apache-2.0, 13,680 PyPI downloads/month | **Add → ADOPT (client library).** |
-| (not in the list) | `OpenTripPlanner` = **LGPL-3.0**; `OptMLGroup/VRP-RL` = **no licence** | Do not evaluate as production candidates. |
+**C22 — `ben-hudson/pylkh`** https://github.com/ben-hudson/pylkh — **41 ★** /13 f · created **2021-01-29** · no releases · 0 in 6 m · trend proxy: 0 commits/90 d, last push 2026-01-14 · issues 3 open / 6 closed · **licence UNVERIFIED (NOASSERTION)**; no weights/data · n/a · repo 0.8 MB · **library** · OSV n/a · production: none · docs: a README · CI: none · **better than our choice**: a thin wrapper over **LKH-3**, the strongest open TSP/VRP heuristic · risks: no licence file · **DECISION: WATCH (evaluate LKH-3 directly if we need max-CVVRP quality).**
+
+**C23 — `apache/incubator-kie`** (Drools/OptaPlanner successor) https://github.com/apache/incubator-kie — **6 339 ★** /2 601 f · created **2011-02-18** · last release **10.2.0, 2026-04-28** (7) · 1 in 6 m · trend proxy: **100 commits/90 d, 30 humans** · issues **72 open / 32 closed** (304 incl. PRs) · median response UNVERIFIED · **Apache-2.0**; no weights/data · n/a · repo 676.1 MB · **server** (JVM) · OSV n/a · production: Apache KIE · docs: Apache KIE docs · CI: not sampled · **better than our choice**: the Drools rule engine (the constraint-stream lineage) · risks: a platform to install for one feature ·
+**DECISION: WATCH (same family as C8; pick one).**
+
+**C24 — `Zhengzhong-You/RouteOpt`** https://github.com/Zhengzhong-You/RouteOpt — **101 ★** /34 f · created **2023-10-10** · last release **v2.0.0, 2025-03-11** · 0 in 6 m · trend proxy: **6 commits/90 d, 3 humans**, last push 2026-10-13 · issues **0 open / 17 closed** · **GPL-3.0**; no weights/data · n/a · repo 109.5 MB · **C++ exact solver** (CVRP/CVRPTW) · OSV n/a · production: none · docs: a README · CI: not sampled · **better than our choice**: an exact branch-cut-and-price solver — the "best-known" oracle · risks: **GPL → clean-room only**; exact methods will not hit 200 stops ≤ 5 s · **DECISION: CLEAN-ROOM
+STUDY ONLY.**
+
+**C25 — research-only, stale and duplicate (grouped)** — `ai4co/rl4co` **916 ★** MIT, v0.7.0 2026-09-14, 14 commits/90 d, 5 open / 35 closed, repo 163 MB, model-weights licence UNVERIFIED → **REJECT for production, KEEP as a research reference** (a learned policy can be 20 % off on an unseen city; we need a provable 5 %). `ai4co/routefinder` **128 ★** MIT, v0.4.0 2025-09-16, 0 commits/90 d → **REJECT**. `wouterkool/attention-learn-to-route` **1 389 ★** MIT, last push 2024-08-04 (807 d), 29 open / 24 closed → **REJECT (stale)**. `optapy/optapy` **307 ★** Apache-2.0, last release 9.37.0b0 2023-04-25, last push
+2023-10-02, 31 open / 27 closed → **REJECT (stale; the Java original moved on)**. `hubbs5/or-gym` **454 ★** MIT, last push 2023-10-12 (1 104 d) → **REJECT (stale)**. `ahottung/NLNS` **112 ★** **GPL-3.0**, last push 2020-08-20 → **REJECT (GPL + dead)**. `yorak/VeRyPy` **287 ★** MIT, last push 2023-12-03, 12 open / 3 closed → **WATCH (15 classical heuristics = a cheap baseline family)**. `skatsuta/vrp-solver` **104 ★** MIT, last push 2024-03-21 (943 d) → **REJECT (stale)**. `ustroetz/python-osrm` **147 ★** MIT, last push 2024-01-20 (1 004 d), 14 open / 23 closed → **REJECT (subsumed by routingpy)**.
+`TimefoldAI/timefold-solver-python` **57 ★** — **ARCHIVED**, last release 2024-07-09 → **REJECT**. `Valdecy/pyCombinatorial` **140 ★** NOASSERTION + `fikisipi/elkai` **199 ★** NOASSERTION, last release v2.0.1 2023-05-09 → **licence UNVERIFIED**; elkai WATCH (LKH-3), pyCombinatorial REJECT. **Trend proxy for all eleven: 0 commits/90 d except rl4co (14).**
+
+**C26 — 2026 newcomers without traction (grouped)** — `fknop/hermes` https://github.com/fknop/hermes — **0 ★** · created 2025-02-28 · **no releases**, **0 commits/90 d** (last push 2026-04-05) · 0 issues · **BSD-3-Clause** · repo 19.2 MB · Rust · **CI: 0 workflows** · claims a routing engine _and_ a VRP solver in Rust → **REJECT (a prototype, not a project)**. `spoorendonk/bucket-graph-spprc` https://github.com/spoorendonk/bucket-graph-spprc — **30 ★** · created **2026-03-05** · v0.1.0 2026-06-23 · 1 in 6 m · **25 commits/90 d, 1 human** · 11 open / 55 closed · **MIT** · repo 1.6 MB · **C++23 header-only
+library** (the SPPRC pricing sub-problem a time-dependent exact solver needs) → **WATCH (a building block, not a solver for us)**. `SolverForge/solverforge-maps` https://github.com/SolverForge/solverforge-maps — **6 ★** · created **2026-01-10** · v2.1.4 2026-05-03 · 0 commits/90 d · 0 open / 14 closed · **Apache-2.0** · repo 0.2 MB · map/matrix utilities for VRP work → **WATCH (a helper library)**.
+
+**C27 — `nilsnolde/docker-valhalla`** https://github.com/nilsnolde/docker-valhalla — **318 ★** /96 f · created 2020-02-24 · **ARCHIVED** · last push 2026-03-04 (231 d) · 0 commits/90 d · issues **2 open / 72 closed** · median response UNVERIFIED · **MIT**; no weights/data · n/a · repo 4.4 MB · **container images** · OSV n/a · production: widely used images · docs: a README per image · CI: none sampled · **better than our choice**: the reference way to run Valhalla in Docker · risks: **archived**, so no security patches · **DECISION: REJECT — build our own Valhalla image from pinned upstream releases.**
+
+**C28 — clean-room set (never in our repo, never quoted)** — `GIScience/openrouteservice` **1 985 ★** **GPL-3.0**, v10.1.0 2026-10-14, 5 releases/6 m, 100 commits/90 d, 7 humans, 89 open / 3 closed → **CLEAN-ROOM ONLY** (V4 §11.2); note VROOM lists ORS as a supported engine, so our VROOM config must never point at ORS. `osm-search/Nominatim` **4 525 ★** **GPL-3.0**, v5.3.3 2026-10-14, 100 commits/90 d, 96 open / 29 closed → **CLEAN-ROOM ONLY** (geocoder). `opentripplanner/OpenTripPlanner` **2 762 ★**, licence **NOASSERTION per the API (sprint #1 read LGPL-3.0 — UNVERIFIED, re-read the file before any use)**,
+v2.10.0 2026-09-09, 60 open / 2 closed → **REJECT** (transit-first, not on the allow-list). `fleetbase/fleetbase` + `fleetbase/navigator-app` — AGPL-3.0, already on the V4 §11.2 clean-room list.
+
+**C29 — `TimefoldAI/timefold-quickstarts`** https://github.com/TimefoldAI/timefold-quickstarts — **596 ★** / Apache-2.0 · pushed 2026-10-21 · 100+ commits/90 d · the usage reference for the Java solver (not a candidate itself). **DECISION: KEEP as documentation only.**
+
+**C30 — `Valdecy/pyCombinatorial`** (counted in C25) · https://github.com/Valdecy/pyCombinatorial — **140 ★** /18 f · created 2021-03-18 · **no releases**, licence NOASSERTION · 0 commits/90 d, last push 2026-05-18 · 0 open / 3 closed · repo 0.6 MB · a batteries-included TSP algorithm suite. **DECISION: REJECT (licence UNVERIFIED and duplicated by elkai).**
+
+## 2. Shortlist (13) and decisions
+
+| #                                                             | Project                                                                                                                     | Decision                                                 | One-line reason                                                                                                                                                                                       |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C2                                                            | **PyVRP/PyVRP**                                                                                                             | **ADOPT (primary VRP)**                                  | MIT, 3 releases/6 m, 35 commits/90 d, 76.7 k downloads/month, 33 wheels, 0 OSV, 17/20 CI green, published in INFORMS J. Computing.                                                                    |
+| C1                                                            | **VROOM-Project/vroom**                                                                                                     | **ADOPT (co-primary, pinned `v1.15.0`)**                 | The richest MIT/BSD constraint model (breaks, skills, PDPTW, multi-depot, custom matrices) — but upstream is stalled: 0 `master` commits since 2026-03-18, 26-month release gap, PRs closed unmerged. |
+| C4                                                            | **graphhopper/graphhopper**                                                                                                 | **ADOPT (router + map-matching + instructions)**         | Apache-2.0, 72 commits/90 d, 19/20 CI green, in-tree `navigation/` and `map-matching/`, customizable CH (#3414) for a cheap matrix.                                                                   |
+| C5                                                            | **valhalla/valhalla**                                                                                                       | **ADOPT (truck costs, matrix, IRD trace, driving side)** | MIT (verified in `COPYING`), monthly releases, 78 commits/90 d, 17 humans, `trace_attributes`, isochrones, `driving_side`.                                                                            |
+| C19                                                           | **routingpy/routingpy**                                                                                                     | **ADOPT (client adapter)**                               | One Python API over OSRM/Valhalla/GraphHopper — but no release since 2023: pin a commit behind our own `RoutingClient`.                                                                               |
+| C13                                                           | **PyVRP/VRPLIB**                                                                                                            | **ADOPT (tooling)**                                      | MIT loader for the standard instance formats — the bridge to the published benchmarks.                                                                                                                |
+| C3                                                            | **google/or-tools**                                                                                                         | **KEEP (third engine)**                                  | Apache-2.0, 6.17 M downloads/month, 100+ commits/90 d on `main`; CP-SAT for one-stop re-optimisation only.                                                                                            |
+| C6                                                            | **Project-OSRM/osrm-backend**                                                                                               | **KEEP (matrix + Plan B)**                               | Fastest matrix, monthly releases, 7 humans — car profile only.                                                                                                                                        |
+| C12                                                           | **iRB-Lab/py-ga-VRPTW**                                                                                                     | **KEEP (readable baseline)**                             | The GA baseline every reviewer can read — the control in the harness.                                                                                                                                 |
+| C20 / C29                                                     | **vroom-docker · vroom-express · cuopt-examples · timefold-quickstarts**                                                    | **KEEP (CI bootstrap / contract / usage)**               | A working stack in one container; the HTTP JSON shape to mirror; the cuOpt and Timefold API references.                                                                                               |
+| C7                                                            | **NVIDIA/cuopt**                                                                                                            | **WATCH**                                                | The only GPU VRP; needs a GPU runner, and open bug #904 breaks `min_vehicles` with fixed costs.                                                                                                       |
+| C15                                                           | **0nyr/kayros**                                                                                                             | **WATCH**                                                | The only **time-dependent** solver (traffic-aware) — beta, one maintainer.                                                                                                                            |
+| C16                                                           | **punnerud/mpee**                                                                                                           | **WATCH**                                                | The most interesting 2026 newcomer (one Rust engine for routing+VRP, offline, WASM) — **no licence file yet**.                                                                                        |
+| C14                                                           | **motis-project/motis**                                                                                                     | **WATCH**                                                | MIT routing + geocoding + tiles in one service; transit-first, small team.                                                                                                                            |
+| C8 / C9 / C10 / C11 / C17 / C18 / C21 / C22 / C23 / C25 / C26 | Timefold · jsprit · reinterpretcat · ALNS · volare · RoutingKit · HGS-CVRP · pylkh · kie · research-only · 2026-no-traction | **WATCH**                                                | Each covers one capability (constraints, Rust binary, new entrant, CH matrix, LKH, GA baseline) — none covers the whole need.                                                                         |
+| C24 / C25 / C28                                               | RouteOpt · NLNS · ORS · Nominatim · OpenTripPlanner · Fleetbase                                                             | **CLEAN-ROOM / REJECT**                                  | Copyleft or off the allow-list (V4 §11.2).                                                                                                                                                            |
+
+## 3. Deep review — top 5 (code, commits, PRs and issues opened 2026-10-21)
+
+**3.1 PyVRP (C2)** — _README_: MIT, "state-of-the-art VRP solver developed by Applied Routing"; the supported-problem list _is_ the product: PDPTW/backhaul, heterogeneous fleets with **shift durations, routing profiles and max distance/duration**, time windows + release times, **multi-depot**, **reloading (multi-trip)**, optional clients with prizes, client groups — plus four **Enterprise-only** features (break planning, compatibility/sequencing, fairness, soft clustering) that is the gap we must design around. _API ergonomics_: `Model → Data → solve()`; **profiles** ("different distances for different vehicle
+types, and modelling access restrictions") is exactly "no entry through the back lane". _Code_: ~30 pytest modules mirroring the domain model; `benchmarks/` runs in CI; a CodSpeed workflow. _Last 20 commits_: Niels Wouda and Leon Lan only — float-cost refactors (#1191, #1196, #1200, #1201), **Python 3.15 wheels (#1204)**, **minimum Python 3.12 (#1206)**, clustering docs (#1195); the last 10 PRs are all merged/closed by the same two authors. _Open issues that matter_: **#867 "Time Dependent VRP"**, **#992 "Performance on small instances (<200 nodes)"**, #441 "Common VRP variants" (18), #1055 (10). _Performance
+claims_: none in the README; the repo ships the SINTEF instances and asserts reproducibility via `seed`. _Verdict_: **the only candidate we would put in production today.**
+
+**3.2 VROOM (C1)** — _README_: "Complex Route Optimization in Milliseconds … maintained by Verso" — and also a **sales funnel** (Verso Premium API, "white-glove support"): a governance smell, not a licence problem. _Model_: `vehicles` (capacity on arbitrary metrics, **skills**, working hours, **driver breaks**, per-vehicle start/end) and `jobs`/`shipments` (time windows, service duration, skills, priority, arbitrary load dimensions). _Routing engines_: OSRM, ORS (⚠ GPL — never point our config at it), Valhalla, **or a custom cost matrix from any source** — that is how our own matrix feeds it. _Surface_: `vroom`
+CLI, `vroom-express` (HTTP), `libvroom`, Docker; `docs/API.md` + `example_1..3.json` = the JSON contract our FastAPI service should mirror. _Benchmarking discipline_: the README states academic/custom/real-life benchmark sets run **on every release** — the discipline our squad must copy. _Code quality_: C++20, clang-format, **2 CI workflows** (11 ok / 9 fail of the last 20 runs). _Last 20 commits_: `master` stops at **2026-03-18** (the last 12 are `jcoupey` plus one `Michael Cho` fix). _Last 10 PRs_: **#1340, #1350,
+#1354, #1356, #1357 closed 2026-09-06→08 without merging** (verified `merged=false` on each; #1354 closed
+by `davideslv` 2026-09-07). _Open issues that matter_: #1330 "Soft Requested-Time Targeting and Ride-Time Slack Collapse" (12), **#903 "Dynamic costing_options in request to Valhalla"** (11 — the exact integration we want), #1251 "Infeasible route for vehicle" (9), #1335 "Route puts next door houses as drops 5 and 10 in a loop" (7 — a real courier complaint). _Verdict_: **adopt the model, not the momentum** — pin `v1.15.0`, keep it behind our adapter, treat upstream activity as a radar item.
+
+**3.3 GraphHopper (C4)** — _Modules_: `core/`, `map-matching/` (HMM), `navigation/` (the instruction engine), `reader-gtfs/`, `web-api/`, `web-bundle/`, `client-hc/`, **`benchmark/`** — GraphHopper ships its own harness and CI has a **"Trigger Benchmarks"** workflow, the pattern we should copy for §4. _API ergonomics_: a YAML `config.yml` drives the whole server; the Java API is versioned (11.x docs) and `CHANGELOG.md` tracks breaking changes; an **OSRM-compatible output mode** makes it readable by the same client that reads OSRM. _Last 20 commits_: Peter dominates — cycling/sidewalk semantics,
+`max_speed_estimated` made direction-dependent, racing-bike speeds; easbar on graph storage: real map-semantics work, not cosmetics. _Last 10 PRs_: #3414 **"customizable contraction hierarchies"** (merged 2026-10-19 — the cheapest path to a fast matrix), #3418, #3419. _Open issues_: #2053 (38, 2020 — Jigsaw modules), #82 (38, 2013 — area routing), #2130 (33 — OSM reader speed), #2744 "Improve HGV access parsing" (21 — heavy-vehicle access, our courier reality). _Performance claims_: its own benchmark module; the CH work targets matrix latency. _Verdict_: **adopt as the routing engine** (map-matching +
+instructions + matrix in one Apache-2.0 codebase), with Valhalla for the truck model.
+
+**3.4 OR-Tools (C3)** — _Strength_: the `routing` library is dimension-typed (multi-vehicle, time windows, penalties, arc costs) and **CP-SAT** is the only first-class SAT path in the pool — the right tool for "the door code is wrong, this stop now costs 12 min". _Strength_: Apache-2.0, 6.17 M downloads/month, 30 CI workflows across 15 platforms, 100+ commits/90 d on `main` from 8 humans. _Weakness_: the **838 MB wheel** (a CI-image problem), a verbose API, CP-SAT does not scale to a 200-stop VRPTW, and the release train is slow: `stable`'s last release is **v9.15, 2026-01-12** (9 months). _Open issues_: **#4166
+"Performance regression from v9.7 → v9.8-v9.11"** (56 comments, open since 2024-04-01 — unresolved for 2.5 years), #4580 (`Loader.loadNativeLibraries()` slow on macOS M1), #5163 ("uninterruptible PresolveCpModel() … can become effectively stalled"). _Performance claims_: OR-Tools' own numbers apply to its benchmarks, not to a courier matrix. _Verdict_: **keep as the third engine** for single-stop re-optimisation and "is this stop still feasible?" — never for the 200-stop day.
+
+**3.5 NVIDIA/cuOpt (C7)** — _What it is_: a GPU-accelerated optimisation engine (LP/QP + VRP) with a C core, a C API, a Python API and a **Server API** (gRPC) — unusually deployment-ready packaging, and PR **#2036 "add optional distance matrix inputs to C++ models"** and **#2123 "Support chunked upload for VRP over gRPC"** show the matrix path being productised. _Cadence_: monthly releases (26.02 → 26.10), 100 commits/90 d, 18 humans, 21 CI workflows including SonarQube and multi-GPU. _Open issues that matter for a courier_: **#904 "[BUG] cuOpt VRP solver ignores `min_vehicles` constraint when fixed costs are
+included"** (19 comments, open since 2026-02-25 — directly hits "one van per zone" pricing), **#730 "[BUG] Validation Error: Number of pd requests should be inferior to 16384"** (a hard cap on pickup-delivery rows), #438 segfault, #950 int64 builds. _Performance claims_: "near real-time solutions for large-scale LPs"; the VRP numbers are NVIDIA's own — **we have not measured them and our server has no GPU**. _Verdict_: **watch**, with a concrete trigger: a GPU runner in CI **and** a fix for #904.
+
+## 4. Benchmarks (V4 §12.5) — **UNVERIFIED: no eval set exists**
+
+**I did not run a benchmark and I will not invent one.** `docs/squads/routing/benchmarks/README.md` says "Harness: _to be created with the first implementation_"; `docs/squads/routing/eval/` does not exist; `apps/api` has no solver installed. Everything below is **UNVERIFIED** until the set exists.
+
+**The set that must be built (name + shape):**
+
+1. **`docs/squads/routing/eval/bench/` — published instances.** The SINTEF/VROOM families PyVRP already
+   ships and runs under Valgrind in its own CI: `RC208.vrp`, `lrc206.vrp`, `C201R0.25.vrp`, `PR01/PR11A.vrp`, `X-n101-50-k13.vrp`, `X115-HVRP.vrp`, `p06-2-50.vrp` (read with **VRPLIB**). The **best-known** column must come from the published tables (the VROOM wiki "Benchmarks" page), not from a re-run — "within 5 % of best-known" is a claim about the _published_ best.
+2. **`docs/squads/routing/eval/christchurch/` — one real day.** 80–150 stops (V4 §11.1 item 6) with real
+   coordinates from the Address squad, plus a **200-stop** day for the ≤ 5 s gate, and the _model_ (time windows, priorities, capacities, skills, breaks) — not just points.
+3. **`docs/squads/routing/eval/christchurch-2d/`** — the same day on a 2× zoomed bbox, to separate "the
+   solver is slow" from "the matrix is slow". **`docs/squads/routing/eval/harness/`** — the runner: same machine, same matrix, same time limit, same seed; record `objective`, `wall_time`, `feasible?`, `vehicles_used`, `max_violation`.
+
+| Metric                | Gate                                                                | Source of truth                                       |
+| --------------------- | ------------------------------------------------------------------- | ----------------------------------------------------- |
+| Solution quality      | **within 5 % of best-known** on the published instances             | the published best-known tables                       |
+| Runtime               | **200 stops ≤ 5 s** (matrix precomputed)                            | our harness: CI profile + one mid-range profile       |
+| Re-optimisation       | one added stop re-solved in **≤ 2 s**                               | our harness                                           |
+| Determinism           | same seed → same objective                                          | harness assertion                                     |
+| Constraint violations | **zero** (time windows, capacity, skills, breaks)                   | harness assertion — a fast infeasible route is a FAIL |
+| Fairness              | same matrix for every solver; matrix build time reported separately | harness                                               |
+
+**First benchmark to run:** `RC208` + `lrc206` + `C201R0.25` under **PyVRP** and **VROOM** with the same matrix and the same 5 s budget, plus the GA baseline (C12). Nothing is declared "the winner" before this table exists (V4 §13.1: no adoption without the benchmark once the eval set exists).
+
+## 5. What we are missing → rows for `docs/PARITY.md`
+
+The CEO merges these. Each row is a capability that exists in the best OSS repos or in the competitors (`docs/study/spoke/`) and that we do not have today.
+
+| Feature                                                                                | Family       | Gap                                                   | Task id it becomes                          |
+| -------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------- | ------------------------------------------- |
+| Multi-depot + heterogeneous fleet with **per-vehicle skills**                          | Optimisation | Our model is single-depot, one van                    | **T7.2** (VROOM model), **T7.14** (zones)   |
+| **Driver breaks** (mandatory rest) inside the route                                    | Optimisation | We model service time only                            | **T7.2** (VROOM breaks; PyVRP = Enterprise) |
+| **Pickup-and-delivery pairing** with capacity (returns on the same loop)               | Optimisation | Not modelled                                          | **T7.2**                                    |
+| **Time-dependent travel times** (traffic-aware matrix)                                 | Optimisation | Static matrices; PyVRP #867 open, only kayros does it | **T7.2** (matrix service), **T7.10** (ETAs) |
+| **Truck/van profile** (height, weight, surface, access restrictions)                   | Optimisation | Car-only matrices (OSRM)                              | **T7.2** (Valhalla cost model)              |
+| **Warm-start / incremental re-solve** of one changed stop                              | Optimisation | Every edit re-solves the day                          | **T7.2**                                    |
+| **Alternative-route proposal** (2–3 alternatives, driver picks)                        | Optimisation | One solution only                                     | **T7.2**                                    |
+| **Isochrone / drive-time polygons** ("where can I park within 10 min")                 | Optimisation | None                                                  | **T7.3** (door memory), **T7.12**           |
+| **On-device / offline routing fallback** (one downloaded area)                         | Optimisation | Server-only                                           | **T7.7** (offline driving mode), **T7.1**   |
+| **Cost-aware matrix broker** (buy a cell once, learn a day of traffic, replay offline) | Optimisation | Every day we recompute                                | **T7.1**, **T7.2**                          |
+| **GPU re-solve** of a 200-stop day in seconds                                          | Optimisation | CPU-only server                                       | **T7.2** (only with a GPU runner)           |
+| **Multi-leg itinerary** (depot → parcel → depot, transit legs)                         | Optimisation | Single-leg loops only                                 | **T7.14**                                   |
+| **Route-quality telemetry**: stops/h, km, on-time %, per-driver variance               | Analytics    | Not measured against a solver                         | **T7.12**                                   |
+| **Dispatcher manual control** (skip optimisation, reverse, group, make-next)           | Optimisation | Spoke's #1 complaint (REVIEWS P1/P2)                  | **T7.2**, **T7.6**                          |
+
+## 6. Decision
+
+1. **VRP: PyVRP is the default solver; VROOM is the co-primary capability solver, pinned `v1.15.0`.**
+   PyVRP wins on licence, CI, installability and reproducibility; VROOM wins on constraint expressiveness (breaks, skills, PDPTW, multi-depot). **No winner is declared before §4's harness exists.** Both sit behind our own `VrpSolver` interface so either can be swapped.
+2. **Routing engine: GraphHopper (routing + HMM map-matching + instructions + CH matrix) + Valhalla (truck
+   cost model, `trace_attributes` for the IRD logbook, isochrones, `driving_side` for NZ).** OSRM stays the fast matrix accelerator and the Plan-B router.
+3. **Client: `routingpy` pinned to a commit**, behind our own `RoutingClient` interface (V4 §6.1), so a
+   3-year-old release cannot block us.
+4. **Third engine: OR-Tools/CP-SAT** for single-stop re-optimisation and feasibility checks only.
+   **Tooling: VRPLIB** (instance loader), **vroom-docker** (CI bootstrap), **vroom-express** (HTTP contract), **iRB-Lab/py-ga-VRPTW** (readable control baseline).
+5. **Watchlist with triggers:** cuOpt (a GPU runner in CI **and** #904 fixed) · kayros (time-dependent VRP
+   becomes a product requirement) · mpee (a LICENSE file lands) · MOTIS (we want routing + geocoding in one service) · Timefold/jsprit (a rule cannot be expressed as a VRP feature).
+6. **Never ship ORS, Nominatim, Fleetbase, RouteOpt or NLNS** — clean-room study material only, plus a CI
+   check that no ORS/Nominatim URL appears in the routing config.
+
+## 7. Risks
+
+| Risk                                                                                      | Severity | Mitigation                                                                                                  |
+| ----------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
+| VROOM upstream stalled (0 `master` commits since 2026-03-18; PRs closed unmerged 2026-09) | **High** | Pin `v1.15.0`; PyVRP is the default; hard rule: **no upstream commit by 2027-01 → drop to reference-only**. |
+| 200 stops ≤ 5 s unproven for both solvers                                                 | **High** | Build §4's harness **first**; precompute the matrix (GraphHopper CH or OSRM), never request it per pair.    |
+| Time-window/feasibility semantics differ between solvers                                  | **High** | One canonical model in `packages/` + adapters; assert identical feasibility in the harness.                 |
+| PyVRP is a 2-person project with a C++/Meson extension                                    | Medium   | 33 wheels for CPython 3.11–3.15; pin the version; watch the Python floor (3.12 in `main`).                  |
+| cuOpt correctness bug (#904)                                                              | Medium   | Do not adopt until fixed; no GPU runner today.                                                              |
+| Matrix cost/memory at scale                                                               | Medium   | 200×200 is trivial; the risk is 50 000×50 000 — mpee's streaming idea is the answer if we ever need it.     |
+| OSM/ODbL attribution for derived matrices                                                 | Medium   | Attribution in the API and the app; the ODbL boundary goes to the founder + counsel.                        |
+| GPL in the dependency tree (ORS in VROOM's engine list)                                   | Medium   | Config lint: no ORS/Nominatim URLs; `docs/LICENSES.md` + the CI licence gate.                               |
+| Time-dependent VRP has no maintainable OSS option                                         | Medium   | Static matrices now; revisit kayros/mpee when ETAs need traffic (T7.10).                                    |
+
+## 8. What I could not verify
+
+- **6-month star trend for every candidate** — the star _timeline_ is 403 with our token (re-verified
+  2026-10-21); proxies used (releases/6 m, commits/90 d, humans/90 d, downloads/month).
+- **Median issue response time** — sampled from closed-issue timelines (n = 2–15 per repo). For OR-Tools
+  (n=2), cuOpt (n=2), Timefold (n=2) and Kayros/MPEE/hermes (n=0) it is **UNVERIFIED**, not "fast".
+- **MPEE's licence** (no LICENSE file; only the PyPI metadata says MIT), **`pyCombinatorial` and `elkai`**
+  (NOASSERTION) and **OpenTripPlanner's** (the API says NOASSERTION; sprint #1 read LGPL-3.0) — all **UNVERIFIED**.
+- **cuOpt's VRP performance on our instances** (NVIDIA's claims only; no GPU here) and **MPEE's 29.5 s /
+  ~500 MB claims** (the project's own README; not reproduced).
+- **Whether PyVRP 0.14.1's wheels match our exact interpreter ABI** — 33 wheels exist for CPython
+  3.11–3.15; the match for our CI image is **UNVERIFIED** until we install it. **`routingpy` against Valhalla 3.9.x** — the pinned commit is from 2026; **UNVERIFIED**.
+- **The published "best-known" numbers** for the benchmark instances — the tables exist upstream; we have
+  not transcribed them (the harness must read them at run time). **Any solution quality on a real Christchurch day** — no instance exists → **UNVERIFIED**.
+- **The PyPI `vroom` package (1.0.2, 2018-06-30)** — a stale binding; we run the C++ binary/Docker.
+  **VROOM's `vroom-express` Node dependency tree** — not audited (we mirror the contract, not the code).
+
+Corrected by the verifier pass of 2026-10-21 (VERIFICATION-C.md): 7 cards corrected.
+
+## 9. Corrections to sprint #1 and to the V4 §11.1 / SPRINT-SUMMARY routing list
+
+| Claim (2026-10-20)                                                           | Verified 2026-10-21                                                                                                                                                                              | Correction                                                                                                                                   |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| VROOM: "1 016 open / 976 closed issues", "last commit 2026-03-17"            | **40 open / 976 closed** (issues only, PRs excluded; 48 incl. PRs); **0 commits/90 d on `master`**, last commit **2026-03-18**                                                          | The issue counts were wrong by an order of magnitude; the maintenance signal is _worse_ than stated: **5 PRs closed unmerged** in Sept 2026. |
+| VROOM: "release cadence … 7-month gap"                                       | **26-month gap** (v1.14.0 2024-01-17 → v1.15.0 2026-03-13)                                                                                                                                       | Worsen the claim; pin `v1.15.0` and set the 2027-01 drop rule.                                                                               |
+| Timefold: "last release v2.7.1, 2026-10-06"                                  | last release **v1.35.0, 2026-10-15** (55 releases, 11 in 6 m)                                                                                                                                    | The version was wrong and the project is _more_ active than sprint #1 said — still only WATCH (JVM).                                         |
+| PyVRP: "requires Python ≥ 3.11"                                              | PyPI 0.14.1 says **>=3.11**; `main` bumped the floor to **3.12** (#1206, 2026-10-17)                                                                                                             | Pin `0.14.1`; re-check the floor at every bump.                                                                                              |
+| OR-Tools: "default branch `stable`, development on `main`, 100 commits/90 d" | Confirmed (`stable` 1 commit/90 d, **`main` 100+ commits/90 d, 8 humans**)                                                                                                                       | Sprint #1 was right — but add the **838 MB wheel** and the **9-month release gap**.                                                          |
+| RoutingKit: "0 releases, pushed 2026-04-13"                                  | **0 releases, 0 commits/90 d**, last push 2026-04-14                                                                                                                                             | GraphHopper's customizable CH (#3414) covers the matrix need → demote to WATCH-only.                                                         |
+| `nilsnolde/docker-valhalla` — not mentioned                                  | **ARCHIVED**                                                                                                                                                                                     | Do not use it; build our own Valhalla image from pinned upstream.                                                                            |
+| `routingpy` — "ADOPT (client library)"                                       | Confirmed, but **no release since 2023-08-03**, 1 maintainer, 13 680 downloads/month                                                                                                             | Adopt **pinned to a commit**, behind our own interface.                                                                                      |
+| "PyVRP and VROOM as co-primary" (SPRINT-SUMMARY)                             | Holds on licence and capability                                                                                                                                                                  | Keep — but **PyVRP is the default**, VROOM is pinned and time-boxed (§6).                                                                    |
+| "cuOpt — WATCH"                                                              | Confirmed, plus **open bug #904** (`min_vehicles` ignored with fixed costs)                                                                                                                      | The bug is the reason to wait, not the GPU alone.                                                                                            |
+| Not in the list                                                              | **kayros** (MIT, time-dependent VRP, 17 releases in 4 months), **mpee** (Rust routing+VRP in one process, **no licence file**), **motis** (MIT routing+geocoding+tiles), **volare** (Rust, 2026) | Add → **WATCH** (§2).                                                                                                                        |

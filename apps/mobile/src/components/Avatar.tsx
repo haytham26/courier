@@ -2,8 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { useTheme } from '../providers/ThemeProvider';
 
-interface AvatarProps
-  extends React.ComponentPropsWithoutRef<typeof View> {
+interface AvatarProps extends React.ComponentPropsWithoutRef<typeof View> {
   src?: string;
   alt?: string;
   fallback?: string;
@@ -46,16 +45,10 @@ export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProp
       return '?';
     };
 
-    // Generate consistent color from name
-    const getBackgroundColor = () => {
-      if (!name) return theme.colors.textTertiary || theme.colors.textSecondary || '#71717a';
-      let hash = 0;
-      for (let i = 0; i < name.length; i++) {
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      const hue = Math.abs(hash) % 360;
-      return `hsl(${hue}, 60%, 45%)`;
-    };
+    // The fallback is the surface of the theme with the ink on it, so the
+    // initials clear the contrast bar in every theme. A colour made up from
+    // the name cannot promise that.
+    const getBackgroundColor = () => theme.colors.surface;
 
     const showFallback = !src || imageError;
 
@@ -70,17 +63,20 @@ export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProp
               height: sizeStyles.height,
               borderRadius,
               backgroundColor: getBackgroundColor(),
+              borderColor: theme.colors.border,
             },
             style,
           ]}
           {...props}
+          accessibilityRole="image"
+          accessibilityLabel={alt || name}
         >
           <Text
             style={[
               styles.initials,
               {
                 fontSize: sizeStyles.fontSize,
-                color: theme.colors.textInverse,
+                color: theme.colors.textPrimary,
               },
             ]}
           >
@@ -103,6 +99,8 @@ export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProp
           style,
         ]}
         {...props}
+        accessibilityRole="image"
+        accessibilityLabel={alt || name}
       >
         <Image
           source={{ uri: src }}
@@ -120,7 +118,7 @@ export const Avatar = React.forwardRef<React.ElementRef<typeof View>, AvatarProp
         />
       </View>
     );
-  }
+  },
 );
 
 Avatar.displayName = 'Avatar';
@@ -130,6 +128,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    borderWidth: 1,
   },
   image: {
     ...StyleSheet.absoluteFill,
