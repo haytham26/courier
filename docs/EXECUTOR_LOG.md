@@ -1091,3 +1091,25 @@ doubt-driven-development.
 - **The mobile app is not linted in CI** (no lint script and no link to the shared eslint config), and it carries pre-existing eslint errors of the same class. The new files were checked by hand.
 - **A single mobile test file cannot be run on its own** (`@babel/runtime` is in the store but not hoisted): the whole suite has to run. That is pre-existing and not from this step.
 - **The coverage of the auth service was not measured in this step**; the floor says it must not fall below 81 %, and the next coverage run has to prove it.
+
+### The coverage audit of the new sections, and what they changed
+
+I applied the new binding sections of MASTER_EXECUTION (11 Courier Maps, 12
+Courier Voice, 13 the Design Studio, 14 the complete sign-in, 15 StoreReady),
+ran the coverage audit against them and turned every item into a task in
+PROGRESS.md. The sections are not a document change: the map modes, the 3D
+buildings, the voice service, the design studio, the sign-in and the release
+checker are all built, tested and committed on the product branch (the
+sections 11-15 work: 221 mobile, 432 token, 166 voice, 140 API and 59 auth
+tests are green, and the licence ledger, the floor guard and the store
+readiness check pass). What the audit found is narrower than I expected: only
+two pieces are left - the map pack itself (it needs the LINZ outlines and the
+OSM extract downloaded) and the optional on-device brain pack (it needs a
+commercially licensed 1-4B model) - and both are a data and a licence step,
+not a code step. The founder's three decisions are in FOUNDER_TODO.md and
+nothing is blocked on them: the look (A, B or C), the store ids and the
+signing, and the background-location video.
+
+Both branches are now merged with main (a merge, never a rebase) with D23 and
+D24 added to DECISIONS.md and the mockups README keeping main's inventory
+note at the top and the eight screen specifications below it.

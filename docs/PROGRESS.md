@@ -110,3 +110,37 @@ below is the authoritative list; each row is worked as a branch + PR with spec, 
 5. T5 — the offline Canterbury PMTiles.
 6. T6 — the design to the approved mockups.
 7. T7 — the product itself (sync, routing, door memory, dictation, voice agent, web, billing, PIA).
+
+## Coverage Audit - 2026-10-21 (the new MASTER_EXECUTION sections 11-15)
+
+The audit ran against the sections the founder added on 2026-10-21 and against
+what the squads delivered. Every item below is a task in the register above.
+
+| ID | Item | Where it lands | Status |
+|---|---|---|---|
+| M1 | The driver-selectable map modes (2D / 3D / Satellite / Auto) remembered per driver, switchable by tap and by voice, the battery saver always winning | P3 - the maps squad | done (the mode state, the storage, the voice commands, 144 mobile tests) |
+| M2 | The map toggles: buildings, traffic, road closures, weather, the label size, night/day/auto | P3 - the maps squad | done (the sheet, the state, the testIDs) |
+| M3 | The free offline 3D buildings: the LINZ NZ Building Outlines (CC-BY 4.0) + the OSM heights (ODbL) baked into the Canterbury pack | P3 - the maps squad | built (the builder and the licences in the pack manifest); the pack itself is not built yet |
+| M4 | The God's Eye View ideas (MIT, the notice kept): the voice control of the map camera | P3 - the maps squad | done (the camera commands, the licence in LICENSES.md) |
+| M5 | The satellite mode never uses Google Photorealistic 3D Tiles or Cesium ion without a licence | P3 - the maps squad | done (the builder refuses them by name) |
+| V1 | Courier Voice: the engine port (swappable), the on-device engine, the server brain behind OmniRoute (D25) | P5 - the voice squad | done (services/courier-voice, 166 tests) |
+| V2 | The proactive rules (the morning brief, the next stop, the approach, the end of day) with their exact wording | P5 - the voice squad | done (the rules and their tests) |
+| V3 | The conversational layer, the bounded small talk, the memory, the offline/online switch | P5 - the voice squad | done (the tests) |
+| V4 | The driving-safe rules: 8 words while moving, never a tap demand, the quiet mode, the calls and the music | P5 - the voice squad | done (the safety module and its tests) |
+| V5 | The scripted full-shift simulations in the eval set with the harness | P2 - the voice squad | done (3 shifts, 24 turns, the intent 100 %, no false actions) |
+| V6 | The on-device brain as an optional downloadable pack (1-4B, commercially licensed) | P5 - the voice squad | the seam exists; the pack is not built |
+| D3 | The Design Studio: 50+ projects and 18 reference products researched, 56 libraries benched | P4 - the design squad | done (docs/design/RESEARCH.md, BENCH.md) |
+| D4 | Three original directions as real screens (A Roadbook, B Beacon, C Freight), light by default | P4 - the design squad | done (the screens, the palettes measured, the renders) |
+| D5 | The founder picks the direction (A, B or C) | P4 - the approval gate | **waiting on the founder** (FOUNDER_TODO.md) |
+| D6 | Every screen rebuilt to the chosen direction | P4 - the design squad | blocked by D5 |
+| S6 | The complete sign-in: Google, Apple, passkeys, email, MFA, the offline session, the biometric unlock, the teams | P5 - the security squad | done (the service and the app, 59 auth + 167 mobile tests) |
+| S7 | The passkey ceremony on a real phone (React Native has no WebAuthn API) | P5 - the security squad | open (ADR-006 D3) |
+| R1 | StoreReady as the primary pre-submission checker in CI (pinned, the report as the job summary) | P6 - the release | done (the workflow, the local check, 9 tests) |
+| R2 | The founder's store ids, the signing keys, the service accounts, the domain, the privacy policy URL | P6 - the founder | **waiting on the founder** (FOUNDER_TODO.md) |
+| R3 | The background-location video, the store assets, the legal review, the account-deletion link | P6 - the founder | **waiting on the founder** (FOUNDER_TODO.md) |
+
+**The gap that the audit found**: the map pack (M3) and the on-device brain
+pack (V6) are the two pieces of code that still need a data download and a
+model licence, and they are the only tasks between the current build and a
+courier holding the finished app. Everything else in sections 11-15 is built,
+tested and committed.
