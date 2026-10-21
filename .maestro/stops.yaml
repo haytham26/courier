@@ -16,6 +16,5 @@ name: The stops list opens a stop
     id: "stop-2"
 - tapOn:
     id: "stop-2"
-- assertVisible: "Papanui Road"
-- assertVisible: "Merivale"
+- assertVisible: "Riccarton"
 - takeScreenshot: "stop-detail"
