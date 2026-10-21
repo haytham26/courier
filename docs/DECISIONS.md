@@ -44,3 +44,25 @@
 - Cap — product demo/tutorial videos.
 - OpenSEO — website SEO.
 Each: license check (fine to self-host unmodified as separate tools; if we modify an AGPL one that users access over the network, we must offer those users its modified source), self-host plan, security review, added to COST_PLAN when adopted.
+
+## D23 - Courier Voice (2026-10-21, founder decision)
+- The voice engine is our own product: **Courier Voice** (`services/courier-voice`), built per V4 section 13.6 with its safeguards: the provenance in `LICENSES.md`, a swappable engine interface, and we keep benchmarking the commercially-licensed alternatives.
+- The user-facing surfaces show only "Courier Voice"; the required LICENSE/NOTICE files stay internal.
+
+## D24 - Our brand on the adopted permissive OSS (2026-10-21, founder decision)
+- The permissive licences (MIT/BSD/Apache/MPL/CC0/ISC) may be forked and vendored, renamed under "Courier <Name>" (Courier Maps, Courier Nav, Courier Route, Courier Scan, Courier Sync), adapted for the NZ couriers, kept private, with the required LICENSE/NOTICE and the provenance in `LICENSES.md`, our own tests and benchmarks, and the upstream security fixes tracked.
+- The copyleft (AGPL/GPL: Fleetbase, Navigator, OpenRouteService, Nominatim, VoiceStudio) is **clean-room only**: the features and the ideas, never the code.
+- The model-weight licences are checked separately from the code licences.
+
+## D25 — OmniRoute as the server LLM gateway (2026-10-21, founder decision; resolves D18)
+- Use **OmniRoute** (github.com/diegosouzapw/OmniRoute, MIT, self-hosted AI gateway: routing, load-balancing, fallback, caching, observability) as the single LLM gateway for Courier Voice's server brain and other server AI features (alongside/instead of LiteLLM — Platform squad decides by benchmark + ADR).
+- **Production deployment**: self-hosted on our server (Oracle Sydney), never the founder's PC; pinned version; secrets in the server secret manager; admin UI not exposed publicly; logs without PII.
+- **Production routing policy**: only providers/accounts whose terms allow commercial API use and that do **not** train on our data (driver/customer text/audio). Personal subscription logins (ChatGPT/Claude/Gemini consumer plans via OAuth), unofficial/free proxies and any provider that may train on inputs are **dev-only** and must be disabled for production traffic (separate OmniRoute instance/config for dev).
+- Cost guard (§7) applies: free/cheap tiers first, paid fallback with alerts and caps. App calls the gateway via one internal interface so the gateway can be swapped.
+
+## D26 — Founder decisions on the map pack and the label eval set (2026-10-21)
+1. **Offline map pack delivery: both.** Ship the Canterbury pack as a Google **Play Asset Delivery install-time asset pack** (does not count against the 80 MB base APK budget; the map works offline from the first launch). Twice-weekly updates are downloaded in-app on Wi-Fi (diff when possible) and replace the pack atomically; if the asset pack is missing (sideloaded APK), download on first run on Wi-Fi; online source as last fallback.
+2. **ODbL**: treat the on-device tiles as a **Produced Work** — show OSM + LINZ attribution in the map and in Settings → Open-source licences; we do not distribute a derived database publicly. No blocker; include it in the pre-launch legal review list (not a gate for building).
+3. **Geofabrik**: free download of OSM extracts is allowed under ODbL with fair use. Download **twice a week** from CI (scheduled), and ship map updates twice a week with a clear User-Agent, cache the file, verify the checksum; fallback mirrors: openstreetmap.fr extracts, BBBike, or a planet/NZ extract from planet.openstreetmap.org. If the host times out, retry later — not a founder action.
+4. **Label eval set without founder photos**: add up to **100 more real-looking labels** from (a) openly licensed public datasets of shipping/parcel labels (Kaggle, Roboflow Universe, Hugging Face, papers) whose licence allows commercial use/evaluation — record source + licence per image in the ledger; and (b) photo-realistic synthetic labels (real NZ courier layouts: NZ Post, CourierPost, Aramex, NZ Couriers, DHL; fake names/phones; real LINZ addresses) rendered then photographed-style augmented (angles, glare, blur, crumples, low light). **Never scrape personal photos from social media or the web** (privacy + copyright). Founder photos, when provided, are added later.
+5. **Scanner reads the address only, smartly**: detect the label → locate the recipient address block → auto-crop and zoom into that region (ignore sender, barcodes, phone numbers, marketing) → highlight it on screen → OCR only that region → smart parsing (NZ address parser + D8 correction against LINZ + confidence, handles units, RD, abbreviations, line breaks, handwriting where possible) → one quick question only if confidence is low. The eval set measures the crop accuracy (right block found) separately from the reading accuracy.

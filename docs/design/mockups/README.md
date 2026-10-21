@@ -1,11 +1,23 @@
+# Mockups v1/v2 ÔÇö CONTENT INVENTORY ONLY (visual style rejected by the founder)
+These files show which screens exist and what each must contain. Their look (neon on black, glow, orbs) was rejected as "AI-looking". Do not copy their style. The real design comes from MASTER_EXECUTION ┬º13 (Design Studio: research, 3 directions, founder pick, library bench).
+Canvas: https://claude.ai/artifact/KixaotGGNLugEY5hpfwPuD
+
+---
+
+## The screen specifications (the build reference)
+
+The specifications below are what every screen of the app must contain: the states, the
+night and day behaviour, the motion, the copy and the accessibility notes. The look itself
+is not decided yet: MASTER_EXECUTION section 13 (the Design Studio) decides it.
+
 # The mockups and the screen specifications
 
 ## The approved mockups (the founder-approved target look)
 
-- `Main.dc.html` - 1 · Driving mode (night): turn card, offline-map chip, bottom sheet with stop number (76 pt), street, suburb, door note + parcel location chips, 72 pt green "Delivered" + skip, listening indicator.
-- `Dictation.dc.html` - 2 · Dictation report: counts (matched / corrected / check), "what I corrected" cards (struck original → corrected + reason), "please check" question with 2 big choices + "or just say it".
-- `DayList.dc.html` - 3 · Today's list (day): run name, progress bar, segmented filters, stops grouped by street, NEXT badge, "Corrected from …" note.
-- Viewport 390×844. Font Figtree. Colours/sizes in the inline styles are the reference for docs/design/SYSTEM.md tokens. Open the files in a browser (inline styles render without the support script).
+- `Main.dc.html` - 1 Â· Driving mode (night): turn card, offline-map chip, bottom sheet with stop number (76 pt), street, suburb, door note + parcel location chips, 72 pt green "Delivered" + skip, listening indicator.
+- `Dictation.dc.html` - 2 Â· Dictation report: counts (matched / corrected / check), "what I corrected" cards (struck original â†’ corrected + reason), "please check" question with 2 big choices + "or just say it".
+- `DayList.dc.html` - 3 Â· Today's list (day): run name, progress bar, segmented filters, stops grouped by street, NEXT badge, "Corrected from â€¦" note.
+- Viewport 390Ã—844. Font Figtree. Colours/sizes in the inline styles are the reference for docs/design/SYSTEM.md tokens. Open the files in a browser (inline styles render without the support script).
 - Live preview: https://claude.ai/artifact/KixaotGGNLugEY5hpfwPuD
 
 The colours of the mockups are the colours of the token package: the day
@@ -49,17 +61,17 @@ Every spec has the same sections, in the same order:
 
 | Rule                                                             | Where it comes from        |
 | ---------------------------------------------------------------- | -------------------------- |
-| One primary action per screen, 72 pt                             | `docs/design/SYSTEM.md` §3 |
-| Every other target at least 56 pt                                | `docs/design/SYSTEM.md` §3 |
-| Body text at least 17 pt, key numbers 48-76 pt                   | `docs/design/SYSTEM.md` §2 |
-| Text 4.5:1, large text and boundaries 3:1, driving text 7:1      | `docs/design/SYSTEM.md` §6 |
-| Motion 150-250 ms, spring for the sheets                         | `docs/design/SYSTEM.md` §5 |
-| "Reduce motion" makes the movement instant, never removes it     | `docs/design/SYSTEM.md` §5 |
-| One icon set (Material Symbols), no emoji ever                   | `docs/design/SYSTEM.md` §7 |
-| Plain NZ English, voice prompts of at most 8 words while driving | `docs/design/SYSTEM.md` §8 |
-| Every interactive element has a label and a role                 | `docs/design/SYSTEM.md` §6 |
-| The status is never colour-only                                  | `docs/design/SYSTEM.md` §3 |
-| A skeleton, never a spinner for more than 300 ms                 | `docs/design/SYSTEM.md` §4 |
+| One primary action per screen, 72 pt                             | `docs/design/SYSTEM.md` Â§3 |
+| Every other target at least 56 pt                                | `docs/design/SYSTEM.md` Â§3 |
+| Body text at least 17 pt, key numbers 48-76 pt                   | `docs/design/SYSTEM.md` Â§2 |
+| Text 4.5:1, large text and boundaries 3:1, driving text 7:1      | `docs/design/SYSTEM.md` Â§6 |
+| Motion 150-250 ms, spring for the sheets                         | `docs/design/SYSTEM.md` Â§5 |
+| "Reduce motion" makes the movement instant, never removes it     | `docs/design/SYSTEM.md` Â§5 |
+| One icon set (Material Symbols), no emoji ever                   | `docs/design/SYSTEM.md` Â§7 |
+| Plain NZ English, voice prompts of at most 8 words while driving | `docs/design/SYSTEM.md` Â§8 |
+| Every interactive element has a label and a role                 | `docs/design/SYSTEM.md` Â§6 |
+| The status is never colour-only                                  | `docs/design/SYSTEM.md` Â§3 |
+| A skeleton, never a spinner for more than 300 ms                 | `docs/design/SYSTEM.md` Â§4 |
 
 ## The contrast, before and after
 
