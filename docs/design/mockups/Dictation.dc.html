@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dictation report</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Figtree',system-ui,sans-serif}
+a{color:#5AB0FF}a:hover{color:#8CC8FF}
+@keyframes pulse{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.1);opacity:0}}
+@keyframes dash{to{stroke-dashoffset:-40}}
+
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;box-sizing:border-box;background:#07090C;color:#F3F5F7;font-family:'Figtree',system-ui,sans-serif;padding:56px 20px 24px;display:flex;flex-direction:column;gap:16px">
+<span style="font-size:13px;font-weight:700;letter-spacing:.12em;color:#CFFF4A">DICTATION FINISHED</span>
+<h1 style="margin:-6px 0 0;font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1.05">212 stops added</h1>
+<span style="font-size:16px;color:#9AA6B2">I fixed 3 and need you to check 1.</span>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+<div style="padding:14px;border-radius:18px;background:#0F1318;border:1px solid #26303B"><div style="font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;color:#CFFF4A">208</div><div style="font-size:13px;color:#9AA6B2">Matched</div></div>
+<div style="padding:14px;border-radius:18px;background:#0F1318;border:1px solid #26303B"><div style="font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;color:#5AB0FF">3</div><div style="font-size:13px;color:#9AA6B2">Corrected</div></div>
+<div style="padding:14px;border-radius:18px;background:#0F1318;border:1px solid #26303B"><div style="font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;color:#FFB547">1</div><div style="font-size:13px;color:#9AA6B2">Check</div></div></div>
+<span style="font-size:13px;font-weight:700;letter-spacing:.1em;color:#9AA6B2">WHAT I CORRECTED</span>
+<div style="padding:14px 16px;border-radius:18px;background:#0F1318;border:1px solid #26303B;display:flex;flex-direction:column;gap:5px"><span style="font-size:15px;color:#7E8A96;text-decoration:line-through">Rickerton Road</span><span style="font-size:19px;font-weight:700;display:flex;align-items:center;gap:8px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#CFFF4A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>Riccarton Road</span><span style="font-size:13px;color:#5AB0FF">Spelling · official LINZ name</span></div>
+<div style="padding:14px 16px;border-radius:18px;background:#0F1318;border:1px solid #26303B;display:flex;flex-direction:column;gap:5px"><span style="font-size:15px;color:#7E8A96;text-decoration:line-through">1400 Harewood Road</span><span style="font-size:19px;font-weight:700;display:flex;align-items:center;gap:8px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#CFFF4A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>140 Harewood Road</span><span style="font-size:13px;color:#5AB0FF">1400 doesn't exist on this street</span></div>
+<div style="padding:14px 16px;border-radius:18px;background:#0F1318;border:1px solid #26303B;display:flex;flex-direction:column;gap:5px"><span style="font-size:15px;color:#7E8A96;text-decoration:line-through">7 Sawyers Arms… no, 17</span><span style="font-size:19px;font-weight:700;display:flex;align-items:center;gap:8px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#CFFF4A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>17 Sawyers Arms Road</span><span style="font-size:13px;color:#5AB0FF">Kept your last correction</span></div>
+<div style="padding:16px;border-radius:20px;background:#241C0C;border:1px solid #4E3A14;display:flex;flex-direction:column;gap:12px">
+<span style="font-size:19px;font-weight:700">Smith Street — which suburb?</span>
+<div style="display:flex;gap:10px"><button type="button" style="height:54px;border:none;border-radius:16px;background:#CFFF4A;color:#0B0F05;font:inherit;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;flex:1;background:#FFB547">Redwood</button><button type="button" style="height:54px;border:none;border-radius:16px;background:#161C23;color:#F3F5F7;font:inherit;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;flex:1">Belfast</button></div>
+<span style="font-size:14px;color:#D8C49A">Or just say it.</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

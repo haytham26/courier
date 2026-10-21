@@ -29,3 +29,33 @@
   (انظر `docs/adr/ADR-002-expo-58.md`؛ سابقاً كان القفل على SDK 57 قبل إطلاق 58 في 2026-10-15).
 - laya-coreml مرفوض (Apple فقط).
 - التفاصيل والإصلاحات المعلّقة: FINAL_PROMPT §0-F.3.
+- التفاصيل والإصلاحات المعلّقة: FINAL_PROMPT §0-F.
+
+## D22 — VoiceStudio / OmniVoice + post-launch open-source tools (2026-10-20)
+**Voice (founder decision: use everything VoiceStudio offers, keep our product private):**
+- The 600+ language capability comes from the engine **k2-fsa/OmniVoice (code Apache-2.0)** — free to modify and keep private, including in a commercial product. Verify the model weights license on Hugging Face (k2-fsa/OmniVoice) before production.
+- Build our own **private** voice service (`services/voice`, in this repo) directly on OmniVoice + sherpa-onnx + Pipecat: TTS, voice design, multilingual dictation/transcription, and synthetic training-audio generation, adapted to couriers (NZ street/suburb vocabulary, accents, noise).
+- github.com/debpalash/VoiceStudio is AGPL-3.0: use it as a **reference and internal dev tool** (e.g. to generate synthetic eval audio, study its features/UX). Do NOT copy its code into our repos — re-implement needed features ourselves on top of OmniVoice. This keeps the whole product private with no source-publishing obligation.
+- On device stays sherpa-onnx (+ Kokoro or an OmniVoice ONNX export if weights license allows and the benchmark wins).
+- Voice squad benchmarks OmniVoice vs current stack (quality, latency, languages incl. NZ English, Māori place names, Arabic, Hindi/Punjabi, Mandarin, Samoan/Tongan) before switching any production path.
+
+**Post-launch tools (not in v1 scope, planned):**
+- Chatwoot — driver support chat (in-app + dashboard), self-hosted on Oracle.
+- WeKnora (Tencent) — help-centre Q&A over our docs/FAQ (private network only).
+- Cal.com — demo bookings with courier companies/teams.
+- Cap — product demo/tutorial videos.
+- OpenSEO — website SEO.
+Each: license check (fine to self-host unmodified as separate tools; if we modify an AGPL one that users access over the network, we must offer those users its modified source), self-host plan, security review, added to COST_PLAN when adopted.
+
+## D25 — OmniRoute as the server LLM gateway (2026-10-21, founder decision; resolves D18)
+- Use **OmniRoute** (github.com/diegosouzapw/OmniRoute, MIT, self-hosted AI gateway: routing, load-balancing, fallback, caching, observability) as the single LLM gateway for Courier Voice's server brain and other server AI features (alongside/instead of LiteLLM — Platform squad decides by benchmark + ADR).
+- **Production deployment**: self-hosted on our server (Oracle Sydney), never the founder's PC; pinned version; secrets in the server secret manager; admin UI not exposed publicly; logs without PII.
+- **Production routing policy**: only providers/accounts whose terms allow commercial API use and that do **not** train on our data (driver/customer text/audio). Personal subscription logins (ChatGPT/Claude/Gemini consumer plans via OAuth), unofficial/free proxies and any provider that may train on inputs are **dev-only** and must be disabled for production traffic (separate OmniRoute instance/config for dev).
+- Cost guard (§7) applies: free/cheap tiers first, paid fallback with alerts and caps. App calls the gateway via one internal interface so the gateway can be swapped.
+
+## D26 — Founder decisions on the map pack and the label eval set (2026-10-21)
+1. **Offline map pack delivery: both.** Ship the Canterbury pack as a Google **Play Asset Delivery install-time asset pack** (does not count against the 80 MB base APK budget; the map works offline from the first launch). Twice-weekly updates are downloaded in-app on Wi-Fi (diff when possible) and replace the pack atomically; if the asset pack is missing (sideloaded APK), download on first run on Wi-Fi; online source as last fallback.
+2. **ODbL**: treat the on-device tiles as a **Produced Work** — show OSM + LINZ attribution in the map and in Settings → Open-source licences; we do not distribute a derived database publicly. No blocker; include it in the pre-launch legal review list (not a gate for building).
+3. **Geofabrik**: free download of OSM extracts is allowed under ODbL with fair use. Download **twice a week** from CI (scheduled), and ship map updates twice a week with a clear User-Agent, cache the file, verify the checksum; fallback mirrors: openstreetmap.fr extracts, BBBike, or a planet/NZ extract from planet.openstreetmap.org. If the host times out, retry later — not a founder action.
+4. **Label eval set without founder photos**: add up to **100 more real-looking labels** from (a) openly licensed public datasets of shipping/parcel labels (Kaggle, Roboflow Universe, Hugging Face, papers) whose licence allows commercial use/evaluation — record source + licence per image in the ledger; and (b) photo-realistic synthetic labels (real NZ courier layouts: NZ Post, CourierPost, Aramex, NZ Couriers, DHL; fake names/phones; real LINZ addresses) rendered then photographed-style augmented (angles, glare, blur, crumples, low light). **Never scrape personal photos from social media or the web** (privacy + copyright). Founder photos, when provided, are added later.
+5. **Scanner reads the address only, smartly**: detect the label → locate the recipient address block → auto-crop and zoom into that region (ignore sender, barcodes, phone numbers, marketing) → highlight it on screen → OCR only that region → smart parsing (NZ address parser + D8 correction against LINZ + confidence, handles units, RD, abbreviations, line breaks, handwriting where possible) → one quick question only if confidence is low. The eval set measures the crop accuracy (right block found) separately from the reading accuracy.
