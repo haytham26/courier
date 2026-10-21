@@ -22,3 +22,11 @@ package_managers.pnpm.pnpm-trust-policy
 package_managers.pnpm.pnpm-block-exotic-sub-dependencies
 package_managers.npm.npm-missing-minimum-release-age
 yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service
+
+# 3. The same rule for uv: the API pins its versions in uv.lock and the
+#    security patches (certifi) have to land the day they are published, so a
+#    seven-day cooldown would keep the vulnerable version in place. uv 12
+#    verifies the lockfile against its own supply-chain policy on every
+#    install, the versions are pinned exactly, the audits fail on any high or
+#    critical advisory, and the licence inventory covers the licensing risk.
+package_managers.uv.uv-missing-dependency-cooldown
