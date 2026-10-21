@@ -15,18 +15,12 @@ name: B.7 compatibility screen and the voice permission prompt
     visible:
       id: "settings-screen"
     timeout: 30000
-# The Diagnostics section is at the bottom of the settings. The swipe is
-# explicit: a React Native ScrollView does not put its off-screen children in
-# the accessibility tree, so Maestro cannot scroll "until visible".
-- swipe:
-    direction: UP
-    duration: 500
-- swipe:
-    direction: UP
-    duration: 500
-- swipe:
-    direction: UP
-    duration: 500
+# The Diagnostics section is at the bottom of the settings.
+- scrollUntilVisible:
+    element:
+      id: "settings-compat"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
     id: "settings-compat"
 - extendedWaitUntil:
