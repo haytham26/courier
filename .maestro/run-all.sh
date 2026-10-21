@@ -30,7 +30,10 @@ dump_evidence() {
   echo "::group::evidence"
   adb shell dumpsys activity activities 2>/dev/null | grep -i "mResumedActivity" | tee "$EVIDENCE/activity.txt" || true
   adb shell pidof "$PKG" > "$EVIDENCE/pid.txt" 2>/dev/null || echo "the app process is not running" > "$EVIDENCE/pid.txt"
-  adb logcat -d -t 2000 > "$EVIDENCE/logcat.txt" 2>/dev/null || true
+  # The crash buffer is small and keeps the fatal exception: the main buffer is
+  # overwritten by the polling noise long before the end of the run.
+  adb logcat -b crash -d > "$EVIDENCE/logcat-crash.txt" 2>/dev/null || true
+  adb logcat -d -t 3000 > "$EVIDENCE/logcat.txt" 2>/dev/null || true
   adb exec-out screencap -p > "$EVIDENCE/screen.png" 2>/dev/null || true
   echo "::endgroup::"
 }
