@@ -1234,3 +1234,28 @@ the release bundle failed on the import. Merge the branch and read the diff.
    the acceptance on the CI emulator) and `docs/FINAL_REPORT.md`.
 3. The two founder decisions (the look A/B/C, and the store ids and the
    signing) are in FOUNDER_TODO.md; nothing is blocked on them.
+
+### The last run of the shift (22:43) and the fix that follows
+
+The swipes work: the flow reached the settings and swiped, but three swipes
+were not enough to bring the Diagnostics entry on the screen (the settings
+have six cards and the entry is the last one), so the tap found nothing.
+The flow now swipes eight times. The run with that fix is the one the next
+shift should read first:
+
+    powershell -ExecutionPolicy Bypass -File scripts\gh.ps1 run list --branch feat/p1-emulator-pipeline --limit 3
+    powershell -ExecutionPolicy Bypass -File scripts\gh.ps1 pr checks 2
+
+Everything else in the flows passes: the smoke flow, today's list (DELIVERED,
+REMAINING, SUCCESS RATE, Current Run), the map and the stops (45 Papanui Road,
+Merivale).
+
+**If the compatibility flow still fails**, the fastest path is the same as
+today: the evidence artifact carries the crash buffer, the uiautomator dump
+and the screenshot of the end state. The two failures of this shift (the
+permission dialog and the scroll) were both in the flow, not in the app.
+
+**The state of the three branches** (all pushed, all merged with main):
+- PR #2 `feat/p1-emulator-pipeline` - the pipeline and the product
+- PR #1 `feat/v4-company-bootstrap` - the product
+- `feat/t2-expo-58-decision` - the T2/T4 content, ready for its PR
