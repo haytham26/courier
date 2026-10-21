@@ -13,6 +13,13 @@ const tabIcons: Record<string, { focused: string; unfocused: string }> = {
 
 type IoniconsName = 'home' | 'home-outline' | 'map' | 'map-outline' | 'list' | 'list-outline' | 'settings' | 'settings-outline';
 
+// The app is opened from the launcher without a deep link most of the time:
+// the URL is then empty and the router needs to know which screen to open
+// first, or the tabs have no child to render.
+export const unstable_settings = {
+  initialRouteName: 'index',
+};
+
 export default function TabsLayout() {
   const { theme } = useTheme();
 
