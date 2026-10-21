@@ -124,3 +124,60 @@ When documents disagree, **this file wins, then the newest ADR/DECISIONS entry, 
 - Android E2E triggers: §7.1 (PRs to main + nightly + manual) supersedes "every push".
 - Definition of Done: §6 here (it includes V4 §9).
 Record any new conflict and its resolution in DECISIONS.md.
+
+## 11. Courier Maps view modes + ideas from God's Eye View (P3, binding)
+- **Driver-selectable map modes** (like Google Maps), remembered per driver, switchable by tap or voice ("3D on", "flat map"):
+  - **2D flat** (default for battery saver), **3D** (tilted, extruded buildings), **Satellite** (online only, licensed imagery provider if adopted via ADR), **Auto** (3D while driving in town, 2D in rural/low battery).
+  - Toggles: buildings on/off, traffic layer, road-closures layer, weather layer, labels size, night/day/auto.
+- **Free offline 3D buildings**: LINZ **NZ Building Outlines** (CC-BY 4.0, same LINZ key) + OSM building heights/levels (ODbL) → baked into the Canterbury PMTiles; MapLibre fill-extrusion with soft lighting/shadows. Attribute LINZ and OSM. Measure fps and battery in 2D vs 3D.
+- **Ideas to adopt from github.com/bilawalsidhu/gods-eye-view (MIT — code may be reused/adapted, keep its LICENSE notice)**: voice control of the map camera ("zoom to Riccarton", "show failed stops today"); follow-cam behind the vehicle (cockpit-style tilt); shader-based visual styles for night and high-contrast; live data layers framework (weather, closures from Waka Kotahi, traffic via a free-tier provider); shareable map-scene links for teams; a richer 3D live map for the dispatcher web dashboard and the marketing site.
+- **Not allowed**: Google Photorealistic 3D Tiles or Cesium ion used without a proper commercial licence/billing. If the founder wants Google 3D as an optional online "photo-real" mode, prepare a cost estimate (1,000 free sessions/month, then metered) as a founder approval gate (§7.3).
+
+## 12. Courier Voice — the shift companion (P5, binding behaviour spec)
+Courier Voice is a co-driver that talks with the driver and follows the whole shift, hands-free, in the driver's language.
+- **Always with you during the shift**: starts with driving mode, listens for the wake word or earbud press, survives screen-off, calls and music; ends with an end-of-day summary.
+- **Proactive (speaks first, short, only when useful)**: morning brief ("214 stops, 3 new addresses, rain after 2"); approaching the next stop ("next: 14 Harewood, side gate, small box mid-rack"); door memory and hazards ("dog at this address"); parcel location in the van; address problems ("this number doesn't exist on this street — did you mean 140?"); route changes, closures, traffic delays; break/fatigue reminders; time/ETA checks ("you're 12 minutes ahead"); end of day ("206 delivered, 8 failed, 3 returns in the van").
+- **Conversational**: answers natural questions about the run and own data ("how many left?", "what's after this?", "where's the parcel for Mrs Smith?", "how much did I earn today?"), handles follow-ups and corrections ("no, 17"), understands mixed languages, asks one short clarifying question only when needed.
+- **Casual chat is welcome**: the driver can just talk with it — small talk, jokes, news/sport/weather, how the day is going, keeping company on long rural legs — like a friendly co-driver. Online it uses the server LLM for free conversation; offline it keeps simple small talk and says when it needs internet for more. While moving, it keeps answers short and pauses chat for navigation/stop prompts; "chatty" verbosity lets it talk more when parked or on breaks. Safety and content rules apply (no distraction, respectful, no harmful content).
+- **Fully offline brain (option)**: ship an optional downloadable on-device LLM pack (small, commercially-licensed, quantised ~1–4B model, e.g. Gemma / Qwen / Phi class — Voice squad benchmarks quality, speed, RAM, battery on a mid-range Android) so commands, questions about the run AND casual chat work with no internet on capable phones. Auto-select by device capability; fall back to the rule-based offline mode on low-end phones. Online server brain = the **primary** chat path, through our self-hosted **OmniRoute** gateway (D25) on the Oracle server, routing to commercially-licensed no-training providers / our self-hosted model, paid API only as fallback via the cost guard. The on-device LLM pack is optional (later), for strong phones and dead zones.
+- **Does every action by voice**: delivered / failed + reason / skip / back / add stop / dictate a list / note for this door / call or text customer (template) / navigate / switch map mode / report a problem.
+- **Driving-safe**: replies ≤ 8 words while moving; no long reading; never demands a screen tap while moving; quiet mode and "only essentials" mode; respects calls and audio focus.
+- **Personality & settings**: calm, friendly, concise NZ tone (never robotic, never "as an AI"); voice selection; speaking speed; verbosity (minimal / normal / chatty); language; proactive alerts on/off per type.
+- **Memory**: remembers the day's context and the driver's preferences; learns runs over time (door spots, usual order, service times) — on-device first, privacy controls, forget-me.
+- **Offline vs online**: offline = on-device commands, dictation, proactive alerts from local data; online = richer conversation and server reasoning. Seamless switching; it tells the driver only if a capability is unavailable.
+- **Evaluation**: scripted full-shift simulations (voice + noise) in the eval set; targets per V4 §10.1; a beta driver satisfaction score for the companion.
+
+## 13. Design Studio — a world-class, original look (founder directive, binding; P4)
+The founder rejected both mockup sets (v1, v2 in `docs/design/mockups/`) as **looking AI-made**. Use them **only as a content/screen inventory** (which screens exist and what each must show), **never as the visual style**. Build a genuinely original, modern, premium identity that stands out internationally.
+
+### 13.1 Research (V4 §12 method), before any visual work
+- **≥ 50 design/animation/UI projects on GitHub (2025–2026)**: RN UI kits and design systems, motion/animation libs (Reanimated 4, Skia, Rive, Lottie, Moti, gesture/physics libs, shared-element, haptics), charts, map styling, typography/variable fonts, icon systems, SaaS dashboard kits, onboarding patterns. Evidence card each; shortlist 15.
+- **Reference products to study (screens + motion)**: Spoke/Circuit, Uber Driver, DoorDash Dasher, Amazon Flex, Apple Maps, Google Maps, Waze, Strava, Revolut, Monzo, Linear, Arc, Things 3, Airbnb, Duolingo, Nothing OS, Teenage Engineering, Apple Fitness — capture what makes each distinctive. Public material only; no copying of proprietary assets.
+- Write `docs/design/RESEARCH.md` (what's distinctive in 2026, what to avoid, what fits a courier's day).
+
+### 13.2 Explicit anti-"AI look" rules (design gate fails on any)
+No neon accent on black, no glow/bloom effects, no glassmorphism everywhere, no pulsing orbs, no purple/blue gradients, no "sparkle" icons for AI, no generic rounded cards stacked, no centered hero + two buttons cliché, no dark mode by default, no stock iconography without a system, no lorem-like filler, no emoji. Every screen must have a clear visual idea, real hierarchy and purposeful motion.
+
+### 13.3 Direction
+- **Light theme is the default** (daylight readability in a van); night theme is an adapted option (auto at sunset), not the identity.
+- Own the identity: distinctive typography pairing (licensed for app use), a signature colour system rooted in the product (e.g. NZ/Canterbury landscape, road signage, parcel/kraft materials — decide by research), a recognisable map style, a motion language (how things enter, confirm, complete), sound/haptic signatures, custom illustration or iconography details.
+- Produce **3 distinct directions** (mood board + 4 key screens each: Today, Driving with map, Copilot voice, Scanner) as real RN screens in a `design-lab` route/Storybook, light and night; record screen videos via the CI emulator. Write `docs/design/DIRECTIONS.md`. The founder picks one (approval gate §7.3) — meanwhile continue other work.
+
+### 13.4 Library test bench (≥ 50 candidates, top 15 prototyped)
+For motion, UI, charts, maps styling, icons, fonts: prototype each shortlisted lib in the design-lab, measure fps (UI/JS thread), bundle size, startup cost, New-Architecture compatibility, a11y and maintenance; publish `docs/design/LIBRARY-BENCH.md` with a table and the winners. Adopt only measured winners (ADR).
+
+### 13.5 Build to the chosen direction
+All 11+ screens (welcome, sign-in, onboarding, today, driving 2D/3D, Copilot voice, dictation, scanner, POD, route/templates, end of day/earnings, settings/map modes/downloads, team/dispatcher web) in the chosen direction, every state (loading/empty/error/offline), light + night, small/large phones, 200% text, RTL. Visual-regression baselines + screen videos as evidence. Human-design review sign-off per screen; scorecard UX ≥ 8/10 vs Spoke and the reference products.
+
+## 14. Accounts & sign-in — complete, any user (binding; security squad owns it)
+Built on Better Auth (services/auth) + FastAPI JWKS verification. Every method has spec, tests (unit + integration + Maestro E2E), threat model and evidence.
+- **Methods**: Sign in with **Google** (Android: Credential Manager / Google Identity; iOS: Google Sign-In), Sign in with **Apple** (required on iOS when any social login is offered; also available on Android/web), **passkeys** (WebAuthn / Android Credential Manager / iCloud Keychain), **email + password**, **magic link / email OTP**, optional **phone OTP** (SMS cost guard), and for teams **Google Workspace / Microsoft Entra SSO** (OIDC) later. All through Better Auth plugins/providers; no custom crypto.
+- **Account lifecycle**: email verification; account linking (same email across Google/Apple/password, with confirmation); Apple "Hide my email" relay handled; password reset; change email; **delete account in-app + web link** (Play/App Store requirement) with data deletion job; data export.
+- **Security**: login-attempt limits (per account/IP/device, progressive delay, lockout + email unlock, Turnstile/CAPTCHA after threshold); **MFA** (TOTP + passkey as second factor); new-device alerts; session list + remote sign-out; short-lived ES256 JWT + refresh rotation with reuse detection; Play Integrity / App Attest on sign-in; breached-password check; secure storage (Keystore/Keychain via expo-secure-store); rate limits on all auth routes.
+- **Driver-specific**: sign in once, then **works offline** for the whole shift (offline session with bounded lifetime); **biometric app unlock** (fingerprint/face) instead of re-typing; quick switch between driver accounts on a shared device (team).
+- **Teams**: invite by link/email/QR, roles (driver, team lead, dispatcher, admin, owner), join a team, leave team, owner transfer; organisation billing.
+- **Store config the founder must provide** (FOUNDER_TODO, approval gate): Google Cloud OAuth client IDs (Android SHA-1/256 from Play App Signing, iOS, web), Apple Developer account + Sign in with Apple service ID/key, email sender domain (SPF/DKIM). Build everything with test credentials/mocks until then.
+
+## 15. Store readiness tooling
+- Adopt **StoreReady** (github.com/MaTriXy/StoreReady, MPL-2.0, built by a trusted friend of the founder) as the **primary** pre-submission checker in CI on release branches (`playstore-checkup`, later `appstore-checkup`, JSON output): CRITICAL = release blocker, WARN = task. Pin an exact version (our rule for every tool). Report bugs/missing checks as issues on its repo and propose checks our app needs (background location, microphone/foreground services, account deletion, data safety) — coordinate improvements with its author.
+- Also evaluate the official/major alternatives found in research (Play Console pre-launch report, Firebase Test Lab equivalents, Fastlane `precheck`) and keep the best combination.
