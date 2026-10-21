@@ -32,6 +32,8 @@ apps/api/coverage.json
 Thumbs.db
 # Local LINZ datasets (large, not committed)
 data/linz/
+# Drawn label images and the real label photos (personal data, never committed)
+data/labels/
 # Local scratch backups (never committed)
 .local-backup/
 # Clean-room study clones (never committed, read-only reference)

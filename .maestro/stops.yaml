@@ -16,6 +16,8 @@ name: The stops list opens a stop
     id: "stop-2"
 - tapOn:
     id: "stop-2"
-- assertVisible: "Papanui Road"
+# The assertion is the whole text: Maestro matches the text exactly, not a
+# part of it.
+- assertVisible: "45 Papanui Road"
 - assertVisible: "Merivale"
 - takeScreenshot: "stop-detail"

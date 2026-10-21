@@ -3,8 +3,19 @@ name: B.7 compatibility screen and the voice permission prompt
 ---
 - launchApp:
     clearState: true
-# The deep link opens the compatibility screen (the route is /compat).
-- openLink: "courier:///compat"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The compatibility screen is reached from the settings, the way a courier (or
+# a support agent on the phone) would reach it.
+- tapOn: "Settings"
+- extendedWaitUntil:
+    visible:
+      id: "settings-compat"
+    timeout: 30000
+- tapOn:
+    id: "settings-compat"
 - extendedWaitUntil:
     visible:
       id: "compat-screen"
