@@ -12,6 +12,7 @@ from .agents import copilot
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
+from .repo import DeliveryEventRow, Repo, get_repo
 
 # Fail fast when the API cannot verify tokens (no default secrets).
 get_auth_settings()
@@ -69,9 +70,30 @@ def list_stops(shift_id: uuid.UUID, status: str | None = None, principal: AuthPr
 
 
 @app.post("/shifts/{shift_id}/events:batch")
-def sync_events(shift_id: uuid.UUID, events: list[DeliveryEvent], principal: AuthPrincipal = Depends(get_current_principal)):
+def sync_events(
+    shift_id: uuid.UUID,
+    events: list[DeliveryEvent],
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
     """Offline-first sync: INSERT ... ON CONFLICT (id) DO NOTHING; returns server cursor."""
-    ...
+    rows = [
+        DeliveryEventRow(
+            id=event.id,
+            shift_id=shift_id,
+            stop_id=event.stop_id,
+            kind=event.kind,
+            utterance=event.utterance,
+            safe_place=event.safe_place,
+            lat=event.lat,
+            lon=event.lon,
+            accuracy_m=event.accuracy_m,
+            occurred_at=event.occurred_at,
+        )
+        for event in events
+    ]
+    stored = repo.append_events(shift_id, rows)
+    return {"accepted": stored, "cursor": repo.cursor(shift_id)}
 
 
 @app.websocket("/shifts/{shift_id}/voice")
