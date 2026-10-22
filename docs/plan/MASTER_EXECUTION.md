@@ -340,7 +340,8 @@ The founder must receive finished, checked work. He must never have to remind yo
 The founder put about 10 screenshots of the Spoke driver app on his PC in the folder `C:\Users\DCL\Downloads\WhatsApp Unknown 2026-10-23 at 4.11.31 AM`.
 
 **Handling the screenshots:**
-- Copy them into the repo folder `research-private/spoke/`, which is git-ignored. Add the line to `.gitignore` before copying.
+- Copy them into the repo folder `research-private/spoke/`, which is git-ignored.
+- **Founder authorisation, an exception to "work only inside the repo folder":** you may READ and COPY (never move, change or delete) the files of that one folder into `research-private/spoke/`. The folder may be a folder, a .zip, or loose images whose names start with "WhatsApp Unknown 2026-10-23 at 4.11.31 AM". If the name does not match, list `C:\Users\DCL\Downloads` filtered on "WhatsApp Unknown 2026-10-23" and use what you find. If nothing is there, write it in FOUNDER_TODO and continue with the public sources. Add the line to `.gitignore` before copying.
 - The screenshots are third-party copyrighted material and the repo is public: never commit them, never paste them into docs, and never reproduce their visuals, text or icons.
 
 **The analysis**, written to `docs/research/competitors/spoke.md`. Use text only, with neutral descriptions:
