@@ -95,6 +95,8 @@ const voiceStatus =
       'run',
       '--directory',
       'services/courier-voice',
+      '--extra',
+      'dev',
       'pytest',
       '--cov=app',
       '--cov-report=json:coverage.json',
