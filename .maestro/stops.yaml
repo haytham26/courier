@@ -10,14 +10,15 @@ name: The stops list opens a stop
 - tapOn: "Stops"
 - extendedWaitUntil:
     visible:
-      id: "stops-screen"
+      id: "stop-2"
     timeout: 30000
-- assertVisible:
-    id: "stop-2"
 - tapOn:
     id: "stop-2"
-# The assertion is the whole text: Maestro matches the text exactly, not a
-# part of it.
+- extendedWaitUntil:
+    visible:
+      id: "stop-detail-sheet"
+    timeout: 30000
+# Maestro matches the text exactly, so the assertion is the whole address.
 - assertVisible: "45 Papanui Road"
 - assertVisible: "Merivale"
 - takeScreenshot: "stop-detail"
