@@ -10,6 +10,12 @@
  * elements for browser-only interfaces that the host instances of the
  * React test renderer do not carry. The details live in the header of
  * the twin.
+ *
+ * The guard covers both forms of the barrel: the TypeScript source tree
+ * (the tests run from `src/` on this machine) and the compiled
+ * `lib/module` tree (the tests run from the published build on the
+ * workers - the relative requests there carry explicit `.js` suffixes,
+ * see docs/status/BUGS.md for the run evidence of 2026-10-22).
  */
 'use strict';
 
@@ -17,38 +23,13 @@ const path = require('path');
 const reanimatedResolver = require('react-native-reanimated/jest/resolver');
 
 const WEB_BARREL =
-  /react-native-reanimated[\\/]src[\\/]layoutReanimation[\\/]web[\\/]index\.tsx?$/;
-
-// DIAG (remove once the CI run is green): record every distinct request
-// that touches the layout animations or the AnimatedComponent, with its
-// resolved path, so the failure of the guard to engage on the workers
-// becomes visible.
-const diagSeen = new Set();
-function diagOnce(key, request, resolved) {
-  const id = key + '|' + request;
-  if (diagSeen.has(id)) return;
-  diagSeen.add(id);
-  console.error(`DIAG ${key}: ${request}\n  -> ${resolved}`);
-}
+  /react-native-reanimated[\\/](?:src|lib[\\/]module)[\\/]layoutReanimation[\\/]web[\\/]index\.(?:tsx?|js|jsx|mjs|cjs)$/;
 
 module.exports = (request, options) => {
   const resolved = reanimatedResolver(request, options);
 
-  if (typeof resolved === 'string') {
-    const flat = resolved.replace(/\\/g, '/');
-
-    if (flat.includes('layoutReanimation/web/')) {
-      diagOnce('webdir', request, resolved);
-      if (WEB_BARREL.test(resolved)) {
-        diagOnce('barrelhit', request, resolved);
-        return path.join(__dirname, 'motion-void-web-layout.js');
-      }
-      diagOnce('barrelmiss', request, resolved);
-    }
-
-    if (flat.includes('createAnimatedComponent/AnimatedComponent')) {
-      diagOnce('animcomp', request, resolved);
-    }
+  if (typeof resolved === 'string' && WEB_BARREL.test(resolved)) {
+    return path.join(__dirname, 'motion-void-web-layout.js');
   }
 
   return resolved;
