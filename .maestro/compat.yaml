@@ -1,32 +1,10 @@
 appId: com.courier.copilot
 name: B.7 compatibility screen and the voice permission prompt
 ---
-- launchApp:
-    clearState: true
-- extendedWaitUntil:
-    visible:
-      id: "today-screen"
-    timeout: 60000
-# The compatibility screen is reached from the settings, the way a courier (or
-# a support agent on the phone) would reach it.
-- tapOn:
-    id: "today-settings"
-- extendedWaitUntil:
-    visible:
-      id: "settings-screen"
-    timeout: 30000
-# The Diagnostics section is at the bottom of the settings.
-- swipe:
-    direction: UP
-    duration: 500
-- swipe:
-    direction: UP
-    duration: 500
-- swipe:
-    direction: UP
-    duration: 500
-- tapOn:
-    id: "settings-compat"
+# The deep link opens the compatibility screen (the route is /compat). It needs
+# the root stack to keep every route registered: a link to a route the stack
+# does not know is ignored by the router.
+- openLink: "courier:///compat"
 - extendedWaitUntil:
     visible:
       id: "compat-screen"
