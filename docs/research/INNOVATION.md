@@ -210,3 +210,28 @@
 ---
 
 *Innovation complete. Top 10 validated by Critic. Ready for Part 6 (Development) upon approval.*
+
+## 6. From the Spoke research (2026-10-23, MASTER §17.2)
+
+Six ideas recorded from the Spoke captures and the public record
+(`docs/research/competitors/spoke.md`). Recorded, not scheduled — the plan's §4 order
+owns the queue; these enter the next planning pass with their squads.
+
+| # | Idea | Description | Problem Solved | Effort | Value | Copyable? |
+|---|------|-------------|----------------|--------|-------|-----------|
+| 39 | **Van-as-a-Stack Stop Chips** | The stop list reads the load order: package position (front/middle) and stack count per stop, loaded at "Load vehicle" | Locating a parcel in the van at the door | S | 🔥🔥 | Easy (data model + chips) — Spoke screens |
+| 40 | **Minimal-Perturbation Reopt** | "Reorder only the changed stops" as a first-class solver mode next to full reoptimise | A mid-shift solve reordering the whole day | M | 🔥🔥🔥 | Medium (solver option) — Spoke's two-mode dialog |
+| 41 | **Zone-Priority Sketch ("Refine")** | Draw circles on the map in the order you want to drive those areas; the solver respects the sketch | Hand-solving 100+ stops to keep local order | M | 🔥🔥🔥 | Medium (map gestures + solver) — Spoke's Refine |
+| 42 | **Spoken Edit Honesty** | Before any edit applies, the copilot says the delta ("adds ten minutes, finish 10:24") and asks | Surprises in the day's finish time | S | 🔥🔥🔥 | Easy (diff + TTS) — Spoke's finish-time chips, made conversational |
+| 43 | **Read-Only Live Route Share** | A watchable progress link for family/ops with stops done and ETA | "Where are you?" calls | S | 🔥🔥 | Easy (share sheet + worker endpoint) — Spoke's Share live route |
+| 44 | **Break Planning on the Day Plan** | A first-class break row the plan absorbs without breaking the finish promise | Fatigue planning left to memory | S | 🔥🔥 | Easy (plan row) — Spoke's plan-a-break row |
+
+Matching verdicts from the capability table (see spoke.md): the moat lanes against
+Spoke stay the voice copilot (they have none), the offline-first maps + scanner
+(Margin: route-order offline only), and NZ address intelligence (Google-search
+generic).
+
+---
+
+*Section 6 added by the Spoke research team on 2026-10-23; sections 1–5 unchanged. The
+next pass ranks these against the Top 10 by the same value/effort score.*
