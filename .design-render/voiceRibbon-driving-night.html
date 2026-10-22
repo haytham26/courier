@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Direction 04 - voiceRibbon - Courier Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; background: #2b2b2b; }
+  .sheet { display: flex; flex-wrap: wrap; gap: 24px; padding: 24px; justify-content: center; }
+  .phone {
+    width: 390px; height: 844px; overflow: hidden; position: relative;
+    display: flex; flex-direction: column; background: var(--bg); color: var(--ink);
+    font-family: var(--font); font-size: var(--body); line-height: var(--body-leading);
+    min-width: 0; flex: 0 0 auto;
+  }
+  .pad { padding: 0 20px; }
+  .grow { flex: 1; padding-top: 20px; padding-bottom: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .head-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; }
+  .title { font-size: var(--title); line-height: var(--title-leading); font-weight: 700; letter-spacing: -0.02em; }
+  .address { font-size: var(--address); line-height: var(--address-leading); font-weight: 600; letter-spacing: var(--address-tracking); }
+  .body { font-size: var(--body); line-height: var(--body-leading); }
+  .row { font-size: var(--row); line-height: var(--row-leading); }
+  .label { font-size: var(--label); line-height: var(--label-leading); font-weight: 600; letter-spacing: var(--label-tracking); color: var(--ink-2); }
+  .caption { font-size: var(--caption); line-height: var(--caption-leading); }
+  .metric { font-size: var(--metric); line-height: var(--metric-leading); font-weight: 700; letter-spacing: var(--metric-tracking); font-variant-numeric: tabular-nums; }
+  .muted { color: var(--ink-3); }
+  .accent { color: var(--accent); }
+  .ok { color: var(--ok); }
+  .bad { color: var(--bad); }
+  .right { margin-left: auto; }
+  .rule { height: 1px; background: var(--border); margin: 12px 0; }
+  .rule.accent { background: var(--accent); height: 2px; }
+  .gear { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--ink); }
+  .actions { padding: 12px 20px 8px; display: flex; gap: 8px; }
+  .primary { flex: 1; height: 72px; background: var(--accent); color: var(--ink-inverse); display: flex; align-items: center; justify-content: center; font-size: var(--address); font-weight: 600; }
+  .outline { flex: 1; height: 72px; border: 1px solid var(--border); color: var(--ink); display: flex; align-items: center; justify-content: center; font-size: var(--body); font-weight: 500; }
+  .outline.wide { width: 100%; }
+  .voice-line { text-align: center; font-size: var(--caption); color: var(--ink-2); padding: 2px 0; }
+  .foot { padding: 8px 20px; }
+  .map-area { flex: 1; position: relative; overflow: hidden; }
+  .map-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .under { border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+  .read { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; }
+  .confirmed { padding-top: 8px; }
+  .strike { height: 2px; background: var(--ok); width: 100%; margin-top: 4px; }
+  .strike-band { height: 3px; background: var(--accent); margin: 4px 20px 0; }
+  .caret { border-top: 1px solid var(--border); padding: 8px 20px; font-size: var(--caption); color: var(--ink-3); }
+  .talk { min-height: 64px; background: var(--ink); color: var(--bg); display: flex; align-items: center; padding: 0 20px; font-size: var(--body); }
+
+  /* Voice Ribbon */
+  .vr .ribbon { height: 64px; background: var(--surface); padding: 8px 20px; display: flex; flex-direction: column; justify-content: space-between; }
+  .vr .ribbon-bars { display: flex; align-items: flex-end; justify-content: space-between; height: 28px; }
+  .vr .ribbon-bars .bar { width: 3px; border-radius: 2px; background: var(--accent); }
+  .vr .ribbon-row { display: flex; align-items: center; gap: 8px; }
+  .vr .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--accent); }
+  .vr .metric-row { display: flex; padding: 16px 20px; }
+  .vr .metric-block { flex: 1; }
+  .vr .stats { width: 148px; border-left: 1px solid var(--border); padding-left: 16px; }
+  .vr .stat { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
+  .vr .next { padding: 0 20px 16px; }
+  .vr .stop { display: flex; align-items: center; gap: 12px; min-height: 64px; }
+  .vr .seq { width: 28px; font-size: var(--row); color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .vr .stop-main { flex: 1; }
+  .vr .eta { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .vr .map-chip { position: absolute; top: 12px; left: 12px; padding: 6px 12px; border: 1px solid var(--border); background: var(--surface); font-size: 12px; color: var(--ink-2); }
+  .vr .plate { background: var(--surface); border-top: 1px solid var(--border); padding-top: 12px; }
+  .vr .guide { position: absolute; left: 24px; right: 24px; top: 22%; bottom: 22%; border: 1px solid var(--accent); border-radius: 12px; }
+  .vr .camera { flex: 1; position: relative; background: #2a2724; }
+  .vr .camera-fallback { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+  .vr .tag { border: 1px solid var(--border); padding: 8px 12px; font-size: var(--label); letter-spacing: var(--label-tracking); color: var(--ink-3); }
+  .vr .panel { background: var(--surface); border-top: 1px solid var(--border); padding: 16px 0 8px; }
+
+  /* X-ray Parcel */
+  .xp .hero { display: flex; gap: 16px; padding: 16px 20px; }
+  .xp .hero-text { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .xp .parcel { position: relative; }
+  .xp .parcel-top { position: absolute; top: 0; left: 0; right: 0; background: var(--elevated); border: 1px solid var(--border); border-bottom: 0; transform: skewY(-28deg); }
+  .xp .parcel-side { position: absolute; top: 0; right: 0; bottom: 0; background: var(--bg); border: 1px solid var(--border); border-left: 0; transform: skewX(-28deg); }
+  .xp .parcel-front { position: absolute; inset: 0; background: var(--surface); border: 1px solid var(--border); overflow: hidden; }
+  .xp .parcel-label { position: absolute; top: 12px; left: 12px; right: 12px; padding: 8px; border: 1px solid var(--accent); background: var(--bg); }
+  .xp .parcel-label.block { position: static; }
+  .xp .parcel-tape { position: absolute; left: 0; right: 0; top: 0; height: 6px; background: var(--accent); }
+  .xp .wide-tape { position: static; margin: -12px -12px 8px; }
+  .xp .next { display: flex; gap: 12px; padding: 0 20px 16px; }
+  .xp .next-rule { width: 4px; background: var(--accent); border-radius: 2px; }
+  .xp .square { width: 12px; height: 12px; background: var(--ink-3); border-radius: 2px; }
+  .xp .rack { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; display: flex; align-items: center; gap: 6px; }
+  .xp .rack-box { width: 28px; height: 20px; border: 1px solid var(--border); background: var(--elevated); display: inline-block; }
+  .xp .rack-box.on { background: var(--accent); }
+  .xp .stage { display: flex; flex-direction: column; align-items: center; padding: 12px 0; }
+  .xp .stamp { margin-top: 16px; padding: 8px 12px; background: var(--accent); color: var(--ink-inverse); border: 2px solid var(--surface); transform: rotate(-2deg); max-width: 260px; font-size: var(--caption); }
+
+  /* Scanline */
+  .sl .band { display: flex; padding: 6px 20px; }
+  .sl .band-rule { width: 3px; background: var(--border); }
+  .sl .band-rule.accent { background: var(--accent); }
+  .sl .band-body { flex: 1; padding-left: 12px; }
+  .sl .metric-band { display: flex; padding: 8px 20px; }
+  .sl .metric-band .band-body { display: flex; flex-direction: column; }
+  .sl .scan-row { display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 0 20px; }
+  .sl .scan-row .grow { flex: 1; }
+  .sl .crop { position: absolute; left: 24px; right: 24px; top: 18%; bottom: 18%; }
+  .sl .crop span { position: absolute; width: 20px; height: 20px; }
+  .sl .crop-tl { top: 0; left: 0; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); }
+  .sl .crop-tr { top: 0; right: 0; border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+  .sl .crop-bl { bottom: 0; left: 0; border-bottom: 2px solid var(--accent); border-left: 2px solid var(--accent); }
+  .sl .crop-br { bottom: 0; right: 0; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+</style>
+<style>
+      html, body { width: 390px; height: 844px; margin: 0; padding: 0; overflow: hidden; }
+      .sheet { display: block; padding: 0; gap: 0; }
+      .phone { display: none; }
+      .phone#driving-night { display: flex; }
+    </style></head>
+<body>
+  <div class="sheet">
+    <div class="phone vr" id="today-light" data-theme="light" style="--bg: #e8e5e6;
+      --surface: #ffffff;
+      --elevated: #f1efef;
+      --border: #6b6567;
+      --ink: #151314;
+      --ink-2: #4a4547;
+      --ink-3: #55504f;
+      --ink-inverse: #ffffff;
+      --accent: #8c3b1a;
+      --accent-2: #2f5d5a;
+      --ok: #1d5b34;
+      --warn: #7a4a00;
+      --bad: #a11e18;
+      --map-bg: #e8e5e6;
+      --map-land: #f1efef;
+      --map-water: #dbe2e0;
+      --map-road: #ffffff;
+      --map-highway: #e9d3a4;
+      --map-building: #e3e0e1;
+      --map-park: #dde4da;
+      --map-text: #151314;
+      --pin: #8c3b1a;
+      --route: #2f5d5a; --metric: 64px;
+      --metric-leading: 68px;
+      --metric-tracking: -0.03em;
+      --address: 30px;
+      --address-leading: 36px;
+      --address-tracking: -0.02em;
+      --row: 21px;
+      --row-leading: 28px;
+      --label: 17px;
+      --label-leading: 22px;
+      --label-tracking: 0.08em;
+      --body: 19px;
+      --body-leading: 26px;
+      --caption: 17px;
+      --caption-leading: 22px;
+      --title: 28px;
+      --title-leading: 34px; --font: 'Space Grotesk', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;">
+      
+      <div class="pad">
+        <div class="head-row">
+          <div class="title">Northwood AM</div>
+          <div class="gear">&#9881;</div>
+        </div>
+        <div class="rule accent"></div>
+        <div class="metric-row">
+          <div class="metric-block">
+            <div class="metric accent">18</div>
+            <div class="label">Stops left</div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span class="caption">Delivered</span><span class="row ok">42</span></div>
+            <div class="stat"><span class="caption">To drive</span><span class="row">6.4 km</span></div>
+            <div class="stat"><span class="caption">Failed</span><span class="row bad">2</span></div>
+          </div>
+        </div>
+        <div class="next">
+          <div class="label accent">Next stop</div>
+          <div class="address">14 Harewood Road</div>
+          <div class="body">Papanui &middot; 10:42 &middot; 4.2 km &middot; 3 parcels</div>
+          <div class="caption muted">Side gate, small box in the rear rack</div>
+        </div>
+        <div class="rule"></div>
+        <div class="stop">
+          <div class="seq">45</div>
+          <div class="stop-main"><div class="row">14 Harewood Road</div><div class="caption muted">Papanui &middot; Next</div></div>
+          <div class="row eta">10:42</div>
+        </div>
+        <div class="stop">
+          <div class="seq">46</div>
+          <div class="stop-main"><div class="row">22 Westminster Street</div><div class="caption muted">Merivale &middot; Pending</div></div>
+          <div class="row eta">10:49</div>
+        </div>
+        <div class="stop">
+          <div class="seq">47</div>
+          <div class="stop-main"><div class="row">3/120 Blenheim Road</div><div class="caption muted">Upper Riccarton &middot; Pending</div></div>
+          <div class="row eta">11:02</div>
+        </div>
+      </div>
+      <div class="actions"><div class="primary">Next stop</div></div>
+      
+      <div class="ribbon">
+        <div class="ribbon-bars">
+          <span class="bar" style="height:11.7px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:26.0px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:11.7px;opacity:0.9"></span>
+        </div>
+        <div class="ribbon-row">
+          <span class="dot" style="background:var(--accent)"></span>
+          <span class="caption">Listening</span>
+          <span class="caption muted right">4 waiting</span>
+        </div>
+      </div>
+    </div>
+    <div class="phone vr" id="driving-light" data-theme="light" style="--bg: #e8e5e6;
+      --surface: #ffffff;
+      --elevated: #f1efef;
+      --border: #6b6567;
+      --ink: #151314;
+      --ink-2: #4a4547;
+      --ink-3: #55504f;
+      --ink-inverse: #ffffff;
+      --accent: #8c3b1a;
+      --accent-2: #2f5d5a;
+      --ok: #1d5b34;
+      --warn: #7a4a00;
+      --bad: #a11e18;
+      --map-bg: #e8e5e6;
+      --map-land: #f1efef;
+      --map-water: #dbe2e0;
+      --map-road: #ffffff;
+      --map-highway: #e9d3a4;
+      --map-building: #e3e0e1;
+      --map-park: #dde4da;
+      --map-text: #151314;
+      --pin: #8c3b1a;
+      --route: #2f5d5a; --metric: 64px;
+      --metric-leading: 68px;
+      --metric-tracking: -0.03em;
+      --address: 30px;
+      --address-leading: 36px;
+      --address-tracking: -0.02em;
+      --row: 21px;
+      --row-leading: 28px;
+      --label: 17px;
+      --label-leading: 22px;
+      --label-tracking: 0.08em;
+      --body: 19px;
+      --body-leading: 26px;
+      --caption: 17px;
+      --caption-leading: 22px;
+      --title: 28px;
+      --title-leading: 34px; --font: 'Space Grotesk', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;">
+      
+      <div class="map-area">
+        <svg class="map-svg" viewBox="0 0 390 420" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" data-pitch="52">
+      <rect x="0" y="0" width="390" height="420" fill="var(--map-land)" />
+      <path d="M0 0 L90 0 C 60 60, 40 120, 0 150 Z" fill="var(--map-water)" />
+      <rect x="20" y="30" width="90" height="70" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="130" y="20" width="70" height="60" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="230" y="40" width="110" height="60" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="30" y="130" width="70" height="80" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="140" y="120" width="80" height="70" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="250" y="130" width="100" height="90" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="20" y="250" width="100" height="60" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="150" y="230" width="90" height="90" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="270" y="260" width="90" height="70" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <path d="M0 110 L390 100" stroke="var(--map-road)" stroke-width="16" fill="none" />
+      <path d="M0 220 L390 205" stroke="var(--map-road)" stroke-width="10" fill="none" />
+      <path d="M0 320 L390 300" stroke="var(--map-road)" stroke-width="10" fill="none" />
+      <path d="M120 0 L110 420" stroke="var(--map-road)" stroke-width="12" fill="none" />
+      <path d="M300 0 L288 420" stroke="var(--map-road)" stroke-width="12" fill="none" />
+      <path d="M0 110 L390 100" stroke="var(--map-highway)" stroke-width="4" fill="none" opacity="0.9" />
+      
+      <path d="M120 400 C 118 330, 150 300, 150 240 S 130 170, 118 110" stroke="var(--route)" stroke-width="6" fill="none" stroke-linecap="round" />
+      <circle cx="120" cy="400" r="9" fill="var(--route)" />
+      <circle cx="118" cy="110" r="11" fill="var(--pin)" stroke="var(--bg)" stroke-width="3" />
+      <text x="118" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="var(--bg)">45</text>
+    </svg>
+        <div class="map-chip">Offline map: Canterbury (pmtiles)</div>
+      </div>
+      <div class="plate">
+        <div class="pad">
+          <div class="address">14 Harewood Road</div>
+          <div class="body">Papanui &middot; 4.2 km &middot; 10:42</div>
+          <div class="caption muted">Side gate, the small box is in the rear rack</div>
+        </div>
+        <div class="actions"><div class="primary">Next stop</div></div>
+      </div>
+      
+      <div class="ribbon">
+        <div class="ribbon-bars">
+          <span class="bar" style="height:11.7px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:26.0px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:11.7px;opacity:0.9"></span>
+        </div>
+        <div class="ribbon-row">
+          <span class="dot" style="background:var(--accent)"></span>
+          <span class="caption">Listening</span>
+          <span class="caption muted right">4 waiting</span>
+        </div>
+      </div>
+    </div>
+    <div class="phone vr" id="copilot-light" data-theme="light" style="--bg: #e8e5e6;
+      --surface: #ffffff;
+      --elevated: #f1efef;
+      --border: #6b6567;
+      --ink: #151314;
+      --ink-2: #4a4547;
+      --ink-3: #55504f;
+      --ink-inverse: #ffffff;
+      --accent: #8c3b1a;
+      --accent-2: #2f5d5a;
+      --ok: #1d5b34;
+      --warn: #7a4a00;
+      --bad: #a11e18;
+      --map-bg: #e8e5e6;
+      --map-land: #f1efef;
+      --map-water: #dbe2e0;
+      --map-road: #ffffff;
+      --map-highway: #e9d3a4;
+      --map-building: #e3e0e1;
+      --map-park: #dde4da;
+      --map-text: #151314;
+      --pin: #8c3b1a;
+      --route: #2f5d5a; --metric: 64px;
+      --metric-leading: 68px;
+      --metric-tracking: -0.03em;
+      --address: 30px;
+      --address-leading: 36px;
+      --address-tracking: -0.02em;
+      --row: 21px;
+      --row-leading: 28px;
+      --label: 17px;
+      --label-leading: 22px;
+      --label-tracking: 0.08em;
+      --body: 19px;
+      --body-leading: 26px;
+      --caption: 17px;
+      --caption-leading: 22px;
+      --title: 28px;
+      --title-leading: 34px; --font: 'Space Grotesk', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;">
+      
+      <div class="pad grow">
+        <div class="label accent">Listening</div>
+        <div class="address">Delivered to the side gate at 14 Harewood Road.</div>
+        <div class="under">
+          <div class="body">Understood: delivered</div>
+          <div class="caption muted">14 Harewood Road, Papanui</div>
+        </div>
+        <div class="confirmed">
+          <div class="label ok">Delivered</div>
+          <div class="row">14 Harewood Road</div>
+          <div class="strike"></div>
+        </div>
+      </div>
+      <div class="foot"><span class="caption muted">18 stops left &middot; 4 actions waiting</span></div>
+      
+      <div class="ribbon">
+        <div class="ribbon-bars">
+          <span class="bar" style="height:11.7px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:26.0px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:11.7px;opacity:0.9"></span>
+        </div>
+        <div class="ribbon-row">
+          <span class="dot" style="background:var(--accent)"></span>
+          <span class="caption">Listening</span>
+          <span class="caption muted right">4 waiting</span>
+        </div>
+      </div>
+    </div>
+    <div class="phone vr" id="scanner-light" data-theme="light" style="--bg: #e8e5e6;
+      --surface: #ffffff;
+      --elevated: #f1efef;
+      --border: #6b6567;
+      --ink: #151314;
+      --ink-2: #4a4547;
+      --ink-3: #55504f;
+      --ink-inverse: #ffffff;
+      --accent: #8c3b1a;
+      --accent-2: #2f5d5a;
+      --ok: #1d5b34;
+      --warn: #7a4a00;
+      --bad: #a11e18;
+      --map-bg: #e8e5e6;
+      --map-land: #f1efef;
+      --map-water: #dbe2e0;
+      --map-road: #ffffff;
+      --map-highway: #e9d3a4;
+      --map-building: #e3e0e1;
+      --map-park: #dde4da;
+      --map-text: #151314;
+      --pin: #8c3b1a;
+      --route: #2f5d5a; --metric: 64px;
+      --metric-leading: 68px;
+      --metric-tracking: -0.03em;
+      --address: 30px;
+      --address-leading: 36px;
+      --address-tracking: -0.02em;
+      --row: 21px;
+      --row-leading: 28px;
+      --label: 17px;
+      --label-leading: 22px;
+      --label-tracking: 0.08em;
+      --body: 19px;
+      --body-leading: 26px;
+      --caption: 17px;
+      --caption-leading: 22px;
+      --title: 28px;
+      --title-leading: 34px; --font: 'Space Grotesk', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;">
+      
+      <div class="camera">
+        <div class="camera-fallback">
+          <div class="tag">CAMERA</div>
+          <div class="body muted">14 Harewood Road</div>
+        </div>
+        <div class="guide"></div>
+      </div>
+      <div class="panel">
+        <div class="pad">
+          <div class="label accent">The address</div>
+          <div class="address">14 Harewood Road</div>
+          <div class="body">Papanui &middot; 8011 &middot; 3 parcels</div>
+          <div class="read"><div class="caption muted">Clear read</div><div class="caption">Every line of the address was found on the label.</div></div>
+          <div class="actions"><div class="primary">Confirm</div><div class="outline">Correct</div></div>
+        </div>
+      </div>
+      
+      <div class="ribbon">
+        <div class="ribbon-bars">
+          <span class="bar" style="height:11.7px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:26.0px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:11.7px;opacity:0.9"></span>
+        </div>
+        <div class="ribbon-row">
+          <span class="dot" style="background:var(--accent)"></span>
+          <span class="caption">Listening</span>
+          <span class="caption muted right">4 waiting</span>
+        </div>
+      </div>
+    </div>
+    <div class="phone vr" id="today-night" data-theme="night" style="--bg: #121110;
+      --surface: #1b1a19;
+      --elevated: #242322;
+      --border: #7d7674;
+      --ink: #f1edeb;
+      --ink-2: #c8c1bd;
+      --ink-3: #afa7a3;
+      --ink-inverse: #121110;
+      --accent: #dd8256;
+      --accent-2: #71b3ae;
+      --ok: #59b184;
+      --warn: #d8a83c;
+      --bad: #e8736a;
+      --map-bg: #121110;
+      --map-land: #1b1a19;
+      --map-water: #151d1c;
+      --map-road: #242322;
+      --map-highway: #8a7550;
+      --map-building: #201f1e;
+      --map-park: #1a241c;
+      --map-text: #f1edeb;
+      --pin: #dd8256;
+      --route: #71b3ae; --metric: 64px;
+      --metric-leading: 68px;
+      --metric-tracking: -0.03em;
+      --address: 30px;
+      --address-leading: 36px;
+      --address-tracking: -0.02em;
+      --row: 21px;
+      --row-leading: 28px;
+      --label: 17px;
+      --label-leading: 22px;
+      --label-tracking: 0.08em;
+      --body: 19px;
+      --body-leading: 26px;
+      --caption: 17px;
+      --caption-leading: 22px;
+      --title: 28px;
+      --title-leading: 34px; --font: 'Space Grotesk', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;">
+      
+      <div class="pad">
+        <div class="head-row">
+          <div class="title">Northwood AM</div>
+          <div class="gear">&#9881;</div>
+        </div>
+        <div class="rule accent"></div>
+        <div class="metric-row">
+          <div class="metric-block">
+            <div class="metric accent">18</div>
+            <div class="label">Stops left</div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span class="caption">Delivered</span><span class="row ok">42</span></div>
+            <div class="stat"><span class="caption">To drive</span><span class="row">6.4 km</span></div>
+            <div class="stat"><span class="caption">Failed</span><span class="row bad">2</span></div>
+          </div>
+        </div>
+        <div class="next">
+          <div class="label accent">Next stop</div>
+          <div class="address">14 Harewood Road</div>
+          <div class="body">Papanui &middot; 10:42 &middot; 4.2 km &middot; 3 parcels</div>
+          <div class="caption muted">Side gate, small box in the rear rack</div>
+        </div>
+        <div class="rule"></div>
+        <div class="stop">
+          <div class="seq">45</div>
+          <div class="stop-main"><div class="row">14 Harewood Road</div><div class="caption muted">Papanui &middot; Next</div></div>
+          <div class="row eta">10:42</div>
+        </div>
+        <div class="stop">
+          <div class="seq">46</div>
+          <div class="stop-main"><div class="row">22 Westminster Street</div><div class="caption muted">Merivale &middot; Pending</div></div>
+          <div class="row eta">10:49</div>
+        </div>
+        <div class="stop">
+          <div class="seq">47</div>
+          <div class="stop-main"><div class="row">3/120 Blenheim Road</div><div class="caption muted">Upper Riccarton &middot; Pending</div></div>
+          <div class="row eta">11:02</div>
+        </div>
+      </div>
+      <div class="actions"><div class="primary">Next stop</div></div>
+      
+      <div class="ribbon">
+        <div class="ribbon-bars">
+          <span class="bar" style="height:11.7px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:26.0px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:11.7px;opacity:0.9"></span>
+        </div>
+        <div class="ribbon-row">
+          <span class="dot" style="background:var(--accent)"></span>
+          <span class="caption">Listening</span>
+          <span class="caption muted right">4 waiting</span>
+        </div>
+      </div>
+    </div>
+    <div class="phone vr" id="driving-night" data-theme="night" style="--bg: #121110;
+      --surface: #1b1a19;
+      --elevated: #242322;
+      --border: #7d7674;
+      --ink: #f1edeb;
+      --ink-2: #c8c1bd;
+      --ink-3: #afa7a3;
+      --ink-inverse: #121110;
+      --accent: #dd8256;
+      --accent-2: #71b3ae;
+      --ok: #59b184;
+      --warn: #d8a83c;
+      --bad: #e8736a;
+      --map-bg: #121110;
+      --map-land: #1b1a19;
+      --map-water: #151d1c;
+      --map-road: #242322;
+      --map-highway: #8a7550;
+      --map-building: #201f1e;
+      --map-park: #1a241c;
+      --map-text: #f1edeb;
+      --pin: #dd8256;
+      --route: #71b3ae; --metric: 64px;
+      --metric-leading: 68px;
+      --metric-tracking: -0.03em;
+      --address: 30px;
+      --address-leading: 36px;
+      --address-tracking: -0.02em;
+      --row: 21px;
+      --row-leading: 28px;
+      --label: 17px;
+      --label-leading: 22px;
+      --label-tracking: 0.08em;
+      --body: 19px;
+      --body-leading: 26px;
+      --caption: 17px;
+      --caption-leading: 22px;
+      --title: 28px;
+      --title-leading: 34px; --font: 'Space Grotesk', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;">
+      
+      <div class="map-area">
+        <svg class="map-svg" viewBox="0 0 390 420" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" data-pitch="52">
+      <rect x="0" y="0" width="390" height="420" fill="var(--map-land)" />
+      <path d="M0 0 L90 0 C 60 60, 40 120, 0 150 Z" fill="var(--map-water)" />
+      <rect x="20" y="30" width="90" height="70" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="130" y="20" width="70" height="60" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="230" y="40" width="110" height="60" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="30" y="130" width="70" height="80" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="140" y="120" width="80" height="70" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="250" y="130" width="100" height="90" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="20" y="250" width="100" height="60" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="150" y="230" width="90" height="90" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <rect x="270" y="260" width="90" height="70" fill="var(--map-building)" stroke="var(--map-land)" stroke-width="1" />
+      <path d="M0 110 L390 100" stroke="var(--map-road)" stroke-width="16" fill="none" />
+      <path d="M0 220 L390 205" stroke="var(--map-road)" stroke-width="10" fill="none" />
+      <path d="M0 320 L390 300" stroke="var(--map-road)" stroke-width="10" fill="none" />
+      <path d="M120 0 L110 420" stroke="var(--map-road)" stroke-width="12" fill="none" />
+      <path d="M300 0 L288 420" stroke="var(--map-road)" stroke-width="12" fill="none" />
+      <path d="M0 110 L390 100" stroke="var(--map-highway)" stroke-width="4" fill="none" opacity="0.9" />
+      
+      <path d="M120 400 C 118 330, 150 300, 150 240 S 130 170, 118 110" stroke="var(--route)" stroke-width="6" fill="none" stroke-linecap="round" />
+      <circle cx="120" cy="400" r="9" fill="var(--route)" />
+      <circle cx="118" cy="110" r="11" fill="var(--pin)" stroke="var(--bg)" stroke-width="3" />
+      <text x="118" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="var(--bg)">45</text>
+    </svg>
+        <div class="map-chip">Offline map: Canterbury (pmtiles)</div>
+      </div>
+      <div class="plate">
+        <div class="pad">
+          <div class="address">14 Harewood Road</div>
+          <div class="body">Papanui &middot; 4.2 km &middot; 10:42</div>
+          <div class="caption muted">Side gate, the small box is in the rear rack</div>
+        </div>
+        <div class="actions"><div class="primary">Next stop</div></div>
+      </div>
+      
+      <div class="ribbon">
+        <div class="ribbon-bars">
+          <span class="bar" style="height:11.7px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:26.0px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:11.7px;opacity:0.9"></span>
+        </div>
+        <div class="ribbon-row">
+          <span class="dot" style="background:var(--accent)"></span>
+          <span class="caption">Listening</span>
+          <span class="caption muted right">4 waiting</span>
+        </div>
+      </div>
+    </div>
+    <div class="phone vr" id="copilot-night" data-theme="night" style="--bg: #121110;
+      --surface: #1b1a19;
+      --elevated: #242322;
+      --border: #7d7674;
+      --ink: #f1edeb;
+      --ink-2: #c8c1bd;
+      --ink-3: #afa7a3;
+      --ink-inverse: #121110;
+      --accent: #dd8256;
+      --accent-2: #71b3ae;
+      --ok: #59b184;
+      --warn: #d8a83c;
+      --bad: #e8736a;
+      --map-bg: #121110;
+      --map-land: #1b1a19;
+      --map-water: #151d1c;
+      --map-road: #242322;
+      --map-highway: #8a7550;
+      --map-building: #201f1e;
+      --map-park: #1a241c;
+      --map-text: #f1edeb;
+      --pin: #dd8256;
+      --route: #71b3ae; --metric: 64px;
+      --metric-leading: 68px;
+      --metric-tracking: -0.03em;
+      --address: 30px;
+      --address-leading: 36px;
+      --address-tracking: -0.02em;
+      --row: 21px;
+      --row-leading: 28px;
+      --label: 17px;
+      --label-leading: 22px;
+      --label-tracking: 0.08em;
+      --body: 19px;
+      --body-leading: 26px;
+      --caption: 17px;
+      --caption-leading: 22px;
+      --title: 28px;
+      --title-leading: 34px; --font: 'Space Grotesk', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;">
+      
+      <div class="pad grow">
+        <div class="label accent">Listening</div>
+        <div class="address">Delivered to the side gate at 14 Harewood Road.</div>
+        <div class="under">
+          <div class="body">Understood: delivered</div>
+          <div class="caption muted">14 Harewood Road, Papanui</div>
+        </div>
+        <div class="confirmed">
+          <div class="label ok">Delivered</div>
+          <div class="row">14 Harewood Road</div>
+          <div class="strike"></div>
+        </div>
+      </div>
+      <div class="foot"><span class="caption muted">18 stops left &middot; 4 actions waiting</span></div>
+      
+      <div class="ribbon">
+        <div class="ribbon-bars">
+          <span class="bar" style="height:11.7px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:26.0px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:11.7px;opacity:0.9"></span>
+        </div>
+        <div class="ribbon-row">
+          <span class="dot" style="background:var(--accent)"></span>
+          <span class="caption">Listening</span>
+          <span class="caption muted right">4 waiting</span>
+        </div>
+      </div>
+    </div>
+    <div class="phone vr" id="scanner-night" data-theme="night" style="--bg: #121110;
+      --surface: #1b1a19;
+      --elevated: #242322;
+      --border: #7d7674;
+      --ink: #f1edeb;
+      --ink-2: #c8c1bd;
+      --ink-3: #afa7a3;
+      --ink-inverse: #121110;
+      --accent: #dd8256;
+      --accent-2: #71b3ae;
+      --ok: #59b184;
+      --warn: #d8a83c;
+      --bad: #e8736a;
+      --map-bg: #121110;
+      --map-land: #1b1a19;
+      --map-water: #151d1c;
+      --map-road: #242322;
+      --map-highway: #8a7550;
+      --map-building: #201f1e;
+      --map-park: #1a241c;
+      --map-text: #f1edeb;
+      --pin: #dd8256;
+      --route: #71b3ae; --metric: 64px;
+      --metric-leading: 68px;
+      --metric-tracking: -0.03em;
+      --address: 30px;
+      --address-leading: 36px;
+      --address-tracking: -0.02em;
+      --row: 21px;
+      --row-leading: 28px;
+      --label: 17px;
+      --label-leading: 22px;
+      --label-tracking: 0.08em;
+      --body: 19px;
+      --body-leading: 26px;
+      --caption: 17px;
+      --caption-leading: 22px;
+      --title: 28px;
+      --title-leading: 34px; --font: 'Space Grotesk', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;">
+      
+      <div class="camera">
+        <div class="camera-fallback">
+          <div class="tag">CAMERA</div>
+          <div class="body muted">14 Harewood Road</div>
+        </div>
+        <div class="guide"></div>
+      </div>
+      <div class="panel">
+        <div class="pad">
+          <div class="label accent">The address</div>
+          <div class="address">14 Harewood Road</div>
+          <div class="body">Papanui &middot; 8011 &middot; 3 parcels</div>
+          <div class="read"><div class="caption muted">Clear read</div><div class="caption">Every line of the address was found on the label.</div></div>
+          <div class="actions"><div class="primary">Confirm</div><div class="outline">Correct</div></div>
+        </div>
+      </div>
+      
+      <div class="ribbon">
+        <div class="ribbon-bars">
+          <span class="bar" style="height:11.7px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:26.0px;opacity:0.9"></span><span class="bar" style="height:25.8px;opacity:0.9"></span><span class="bar" style="height:25.3px;opacity:0.9"></span><span class="bar" style="height:24.4px;opacity:0.9"></span><span class="bar" style="height:23.3px;opacity:0.9"></span><span class="bar" style="height:21.8px;opacity:0.9"></span><span class="bar" style="height:20.1px;opacity:0.9"></span><span class="bar" style="height:18.2px;opacity:0.9"></span><span class="bar" style="height:16.1px;opacity:0.9"></span><span class="bar" style="height:13.9px;opacity:0.9"></span><span class="bar" style="height:11.7px;opacity:0.9"></span>
+        </div>
+        <div class="ribbon-row">
+          <span class="dot" style="background:var(--accent)"></span>
+          <span class="caption">Listening</span>
+          <span class="caption muted right">4 waiting</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

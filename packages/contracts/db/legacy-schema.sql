@@ -7,6 +7,7 @@ CREATE TABLE drivers (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name          text NOT NULL,
   phone         text UNIQUE,
+  auth_subject  text UNIQUE,               -- the login subject of the courier (the `sub` of the token)
   voice_prefs   jsonb NOT NULL DEFAULT '{"verbosity":"terse","units":"metric"}',
   created_at    timestamptz NOT NULL DEFAULT now()
 );
@@ -58,6 +59,18 @@ CREATE TABLE location_notes (
   last_confirmed timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX location_notes_vec ON location_notes USING hnsw (embedding vector_cosine_ops);
+
+-- The door memory: what the courier taught the app about an address.
+-- It belongs to the courier, so the key is the courier and the address.
+CREATE TABLE door_memory (
+  courier_id    text NOT NULL,               -- the auth subject (`sub`) of the courier
+  address_key   text NOT NULL,               -- normalised full address (locations.address_key)
+  note          text,                        -- free text: "side gate left of the garage, dog"
+  safe_place    text,                        -- where the parcel may be left
+  updated_at    timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (courier_id, address_key)
+);
+CREATE INDEX door_memory_address_trgm ON door_memory USING gin (address_key gin_trgm_ops);
 
 -- A single working day on a run.
 CREATE TABLE shifts (
