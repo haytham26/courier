@@ -18,6 +18,117 @@ const authBaseUrl = process.env.EXPO_PUBLIC_AUTH_URL ?? 'http://localhost:3000';
 const appScheme =
   typeof Constants.expoConfig?.scheme === 'string' ? Constants.expoConfig.scheme : 'courier';
 
+/**
+ * The client as the app calls it, with its types written out.
+ *
+ * The generic client of Better Auth resolves the plugin methods through
+ * proxies whose TS types land on `any`, which does not pass the type floor
+ * of the app (no `any`, no unsafe access). The members below are the ones
+ * the provider and the screens actually call, so the surface is narrowed
+ * here, once, at the boundary of the module.
+ */
+
+/** A failure the service answered with: the sentence the courier reads. */
+export interface CourierAuthError {
+  message: string;
+}
+
+/** The courier, as the service describes them. */
+export interface CourierAuthUser {
+  id: string;
+  email: string;
+  name?: string;
+  image?: string | null;
+  emailVerified: boolean;
+  createdAt: Date | string;
+}
+
+/** The read of a session: the courier, and the session with its token. */
+export interface CourierSessionData {
+  user: CourierAuthUser;
+  session: { token: string };
+}
+
+/** What every client call answers with: the value or the failure, never both. */
+export interface CourierAuthResult<TData> {
+  data: TData | null;
+  error: CourierAuthError | null;
+}
+
+/** The data of a credentials sign-in: the session, or the two-factor challenge. */
+export interface CourierSignInData {
+  user?: CourierAuthUser;
+  token?: string;
+  twoFactorRedirect?: boolean;
+  twoFactorMethods?: string[];
+}
+
+/** The team of one organization, as the teams list shows it. */
+export interface CourierAuthTeam {
+  id: string;
+  name: string;
+  organizationId: string;
+}
+
+/** An organization the courier belongs to. */
+export interface CourierAuthOrganization {
+  id: string;
+  name: string;
+}
+
+/** The session hook of the react integration: the session and its state. */
+export interface CourierSessionHook {
+  data: CourierSessionData | null;
+  error: unknown;
+  isPending: boolean;
+  isRefetching: boolean;
+  refetch: () => Promise<void>;
+}
+
+/**
+ * The members are carried as function properties, not as `this`-based
+ * methods: the app lifts some of them (signOut, useSession, refetch) out of
+ * the client, and a function property carries no `this` to lose.
+ */
+export interface CourierAuthClient {
+  signIn: {
+    email: (input: {
+      email: string;
+      password: string;
+    }) => Promise<CourierAuthResult<CourierSignInData>>;
+    social: (input: {
+      provider: 'google' | 'apple';
+      callbackURL: string;
+    }) => Promise<CourierAuthResult<unknown>>;
+    passkey: () => Promise<CourierAuthResult<unknown>>;
+  };
+  signUp: {
+    email: (input: {
+      email: string;
+      password: string;
+      name?: string;
+    }) => Promise<CourierAuthResult<unknown>>;
+  };
+  signOut: (options?: unknown) => Promise<CourierAuthResult<unknown>>;
+  getSession: (options?: unknown) => Promise<CourierAuthResult<CourierSessionData>>;
+  useSession: () => CourierSessionHook;
+  /** The raw call of the service: the document it answers is checked before use. */
+  $fetch: (path: string) => Promise<unknown>;
+  twoFactor: {
+    verifyTotp: (input: { code: string }) => Promise<CourierAuthResult<unknown>>;
+    verifyBackupCode: (input: { code: string }) => Promise<CourierAuthResult<unknown>>;
+  };
+  organization: {
+    list: (options: {
+      query: Record<string, unknown>;
+    }) => Promise<CourierAuthResult<CourierAuthOrganization[]>>;
+    listUserTeams: (options: {
+      query: { organizationId: string };
+    }) => Promise<CourierAuthResult<CourierAuthTeam[]>>;
+    setActiveTeam: (options: { teamId: string }) => Promise<CourierAuthResult<unknown>>;
+  };
+}
+
 const mockUser = {
   id: 'e2e-driver',
   email: 'driver@example.co.nz',
@@ -34,37 +145,53 @@ const mockSession = {
   expiresAt: new Date(Date.now() + 86_400_000),
 };
 
-function createMockAuthClient() {
+/** The refusal of a flow the emulator run does not drive. */
+function mockRefusal(): Promise<CourierAuthResult<unknown>> {
+  const refusal: CourierAuthResult<unknown> = {
+    data: null,
+    error: { message: 'the emulator run signs in with email and password only' },
+  };
+  return Promise.resolve(refusal);
+}
+
+function createMockAuthClient(): CourierAuthClient {
   return {
     signIn: {
-      email: async () => ({ data: { user: mockUser, token: 'e2e-token' }, error: null }),
+      email: () => Promise.resolve({ data: { user: mockUser, token: 'e2e-token' }, error: null }),
+      social: () => mockRefusal(),
+      passkey: () => mockRefusal(),
     },
     signUp: {
-      email: async () => ({ data: { user: mockUser, token: 'e2e-token' }, error: null }),
+      email: () => Promise.resolve({ data: { user: mockUser, token: 'e2e-token' }, error: null }),
     },
-    signOut: async () => ({ data: { success: true }, error: null }),
-    getSession: async () => ({ data: { user: mockUser, session: mockSession }, error: null }),
+    signOut: () => Promise.resolve({ data: { success: true }, error: null }),
+    $fetch: () => Promise.reject(new Error('the emulator run has no auth service to ask')),
+    getSession: () =>
+      Promise.resolve({ data: { user: mockUser, session: mockSession }, error: null }),
     useSession: () => ({
       data: { user: mockUser, session: mockSession },
       error: null,
       isPending: false,
       isRefetching: false,
-      refetch: async () => {},
+      refetch: () => Promise.resolve(),
     }),
+    twoFactor: {
+      verifyTotp: () => mockRefusal(),
+      verifyBackupCode: () => mockRefusal(),
+    },
     organization: {
-      list: async () => ({ data: [], error: null }),
-      getFullOrganization: async () => ({ data: null, error: null }),
-      setActive: async () => ({ data: null, error: null }),
+      list: () => Promise.resolve({ data: [], error: null }),
+      listUserTeams: () => Promise.resolve({ data: [], error: null }),
+      setActiveTeam: () => Promise.resolve({ data: null, error: null }),
     },
   };
 }
 
-const mockAuthClient = createMockAuthClient();
 const isE2E = process.env.EXPO_PUBLIC_E2E === '1';
 
-export const authClient = isE2E
-  ? (mockAuthClient as unknown as ReturnType<typeof createAuthClient>)
-  : createAuthClient({
+export const authClient: CourierAuthClient = isE2E
+  ? createMockAuthClient()
+  : (createAuthClient({
       baseURL: authBaseUrl,
       plugins: [
         expoClient({
@@ -75,7 +202,7 @@ export const authClient = isE2E
         organizationClient(),
         twoFactorClient(),
       ],
-    });
+    }) as unknown as CourierAuthClient);
 
 // Export auth methods
 export const signIn = authClient.signIn;

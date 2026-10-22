@@ -111,17 +111,19 @@ export async function writeDriverPreference(
 ): Promise<void> {
   const previous = writeQueues.get(driverId) ?? Promise.resolve();
 
-  const write = previous.then(async () => {
+  const write: Promise<void> = previous.then(async () => {
     const preferences = await readDriverPreferences(store, driverId);
     preferences[key] = value;
     await store.write(driverId, serialiseDriverPreferences(preferences));
   });
 
   // The queue keeps going after a failed write, and the caller still sees
-  // the failure.
+  // the failure. The swallow answers with a resolved promise because, in
+  // the non-strict mode of the app, an `undefined` result widens the chain
+  // to Promise<any>.
   writeQueues.set(
     driverId,
-    write.catch(() => undefined),
+    write.catch(() => Promise.resolve()),
   );
 
   return write;

@@ -51,20 +51,24 @@ jest.mock('@expo/vector-icons', () => {
 });
 
 jest.mock('expo-location', () => ({
-  getForegroundPermissionsAsync: jest.fn(async () => ({ granted: false, status: 'denied' })),
-  watchPositionAsync: jest.fn(async () => ({ remove: jest.fn() })),
+  getForegroundPermissionsAsync: jest.fn(() => Promise.resolve({ granted: false, status: 'denied' })),
+  watchPositionAsync: jest.fn(() => Promise.resolve({ remove: jest.fn() })),
   Accuracy: { Balanced: 3 },
 }));
 
 jest.mock('expo-network', () => ({
-  getNetworkStateAsync: jest.fn(async () => ({ isConnected: true, isInternetReachable: true })),
+  getNetworkStateAsync: jest.fn(() =>
+    Promise.resolve({ isConnected: true, isInternetReachable: true }),
+  ),
 }));
 
 jest.mock('@/maps/packFiles', () => ({
-  loadOfflinePack: jest.fn(async () => ({
-    state: { status: 'missing' },
-    locations: { downloadedFileUrl: null, bundledFileUrl: null },
-  })),
+  loadOfflinePack: jest.fn(() =>
+    Promise.resolve({
+      state: { status: 'missing' },
+      locations: { downloadedFileUrl: null, bundledFileUrl: null },
+    }),
+  ),
   localGlyphsUrl: jest.fn(() => null),
 }));
 
@@ -161,7 +165,13 @@ describe('the map screen', () => {
     it('starts on the flat map', async () => {
       await renderScreen();
 
-      expect(screen.getByTestId('map-mode-flat').props.accessibilityState.selected).toBe(true);
+      expect(
+        (
+          screen.getByTestId('map-mode-flat').props as {
+            accessibilityState?: { selected?: boolean };
+          }
+        ).accessibilityState?.selected,
+      ).toBe(true);
     });
 
     it('takes the mode the courier taps', async () => {
@@ -170,7 +180,13 @@ describe('the map screen', () => {
       fireEvent.press(screen.getByTestId('map-mode-3d'));
 
       await waitFor(() =>
-        expect(screen.getByTestId('map-mode-3d').props.accessibilityState.selected).toBe(true),
+        expect(
+          (
+            screen.getByTestId('map-mode-3d').props as {
+              accessibilityState?: { selected?: boolean };
+            }
+          ).accessibilityState?.selected,
+        ).toBe(true),
       );
     });
 

@@ -67,7 +67,7 @@ async function readTextFile(file: File): Promise<string | null> {
     }
     return await file.text();
   } catch (error) {
-    throw new Error(`the file could not be read: ${describe(error)}`);
+    throw new Error(`the file could not be read: ${describe(error)}`, { cause: error });
   }
 }
 

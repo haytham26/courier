@@ -25,22 +25,23 @@ function aFetch(
 ): { impl: typeof fetch; calls: Call[] } {
   const calls: Call[] = [];
   let index = 0;
-  const impl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  const impl = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const answer = answers[Math.min(index, answers.length - 1)];
     index += 1;
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     calls.push({
-      url: String(input),
-      method: String(init?.method ?? 'GET'),
-      body: init?.body === undefined ? undefined : JSON.parse(String(init.body)),
+      url,
+      method: init?.method ?? 'GET',
+      body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
       headers: (init?.headers ?? {}) as Record<string, string>,
     });
     const status = answer?.status ?? 200;
-    return {
+    return Promise.resolve({
       ok: status < 400,
       status,
-      json: async () => answer?.body ?? {},
-    } as Response;
-  }) as unknown as typeof fetch;
+      json: () => Promise.resolve(answer?.body ?? {}),
+    } as Response);
+  };
   return { impl, calls };
 }
 
@@ -51,7 +52,7 @@ describe('the client of Courier Voice', () => {
     ]);
     const client = new CourierVoiceClient({
       baseUrl: 'http://voice.test/',
-      getToken: async () => 'token-1',
+      getToken: () => Promise.resolve('token-1'),
       fetchImpl: impl,
     });
 
@@ -67,7 +68,7 @@ describe('the client of Courier Voice', () => {
     const { impl, calls } = aFetch([{ body: { speech: 'Eight stops left.', action: null } }]);
     const client = new CourierVoiceClient({
       baseUrl: 'http://voice.test',
-      getToken: async () => 'token-1',
+      getToken: () => Promise.resolve('token-1'),
       fetchImpl: impl,
     });
 
@@ -89,7 +90,7 @@ describe('the client of Courier Voice', () => {
     ]);
     const client = new CourierVoiceClient({
       baseUrl: 'http://voice.test',
-      getToken: async () => 'token-1',
+      getToken: () => Promise.resolve('token-1'),
       fetchImpl: impl,
     });
 
@@ -106,7 +107,7 @@ describe('the client of Courier Voice', () => {
     ]);
     const client = new CourierVoiceClient({
       baseUrl: 'http://voice.test',
-      getToken: async () => 'token-1',
+      getToken: () => Promise.resolve('token-1'),
       fetchImpl: impl,
     });
 
@@ -122,7 +123,7 @@ describe('the client of Courier Voice', () => {
     const { impl, calls } = aFetch([{ body: {} }]);
     const client = new CourierVoiceClient({
       baseUrl: 'http://voice.test',
-      getToken: async () => null,
+      getToken: () => Promise.resolve(null),
       fetchImpl: impl,
     });
 
@@ -134,7 +135,7 @@ describe('the client of Courier Voice', () => {
     const { impl, calls } = aFetch([{ status: 500, body: {} }]);
     const client = new CourierVoiceClient({
       baseUrl: 'http://voice.test',
-      getToken: async () => 'token-1',
+      getToken: () => Promise.resolve('token-1'),
       fetchImpl: impl,
     });
 
@@ -143,12 +144,10 @@ describe('the client of Courier Voice', () => {
   });
 
   it('gives up with a plain sentence when the service is not there', async () => {
-    const failing = (async () => {
-      throw new Error('the network is down');
-    }) as unknown as typeof fetch;
+    const failing: typeof fetch = () => Promise.reject(new Error('the network is down'));
     const client = new CourierVoiceClient({
       baseUrl: 'http://voice.test',
-      getToken: async () => 'token-1',
+      getToken: () => Promise.resolve('token-1'),
       fetchImpl: failing,
     });
 

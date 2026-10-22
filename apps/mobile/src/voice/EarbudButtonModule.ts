@@ -19,7 +19,24 @@ export interface EarbudButtonModuleInterface {
   removeListeners(count: number): void;
 }
 
-const { EarbudButtonManager } = NativeModules;
+/**
+ * The native module of the earbud buttons.
+ *
+ * NativeModules hands back any-typed objects, so its shape is declared here:
+ * the three calls, plus the two members NativeEventEmitter needs of an event
+ * module (the Android module extends RCTEventEmitter, so it carries them).
+ */
+interface NativeEarbudButtonModule {
+  startListening(): Promise<void>;
+  stopListening(): Promise<void>;
+  isSupported?(): Promise<boolean>;
+  addListener(eventType: string): void;
+  removeListeners(count: number): void;
+}
+
+const { EarbudButtonManager } = NativeModules as {
+  EarbudButtonManager?: NativeEarbudButtonModule | undefined;
+};
 
 let eventEmitter: NativeEventEmitter | null = null;
 
@@ -28,27 +45,27 @@ if (EarbudButtonManager && Platform.OS !== 'web') {
 }
 
 export const EarbudButtonModule: EarbudButtonModuleInterface = {
-  async startListening(): Promise<void> {
+  startListening(): Promise<void> {
     if (!EarbudButtonManager) {
       console.warn('EarbudButtonManager native module not available');
-      return;
+      return Promise.resolve();
     }
     return EarbudButtonManager.startListening();
   },
 
-  async stopListening(): Promise<void> {
+  stopListening(): Promise<void> {
     if (!EarbudButtonManager) {
       console.warn('EarbudButtonManager native module not available');
-      return;
+      return Promise.resolve();
     }
     return EarbudButtonManager.stopListening();
   },
 
-  async isSupported(): Promise<boolean> {
+  isSupported(): Promise<boolean> {
     if (!EarbudButtonManager) {
-      return false;
+      return Promise.resolve(false);
     }
-    return EarbudButtonManager.isSupported?.() ?? false;
+    return EarbudButtonManager.isSupported?.() ?? Promise.resolve(false);
   },
 
   addListener(eventName: string, listener: (event: EarbudEvent) => void): void {
@@ -57,11 +74,11 @@ export const EarbudButtonModule: EarbudButtonModuleInterface = {
       return;
     }
     // NativeEventEmitter expects (...args: any[]) => void, so we wrap the listener
-    const wrappedListener = (event: any) => listener(event as EarbudEvent);
+    const wrappedListener = (event: unknown) => listener(event as EarbudEvent);
     eventEmitter.addListener(eventName, wrappedListener);
   },
 
-  removeListeners(count: number): void {
+  removeListeners(_count: number): void {
     if (!eventEmitter) return;
     eventEmitter.removeAllListeners();
   },

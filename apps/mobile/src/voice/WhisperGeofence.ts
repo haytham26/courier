@@ -4,7 +4,8 @@
  * Implements the "Whisper" approach from the requirements
  */
 
-import { Location, haversineDistance } from '@courier/shared';
+import type { Location} from '@courier/shared';
+import { haversineDistance } from '@courier/shared';
 
 export interface GeofenceConfig {
   outerRadius: number; // 150m - first whisper
@@ -97,13 +98,13 @@ class WhisperGeofenceService {
     }
   }
 
-  private async checkGeofences(currentLocation: Location): Promise<void> {
-    if (this.currentStopIndex >= this.stops.length) return;
+  private checkGeofences(currentLocation: Location): Promise<void> {
+    if (this.currentStopIndex >= this.stops.length) return Promise.resolve();
 
     const currentStop = this.stops[this.currentStopIndex];
     const stopLocation = this.getBestStopLocation(currentStop);
-    
-    if (!stopLocation) return;
+
+    if (!stopLocation) return Promise.resolve();
 
     const distance = haversineDistance(
       currentLocation.lat,
@@ -148,8 +149,9 @@ class WhisperGeofenceService {
     // Advance to next stop when we're past the inner radius and moving away
     if (triggered.inner && distance > this.config.innerRadius * 1.5) {
       this.currentStopIndex++;
-      this.checkGeofences(currentLocation); // Check next stop immediately
+      void this.checkGeofences(currentLocation); // Check next stop immediately
     }
+    return Promise.resolve();
   }
 
   private getBestStopLocation(stop: StopWithLocation): Location | null {
