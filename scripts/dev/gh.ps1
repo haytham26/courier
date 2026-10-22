@@ -1,10 +1,10 @@
 # Runs the GitHub CLI with the token from .env.local.
 # The token is read at runtime and never printed, logged or committed.
 #
-#   powershell -ExecutionPolicy Bypass -File scripts\gh.ps1 pr list
+#   powershell -ExecutionPolicy Bypass -File scripts\dev\gh.ps1 pr list
 $ErrorActionPreference = "Stop"
 
-$envFile = Join-Path $PSScriptRoot "..\.env.local"
+$envFile = Join-Path $PSScriptRoot "..\..\.env.local"
 if (-not (Test-Path -LiteralPath $envFile)) {
     throw "No .env.local found (expected $envFile)"
 }
