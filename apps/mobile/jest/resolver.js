@@ -19,29 +19,37 @@ const reanimatedResolver = require('react-native-reanimated/jest/resolver');
 const WEB_BARREL =
   /react-native-reanimated[\\/]src[\\/]layoutReanimation[\\/]web[\\/]index\.tsx?$/;
 
-// DIAG (remove once the CI run proves the engagement):
-let diagnosedFirst = false;
+// DIAG (remove once the CI run is green): record every distinct request
+// that touches the layout animations or the AnimatedComponent, with its
+// resolved path, so the failure of the guard to engage on the workers
+// becomes visible.
+const diagSeen = new Set();
+function diagOnce(key, request, resolved) {
+  const id = key + '|' + request;
+  if (diagSeen.has(id)) return;
+  diagSeen.add(id);
+  console.error(`DIAG ${key}: ${request}\n  -> ${resolved}`);
+}
 
 module.exports = (request, options) => {
   const resolved = reanimatedResolver(request, options);
 
-  if (
-    typeof resolved === 'string' &&
-    resolved.replace(/\\/g, '/').includes('layoutReanimation/web/')
-  ) {
-    // DIAG (remove once the CI run proves the engagement):
-    if (!diagnosedFirst) {
-      diagnosedFirst = true;
-      console.error(`DIAG first layoutReanimation/web resolution: ${request}\n  -> ${resolved}`);
+  if (typeof resolved === 'string') {
+    const flat = resolved.replace(/\\/g, '/');
+
+    if (flat.includes('layoutReanimation/web/')) {
+      diagOnce('webdir', request, resolved);
+      if (WEB_BARREL.test(resolved)) {
+        diagOnce('barrelhit', request, resolved);
+        return path.join(__dirname, 'motion-void-web-layout.js');
+      }
+      diagOnce('barrelmiss', request, resolved);
     }
-    if (WEB_BARREL.test(resolved)) {
-      console.error(`DIAG the barrel redirects to the inert twin: ${request} -> ${resolved}`);
-      return path.join(__dirname, 'motion-void-web-layout.js');
+
+    if (flat.includes('createAnimatedComponent/AnimatedComponent')) {
+      diagOnce('animcomp', request, resolved);
     }
   }
 
   return resolved;
 };
-
-// DIAG (remove once the CI run proves the engagement):
-console.error('DIAG the resolver wrapper of the mobile test run is in place');
