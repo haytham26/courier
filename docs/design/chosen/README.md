@@ -11,6 +11,10 @@ The HTML is a visual reference, not production code. Build it in React Native wi
 
 The map is the app. Everything else floats above it on glass: the top pills, the round map buttons, the bottom sheet and the tab bar. This is Apple Maps on iOS 26. Colour is used only for meaning. There are no decorative gradients, no glows, no neon, no emoji and no dashes or middle dots in the copy.
 
+## 3D and motion (binding)
+
+The screens are built three dimensional and animated: tilted 3D map, driving camera, 3D puck, rising pins, self drawing route, spring sheets and Slide to Deliver with haptics. The full spec is MASTER_EXECUTION §13.8 and D29.
+
 ## Editable by design (binding)
 
 Every colour, radius, spacing, blur and type size comes from ONE token file in the shared UI package (for example `packages/ui/src/tokens.ts`), with light and dark sets. No screen may hard-code a value. Changing the brand colour, a corner radius or the font in that one file must restyle the whole app. Add a Storybook or a "Design tokens" debug screen that shows every token and component, so the founder can review changes.

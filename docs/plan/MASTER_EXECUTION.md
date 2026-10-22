@@ -267,3 +267,20 @@ Roadbook, Beacon and Freight look dated and plain — "not an app of 2026". Rest
 ### 13.7 Founder decision (2026-10-22): Maps First is CHOSEN (binding, see D27)
 The design direction is decided: `docs/design/chosen/`. Do not produce more directions. P4 now means: write ADR-00x "Design system: Maps First", build the token file and the components listed in `docs/design/chosen/README.md`, then rebuild every screen to match the reference screens, in light and dark, on Android and iOS. The design gate passes
 only when each built screen is compared side by side with its reference (emulator screenshot next to the reference PNG in the PR) and the anti-AI-look rules in §13.2 pass.
+
+
+### 13.8 Founder directive (2026-10-22): 3D and motion are part of Maps First (binding, see D29)
+The app must feel alive and three dimensional, like Apple Maps, with motion that helps the driver and never decorates. Build it into the components and screens of §13.7, not as a later polish pass.
+
+1. **3D map by default in Auto and 3D modes**: MapLibre pitch 45 to 60 degrees, extruded buildings from the offline pack (LINZ outlines plus OSM heights, D26), soft shading and shadows from the sun angle where cheap, 3D landmarks for the depot and the next stop.
+2. **Driving camera**: follows the vehicle with heading-up, tilts and zooms by speed and by distance to the next turn, eases into each turn, and returns to an overview at each stop. All camera moves are smooth (no jumps), interruptible by a finger, and recentre with one tap.
+3. **3D vehicle puck and pins**: a 3D puck that rotates with the heading; stop pins that rise from the map, numbered, with the next stop lifted and pulsing gently.
+4. **Route motion**: the route line draws itself when a route is planned or re-optimised; the done part fades; a change of order animates the pins to their new numbers.
+5. **Interface motion** (Reanimated 4, Skia): spring sheets and the glass tab bar, shared-element transitions between the stop card and its detail, the Slide to Deliver thumb with a spring and a success morph into the check, counters that roll, the progress line that fills. Each with a matching haptic.
+6. **Rules**:
+   - Every animation has a purpose (orientation, feedback, continuity).
+   - 60 fps on a mid-range Android (the emulator profile in CI plus one real-device check). Profile with the Reanimated and Skia tools, and budget battery and GPU while driving.
+   - Reduced motion gives a calm 2D path with fades instead of camera flights.
+   - No decorative particles, glows, confetti or bouncing for its own sake (§13.2).
+   - Motion durations and curves are tokens in the same token file (D27).
+7. **Evidence**: each screen PR adds a short screen recording from the emulator next to the reference, and a frame-time trace for the driving screen.

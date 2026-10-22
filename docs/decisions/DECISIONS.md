@@ -82,3 +82,7 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
 - **The alternatives** (the Play Console pre-launch report, Firebase Test Lab, Fastlane `precheck`) stay on the list to evaluate; the tool does the part that can run without an account, and the Play Console does the part that needs one.
 - The checks the tool does not have (background location, foreground services, account deletion, data safety, the Play Console API) are proposed to its author; the list is in `docs/operations/RELEASE-CHECKLIST.md`.
 
+## D29 — 3D and motion are part of Maps First (2026-10-22, founder decision)
+- The Maps First design (D27) is built three dimensional and animated: a tilted 3D map with extruded buildings, a driving camera that follows and eases into turns, a 3D puck and rising pins, route lines that draw themselves, and spring motion with haptics across the interface. The binding spec is MASTER_EXECUTION §13.8.
+- Motion must serve the driver (orientation, feedback, continuity), keep 60 fps on a mid-range Android, respect reduced motion, and its durations and curves live in the token file.
+
