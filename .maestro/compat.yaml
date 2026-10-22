@@ -15,18 +15,9 @@ name: B.7 compatibility screen and the voice permission prompt
     visible:
       id: "settings-screen"
     timeout: 30000
-# The Diagnostics section is at the bottom of the settings.
-- swipe:
-    direction: UP
-    duration: 500
-- swipe:
-    direction: UP
-    duration: 500
-- swipe:
-    direction: UP
-    duration: 500
-- tapOn:
-    id: "settings-compat"
+# The deep link opens the compatibility screen. The root stack keeps every route
+# registered (Stack.Protected), so a link to /compat is routed instead of ignored.
+- openLink: "courier:///compat"
 - extendedWaitUntil:
     visible:
       id: "compat-screen"
