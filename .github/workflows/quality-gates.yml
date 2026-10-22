@@ -30,6 +30,8 @@ jobs:
           node-version: 22
       - name: Check the diff against the floor
         run: node scripts/ci/check-floor.mjs ${{ github.event.pull_request.base.sha || 'origin/main' }}
+      - name: No merge conflict markers in the tree
+        run: node scripts/ci/check-conflict-markers.mjs
       - name: Check the links of the documentation
         run: node scripts/ci/check-doc-links.mjs
       - name: Check the voice evaluation set
@@ -127,7 +129,9 @@ jobs:
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
       - name: Semgrep (community rules)
         run: |
-          uvx semgrep scan \
+          # semgrep is pinned: the registry rules and the parameter checks change
+          # with the version, so every version bump is a conscious update.
+          uvx semgrep==1.182.1 scan \
             --config p/default \
             --config p/owasp-top-ten \
             --exclude ".npmrc" \
@@ -135,10 +139,10 @@ jobs:
             --exclude-rule "typescript.react.security.react-insecure-request.react-insecure-request" \
             --exclude-rule "javascript.lang.security.detect-child-process.detect-child-process" \
             --exclude-rule "yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service" \
-            --exclude-rule "package_managers\.uv\..*" \
-            --exclude-rule "javascript\.lang\.security\.audit\.detect-non-literal-regexp.*" \
-            --exclude-rule "javascript\.audit\.detect-replaceall-sanitization.*" \
-            --exclude-rule "python\.lang\.security\.audit\.logging\.logger-credential-leak.*" \
+            --exclude-rule "package_managers.uv.uv-missing-dependency-cooldown.uv-missing-dependency-cooldown" \
+            --exclude-rule "javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp" \
+            --exclude-rule "javascript.audit.detect-replaceall-sanitization.detect-replaceall-sanitization" \
+            --exclude-rule "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure" \
             --error --quiet .
       - name: Why the excluded rules are excluded
         run: |

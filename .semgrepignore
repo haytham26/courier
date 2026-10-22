@@ -49,7 +49,7 @@ package_managers.pnpm.pnpm-trust-policy
 package_managers.pnpm.pnpm-block-exotic-sub-dependencies
 package_managers.npm.npm-missing-minimum-release-age
 yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service
-package_managers.uv.uv-missing-dependency-cooldown
-javascript.lang.security.audit.detect-non-literal-regexp
-javascript.audit.detect-replaceall-sanitization
-python.lang.security.audit.logging.logger-credential-leak
+package_managers.uv.uv-missing-dependency-cooldown.uv-missing-dependency-cooldown
+javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+javascript.audit.detect-replaceall-sanitization.detect-replaceall-sanitization
+python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure
