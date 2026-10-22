@@ -92,3 +92,8 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
 - Competitive research on Spoke starts now, from the founder's screenshots kept in the git-ignored `research-private/` folder, never committed, clean room only (§17.2).
 - First-run experience: skippable welcome, an offline interactive demo run, a Courier Voice guided tour, coach marks, short video walkthroughs and an in-app Help centre (§17.3).
 - n8n, self-hosted, automates company operations (CI digests, the weekly report, map updates, review monitoring) with workflows versioned in `infra/n8n/workflows/` (§17.4).
+
+## D31 — Company completeness and Courier Ops (2026-10-23, founder decision on the chief adviser's review)
+- Close the company gaps in MASTER_EXECUTION §18: NZ driver distraction law as a design constraint, Privacy Act 2020, carrier terms, app store billing (in-app purchase for drivers, web billing for teams), company basics, driver research and closed beta, pricing, B2B, growth and launch, SRE (SLOs, load tests, DR drills, release engineering, crash and cost monitoring), privacy-first analytics, AI governance, support and the engineering organisation.
+- Build Courier Ops (§17.5) as our own console and AI ops agents on top of an open-source workflow engine (n8n, Windmill or Temporal by benchmark), not a workflow engine from scratch. Human approval for any action on production, money or customer data.
+- Analyse Spoke to the depth listed in §17.6.

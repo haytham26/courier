@@ -29,3 +29,6 @@ Research (V4 §12) GitHub 2025–2026 for complete SaaS starter kits/boilerplate
 
 ## E. Completeness rule
 At every CEO loop, scan this checklist + PARITY.md + research "what we are missing". Any unchecked item without a task gets a task. v1.0.0 cannot ship with an unchecked must-have in A or B.
+
+## F. Company completeness (added 2026-10-23, see MASTER_EXECUTION §18 and D31)
+Legal and NZ compliance (driver distraction rule, Privacy Act 2020, carrier terms, store billing rules, company basics); customers and market (interviews, closed beta, pricing, B2B); growth and launch; SRE (SLOs, status page, load tests, DR drills, release engineering, crash and cost monitoring); analytics and AI governance; support and customer success; engineering organisation; Courier Ops console and AI ops agents (§17.5).

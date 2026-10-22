@@ -375,3 +375,129 @@ Add public sources as well (their website, help centre, app store listings and r
    - new sign-up and support-ticket notifications after launch.
 3. Store the workflows as exported JSON in `infra/n8n/workflows/` with a README, so they are versioned and reviewable. Never commit secrets or credentials.
 4. Hold n8n to the same safety rules as the rest of the stack: least privilege, and no customer personal data sent to third parties that train on data (D25).
+
+### 17.5 Courier Ops: our own operations platform (Operations and automation squad)
+The founder wants an internal system like n8n but more advanced and made for this company. Do not write a workflow engine from scratch; that is years of work and a security risk. Build **Courier Ops** as our own layer on top of proven open-source engines:
+- **Engine**: n8n (or Windmill / Temporal, chosen by a benchmark and an ADR) runs the workflows.
+- **Courier Ops Console**: our own web dashboard (in the web app, admin role only) that shows in one place:
+  - company health: CI, E2E, crash rate, API latency, costs per provider (OmniRoute, server, maps);
+  - business: sign-ups, trials, paying users, churn, MRR in NZD, activation funnel;
+  - support: tickets, store reviews (ours and competitors), NPS;
+  - the agent squads: what each one did this week, open tasks, blocked items.
+- **AI ops agents** (through OmniRoute, D25 rules): triage new issues and crash reports, draft release notes, summarise store reviews, watch competitors' release notes and reviews weekly, and draft the weekly company report.
+- **Rules**: every action that changes production, money or customer data needs a human approval step in the Console; full audit log; least privilege; no customer personal data to providers that train.
+
+### 17.6 Spoke analysis depth (adds to §17.2)
+Cover each of these with evidence:
+- onboarding and sign-up;
+- permission prompts;
+- route import (paste, CSV, photo, voice);
+- optimisation options and constraints (time windows, priority, vehicle, breaks);
+- navigation hand-off and the in-app map;
+- the stop card;
+- proof of delivery (photo, signature, safe place, notes);
+- failed delivery flow;
+- customer notifications and tracking links;
+- end of day and reports;
+- team and dispatcher features;
+- settings;
+- offline behaviour;
+- error states and the empty states;
+- tone of the copy;
+- speed: how many taps per stop;
+- accessibility;
+- pricing tiers and limits;
+- platforms;
+- what their reviews complain about most.
+
+For each one, give our plan to be clearly better, measured: fewer taps per stop, faster scan-to-route, works offline, hands-free.
+
+## 18. Company completeness: the gaps to close (founder's chief adviser, 2026-10-23, binding; see D31)
+Each item below becomes a task with an owner squad, a spec and evidence, merged into the §4 order. Items that need the founder (money, legal signatures, real people) go to FOUNDER_TODO with a recommendation and a deadline.
+
+### 18.1 Legal and compliance (NZ)
+1. **Driver distraction law (critical, product-shaping).** NZ Land Transport (Road User) Rule: a mobile phone may be used while driving only if it is mounted and touched infrequently and briefly.
+   - Design every driving-time interaction for this: voice first, large targets, no typing while moving.
+   - Lock the keyboard and long forms above a speed threshold.
+   - Show a short safety notice at first run.
+   - Record this in DECISIONS and in the store listing.
+2. **Privacy Act 2020 (NZ).**
+   - Comply with the information privacy principles.
+   - Name a privacy officer (FOUNDER_TODO).
+   - Write a breach notification process (notify the Privacy Commissioner when there is serious harm).
+   - Run a data map and a privacy impact assessment for location, voice and photos of labels (third-party names and addresses).
+3. **Carrier terms.** Check whether scanning and storing NZ Post / Aramex / NZ Couriers label data conflicts with the contractors' agreements. Write a legal question for the founder's lawyer, and keep the data minimal and on device where possible.
+4. **App store billing rules.**
+   - Google Play and Apple require their in-app billing for digital subscriptions bought inside the app.
+   - Decide the model with an ADR: in-app purchase via RevenueCat (or similar) for individual drivers, and web billing (Stripe) for teams bought on the website.
+   - Price in NZD including GST.
+5. **Company basics (FOUNDER_TODO with recommendations):**
+   - NZ company and GST registration;
+   - IP assignment;
+   - an IPONZ trademark search and filing for "Courier Copilot";
+   - domains;
+   - professional indemnity and cyber insurance;
+   - accounting in Xero;
+   - terms of service, privacy policy and EULA reviewed by a lawyer.
+
+### 18.2 Customers and market
+1. **Driver research programme.**
+   - Run at least 10 more driver interviews (only one exists), with a script and a consent form.
+   - Hold a closed beta with 10 to 20 Christchurch couriers through Play internal testing and TestFlight.
+   - Hold a weekly feedback review.
+2. **Pricing research.** NZ courier willingness to pay, competitor prices (Spoke, Circuit, Routific, Upper, MyRouteOnline), and a pricing page. Experiment with the trial length.
+3. **B2B.**
+   - Team plan for depots and contractor fleets.
+   - Dispatcher web dashboard (the web squad).
+   - Onboarding for a team owner.
+   - Sales one-pager and a demo booking (Cal.com, D22).
+
+### 18.3 Growth and launch
+- **Brand kit:** name, logo, icon, colours from the token file, voice and tone.
+- **Website:** landing, pricing, help, privacy, terms and status. Add SEO and analytics without cookies where possible.
+- **App store optimisation:** screenshots from the real app, videos (§17.3), keywords and localised listings.
+- **Launch plan:**
+  - NZ courier communities (Facebook groups, depots);
+  - a referral programme;
+  - a launch checklist (RELEASE-CHECKLIST.md);
+  - a press kit.
+
+### 18.4 Reliability and operations (SRE)
+- **Service levels.**
+  - Write SLOs for the API and sync (for example 99.9% monthly), an error budget, uptime monitoring, a public status page and an incident process (`docs/operations/RUNBOOK.md`).
+  - On-call during the beta: alerts to the founder by n8n, with a quiet-hours policy.
+- **Testing and recovery.**
+  - Load test the API and sync for 1,000 drivers with k6 or Locust before launch.
+  - Run a disaster recovery drill (restore from backup into a clean server) every quarter, with evidence.
+- **Releases and monitoring.**
+  - Release engineering: EAS Build and Submit, OTA updates with expo-updates channels (beta and production), staged rollouts in Play, version and build numbers, and a rollback plan.
+  - Monitor crashes and performance (Sentry or a self-hosted alternative, with privacy filtering) and gate releases on a crash-free rate.
+  - Track cost: a monthly cost per active driver on the Courier Ops Console, with alerts when it rises.
+
+### 18.5 Data, analytics and AI governance
+- **Product analytics** (PostHog self-hosted or similar), privacy first:
+  - Measure the activation funnel (install, demo run, first real route, first delivered stop), retention cohorts, and feature usage.
+  - Respect an opt-out in Settings.
+- **Learning from the field.** With explicit consent only, a pipeline that improves the scanner and voice models from field data:
+  - anonymise it and set a retention limit;
+  - never send it to providers that train.
+- **AI evaluation and safety.**
+  - Eval sets for voice commands, address parsing and the scanner, run in CI with thresholds.
+  - Guard against prompt injection (labels and voice can contain hostile text).
+  - Cost caps per user in OmniRoute.
+
+### 18.6 Support and customer success
+- In-app Help (§17.3).
+- Support email, then Chatwoot.
+- A support SLA for the beta.
+- A changelog and a "What's new" screen.
+- An in-app feedback button with a screenshot and the logs (opt in).
+- A refund and cancellation policy.
+- Account deletion in the app and on the web (a store requirement).
+
+### 18.7 Engineering organisation
+- An agent budget: track the API cost of the executor's own agent sessions per week, and report it in the company report.
+- A definition of ready and a definition of done per task.
+- The ADR for every significant choice.
+- Dependency updates with Renovate, grouped weekly.
+- A security review of the agent tooling itself: tokens with least scope, and no secrets in logs or prompts.
