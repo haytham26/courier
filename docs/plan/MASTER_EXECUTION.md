@@ -169,6 +169,30 @@ For motion, UI, charts, maps styling, icons, fonts: prototype each shortlisted l
 ### 13.5 Build to the chosen direction
 All 11+ screens (welcome, sign-in, onboarding, today, driving 2D/3D, Copilot voice, dictation, scanner, POD, route/templates, end of day/earnings, settings/map modes/downloads, team/dispatcher web) in the chosen direction, every state (loading/empty/error/offline), light + night, small/large phones, 200% text, RTL. Visual-regression baselines + screen videos as evidence. Human-design review sign-off per screen; scorecard UX ≥ 8/10 vs Spoke and the reference products.
 
+
+### 13.9 Founder decision (2026-10-23): contrast rules exactly per WCAG (binding, see D33)
+- **3:1** is allowed only for large text: 24 px regular, or 18.66 px bold (weight 700) and up. Button labels are 18 px bold so they qualify. Large titles qualify.
+- **4.5:1** applies to all other text.
+- **7:1** applies to everything on the driving screen:
+  - The Slide to Deliver label is black on the green; white on #34C759 is only about 2.2:1.
+  - Green text on white, such as "2 min", is darkened.
+  - Change the design to meet the bar; never weaken the test.
+- **The test** asserts every pair explicitly, in light and dark, with no silent exclusions.
+
+### 13.10 Queued founder follow-ups (in this order, after the current task)
+1. **Mobile lint gate (BUG-045).**
+   - Add eslint and @courier/eslint-config to apps/mobile, and a lint script that CI runs.
+   - Fix every finding at the root.
+2. **The contrast rules of §13.9.**
+3. **Organise the repository like a top engineering company (§16).**
+   - A README in every top folder that says what lives there and who owns it.
+   - docs/README.md as the single index.
+   - One name style per area.
+   - Temporary files removed and ignored.
+   - Superseded docs moved to docs/archive/.
+   - Every reference, import, workflow path and doc link updated, with all gates and Android E2E green.
+4. **Then Part B (§13.7, §13.8), §17, §18, and Part C, without stopping.**
+
 ## 14. Accounts & sign-in — complete, any user (binding; security squad owns it)
 Built on Better Auth (services/auth) + FastAPI JWKS verification. Every method has spec, tests (unit + integration + Maestro E2E), threat model and evidence.
 - **Methods**: Sign in with **Google** (Android: Credential Manager / Google Identity; iOS: Google Sign-In), Sign in with **Apple** (required on iOS when any social login is offered; also available on Android/web), **passkeys** (WebAuthn / Android Credential Manager / iCloud Keychain), **email + password**, **magic link / email OTP**, optional **phone OTP** (SMS cost guard), and for teams **Google Workspace / Microsoft Entra SSO** (OIDC) later. All through Better Auth plugins/providers; no custom crypto.

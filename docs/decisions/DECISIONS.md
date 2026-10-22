@@ -110,3 +110,8 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
   - at most 3 parallel sessions;
   - a 30 line handoff in `docs/log/CURRENT.md`;
   - the weekly cost line.
+
+## D33 — Contrast exactly per WCAG and the queued follow-ups (2026-10-23, founder decision)
+- 3:1 only for large text (24 px regular or 18.66 px bold); button labels are 18 px bold; 4.5:1 for other text; 7:1 for everything on the driving screen (the Slide to Deliver label is black on green). The test asserts every pair with no silent exclusions (MASTER_EXECUTION §13.9).
+- Order after the current task: mobile lint gate, contrast, repository organisation, then Part B, §17, §18 and Part C (§13.10).
+
