@@ -181,3 +181,50 @@ Built on Better Auth (services/auth) + FastAPI JWKS verification. Every method h
 ## 15. Store readiness tooling
 - Adopt **StoreReady** (github.com/MaTriXy/StoreReady, MPL-2.0, built by a trusted friend of the founder) as the **primary** pre-submission checker in CI on release branches (`playstore-checkup`, later `appstore-checkup`, JSON output): CRITICAL = release blocker, WARN = task. Pin an exact version (our rule for every tool). Report bugs/missing checks as issues on its repo and propose checks our app needs (background location, microphone/foreground services, account deletion, data safety) — coordinate improvements with its author.
 - Also evaluate the official/major alternatives found in research (Play Console pre-launch report, Firebase Test Lab equivalents, Fastlane `precheck`) and keep the best combination.
+
+## 16. Repository hygiene + 5× verification (founder directive, binding; do before more features)
+Founder audit (2026-10-22) of `feat/v4-company-bootstrap` found clutter typical of AI-generated repos. Fix it on a dedicated branch `chore/repo-structure` (moves via `git mv` to keep history, no behaviour change, all gates green, one PR).
+
+### 16.1 Findings to fix
+1. **Dead/duplicate code** (prove each is unused with grep + tests before deleting; record the proof in the PR): `services/worker/` (old address engine + its test) duplicates `apps/api/app/address_correction.py` → delete after confirming nothing imports it; `apps/api/app/sequencing.py` (old nearest-neighbour) vs `routing.py` → keep one; check `apps/api/app/agents/` and `prompts.py` are used, else delete; `apps/mobile/compat-test-imports.js`, `apps/mobile/scripts/compat-test.js` (old) → delete; Expo template leftovers in `apps/mobile/` (`AGENTS.md`, `LICENSE`, `.claude/`) → delete or justify.
+2. **Duplicates**: `.agents/` is byte-identical to `.claude/skills` → keep one source (`.claude/skills`) and point AGENTS.md at it; two `uv.lock` (root + `apps/api`) → one per Python project, none at root unless a uv workspace is defined.
+3. **Inconsistent layout**: the API lives in `apps/api` while other backends are in `services/`; `db/schema.sql` and `openspec/api.yaml` are lone root folders.
+4. **Tests scattered**: colocated `*.test.ts` in packages, tests inside `scripts/`, `test_*.py` at a folder root. Convention to apply everywhere: TypeScript/JS → `__tests__/` folder next to the code (`src/**/__tests__/*.test.ts`); Python → a `tests/` folder at the project root mirroring the package; scripts → `scripts/<group>/__tests__/`. Update jest/vitest/pytest configs so every test is still discovered (test counts before = after).
+5. **Docs sprawl**: ~35 files at `docs/` root incl. obsolete prompts (FINAL_PROMPT, MASTER_PROMPT, KICKOFF_PROMPT_EN, KICKOFF_V2/V3/V4, RESUME, MASTER_PLAN_2026, SAAS_BUILD_PLAN, PLAN_REVIEW, AUDIT, COVERAGE_AUDIT-P2) mixed with live docs; `EXECUTOR_LOG.md` is 131 KB.
+6. **Data in docs**: eval manifests (`docs/squads/*/eval/manifest/*.jsonl`, up to 420 KB) belong in an eval data package, not docs.
+7. **Dev-only screens in the production app**: `app/design/*` (design lab) and `app/compat.tsx` must be excluded from release builds (dev/E2E flag) or moved to a dev client.
+8. **Obsolete scripts**: `scripts/setup-emulator.*` (local emulator is banned), three `backtest.*` variants, flat `scripts/` with 33 mixed files.
+
+### 16.2 Target structure
+```
+apps/        mobile/ (Expo app)  web/ (dispatcher + admin, when built)
+services/    api/ (FastAPI, moved from apps/api)  auth/  courier-voice/  routing/ (when built)
+packages/    shared/  design-tokens/  nz-address/  eslint-config/  contracts/ (openapi.yaml + db schema + generated types)  eval/ (voice, scanner, routing eval sets + builders + checkers)
+scripts/     ci/  data/ (fetch-linz, build-pmtiles, 3d-buildings)  eval/  dev/  secrets/  — each with a README line per script
+docs/        README.md (index: what each doc is, which are binding)
+             plan/ (MASTER_EXECUTION, SAAS_CHECKLIST, COVERAGE_MAP, CONSTRAINTS)
+             status/ (PROGRESS, QUALITY_SCORECARD, PARITY, FOUNDER_TODO, BUGS)
+             decisions/ (DECISIONS, adr/)
+             product/ (PRODUCT_SPEC, PROJECT_BRIEF, DRIVER_INTERVIEW_1, COMPETITIVE_RESEARCH, TECH_STACK, COST_PLAN, LICENSES)
+             design/  research/  study/  squads/ (no data files)  evidence/  operations/
+             log/ (EXECUTOR_LOG split per week: 2026-W43.md …, plus a short CURRENT.md handoff)
+             archive/ (all obsolete prompts and old reviews, read-only)
+.github/ .maestro/ .claude/   root: only config files + README + AGENTS.md + CLAUDE.md
+```
+Update every path reference (AGENTS.md, CLAUDE.md, MASTER_EXECUTION §1, CI workflows, scripts, imports, tsconfig/pnpm/turbo/uv config) in the same PR. Keep `docs/MASTER_EXECUTION.md` path stable by leaving a one-line pointer file if it moves.
+
+### 16.3 Five-pass double check (every PR from now on, and for this restructure)
+Record each pass in the PR description with its result:
+1. **Build & gates**: install from clean, typecheck, lint, all tests, coverage, audits, licences, Semgrep/CodeQL, gitleaks — all green in CI.
+2. **References**: grep for every moved/deleted path; no broken import, script, workflow, doc link (run a link checker over docs/).
+3. **Runtime**: Android E2E green on the CI emulator; API/auth/voice services start in docker compose and pass smoke tests.
+4. **Truth check**: every claim in PROGRESS.md / EXECUTOR_LOG / PR text matches the code and CI (DONE / PARTIAL / NOT STARTED); nothing scaffolded or faked is called built.
+5. **Independent review**: a fresh-context reviewer role (doubt-driven) re-reads the diff and the tree, lists anything messy, duplicated, dead, misplaced or unsafe; all fixed before merge.
+
+### 13.6 Founder verdict on directions A/B/C (2026-10-22): all three REJECTED
+Roadbook, Beacon and Freight look dated and plain — "not an app of 2026". Restart the Design Studio at a much higher bar:
+- **Design org**: run separate specialist teams in parallel, each with its own lead and deliverable — (1) Brand & identity (name mark, logo, colour, type licensing), (2) Product/UX (flows, information architecture, driving ergonomics), (3) Visual UI (components, layouts, density), (4) Motion & interaction (Reanimated/Skia/Rive choreography, haptics, sound), (5) Maps & 3D (MapLibre styles, 3D buildings, camera), (6) Iconography & illustration, (7) Accessibility & night-driving, (8) Design systems & tokens (implementation), (9) Design research & trends (GitHub 2025–2026, award-winning apps, competitors), (10) Design QA (pixel/motion review vs spec).
+- **Research first (V4 §12 depth)**: ≥ 50 GitHub 2025–2026 design/motion/UI repos and prompt/skill collections for UI generation, ≥ 30 award-level apps (Apple Design Awards, Awwwards mobile, Mobbin/Godly-style references studied in public material), the competitors; write `docs/design/RESEARCH-2.md` with what makes 2026 apps feel new.
+- **Ten directions, not three**: 10 genuinely different, very modern, premium directions, each with: a one-line idea, mood board, brand mark, palette, type pairing, motion language, map style, and **4 screens** (Today, Driving with 3D map, Copilot voice, Scanner) in **light and night**, built as real RN screens with real motion (Reanimated/Skia), recorded as **emulator videos + PNG screenshots** in `docs/design/directions-2/<n>-<name>/`.
+- The anti-AI rules of §13.2 still apply, and also: no "paper/ledger" retro look, no flat bootstrap-like lists, no single-accent-on-grey templates. Every direction must have a strong signature moment (e.g. how a delivery is confirmed, how the map moves, how Copilot appears).
+- Founder + reviewer pick from the ten (approval gate); then refine the winner to final. Until then do not build final screens.
