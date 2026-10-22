@@ -1,0 +1,67 @@
+﻿# The output of scripts/ci/run-coverage.mjs on 2026-10-22 (branch chore/repo-structure).
+# Only the summary lines are kept here; the run itself is in the CI log of the PR.
+
+=== coverage: @courier/shared ===
+All files |   64.47 |    75.47 |   52.38 |   67.69 |                   
+=== coverage: @courier/design-tokens ===
+===== day =====
+  error            #b42318  background   6.06:1   surface   6.57:1
+  inverse on error              6.57:1
+===== night =====
+  error            #ff8a80  background   8.13:1   surface   7.24:1
+  inverse on error              8.13:1
+===== highContrast =====
+  error            #ff5c5c  background   6.94:1   surface   6.94:1
+  inverse on error              6.94:1
+===== roadbook =====
+  error            #a32018  background   6.70:1   surface   7.56:1
+  inverse on error              7.56:1
+===== beacon =====
+  error            #a11f17  background   6.78:1   surface   7.71:1
+  inverse on error              7.71:1
+===== freight =====
+  error            #b91c1c  background   6.47:1   surface   6.47:1
+  inverse on error              6.47:1
+===== voiceRibbon =====
+  error            #a11e18  background   6.18:1   surface   7.74:1
+  inverse on error              7.74:1
+===== voiceRibbonNight =====
+  error            #e8736a  background   6.37:1   surface   5.87:1
+  inverse on error              6.37:1
+===== xrayParcel =====
+  error            #a01810  background   6.64:1   surface   7.98:1
+  inverse on error              7.98:1
+===== xrayParcelNight =====
+  error            #e8736a  background   6.36:1   surface   5.82:1
+  inverse on error              6.36:1
+===== scanline =====
+  error            #b3261e  background   5.37:1   surface   6.54:1
+  inverse on error              6.54:1
+===== scanlineNight =====
+  error            #e8675e  background   5.92:1   surface   5.52:1
+  inverse on error              5.92:1
+All files         |      95 |       75 |   78.57 |   94.89 |                   
+=== coverage: @courier/nz-address ===
+All files     |   82.05 |    66.66 |   94.44 |   82.41 |                        
+=== coverage: @courier/auth ===
+    + FullyQualifiedErrorId : NativeCommandError
+[22m[39m2026-10-22T05:04:47.317Z ERROR [Better Auth]: Provider not found. Make sure to add the provider in your auth 
+[22m[39m2026-10-22T05:04:47.324Z ERROR [Better Auth]: Invalid callbackURL: https://not-our-app.example.co.nz
+[22m[39m2026-10-22T05:04:47.698Z ERROR [Better Auth]: Failed to verify authentication Error: Unexpected 
+All files          |   91.07 |    85.88 |   92.85 |   90.74 |                   
+=== coverage: the Python API ===
+=============================== tests coverage ================================
+TOTAL                         1255    193    85%
+140 passed in 5.33s
+=== coverage: the voice service ===
+=============================== tests coverage ================================
+TOTAL                       1527    116    92%
+166 passed in 8.66s
+=== check-coverage ===
+  packages/ and services/ (overall): 84.2% (floor 81%) ÔÇö 19 file(s)
+  the address engine: 81.3% (floor 81%) ÔÇö 1 file(s)
+  the auth service: 90.7% (floor 88%) ÔÇö 5 file(s)
+  the voice service: 92.4% (floor 85%) ÔÇö 22 file(s)
+  sync: not built yet (floor 90%) ÔÇö not built yet
+  billing: not built yet (floor 90%) ÔÇö not built yet
+check-coverage: every threshold is met

@@ -1,0 +1,78 @@
+{
+  "turns": 24,
+  "measured": {
+    "intent_accuracy": 1.0,
+    "false_action_rate": 0.0,
+    "word_rule_rate": 1.0,
+    "service_latency_p95_ms": 15.0
+  },
+  "checks": {
+    "intent_accuracy": {
+      "metric": "M3",
+      "target": 0.97,
+      "direction": "at_least",
+      "measured": 1.0,
+      "passed": true
+    },
+    "false_action_rate": {
+      "metric": "M9",
+      "target": 0.01,
+      "direction": "at_most",
+      "measured": 0.0,
+      "passed": true
+    },
+    "word_rule_rate": {
+      "metric": "driving-safe",
+      "target": 1.0,
+      "direction": "at_least",
+      "measured": 1.0,
+      "passed": true
+    },
+    "service_latency_p95_ms": {
+      "metric": "M6",
+      "target": 700.0,
+      "direction": "at_most",
+      "measured": 15.0,
+      "passed": true
+    }
+  },
+  "proactive": [
+    {
+      "simulation": "SIM-001",
+      "event": "shift_start",
+      "expected": "214 stops, 3 new addresses, rain after 2",
+      "measured": "214 stops, 3 new addresses, rain after 2",
+      "passed": true
+    },
+    {
+      "simulation": "SIM-001",
+      "event": "approach",
+      "expected": "next: 14 Harewood, side gate, small box mid-rack",
+      "measured": "next: 14 Harewood, side gate, small box mid-rack",
+      "passed": true
+    },
+    {
+      "simulation": "SIM-002",
+      "event": "shift_start",
+      "expected": "12 stops, dry",
+      "measured": "12 stops, dry",
+      "passed": true
+    },
+    {
+      "simulation": "SIM-003",
+      "event": "shift_end",
+      "expected": "1 delivered, 1 failed, 1 returns in the van",
+      "measured": "1 delivered, 1 failed, 1 returns in the van",
+      "passed": true
+    }
+  ],
+  "not_measured": {
+    "M1_wer": "the audio of the set is not generated yet (EVAL.md section 5)",
+    "M2_address_accuracy": "the address is parsed on the device, not in the service",
+    "M4_wake_false_accepts": "the non-speech corpus does not exist yet",
+    "M5_wake_misses": "the non-speech corpus does not exist yet",
+    "M7_battery": "the battery is measured on a device, not in the service",
+    "M8_tts_intelligibility": "the audio of the set is not generated yet"
+  },
+  "passed": true
+}

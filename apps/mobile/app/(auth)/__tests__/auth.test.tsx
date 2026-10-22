@@ -1,50 +1,44 @@
 /**
- * Tests for AuthProvider and auth screens
+ * Tests for the auth client and the AuthProvider.
+ *
+ * The mobile app talks to the Better Auth service (`services/auth`); the
+ * client is the Expo variant, which keeps the session in the device secure
+ * store. The client is mocked here so the tests do not need a server.
  */
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, waitFor } from '@testing-library/react-native';
+import { Text } from 'react-native';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
-import { login, register, signOut, getSession } from '@/lib/auth-client';
+import { signIn, signUp, signOut, getSession } from '@/lib/auth-client';
 
-// Mock the auth client
-jest.mock('@/lib/auth-client', () => ({
-  authClient: {
-    signIn: {
-      email: jest.fn(),
+jest.mock('@/lib/auth-client', () => {
+  const signIn = { email: jest.fn() };
+  const signUp = { email: jest.fn() };
+  const signOut = jest.fn();
+  const getSession = jest.fn();
+
+  return {
+    authClient: {
+      signIn,
+      signUp,
+      signOut,
+      getSession,
+      useSession: jest.fn(() => ({
+        data: null,
+        error: null,
+        isPending: false,
+        isRefetching: false,
+        refetch: jest.fn(),
+      })),
     },
-    signUp: {
-      email: jest.fn(),
-    },
-    signOut: jest.fn(),
-    getSession: jest.fn(),
-    $onAuthStateChange: jest.fn((callback) => {
-      // Return unsubscribe function
-      return jest.fn();
-    }),
-  },
-  signIn: { email: jest.fn() },
-  signUp: { email: jest.fn() },
-  signOut: jest.fn(),
-  getSession: jest.fn(),
-}));
+    signIn,
+    signUp,
+    signOut,
+    getSession,
+  };
+});
 
-// Mock expo-router
-jest.mock('expo-router', () => ({
-  useRouter: () => ({
-    replace: jest.fn(),
-    push: jest.fn(),
-  }),
-}));
-
-// Mock Alert
-jest.mock('react-native', () => ({
-  ...jest.requireActual('react-native'),
-  Alert: {
-    alert: jest.fn(),
-  },
-}));
-
-const mockAuthClient = require('@/lib/auth-client').authClient;
+const mockAuthClient = jest.requireMock('@/lib/auth-client').authClient;
 
 describe('AuthProvider', () => {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -55,73 +49,48 @@ describe('AuthProvider', () => {
     jest.clearAllMocks();
   });
 
-  it('provides auth context to children', () => {
+  it('provides the auth context to children', () => {
     const TestComponent = () => {
-      const { user, isLoading, isAuthenticated } = useAuth();
+      const { isLoading, isAuthenticated } = useAuth();
       return (
-        <React.View testID="auth-status">
-          <React.Text>{isLoading ? 'loading' : 'loaded'}</React.Text>
-          <React.Text>{isAuthenticated ? 'authenticated' : 'unauthenticated'}</React.Text>
-        </React.View>
+        <>
+          <Text testID="state">{isLoading ? 'loading' : 'loaded'}</Text>
+          <Text testID="auth">{isAuthenticated ? 'yes' : 'no'}</Text>
+        </>
       );
     };
 
     const { getByTestId } = render(<TestComponent />, { wrapper });
-    
-    expect(getByTestId('auth-status')).toBeTruthy();
+
+    expect(getByTestId('state')).toBeTruthy();
+    expect(getByTestId('auth')).toBeTruthy();
   });
 
-  it('initializes with loading state', () => {
+  it('exposes the signed-in user when a session exists', async () => {
+    mockAuthClient.useSession.mockReturnValue({
+      data: {
+        user: {
+          id: '1',
+          email: 'driver@example.co.nz',
+          name: 'Test Driver',
+          emailVerified: true,
+          createdAt: '2026-10-20T00:00:00.000Z',
+        },
+      },
+      error: null,
+      isPending: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+
     const TestComponent = () => {
-      const { isLoading } = useAuth();
-      return <React.Text testID="loading">{isLoading.toString()}</React.Text>;
+      const { user, isAuthenticated } = useAuth();
+      return <Text testID="email">{user?.email ?? 'none'}</Text>;
     };
 
     const { getByTestId } = render(<TestComponent />, { wrapper });
-    expect(getByTestId('loading')).toBeTruthy();
-  });
 
-  it('calls refreshSession on mount', () => {
-    const TestComponent = () => {
-      const { refreshSession } = useAuth();
-      return <React.Text onPress={refreshSession} testID="refresh">Refresh</React.Text>;
-    };
-
-    render(<TestComponent />, { wrapper });
-    
-    // getSession should have been called
-    expect(mockAuthClient.getSession).toHaveBeenCalled();
-  });
-});
-
-describe('LoginScreen', () => {
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <AuthProvider>{children}</AuthProvider>
-  );
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('renders login form', () => {
-    // Note: Full integration test would require more setup
-    // This is a placeholder for the login screen test
-    expect(true).toBe(true);
-  });
-});
-
-describe('RegisterScreen', () => {
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <AuthProvider>{children}</AuthProvider>
-  );
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('renders register form', () => {
-    // Placeholder for register screen test
-    expect(true).toBe(true);
+    await waitFor(() => expect(getByTestId('email').props.children).toBe('driver@example.co.nz'));
   });
 });
 
@@ -130,58 +99,54 @@ describe('auth-client', () => {
     jest.clearAllMocks();
   });
 
-  it('signIn.email calls authClient with correct params', async () => {
-    const { signIn } = require('@/lib/auth-client');
-    
+  it('signIn.email forwards the credentials', async () => {
     mockAuthClient.signIn.email.mockResolvedValue({
-      data: { user: { id: '1', email: 'test@example.com' } },
+      data: { user: { id: '1', email: 'driver@example.co.nz' } },
       error: null,
     });
 
-    await signIn.email({ email: 'test@example.com', password: 'password123' });
+    await signIn.email({ email: 'driver@example.co.nz', password: 'correct-horse-battery' });
 
     expect(mockAuthClient.signIn.email).toHaveBeenCalledWith({
-      email: 'test@example.com',
-      password: 'password123',
+      email: 'driver@example.co.nz',
+      password: 'correct-horse-battery',
     });
   });
 
-  it('signUp.email calls authClient with correct params', async () => {
-    const { signUp } = require('@/lib/auth-client');
-    
+  it('signUp.email forwards the credentials', async () => {
     mockAuthClient.signUp.email.mockResolvedValue({
-      data: { user: { id: '1', email: 'test@example.com', name: 'Test User' } },
+      data: { user: { id: '1', email: 'driver@example.co.nz', name: 'Test Driver' } },
       error: null,
     });
 
-    await signUp.email({ email: 'test@example.com', password: 'password123', name: 'Test User' });
+    await signUp.email({
+      email: 'driver@example.co.nz',
+      password: 'correct-horse-battery',
+      name: 'Test Driver',
+    });
 
     expect(mockAuthClient.signUp.email).toHaveBeenCalledWith({
-      email: 'test@example.com',
-      password: 'password123',
-      name: 'Test User',
+      email: 'driver@example.co.nz',
+      password: 'correct-horse-battery',
+      name: 'Test Driver',
     });
   });
 
-  it('signOut calls authClient', async () => {
-    const { signOut } = require('@/lib/auth-client');
-    
+  it('signOut calls the client', async () => {
     mockAuthClient.signOut.mockResolvedValue({ error: null });
 
-    await signOut();
+    await signOut({});
 
     expect(mockAuthClient.signOut).toHaveBeenCalled();
   });
 
-  it('getSession calls authClient', async () => {
-    const { getSession } = require('@/lib/auth-client');
-    
+  it('getSession calls the client', async () => {
     mockAuthClient.getSession.mockResolvedValue({
-      data: { user: { id: '1', email: 'test@example.com' } },
+      data: { user: { id: '1', email: 'driver@example.co.nz' } },
       error: null,
     });
 
-    await getSession();
+    await getSession({ query: {} });
 
     expect(mockAuthClient.getSession).toHaveBeenCalled();
   });

@@ -1,56 +1,52 @@
+/**
+ * Unistyles 3 configuration for the Courier Copilot mobile app.
+ *
+ * The themes come from `packages/design-tokens` (the single source of truth)
+ * and are plain hex values — no CSS custom properties, which do not work in
+ * React Native.
+ *
+ * Unistyles reserves the theme names `light` and `dark` for adaptive themes
+ * (day/night switching driven by the OS colour scheme), so the product themes
+ * `day` and `night` are registered under those names.
+ */
 import { StyleSheet } from 'react-native-unistyles';
+import { themes } from '@courier/design-tokens/themes';
 
-import { themes as baseThemes, ThemeName, generateCSSVariables } from '@courier/design-tokens/themes';
-
-// Define theme with non-nullable colors for React Native compatibility
-interface ThemeColors {
-  background: string;
-  surface: string;
-  surfaceElevated: string;
-  border: string;
-  textPrimary: string;
-  textSecondary: string;
-  textTertiary: string;
-  textInverse: string;
-  brandPrimary: string;
-  brandSecondary: string;
-  success: string;
-  warning: string;
-  error: string;
-  info: string;
-  statusPending: string;
-  statusActive: string;
-  statusDelivered: string;
-  statusFailed: string;
-  statusSkipped: string;
-  mapBackground: string;
-  mapWater: string;
-  mapLand: string;
-  mapRoad: string;
-  mapHighway: string;
-  mapBuilding: string;
-  mapPark: string;
-  mapText: string;
-  stopPin: string;
-  routeLine: string;
-  userLocation: string;
-  [key: string]: string;
-}
-
-// Override Theme with non-nullable colors
-type Theme = Omit<typeof baseThemes.day, 'colors'> & {
-  colors: ThemeColors;
+export const appThemes = {
+  light: themes.day,
+  dark: themes.night,
+  highContrast: themes.highContrast,
+  roadbook: themes.roadbook,
+  beacon: themes.beacon,
+  freight: themes.freight,
 };
 
-// Cast the themes object to have non-nullable colors
-const themes = baseThemes as Record<ThemeName, Theme>;
+export type AppThemes = {
+  light: typeof themes.day;
+  dark: typeof themes.day;
+  highContrast: typeof themes.day;
+  roadbook: typeof themes.day;
+  beacon: typeof themes.day;
+  freight: typeof themes.day;
+};
 
-// Unistyles 3 configuration
-// We use CSS-in-JS with StyleSheet.create() but with Unistyles for theming
-// The theme is applied via ThemeProvider which sets CSS variables
+declare module 'react-native-unistyles' {
+  export interface UnistylesThemes extends AppThemes {}
+}
 
-export type { Theme, ThemeName };
-export { themes, generateCSSVariables };
-
-// Unistyles 3 doesn't need explicit theme registration like v2
-// It uses CSS variables from global.css and ThemeProvider
+/** Product theme names and the Unistyles name they are registered under. */
+export const unistylesThemeNames = {
+  day: 'light',
+  night: 'dark',
+  highContrast: 'highContrast',
+  roadbook: 'roadbook',
+  beacon: 'beacon',
+  freight: 'freight',
+} as const;
+StyleSheet.configure({
+  themes: appThemes,
+  settings: {
+    // The device colour scheme picks day or night automatically.
+    adaptiveThemes: true,
+  },
+});

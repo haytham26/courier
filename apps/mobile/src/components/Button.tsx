@@ -1,9 +1,21 @@
+/**
+ * The button.
+ *
+ * The contract (`docs/design/SYSTEM.md` §2 and §3): a touch target is at
+ * least **56 pt**, the primary action is **72 pt**, there is one primary
+ * action per screen, and every interactive element has an accessibility
+ * label and a role.
+ *
+ * The secondary action is a surface with a border, not a second brand colour:
+ * "one primary action per screen" means the second button must not compete
+ * with the first.
+ */
 import React from 'react';
-import { Pressable, Text, View, StyleSheet, ActivityIndicator, ViewStyle, StyleProp } from 'react-native';
+import { Pressable, Text, View, StyleSheet, ActivityIndicator } from 'react-native';
+import type { ViewStyle, StyleProp } from 'react-native';
 import { useTheme } from '../providers/ThemeProvider';
 
-interface ButtonProps
-  extends React.ComponentPropsWithoutRef<typeof Pressable> {
+interface ButtonProps extends React.ComponentPropsWithoutRef<typeof Pressable> {
   loading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -27,13 +39,14 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
       style,
       onPressIn,
       onPressOut,
+      accessibilityLabel,
       ...props
     },
-    ref
+    ref,
   ) => {
     const { theme } = useTheme();
-    
-    // Map variant to theme colors
+
+    // The variant decides the colours: the fill, the border and the label.
     const getVariantStyles = () => {
       switch (variant) {
         case 'primary':
@@ -44,9 +57,9 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
           };
         case 'secondary':
           return {
-            backgroundColor: theme.colors.brandSecondary,
-            borderColor: theme.colors.brandSecondary,
-            color: theme.colors.textInverse,
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
+            color: theme.colors.textPrimary,
           };
         case 'outline':
           return {
@@ -88,16 +101,17 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
       }
     };
 
+    // The size decides the height: 56 pt for a normal action, 72 pt for the
+    // primary action of a screen.
     const getSizeStyles = () => {
       switch (size) {
         case 'sm':
-          return { height: 36, paddingHorizontal: 12, fontSize: 12 };
-        case 'md':
-          return { height: 44, paddingHorizontal: 16, fontSize: 14 };
+          return { height: 56, paddingHorizontal: 12, fontSize: 17 };
         case 'lg':
-          return { height: 52, paddingHorizontal: 24, fontSize: 16 };
+          return { height: 72, paddingHorizontal: 24, fontSize: 22 };
+        case 'md':
         default:
-          return { height: 44, paddingHorizontal: 16, fontSize: 14 };
+          return { height: 56, paddingHorizontal: 16, fontSize: 19 };
       }
     };
 
@@ -114,43 +128,41 @@ export const Button = React.forwardRef<React.ElementRef<typeof Pressable>, Butto
       style,
     ].filter(Boolean) as StyleProp<ViewStyle>[];
 
+    // The label of the button is its own text, unless the caller gives one.
+    const label = accessibilityLabel ?? (typeof children === 'string' ? children : undefined);
+
     return (
       <Pressable
-        ref={ref as any}
+        ref={ref}
         style={baseStyles}
         disabled={disabled || loading}
         {...props}
         accessibilityRole="button"
-        accessibilityState={{ disabled: disabled || loading }}
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: disabled || loading, busy: loading }}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
       >
         {loading ? (
           <ActivityIndicator
             size="small"
-            color={
-              variant === 'primary' ||
-              variant === 'secondary' ||
-              variant === 'destructive' ||
-              variant === 'success' ||
-              variant === 'warning'
-                ? '#ffffff'
-                : undefined
-            }
+            color={variantStyles.color}
             style={{ marginRight: leftIcon ? 8 : 0 }}
           />
         ) : (
           <>
-            {leftIcon && <View style={{ marginRight: 8 }}>{leftIcon}</View>}
-            <Text style={[styles.text, { color: variantStyles.color, fontSize: sizeStyles.fontSize }]}>
+            {leftIcon ? <View style={{ marginRight: 8 }}>{leftIcon}</View> : null}
+            <Text
+              style={[styles.text, { color: variantStyles.color, fontSize: sizeStyles.fontSize }]}
+            >
               {children}
             </Text>
-            {rightIcon && <View style={{ marginLeft: 8 }}>{rightIcon}</View>}
+            {rightIcon ? <View style={{ marginLeft: 8 }}>{rightIcon}</View> : null}
           </>
         )}
       </Pressable>
     );
-  }
+  },
 );
 
 Button.displayName = 'Button';
@@ -161,10 +173,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    minHeight: 44,
-    minWidth: 48,
+    minHeight: 56,
+    minWidth: 56,
   },
   text: {
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });

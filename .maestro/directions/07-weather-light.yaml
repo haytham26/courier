@@ -1,0 +1,45 @@
+appId: com.courier.copilot
+name: 07 Weather Light - the four screens of the direction
+---
+# The flow that records the video of the direction (MASTER_EXECUTION §13.6).
+# It opens the lab route with a deep link, walks the four screens of the
+# brief in order, presses the confirmation so the signature moment is on the
+# recording, and ends on the night theme.
+- launchApp:
+    clearState: true
+- openLink: "courier://design2/07-weather-light/today"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 45000
+- assertVisible:
+    id: "today-next-stop"
+- tapOn:
+    id: "today-next-stop"
+- takeScreenshot: "07-weather-light-today"
+- openLink: "courier://design2/07-weather-light/driving"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 45000
+- assertVisible:
+    id: "driving-next-stop"
+- takeScreenshot: "07-weather-light-driving"
+- openLink: "courier://design2/07-weather-light/copilot"
+- extendedWaitUntil:
+    visible:
+      id: "copilot-screen"
+    timeout: 45000
+- takeScreenshot: "07-weather-light-copilot"
+- openLink: "courier://design2/07-weather-light/scanner"
+- extendedWaitUntil:
+    visible:
+      id: "scanner-screen"
+    timeout: 45000
+- takeScreenshot: "07-weather-light-scanner"
+- openLink: "courier://design2/07-weather-light/today?theme=night"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 45000
+- takeScreenshot: "07-weather-light-today-night"

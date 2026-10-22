@@ -1,0 +1,7 @@
+{
+  "service": "courier-voice",
+  "engine": "on-device (the deterministic brain of the service)",
+  "audio": "none: the simulations are scored on the text of the turns",
+  "python": "3.11",
+  "generated": "2026-10-21T19:01:05Z"
+}

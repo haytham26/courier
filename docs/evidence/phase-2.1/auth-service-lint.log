@@ -1,0 +1,8 @@
+﻿cmd : $ eslint .
+At line:4 char:59
++ ... vice-lint.log" { cmd /c "corepack pnpm --filter @courier/auth lint" }
++                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ eslint .:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+EXIT_CODE=0

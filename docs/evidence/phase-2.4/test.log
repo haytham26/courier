@@ -1,0 +1,95 @@
+﻿cmd : $ turbo run test && pnpm run test:api
+At line:6 char:46
++ ... md "docs\evidence\phase-2.4\test.log" { cmd /c "corepack pnpm test" }
++                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ turbo run test && pnpm run test:api:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+   ÔÇó turbo 2.11.9
+   ÔÇó Packages in scope: @courier/auth, @courier/design-tokens, @courier/eslint-config, @courier/nz-address, @courier/shared, mobile
+   ÔÇó Running test in 6 packages
+   ÔÇó Remote caching disabled
+
+@courier/shared:test: cache miss, executing e7f67ffab7cab6ee
+@courier/auth:test: cache miss, executing 36298b5137bd4931
+@courier/nz-address:test: cache miss, executing 949d900341da2175
+mobile:test: cache miss, executing 3262460982f786ed
+@courier/design-tokens:test: cache miss, executing c44aae1a52f3e151
+@courier/shared:test: $ vitest run
+@courier/auth:test: $ vitest run
+@courier/nz-address:test: $ vitest run
+mobile:test: $ jest
+@courier/design-tokens:test: $ vitest run
+@courier/shared:test: 
+@courier/shared:test:  RUN  v3.2.7 C:/Users/DCL/projects/courier/packages/shared
+@courier/shared:test: 
+@courier/auth:test: 
+@courier/auth:test:  RUN  v3.2.7 C:/Users/DCL/projects/courier/services/auth
+@courier/auth:test: 
+@courier/nz-address:test: 
+@courier/nz-address:test:  RUN  v3.2.7 C:/Users/DCL/projects/courier/packages/nz-address
+@courier/nz-address:test: 
+@courier/shared:test:  Ô£ô src/utils.test.ts (26 tests) 12ms
+@courier/shared:test: 
+@courier/shared:test:  Test Files  1 passed (1)
+@courier/shared:test:       Tests  26 passed (26)
+@courier/shared:test:    Start at  18:44:59
+@courier/shared:test:    Duration  914ms (transform 203ms, setup 0ms, collect 215ms, tests 12ms, environment 0ms, prepare 308ms)
+@courier/shared:test: 
+@courier/design-tokens:test: 
+@courier/design-tokens:test:  RUN  v3.2.7 C:/Users/DCL/projects/courier/packages/design-tokens
+@courier/design-tokens:test: 
+@courier/nz-address:test:  Ô£ô src/parser.test.ts (17 tests) 20ms
+@courier/nz-address:test: 
+@courier/nz-address:test:  Test Files  1 passed (1)
+@courier/nz-address:test:       Tests  17 passed (17)
+@courier/nz-address:test:    Start at  18:44:59
+@courier/nz-address:test:    Duration  1.57s (transform 184ms, setup 0ms, collect 211ms, tests 20ms, environment 0ms, prepare 312ms)
+@courier/nz-address:test: 
+@courier/auth:test:  Ô£ô tests/config.test.ts (8 tests) 13ms
+@courier/design-tokens:test:  Ô£ô src/tokens.test.ts (27 tests) 7ms
+@courier/design-tokens:test: 
+@courier/design-tokens:test:  Test Files  1 passed (1)
+@courier/design-tokens:test:       Tests  27 passed (27)
+@courier/design-tokens:test:    Start at  18:45:00
+@courier/design-tokens:test:    Duration  1.17s (transform 113ms, setup 0ms, collect 131ms, tests 7ms, environment 0ms, prepare 211ms)
+@courier/design-tokens:test: 
+mobile:test: PASS app/(auth)/__tests__/auth.test.tsx
+mobile:test:   AuthProvider
+mobile:test:     ÔêÜ provides the auth context to children (177 ms)
+mobile:test:     ÔêÜ exposes the signed-in user when a session exists (3 ms)
+mobile:test:   auth-client
+mobile:test:     ÔêÜ signIn.email forwards the credentials (1 ms)
+mobile:test:     ÔêÜ signUp.email forwards the credentials
+mobile:test:     ÔêÜ signOut calls the client (1 ms)
+mobile:test:     ÔêÜ getSession calls the client
+mobile:test: 
+mobile:test: Test Suites: 1 passed, 1 total
+mobile:test: Tests:       6 passed, 6 total
+mobile:test: Snapshots:   0 total
+mobile:test: Time:        2.525 s, estimated 3 s
+mobile:test: Ran all test suites.
+@courier/auth:test:  Ô£ô tests/rate-limit.test.ts (1 test) 263ms
+@courier/auth:test:  Ô£ô tests/organization.test.ts (6 tests) 446ms
+@courier/auth:test: stderr | tests/auth.test.ts > email and password authentication > rejects a wrong password
+@courier/auth:test: 2026-10-20T05:45:02.870Z WARN [Better Auth]: Invalid password
+@courier/auth:test: 
+@courier/auth:test:  Ô£ô tests/auth.test.ts (8 tests) 612ms
+@courier/auth:test:  Ô£ô tests/jwt.test.ts (8 tests) 1951ms
+@courier/auth:test:    Ô£ô JWKS and JWT issuance > rejects an expired token  1574ms
+@courier/auth:test: 
+@courier/auth:test:  Test Files  5 passed (5)
+@courier/auth:test:       Tests  31 passed (31)
+@courier/auth:test:    Start at  18:44:59
+@courier/auth:test:    Duration  4.48s (transform 760ms, setup 0ms, collect 4.77s, tests 3.28s, environment 1ms, prepare 1.82s)
+@courier/auth:test: 
+
+ Tasks:    5 successful, 5 total
+Cached:    0 cached, 5 total
+  Time:    6.093s 
+
+$ uv run --directory apps/api pytest -q
+................................................                         [100%]
+48 passed in 2.18s
+EXIT_CODE=0

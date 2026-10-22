@@ -1,0 +1,39 @@
+﻿corepack : $ turbo run typecheck && pnpm run typecheck:api && pnpm run typecheck:voice
+At line:1 char:1
++ corepack pnpm typecheck 2>&1 | Out-File -FilePath "docs\evidence\sect ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ turbo run typ...typecheck:voice:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+   ÔÇó turbo 2.11.9
+   ÔÇó Packages in scope: @courier/auth, @courier/design-tokens, @courier/eslint-config, @courier/nz-address, @courier/shared, mobile
+   ÔÇó Running typecheck in 6 packages
+   ÔÇó Remote caching disabled
+
+@courier/auth:typecheck: cache miss, executing 4b76d3df4fd59d8a
+@courier/design-tokens:build: cache miss, executing 3022c27863823910
+@courier/design-tokens:typecheck: cache miss, executing 71d3d881f2de6032
+@courier/nz-address:typecheck: cache miss, executing 41c3c57c45702a7b
+@courier/shared:typecheck: cache miss, executing 8241e660dbf9e47a
+@courier/auth:typecheck: $ tsc --noEmit
+@courier/design-tokens:build: $ tsc -p tsconfig.build.json
+@courier/design-tokens:typecheck: $ tsc --noEmit
+@courier/nz-address:typecheck: $ tsc --noEmit
+@courier/shared:typecheck: $ tsc --noEmit
+mobile:typecheck: cache miss, executing e49e7f904e5c0d4d
+mobile:typecheck: $ tsc --noEmit
+
+ Tasks:    6 successful, 6 total
+Cached:    0 cached, 6 total
+  Time:    6.101s 
+
+$ uv run --directory services/api mypy .
+Success: no issues found in 28 source files
+$ uv run --directory services/courier-voice mypy .
+tests\test_cost_and_run.py:71: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests\engines\test_omniroute.py:85: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests\engines\test_omniroute.py:135: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests\engines\test_omniroute.py:148: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests\test_auth.py:146: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+Success: no issues found in 38 source files

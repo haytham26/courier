@@ -1,0 +1,8 @@
+﻿cmd : $ tsc --noEmit
+At line:6 char:65
++ ... heck.log" { cmd /c "corepack pnpm --filter @courier/design-tokens typ ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ tsc --noEmit:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+EXIT_CODE=0

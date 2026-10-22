@@ -46,7 +46,7 @@ export const StopSchema = z.object({
 
 export const TemplateSegmentSchema = z.object({
   street_key: z.string().min(1),
-  direction: z.enum(['asc', 'desc', 'odd_first', 'even_first']),
+  direction: z.enum(['asc', 'desc', 'odd_first', 'even_first', 'zigzag']),
 });
 
 export const RunSchema = z.object({
@@ -91,7 +91,7 @@ export const VoiceResponseSchema = z.discriminatedUnion('type', [
 
 export const IntentSchema = z.object({
   tool: z.string().min(1),
-  args: z.record(z.unknown()),
+  args: z.record(z.string(), z.unknown()),
   speech: z.string().optional(),
   confidence: z.number().min(0).max(1),
 });
@@ -129,13 +129,43 @@ export const IntakeTextSchema = z.object({
 });
 
 export const TemplateUpdateSchema = z.object({
-  segments: z.array(TemplateSegmentSchema),
+  template_id: z.string().min(1).max(64),
+  segments: z.array(TemplateSegmentSchema).default([]),
+  stop_order: z.array(z.string().uuid()),
+});
+
+export const RouteStopSchema = z.object({
+  stop_id: z.string().uuid(),
+  sequence: z.number().int().positive(),
+  lat: z.number(),
+  lon: z.number(),
+  arrival_at: z.string().datetime(),
+  departure_at: z.string().datetime(),
+  distance_m: z.number().nonnegative(),
+  cumulative_distance_m: z.number().nonnegative(),
+  late: z.boolean(),
+});
+
+export const RouteSchema = z.object({
+  shift_id: z.string().uuid(),
+  run_id: z.string().uuid(),
+  engine: z.string().min(1),
+  locked: z.boolean(),
+  template_id: z.string().nullable(),
+  total_distance_m: z.number().nonnegative(),
+  total_duration_s: z.number().nonnegative(),
+  parcels: z.number().int().nonnegative(),
+  capacity_parcels: z.number().int().nonnegative().nullable(),
+  over_capacity: z.boolean(),
+  window_violations: z.number().int().nonnegative(),
+  unroutable_stop_ids: z.array(z.string().uuid()),
+  stops: z.array(RouteStopSchema),
 });
 
 export const ApiErrorSchema = z.object({
   error: z.string().min(1),
   code: z.string().optional(),
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
@@ -160,4 +190,6 @@ export type DeliveryEvent = z.infer<typeof DeliveryEventSchema>;
 export type SyncPayload = z.infer<typeof SyncPayloadSchema>;
 export type IntakeText = z.infer<typeof IntakeTextSchema>;
 export type TemplateUpdate = z.infer<typeof TemplateUpdateSchema>;
+export type RouteStop = z.infer<typeof RouteStopSchema>;
+export type Route = z.infer<typeof RouteSchema>;
 export type ApiError = z.infer<typeof ApiErrorSchema>;

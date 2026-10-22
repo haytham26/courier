@@ -4,35 +4,47 @@
   "workspaces": [
     "apps/mobile",
     "apps/web",
-    "packages/*"
+    "packages/*",
+    "services/auth"
   ],
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "test": "turbo run test",
-    "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck",
+    "test": "turbo run test && pnpm run test:api && pnpm run test:voice && pnpm run test:store-readiness",
+    "test:api": "uv run --directory services/api pytest -q",
+    "test:voice": "uv run --directory services/courier-voice pytest -q",
+    "test:store-readiness": "node --test \"scripts/*/__tests__/*.test.mjs\"",
+    "lint": "turbo run lint && pnpm run lint:api && pnpm run lint:voice",
+    "lint:api": "uv run --directory services/api ruff check .",
+    "lint:voice": "uv run --directory services/courier-voice ruff check .",
+    "typecheck": "turbo run typecheck && pnpm run typecheck:api && pnpm run typecheck:voice",
+    "typecheck:api": "uv run --directory services/api mypy .",
+    "typecheck:voice": "uv run --directory services/courier-voice mypy .",
     "db:push": "turbo run db:push",
     "db:studio": "turbo run db:studio",
     "format": "prettier --write \"**/*.{ts,tsx,json,md,yml,yaml}\"",
-    "check-secrets": "node scripts/check-secrets.js",
-    "push-secrets": "bash scripts/push-secrets.sh",
-    "open-secrets": "bash scripts/open-secrets.sh"
+    "check:fast": "pnpm typecheck && pnpm lint && node scripts/ci/check-floor.mjs",
+    "check:task": "pnpm check:fast && pnpm test",
+    "check:full": "pnpm check:task && pnpm coverage && node scripts/ci/check-licenses.mjs",
+    "coverage": "node scripts/ci/run-coverage.mjs",
+    "format:check": "prettier --check .",
+    "check-secrets": "node scripts/ci/check-secrets.js",
+    "push-secrets": "bash scripts/secrets/push-secrets.sh",
+    "open-secrets": "bash scripts/secrets/open-secrets.sh"
   },
   "devDependencies": {
-    "turbo": "latest",
-    "prettier": "latest",
-    "typescript": "latest",
-    "@types/node": "latest",
-    "eslint": "latest",
-    "@typescript-eslint/eslint-plugin": "latest",
-    "@typescript-eslint/parser": "latest"
+    "turbo": "2.11.9",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3",
+    "@types/node": "24.19.2",
+    "eslint": "10.13.0",
+    "@typescript-eslint/eslint-plugin": "8.71.0",
+    "@typescript-eslint/parser": "8.71.0",
+    "typescript-eslint": "8.71.0",
+    "pnpm": "12.14.0"
   },
   "packageManager": "pnpm@12.14.0",
   "engines": {
     "node": ">=22.0.0"
-  },
-  "pnpm": {
-    "ignoredBuiltScripts": ["esbuild"]
   }
 }

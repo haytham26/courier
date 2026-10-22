@@ -1,0 +1,55 @@
+# Semgrep findings that are accepted on purpose, with the reason.
+#
+# This file is the record of the accepted findings. The machine-readable
+# exclusions are the `--exclude-rule` patterns of the scan command in
+# `.github/workflows/quality-gates.yml` (a `.semgrepignore` filters the files
+# of the scan, not the rules). Every exclusion below has a row in the
+# exceptions table of `docs/plan/CONSTRAINTS.md` with its owner and its date.
+#
+# 1. The Semgrep community ruleset expects the pnpm 10 supply-chain settings
+#    (minimumReleaseAge / trustPolicy / blockExoticSubDependencies) in the pnpm
+#    workspace file. pnpm 12 ships its own supply-chain policy and verifies the
+#    lockfile on every install ("Verifying lockfile against supply-chain
+#    policies"), it no longer reads those settings from package.json, and the
+#    current stack (Expo SDK 58, Better Auth 1.7.10) was published inside the
+#    last week, so a seven-day window would block the whole project. The
+#    versions are pinned exactly, the audits in scripts/ci/check-audit.mjs fail on
+#    any high or critical advisory, and the licence inventory covers the
+#    licensing risk. Tracked as the W3 exception in CONSTRAINTS.md.
+#
+# 2. The container rule wants a read-only root filesystem. The stateful
+#    services here write to their data directory (Postgres, PostGIS, Valkey),
+#    which is a named volume, not the container filesystem; a read-only root
+#    would stop them from starting. The no-new-privileges rule is honoured
+#    everywhere.
+#
+# 3. The same rule for uv: the API pins its versions in uv.lock and the
+#    security patches (certifi) have to land the day they are published, so a
+#    seven-day cooldown would keep the vulnerable version in place. uv 12
+#    verifies the lockfile against its own supply-chain policy on every
+#    install, the versions are pinned exactly, the audits fail on any high or
+#    critical advisory, and the licence inventory covers the licensing risk.
+#
+# 4. The non-literal regular expression: the only hit is a test that builds the
+#    pattern from the name of the direction it is testing. No input of the
+#    application reaches it.
+#
+# 5. The replaceAll sanitiser: the flagged line IS the HTML escaper of the
+#    design render script (it escapes &, <, > and " before they go into the
+#    page). The rule warns about a sanitiser that can be bypassed; this one
+#    escapes the ampersand first, so it cannot.
+#
+# 6. The logger rule: the flagged line logs the NUMBER of tokens and the cost
+#    of the call, never a token and never a key.
+#
+# Tracked as the W3 and W5 exceptions in docs/plan/CONSTRAINTS.md.
+
+package_managers.pnpm.pnpm-missing-minimum-release-age
+package_managers.pnpm.pnpm-trust-policy
+package_managers.pnpm.pnpm-block-exotic-sub-dependencies
+package_managers.npm.npm-missing-minimum-release-age
+yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service
+package_managers.uv.uv-missing-dependency-cooldown.uv-missing-dependency-cooldown
+javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+javascript.audit.detect-replaceall-sanitization.detect-replaceall-sanitization
+python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure

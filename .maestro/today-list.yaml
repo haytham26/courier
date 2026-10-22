@@ -1,0 +1,29 @@
+appId: com.courier.copilot
+name: Today's list shows the day
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The settings gear is in the top bar, visible on arrival.
+- assertVisible:
+    id: "today-settings"
+# The day's actions sit in the Current Run card, under the morning brief and
+# the stats grid, so they need a scroll on the emulator's viewport. The
+# courier scrolls to them; the flow does the same, then asserts each control.
+- scrollUntilVisible:
+    element:
+      id: "today-mark-delivered"
+    direction: DOWN
+    timeout: 20000
+# The assertions are the screen's own testIDs: the copy moves with the design,
+# the testIDs are the contract.
+- assertVisible:
+    id: "today-mark-delivered"
+- assertVisible:
+    id: "today-skip"
+- assertVisible:
+    id: "today-fail"
+- takeScreenshot: "today-list"

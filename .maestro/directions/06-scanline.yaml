@@ -1,0 +1,45 @@
+appId: com.courier.copilot
+name: 06 Scanline - the four screens of the direction
+---
+# The flow that records the video of the direction (MASTER_EXECUTION §13.6).
+# It opens the lab route with a deep link, walks the four screens of the
+# brief in order, presses the confirmation so the signature moment is on the
+# recording, and ends on the night theme.
+- launchApp:
+    clearState: true
+- openLink: "courier://design2/06-scanline/today"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 45000
+- assertVisible:
+    id: "today-next-stop"
+- tapOn:
+    id: "today-next-stop"
+- takeScreenshot: "06-scanline-today"
+- openLink: "courier://design2/06-scanline/driving"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 45000
+- assertVisible:
+    id: "driving-next-stop"
+- takeScreenshot: "06-scanline-driving"
+- openLink: "courier://design2/06-scanline/copilot"
+- extendedWaitUntil:
+    visible:
+      id: "copilot-screen"
+    timeout: 45000
+- takeScreenshot: "06-scanline-copilot"
+- openLink: "courier://design2/06-scanline/scanner"
+- extendedWaitUntil:
+    visible:
+      id: "scanner-screen"
+    timeout: 45000
+- takeScreenshot: "06-scanline-scanner"
+- openLink: "courier://design2/06-scanline/today?theme=night"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 45000
+- takeScreenshot: "06-scanline-today-night"

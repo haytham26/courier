@@ -1,0 +1,7 @@
+# The tables of these two documents are generated from the evidence snapshots by
+# `scripts/design/build-design-research-tables.mjs --write` and
+# `scripts/design/build-design-bench-tables.mjs --write`. Prettier would re-wrap the
+# tables, and the next run of the generator would re-wrap them back, so the
+# documents are left alone.
+docs/design/RESEARCH.md
+docs/design/BENCH.md

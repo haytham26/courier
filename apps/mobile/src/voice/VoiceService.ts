@@ -18,6 +18,9 @@ import {
   GeneratedAudio
 } from 'react-native-sherpa-onnx/tts';
 
+import type { MapViewMode } from '@/maps/viewModes';
+import { publishVoiceCommand } from './commandChannel';
+
 export interface VoiceConfig {
   sttModelPath: string;
   ttsModelPath: string;
@@ -39,10 +42,26 @@ export type VoiceState =
   | 'speaking'
   | 'error';
 
-export type VoiceCommand = 
+/**
+ * The command catalogue.
+ *
+ * Every command the app understands is in this list. The map commands are the
+ * ones MASTER_EXECUTION §11 asks for: the courier can pick the map mode and
+ * move the camera by voice, and the map screen listens on the voice channel
+ * (`commandChannel.ts`).
+ *
+ * The catalogue grew with Courier Voice: the service speaks the names of the
+ * product's tools, and the app has a command for each of them, so a sentence
+ * the service understands does something on the phone.
+ */
+export type VoiceCommand =
   | { type: 'mark_delivered'; stopId: string }
   | { type: 'mark_skipped'; stopId: string }
   | { type: 'mark_failed'; stopId: string; reason: string }
+  | { type: 'add_stop'; rawAddress: string }
+  | { type: 'start_break'; minutes: number | null }
+  | { type: 'end_break' }
+  | { type: 'add_location_note'; kind: string; text: string }
   | { type: 'navigate_next' }
   | { type: 'navigate_previous' }
   | { type: 'repeat_instruction' }
@@ -50,7 +69,15 @@ export type VoiceCommand =
   | { type: 'how_many_left' }
   | { type: 'start_shift' }
   | { type: 'end_shift' }
-  | { type: 'emergency' };
+  | { type: 'emergency' }
+  | { type: 'set_map_mode'; mode: MapViewMode }
+  | { type: 'zoom_to_next_stop' }
+  | { type: 'tilt_map'; on: boolean }
+  | { type: 'follow_me'; on: boolean }
+  | { type: 'look_back' }
+  | { type: 'reset_camera' }
+  | { type: 'set_quiet_mode'; on: boolean }
+  | { type: 'set_verbosity'; verbosity: string };
 
 export interface VoiceCallbacks {
   onStateChange: (state: VoiceState) => void;
@@ -150,18 +177,29 @@ class VoiceService {
     }
   }
 
+  /**
+   * Hands a command to the app.
+   *
+   * The command goes on the voice channel as well, so a screen that only
+   * wants to hear the map commands does not have to hold the voice engine.
+   */
+  private emitCommand(command: VoiceCommand): void {
+    publishVoiceCommand(command);
+    this.callbacks?.onCommand(command);
+  }
+
   private handleEarbudEvent(event: EarbudEvent): void {
     this.callbacks?.onEarbudEvent(event);
 
     switch (event.type) {
       case 'single':
-        this.callbacks?.onCommand({ type: 'mark_delivered', stopId: 'current' });
+        this.emitCommand({ type: 'mark_delivered', stopId: 'current' });
         break;
       case 'double':
-        this.callbacks?.onCommand({ type: 'mark_skipped', stopId: 'current' });
+        this.emitCommand({ type: 'mark_skipped', stopId: 'current' });
         break;
       case 'triple':
-        this.callbacks?.onCommand({ type: 'mark_failed', stopId: 'current', reason: 'earbud_triple' });
+        this.emitCommand({ type: 'mark_failed', stopId: 'current', reason: 'earbud_triple' });
         break;
       case 'long':
         this.startListening();

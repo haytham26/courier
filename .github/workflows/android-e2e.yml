@@ -1,0 +1,173 @@
+name: Android E2E (emulator + Maestro)
+
+# MASTER_EXECUTION P1: the pipeline is built at the root, not patched.
+#  - triggers: PRs to main, nightly and manual only (no push: every push used
+#    to cancel the running job and waste the private Actions minutes)
+#  - the build job produces the release APK once and caches it by content hash;
+#    the e2e job reuses that artifact
+#  - readiness gates with short timeouts: boot -> install -> am start -> pid ->
+#    first-screen testID, each one dumping evidence and failing fast
+#  - the app runs in the E2E mode (local mocks): no Metro, no auth service, no API
+on:
+  pull_request:
+    branches:
+      - main
+    # Only the app, the shared packages, the flows and the pipeline itself can
+    # break the emulator: a documentation-only push must not spend the minutes.
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'services/**'
+      - '.maestro/**'
+      - '.github/workflows/android-e2e.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  schedule:
+    # Nightly. A red nightly is the first task of the next session.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: android-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      apk-sha: ${{ steps.hash.outputs.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          version: 12.14.0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up Java 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a
+
+      - name: Install the dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the workspace packages
+        # The app bundles @courier/design-tokens from its built output: the
+        # package must exist before Metro can resolve it (dist/ is not
+        # committed).
+        run: pnpm --filter @courier/design-tokens build
+
+      - name: The content hash of the build inputs
+        id: hash
+        run: |
+          # The APK only changes when the app, the lockfile or the native config
+          # change: the cache key is that hash, not the commit.
+          sha=$(git ls-files -s apps/mobile packages services pnpm-lock.yaml | sha256sum | cut -d' ' -f1)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "build input hash: $sha"
+
+      - name: Cache the APK by content hash
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          key: apk-${{ steps.hash.outputs.sha }}
+
+      - name: Build the release APK
+        env:
+          # The E2E mode: the app runs on local mocks (no Metro, no auth, no API).
+          EXPO_PUBLIC_E2E: '1'
+        run: |
+          pnpm --filter mobile exec expo prebuild --platform android --no-install
+          cd apps/mobile/android
+          ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: courier-release-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  e2e:
+    name: Run the Maestro flows on the emulator
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Download the APK
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: courier-release-apk
+          path: apk
+
+      - name: Set up Java 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Cache the AVD snapshot
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ~/.android/avd
+          key: avd-${{ runner.os }}-34-google-apis-x86_64
+
+      - name: Install Maestro
+        run: |
+          # The installer is downloaded, shown and then executed - never piped
+          # straight into a shell (V4 section 7).
+          curl -fsSL "https://get.maestro.mobile.dev" -o "$RUNNER_TEMP/maestro-install.sh"
+          head -n 20 "$RUNNER_TEMP/maestro-install.sh"
+          chmod +x "$RUNNER_TEMP/maestro-install.sh"
+          bash "$RUNNER_TEMP/maestro-install.sh"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Run the Maestro flows on the emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 2048
+          script: bash .maestro/run-all.sh
+          working-directory: .
+
+      - name: Upload the evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: android-e2e-evidence
+          path: |
+            .maestro/evidence/**
+            apk/**
+          if-no-files-found: ignore

@@ -1,0 +1,46 @@
+The measured contrast of every pair that appears on the four screens of Weather Light.
+Measured with packages/design-tokens/src/contrast.ts, the code the build gate uses.
+Bars: 4.5:1 for the body, 3:1 for the boundaries, 7:1 for the driving text.
+
+===== light (weatherLight) =====
+  textPrimary      #0d161a on background     #eef2f4  16.26:1
+  textPrimary      #0d161a on surface        #ffffff  18.31:1
+  textSecondary    #3c4d55 on background     #eef2f4  7.82:1
+  textSecondary    #3c4d55 on surface        #ffffff  8.81:1
+  textTertiary     #47585f on background     #eef2f4  6.59:1
+  brandPrimary     #0a4a63 on background     #eef2f4  8.58:1
+  brandPrimary     #0a4a63 on surface        #ffffff  9.67:1
+  brandSecondary   #a8461b on background     #eef2f4  5.24:1
+  statusDelivered  #14603c on background     #eef2f4  6.73:1
+  statusFailed     #a11e18 on background     #eef2f4  6.87:1
+  statusSkipped    #7a4e00 on background     #eef2f4  6.39:1
+  statusActive     #0a4a63 on background     #eef2f4  8.58:1
+  border           #5d6f77 on surface        #ffffff  5.24:1
+  mapText          #0d161a on mapLand        #eff2f3  16.28:1
+  mapText          #0d161a on mapRoad        #ffffff  18.31:1
+  brandPrimary     chip #e0e8ec  7.79:1
+  success          chip #e2ebe7  6.24:1
+  warning          chip #eee9df  5.95:1
+  error            chip #f3e3e2  6.23:1
+
+===== night (weatherLightNight) =====
+  textPrimary      #f2f6f8 on background     #0c1114  17.46:1
+  textPrimary      #f2f6f8 on surface        #141b1f  16.01:1
+  textSecondary    #bccbd1 on background     #0c1114  11.39:1
+  textSecondary    #bccbd1 on surface        #141b1f  10.45:1
+  textTertiary     #9fb2b9 on background     #0c1114  8.63:1
+  brandPrimary     #5fa6c4 on background     #0c1114  7.00:1
+  brandPrimary     #5fa6c4 on surface        #141b1f  6.41:1
+  brandSecondary   #e08148 on background     #0c1114  6.69:1
+  statusDelivered  #59b184 on background     #0c1114  7.28:1
+  statusFailed     #e8736a on background     #0c1114  6.41:1
+  statusSkipped    #d8a83c on background     #0c1114  8.67:1
+  statusActive     #5fa6c4 on background     #0c1114  7.00:1
+  border           #6f8189 on surface        #141b1f  4.29:1
+  mapText          #f2f6f8 on mapLand        #1c252a  14.33:1
+  mapText          #f2f6f8 on mapRoad        #38454c  9.09:1
+  brandPrimary     chip #1d2c34  5.29:1
+  success          chip #1d2e2c  5.44:1
+  warning          chip #2d2d23  6.34:1
+  error            chip #2f2628  4.96:1
+

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<title>Haptic City - today - night</title>
+<link rel="stylesheet" href="../../fonts/fonts.css">
+<style>
+@font-face { font-family: display; src: local('Space Grotesk'); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 390px; height: 844px; overflow: hidden; }
+body {
+  background: #0f1310;
+  color: #f2f5ef;
+  font-family: 'Geist', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.frame { width: 390px; height: 844px; overflow: hidden; display: flex; flex-direction: column; }
+.display { font-family: 'Space Grotesk', 'Geist', system-ui, sans-serif; }
+.metric{font-family:display;font-size:56px;line-height:60px;letter-spacing:-0.02em;font-weight:700;}.address{font-family:display;font-size:28px;line-height:36px;letter-spacing:-0.01em;font-weight:500;}.row{font-family:work;font-size:22px;line-height:28px;letter-spacing:0em;font-weight:500;}.label{font-family:work;font-size:17px;line-height:22px;letter-spacing:0.1em;font-weight:700;}.body{font-family:work;font-size:19px;line-height:26px;letter-spacing:0em;font-weight:400;}.caption{font-family:work;font-size:17px;line-height:22px;letter-spacing:0.04em;font-weight:500;}.title{font-family:display;font-size:30px;line-height:36px;letter-spacing:-0.02em;font-weight:700;}
+.tabular { font-variant-numeric: tabular-nums; }
+
+.screen { }
+.next { display: flex; flex-direction: column; gap: 4px; }
+.nowblock { display: flex; flex-direction: column; gap: 4px; }
+.plate { display: flex; flex-direction: column; gap: 12px; }
+.platerow { display: flex; align-items: flex-start; gap: 16px; }
+.platemain { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.plateside { display: flex; flex-direction: column; align-items: flex-end; }
+.rows { display: flex; flex-direction: column; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; border-bottom: 1px solid transparent; }
+.rowmain { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.action { min-height: 72px; display: flex; align-items: center; justify-content: center; }
+.voice { display: flex; flex-direction: column; gap: 8px; }
+.voice.haptic, .voice.gantry { flex-direction: row; align-items: center; gap: 12px; }
+.haptictarget { width: 56px; height: 56px; border-radius: 28px; border: 2px solid; display: flex; align-items: center; justify-content: center; }
+.hapticseal { min-height: 72px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.gantrysign { padding: 8px 12px; display: inline-flex; }
+.gantrysigncard { display: flex; flex-direction: column; gap: 4px; }
+.talk { min-height: 72px; display: flex; align-items: center; justify-content: center; }
+.secondary { min-height: 56px; display: flex; align-items: center; justify-content: center; }
+.viewfinder { display: flex; flex-direction: column; }
+</style>
+</head>
+<body>
+<div class="frame" data-direction="hapticCity" data-mode="night">
+<div class="screen" style="height:844px;display:flex;flex-direction:column;padding:16px">
+  <p class="label" style="color:#c1cbbf">Harewood AM &middot; 10:38</p>
+  <p class="metric tabular" style="color:#f2f5ef;margin-top:4px">18</p>
+  <p class="label" style="color:#c1cbbf">Stops left</p>
+  <p class="body" style="color:#a9b5a7">42 delivered &middot; 2 failed</p>
+  <div class="haptictarget" style="background:#171c18;border:2px solid #f2f5ef;border-radius:28px;margin:16px 0;padding:16px">
+    <p class="caption" style="color:#a9b5a7">Next stop</p>
+    <p class="address" style="color:#f2f5ef">14 Harewood Road</p>
+    <p class="body" style="color:#c1cbbf">Papanui &middot; 10:42</p>
+    <p class="caption" style="color:#a9b5a7">Side gate, small box in the rear rack</p>
+  </div>
+  <div class="hapticseal" style="background:#f2f5ef;border:2px solid #f2f5ef;border-radius:28px">
+    <span style="width:20px;height:20px;border-radius:10px;border:2px solid #0f1310"></span>
+    <p class="row" style="color:#0f1310">Mark delivered</p>
+  </div>
+  <div style="margin-top:16px"><div class="rows">
+  <div class="row" style="border-bottom-color:#75806f">
+    <p class="caption tabular" style="width:34px;color:#a9b5a7">45</p>
+    <div class="rowmain">
+      <p class="row" style="color:#f2f5ef;font-weight:700;">14 Harewood Road</p>
+      <p class="caption" style="color:#a9b5a7">Papanui</p>
+    </div>
+    <p class="caption tabular" style="color:#c1cbbf">10:42</p>
+    <p class="caption" style="width:64px;text-align:right;color:#63b183">Next</p>
+  </div>
+  <div class="row" style="border-bottom-color:#75806f">
+    <p class="caption tabular" style="width:34px;color:#a9b5a7">46</p>
+    <div class="rowmain">
+      <p class="row" style="color:#f2f5ef;">22 Westminster Street</p>
+      <p class="caption" style="color:#a9b5a7">Merivale</p>
+    </div>
+    <p class="caption tabular" style="color:#c1cbbf">10:49</p>
+    <p class="caption" style="width:64px;text-align:right;color:#a9b5a7">Pending</p>
+  </div>
+  <div class="row" style="border-bottom-color:#75806f">
+    <p class="caption tabular" style="width:34px;color:#a9b5a7">47</p>
+    <div class="rowmain">
+      <p class="row" style="color:#f2f5ef;">3/120 Blenheim Road</p>
+      <p class="caption" style="color:#a9b5a7">Upper Riccarton</p>
+    </div>
+    <p class="caption tabular" style="color:#c1cbbf">11:02</p>
+    <p class="caption" style="width:64px;text-align:right;color:#a9b5a7">Pending</p>
+  </div></div></div>
+  <div style="margin-top:auto;padding-top:16px"><div class="voice haptic">
+  <div class="haptictarget" style="border-color:#f2f5ef"><span style="width:18px;height:18px;border-radius:2px;background:#f2f5ef"></span></div>
+  <p class="caption" style="color:#c1cbbf">Listening &middot; 4 waiting</p>
+</div></div>
+</div>
+</div>
+</body>
+</html>

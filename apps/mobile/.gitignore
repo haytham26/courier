@@ -36,6 +36,11 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# the offline map pack: build artefacts, not source
+assets/maps/*.pmtiles
+assets/maps/*.manifest.json
+assets/maps/glyphs/
+
 # generated native folders
 /ios
 /android

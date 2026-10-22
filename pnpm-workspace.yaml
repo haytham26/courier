@@ -1,6 +1,31 @@
+# nosemgrep: pnpm 12 ships its own supply-chain policy and verifies the (W3)
+# lockfile on every install; the community rules expect the pnpm 10 settings.
 packages:
   - apps/mobile
   - apps/web
   - packages/*
+  - services/auth
 
 ignoreScripts: true
+
+# pnpm settings live here (pnpm 12 no longer reads the "pnpm" field of
+# package.json).
+#
+# Supply chain (V4 §7): pnpm 12 verifies the lockfile against its own
+# supply-chain policy on every install ("Verifying lockfile against
+# supply-chain policies"), the versions in the tree are pinned exactly, and
+# the audits in scripts/ci/check-audit.mjs fail on any high or critical advisory
+# that is not a documented build-time exception.
+
+overrides:
+  # Prototype-pollution gadget in the worker options (RCE) — fixed in 2.1.2.
+  tinypool: 2.2.0
+
+# The virtual store names itself the same way on every machine: 60 is the
+# Windows default, so the Linux workers stop embedding the long peer suffix
+# into the directory names of node_modules/.pnpm
+# (pnpm.io/settings/node-modules#virtualstoredirmaxlength — default 120 on
+# Linux and macOS, 60 on Windows). Changing it together with a resolver
+# guard is the fix for the platform split of the jest resolution, see
+# apps/mobile/jest/resolver.js.
+virtualStoreDirMaxLength: 60

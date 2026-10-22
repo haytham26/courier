@@ -1,115 +1,152 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
-import { themes as baseThemes, ThemeName, generateCSSVariables, type Theme as BaseTheme } from '@courier/design-tokens/themes';
+import { UnistylesRuntime } from 'react-native-unistyles';
+import { themes as baseThemes, type Theme, type ThemeName } from '@courier/design-tokens/themes';
 
-// Define theme with non-nullable colors for React Native compatibility
-interface ThemeColors {
-  background: string;
-  surface: string;
-  surfaceElevated: string;
-  border: string;
-  textPrimary: string;
-  textSecondary: string;
-  textTertiary: string;
-  textInverse: string;
-  brandPrimary: string;
-  brandSecondary: string;
-  success: string;
-  warning: string;
-  error: string;
-  info: string;
-  statusPending: string;
-  statusActive: string;
-  statusDelivered: string;
-  statusFailed: string;
-  statusSkipped: string;
-  mapBackground: string;
-  mapWater: string;
-  mapLand: string;
-  mapRoad: string;
-  mapHighway: string;
-  mapBuilding: string;
-  mapPark: string;
-  mapText: string;
-  stopPin: string;
-  routeLine: string;
-  userLocation: string;
-  [key: string]: string;
-}
+import { unistylesThemeNames } from '@/unistyles';
+import { isThemePreference, type ThemePreference } from '@/constants/theme';
+import { errorMessage } from '@/lib/errors';
+import { createFilePreferenceStore } from '@/sync/preferenceFiles';
+import { useDriverId } from '@/sync/driverSession';
+import { readDriverPreferences, writeDriverPreference } from '@/sync/storage';
 
-// Override Theme with non-nullable colors
-type Theme = Omit<BaseTheme, 'colors'> & {
-  colors: ThemeColors;
-};
+// The product theme names are the ones used in the app; Unistyles registers
+// `day` as `light` and `night` as `dark` so the OS colour scheme can drive
+// the day/night switch.
+const themes = baseThemes;
 
-// Cast the themes object to have non-nullable colors
-const themes = baseThemes as Record<ThemeName, Theme>;
+/** The key the theme choice is stored under in the driver's preferences. */
+export const THEME_PREFERENCE_KEY = 'theme.preference';
 
 interface ThemeContextType {
-  theme: Theme;
+  theme: (typeof themes)[ThemeName];
   themeName: ThemeName;
   setTheme: (name: ThemeName) => void;
   toggleTheme: () => void;
-  cssVariables: string;
+  /** The choice the courier made: the device, the day, the night or the contrast. */
+  themePreference: ThemePreference;
+  setThemePreference: (preference: ThemePreference) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const themeOrder: ThemeName[] = ['day', 'night', 'highContrast'];
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
-  const [themeName, setThemeName] = useState<ThemeName>('day');
-  const [cssVariables, setCssVariables] = useState('');
+  const [themeName, setThemeName] = useState<ThemeName>(
+    systemColorScheme === 'dark' ? 'night' : 'day',
+  );
+  // The courier's choice. It is remembered per driver, so a shared phone
+  // does not carry one driver's theme into the next shift.
+  const [themePreference, setThemePreferenceState] = useState<ThemePreference>('auto');
+  // The stored choice has not been read yet, so nothing is written back.
+  const [loaded, setLoaded] = useState(false);
 
-  // Initialize theme from system or storage
-  useEffect(() => {
-    const initialTheme = systemColorScheme === 'dark' ? 'night' : 'day';
-    setThemeName(initialTheme);
-  }, [systemColorScheme]);
-
-  // Update CSS variables when theme changes
-  useEffect(() => {
-    const theme = themes[themeName];
-    const cssVars = generateCSSVariables(theme);
-    setCssVariables(cssVars);
-    
-    if (Platform.OS === 'web') {
-      document.documentElement.style.cssText = cssVars;
-    }
-    
-    // For Unistyles 3, we need to update the CSS variables on the root element
-    // This will be picked up by Unistyles for styling
-    const root = document.documentElement;
-    Object.entries(theme.colors).forEach(([key, value]) => {
-      if (typeof value === 'string') {
-        root.style.setProperty(`--color-${key.toLowerCase()}`, value);
+  const driverId = useDriverId();
+  const store = useMemo(() => createFilePreferenceStore(), []);
+  /** Puts a theme on the screen, whichever way the courier chose it. */
+  const applyPreference = useCallback(
+    (preference: ThemeName | 'auto') => {
+      if (preference === 'auto') {
+        // The device decides: day in the daylight, night after dark.
+        UnistylesRuntime.setAdaptiveThemes(true);
+        setThemeName(systemColorScheme === 'dark' ? 'night' : 'day');
+        return;
       }
-    });
-  }, [themeName]);
+      UnistylesRuntime.setAdaptiveThemes(false);
+      UnistylesRuntime.setTheme(unistylesThemeNames[preference]);
+      setThemeName(preference);
+    },
+    [systemColorScheme],
+  );
 
-  const theme = themes[themeName];
+  // The stored choice of this driver, read once when the app opens.
+  useEffect(() => {
+    let cancelled = false;
 
-  const setTheme = useCallback((name: ThemeName) => {
-    setThemeName(name);
-  }, []);
+    void (async () => {
+      try {
+        const preferences = await readDriverPreferences(store, driverId);
+        const stored = preferences[THEME_PREFERENCE_KEY];
+        if (!cancelled && isThemePreference(stored)) {
+          setThemePreferenceState(stored);
+          applyPreference(stored);
+        }
+      } catch (error) {
+        console.warn(`theme: the theme choice could not be read: ${errorMessage(error)}`);
+      } finally {
+        if (!cancelled) {
+          setLoaded(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPreference, driverId, store]);
+
+  // The device colour scheme only decides the theme while the courier has not
+  // pinned one.
+  useEffect(() => {
+    if (themePreference === 'auto') {
+      setThemeName(systemColorScheme === 'dark' ? 'night' : 'day');
+    }
+  }, [systemColorScheme, themePreference]);
+
+  // The choice is written back, but only after the stored one has been read,
+  // so the app never overwrites the choice it has not read yet.
+  useEffect(() => {
+    if (!loaded) {
+      return;
+    }
+    void writeDriverPreference(store, driverId, THEME_PREFERENCE_KEY, themePreference).catch(
+      (error: unknown) => {
+        console.warn(`theme: the theme choice could not be saved: ${errorMessage(error)}`);
+      },
+    );
+  }, [driverId, loaded, store, themePreference]);
+
+  const setTheme = useCallback(
+    (name: ThemeName) => {
+      // The three Design Studio directions are palettes, not a choice the
+      // courier makes: they are never written to the preferences.
+      if (isThemePreference(name)) {
+        setThemePreferenceState(name);
+      }
+      applyPreference(name);
+    },
+    [applyPreference],
+  );
+
+  const setThemePreference = useCallback(
+    (preference: ThemePreference) => {
+      setThemePreferenceState(preference);
+      applyPreference(preference);
+    },
+    [applyPreference],
+  );
 
   const toggleTheme = useCallback(() => {
-    const themeOrder: ThemeName[] = ['day', 'night', 'highContrast'];
     const currentIndex = themeOrder.indexOf(themeName);
     const nextIndex = (currentIndex + 1) % themeOrder.length;
-    setThemeName(themeOrder[nextIndex]);
-  }, [themeName]);
+    setTheme(themeOrder[nextIndex] ?? 'day');
+  }, [setTheme, themeName]);
 
-  return (
-    <ThemeContext.Provider value={{ theme, themeName, setTheme, toggleTheme, cssVariables }}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Text style={{ opacity: 0 }} testID="theme-css-variables">
-          {cssVariables}
-        </Text>
-      </View>
-      {children}
-    </ThemeContext.Provider>
+  const value = useMemo<ThemeContextType>(
+    () => ({
+      theme: themes[themeName],
+      themeName,
+      setTheme,
+      toggleTheme,
+      themePreference,
+      setThemePreference,
+    }),
+    [themeName, themePreference, setTheme, toggleTheme, setThemePreference],
   );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {
@@ -120,4 +157,37 @@ export function useTheme() {
   return context;
 }
 
-export { themes, type Theme, type ThemeName };
+/**
+ * A theme scope.
+ *
+ * The design lab (MASTER_EXECUTION §13.4) shows the same screen in three
+ * directions. A scope hands one palette to everything below it - the shared
+ * `Button`, `Card` and `Badge` read the theme from this context, so they
+ * follow the scope - without touching the theme the courier has chosen and
+ * without writing the theme to the device.
+ *
+ * The setters do nothing: a scope is a palette, not a choice.
+ */
+export function ThemeScope({
+  theme,
+  children,
+}: {
+  theme: Theme;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  const value = useMemo<ThemeContextType>(
+    () => ({
+      theme,
+      themeName: theme.name,
+      setTheme: () => undefined,
+      toggleTheme: () => undefined,
+      themePreference: 'day',
+      setThemePreference: () => undefined,
+    }),
+    [theme],
+  );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+export { themes, type ThemeName };

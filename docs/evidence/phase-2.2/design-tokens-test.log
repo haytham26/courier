@@ -1,0 +1,18 @@
+﻿cmd : $ vitest run
+At line:3 char:60
++ ... test.log" { cmd /c "corepack pnpm --filter @courier/design-tokens tes ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ vitest run:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+ RUN  v3.2.7 C:/Users/DCL/projects/courier/packages/design-tokens
+
+ Ô£ô src/tokens.test.ts (27 tests) 4ms
+
+ Test Files  1 passed (1)
+      Tests  27 passed (27)
+   Start at  17:49:48
+   Duration  570ms (transform 124ms, setup 0ms, collect 130ms, tests 4ms, environment 0ms, prepare 152ms)
+
+EXIT_CODE=0

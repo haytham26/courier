@@ -1,0 +1,29 @@
+﻿cmd : $ turbo run lint && pnpm run lint:api
+At line:4 char:46
++ ... md "docs\evidence\phase-2.4\lint.log" { cmd /c "corepack pnpm lint" }
++                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ turbo run lint && pnpm run lint:api:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+   ÔÇó turbo 2.11.9
+   ÔÇó Packages in scope: @courier/auth, @courier/design-tokens, @courier/eslint-config, @courier/nz-address, @courier/shared, mobile
+   ÔÇó Running lint in 6 packages
+   ÔÇó Remote caching disabled
+
+@courier/shared:lint: cache miss, executing 7ba4de9391c70ed8
+@courier/nz-address:lint: cache miss, executing 15aeb5a6e02b17ff
+@courier/design-tokens:lint: cache miss, executing 235b12be9ee60732
+@courier/auth:lint: cache hit, replaying logs 2ae74284b0896ad8
+@courier/auth:lint: $ eslint .
+@courier/shared:lint: $ eslint .
+@courier/nz-address:lint: $ eslint .
+@courier/design-tokens:lint: $ eslint .
+
+ Tasks:    4 successful, 4 total
+Cached:    1 cached, 4 total
+  Time:    3.161s 
+
+$ uv run --directory apps/api ruff check .
+[1;32mAll checks passed![0m
+EXIT_CODE=0

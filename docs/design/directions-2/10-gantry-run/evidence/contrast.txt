@@ -1,0 +1,46 @@
+The measured contrast of every pair that appears on the four screens of Gantry Run.
+Measured with packages/design-tokens/src/contrast.ts, the code the build gate uses.
+Bars: 4.5:1 for the body, 3:1 for the boundaries, 7:1 for the driving text.
+
+===== light (gantryRun) =====
+  textPrimary      #101112 on background     #f3f3f1  17.01:1
+  textPrimary      #101112 on surface        #ffffff  18.90:1
+  textSecondary    #43453f on background     #f3f3f1  8.74:1
+  textSecondary    #43453f on surface        #ffffff  9.71:1
+  textTertiary     #4e504a on background     #f3f3f1  7.35:1
+  brandPrimary     #b3261e on background     #f3f3f1  5.88:1
+  brandPrimary     #b3261e on surface        #ffffff  6.54:1
+  brandSecondary   #1d2a33 on background     #f3f3f1  13.21:1
+  statusDelivered  #1d5b34 on background     #f3f3f1  7.27:1
+  statusFailed     #b3261e on background     #f3f3f1  5.88:1
+  statusSkipped    #7a4a00 on background     #f3f3f1  6.73:1
+  statusActive     #b3261e on background     #f3f3f1  5.88:1
+  border           #6d6d68 on surface        #ffffff  5.20:1
+  mapText          #101112 on mapLand        #f2f2ef  16.85:1
+  mapText          #101112 on mapRoad        #ffffff  18.90:1
+  brandPrimary     chip #f6e4e3  5.33:1
+  success          chip #e3ebe6  6.66:1
+  warning          chip #eee8df  6.14:1
+  error            chip #f6e4e3  5.33:1
+
+===== night (gantryRunNight) =====
+  textPrimary      #f6f6f4 on background     #111110  17.46:1
+  textPrimary      #f6f6f4 on surface        #191918  16.26:1
+  textSecondary    #c6c6c1 on background     #111110  11.02:1
+  textSecondary    #c6c6c1 on surface        #191918  10.26:1
+  textTertiary     #acaca6 on background     #111110  8.28:1
+  brandPrimary     #f2726a on background     #111110  6.65:1
+  brandPrimary     #f2726a on surface        #191918  6.19:1
+  brandSecondary   #8fa4b3 on background     #111110  7.31:1
+  statusDelivered  #5cb083 on background     #111110  7.19:1
+  statusFailed     #f2726a on background     #111110  6.65:1
+  statusSkipped    #d8a83c on background     #111110  8.62:1
+  statusActive     #f2726a on background     #111110  6.65:1
+  border           #77776f on surface        #191918  3.90:1
+  mapText          #f6f6f4 on mapLand        #232322  14.54:1
+  mapText          #f6f6f4 on mapRoad        #3c3c39  10.23:1
+  brandPrimary     chip #342422  5.20:1
+  success          chip #212c25  5.51:1
+  warning          chip #312b1d  6.42:1
+  error            chip #342422  5.20:1
+

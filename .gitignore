@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+# the production environment of the deployment (never committed)
+infra/prod.env
+infra/*.env
 *.pem
 *.key
 *.jks
@@ -10,6 +13,8 @@ secrets/
 # python
 __pycache__/
 .pytest_cache/
+*.egg-info/
+.venv/
 node_modules/
 # turbo
 .turbo/
@@ -17,6 +22,10 @@ node_modules/
 .expo/
 # build outputs
 dist/
+coverage/
+.coverage
+services/api/coverage.json
+services/courier-voice/coverage.json
 *.tsbuildinfo
 # IDE
 .vscode/
@@ -28,5 +37,12 @@ dist/
 Thumbs.db
 # Local LINZ datasets (large, not committed)
 data/linz/
+# Drawn label images and the real label photos (personal data, never committed)
+data/labels/
 # Local scratch backups (never committed)
 .local-backup/
+# Scratch renders of the design lab (the working folder of the render scripts,
+# never committed; the finished renders live in docs/design/directions-2/)
+.design-render/
+# Clean-room study clones (never committed, read-only reference)
+.study/

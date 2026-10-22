@@ -1,0 +1,78 @@
+{
+  "generated": "2026-10-21",
+  "generator": "scripts/eval/build-scanner-eval.mjs",
+  "seed": 20261021,
+  "requirement": "V4 section 10.2: at least 300 real-style NZ courier label images",
+  "floor_total": 300,
+  "min_total": 310,
+  "labels_total": 370,
+  "synthetic_total": 330,
+  "founder_slots": 40,
+  "read_time_budget_s": 1.5,
+  "counts_note": "the floor counts the synthetic labels we can measure on today; the founder slots are counted separately and never make the floor on their own",
+  "slices": [
+    {
+      "id": "courier_labels",
+      "min": 120,
+      "target": 130,
+      "synthetic": 130,
+      "founder_slots": 15,
+      "status": "synthetic ready, the founder photos are pending",
+      "measures": "the everyday thermal labels the courier scans on the run"
+    },
+    {
+      "id": "courier_stationery",
+      "min": 55,
+      "target": 60,
+      "synthetic": 60,
+      "founder_slots": 8,
+      "status": "synthetic ready, the founder photos are pending",
+      "measures": "the labels the courier writes or prints on their own stationery"
+    },
+    {
+      "id": "international_parcels",
+      "min": 40,
+      "target": 40,
+      "synthetic": 40,
+      "founder_slots": 6,
+      "status": "synthetic ready, the founder photos are pending",
+      "measures": "the inbound parcels with a customs form and a foreign sender block"
+    },
+    {
+      "id": "handwriting",
+      "min": 35,
+      "target": 40,
+      "synthetic": 40,
+      "founder_slots": 4,
+      "status": "synthetic ready, the founder photos are pending",
+      "measures": "the dockets the courier writes by hand"
+    },
+    {
+      "id": "damaged_labels",
+      "min": 25,
+      "target": 25,
+      "synthetic": 25,
+      "founder_slots": 3,
+      "status": "synthetic ready, the founder photos are pending",
+      "measures": "the labels that have been through a real van: crumpled, faded, torn, over-stickered"
+    },
+    {
+      "id": "low_light",
+      "min": 20,
+      "target": 20,
+      "synthetic": 20,
+      "founder_slots": 2,
+      "status": "synthetic ready, the founder photos are pending",
+      "measures": "the van at dusk, the porch with a torch, the glare off a plastic sleeve"
+    },
+    {
+      "id": "plastic_wrapping",
+      "min": 15,
+      "target": 15,
+      "synthetic": 15,
+      "founder_slots": 2,
+      "status": "synthetic ready, the founder photos are pending",
+      "measures": "the label under a plastic sleeve or a poly bag, with the glare that goes with it"
+    }
+  ]
+}

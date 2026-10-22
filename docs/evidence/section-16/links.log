@@ -1,0 +1,3 @@
+﻿check-doc-links: 35 relative link(s) checked over the live documentation
+check-doc-links: 21 file(s) skipped as history (docs/archive, docs/evidence, docs/log)
+check-doc-links: every relative link resolves

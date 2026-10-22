@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Control Room — The run is an instrument panel: every number is a readout and the next move is the only bright thing on the screen. — Courier Copilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300..800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+
+  *{box-sizing:border-box;}
+  body{margin:0;padding:32px 16px 64px;background:#d8d9d6;display:flex;flex-direction:column;align-items:center;gap:28px;font-family:IBM Plex Mono,sans-serif;}
+  .frame{display:none;width:390px;height:844px;overflow:hidden;flex-direction:column;background:var(--bg);color:var(--ink);position:relative;}
+  body:not(:has(.frame:target)) .frame{display:flex;}
+  .frame:target{display:flex;}
+  .rule{height:1px;background:var(--border);margin:0 16px;flex:none;}
+  .header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;flex:none;}
+  .header-left{display:flex;flex-direction:column;gap:2px;}
+  .header-right{display:flex;align-items:center;gap:4px;}
+  .icon{width:56px;height:56px;display:flex;align-items:center;justify-content:center;color:var(--ink);}
+  .row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .row-right{display:flex;flex-direction:column;align-items:flex-end;}
+  .spacer{flex:1;}
+  .action-bar{padding:12px 16px 8px;flex:none;}
+  .primary{height:72px;width:100%;border-radius:2px;background:var(--accent);color:var(--surface);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;}
+  .secondary{height:56px;width:100%;margin-top:8px;border-radius:2px;border:1px solid var(--border);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:500;}
+  .voice-strip{height:64px;display:flex;align-items:center;gap:8px;padding:0 16px 8px;flex:none;}
+  .lamp{width:8px;height:8px;background:var(--accent);display:inline-block;}
+  .map{position:absolute;inset:0;width:100%;height:100%;}
+  .map-wrap{position:relative;flex:1;min-height:0;overflow:hidden;}
+  .viewfinder{flex:1;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;position:relative;}
+  .scanner-panel{padding:16px;flex:none;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;}
+  .confidence{border:1px solid;padding:4px 8px;font-size:17px;font-weight:600;letter-spacing:0.02em;}
+  .offline-note{text-align:center;font-size:17px;color:var(--ink3);margin-top:12px;}
+  .capture{max-width:760px;font-size:15px;line-height:22px;color:#2b2f31;}
+  .capture h1{font-size:22px;margin:0 0 8px;}
+  .capture code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;}
+  .swatches{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;}
+  .swatch{display:flex;align-items:center;gap:6px;font-size:13px;}
+  .chip{width:22px;height:22px;border-radius:4px;border:1px solid #00000022;}
+  
+  .gauge-block{padding:12px 16px;display:flex;flex-direction:column;gap:12px;flex:none;}
+  .gauge-row{display:flex;align-items:baseline;gap:12px;}
+  .gauge{display:flex;align-items:center;gap:3px;height:24px;position:relative;}
+  .gauge i{width:12px;height:12px;display:block;}
+  .gauge b{position:absolute;left:0;top:0;width:2px;height:24px;background:var(--ink);}
+  .readouts{display:flex;padding:12px 16px;flex:none;}
+  .readout{flex:1;display:flex;flex-direction:column;gap:2px;}
+  .readout.split{border-left:1px solid var(--border);padding-left:12px;}
+  .next-move{padding:12px 16px;display:flex;flex-direction:column;gap:2px;flex:none;}
+  .next-head{display:flex;align-items:center;justify-content:space-between;}
+  .list-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 4px;flex:none;}
+  .row{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 16px;border-bottom:1px solid var(--border);flex:none;}
+  .plate{position:absolute;left:0;right:0;bottom:0;background:var(--surface);padding:12px 16px;}
+  .plate-head{display:flex;align-items:center;justify-content:space-between;}
+  .strip{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;flex:none;}
+  .strip-head{display:flex;align-items:center;gap:12px;}
+  .meter{margin-left:auto;display:flex;align-items:flex-end;gap:3px;}
+  .meter i{width:3px;background:var(--ink3);display:block;}
+  .note-body{padding:16px;display:flex;flex-direction:column;gap:4px;flex:1;overflow:hidden;}
+  .confirmed{border:1px solid var(--ok);border-radius:2px;padding:12px;margin-top:12px;display:flex;flex-direction:column;gap:4px;}
+  .command{display:flex;align-items:center;justify-content:space-between;min-height:56px;border-bottom:1px solid var(--border);}
+  .guide{width:280px;height:180px;position:relative;}
+  .guide i{position:absolute;width:24px;height:24px;border:3px solid var(--accent);}
+  .guide i:nth-child(1){top:0;left:0;border-right:0;border-bottom:0;}
+  .guide i:nth-child(2){top:0;right:0;border-left:0;border-bottom:0;}
+  .guide i:nth-child(3){bottom:0;left:0;border-right:0;border-top:0;}
+  .guide i:nth-child(4){bottom:0;right:0;border-left:0;border-top:0;}
+  .label-card{background:var(--surface);padding:12px 16px;display:flex;flex-direction:column;gap:2px;margin-top:24px;}
+.metric{font-size:64px;line-height:68px;letter-spacing:-0.03em;font-weight:700;}
+.address{font-size:30px;line-height:36px;letter-spacing:-0.01em;font-weight:600;}
+.row{font-size:21px;line-height:28px;letter-spacing:0em;font-weight:500;}
+.label{font-size:17px;line-height:22px;letter-spacing:0.1em;font-weight:600;}
+.body{font-size:19px;line-height:26px;letter-spacing:0em;font-weight:500;}
+.caption{font-size:17px;line-height:22px;letter-spacing:0.02em;font-weight:500;}
+.title{font-size:30px;line-height:36px;letter-spacing:-0.02em;font-weight:700;}
+.metric,.address,.title{font-family:'Roboto Flex',sans-serif;}
+.row,.label,.body,.caption{font-family:'IBM Plex Mono',sans-serif;}
+.tab{font-variant-numeric:tabular-nums;}
+</style>
+</head>
+<body>
+<div class="frame" id="today-light" style="--bg:#f2f3f0;--surface:#ffffff;--elev:#e9ebe5;--border:#6b7067;--ink:#14161a;--ink2:#454a4f;--ink3:#50555a;--accent:#a63a00;--accent2:#14563c;--ok:#14603c;--bad:#a01810;--warn:#7a4a00;--map-land:#f0f1ec;--map-water:#d6e4ea;--map-road:#ffffff;--map-building:#e0e2db;--map-route:#a63a00;--map-highway:#f2c94c">
+  <div class="header">
+      <div class="header-left">
+        <div class="label" style="color:var(--ink2)">MONDAY · NORTHWOOD AM</div>
+        <div class="caption" style="color:var(--ink3)">Tane Rua</div>
+      </div>
+      <div class="header-right">
+        <div class="row tab" style="color:var(--ink)">10:38</div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:inherit"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></div>
+      </div>
+    </div>
+    <div class="rule"></div>
+    <div class="gauge-block">
+      <div class="gauge-row">
+        <div class="metric tab" style="color:var(--ink)">18</div>
+        <div class="label" style="color:var(--ink2)">STOPS LEFT</div>
+      </div>
+      <div class="gauge"><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--border);opacity:0.4"></i><i style="background:var(--border);opacity:0.4"></i><i style="background:var(--border);opacity:0.4"></i><i style="background:var(--border);opacity:0.4"></i><i style="background:var(--border);opacity:0.4"></i><i style="background:var(--border);opacity:0.4"></i><b></b></div>
+    </div>
+    <div class="rule"></div>
+    <div class="readouts">
+      <div class="readout"><div class="caption" style="color:var(--ink2)">Delivered</div><div class="row tab" style="color:var(--ok)">42</div></div>
+      <div class="readout split"><div class="caption" style="color:var(--ink2)">Failed</div><div class="row tab" style="color:var(--bad)">2</div></div>
+      <div class="readout split"><div class="caption" style="color:var(--ink2)">To drive</div><div class="row tab" style="color:var(--ink)">6.4 km</div></div>
+    </div>
+    <div class="rule"></div>
+    <div class="next-move">
+      <div class="next-head"><div class="label" style="color:var(--accent)">NEXT MOVE</div><div class="caption tab" style="color:var(--ink3)">2.1 km</div></div>
+      <div class="address" style="color:var(--ink)">14 Harewood Road</div>
+      <div class="body" style="color:var(--ink2)">Papanui · 10:42 · 3 parcels</div>
+      <div class="caption" style="color:var(--ink3)">Side gate, small box in the rear rack</div>
+    </div>
+    <div class="rule"></div>
+    <div class="list-head"><div class="label" style="color:var(--ink2)">STOPS</div><div class="caption" style="color:var(--ink3)">8 shown</div></div>
+    <div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">45</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:700">14 Harewood Road</div>
+        <div class="caption" style="color:var(--ink3)">Papanui</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">10:42</div>
+      <div class="caption" style="color:var(--accent);width:68px;text-align:right">Next</div>
+    </div>
+<div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">46</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:500">22 Westminster Street</div>
+        <div class="caption" style="color:var(--ink3)">Merivale</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">10:49</div>
+      <div class="caption" style="color:var(--ink3);width:68px;text-align:right">Pending</div>
+    </div>
+<div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">47</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:500">3/120 Blenheim Road</div>
+        <div class="caption" style="color:var(--ink3)">Upper Riccarton</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">11:02</div>
+      <div class="caption" style="color:var(--ink3);width:68px;text-align:right">Pending</div>
+    </div>
+<div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">48</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:500">78 Main South Road</div>
+        <div class="caption" style="color:var(--ink3)">Sockburn</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">11:14</div>
+      <div class="caption" style="color:var(--ink3);width:68px;text-align:right">Pending</div>
+    </div>
+<div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">49</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:500">234 Colombo Street</div>
+        <div class="caption" style="color:var(--ink3)">Sydenham</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">11:26</div>
+      <div class="caption" style="color:var(--ink3);width:68px;text-align:right">Pending</div>
+    </div>
+<div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">50</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:500">9 Cashel Street</div>
+        <div class="caption" style="color:var(--ink3)">Addington</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">11:41</div>
+      <div class="caption" style="color:var(--ink3);width:68px;text-align:right">Pending</div>
+    </div>
+    <div class="spacer"></div>
+  <div class="action-bar"><div class="primary">Next stop</div></div>
+  <div class="voice-strip" style="border-top:1px solid var(--border)">
+    <i class="lamp"></i><div class="caption" style="color:var(--ink2)">Listening</div><div class="caption" style="color:var(--ink3);margin-left:auto">4 waiting</div>
+  </div>
+</div>
+<div class="frame" id="driving-light" style="--bg:#f2f3f0;--surface:#ffffff;--elev:#e9ebe5;--border:#6b7067;--ink:#14161a;--ink2:#454a4f;--ink3:#50555a;--accent:#a63a00;--accent2:#14563c;--ok:#14603c;--bad:#a01810;--warn:#7a4a00;--map-land:#f0f1ec;--map-water:#d6e4ea;--map-road:#ffffff;--map-building:#e0e2db;--map-route:#a63a00;--map-highway:#f2c94c">
+  <div class="map-wrap"><svg class="map" viewBox="0 0 390 470" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="390" height="470" fill="#f0f1ec" />
+  <g stroke="#dfe3da" stroke-width="1" fill="none">
+    <path d="M-20 120 H410 M-20 260 H410 M-20 380 H410" />
+    <path d="M70 -20 V490 M180 -20 V490 M300 -20 V490" />
+  </g>
+  <g stroke="#ffffff" stroke-width="9" fill="none" stroke-linecap="square">
+    <path d="M-20 120 H410 M-20 260 H410 M-20 380 H410" />
+    <path d="M70 -20 V490 M180 -20 V490 M300 -20 V490" />
+  </g>
+  <g fill="#e0e2db" opacity="0.9">
+    <rect x="86" y="136" width="80" height="108" />
+    <rect x="196" y="276" width="88" height="88" />
+    <rect x="316" y="136" width="60" height="108" />
+    <rect x="86" y="396" width="80" height="60" />
+  </g>
+  <path d="M40 430 L120 330 L200 300 L300 250" stroke="#a63a00" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="40" cy="430" r="7" fill="#14495f" />
+  <rect x="292" y="242" width="16" height="16" fill="#a63a00" />
+</svg><div class="plate">
+        <div class="plate-head"><div class="label" style="color:var(--accent)">NEXT MOVE</div><div class="caption" style="color:var(--ink3)">STOP 45</div></div>
+        <div class="address" style="color:var(--ink)">14 Harewood Road</div>
+        <div class="body" style="color:var(--ink2)">Papanui · 2.1 km · 10:42</div>
+        <div class="rule" style="margin:12px 0"></div>
+        <div class="readouts">
+          <div class="readout"><div class="caption" style="color:var(--ink2)">Door note</div><div class="row" style="color:var(--ink)">Side gate, small box in the rear rack</div></div>
+          <div class="readout"><div class="caption" style="color:var(--ink2)">In the van</div><div class="row" style="color:var(--ink)">Rear rack, bay 2</div></div>
+        </div>
+      </div></div>
+  <div class="action-bar"><div class="primary">Delivered</div></div>
+    <div class="voice-strip" style="border-top:1px solid var(--border)">
+      <i class="lamp"></i><div class="caption" style="color:var(--ink2)">Listening</div>
+    </div>
+</div>
+<div class="frame" id="copilot-light" style="--bg:#f2f3f0;--surface:#ffffff;--elev:#e9ebe5;--border:#6b7067;--ink:#14161a;--ink2:#454a4f;--ink3:#50555a;--accent:#a63a00;--accent2:#14563c;--ok:#14603c;--bad:#a01810;--warn:#7a4a00;--map-land:#f0f1ec;--map-water:#d6e4ea;--map-road:#ffffff;--map-building:#e0e2db;--map-route:#a63a00;--map-highway:#f2c94c">
+  <div class="strip">
+      <div class="strip-head"><i class="lamp"></i><div class="label" style="color:var(--ink)">Listening</div><div class="meter"><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i><i style="height:6px"></i><i style="height:3px"></i></div></div>
+      <div class="body" style="color:var(--ink2)">Fourteen Harewood Road, Papanui. Side gate, small box in the rear rack.</div>
+    </div>
+    <div class="note-body">
+      <div class="label" style="color:var(--ink2)">WHAT IT HEARD</div>
+      <div class="body" style="color:var(--ink)">Delivered, left it in the side gate</div>
+      <div class="rule"></div>
+      <div class="label" style="color:var(--ink2)">WHAT IT DID</div>
+      <div class="body" style="color:var(--ink)">Stop 45 confirmed, delivered to the side gate</div>
+      <div class="confirmed"><div class="label" style="color:var(--ok)">CONFIRMED</div><div class="body" style="color:var(--ink)">Stop 45 delivered. 18 stops left.</div></div>
+      <div class="rule"></div>
+      <div class="label" style="color:var(--ink2)">IT CAN</div>
+      <div class="command"><div class="row" style="color:var(--ink)">Mark delivered</div><div class="caption" style="color:var(--ink3)">Say it</div></div>
+<div class="command"><div class="row" style="color:var(--ink)">Skip this stop</div><div class="caption" style="color:var(--ink3)">Say it</div></div>
+<div class="command"><div class="row" style="color:var(--ink)">Next stop</div><div class="caption" style="color:var(--ink3)">Say it</div></div>
+<div class="command"><div class="row" style="color:var(--ink)">How many left</div><div class="caption" style="color:var(--ink3)">Say it</div></div>
+    </div>
+  <div class="action-bar"><div class="primary">Talk to Copilot</div></div>
+</div>
+<div class="frame" id="scanner-light" style="--bg:#f2f3f0;--surface:#ffffff;--elev:#e9ebe5;--border:#6b7067;--ink:#14161a;--ink2:#454a4f;--ink3:#50555a;--accent:#a63a00;--accent2:#14563c;--ok:#14603c;--bad:#a01810;--warn:#7a4a00;--map-land:#f0f1ec;--map-water:#d6e4ea;--map-road:#ffffff;--map-building:#e0e2db;--map-route:#a63a00;--map-highway:#f2c94c">
+  <div class="viewfinder">
+    <div class="guide"><i></i><i></i><i></i><i></i></div>
+    <div class="label-card"><div class="row" style="color:var(--ink)">14 Harewood Road</div><div class="caption" style="color:var(--ink2)">Papanui · Christchurch · 8053</div><div class="caption" style="color:var(--ink3)">CP-48155</div></div>
+  </div>
+  <div class="scanner-panel">
+    <div class="panel-head"><div class="label" style="color:var(--ink2)">READ</div><div class="confidence" style="border-color:var(--ok);color:var(--ok)">CLEAR READ</div></div>
+    <div class="address" style="color:var(--ink)">14 Harewood Road</div>
+    <div class="body" style="color:var(--ink2)">Papanui · Christchurch · 8053</div>
+    <div class="caption" style="color:var(--ink3)">Side gate, small box in the rear rack</div>
+    <div class="offline-note">The scan works with no network.</div>
+  </div>
+  <div class="action-bar"><div class="primary">Use this address</div><div class="secondary">Correct this address</div></div>
+</div>
+<div class="frame" id="today-night" style="--bg:#101311;--surface:#181c19;--elev:#212622;--border:#7b837a;--ink:#f4f5f2;--ink2:#c3c8c2;--ink3:#a9afa9;--accent:#e07a35;--accent2:#5fae86;--ok:#59b184;--bad:#e8736a;--warn:#d8a83c;--map-land:#212622;--map-water:#1d2a30;--map-road:#3a4039;--map-building:#2b302b;--map-route:#e07a35;--map-highway:#8a7433">
+  <div class="header">
+      <div class="header-left">
+        <div class="label" style="color:var(--ink2)">MONDAY · NORTHWOOD AM</div>
+        <div class="caption" style="color:var(--ink3)">Tane Rua</div>
+      </div>
+      <div class="header-right">
+        <div class="row tab" style="color:var(--ink)">10:38</div>
+        <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:inherit"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></div>
+      </div>
+    </div>
+    <div class="rule"></div>
+    <div class="gauge-block">
+      <div class="gauge-row">
+        <div class="metric tab" style="color:var(--ink)">18</div>
+        <div class="label" style="color:var(--ink2)">STOPS LEFT</div>
+      </div>
+      <div class="gauge"><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--accent);opacity:1"></i><i style="background:var(--border);opacity:0.4"></i><i style="background:var(--border);opacity:0.4"></i><i style="background:var(--border);opacity:0.4"></i><i style="background:var(--border);opacity:0.4"></i><i style="background:var(--border);opacity:0.4"></i><i style="background:var(--border);opacity:0.4"></i><b></b></div>
+    </div>
+    <div class="rule"></div>
+    <div class="readouts">
+      <div class="readout"><div class="caption" style="color:var(--ink2)">Delivered</div><div class="row tab" style="color:var(--ok)">42</div></div>
+      <div class="readout split"><div class="caption" style="color:var(--ink2)">Failed</div><div class="row tab" style="color:var(--bad)">2</div></div>
+      <div class="readout split"><div class="caption" style="color:var(--ink2)">To drive</div><div class="row tab" style="color:var(--ink)">6.4 km</div></div>
+    </div>
+    <div class="rule"></div>
+    <div class="next-move">
+      <div class="next-head"><div class="label" style="color:var(--accent)">NEXT MOVE</div><div class="caption tab" style="color:var(--ink3)">2.1 km</div></div>
+      <div class="address" style="color:var(--ink)">14 Harewood Road</div>
+      <div class="body" style="color:var(--ink2)">Papanui · 10:42 · 3 parcels</div>
+      <div class="caption" style="color:var(--ink3)">Side gate, small box in the rear rack</div>
+    </div>
+    <div class="rule"></div>
+    <div class="list-head"><div class="label" style="color:var(--ink2)">STOPS</div><div class="caption" style="color:var(--ink3)">8 shown</div></div>
+    <div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">45</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:700">14 Harewood Road</div>
+        <div class="caption" style="color:var(--ink3)">Papanui</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">10:42</div>
+      <div class="caption" style="color:var(--accent);width:68px;text-align:right">Next</div>
+    </div>
+<div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">46</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:500">22 Westminster Street</div>
+        <div class="caption" style="color:var(--ink3)">Merivale</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">10:49</div>
+      <div class="caption" style="color:var(--ink3);width:68px;text-align:right">Pending</div>
+    </div>
+<div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">47</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:500">3/120 Blenheim Road</div>
+        <div class="caption" style="color:var(--ink3)">Upper Riccarton</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">11:02</div>
+      <div class="caption" style="color:var(--ink3);width:68px;text-align:right">Pending</div>
+    </div>
+<div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">48</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:500">78 Main South Road</div>
+        <div class="caption" style="color:var(--ink3)">Sockburn</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">11:14</div>
+      <div class="caption" style="color:var(--ink3);width:68px;text-align:right">Pending</div>
+    </div>
+<div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">49</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:500">234 Colombo Street</div>
+        <div class="caption" style="color:var(--ink3)">Sydenham</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">11:26</div>
+      <div class="caption" style="color:var(--ink3);width:68px;text-align:right">Pending</div>
+    </div>
+<div class="row">
+      <div class="row tab" style="color:var(--ink3);width:28px">50</div>
+      <div class="row-main">
+        <div class="row" style="color:var(--ink);font-weight:500">9 Cashel Street</div>
+        <div class="caption" style="color:var(--ink3)">Addington</div>
+      </div>
+      <div class="row tab" style="color:var(--ink2)">11:41</div>
+      <div class="caption" style="color:var(--ink3);width:68px;text-align:right">Pending</div>
+    </div>
+    <div class="spacer"></div>
+  <div class="action-bar"><div class="primary">Next stop</div></div>
+  <div class="voice-strip" style="border-top:1px solid var(--border)">
+    <i class="lamp"></i><div class="caption" style="color:var(--ink2)">Listening</div><div class="caption" style="color:var(--ink3);margin-left:auto">4 waiting</div>
+  </div>
+</div>
+<div class="frame" id="driving-night" style="--bg:#101311;--surface:#181c19;--elev:#212622;--border:#7b837a;--ink:#f4f5f2;--ink2:#c3c8c2;--ink3:#a9afa9;--accent:#e07a35;--accent2:#5fae86;--ok:#59b184;--bad:#e8736a;--warn:#d8a83c;--map-land:#212622;--map-water:#1d2a30;--map-road:#3a4039;--map-building:#2b302b;--map-route:#e07a35;--map-highway:#8a7433">
+  <div class="map-wrap"><svg class="map" viewBox="0 0 390 470" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <rect width="390" height="470" fill="#212622" />
+  <g stroke="#2b312b" stroke-width="1" fill="none">
+    <path d="M-20 120 H410 M-20 260 H410 M-20 380 H410" />
+    <path d="M70 -20 V490 M180 -20 V490 M300 -20 V490" />
+  </g>
+  <g stroke="#3a4039" stroke-width="9" fill="none" stroke-linecap="square">
+    <path d="M-20 120 H410 M-20 260 H410 M-20 380 H410" />
+    <path d="M70 -20 V490 M180 -20 V490 M300 -20 V490" />
+  </g>
+  <g fill="#2b302b" opacity="0.9">
+    <rect x="86" y="136" width="80" height="108" />
+    <rect x="196" y="276" width="88" height="88" />
+    <rect x="316" y="136" width="60" height="108" />
+    <rect x="86" y="396" width="80" height="60" />
+  </g>
+  <path d="M40 430 L120 330 L200 300 L300 250" stroke="#e07a35" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="40" cy="430" r="7" fill="#6fa9c4" />
+  <rect x="292" y="242" width="16" height="16" fill="#e07a35" />
+</svg><div class="plate">
+        <div class="plate-head"><div class="label" style="color:var(--accent)">NEXT MOVE</div><div class="caption" style="color:var(--ink3)">STOP 45</div></div>
+        <div class="address" style="color:var(--ink)">14 Harewood Road</div>
+        <div class="body" style="color:var(--ink2)">Papanui · 2.1 km · 10:42</div>
+        <div class="rule" style="margin:12px 0"></div>
+        <div class="readouts">
+          <div class="readout"><div class="caption" style="color:var(--ink2)">Door note</div><div class="row" style="color:var(--ink)">Side gate, small box in the rear rack</div></div>
+          <div class="readout"><div class="caption" style="color:var(--ink2)">In the van</div><div class="row" style="color:var(--ink)">Rear rack, bay 2</div></div>
+        </div>
+      </div></div>
+  <div class="action-bar"><div class="primary">Delivered</div></div>
+    <div class="voice-strip" style="border-top:1px solid var(--border)">
+      <i class="lamp"></i><div class="caption" style="color:var(--ink2)">Listening</div>
+    </div>
+</div>
+<div class="frame" id="copilot-night" style="--bg:#101311;--surface:#181c19;--elev:#212622;--border:#7b837a;--ink:#f4f5f2;--ink2:#c3c8c2;--ink3:#a9afa9;--accent:#e07a35;--accent2:#5fae86;--ok:#59b184;--bad:#e8736a;--warn:#d8a83c;--map-land:#212622;--map-water:#1d2a30;--map-road:#3a4039;--map-building:#2b302b;--map-route:#e07a35;--map-highway:#8a7433">
+  <div class="strip">
+      <div class="strip-head"><i class="lamp"></i><div class="label" style="color:var(--ink)">Listening</div><div class="meter"><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i><i style="height:6px"></i><i style="height:3px"></i></div></div>
+      <div class="body" style="color:var(--ink2)">Fourteen Harewood Road, Papanui. Side gate, small box in the rear rack.</div>
+    </div>
+    <div class="note-body">
+      <div class="label" style="color:var(--ink2)">WHAT IT HEARD</div>
+      <div class="body" style="color:var(--ink)">Delivered, left it in the side gate</div>
+      <div class="rule"></div>
+      <div class="label" style="color:var(--ink2)">WHAT IT DID</div>
+      <div class="body" style="color:var(--ink)">Stop 45 confirmed, delivered to the side gate</div>
+      <div class="confirmed"><div class="label" style="color:var(--ok)">CONFIRMED</div><div class="body" style="color:var(--ink)">Stop 45 delivered. 18 stops left.</div></div>
+      <div class="rule"></div>
+      <div class="label" style="color:var(--ink2)">IT CAN</div>
+      <div class="command"><div class="row" style="color:var(--ink)">Mark delivered</div><div class="caption" style="color:var(--ink3)">Say it</div></div>
+<div class="command"><div class="row" style="color:var(--ink)">Skip this stop</div><div class="caption" style="color:var(--ink3)">Say it</div></div>
+<div class="command"><div class="row" style="color:var(--ink)">Next stop</div><div class="caption" style="color:var(--ink3)">Say it</div></div>
+<div class="command"><div class="row" style="color:var(--ink)">How many left</div><div class="caption" style="color:var(--ink3)">Say it</div></div>
+    </div>
+  <div class="action-bar"><div class="primary">Talk to Copilot</div></div>
+</div>
+<div class="frame" id="scanner-night" style="--bg:#101311;--surface:#181c19;--elev:#212622;--border:#7b837a;--ink:#f4f5f2;--ink2:#c3c8c2;--ink3:#a9afa9;--accent:#e07a35;--accent2:#5fae86;--ok:#59b184;--bad:#e8736a;--warn:#d8a83c;--map-land:#212622;--map-water:#1d2a30;--map-road:#3a4039;--map-building:#2b302b;--map-route:#e07a35;--map-highway:#8a7433">
+  <div class="viewfinder">
+    <div class="guide"><i></i><i></i><i></i><i></i></div>
+    <div class="label-card"><div class="row" style="color:var(--ink)">14 Harewood Road</div><div class="caption" style="color:var(--ink2)">Papanui · Christchurch · 8053</div><div class="caption" style="color:var(--ink3)">CP-48155</div></div>
+  </div>
+  <div class="scanner-panel">
+    <div class="panel-head"><div class="label" style="color:var(--ink2)">READ</div><div class="confidence" style="border-color:var(--ok);color:var(--ok)">CLEAR READ</div></div>
+    <div class="address" style="color:var(--ink)">14 Harewood Road</div>
+    <div class="body" style="color:var(--ink2)">Papanui · Christchurch · 8053</div>
+    <div class="caption" style="color:var(--ink3)">Side gate, small box in the rear rack</div>
+    <div class="offline-note">The scan works with no network.</div>
+  </div>
+  <div class="action-bar"><div class="primary">Use this address</div><div class="secondary">Correct this address</div></div>
+</div>
+<div class="capture">
+  <h1>Control Room — The run is an instrument panel: every number is a readout and the next move is the only bright thing on the screen.</h1>
+  <p>
+    The four screens of the direction, in the day and at night, drawn with the palette of
+    <code>packages/design-tokens/src/themes2a.ts</code> and the type scale of
+    <code>packages/design-tokens/src/directions2a.ts</code>. The frames are addressable:
+    <code>render.html#today-light</code> opens one screen at a time, which is how
+    <code>scripts/design/render-directions.mjs</code> shoots the PNGs.
+  </p>
+  <div class="swatches">
+    <div class="swatch"><span class="chip" style="background:#f2f3f0"></span> background #f2f3f0</div>
+    <div class="swatch"><span class="chip" style="background:#14161a"></span> textPrimary #14161a</div>
+    <div class="swatch"><span class="chip" style="background:#a63a00"></span> brandPrimary #a63a00</div>
+    <div class="swatch"><span class="chip" style="background:#14563c"></span> brandSecondary #14563c</div>
+    <div class="swatch"><span class="chip" style="background:#101311"></span> night background #101311</div>
+  </div>
+</div>
+</body>
+</html>

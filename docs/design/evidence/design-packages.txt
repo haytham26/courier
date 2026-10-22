@@ -1,0 +1,77 @@
+# The npm packages the Design Studio bench measures.
+#
+# One package name per line. `#` starts a comment. The data is fetched with
+# `scripts/design/fetch-design-npm-evidence.ps1` into
+# `docs/design/evidence/npm-packages-<date>.tsv`.
+#
+# The size column is the **npm unpacked size** of the published tarball. It
+# is a proxy for the install footprint, not the contribution to the APK: a
+# package with native code also carries a `.so`/`.aar` that the tarball does
+# not count.
+
+# --- Motion, gestures, sheets ----------------------------------------------
+react-native-reanimated
+react-native-worklets
+react-native-gesture-handler
+@swmansion/react-native-bottom-sheet
+@gorhom/bottom-sheet
+@lodev09/react-native-true-sheet
+moti
+react-native-redash
+react-native-ease
+number-flow-react-native
+@legendapp/motion
+react-native-reanimated-dnd
+react-native-reorderable-list
+react-native-draggable-flatlist
+react-native-swipeable-list
+react-native-haptic-feedback
+react-native-zoom-toolkit
+react-native-modalize
+
+# --- Drawing, motion files, icons and fonts --------------------------------
+@shopify/react-native-skia
+react-native-skia
+lottie-react-native
+@rive-app/react-native
+react-native-svg
+@expo/vector-icons
+@expo-google-fonts/figtree
+expo-symbols
+
+# --- Lists, storage, platform ----------------------------------------------
+@shopify/flash-list
+react-native-mmkv
+react-native-nitro-modules
+react-native-screens
+react-native-safe-area-context
+react-native-localize
+react-native-unistyles
+
+# --- Design systems --------------------------------------------------------
+react-native-paper
+@ui-kitten/components
+react-native-ui-lib
+heroui-native
+@gluestack-ui/themed
+tamagui
+@shopify/restyle
+@bottom-tabs/react-navigation
+react-native-tab-view
+
+# --- Maps ------------------------------------------------------------------
+@maplibre/maplibre-react-native
+maplibre-gl
+# --- The router, the platform modules and the design evidence chain -------
+@react-navigation/native
+@react-navigation/bottom-tabs
+@react-navigation/native-stack
+expo-haptics
+expo-location
+expo-audio
+expo-blur
+expo-linear-gradient
+@op-engineering/op-sqlite
+react-native-sherpa-onnx
+react-native-view-shot
+@testing-library/react-native

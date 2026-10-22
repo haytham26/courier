@@ -1,0 +1,43 @@
+﻿apps\api\package.json:32: "python-jose[cryptography]": "^3.3.0",
+apps\api\package.json:33: "passlib[bcrypt]": "^1.7.4",
+apps\mobile\App.js:20: backgroundColor: 'var(--color-background)',
+apps\mobile\global.css:70: background-color: var(--color-background);
+apps\mobile\global.css:71: color: var(--color-text-primary);
+apps\mobile\global.css:96: outline: 2px solid var(--color-brand-primary);
+apps\mobile\global.css:162: background-color: var(--color-map-background);
+apps\mobile\app\(tabs)\settings.tsx:188: <Text style={[styles.aboutValue, { color: theme.colors.textPrimary }]}>PowerSync + op-sqlite</Text>
+apps\mobile\src\constants\theme.ts:14: background: 'var(--color-background)',
+apps\mobile\src\constants\theme.ts:15: surface: 'var(--color-surface)',
+apps\mobile\src\constants\theme.ts:16: surfaceElevated: 'var(--color-surface-elevated)',
+apps\mobile\src\constants\theme.ts:17: border: 'var(--color-border)',
+apps\mobile\src\constants\theme.ts:18: text: 'var(--color-text-primary)',
+apps\mobile\src\constants\theme.ts:19: textSecondary: 'var(--color-text-secondary)',
+apps\mobile\src\constants\theme.ts:20: textTertiary: 'var(--color-text-tertiary)',
+apps\mobile\src\constants\theme.ts:21: textInverse: 'var(--color-text-inverse)',
+apps\mobile\src\constants\theme.ts:22: brandPrimary: 'var(--color-brand-primary)',
+apps\mobile\src\constants\theme.ts:23: brandSecondary: 'var(--color-brand-secondary)',
+apps\mobile\src\constants\theme.ts:24: success: 'var(--color-success)',
+apps\mobile\src\constants\theme.ts:25: warning: 'var(--color-warning)',
+apps\mobile\src\constants\theme.ts:26: error: 'var(--color-error)',
+apps\mobile\src\constants\theme.ts:27: info: 'var(--color-info)',
+apps\mobile\src\constants\theme.ts:28: statusPending: 'var(--color-status-pending)',
+apps\mobile\src\constants\theme.ts:29: statusActive: 'var(--color-status-active)',
+apps\mobile\src\constants\theme.ts:30: statusDelivered: 'var(--color-status-delivered)',
+apps\mobile\src\constants\theme.ts:31: statusFailed: 'var(--color-status-failed)',
+apps\mobile\src\constants\theme.ts:32: statusSkipped: 'var(--color-status-skipped)',
+apps\mobile\src\constants\theme.ts:33: mapBackground: 'var(--color-map-background)',
+apps\mobile\src\constants\theme.ts:34: mapWater: 'var(--color-map-water)',
+apps\mobile\src\constants\theme.ts:35: mapLand: 'var(--color-map-land)',
+apps\mobile\src\constants\theme.ts:36: mapRoad: 'var(--color-map-road)',
+apps\mobile\src\constants\theme.ts:37: mapHighway: 'var(--color-map-highway)',
+apps\mobile\src\constants\theme.ts:38: mapBuilding: 'var(--color-map-building)',
+apps\mobile\src\constants\theme.ts:39: mapPark: 'var(--color-map-park)',
+apps\mobile\src\constants\theme.ts:40: mapText: 'var(--color-map-text)',
+apps\mobile\src\constants\theme.ts:41: stopPin: 'var(--color-stop-pin)',
+apps\mobile\src\constants\theme.ts:42: routeLine: 'var(--color-route-line)',
+apps\mobile\src\constants\theme.ts:43: userLocation: 'var(--color-user-location)',
+packages\design-tokens\src\index.ts:3: * Built with Style Dictionary, outputs to NativeWind, CSS, etc.
+packages\design-tokens\src\themes.ts:4: * Maps to NativeWind/Tailwind config
+packages\design-tokens\src\tokens.ts:5: * Built for NativeWind + Style Dictionary pipeline
+BANNED_HITS=41
+EXIT_CODE=1

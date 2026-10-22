@@ -1,0 +1,14 @@
+﻿# The full output of corepack pnpm test on 2026-10-22 (branch chore/repo-structure).
+# Only the summary lines are kept here; the run itself is in the CI log of the PR.
+
+@courier/shared:test: [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+@courier/nz-address:test: [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+@courier/design-tokens:test: [2m Test Files [22m [1m[32m6 passed[39m[22m[90m (6)[39m
+@courier/auth:test: [2m Test Files [22m [1m[32m9 passed[39m[22m[90m (9)[39m
+mobile:test: Test Suites: 25 passed, 25 total
+mobile:test: Tests:       339 passed, 339 total
+mobile:test: Ran all test suites.
+ Tasks:    5 successful, 5 total
+140 passed in 2.62s
+166 passed in 7.90s
+Ôä╣ pass 9

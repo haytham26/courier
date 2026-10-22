@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<title>Gantry Run - scanner - light</title>
+<link rel="stylesheet" href="../../fonts/fonts.css">
+<style>
+@font-face { font-family: display; src: local('Bricolage Grotesque'); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 390px; height: 844px; overflow: hidden; }
+body {
+  background: #f3f3f1;
+  color: #101112;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.frame { width: 390px; height: 844px; overflow: hidden; display: flex; flex-direction: column; }
+.display { font-family: 'Bricolage Grotesque', 'IBM Plex Sans', system-ui, sans-serif; }
+.metric{font-family:display;font-size:60px;line-height:64px;letter-spacing:-0.03em;font-weight:700;}.address{font-family:display;font-size:26px;line-height:32px;letter-spacing:-0.01em;font-weight:700;}.row{font-family:work;font-size:21px;line-height:28px;letter-spacing:0em;font-weight:500;}.label{font-family:work;font-size:17px;line-height:22px;letter-spacing:0.1em;font-weight:700;}.body{font-family:work;font-size:19px;line-height:26px;letter-spacing:0em;font-weight:400;}.caption{font-family:work;font-size:17px;line-height:22px;letter-spacing:0.02em;font-weight:500;}.title{font-family:display;font-size:30px;line-height:36px;letter-spacing:-0.02em;font-weight:700;}
+.tabular { font-variant-numeric: tabular-nums; }
+
+.screen { }
+.next { display: flex; flex-direction: column; gap: 4px; }
+.nowblock { display: flex; flex-direction: column; gap: 4px; }
+.plate { display: flex; flex-direction: column; gap: 12px; }
+.platerow { display: flex; align-items: flex-start; gap: 16px; }
+.platemain { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.plateside { display: flex; flex-direction: column; align-items: flex-end; }
+.rows { display: flex; flex-direction: column; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; border-bottom: 1px solid transparent; }
+.rowmain { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.action { min-height: 72px; display: flex; align-items: center; justify-content: center; }
+.voice { display: flex; flex-direction: column; gap: 8px; }
+.voice.haptic, .voice.gantry { flex-direction: row; align-items: center; gap: 12px; }
+.haptictarget { width: 56px; height: 56px; border-radius: 28px; border: 2px solid; display: flex; align-items: center; justify-content: center; }
+.hapticseal { min-height: 72px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.gantrysign { padding: 8px 12px; display: inline-flex; }
+.gantrysigncard { display: flex; flex-direction: column; gap: 4px; }
+.talk { min-height: 72px; display: flex; align-items: center; justify-content: center; }
+.secondary { min-height: 56px; display: flex; align-items: center; justify-content: center; }
+.viewfinder { display: flex; flex-direction: column; }
+</style>
+</head>
+<body>
+<div class="frame" data-direction="gantryRun" data-mode="light">
+<div class="screen" style="height:844px;display:flex;flex-direction:column">
+  <div class="viewfinder" style="flex:1;margin:16px;background:#101112;border-radius:8px;padding:24px;position:relative">
+    <div>
+      <p style="font-size:26px;line-height:32px;font-weight:700;color:#ffffff">14 HAREWOOD RD</p>
+      <p style="font-size:20px;line-height:26px;font-weight:600;color:#ffffff">PAPANUI</p>
+      <p style="font-size:15px;line-height:20px;color:#ffffff">14 HAREWOOD RD &middot; PAPANUI &middot; 8014</p>
+    </div>
+    <div class="guide" style="position:absolute;left:32px;right:32px;top:80px;height:120px;border:2px solid #b3261e;border-radius:8px"><div style="position:absolute;left:12px;right:12px;top:12px;bottom:12px;border:2px solid #b3261e;border-top-width:6px"></div></div>
+    <div style="margin-top:auto">
+      <p style="font-size:15px;line-height:20px;color:#ffffff">Reading the address block</p>
+    </div>
+  </div>
+  <div style="padding:24px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <p class="label" style="color:#43453f">Found</p>
+      <p class="caption" style="color:#1d5b34">Confident</p>
+    </div>
+    <p class="address" style="color:#101112;padding-top:8px">14 HAREWOOD RD</p>
+    <p class="body" style="color:#43453f">Stop 45 &middot; PAPANUI</p>
+    <div style="padding-top:16px"><div class="action" style="background:#b3261e;border-radius:4px"><p class="row" style="color:#ffffff;font-weight:700">Confirm the address</p></div></div>
+    <div class="secondary" style="border:1px solid #6d6d68;border-radius:8px;margin-top:12px">
+      <p class="row" style="color:#101112">Correct this address</p>
+    </div>
+  </div>
+</div>
+</div>
+</body>
+</html>

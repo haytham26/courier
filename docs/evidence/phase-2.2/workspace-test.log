@@ -1,0 +1,58 @@
+﻿Scope: 4 of 6 workspace projects
+services/auth test$ vitest run
+packages/nz-address test$ vitest run
+packages/shared test$ vitest run
+packages/design-tokens test$ vitest run
+packages/design-tokens test: 
+packages/design-tokens test:  RUN  v3.2.7 C:/Users/DCL/projects/courier/packages/design-tokens
+packages/design-tokens test: 
+services/auth test: 
+services/auth test:  RUN  v3.2.7 C:/Users/DCL/projects/courier/services/auth
+services/auth test: 
+packages/nz-address test: 
+packages/nz-address test:  RUN  v3.2.7 C:/Users/DCL/projects/courier/packages/nz-address
+packages/nz-address test: 
+packages/shared test: 
+packages/shared test:  RUN  v3.2.7 C:/Users/DCL/projects/courier/packages/shared
+packages/shared test: 
+packages/nz-address test:  Ô£ô src/parser.test.ts (17 tests) 16ms
+packages/design-tokens test:  Ô£ô src/tokens.test.ts (27 tests) 11ms
+packages/nz-address test: 
+packages/nz-address test:  Test Files  1 passed (1)
+packages/nz-address test:       Tests  17 passed (17)
+packages/nz-address test:    Start at  17:49:49
+packages/nz-address test:    Duration  1.40s (transform 197ms, setup 0ms, collect 227ms, tests 16ms, environment 0ms, prepare 347ms)
+packages/nz-address test: 
+packages/design-tokens test: 
+packages/design-tokens test:  Test Files  1 passed (1)
+packages/design-tokens test:       Tests  27 passed (27)
+packages/design-tokens test:    Start at  17:49:49
+packages/design-tokens test:    Duration  1.54s (transform 839ms, setup 0ms, collect 844ms, tests 11ms, environment 0ms, prepare 324ms)
+packages/design-tokens test: 
+packages/shared test:  Ô£ô src/utils.test.ts (26 tests) 11ms
+packages/shared test: 
+packages/shared test:  Test Files  1 passed (1)
+packages/shared test:       Tests  26 passed (26)
+packages/shared test:    Start at  17:49:49
+packages/shared test:    Duration  1.51s (transform 157ms, setup 0ms, collect 158ms, tests 11ms, environment 0ms, prepare 263ms)
+packages/shared test: 
+services/auth test:  Ô£ô tests/config.test.ts (8 tests) 19ms
+packages/nz-address test: Done
+packages/design-tokens test: Done
+packages/shared test: Done
+services/auth test:  Ô£ô tests/rate-limit.test.ts (1 test) 256ms
+services/auth test:  Ô£ô tests/organization.test.ts (6 tests) 427ms
+services/auth test: stderr | tests/auth.test.ts > email and password authentication > rejects a wrong password
+services/auth test: 2026-10-20T04:49:52.513Z WARN [Better Auth]: Invalid password
+services/auth test: 
+services/auth test:  Ô£ô tests/auth.test.ts (8 tests) 594ms
+services/auth test:  Ô£ô tests/jwt.test.ts (8 tests) 1947ms
+services/auth test:    Ô£ô JWKS and JWT issuance > rejects an expired token  1579ms
+services/auth test: 
+services/auth test:  Test Files  5 passed (5)
+services/auth test:       Tests  31 passed (31)
+services/auth test:    Start at  17:49:49
+services/auth test:    Duration  4.24s (transform 1.08s, setup 0ms, collect 4.46s, tests 3.24s, environment 1ms, prepare 1.86s)
+services/auth test: 
+services/auth test: Done
+EXIT_CODE=0

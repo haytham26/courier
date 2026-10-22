@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-labelledby="mark-title">
+  <title id="mark-title">X-ray Parcel: the parcel in isometric with its label band on the face</title>
+  <g fill="none" stroke="#14161a" stroke-width="3" stroke-linejoin="round">
+    <path d="M24 8 40 17v14L24 40 8 31V17z" />
+    <path d="M8 17 24 26 40 17M24 26v14" />
+  </g>
+  <path d="M8 22 24 31v5L8 27z" fill="#a63a00" />
+</svg>

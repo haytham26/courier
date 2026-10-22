@@ -1,0 +1,202 @@
+name: Store readiness
+
+# The tool: StoreReady, https://github.com/MaTriXy/StoreReady (MPL-2.0), by
+# MaTriXy (Yossi Elkrief), a friend of the founder. The latest release is
+# v0.1.0, published on 8 March 2026, and it was read on 2026-10-21.
+#
+# MASTER_EXECUTION section 15: StoreReady is the primary pre-submission
+# checker. It runs on the release trigger and on demand, never on every push:
+# the private Actions minutes are limited (section 7.1).
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - 'release/**'
+  workflow_dispatch:
+    inputs:
+      app_id:
+        description: 'The App Store Connect app id (the Apple lane needs it)'
+        required: false
+        default: ''
+      apk_path:
+        description: 'The release APK to measure, if it is on the runner'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store-ready-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  store-ready:
+    name: StoreReady pre-submission check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The names only. The values live in the GitHub Secrets: they are never
+      # written to the repository, to the log or to an artefact, and a missing
+      # one never fails this job (see docs/status/FOUNDER_TODO.md).
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_P8_BASE64 }}
+      APP_STORE_CONNECT_APP_ID: ${{ inputs.app_id || vars.APP_STORE_CONNECT_APP_ID }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 12.14.0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install the dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate the Android project the check reads
+        # The check reads the manifest and the Gradle files of the real
+        # Android project, so the project has to exist before the tool runs.
+        run: pnpm --filter mobile exec expo prebuild --platform android --no-install
+
+      - name: Install StoreReady v0.1.0
+        # The version is pinned and the download is checked against the
+        # SHA-256 of the release asset (v0.1.0, 8 March 2026).
+        env:
+          STOREREADY_VERSION: v0.1.0
+          STOREREADY_SHA256: 630a03742039e9c9b84266236b8d22ce49db09d611c981673f2e0290af040713
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/storeready"
+          curl --fail --location --silent --show-error \
+            --output "$RUNNER_TEMP/storeready.tar.gz" \
+            "https://github.com/MaTriXy/StoreReady/releases/download/${STOREREADY_VERSION}/storeready-linux-amd64.tar.gz"
+          echo "${STOREREADY_SHA256}  $RUNNER_TEMP/storeready.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/storeready.tar.gz" -C "$RUNNER_TEMP/storeready"
+          sudo install -m 0755 "$RUNNER_TEMP/storeready/storeready" /usr/local/bin/storeready
+          storeready version
+
+      - name: Run the Google Play checkup
+        # The tool writes its own report and always exits 0, so the blocking
+        # findings are read from the report below.
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          storeready playstore-checkup apps/mobile --format json --output artifacts/store-ready-play.json
+          jq '.summary' artifacts/store-ready-play.json
+
+      - name: Run the local pre-submission check
+        # The release manager's copy of the check: the version, the
+        # permissions, the documents, the icons, the signing and the budget.
+        id: local
+        continue-on-error: true
+        env:
+          APK_PATH: ${{ inputs.apk_path }}
+        run: |
+          set -euo pipefail
+          args=(--json artifacts/store-readiness.json)
+          if [ -n "$APK_PATH" ]; then
+            args+=(--apk "$APK_PATH")
+          fi
+          node scripts/ci/check-store-readiness.mjs "${args[@]}" | tee artifacts/store-readiness.txt
+
+      - name: Run the App Store Connect metadata check
+        # The only lane of the tool that needs a credential. The key stays in
+        # the runner folder, never in the workspace and never in an artefact.
+        id: asc
+        if: env.APP_STORE_CONNECT_KEY_ID != '' && env.APP_STORE_CONNECT_APP_ID != ''
+        continue-on-error: true
+        env:
+          HOME: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.storeready"
+          printf '%s' "$APP_STORE_CONNECT_KEY_P8_BASE64" | base64 -d > "$HOME/.storeready/key.p8"
+          printf '{"auth_method":"api_key","key_id":"%s","issuer_id":"%s","private_key_path":"%s"}' \
+            "$APP_STORE_CONNECT_KEY_ID" \
+            "$APP_STORE_CONNECT_ISSUER_ID" \
+            "$HOME/.storeready/key.p8" > "$HOME/.storeready/config.json"
+          storeready scan --app-id "$APP_STORE_CONNECT_APP_ID" --format json --output artifacts/store-ready-asc.json
+          rm -f "$HOME/.storeready/key.p8"
+
+      - name: The App Store Connect lane was skipped
+        if: env.APP_STORE_CONNECT_KEY_ID == '' || env.APP_STORE_CONNECT_APP_ID == ''
+        run: |
+          echo "::warning::The App Store Connect lane was skipped: the key (APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_P8_BASE64) or the app id is not set. The names are in docs/status/FOUNDER_TODO.md. The Google Play check ran anyway."
+
+      - name: The App Store Connect lane did not run
+        if: steps.asc.outcome == 'failure'
+        run: |
+          echo "::warning::The App Store Connect lane did not run. The Google Play check is the one that blocks the release."
+
+      - name: The report as the job summary
+        # The founder reads the findings here, without downloading anything.
+        if: always()
+        run: |
+          {
+            echo "## Store readiness"
+            echo ""
+            if [ -f artifacts/store-ready-play.json ]; then
+              node scripts/ci/store-ready-summary.mjs artifacts/store-ready-play.json || true
+            else
+              echo "The Google Play checkup did not run."
+              echo ""
+            fi
+            if [ -f artifacts/store-ready-asc.json ]; then
+              node scripts/ci/store-ready-summary.mjs artifacts/store-ready-asc.json || true
+            fi
+            echo "### The local pre-submission check"
+            echo ""
+            if [ -f artifacts/store-readiness.txt ]; then
+              cat artifacts/store-readiness.txt
+            else
+              echo "The local check did not run."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail the job on a blocking finding
+        if: steps.local.outcome == 'failure'
+        run: |
+          echo "::error::The local pre-submission check found a blocking problem. The build is not ready to submit."
+          exit 1
+
+      - name: Fail the job on a blocking finding
+        if: steps.asc.outcome == 'success'
+        run: |
+          set -euo pipefail
+          blocks=$(jq -r '.summary.blocks // 0' artifacts/store-ready-asc.json)
+          if [ "$blocks" -gt 0 ]; then
+            echo "::error::StoreReady found $blocks blocking finding(s) in the App Store Connect lane."
+            exit 1
+          fi
+
+      - name: Fail the job on a blocking finding
+        run: |
+          set -euo pipefail
+          if [ ! -f artifacts/store-ready-play.json ]; then
+            echo "::error::The Google Play checkup did not run, so the release was not checked."
+            exit 1
+          fi
+          critical=$(jq -r '.summary.critical // 0' artifacts/store-ready-play.json)
+          if [ "$critical" -gt 0 ]; then
+            echo "::error::StoreReady found $critical blocking finding(s). The build is not ready to submit."
+            exit 1
+          fi
+
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: store-ready-report
+          path: |
+            artifacts/
+          retention-days: 7
+          if-no-files-found: warn

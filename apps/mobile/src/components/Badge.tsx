@@ -1,15 +1,34 @@
+/**
+ * The badge.
+ *
+ * A badge carries a status. The status is never colour-only: the badge
+ * always has its text, and the dot is decorative, so it is hidden from the
+ * screen reader. The label on the pill clears the 4.5:1 bar in every theme -
+ * the numbers are in `packages/design-tokens/src/contrast.test.ts`.
+ */
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../providers/ThemeProvider';
 
-interface BadgeProps
-  extends React.ComponentPropsWithoutRef<typeof View> {
+interface BadgeProps extends React.ComponentPropsWithoutRef<typeof View> {
   children: React.ReactNode;
-  variant?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'active' | 'outline';
+  variant?:
+    | 'default'
+    | 'primary'
+    | 'secondary'
+    | 'success'
+    | 'warning'
+    | 'error'
+    | 'info'
+    | 'active'
+    | 'outline';
   size?: 'sm' | 'md' | 'lg';
   dot?: boolean;
   dotColor?: string;
 }
+
+/** The tint of a badge pill: the colour at 12.5 % over the surface. */
+const TINT_ALPHA = '20';
 
 export const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>(
   ({ variant = 'default', size = 'md', dot = false, dotColor, children, style, ...props }, ref) => {
@@ -19,38 +38,38 @@ export const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>
       switch (variant) {
         case 'primary':
           return {
-            backgroundColor: `${theme.colors.brandPrimary}20`,
+            backgroundColor: `${theme.colors.brandPrimary}${TINT_ALPHA}`,
             color: theme.colors.brandPrimary,
           };
         case 'secondary':
           return {
-            backgroundColor: `${theme.colors.brandSecondary}20`,
+            backgroundColor: `${theme.colors.brandSecondary}${TINT_ALPHA}`,
             color: theme.colors.brandSecondary,
           };
         case 'success':
           return {
-            backgroundColor: `${theme.colors.success}20`,
+            backgroundColor: `${theme.colors.success}${TINT_ALPHA}`,
             color: theme.colors.success,
           };
         case 'warning':
           return {
-            backgroundColor: `${theme.colors.warning}20`,
+            backgroundColor: `${theme.colors.warning}${TINT_ALPHA}`,
             color: theme.colors.warning,
           };
         case 'error':
           return {
-            backgroundColor: `${theme.colors.error}20`,
+            backgroundColor: `${theme.colors.error}${TINT_ALPHA}`,
             color: theme.colors.error,
           };
         case 'info':
           return {
-            backgroundColor: `${theme.colors.info}20`,
+            backgroundColor: `${theme.colors.info}${TINT_ALPHA}`,
             color: theme.colors.info,
           };
         case 'active':
           return {
-            backgroundColor: `${theme.colors.brandSecondary}20`,
-            color: theme.colors.brandSecondary,
+            backgroundColor: `${theme.colors.statusActive}${TINT_ALPHA}`,
+            color: theme.colors.statusActive,
           };
         case 'outline':
           return {
@@ -70,13 +89,12 @@ export const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>
     const getSizeStyles = () => {
       switch (size) {
         case 'sm':
-          return { paddingHorizontal: 8, paddingVertical: 2, fontSize: 10 };
-        case 'md':
-          return { paddingHorizontal: 10, paddingVertical: 2, fontSize: 12 };
+          return { paddingHorizontal: 8, paddingVertical: 4, fontSize: 17 };
         case 'lg':
-          return { paddingHorizontal: 12, paddingVertical: 4, fontSize: 14 };
+          return { paddingHorizontal: 12, paddingVertical: 4, fontSize: 19 };
+        case 'md':
         default:
-          return { paddingHorizontal: 10, paddingVertical: 2, fontSize: 12 };
+          return { paddingHorizontal: 10, paddingVertical: 4, fontSize: 17 };
       }
     };
 
@@ -86,28 +104,23 @@ export const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>
     return (
       <View
         ref={ref}
-        style={[
-          styles.base,
-          variantStyles,
-          sizeStyles,
-          style,
-        ]}
+        style={[styles.base, variantStyles, sizeStyles, style]}
         {...props}
+        accessibilityRole="text"
       >
-        {dot && (
+        {dot ? (
           <View
-            style={[
-              styles.dot,
-              { backgroundColor: dotColor || variantStyles.color },
-            ]}
+            style={[styles.dot, { backgroundColor: dotColor || variantStyles.color }]}
+            importantForAccessibility="no-hide-descendants"
+            accessibilityElementsHidden
           />
-        )}
+        ) : null}
         <Text style={[styles.text, { color: variantStyles.color, fontSize: sizeStyles.fontSize }]}>
           {children}
         </Text>
       </View>
     );
-  }
+  },
 );
 
 Badge.displayName = 'Badge';
@@ -119,12 +132,12 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   text: {
-    fontWeight: '500',
+    fontWeight: '600',
   },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
   },
 });

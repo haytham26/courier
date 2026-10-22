@@ -1,0 +1,111 @@
+# The design research pool - the repositories the Design Studio bench covers.
+#
+# One `owner/name` per line. `#` starts a comment. The order is the order of
+# the evidence cards in `docs/design/RESEARCH.md` and `docs/design/BENCH.md`.
+#
+# The data is fetched with `scripts/design/fetch-design-evidence.ps1`, which reads
+# this file and writes `docs/design/evidence/github-repos-<date>.tsv`. The
+# snapshot is the evidence; the two documents are written from it.
+
+# --- A. React Native design systems and UI kits ---------------------------
+tamagui/tamagui
+callstack/react-native-paper
+akveo/react-native-ui-kitten
+wix/react-native-ui-lib
+founded-labs/react-native-reusables
+heroui-inc/heroui-native
+GeekyAnts/NativeBase
+gluestack/gluestack-ui
+satya164/react-native-tab-view
+callstack/react-native-bottom-tabs
+Shopify/restyle
+nativewind/nativewind
+
+# --- B. Styling engines, tokens and colour ---------------------------------
+jpudysz/react-native-unistyles
+uni-stack/uniwind
+amzn/style-dictionary
+radix-ui/colors
+google/material-design-icons
+
+# --- C. Motion, animation and haptics --------------------------------------
+software-mansion/react-native-reanimated
+software-mansion/react-native-worklets
+nandorojo/moti
+wcandillon/react-native-skia
+Shopify/react-native-skia
+airbnb/lottie-react-native
+airbnb/lottie-android
+rive-app/rive-react-native
+motiondivision/motion
+wcandillon/react-native-redash
+appandflow/react-native-ease
+Rednegniw/number-flow-react-native
+LegendApp/legend-motion
+dohooo/react-native-reanimated-carousel
+SchroederNathan/react-native-motion
+xotahal/react-native-motion
+mkuczera/react-native-haptic-feedback
+
+# --- D. Sheets, gestures, lists and shared elements ------------------------
+software-mansion/react-native-gesture-handler
+gorhom/react-native-bottom-sheet
+software-mansion-labs/react-native-bottom-sheet
+lodev09/react-native-true-sheet
+computerjazz/react-native-draggable-flatlist
+entropyconquers/react-native-reanimated-dnd
+omahili/react-native-reorderable-list
+esthor/react-native-swipeable-list
+azimgd/shadowlist
+Glazzes/react-native-zoom-toolkit
+jeremybarbet/react-native-modalize
+osdnk/react-native-reanimated-bottom-sheet
+
+# --- E. Icons, fonts, accessibility and the platform ------------------------
+oblador/react-native-vector-icons
+software-mansion/react-native-svg
+expo/google-fonts
+google/fonts
+ArturKalach/react-native-a11y
+ArturKalach/react-native-a11y-order
+FormidableLabs/eslint-plugin-react-native-a11y
+dequelabs/axe-core
+Shopify/flash-list
+software-mansion/react-native-screens
+appandflow/react-native-safe-area-context
+margelo/react-native-mmkv
+margelo/nitro
+zoontek/react-native-localize
+
+# --- F. Maps, map styling and the routing we draw on ----------------------
+maplibre/maplibre-native
+maplibre/maplibre-gl-js
+maplibre/maplibre-style-spec
+maplibre/maputnik
+protomaps/basemaps
+protomaps/PMTiles
+maptiler/tileserver-gl
+openmaptiles/maptiler-basic-gl-style
+openmaptiles/openmaptiles
+mapbox/mapbox-gl-native
+tyrasd/overpass-turbo
+Project-OSRM/osrm-backend
+graphhopper/graphhopper
+GIScience/openrouteservice
+
+# --- G. The open-source work of the reference products ---------------------
+monzo/docs
+primer/react
+microsoft/fluentui
+adobe/react-spectrum
+mantinedev/mantine
+chakra-ui/chakra-ui
+grafana/grafana
+recharts/recharts
+expo/expo
+op-engineering/op-sqlite
+react-navigation/react-navigation
+gre/react-native-view-shot
+callstack/react-native-testing-library
+maplibre/maplibre-react-native
+k2-fsa/sherpa-onnx
