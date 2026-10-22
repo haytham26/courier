@@ -501,3 +501,39 @@ Each item below becomes a task with an owner squad, a spec and evidence, merged 
 - The ADR for every significant choice.
 - Dependency updates with Renovate, grouped weekly.
 - A security review of the agent tooling itself: tokens with least scope, and no secrets in logs or prompts.
+
+## 19. Work efficiently: no loops, no wasted tokens (founder directive 2026-10-23, binding; see D32)
+Quality stays at the top; these rules only remove waste.
+
+### 19.1 Never loop on one problem
+1. **Reproduce first.** Before any fix, reproduce the failure locally in a CI-identical setup (same lockfile, same pnpm settings, CI=true). Never push "to see what happens".
+2. **Two-attempt rule.** At most 2 fix attempts per failure on the same hypothesis. If the second fails, stop and write a 10-line root-cause note in `docs/log/CURRENT.md` (facts, hypotheses ruled out, next experiment). Then change the approach: read the official docs or source of the library (source-driven-development), search its issues, or ask the reviewer agent for an independent read.
+3. **Time box.** If a blocker is still open after 45 minutes of work or 3 CI cycles:
+   - park it in `docs/status/BUGS.md` with the evidence;
+   - open the smallest safe workaround only if it keeps every test and gate;
+   - move to the next independent task, and come back with fresh eyes later.
+
+   Never weaken a gate to escape a blocker.
+4. **No diagnostic commits on a PR branch.** Run experiments on a scratch branch with workflow_dispatch, or locally, and delete the scratch branch afterwards.
+5. **Known traps first.** Keep a "Traps" list in `docs/log/CURRENT.md` (for example the pnpm virtual store naming, the Reanimated jest resolver, the Maestro selector schema, gh --watch with stuck rows). Read it before debugging anything similar.
+
+### 19.2 Save tokens and context
+1. **Logs.** Read only the failed job logs, and only their tail or grep for `FAIL`, `Error`, `●`; never the whole log.
+2. **Files.** Search before reading (grep or glob), then read only the needed lines. Do not re-read files that have not changed.
+3. **Batch.** Run every local gate once before a push (lint, typecheck, tests, coverage, floor guard, marker gate, doc links), then push one coherent commit.
+4. **CI.** Never re-run CI without a change, except one re-run to confirm an infrastructure flake.
+5. **Never block on waiting.** No `--watch`, no long sleep. Start CI, work on the next independent item, then check with `gh run list` or `gh run view <id>`.
+6. **Parallel sessions.** Run at most 3 squad sessions at once, and only for independent work. Each gets a short brief with the exact files and the done criteria. The reviewer checks the diff, not the whole repo.
+7. **Model choice.** Routine work (docs, formatting, simple tests) may use a cheaper model. Architecture, security, debugging and design use the strongest model.
+8. **Memory.** After each task, update `docs/log/CURRENT.md` in at most 30 lines: state, next item, traps. A new or compacted session starts from that file, STATUS.md and this plan, not from scratch.
+9. **Cost line.** Report the week's agent cost and CI minutes in the company report (§17.1).
+
+### 19.3 Definition of done for every task (so nothing is redone)
+- The spec or task text is linked.
+- The tests are written first, or with the change (test-driven-development).
+- All local gates are green.
+- The PR is reviewed by the reviewer agent.
+- The GitHub checks are green: CI and quality gates always, and Android E2E for any change to app code (docs-only PRs do not run it).
+- The 5-pass check is posted.
+- STATUS.md and the week log are updated.
+- The branch is deleted after the merge.

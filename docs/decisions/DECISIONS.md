@@ -97,3 +97,16 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
 - Close the company gaps in MASTER_EXECUTION §18: NZ driver distraction law as a design constraint, Privacy Act 2020, carrier terms, app store billing (in-app purchase for drivers, web billing for teams), company basics, driver research and closed beta, pricing, B2B, growth and launch, SRE (SLOs, load tests, DR drills, release engineering, crash and cost monitoring), privacy-first analytics, AI governance, support and the engineering organisation.
 - Build Courier Ops (§17.5) as our own console and AI ops agents on top of an open-source workflow engine (n8n, Windmill or Temporal by benchmark), not a workflow engine from scratch. Human approval for any action on production, money or customer data.
 - Analyse Spoke to the depth listed in §17.6.
+
+## D32 — Efficiency rules: no loops, no wasted tokens (2026-10-23, founder decision)
+- MASTER_EXECUTION §19 is binding:
+  - reproduce before fixing;
+  - at most two attempts per hypothesis, then a written root-cause note and a new approach;
+  - a 45 minute or 3 CI cycle time box, then park and move on, never by weakening a gate;
+  - no diagnostic commits on PR branches;
+  - read only failing log tails;
+  - batch local gates before a push;
+  - never block on watches;
+  - at most 3 parallel sessions;
+  - a 30 line handoff in `docs/log/CURRENT.md`;
+  - the weekly cost line.
