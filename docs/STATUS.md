@@ -32,7 +32,7 @@ Open defects: `docs/status/BUGS.md`. Contract: `docs/plan/MASTER_EXECUTION.md`.
 | The sign-in (P5) | the service and the app screens | no native Google or Apple sign-in in the app; magic link, HIBP, device binding, session list and refresh rotation open |
 | The driving mode, the door memory, the earnings | the code and the tests | nothing proven on a device; no payouts, no IRD or Xero export |
 | The store readiness (S2) | the policy, the listing draft, 9 checker tests | the founder's store assets and the legal review |
-| The mobile lint (BUG-045) | the flat config is wired into the app | the 159 findings are open; the lint script stays off until they are fixed |
+| The mobile lint (BUG-045) | the config file `apps/mobile/eslint.config.mjs` exists | the app does not yet declare the config package or eslint, so the gate has not run: join the gate, fix the findings, then turn the lint script on |
 
 ## NOT STARTED
 
