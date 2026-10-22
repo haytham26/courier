@@ -14,7 +14,8 @@ name: Today's list shows the day
 # the stats grid, so they need a scroll on the emulator's viewport. The
 # courier scrolls to them; the flow does the same, then asserts each control.
 - scrollUntilVisible:
-    id: "today-mark-delivered"
+    element:
+      id: "today-mark-delivered"
     direction: DOWN
     timeout: 20000
 # The assertions are the screen's own testIDs: the copy moves with the design,
