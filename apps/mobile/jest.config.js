@@ -12,16 +12,19 @@
  * the window exists without the document (jest-expo aliases `window` and the
  * React Native preset setup redefines it).
  *
- * The resolver of Reanimated 4 is the other important line: it sends the
- * `react-native-worklets` native files to their web twins, so a test run
- * never reaches for a native module that is not there.
+ * The resolver is `./jest/resolver.js`: it calls the official resolver of
+ * Reanimated 4 for every request (it sends the `react-native-worklets`
+ * native files to their web twins, so a test run never reaches for a
+ * native module that is not there), and sends the web barrel of Reanimated's
+ * layout animations to its inert twin in the test realm - see the header
+ * of `jest/motion-void-web-layout.js`.
  */
 module.exports = {
   preset: 'jest-expo',
   testEnvironment: '<rootDir>/jestEnvironment.js',
   setupFiles: ['<rootDir>/jest.setup.media.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  resolver: 'react-native-reanimated/jest/resolver',
+  resolver: '<rootDir>/jest/resolver.js',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },

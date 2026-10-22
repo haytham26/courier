@@ -33,19 +33,6 @@ class ReactNativeWithDomEnvironment extends ReactNativeEnvironment {
     });
     this._domWindow = dom.window;
     this.global.document = dom.window.document;
-
-    // DIAGNOSTIC (to remove): the CI run of 2026-10-22 fails the design lab
-    // suites with "undefined is not iterable" coming from Reanimated's web
-    // layout animations, which call `Array.from(element.style)`. Print the
-    // offending value with a stack so the fix lands on the true element
-    // type instead of a guess. Windows never hits it; CI (Linux) does.
-    const RealArrayFrom = this.global.Array.from;
-    this.global.Array.from = function ArrayFromDiagnostic(arrayLike, ...rest) {
-      if (arrayLike === undefined || arrayLike === null) {
-        console.error(`DIAG Array.from(${String(arrayLike)})\n${new Error().stack}`);
-      }
-      return RealArrayFrom.call(this, arrayLike, ...rest);
-    };
   }
 
   async teardown() {
