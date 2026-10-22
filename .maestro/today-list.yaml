@@ -7,14 +7,6 @@ name: Today's list shows the day
     visible:
       id: "today-screen"
     timeout: 60000
-<<<<<<< Updated upstream
-# The stat labels are upper case in the design, so the flow looks for them the
-# way the screen shows them.
-- assertVisible: "DELIVERED"
-- assertVisible: "REMAINING"
-- assertVisible: "SUCCESS RATE"
-- assertVisible: "Current Run"
-=======
 # The assertions are the screen's own testIDs: the copy moves with the design,
 # the testIDs are the contract.
 - assertVisible:
@@ -25,5 +17,4 @@ name: Today's list shows the day
     id: "today-fail"
 - assertVisible:
     id: "today-settings"
->>>>>>> Stashed changes
 - takeScreenshot: "today-list"
