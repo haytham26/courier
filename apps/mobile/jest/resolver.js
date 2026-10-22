@@ -19,12 +19,29 @@ const reanimatedResolver = require('react-native-reanimated/jest/resolver');
 const WEB_BARREL =
   /react-native-reanimated[\\/]src[\\/]layoutReanimation[\\/]web[\\/]index\.tsx?$/;
 
+// DIAG (remove once the CI run proves the engagement):
+let diagnosedFirst = false;
+
 module.exports = (request, options) => {
   const resolved = reanimatedResolver(request, options);
 
-  if (typeof resolved === 'string' && WEB_BARREL.test(resolved)) {
-    return path.join(__dirname, 'motion-void-web-layout.js');
+  if (
+    typeof resolved === 'string' &&
+    resolved.replace(/\\/g, '/').includes('layoutReanimation/web/')
+  ) {
+    // DIAG (remove once the CI run proves the engagement):
+    if (!diagnosedFirst) {
+      diagnosedFirst = true;
+      console.error(`DIAG first layoutReanimation/web resolution: ${request}\n  -> ${resolved}`);
+    }
+    if (WEB_BARREL.test(resolved)) {
+      console.error(`DIAG the barrel redirects to the inert twin: ${request} -> ${resolved}`);
+      return path.join(__dirname, 'motion-void-web-layout.js');
+    }
   }
 
   return resolved;
 };
+
+// DIAG (remove once the CI run proves the engagement):
+console.error('DIAG the resolver wrapper of the mobile test run is in place');

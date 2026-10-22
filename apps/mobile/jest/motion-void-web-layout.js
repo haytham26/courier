@@ -30,6 +30,12 @@ const componentUtils = require(
   'react-native-reanimated/src/layoutReanimation/web/componentUtils'
 );
 
+// DIAG (remove once the CI run proves the engagement):
+if (!globalThis.__courierMotionVoidDiag) {
+  globalThis.__courierMotionVoidDiag = true;
+  console.error('DIAG the inert twin of the web layout animations is loaded');
+}
+
 module.exports = {
   __esModule: true,
 
