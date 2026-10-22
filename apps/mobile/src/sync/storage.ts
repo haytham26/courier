@@ -119,8 +119,8 @@ export async function writeDriverPreference(
 
   // The queue keeps going after a failed write, and the caller still sees
   // the failure. The swallow answers with a resolved promise because, in
-  // the non-strict mode of the app, an `undefined` result widens the chain
-  // to Promise<any>.
+  // the non-strict mode of the app, an `undefined` callback result widens
+  // the catch chain off the void promise type.
   writeQueues.set(
     driverId,
     write.catch(() => Promise.resolve()),

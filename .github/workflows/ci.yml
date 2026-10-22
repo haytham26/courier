@@ -32,6 +32,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build the design-tokens package
+        # The mobile tsconfig resolves @courier/design-tokens/* from dist/,
+        # which is not committed, so the shared package has to be built
+        # before the lint and the typecheck of the app can see its types.
+        run: pnpm --filter @courier/design-tokens build
+
       - name: Install Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
