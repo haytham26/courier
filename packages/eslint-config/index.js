@@ -40,6 +40,30 @@ export default tseslint.config(
     },
   },
   {
+    // D27, "editable by design": every colour a screen uses comes from the
+    // ONE token file (`@courier/design-tokens/chosen` and, until the screens
+    // are rebuilt, the legacy token modules). A hex colour outside those
+    // files fails the build. The lints run per package (`eslint .`), so the
+    // patterns are anchored to any directory (the `**/` head).
+    files: ['**/*.{ts,tsx}'],
+    ignores: [
+      '**/packages/design-tokens/**',
+      '**/app/design/**',
+      '**/app/design2/**',
+      '**/src/design/**',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/^#[0-9a-fA-F]{3,8}$/]',
+          message:
+            'Colours come from one token file (import { tokens } from @courier/design-tokens/chosen), never as hex literals.',
+        },
+      ],
+    },
+  },
+  {
     // Config files and plain JavaScript are not type checked.
     files: ['**/*.js', '**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
