@@ -1,6 +1,7 @@
 # The docs of Courier Copilot
 
-**Start here:** `docs/plan/MASTER_EXECUTION.md` (the execution contract). `docs/MASTER_EXECUTION.md`
+**Start here:** `docs/STATUS.md` (the one screen of where the company stands). The execution
+contract is `docs/plan/MASTER_EXECUTION.md` (the binding plan); `docs/MASTER_EXECUTION.md`
 is a one-line pointer to it, so the old path keeps working.
 
 The folder is grouped by what a document is for. Every document says what it is and how fresh it is;
