@@ -101,4 +101,8 @@ What to do: the runbook, "The certificate is about to expire".
 - **The errors of the app itself** (a crash of the app on the phone, a
   failed voice command). Those go to the error tracker, not to the
   heartbeat.
-- **The cost** of the cloud. The monthly report is in `docs/COST_PLAN.md`.
+- **The cost** of the cloud. The monthly report is in `docs/product/COST_PLAN.md`.
+- A mounted file it has **no read permission for** (the container runs as
+  uid 10001): the check then logs "skipped" every round instead of going
+  quiet. If a check the operator expects never appears in the log, the
+  permissions of that mount are the first thing to look at.
