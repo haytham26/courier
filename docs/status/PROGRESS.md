@@ -10,6 +10,8 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 | **P1 the Android E2E pipeline** | PARTIAL | the two-job pipeline (the release APK cached by content hash, then the emulator), the readiness gates (boot, install, start, pid, first screen), the E2E mode on local mocks, the permission grants, the evidence uploaded every run | the B.7 compatibility flow is the last one open: the deep link to /compat is in the run of 2026-10-22 00:00 | the run 39691708360: four flows green, the app renders in the new design |
 | **P2 the research (24 areas)** | DONE | every area at the full V4 depth (30+ cards, the query log, the shortlist, the top-5 deep review, the benchmarks, the gaps, the decision, the risks) + the verifier pass (271 of 941 cards re-checked, 129 corrected) | — | docs/research/2026/ + the four VERIFICATION files |
 | **P2 the eval sets** | PARTIAL | the voice set (600 scripts, 840 planned files, 240 real LINZ addresses) and the scanner set (330 synthetic labels with their ground truth, 40 slots for the founder) - both checked in CI | the audio is not generated (it needs the TTS and the licence ledger), the 40 founder photos, the routing eval set, the non-speech corpus | scripts/eval/check-voice-eval.mjs, scripts/eval/check-scanner-eval.mjs |
+| **T2 the Expo version** | DONE | ADR-002 stays on Expo SDK 58 / RN 0.88, with the official source and each native module's peer range; D21 locks SDK 58 | — | docs/decisions/adr/ADR-002-expo-58.md, docs/research/2026/expo-sdk-58.md |
+| **T4 the real LINZ data** | DONE | 225,151 real addresses indexed in `data/linz/` (gitignored), the D8 engine fixes (the rural suburbs, the hundreds, the unit and suffix combinations, the street type inside the road name), 98.3% D8 accuracy on the sampled real data | the weekly LINZ rebuild job ships with T5 | docs/evidence/phase-2.3/linz-accuracy.md, docs/decisions/adr/ADR-003-linz-data.md |
 | **P3 the map view modes** | PARTIAL | the modes (2D, 3D, Satellite, Auto) with the per-driver memory, the toggles, the voice control of the camera, the 3D buildings builder with the licences checked | the Canterbury pack itself is not built (it needs the LINZ outlines and the OSM extract downloaded) | pps/mobile/src/maps/, 144 mobile tests |
 | **P3 the offline map** | PARTIAL | the style from the tokens (day, night, high contrast), the pack contract, the fallback, the pack builder | the pack is not built and never ran on a device; the frame times and the size are unmeasured | docs/squads/maps/ |
 | **P4 the design** | NOT STARTED | the design tokens to the contract (Figtree, the 17pt floor, the 56/72pt targets, the measured contrast), the motion helpers, the screen specs | the founder rejected the three directions (Roadbook, Beacon, Freight) on 2026-10-22: the Design Studio restarts at MASTER_EXECUTION §13.6 (the research, ten directions) | docs/design/, the founder's verdict in §13.6 |
@@ -96,11 +98,11 @@ below is the authoritative list; each row is worked as a branch + PR with spec, 
 | M5 | Mutation score ≥80 % on address, routing, sync, billing, auth (§8.2) | P2–P5 | Planned |
 
 ## Next (in order)
-1. Merge PR #1 once the Android emulator job is green (the other gates are already green).
-2. T2 — the Expo version decision (D21): either the SDK 57 downgrade or the ADR that proves
-   SDK 58 with every native module, then DECISIONS.md.
-3. T3 — the emulator run green, the artifacts downloaded into `docs/evidence/b7/`, B.7 marked PASS.
-4. T4 — the real LINZ addresses (`scripts/data/fetch-linz.py`) and the ≥95 % accuracy report.
-5. T5 — the offline Canterbury PMTiles.
-6. T6 — the design to the approved mockups.
-7. T7 — the product itself (sync, routing, door memory, dictation, voice agent, web, billing, PIA).
+1. Merge PR #3 (`chore/repo-structure`, already contains PRs #1 and #2) once its CI and its Android
+   E2E are green on the CI emulator.
+2. T1-T4 are done (the emulator pipeline, the Expo 58 ADR, the LINZ accuracy, the restructure
+   merge); the weekly LINZ rebuild job belongs to T5.
+3. T5 — the offline Canterbury PMTiles (+ the weekly rebuild job).
+4. T6 — the design to `docs/design/chosen/` (Maps First, D27): the token file, the components,
+   then the 13 screens, every state, light and dark, with the side-by-side design gate.
+5. T7 — the product itself (sync, routing, door memory, dictation, voice agent, web, billing, PIA).
