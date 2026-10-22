@@ -9,13 +9,15 @@ name: Design videos
 
 on:
   workflow_dispatch:
-  push:
-    branches: ['**']
-    paths:
-      - 'apps/mobile/**'
-      - '.maestro/directions/**'
-      - 'packages/design-tokens/**'
-      - '.github/workflows/design-videos.yml'
+#  No push trigger since 2026-10-22 (D27): the ten directions are history the
+#  founder keeps read-only ("It supersedes A/B/C and the 10 directions ... do
+#  not make more directions"), so every push failed this workflow at a
+#  recording step nobody wants. The Maps First recordings of Part B get their
+#  own workflow under the design gate (ADR-008).
+#
+# TODO(P4): replace with the Maps First screen-recording workflow (the 13
+# reference screens, light and dark) and delete this one in the same PR.
+
 
 concurrency:
   group: design-videos-${{ github.ref }}

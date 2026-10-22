@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 
 from app.address_correction import (
-    AddressCorrector,
     Address,
+    AddressCorrector,
     InMemoryAddressStore,
     SqliteAddressStore,
     _as_int,
