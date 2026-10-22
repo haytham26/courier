@@ -284,3 +284,94 @@ The app must feel alive and three dimensional, like Apple Maps, with motion that
    - No decorative particles, glows, confetti or bouncing for its own sake (§13.2).
    - Motion durations and curves are tokens in the same token file (D27).
 7. **Evidence**: each screen PR adds a short screen recording from the emulator next to the reference, and a frame-time trace for the driving screen.
+
+## 17. Operate as a complete company without being asked (founder directive 2026-10-23, binding; see D30)
+The founder must receive finished, checked work. He must never have to remind you of work a real company would do on its own. From now on, run every squad below on a schedule and as part of every phase, without waiting for a message.
+
+### 17.1 How the company works
+- **Squads, run in parallel.** Use multi-agent sessions: each squad is a separate agent session with its own brief, and a separate reviewer agent checks its output adversarially before anything merges (code-review-and-quality, doubt-driven-development).
+  - Product
+  - Design
+  - Mobile
+  - Backend
+  - Maps
+  - Voice
+  - QA
+  - Security
+  - Competitive research
+  - Innovation
+  - Onboarding and education
+  - Growth and launch
+  - Operations and automation
+- **Zero-defect bar.**
+  - Every change passes lint, typecheck, tests, coverage, the quality gates and Android E2E on GitHub, plus the 5-pass check (§16.3).
+  - Nothing is reported DONE without the run links.
+- **Weekly company report** in `docs/status/STATUS.md` and the week log. It covers:
+  - what each squad shipped;
+  - what it found;
+  - what it proposes next.
+- **The founder's queue.** Only decisions that truly need the founder go to `docs/status/FOUNDER_TODO.md`, each with a recommended answer. Everything else you decide and record in DECISIONS.
+
+### 17.2 Competitive research: Spoke (start now, Competitive research + Innovation squads)
+The founder put about 10 screenshots of the Spoke driver app on his PC in the folder `C:\Users\DCL\Downloads\WhatsApp Unknown 2026-10-23 at 4.11.31 AM`.
+
+**Handling the screenshots:**
+- Copy them into the repo folder `research-private/spoke/`, which is git-ignored. Add the line to `.gitignore` before copying.
+- The screenshots are third-party copyrighted material and the repo is public: never commit them, never paste them into docs, and never reproduce their visuals, text or icons.
+
+**The analysis**, written to `docs/research/competitors/spoke.md`. Use text only, with neutral descriptions:
+- every feature visible;
+- every screen and its purpose;
+- the user flows (how a driver goes from login to the end of the day);
+- their way of thinking (what they optimise for, what they assume about drivers);
+- their pricing and business model where public;
+- strengths, and weaknesses and friction points;
+- what is missing.
+
+Add public sources as well (their website, help centre, app store listings and reviews, YouTube walkthroughs) with links.
+
+**The outcome**, a table in that file and new items in the plan:
+- For each Spoke capability: our equivalent, whether ours is better / equal / missing, and the task to be clearly better.
+- Ideas where we leapfrog them, for example:
+  - Courier Voice hands-free;
+  - offline maps and the scanner;
+  - NZ address correction with LINZ;
+  - Live Activity;
+  - 3D driving camera.
+- Every gap becomes a task in the §4 order with an owner squad.
+
+**Clean room:** learn the ideas and the user needs, then design our own solution in our Maps First style. Never decompile, scrape or copy their app.
+
+### 17.3 First-run experience: welcome, tutorial and live demo (Onboarding squad, Phase P4 with the screens)
+1. **Welcome.** A short welcome of 3 to 4 cards in the Maps First style, each skippable, with "Skip" always visible. It asks permissions only when needed and explains why: location, camera, microphone and notifications.
+2. **Demo run.** An interactive, offline demo with a sample Christchurch route of 8 stops. The new driver can try the whole loop without an account:
+   - scan a label;
+   - optimise;
+   - drive in simulation;
+   - Slide to Deliver;
+   - add a proof photo;
+   - end of day.
+
+   It can be reopened later from Settings.
+3. **Voice-guided tour.** Courier Voice offers to guide the driver through the demo by voice ("Say next or skip"), so the tutorial works hands free. The driver can always mute it.
+4. **Coach marks.** Light coach marks the first time each feature appears: one tip at a time, dismissable, never shown again after it is used.
+5. **Video walkthroughs.** Short videos (30 to 60 s) for the store listing, the website and the in-app Help.
+   - Make them with open-source tooling, for example Remotion for animated product videos and Maestro recordings of the real app. Check each licence and record it in the licence inventory.
+   - A real person on camera is a founder action (FOUNDER_TODO).
+   - AI avatars may be used only if clearly labelled as AI and never imitating a real person.
+6. **Research first.** Study the best open-source onboarding and tour libraries for React Native and Expo. Benchmark them, choose with an ADR, and keep the licence clean.
+7. **Help centre.** In-app Help with searchable articles, the videos, "Ask Copilot", and contact support (Chatwoot later, per D22 post-launch).
+8. **Tests.** Every onboarding step has testIDs and a Maestro flow, including "Skip all" and "Replay the demo".
+
+### 17.4 Company automation with n8n (Operations and automation squad)
+1. Self-host n8n on our server, next to OmniRoute, never on the founder PC. Pin the version and keep the secrets in the server secret manager.
+   - Record its licence (Sustainable Use License: internal business use is allowed; we do not resell it) in the licence inventory.
+2. First workflows:
+   - daily CI health and failed-run alerts to the founder (one digest, not spam);
+   - the weekly company report assembled from STATUS.md and the week log;
+   - twice-weekly map pack update monitoring (D26);
+   - app store review monitoring with the competitor's reviews;
+   - crash and error digests (once Sentry or similar is live);
+   - new sign-up and support-ticket notifications after launch.
+3. Store the workflows as exported JSON in `infra/n8n/workflows/` with a README, so they are versioned and reviewable. Never commit secrets or credentials.
+4. Hold n8n to the same safety rules as the rest of the stack: least privilege, and no customer personal data sent to third parties that train on data (D25).

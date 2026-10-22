@@ -86,3 +86,9 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
 - The Maps First design (D27) is built three dimensional and animated: a tilted 3D map with extruded buildings, a driving camera that follows and eases into turns, a 3D puck and rising pins, route lines that draw themselves, and spring motion with haptics across the interface. The binding spec is MASTER_EXECUTION §13.8.
 - Motion must serve the driver (orientation, feedback, continuity), keep 60 fps on a mid-range Android, respect reduced motion, and its durations and curves live in the token file.
 
+
+## D30 — The company runs itself; Spoke research, first-run experience and n8n (2026-10-23, founder decision)
+- The executor operates as a complete company without being asked: parallel squad sessions with an independent reviewer, a weekly company report, and only true founder decisions in FOUNDER_TODO (MASTER_EXECUTION §17.1).
+- Competitive research on Spoke starts now, from the founder's screenshots kept in the git-ignored `research-private/` folder, never committed, clean room only (§17.2).
+- First-run experience: skippable welcome, an offline interactive demo run, a Courier Voice guided tour, coach marks, short video walkthroughs and an in-app Help centre (§17.3).
+- n8n, self-hosted, automates company operations (CI digests, the weekly report, map updates, review monitoring) with workflows versioned in `infra/n8n/workflows/` (§17.4).
