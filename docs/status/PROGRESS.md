@@ -100,7 +100,7 @@ below is the authoritative list; each row is worked as a branch + PR with spec, 
 2. T2 — the Expo version decision (D21): either the SDK 57 downgrade or the ADR that proves
    SDK 58 with every native module, then DECISIONS.md.
 3. T3 — the emulator run green, the artifacts downloaded into `docs/evidence/b7/`, B.7 marked PASS.
-4. T4 — the real LINZ addresses (`scripts/fetch-linz.py`) and the ≥95 % accuracy report.
+4. T4 — the real LINZ addresses (`scripts/data/fetch-linz.py`) and the ≥95 % accuracy report.
 5. T5 — the offline Canterbury PMTiles.
 6. T6 — the design to the approved mockups.
 7. T7 — the product itself (sync, routing, door memory, dictation, voice agent, web, billing, PIA).

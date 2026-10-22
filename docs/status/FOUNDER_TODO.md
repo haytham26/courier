@@ -4,7 +4,7 @@
 
 ---
 
-## Now (Free) — Paste into `.env.local` then run `scripts/check-secrets`
+## Now (Free) — Paste into `.env.local` then run `scripts/ci/check-secrets.js`
 
 | Item | Provider / URL | Env Var | Where It Goes | Affected Feature & Current Workaround | Blocks? |
 |------|----------------|---------|---------------|----------------------------------------|---------|
@@ -125,7 +125,7 @@ still runs.
 ---
 
 **Last Updated:** 2026-10-22 (design studio: the founder picks the look - A, B or C; and the security squad: the complete sign-in - the Google and Apple ids, the Apple team id, the passkey domain and the app store ids)
-**Next Action:** Founder picks the direction (A, B or C) and pastes the free keys into `.env.local`, then runs `scripts/check-secrets`
+**Next Action:** Founder picks the direction (A, B or C) and pastes the free keys into `.env.local`, then runs `scripts/ci/check-secrets.js`
 ## Post-launch tools (D22)
 - [ ] Chatwoot (support chat) · [ ] WeKnora (help-centre AI) · [ ] Cal.com (demos) · [ ] Cap (videos) · [ ] OpenSEO (website SEO)
 - [ ] Confirm OmniVoice model-weights license allows commercial use (Hugging Face k2-fsa/OmniVoice).

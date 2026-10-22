@@ -26,9 +26,9 @@
 - [ ] Android emulator E2E is green — run link:
 - [ ] Two independent review passes (critical modules: auth, payments, sync, address, voice, routing)
 - [ ] `pnpm check:full` passes locally
-- [ ] Coverage and mutation scores are at or above the floor in CONSTRAINTS.md
+- [ ] Coverage and mutation scores are at or above the floor in docs/plan/CONSTRAINTS.md
 - [ ] No new floor violations (`node scripts/ci/check-floor.mjs`)
-- [ ] PROGRESS.md and EXECUTOR_LOG.md are updated (including the skills and squads applied)
+- [ ] PROGRESS.md and the log of the week are updated (including the skills and squads applied)
 
 ## Screenshots
 

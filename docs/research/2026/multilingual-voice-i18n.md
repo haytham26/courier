@@ -1064,7 +1064,7 @@ is a gate, not a suggestion.**
 | 15 | **CLDR** | **CLDR v49** is released (we are on **v48 / Unicode 16.0.0**) — re-read the plural table and the NZ formats | `unicode-org/cldr` releases |
 | 16 | **Translation workflow** | Tolgee publishes a **clear EL boundary** for self-hosting, **or** a TMS ships te reo / Samoan community packs | the Tolgee repo + its licence file |
 | 17 | **Spoke** | Spoke's app listing changes its 19-language list, or ships a voice-control feature | the NZ App Store / Play listings (the same sources as TEARDOWN.md S13/S14/S16) |
-| 18 | **Any non-commercial weight** | nothing — a non-commercial licence is a permanent rejection, not a radar item | `scripts/check-licences.mjs` + the ledger |
+| 18 | **Any non-commercial weight** | nothing — a non-commercial licence is a permanent rejection, not a radar item | `scripts/ci/check-licenses.mjs` + the ledger |
 
 ---
 
