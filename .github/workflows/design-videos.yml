@@ -13,10 +13,9 @@ on:
 #  founder keeps read-only ("It supersedes A/B/C and the 10 directions ... do
 #  not make more directions"), so every push failed this workflow at a
 #  recording step nobody wants. The Maps First recordings of Part B get their
-#  own workflow under the design gate (ADR-008).
-#
-# TODO(P4): replace with the Maps First screen-recording workflow (the 13
-# reference screens, light and dark) and delete this one in the same PR.
+#  own workflow under the design gate (ADR-008): P4 replaces this file with
+#  the screen-recording workflow of the 13 reference screens, light and dark,
+#  and deletes this one in the same PR.
 
 
 concurrency:
