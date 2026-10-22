@@ -75,6 +75,6 @@ Reasons:
 
 ## 5. Follow-up
 
-- `docs/adr/ADR-002-expo-58.md` records the decision and updates D21 in `docs/DECISIONS.md`.
+- `docs/decisions/adr/ADR-002-expo-58.md` records the decision and updates D21 in `docs/decisions/DECISIONS.md`.
 - The Platform squad re-checks the pinned versions and the advisories before each phase
   (V4 §3.4).

@@ -60,9 +60,9 @@ Example (real): `160 Bealey Avenue, Christchurch Central, Christchurch`.
 
 ## Decision
 
-- `scripts/fetch-linz.py` fetches the verified layers per area (Christchurch, Waimakariri,
+- `scripts/data/fetch-linz.py` fetches the verified layers per area (Christchurch, Waimakariri,
   Selwyn) into `data/linz/` as GeoJSON, with paging, and never prints the key.
-- `scripts/list-linz-layers.py` lists the layers with their titles, so the next person can
+- `scripts/data/list-linz-layers.py` lists the layers with their titles, so the next person can
   re-verify the ids in one command instead of guessing.
 - The D8 engine reads this data through the same `AddressStore` interface, so the fixture store
   (tests) and the real store (production) are interchangeable.

@@ -2,7 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-10-20
-- **Decides:** D21 ("Expo SDK 57 is locked") in `docs/DECISIONS.md`
+- **Decides:** D21 ("Expo SDK 57 is locked") in `docs/decisions/DECISIONS.md`
 - **Research:** `docs/research/2026/expo-sdk-58.md` (V4 §3 protocol)
 - **Branch:** `feat/t2-expo-58-decision`
 
@@ -58,10 +58,10 @@ the release.
 
 ## Consequences
 
-- `docs/DECISIONS.md` D21 is updated: the locked SDK is 58, and any change to it needs a
+- `docs/decisions/DECISIONS.md` D21 is updated: the locked SDK is 58, and any change to it needs a
   new ADR with an official source.
 - `apps/mobile` keeps the exact pins it has; the versions are recorded in
-  `docs/adr/ADR-001-versions.md`.
+  `docs/decisions/adr/ADR-001-versions.md`.
 - The Platform squad re-checks the pinned versions and the advisories before each phase
   (V4 §3.4) and the CI audit gate fails on any new high or critical advisory.
 - The SDK 58 migration items that touch us are already done: the strict TypeScript API
