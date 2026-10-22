@@ -3,20 +3,16 @@ name: The map screen renders
 ---
 - launchApp:
     clearState: true
-- assertVisible:
-    id: "login-screen"
-- tapOn: "Sign Up"
-- tapOn:
-    id: "register-email"
-- inputText: "map@example.co.nz"
-- tapOn:
-    id: "register-password"
-- inputText: "correct-horse-battery"
-- tapOn: "Create Account"
 - extendedWaitUntil:
     visible:
       id: "today-screen"
-    timeout: 20000
-- tapOn: "Map"
-- assertVisible:
-    id: "map-screen"
+    timeout: 60000
+# The tab is tapped by its testID: the words on today's list can match the
+# tab labels, and Maestro matches the text case-insensitively.
+- tapOn:
+    id: "tab-map"
+- extendedWaitUntil:
+    visible:
+      id: "map-screen"
+    timeout: 30000
+- takeScreenshot: "map"

@@ -91,10 +91,10 @@ export default function TabsLayout() {
         };
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Home' }} />
-      <Tabs.Screen name="map" options={{ title: 'Map' }} />
-      <Tabs.Screen name="stops" options={{ title: 'Stops' }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
+      <Tabs.Screen name="index" options={{ title: 'Home', tabBarButtonTestID: 'tab-home' }} />
+      <Tabs.Screen name="map" options={{ title: 'Map', tabBarButtonTestID: 'tab-map' }} />
+      <Tabs.Screen name="stops" options={{ title: 'Stops', tabBarButtonTestID: 'tab-stops' }} />
+      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarButtonTestID: 'tab-settings' }} />
     </Tabs>
   );
 }
