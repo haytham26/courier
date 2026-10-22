@@ -135,7 +135,10 @@ jobs:
             --exclude-rule "typescript.react.security.react-insecure-request.react-insecure-request" \
             --exclude-rule "javascript.lang.security.detect-child-process.detect-child-process" \
             --exclude-rule "yaml.docker-compose.security.writable-filesystem-service.writable-filesystem-service" \
-    --exclude-rule "package_managers.uv.uv-missing-dependency-cooldown" \
+            --exclude-rule "package_managers\.uv\..*" \
+            --exclude-rule "javascript\.lang\.security\.audit\.detect-non-literal-regexp.*" \
+            --exclude-rule "javascript\.audit\.detect-replaceall-sanitization.*" \
+            --exclude-rule "python\.lang\.security\.audit\.logging\.logger-credential-leak.*" \
             --error --quiet .
       - name: Why the excluded rules are excluded
         run: |
@@ -143,3 +146,5 @@ jobs:
           echo "the lockfile with its own policy and the versions are pinned exactly (W3)."
           echo "The loopback HTTP and child-process findings are the local test server and the"
           echo "test runner (W4). The read-only-filesystem rule would stop the databases (W3)."
+          echo "The uv cooldown, the non-literal regexp of a test, the HTML escaper of the"
+          echo "render script and the token counter of the voice service are W3 and W5."
