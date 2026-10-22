@@ -47,4 +47,7 @@ data/labels/
 # Clean-room study clones (never committed, read-only reference)
 .study/
 # Third-party research material (copyrighted, never committed)
+# The founder's untracked working prompt (never committed)
+/NEXT_SHIFT_PROMPT.md
+
 research-private/
