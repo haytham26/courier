@@ -4,18 +4,22 @@
  * Implements earbud button protocol: 1x=Delivered, 2x=Skip, 3x=Fail, Long=Talk
  */
 
-import { createAudioPlayer, AudioPlayer } from 'expo-audio';
+import type { AudioPlayer } from 'expo-audio';
+import { createAudioPlayer } from 'expo-audio';
 import { Platform } from 'react-native';
+import type { 
+  SttEngine} from 'react-native-sherpa-onnx/stt';
 import { 
-  createSTT, 
-  SttEngine,
+  createSTT,
   detectSttModel
 } from 'react-native-sherpa-onnx/stt';
-import { 
-  createTTS, 
+import type { 
   TtsEngine,
-  detectTtsModel,
   GeneratedAudio
+} from 'react-native-sherpa-onnx/tts';
+import { 
+  createTTS,
+  detectTtsModel
 } from 'react-native-sherpa-onnx/tts';
 
 import type { MapViewMode } from '@/maps/viewModes';
@@ -202,27 +206,29 @@ class VoiceService {
         this.emitCommand({ type: 'mark_failed', stopId: 'current', reason: 'earbud_triple' });
         break;
       case 'long':
-        this.startListening();
+        void this.startListening();
         break;
     }
   }
 
-  async startListening(): Promise<void> {
-    if (this.state === 'listening') return;
-    
+  startListening(): Promise<void> {
+    if (this.state === 'listening') return Promise.resolve();
+
     this.setState('listening');
-    
+
     // TODO: Start STT streaming when sherpa-onnx streaming API is available
+    return Promise.resolve();
   }
 
-  async stopListening(): Promise<void> {
-    if (this.state !== 'listening') return;
-    
+  stopListening(): Promise<void> {
+    if (this.state !== 'listening') return Promise.resolve();
+
     try {
       this.setState('idle');
     } catch (error) {
       this.callbacks?.onError(error as Error);
     }
+    return Promise.resolve();
   }
 
   async speak(text: string): Promise<void> {
@@ -240,7 +246,7 @@ class VoiceService {
       const dataUri = `data:audio/wav;base64,${base64Audio}`;
       
       this.audioPlayer.replace(dataUri);
-      await this.audioPlayer.play();
+      this.audioPlayer.play();
     } catch (error) {
       this.callbacks?.onError(error as Error);
     } finally {

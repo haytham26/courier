@@ -217,7 +217,7 @@ export function parsePackManifest(raw: string): PackManifestResult {
     return {
       ok: false,
       error: 'wrong-schema',
-      detail: `the manifest schema is ${String(parsed.schema)}, expected ${PACK_MANIFEST_SCHEMA}`,
+      detail: `the manifest schema is ${readString(parsed, 'schema') ?? 'not a string'}, expected ${PACK_MANIFEST_SCHEMA}`,
     };
   }
 
@@ -444,7 +444,7 @@ export async function checkOfflinePack(
   let failure: OfflinePackState | null = null;
 
   for (const candidate of candidates) {
-    let raw: string | null = null;
+    let raw: string | null;
     try {
       raw = await candidate.read();
     } catch (error) {
@@ -528,5 +528,8 @@ export function describe(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  return String(error);
+  if (typeof error === 'string') {
+    return error;
+  }
+  return JSON.stringify(error) ?? 'unknown failure';
 }

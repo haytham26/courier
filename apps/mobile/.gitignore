@@ -7,7 +7,11 @@ node_modules/
 .expo/
 dist/
 web-build/
-expo-env.d.ts
+# expo-env.d.ts STAYS TRACKED since Expo CLI SDK 49: it is generated once by
+# "npx expo customize" (the note inside says "should be committed") and the
+# app tsconfig includes it for the ambient process.env typing; without it a
+# fresh clone (CI) reads EXPO_PUBLIC_* as any and the lint gate fails there
+# while it passes on machines that happen to have the file.
 
 # Native
 .kotlin/

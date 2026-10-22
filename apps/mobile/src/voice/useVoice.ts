@@ -4,7 +4,8 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { voiceService, VoiceState, VoiceCommand, VoiceCallbacks, VoiceConfig, EarbudEvent } from './VoiceService';
+import type { VoiceState, VoiceCommand, VoiceCallbacks, VoiceConfig, EarbudEvent } from './VoiceService';
+import { voiceService } from './VoiceService';
 
 export function useVoice(config?: VoiceConfig) {
   const [state, setState] = useState<VoiceState>('idle');

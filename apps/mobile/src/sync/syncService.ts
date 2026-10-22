@@ -5,7 +5,8 @@
  * The order matters: the batch is only confirmed after the server has stored
  * it, so a dropped connection leaves the events in the log for the next try.
  */
-import { EventLog, DEFAULT_BATCH_SIZE } from './eventLog';
+import type { EventLog} from './eventLog';
+import { DEFAULT_BATCH_SIZE } from './eventLog';
 import type { DeliveryEvent, SyncResult, SyncTransport } from './types';
 
 export interface SyncOutcome {

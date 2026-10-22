@@ -89,14 +89,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface SessionState {
-  data: { user: AuthUser } | null;
-  error: unknown;
-  isPending: boolean;
-  isRefetching: boolean;
-  refetch: () => Promise<void>;
-}
-
 /** The plain sentence the app shows when a sign-in does not work. */
 function messageFor(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -136,7 +128,7 @@ function toAuthUser(user: OfflineSessionUser): AuthUser {
  * (a shift) and it never pretends the server confirmed it.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data, error, isPending, refetch } = authClient.useSession() as SessionState;
+  const { data, error, isPending, refetch } = authClient.useSession();
 
   const [user, setUser] = useState<AuthUser | null>(null);
   const [status, setStatus] = useState<SessionStatus>('loading');
@@ -205,17 +197,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadTeams = useCallback(async (): Promise<Team[]> => {
     try {
       const { data: organizations } = await authClient.organization.list({ query: {} });
-      const list = (organizations ?? []) as Array<{ id: string; name: string }>;
+      const list = organizations ?? [];
       const found: Team[] = [];
       for (const organization of list) {
         const { data: organizationTeams } = await authClient.organization.listUserTeams({
           query: { organizationId: organization.id },
         });
-        for (const team of (organizationTeams ?? []) as Array<{
-          id: string;
-          name: string;
-          organizationId: string;
-        }>) {
+        for (const team of organizationTeams ?? []) {
           found.push(team);
         }
       }
@@ -254,12 +242,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (failure) {
         return { status: 'failed', message: messageFor(failure, 'Wrong email or password') };
       }
-      const challenge = result as { twoFactorRedirect?: boolean; twoFactorMethods?: string[] };
-      if (challenge?.twoFactorRedirect === true) {
+      if (result?.twoFactorRedirect === true) {
         setStep('two-factor');
         return {
           status: 'two-factor-required',
-          methods: challenge.twoFactorMethods ?? ['totp'],
+          methods: result.twoFactorMethods ?? ['totp'],
         };
       }
       await finishSignIn();

@@ -6,28 +6,34 @@
  */
 import { EventLog } from '../eventLog';
 import { SyncService } from '../syncService';
-import type { DeliveryEvent, EventStore, SyncTransport } from '../types';
+import type { DeliveryEvent, EventStore, SyncResult, SyncTransport } from '../types';
 
 class FakeStore implements EventStore {
   readonly events: DeliveryEvent[] = [];
   readonly synced = new Set<string>();
 
-  async append(event: DeliveryEvent): Promise<void> {
+  append(event: DeliveryEvent): Promise<void> {
     if (!this.events.some((stored) => stored.id === event.id)) {
       this.events.push(event);
     }
+    return Promise.resolve();
   }
 
-  async pending(limit: number): Promise<DeliveryEvent[]> {
-    return this.events.filter((event) => !this.synced.has(event.id)).slice(0, limit);
+  pending(limit: number): Promise<DeliveryEvent[]> {
+    return Promise.resolve(
+      this.events.filter((event) => !this.synced.has(event.id)).slice(0, limit),
+    );
   }
 
-  async markSynced(ids: string[]): Promise<void> {
+  markSynced(ids: string[]): Promise<void> {
     ids.forEach((id) => this.synced.add(id));
+    return Promise.resolve();
   }
 
-  async pendingCount(): Promise<number> {
-    return this.events.filter((event) => !this.synced.has(event.id)).length;
+  pendingCount(): Promise<number> {
+    return Promise.resolve(
+      this.events.filter((event) => !this.synced.has(event.id)).length,
+    );
   }
 }
 
@@ -35,12 +41,12 @@ class FakeTransport implements SyncTransport {
   readonly batches: DeliveryEvent[][] = [];
   failure: Error | null = null;
 
-  async send(_shiftId: string, events: DeliveryEvent[]) {
+  send(_shiftId: string, events: DeliveryEvent[]): Promise<SyncResult> {
     if (this.failure) {
-      throw this.failure;
+      return Promise.reject(this.failure);
     }
     this.batches.push(events);
-    return { accepted: events.length, cursor: events.length };
+    return Promise.resolve({ accepted: events.length, cursor: events.length });
   }
 }
 
@@ -140,7 +146,6 @@ describe('SyncService', () => {
     const store = new FakeStore();
     const transport = new FakeTransport();
     const log = new EventLog(store);
-    const service = new SyncService(log, transport, 1);
     await log.record(event('a'));
     await log.record(event('b'));
     let calls = 0;

@@ -32,6 +32,14 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const themeOrder: ThemeName[] = ['day', 'night', 'highContrast'];
 
+/**
+ * True when a name is one Unistyles has registered, so it can be put on the
+ * screen. The Design Studio palettes that are not registered cannot be.
+ */
+function isRegisteredTheme(name: ThemeName): name is keyof typeof unistylesThemeNames {
+  return name in unistylesThemeNames;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
   const [themeName, setThemeName] = useState<ThemeName>(
@@ -47,7 +55,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const store = useMemo(() => createFilePreferenceStore(), []);
   /** Puts a theme on the screen, whichever way the courier chose it. */
   const applyPreference = useCallback(
-    (preference: ThemeName | 'auto') => {
+    (preference: keyof typeof unistylesThemeNames | 'auto') => {
       if (preference === 'auto') {
         // The device decides: day in the daylight, night after dark.
         UnistylesRuntime.setAdaptiveThemes(true);
@@ -115,7 +123,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (isThemePreference(name)) {
         setThemePreferenceState(name);
       }
-      applyPreference(name);
+      if (isRegisteredTheme(name)) {
+        applyPreference(name);
+      }
     },
     [applyPreference],
   );

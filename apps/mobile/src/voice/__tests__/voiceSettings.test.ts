@@ -87,6 +87,7 @@ describe('the voice settings', () => {
     await storeVoiceSettings(store, 'driver-1', DEFAULT_VOICE_SETTINGS);
     const raw = await store.read('driver-1');
     expect(raw).not.toBeNull();
-    expect(JSON.parse(raw ?? '{}')[VOICE_SETTINGS_PREFERENCE_KEY]).toBeDefined();
+    const stored = JSON.parse(raw ?? '{}') as Record<string, unknown>;
+    expect(stored[VOICE_SETTINGS_PREFERENCE_KEY]).toBeDefined();
   });
 });

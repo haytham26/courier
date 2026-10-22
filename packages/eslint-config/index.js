@@ -35,8 +35,18 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
-      '@typescript-eslint/consistent-type-imports': 'error',
+      // `typeof import('mod')` stays allowed: it is type-only, it carries
+      // the real types (unlike a namespace-star type import, which the
+      // type-aware program sometimes cannot resolve), and it is the standard
+      // shape of `jest.requireActual<typeof import('jest')>` in test files.
+      '@typescript-eslint/consistent-type-imports': ['error', { disallowTypeAnnotations: false }],
       '@typescript-eslint/no-floating-promises': 'error',
+      // Library module augmentation is the one legitimate empty interface:
+      // `declare module 'lib' { interface LibThemes extends Ours {} }` is how
+      // a theme is registered with its library. An alias cannot replace the
+      // interface there, because the library already declares the interface
+      // and interface merging needs it.
+      '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'with-single-extends' }],
     },
   },
   {
@@ -67,5 +77,31 @@ export default tseslint.config(
     // Config files and plain JavaScript are not type checked.
     files: ['**/*.js', '**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    // Plain JavaScript in this workspace is tooling (Babel, Metro, Jest and
+    // Expo plugin files). Those files are CommonJS and run under plain Node,
+    // so they carry the Node and Jest globals, and `require` is their module
+    // system. The no-require-imports rule targets TypeScript code paths,
+    // where `import` replaces `require`; it is scoped off for .js files.
+
+    // The globals are declared here instead of a `globals` dependency so the
+    // config stays dependency-free for every package that imports it.
+    files: ['**/*.js'],
+    languageOptions: {
+      globals: {
+        module: 'writable',
+        require: 'readonly',
+        process: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        console: 'readonly',
+        jest: 'readonly',
+        window: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
   },
 );

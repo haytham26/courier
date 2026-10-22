@@ -18,7 +18,7 @@
  * background and the courier overlay, so the screen never shows a broken map.
  */
 
-import { themes, type ThemeName } from '@courier/design-tokens/themes';
+import type { ThemeName } from '@courier/design-tokens/themes';
 import { components } from '@courier/design-tokens/tokens';
 import type { MapPalette } from '@courier/design-tokens/mapPalettes';
 import type {
@@ -189,7 +189,6 @@ const PRODUCT_MAP_PALETTES: Partial<Record<ThemeName, MapPalette>> = {
  * to be valid.
  */
 export function buildCourierStyle(options: CourierStyleOptions): StyleSpecification {
-  const theme = themes[options.themeName];
   const map: MapPalette =
     options.palette ?? PRODUCT_MAP_PALETTES[options.themeName] ?? components.map.day;
   const satellite = options.satellite ?? null;

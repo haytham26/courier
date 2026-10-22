@@ -38,7 +38,21 @@ jest.mock('@/lib/auth-client', () => {
   };
 });
 
-const mockAuthClient = jest.requireMock('@/lib/auth-client').authClient;
+/**
+ * The mocked client, as the provider calls it: the same members, but every
+ * call is a mockable fn. `requireMock` comes back untyped, so the
+ * shape the provider depends on is asserted here once.
+ */
+interface AuthClientMock {
+  signIn: { email: jest.Mock };
+  signUp: { email: jest.Mock };
+  signOut: jest.Mock;
+  getSession: jest.Mock;
+  useSession: jest.Mock;
+}
+
+const mockAuthClient =
+  jest.requireMock<{ authClient: AuthClientMock }>('@/lib/auth-client').authClient;
 
 describe('AuthProvider', () => {
   const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -84,7 +98,7 @@ describe('AuthProvider', () => {
     });
 
     const TestComponent = () => {
-      const { user, isAuthenticated } = useAuth();
+      const { user } = useAuth();
       return <Text testID="email">{user?.email ?? 'none'}</Text>;
     };
 

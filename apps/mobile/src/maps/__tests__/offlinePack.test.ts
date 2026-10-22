@@ -44,13 +44,13 @@ function probeWith(options: {
   downloadedError?: Error;
 }): OfflinePackProbe {
   return {
-    readDownloadedManifest: async () => {
+    readDownloadedManifest: (): Promise<string | null> => {
       if (options.downloadedError) {
-        throw options.downloadedError;
+        return Promise.reject(options.downloadedError);
       }
-      return options.downloaded ?? null;
+      return Promise.resolve(options.downloaded ?? null);
     },
-    readBundledManifest: async () => options.bundled ?? null,
+    readBundledManifest: (): Promise<string | null> => Promise.resolve(options.bundled ?? null),
   };
 }
 
@@ -85,7 +85,7 @@ describe('the pack manifest', () => {
   });
 
   it('rejects a manifest that is missing the licence', () => {
-    const { sourceLicence, ...withoutLicence } = MANIFEST;
+    const { sourceLicence: _sourceLicence, ...withoutLicence } = MANIFEST;
     const result = parsePackManifest(JSON.stringify(withoutLicence));
 
     expect(result.ok).toBe(false);
