@@ -10,6 +10,7 @@
  */
 module.exports = {
   preset: 'jest-expo',
+  setupFiles: ['<rootDir>/jest.setup.media.js'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   resolver: 'react-native-reanimated/jest/resolver',
   moduleNameMapper: {

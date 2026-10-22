@@ -45,17 +45,4 @@ jest.mock('@expo/vector-icons', () => {
   };
 });
 
-// The react-native-web style helpers ask the media query list: the jest
-// environment has no matchMedia, so the component tree cannot be built.
-if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
-  window.matchMedia = (query) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  });
-}
+
