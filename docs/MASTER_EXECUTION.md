@@ -181,3 +181,42 @@ Built on Better Auth (services/auth) + FastAPI JWKS verification. Every method h
 ## 15. Store readiness tooling
 - Adopt **StoreReady** (github.com/MaTriXy/StoreReady, MPL-2.0, built by a trusted friend of the founder) as the **primary** pre-submission checker in CI on release branches (`playstore-checkup`, later `appstore-checkup`, JSON output): CRITICAL = release blocker, WARN = task. Pin an exact version (our rule for every tool). Report bugs/missing checks as issues on its repo and propose checks our app needs (background location, microphone/foreground services, account deletion, data safety) — coordinate improvements with its author.
 - Also evaluate the official/major alternatives found in research (Play Console pre-launch report, Firebase Test Lab equivalents, Fastlane `precheck`) and keep the best combination.
+
+## 16. Repository hygiene + 5× verification (founder directive, binding; do before more features)
+Founder audit (2026-10-22) of `feat/v4-company-bootstrap` found clutter typical of AI-generated repos. Fix it on a dedicated branch `chore/repo-structure` (moves via `git mv` to keep history, no behaviour change, all gates green, one PR).
+
+### 16.1 Findings to fix
+1. **Dead/duplicate code**: `services/worker/` (old address engine + its test) duplicates `apps/api/app/address_correction.py` → delete after confirming nothing imports it; `apps/api/app/sequencing.py` (old nearest-neighbour) vs `routing.py` → keep one; check `apps/api/app/agents/` and `prompts.py` are used, else delete; `apps/mobile/compat-test-imports.js`, `apps/mobile/scripts/compat-test.js` (old) → delete; Expo template leftovers in `apps/mobile/` (`AGENTS.md`, `LICENSE`, `.claude/`) → delete or justify.
+2. **Duplicates**: `.agents/` is byte-identical to `.claude/skills` → keep one source (`.claude/skills`) and point AGENTS.md at it; two `uv.lock` (root + `apps/api`) → one per Python project, none at root unless a uv workspace is defined.
+3. **Inconsistent layout**: the API lives in `apps/api` while other backends are in `services/`; `db/schema.sql` and `openspec/api.yaml` are lone root folders.
+4. **Tests scattered**: colocated `*.test.ts` in packages, tests inside `scripts/`, `test_*.py` at a folder root. Pick one convention per language and apply it everywhere.
+5. **Docs sprawl**: ~35 files at `docs/` root incl. obsolete prompts (FINAL_PROMPT, MASTER_PROMPT, KICKOFF_PROMPT_EN, KICKOFF_V2/V3/V4, RESUME, MASTER_PLAN_2026, SAAS_BUILD_PLAN, PLAN_REVIEW, AUDIT, COVERAGE_AUDIT-P2) mixed with live docs; `EXECUTOR_LOG.md` is 131 KB.
+6. **Data in docs**: eval manifests (`docs/squads/*/eval/manifest/*.jsonl`, up to 420 KB) belong in an eval data package, not docs.
+7. **Dev-only screens in the production app**: `app/design/*` (design lab) and `app/compat.tsx` must be excluded from release builds (dev/E2E flag) or moved to a dev client.
+8. **Obsolete scripts**: `scripts/setup-emulator.*` (local emulator is banned), three `backtest.*` variants, flat `scripts/` with 33 mixed files.
+
+### 16.2 Target structure
+```
+apps/        mobile/ (Expo app)  web/ (dispatcher + admin, when built)
+services/    api/ (FastAPI, moved from apps/api)  auth/  courier-voice/  routing/ (when built)
+packages/    shared/  design-tokens/  nz-address/  eslint-config/  contracts/ (openapi.yaml + db schema + generated types)  eval/ (voice, scanner, routing eval sets + builders + checkers)
+scripts/     ci/  data/ (fetch-linz, build-pmtiles, 3d-buildings)  eval/  dev/  secrets/  — each with a README line per script
+docs/        README.md (index: what each doc is, which are binding)
+             plan/ (MASTER_EXECUTION, SAAS_CHECKLIST, COVERAGE_MAP, CONSTRAINTS)
+             status/ (PROGRESS, QUALITY_SCORECARD, PARITY, FOUNDER_TODO, BUGS)
+             decisions/ (DECISIONS, adr/)
+             product/ (PRODUCT_SPEC, PROJECT_BRIEF, DRIVER_INTERVIEW_1, COMPETITIVE_RESEARCH, TECH_STACK, COST_PLAN, LICENSES)
+             design/  research/  study/  squads/ (no data files)  evidence/  operations/
+             log/ (EXECUTOR_LOG split per week: 2026-W43.md …, plus a short CURRENT.md handoff)
+             archive/ (all obsolete prompts and old reviews, read-only)
+.github/ .maestro/ .claude/   root: only config files + README + AGENTS.md + CLAUDE.md
+```
+Update every path reference (AGENTS.md, CLAUDE.md, MASTER_EXECUTION §1, CI workflows, scripts, imports, tsconfig/pnpm/turbo/uv config) in the same PR. Keep `docs/MASTER_EXECUTION.md` path stable by leaving a one-line pointer file if it moves.
+
+### 16.3 Five-pass double check (every PR from now on, and for this restructure)
+Record each pass in the PR description with its result:
+1. **Build & gates**: install from clean, typecheck, lint, all tests, coverage, audits, licences, Semgrep/CodeQL, gitleaks — all green in CI.
+2. **References**: grep for every moved/deleted path; no broken import, script, workflow, doc link (run a link checker over docs/).
+3. **Runtime**: Android E2E green on the CI emulator; API/auth/voice services start in docker compose and pass smoke tests.
+4. **Truth check**: every claim in PROGRESS.md / EXECUTOR_LOG / PR text matches the code and CI (DONE / PARTIAL / NOT STARTED); nothing scaffolded or faked is called built.
+5. **Independent review**: a fresh-context reviewer role (doubt-driven) re-reads the diff and the tree, lists anything messy, duplicated, dead, misplaced or unsafe; all fixed before merge.
