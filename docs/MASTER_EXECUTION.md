@@ -228,3 +228,7 @@ Roadbook, Beacon and Freight look dated and plain — "not an app of 2026". Rest
 - **Ten directions, not three**: 10 genuinely different, very modern, premium directions, each with: a one-line idea, mood board, brand mark, palette, type pairing, motion language, map style, and **4 screens** (Today, Driving with 3D map, Copilot voice, Scanner) in **light and night**, built as real RN screens with real motion (Reanimated/Skia), recorded as **emulator videos + PNG screenshots** in `docs/design/directions-2/<n>-<name>/`.
 - The anti-AI rules of §13.2 still apply, and also: no "paper/ledger" retro look, no flat bootstrap-like lists, no single-accent-on-grey templates. Every direction must have a strong signature moment (e.g. how a delivery is confirmed, how the map moves, how Copilot appears).
 - Founder + reviewer pick from the ten (approval gate); then refine the winner to final. Until then do not build final screens.
+
+### 13.7 Founder decision (2026-10-22): Maps First is CHOSEN (binding, see D27)
+The design direction is decided: `docs/design/chosen/`. Do not produce more directions. P4 now means: write ADR-00x "Design system: Maps First", build the token file and the components listed in `docs/design/chosen/README.md`, then rebuild every screen to match the reference screens, in light and dark, on Android and iOS. The design gate passes only when each built screen is compared side by side with its reference (emulator screenshot next to the reference PNG in the PR) and the anti-AI-look rules in §13.2 pass.
+
