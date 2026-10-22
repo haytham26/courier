@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-labelledby="mark-title">
+  <title id="mark-title">Weather Light: the sun over the horizon of the day</title>
+  <circle cx="24" cy="21" r="11" fill="#0a4a63" />
+  <rect x="5" y="35" width="38" height="3" fill="#0d161a" />
+  <rect x="11" y="41" width="26" height="3" fill="#0d161a" />
+</svg>

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<title>Weather Light - driving - night</title>
+<link rel="stylesheet" href="../../fonts/fonts.css">
+<style>
+@font-face { font-family: display; src: local('Instrument Sans'); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 390px; height: 844px; overflow: hidden; }
+body {
+  background: #0c1114;
+  color: #f2f6f8;
+  font-family: 'Public Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.frame { width: 390px; height: 844px; overflow: hidden; display: flex; flex-direction: column; }
+.display { font-family: 'Instrument Sans', 'Public Sans', system-ui, sans-serif; }
+.metric{font-family:display;font-size:64px;line-height:68px;letter-spacing:-0.03em;font-weight:700;}.address{font-family:display;font-size:30px;line-height:38px;letter-spacing:-0.01em;font-weight:600;}.row{font-family:work;font-size:21px;line-height:28px;letter-spacing:0em;font-weight:400;}.label{font-family:work;font-size:17px;line-height:22px;letter-spacing:0.08em;font-weight:600;}.body{font-family:work;font-size:19px;line-height:26px;letter-spacing:0em;font-weight:400;}.caption{font-family:work;font-size:17px;line-height:22px;letter-spacing:0.01em;font-weight:600;}.title{font-family:display;font-size:32px;line-height:40px;letter-spacing:-0.02em;font-weight:700;}
+.tabular { font-variant-numeric: tabular-nums; }
+
+.screen { }
+.next { display: flex; flex-direction: column; gap: 4px; }
+.nowblock { display: flex; flex-direction: column; gap: 4px; }
+.plate { display: flex; flex-direction: column; gap: 12px; }
+.platerow { display: flex; align-items: flex-start; gap: 16px; }
+.platemain { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.plateside { display: flex; flex-direction: column; align-items: flex-end; }
+.rows { display: flex; flex-direction: column; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 0; border-bottom: 1px solid transparent; }
+.rowmain { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.action { min-height: 72px; display: flex; align-items: center; justify-content: center; }
+.voice { display: flex; flex-direction: column; gap: 8px; }
+.voice.haptic, .voice.gantry { flex-direction: row; align-items: center; gap: 12px; }
+.haptictarget { width: 56px; height: 56px; border-radius: 28px; border: 2px solid; display: flex; align-items: center; justify-content: center; }
+.hapticseal { min-height: 72px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.gantrysign { padding: 8px 12px; display: inline-flex; }
+.gantrysigncard { display: flex; flex-direction: column; gap: 4px; }
+.talk { min-height: 72px; display: flex; align-items: center; justify-content: center; }
+.secondary { min-height: 56px; display: flex; align-items: center; justify-content: center; }
+.viewfinder { display: flex; flex-direction: column; }
+</style>
+</head>
+<body>
+<div class="frame" data-direction="weatherLight" data-mode="night">
+<div class="screen" style="height:844px;display:flex;flex-direction:column">
+  <div style="height:330px;overflow:hidden;position:relative">
+    <svg viewBox="0 0 390 430" width="390" height="430" xmlns="http://www.w3.org/2000/svg">
+  <rect width="390" height="430" fill="#141b1f"/>
+  <path d="M -20 150 C 90 120, 210 170, 410 120 L 410 430 L -20 430 Z" fill="#1c252a"/>
+  <path d="M -20 402 C 120 380, 220 430, 410 396 L 410 430 L -20 430 Z" fill="#16262e"/>
+  <path d="M 250 150 C 300 170, 330 200, 350 430 L 410 430 L 410 120 Z" fill="#1f2c27" opacity="0.6"/>
+  <path d="M -20 320 L 410 250" stroke="#2b363c" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M -20 320 L 410 250" stroke="#38454c" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M -20 380 L 410 300" stroke="#2b363c" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M -20 380 L 410 300" stroke="#38454c" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M 60 -20 L 150 420" stroke="#2b363c" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M 60 -20 L 150 420" stroke="#38454c" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M 250 -20 L 300 420" stroke="#2b363c" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M 250 -20 L 300 420" stroke="#38454c" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <g>
+      <polygon points="40,210 94,210 94,176 40,176" fill="#242f35"/>
+      <polygon points="40,176 94,176 106,166 52,166" fill="#242f35" opacity="0.85"/>
+    </g><g>
+      <polygon points="110,250 156,250 156,224 110,224" fill="#242f35"/>
+      <polygon points="110,224 156,224 168,214 122,214" fill="#242f35" opacity="0.85"/>
+    </g><g>
+      <polygon points="176,196 238,196 238,156 176,156" fill="#242f35"/>
+      <polygon points="176,156 238,156 250,146 188,146" fill="#242f35" opacity="0.85"/>
+    </g><g>
+      <polygon points="262,232 312,232 312,202 262,202" fill="#242f35"/>
+      <polygon points="262,202 312,202 324,192 274,192" fill="#242f35" opacity="0.85"/>
+    </g><g>
+      <polygon points="318,186 362,186 362,150 318,150" fill="#242f35"/>
+      <polygon points="318,150 362,150 374,140 330,140" fill="#242f35" opacity="0.85"/>
+    </g>
+  <path d="M -20 360 C 90 352, 120 300, 190 288 S 320 250, 410 236" stroke="#e08148" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="300" cy="252" r="15" fill="#5fa6c4" stroke="#141b1f" stroke-width="3"/>
+  <text x="300" y="258" text-anchor="middle" font-family="'system-ui'" font-size="13" font-weight="700" fill="#141b1f">45</text>
+</svg>
+    <div style="position:absolute;left:0;right:0;bottom:0;background:#141b1f;border-top:1px solid #6f8189;padding:6px 12px">
+      <p class="caption" style="font-size:12px;color:#bccbd1">&copy; OpenStreetMap contributors</p>
+      <p class="caption" style="font-size:12px;color:#bccbd1">Contains information from OpenStreetMap, available under the Open Database License (ODbL).</p>
+      <p class="caption" style="font-size:12px;color:#bccbd1">Sourced from the LINZ Data Service and licensed for reuse under the CC BY 4.0 licence</p>
+    </div>
+  </div>
+  
+<div class="plate" style="background:#141b1f;border-color:#6f8189;border-radius:16px;padding:24px">
+  <div class="platerow">
+    <div class="platemain">
+      <p class="label" style="color:#5fa6c4">Next stop</p>
+      <h2 class="address">14 Harewood Road</h2>
+      <p class="body" style="color:#bccbd1">Papanui &middot; 10:42 &middot; 1.2 km</p>
+    </div>
+    <div class="plateside">
+      <p class="metric tabular" style="font-size:40px;line-height:44px;color:#f2f6f8">1.2</p>
+      <p class="caption" style="color:#bccbd1">km away</p>
+    </div>
+  </div>
+  <p class="caption" style="color:#9fb2b9">Side gate, small box in the rear rack</p>
+  <div style="padding-top:8px"><div class="action" style="background:#5fa6c4;border-radius:10px"><p class="row" style="color:#0c1114;font-weight:700">Next stop</p></div></div>
+  <div class="voice weather">
+  <div style="height:8px;border-radius:4px;background:#1c252a;overflow:hidden"><div style="height:8px;width:72%;border-radius:4px;background:#5fa6c4"></div></div>
+  <p class="caption" style="color:#bccbd1">Listening &middot; 4 waiting</p>
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>

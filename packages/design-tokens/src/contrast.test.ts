@@ -18,6 +18,7 @@ import {
   blend,
   contrastRatio,
   contrastRatioRounded,
+  parseHex,
   relativeLuminance,
 } from './contrast';
 
@@ -164,6 +165,58 @@ describe('the night theme, the driving screen', () => {
   });
 });
 
+describe('the night palettes of the second round of the studio', () => {
+  const NIGHT_THEMES = [
+    'voiceRibbonNight',
+    'xrayParcelNight',
+    'scanlineNight',
+  ] as const;
+
+  it.each(NIGHT_THEMES)('%s keeps the driving text at the 7:1 bar', (name) => {
+    const night = themes[name];
+
+    for (const colour of [night.colors.textPrimary, night.colors.textSecondary]) {
+      for (const surface of SURFACES) {
+        const ratio = contrastRatio(colour, night.colors[surface]);
+        expect(
+          ratio,
+          `the ${name} driving text ${colour} on the ${surface} is ${contrastRatioRounded(
+            colour,
+            night.colors[surface],
+          )}:1`,
+        ).toBeGreaterThanOrEqual(CONTRAST_BARS.driving);
+      }
+    }
+  });
+
+  it.each(NIGHT_THEMES)('%s is a near-black ground with a low blue channel', (name) => {
+    const background = themes[name].colors.background;
+    const luminance = relativeLuminance(background);
+
+    expect(background).not.toBe('#000000');
+    expect(luminance).toBeGreaterThan(0);
+    expect(luminance).toBeLessThan(0.01);
+
+    // REVIEW-G3: the blue channel is 26 or less, so the screen does not wash
+    // the driver's night vision.
+    const blue = parseHex(background).b;
+    expect(blue, `the ${name} background ${background} has a blue channel of ${blue}`).toBeLessThanOrEqual(26);
+  });
+
+  it.each(NIGHT_THEMES)('%s never writes pure white', (name) => {
+    const night = themes[name];
+
+    expect(night.colors.textPrimary).not.toBe('#ffffff');
+    // REVIEW-G2: the brightest text is #F2F2F2 or less.
+    for (const channel of ['textPrimary', 'textSecondary', 'textTertiary'] as const) {
+      const { r, g, b } = parseHex(night.colors[channel]);
+      expect(Math.max(r, g, b), `${name} ${channel} is ${night.colors[channel]}`).toBeLessThanOrEqual(
+        242,
+      );
+    }
+  });
+});
+
 describe('the contrast table', () => {
   it('prints the measured ratios of every palette', () => {
     const names: ThemeName[] = [
@@ -173,6 +226,12 @@ describe('the contrast table', () => {
       'roadbook',
       'beacon',
       'freight',
+      'voiceRibbon',
+      'voiceRibbonNight',
+      'xrayParcel',
+      'xrayParcelNight',
+      'scanline',
+      'scanlineNight',
     ];
 
     for (const name of names) {
@@ -211,7 +270,7 @@ describe('the contrast table', () => {
       console.log(`\n===== ${name} =====\n${rows.join('\n')}`);
     }
 
-    expect(names).toHaveLength(6);
+    expect(names).toHaveLength(12);
   });
 });
 
@@ -239,5 +298,59 @@ describe('the three Design Studio directions', () => {
     );
 
     expect(new Set(palettes).size).toBe(3);
+  });
+});
+
+describe('the three directions of the second round of the studio', () => {
+  it('are light palettes in the day, because the day is the identity', () => {
+    for (const name of ['voiceRibbon', 'xrayParcel', 'scanline'] as const) {
+      const luminance = relativeLuminance(themes[name].colors.background);
+
+      expect(luminance, `${name} is not a light palette`).toBeGreaterThan(0.5);
+      expect(themes[name].colors.background).not.toBe('#000000');
+    }
+  });
+
+  it('are three different palettes, not three colours of the same one', () => {
+    const palettes = (['voiceRibbon', 'xrayParcel', 'scanline'] as const).map((name) =>
+      [
+        themes[name].colors.background,
+        themes[name].colors.surface,
+        themes[name].colors.brandPrimary,
+        themes[name].colors.textPrimary,
+      ].join(' '),
+    );
+
+    expect(new Set(palettes).size).toBe(3);
+  });
+
+  it('hold two chromatic colours besides the neutrals, so the accent is never alone', () => {
+    for (const name of ['voiceRibbon', 'xrayParcel', 'scanline'] as const) {
+      const theme = themes[name];
+      const chromatic = new Set([
+        theme.colors.brandPrimary,
+        theme.colors.brandSecondary,
+        theme.colors.success,
+        theme.colors.warning,
+        theme.colors.error,
+        theme.colors.info,
+      ]);
+
+      // REVIEW-A15: at least two chromatic non-neutral colours.
+      expect(
+        chromatic.size,
+        `${name} holds ${chromatic.size} chromatic colours`,
+      ).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('keep the accent and the second chromatic colour apart, so no gradient hides in them', () => {
+    for (const name of ['voiceRibbon', 'xrayParcel', 'scanline'] as const) {
+      const theme = themes[name];
+
+      expect(theme.colors.brandPrimary).not.toBe(theme.colors.brandSecondary);
+      expect(theme.colors.brandPrimary).not.toBe(theme.colors.background);
+      expect(theme.colors.brandSecondary).not.toBe(theme.colors.background);
+    }
   });
 });

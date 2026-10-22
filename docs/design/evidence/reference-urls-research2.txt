@@ -1,0 +1,95 @@
+﻿# The reference URLs of docs/design/RESEARCH-2.md.
+# One URL per line. Lines starting with # are comments and are ignored.
+# Checked by scripts/check-design-research2-reference-urls.ps1
+
+# --- Awards and design references ---
+https://developer.apple.com/design/awards/2026/
+https://www.apple.com/newsroom/2026/06/apple-reveals-winners-of-the-2026-apple-design-awards/
+https://apps.apple.com/us/story/id1896834601
+https://apps.apple.com/us/story/id1808994124
+https://www.apple.com/newsroom/2025/06/apple-unveils-winners-and-finalists-of-the-2025-apple-design-awards/
+https://developer.apple.com/design/awards/2025/
+https://www.awwwards.com/websites/mobile-apps/
+https://www.apple.com/newsroom/2025/06/apple-elevates-the-iphone-experience-with-ios-26/
+https://www.apple.com/newsroom/2025/06/apple-introduces-a-delightful-and-elegant-new-software-design/
+https://developer.apple.com/design/human-interface-guidelines/
+https://m3.material.io/
+https://m3.material.io/blog/building-with-m3-expressive
+https://m3.material.io/styles/motion/overview/how-it-works
+https://blog.google/products/android/material-3-expressive-android-wearos-launch
+https://developer.android.com/design/ui/cars/guides/foundations/design-principles
+https://developer.android.com/design/ui/cars/guides/foundations/writing-guidelines
+https://source.android.google.cn/docs/automotive/driver_distraction/guidelines
+https://www.w3.org/TR/WCAG22/
+https://www.w3.org/TR/css-color-4/
+https://docs.swmansion.com/react-native-reanimated/docs/animations/withSpring/
+https://docs.expo.dev/versions/latest/sdk/haptics/
+https://docs.expo.dev/versions/latest/sdk/audio/
+https://developer.apple.com/documentation/uikit/uihapticfeedbackgenerator
+https://developer.android.com/develop/ui/compose/touch-input/pointer-input/haptics
+
+# --- Maps, tiles and licences ---
+https://protomaps.com/legal
+https://docs.protomaps.com/
+https://www.openstreetmap.org/copyright
+https://operations.osmfoundation.org/policies/tiles/
+https://www.linz.govt.nz/products-services/data/licensing-and-using-data/attributing-linz-data
+https://www.naturalearthdata.com/about/terms-of-use/
+https://maplibre.org/maplibre-style-spec/
+https://maplibre.org/
+https://pmtiles.io/
+https://github.com/protomaps/basemaps/blob/main/LICENSE.md
+https://github.com/protomaps/basemaps/blob/main/LICENSE_DATA.md
+https://github.com/openmaptiles/openmaptiles/blob/master/LICENSE.md
+https://github.com/maplibre/demotiles/blob/gh-pages/LICENSE
+
+# --- Type licences ---
+https://openfontlicense.org/
+https://github.com/google/fonts/blob/main/ofl/figtree/OFL.txt
+https://github.com/google/fonts/blob/main/ofl/inter/OFL.txt
+https://github.com/google/fonts/blob/main/ofl/spacegrotesk/OFL.txt
+https://github.com/google/fonts/blob/main/ofl/bricolagegrotesque/OFL.txt
+https://github.com/google/fonts/blob/main/ofl/fraunces/OFL.txt
+https://github.com/google/fonts/blob/main/ofl/robotoflex/OFL.txt
+https://github.com/google/fonts/blob/main/ofl/instrumentsans/OFL.txt
+https://github.com/google/fonts/blob/main/ofl/newsreader/OFL.txt
+https://github.com/google/fonts/blob/main/ofl/jetbrainsmono/OFL.txt
+https://github.com/google/fonts/blob/main/ofl/manrope/OFL.txt
+https://github.com/google/fonts/blob/main/ofl/archivo/OFL.txt
+https://github.com/vercel/geist-font/blob/main/LICENSE.txt
+https://github.com/IBM/plex/blob/master/LICENSE.txt
+https://github.com/rsms/inter/blob/master/LICENSE.txt
+https://github.com/adobe-fonts/source-sans/blob/master/LICENSE.md
+https://developer.apple.com/fonts/
+https://commercialtype.com/gotham/
+https://www.monotype.com/
+
+# --- The competitors ---
+https://spoke.com/route-planner
+https://apps.apple.com/nz/app/spoke-route-planner/id1198232244
+https://getcircuit.com/
+https://www.uber.com/global/en/driver/
+https://dasher.doordash.com/
+https://dasherhelp.doordash.com/
+https://www.amazon.com/flex
+https://www.apple.com/maps/
+https://maps.google.com/
+https://www.waze.com/
+https://www.strava.com/
+https://www.revolut.com/
+https://monzo.com/
+https://linear.app/
+https://what3words.com/
+https://onfleet.com/
+https://www.routific.com/
+
+# --- Award-level apps: their own sites ---
+https://octo.app/
+https://blippo.plus/
+https://www.primary.app/
+https://www.notboring.camera/
+https://capwords.app/
+https://speechify.com/
+https://www.play.design/
+https://taobao.com/
+

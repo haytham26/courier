@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-labelledby="mark-title">
+  <title id="mark-title">Topo: the contour of the land and the marker on it</title>
+  <path d="M5 41c6-15 13-23 21-23s14 6 14 15" fill="none" stroke="#151314" stroke-width="2" />
+  <path d="M12 41c4-11 10-17 15-17s9 5 9 11" fill="none" stroke="#151314" stroke-width="2" />
+  <path d="M19 41c3-7 6-10 9-10s5 4 5 8" fill="none" stroke="#2f5d5a" stroke-width="2" />
+  <circle cx="28" cy="31" r="3" fill="#8c3b1a" />
+</svg>

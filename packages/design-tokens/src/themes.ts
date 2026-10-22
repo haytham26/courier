@@ -17,6 +17,8 @@
  */
 
 import { spacing, typography, borderRadius, shadows, motion, components } from './tokens';
+import { themes2 } from './themes2';
+import { themes2a } from './themes2a';
 
 /**
  * The theme names.
@@ -26,8 +28,39 @@ import { spacing, typography, borderRadius, shadows, motion, components } from '
  * §13.4): three original looks for the founder to choose between. Each one is
  * a light palette, because the founder's rule is that the day is the default
  * and the night is the adapted option.
+ *
+ * The six names after them are the **second round** of the studio
+ * (MASTER_EXECUTION §13.6): three directions, each with its own light palette
+ * and its own adapted night palette, in the same semantic roles as `day` and
+ * `night`. A component never grows a direction-named role.
  */
-export type ThemeName = 'day' | 'night' | 'highContrast' | 'roadbook' | 'beacon' | 'freight';
+export type ThemeName =
+  | 'day'
+  | 'night'
+  | 'highContrast'
+  | 'roadbook'
+  | 'beacon'
+  | 'freight'
+  | 'voiceRibbon'
+  | 'voiceRibbonNight'
+  | 'xrayParcel'
+  | 'xrayParcelNight'
+  | 'scanline'
+  | 'scanlineNight'
+  | 'weatherLight'
+  | 'weatherLightNight'
+  | 'hapticCity'
+  | 'hapticCityNight'
+  | 'nightShift'
+  | 'nightShiftNight'
+  | 'gantryRun'
+  | 'gantryRunNight'
+  | 'controlRoom'
+  | 'controlRoomNight'
+  | 'topo'
+  | 'topoNight'
+  | 'addressFirst'
+  | 'addressFirstNight';
 
 export interface ThemeColors {
   background: string;
@@ -525,6 +558,363 @@ export const freightTheme: Theme = {
   },
 };
 
+/**
+ * The Voice Ribbon direction (Design Studio round two, direction 04).
+ *
+ * **The companion is the interface.** A live amplitude ribbon along the
+ * bottom edge carries the voice state and replaces the buttons; the motion of
+ * the screen is the motion of the microphone.
+ *
+ * The palette is **P6 Clay** of `docs/design/RESEARCH-2.md` §5.2: burnt
+ * sienna and a deep teal on a neutral white. Two chromatic colours, so no
+ * pair of them is a purple-to-blue gradient and the accent never carries the
+ * meaning alone.
+ *
+ * Measured contrast (background #E8E5E6 / surface #FFFFFF / elevated #F1EFEF):
+ *   textPrimary      #151314  14.78:1 / 18.50:1 / 16.15:1  (bar 4.5:1, 7:1 driving)
+ *   textSecondary    #4A4547   7.51:1 /  9.40:1 /  8.21:1  (bar 4.5:1, 7:1 driving)
+ *   brandPrimary     #8C3B1A   6.09:1 /  7.62:1 /  6.65:1  (bar 4.5:1)
+ *   brandSecondary   #2F5D5A   5.92:1 /  7.41:1 /  6.47:1  (bar 4.5:1)
+ *   error            #A11E18   6.18:1 /  7.74:1 /  6.75:1  (bar 4.5:1)
+ *   border           #6B6567   4.56:1 /  5.70:1 /  4.98:1  (bar 3:1, non-text)
+ * The label on the accent (#FFFFFF on #8C3B1A): 7.62:1.
+ */
+export const voiceRibbonTheme: Theme = {
+  ...baseTheme,
+  name: 'voiceRibbon',
+  displayName: 'Voice Ribbon',
+  colors: {
+    background: '#e8e5e6',
+    surface: '#ffffff',
+    surfaceElevated: '#f1efef',
+    overlay: '#00000080',
+    border: '#6b6567',
+    textPrimary: '#151314',
+    textSecondary: '#4a4547',
+    textTertiary: '#55504f',
+    textInverse: '#ffffff',
+    brandPrimary: '#8c3b1a',
+    brandSecondary: '#2f5d5a',
+    success: '#1d5b34',
+    warning: '#7a4a00',
+    error: '#a11e18',
+    info: '#2f5d5a',
+    // Status
+    statusPending: '#4a4547',
+    statusActive: '#8c3b1a',
+    statusDelivered: '#1d5b34',
+    statusFailed: '#a11e18',
+    statusSkipped: '#7a4a00',
+    // Map
+    mapBackground: '#e8e5e6',
+    mapWater: '#dbe2e0',
+    mapLand: '#f1efef',
+    mapRoad: '#ffffff',
+    mapHighway: '#e9d3a4',
+    mapBuilding: '#e3e0e1',
+    mapPark: '#dde4da',
+    mapText: '#151314',
+    stopPin: '#8c3b1a',
+    routeLine: '#2f5d5a',
+    userLocation: '#2f5d5a',
+  },
+};
+
+/**
+ * The Voice Ribbon direction at night.
+ *
+ * The night palette is a re-think, not a filter: the ground is a warm
+ * near-black (#121110, blue channel 16), the text is warm off-white and the
+ * ribbon is the only saturated thing on the screen.
+ *
+ * Measured contrast (background #121110 / surface #1B1A19 / elevated #242322):
+ *   textPrimary      #F1EDEB  16.21:1 / 14.94:1 / 13.49:1  (bar 4.5:1, 7:1 driving)
+ *   textSecondary    #C8C1BD  10.62:1 /  9.78:1 /  8.83:1  (bar 4.5:1, 7:1 driving)
+ *   brandPrimary     #DD8256   6.65:1 /  6.13:1 /  5.53:1  (bar 4.5:1)
+ *   brandSecondary   #71B3AE   7.87:1 /  7.25:1 /  6.55:1  (bar 4.5:1)
+ *   error            #E8736A   6.37:1 /  5.87:1 /  5.34:1  (bar 4.5:1)
+ *   border           #7D7674   4.24:1 /  3.90:1 /  3.52:1  (bar 3:1, non-text)
+ * The label on the accent (#121110 on #DD8256): 6.65:1.
+ */
+export const voiceRibbonNightTheme: Theme = {
+  ...baseTheme,
+  name: 'voiceRibbonNight',
+  displayName: 'Voice Ribbon (night)',
+  colors: {
+    background: '#121110',
+    surface: '#1b1a19',
+    surfaceElevated: '#242322',
+    overlay: '#00000080',
+    border: '#7d7674',
+    textPrimary: '#f1edeb',
+    textSecondary: '#c8c1bd',
+    textTertiary: '#afa7a3',
+    textInverse: '#121110',
+    brandPrimary: '#dd8256',
+    brandSecondary: '#71b3ae',
+    success: '#59b184',
+    warning: '#d8a83c',
+    error: '#e8736a',
+    info: '#71b3ae',
+    // Status
+    statusPending: '#c8c1bd',
+    statusActive: '#dd8256',
+    statusDelivered: '#59b184',
+    statusFailed: '#e8736a',
+    statusSkipped: '#d8a83c',
+    // Map
+    mapBackground: '#121110',
+    mapWater: '#151d1c',
+    mapLand: '#1b1a19',
+    mapRoad: '#242322',
+    mapHighway: '#8a7550',
+    mapBuilding: '#201f1e',
+    mapPark: '#1a241c',
+    mapText: '#f1edeb',
+    stopPin: '#dd8256',
+    routeLine: '#71b3ae',
+    userLocation: '#71b3ae',
+  },
+};
+
+/**
+ * The X-ray Parcel direction (Design Studio round two, direction 05).
+ *
+ * **The parcel is the hero object.** The delivery is a physical act: the
+ * parcel is a dimensional object, the van has a rack, and the stop is a place
+ * you arrive at rather than a row in a list.
+ *
+ * The palette is **P1 HiVis** of `docs/design/RESEARCH-2.md` §5.2: safety
+ * orange and kelp green on a cool white. The orange is the parcel, the green
+ * is the map and the run.
+ *
+ * Measured contrast (background #E9EBE5 / surface #FFFFFF / elevated #F0F1EC):
+ *   textPrimary      #14161A  15.08:1 / 18.11:1 / 15.95:1  (bar 4.5:1, 7:1 driving)
+ *   textSecondary    #454A4F   7.45:1 /  8.95:1 /  7.89:1  (bar 4.5:1, 7:1 driving)
+ *   brandPrimary     #A63A00   5.42:1 /  6.51:1 /  5.73:1  (bar 4.5:1)
+ *   brandSecondary   #14563C   7.20:1 /  8.66:1 /  7.72:1  (bar 4.5:1)
+ *   error            #A01810   6.64:1 /  7.98:1 /  7.11:1  (bar 4.5:1)
+ *   border           #6B7067   4.22:1 /  5.07:1 /  4.47:1  (bar 3:1, non-text)
+ * The label on the accent (#FFFFFF on #A63A00): 6.51:1.
+ */
+export const xrayParcelTheme: Theme = {
+  ...baseTheme,
+  name: 'xrayParcel',
+  displayName: 'X-ray Parcel',
+  colors: {
+    background: '#e9ebe5',
+    surface: '#ffffff',
+    surfaceElevated: '#f0f1ec',
+    overlay: '#00000080',
+    border: '#6b7067',
+    textPrimary: '#14161a',
+    textSecondary: '#454a4f',
+    textTertiary: '#50555a',
+    textInverse: '#ffffff',
+    brandPrimary: '#a63a00',
+    brandSecondary: '#14563c',
+    success: '#14603c',
+    warning: '#7a4a00',
+    error: '#a01810',
+    info: '#14495f',
+    // Status
+    statusPending: '#454a4f',
+    statusActive: '#a63a00',
+    statusDelivered: '#14603c',
+    statusFailed: '#a01810',
+    statusSkipped: '#7a4a00',
+    // Map
+    mapBackground: '#e9ebe5',
+    mapWater: '#d6e4ea',
+    mapLand: '#f0f1ec',
+    mapRoad: '#ffffff',
+    mapHighway: '#f2c94c',
+    mapBuilding: '#e0e2db',
+    mapPark: '#dae6d0',
+    mapText: '#14161a',
+    stopPin: '#a63a00',
+    routeLine: '#14563c',
+    userLocation: '#14495f',
+  },
+};
+
+/**
+ * The X-ray Parcel direction at night.
+ *
+ * The parcel is still the object, but the ground is a cold near-black
+ * (#0F1210, blue channel 16) and the buildings of the map are lit from the
+ * north-west so the parcel reads as a solid thing in a dark van.
+ *
+ * Measured contrast (background #0F1210 / surface #181C19 / elevated #212620):
+ *   textPrimary      #F1F2EF  16.77:1 / 15.33:1 / 13.71:1  (bar 4.5:1, 7:1 driving)
+ *   textSecondary    #C3C8C2  11.09:1 / 10.14:1 /  9.07:1  (bar 4.5:1, 7:1 driving)
+ *   brandPrimary     #E07A35   6.29:1 /  5.75:1 /  5.14:1  (bar 4.5:1)
+ *   brandSecondary   #5FAE86   7.08:1 /  6.47:1 /  5.80:1  (bar 4.5:1)
+ *   error            #E8736A   6.36:1 /  5.82:1 /  5.20:1  (bar 4.5:1)
+ *   border           #7B837A   4.82:1 /  4.41:1 /  3.94:1  (bar 3:1, non-text)
+ * The label on the accent (#0F1210 on #E07A35): 6.29:1.
+ */
+export const xrayParcelNightTheme: Theme = {
+  ...baseTheme,
+  name: 'xrayParcelNight',
+  displayName: 'X-ray Parcel (night)',
+  colors: {
+    background: '#0f1210',
+    surface: '#181c19',
+    surfaceElevated: '#212620',
+    overlay: '#00000080',
+    border: '#7b837a',
+    textPrimary: '#f1f2ef',
+    textSecondary: '#c3c8c2',
+    textTertiary: '#a9afa9',
+    textInverse: '#0f1210',
+    brandPrimary: '#e07a35',
+    brandSecondary: '#5fae86',
+    success: '#59b184',
+    warning: '#d8a83c',
+    error: '#e8736a',
+    info: '#6fa9c4',
+    // Status
+    statusPending: '#c3c8c2',
+    statusActive: '#e07a35',
+    statusDelivered: '#59b184',
+    statusFailed: '#e8736a',
+    statusSkipped: '#d8a83c',
+    // Map
+    mapBackground: '#0f1210',
+    mapWater: '#0e1a1e',
+    mapLand: '#181c19',
+    mapRoad: '#212620',
+    mapHighway: '#96783f',
+    mapBuilding: '#1c201d',
+    mapPark: '#16281a',
+    mapText: '#f1f2ef',
+    stopPin: '#e07a35',
+    routeLine: '#5fae86',
+    userLocation: '#6fa9c4',
+  },
+};
+
+/**
+ * The Scanline direction (Design Studio round two, direction 06).
+ *
+ * **The scanner sets the language.** Ruled bands, crop marks and monospaced
+ * data, so a scanned address and a typed address look like they came out of
+ * the same machine.
+ *
+ * The palette is **P3 Signal** of `docs/design/RESEARCH-2.md` §5.2: vermilion
+ * and ink on a neutral white. The vermilion is the only saturated colour, the
+ * ink carries every rule and every band.
+ *
+ * Measured contrast (background #E9E9E5 / surface #FFFFFF / elevated #F2F2EF):
+ *   textPrimary      #101112  15.53:1 / 18.90:1 / 16.85:1  (bar 4.5:1, 7:1 driving)
+ *   textSecondary    #43453F   7.98:1 /  9.71:1 /  8.66:1  (bar 4.5:1, 7:1 driving)
+ *   brandPrimary     #B3261E   5.37:1 /  6.54:1 /  5.83:1  (bar 4.5:1)
+ *   brandSecondary   #1D2A33  12.05:1 / 14.67:1 / 13.37:1  (bar 4.5:1)
+ *   error            #B3261E   5.37:1 /  6.54:1 /  5.83:1  (bar 4.5:1)
+ *   border           #6D6D68   4.27:1 /  5.20:1 /  4.64:1  (bar 3:1, non-text)
+ * The label on the accent (#FFFFFF on #B3261E): 6.54:1.
+ */
+export const scanlineTheme: Theme = {
+  ...baseTheme,
+  name: 'scanline',
+  displayName: 'Scanline',
+  colors: {
+    background: '#e9e9e5',
+    surface: '#ffffff',
+    surfaceElevated: '#f2f2ef',
+    overlay: '#00000080',
+    border: '#6d6d68',
+    textPrimary: '#101112',
+    textSecondary: '#43453f',
+    textTertiary: '#4e504a',
+    textInverse: '#ffffff',
+    brandPrimary: '#b3261e',
+    brandSecondary: '#1d2a33',
+    success: '#1d5b34',
+    warning: '#7a4a00',
+    error: '#b3261e',
+    info: '#1d2a33',
+    // Status
+    statusPending: '#43453f',
+    statusActive: '#b3261e',
+    statusDelivered: '#1d5b34',
+    statusFailed: '#b3261e',
+    statusSkipped: '#7a4a00',
+    // Map
+    mapBackground: '#e9e9e5',
+    mapWater: '#dde2e3',
+    mapLand: '#f2f2ef',
+    mapRoad: '#ffffff',
+    mapHighway: '#e7d9a8',
+    mapBuilding: '#e2e2dd',
+    mapPark: '#dfe5db',
+    mapText: '#101112',
+    stopPin: '#b3261e',
+    routeLine: '#1d2a33',
+    userLocation: '#1d2a33',
+  },
+};
+
+/**
+ * The Scanline direction at night.
+ *
+ * The same machine in a dark van: a neutral near-black (#101010, blue
+ * channel 16), the ink becomes a soft white and the vermilion is lifted to
+ * #E8675E - a measured step up from the research value of #E0524A, so the
+ * label clears 4.5:1 on the raised surface as well as on the ground. The
+ * value is measured by `contrast.test.ts`, not estimated.
+ *
+ * Measured contrast (background #101010 / surface #181818 / elevated #212121):
+ *   textPrimary      #F1F1F0  16.84:1 / 15.71:1 / 14.25:1  (bar 4.5:1, 7:1 driving)
+ *   textSecondary    #C6C6C1  11.10:1 / 10.36:1 /  9.39:1  (bar 4.5:1, 7:1 driving)
+ *   brandPrimary     #E8675E   5.92:1 /  5.52:1 /  5.01:1  (bar 4.5:1)
+ *   brandSecondary   #8FA4B3   7.37:1 /  6.87:1 /  6.21:1  (bar 4.5:1)
+ *   error            #E8675E   5.92:1 /  5.52:1 /  5.01:1  (bar 4.5:1)
+ *   border           #77776F   4.22:1 /  3.93:1 /  3.57:1  (bar 3:1, non-text)
+ * The label on the accent (#101010 on #E8675E): 5.92:1.
+ */
+export const scanlineNightTheme: Theme = {
+  ...baseTheme,
+  name: 'scanlineNight',
+  displayName: 'Scanline (night)',
+  colors: {
+    background: '#101010',
+    surface: '#181818',
+    surfaceElevated: '#212121',
+    overlay: '#00000080',
+    border: '#77776f',
+    textPrimary: '#f1f1f0',
+    textSecondary: '#c6c6c1',
+    textTertiary: '#acaca6',
+    textInverse: '#101010',
+    brandPrimary: '#e8675e',
+    brandSecondary: '#8fa4b3',
+    success: '#5cb083',
+    warning: '#d8a83c',
+    error: '#e8675e',
+    info: '#8fa4b3',
+    // Status
+    statusPending: '#c6c6c1',
+    statusActive: '#e8675e',
+    statusDelivered: '#5cb083',
+    statusFailed: '#e8675e',
+    statusSkipped: '#d8a83c',
+    // Map
+    mapBackground: '#101010',
+    mapWater: '#141a1c',
+    mapLand: '#181818',
+    mapRoad: '#212121',
+    mapHighway: '#8f8156',
+    mapBuilding: '#1c1c1c',
+    mapPark: '#172014',
+    mapText: '#f1f1f0',
+    stopPin: '#e8675e',
+    routeLine: '#8fa4b3',
+    userLocation: '#8fa4b3',
+  },
+};
+
 // All themes
 export const themes: Record<ThemeName, Theme> = {
   day: dayTheme,
@@ -533,6 +923,14 @@ export const themes: Record<ThemeName, Theme> = {
   roadbook: roadbookTheme,
   beacon: beaconTheme,
   freight: freightTheme,
+  voiceRibbon: voiceRibbonTheme,
+  voiceRibbonNight: voiceRibbonNightTheme,
+  xrayParcel: xrayParcelTheme,
+  xrayParcelNight: xrayParcelNightTheme,
+  scanline: scanlineTheme,
+  scanlineNight: scanlineNightTheme,
+  ...themes2,
+  ...themes2a,
 };
 
 // Default theme
@@ -544,7 +942,34 @@ export function getTheme(name: ThemeName): Theme {
 }
 
 export function getThemeNames(): ThemeName[] {
-  return ['day', 'night', 'highContrast', 'roadbook', 'beacon', 'freight'];
+  return [
+    'day',
+    'night',
+    'highContrast',
+    'roadbook',
+    'beacon',
+    'freight',
+    'voiceRibbon',
+    'voiceRibbonNight',
+    'xrayParcel',
+    'xrayParcelNight',
+    'scanline',
+    'scanlineNight',
+    'weatherLight',
+    'weatherLightNight',
+    'hapticCity',
+    'hapticCityNight',
+    'nightShift',
+    'nightShiftNight',
+    'gantryRun',
+    'gantryRunNight',
+    'controlRoom',
+    'controlRoomNight',
+    'topo',
+    'topoNight',
+    'addressFirst',
+    'addressFirstNight',
+  ];
 }
 
 // CSS custom properties generator

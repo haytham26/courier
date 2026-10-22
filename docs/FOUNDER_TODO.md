@@ -34,34 +34,25 @@
 
 ---
 
-## Design Studio — the founder picks the look (approval gate, MASTER_EXECUTION §13.4)
+## Design Studio — the founder picks the look (approval gate, MASTER_EXECUTION §13.6)
 
-**Nothing is blocked by this.** The screens of all three directions are built and running; the
-work carries on while you decide. But the look of the app is your call, and the app cannot be
-built in the chosen direction until you make it.
+**Nothing is blocked by this, and nothing is asked of you yet.**
 
-**Please pick one: A, B or C.**
+**The state of the gate:** the three directions of October 2026 — Roadbook, Beacon and Freight —
+were **rejected** by the founder on 2026-10-22 as dated and plain. They are history: please do
+not pick one of them. The Design Studio is being rebuilt with ten specialist teams and **ten new
+directions**, and the pick opens when the pack is published.
 
-| | Direction  | Route in the app       | The one-line difference                                                        |
-|---|------------|------------------------|--------------------------------------------------------------------------------|
-| **A** | **Roadbook** — dense and operational | `/design/roadbook` | The paper run sheet: hairline rules, tabular numbers, six stops of the run on one screen. |
-| **B** | **Beacon** — calm and glanceable   | `/design/beacon`   | One thing at a time: the count, the address, the action, and a lot of quiet space. |
-| **C** | **Freight** — expressive and branded | `/design/freight` | The parcel label: hard corners, one block of highway orange, a number that fills the screen. |
+| What | Where |
+|---|---|
+| The org: the ten teams, their remits, their deliverables, the working agreement | `docs/design/ORG.md` |
+| The spec every direction must satisfy, so the ten are comparable | `docs/design/SPEC.md` |
+| The QA: the checklists, the weights, the signature-moment rule | `docs/design/REVIEW.md` |
+| The plan: the five pairs, the rhythm of the round, what happens after the pick | `docs/design/PLAN.md` |
 
-**How to look at them**
-
-1. The renders (open them in a browser, they are the same layout as the phone):
-   - `docs/design/directions/a-roadbook.html`
-   - `docs/design/directions/b-beacon.html`
-   - `docs/design/directions/c-freight.html`
-2. Or on the phone: the route `/design` opens the picker, and each direction opens the real
-   screen of the app. The emulator screenshots of the three come from the CI emulator run.
-3. The full spec of each one — the type scale, the colour roles, the spacing, the motion, the
-   accessibility notes and the anti-"AI look" checklist — is in
-   `docs/design/RESEARCH.md` → `docs/design/DIRECTIONS.md`.
-
-**Answer with "A", "B" or "C"** (or "A, but with the Beacon's number"), and we build the whole
-app in it.
+**What you will be asked, and when:** one pick, from ten directions, with a page, a video and a
+score for each. The pick is the only thing in the design studio that waits for you. When it
+opens, the entry will be here, dated, with the ten names.
 
 ---
 

@@ -56,14 +56,34 @@ describe('Design Tokens', () => {
 });
 
 describe('Themes', () => {
-  it('has the three product themes and the three Design Studio directions', () => {
-    expect(Object.keys(themes)).toHaveLength(6);
+  it('has the three product themes, the first three directions and the second round', () => {
+    expect(Object.keys(themes)).toHaveLength(26);
     expect(themes.day).toBeDefined();
     expect(themes.night).toBeDefined();
     expect(themes.highContrast).toBeDefined();
     expect(themes.roadbook).toBeDefined();
     expect(themes.beacon).toBeDefined();
     expect(themes.freight).toBeDefined();
+    expect(themes.voiceRibbon).toBeDefined();
+    expect(themes.voiceRibbonNight).toBeDefined();
+    expect(themes.xrayParcel).toBeDefined();
+    expect(themes.xrayParcelNight).toBeDefined();
+    expect(themes.scanline).toBeDefined();
+    expect(themes.scanlineNight).toBeDefined();
+    expect(themes.weatherLight).toBeDefined();
+    expect(themes.weatherLightNight).toBeDefined();
+    expect(themes.hapticCity).toBeDefined();
+    expect(themes.hapticCityNight).toBeDefined();
+    expect(themes.nightShift).toBeDefined();
+    expect(themes.nightShiftNight).toBeDefined();
+    expect(themes.gantryRun).toBeDefined();
+    expect(themes.gantryRunNight).toBeDefined();
+    expect(themes.controlRoom).toBeDefined();
+    expect(themes.controlRoomNight).toBeDefined();
+    expect(themes.topo).toBeDefined();
+    expect(themes.topoNight).toBeDefined();
+    expect(themes.addressFirst).toBeDefined();
+    expect(themes.addressFirstNight).toBeDefined();
   });
 
   it('day theme has correct colors', () => {
@@ -197,6 +217,15 @@ describe('Map tokens', () => {
     expect(tokens.component.map.day.background).toBe('#f4f6f7');
     expect(tokens.component.map.night.background).toBe('#121a1f');
     expect(tokens.component.map.highContrast.background).toBe('#000000');
+  });
+
+  it('has map colours for the three directions of the second round', () => {
+    expect(tokens.component.map.voiceRibbon.background).toBe('#e8e5e6');
+    expect(tokens.component.map.voiceRibbonNight.background).toBe('#121110');
+    expect(tokens.component.map.xrayParcel.background).toBe('#e9ebe5');
+    expect(tokens.component.map.xrayParcelNight.background).toBe('#0f1210');
+    expect(tokens.component.map.scanline.background).toBe('#e9e9e5');
+    expect(tokens.component.map.scanlineNight.background).toBe('#101010');
   });
 
   it('has map route line colors', () => {

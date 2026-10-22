@@ -37,5 +37,8 @@ data/linz/
 data/labels/
 # Local scratch backups (never committed)
 .local-backup/
+# Scratch renders of the design lab (the working folder of the render scripts,
+# never committed; the finished renders live in docs/design/directions-2/)
+.design-render/
 # Clean-room study clones (never committed, read-only reference)
 .study/

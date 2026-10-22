@@ -1,0 +1,46 @@
+The measured contrast of every pair that appears on the four screens of Night Shift.
+Measured with packages/design-tokens/src/contrast.ts, the code the build gate uses.
+Bars: 4.5:1 for the body, 3:1 for the boundaries, 7:1 for the driving text.
+
+===== light (nightShift) =====
+  textPrimary      #151314 on background     #f2f0f1  16.31:1
+  textPrimary      #151314 on surface        #ffffff  18.50:1
+  textSecondary    #4a4547 on background     #f2f0f1  8.29:1
+  textSecondary    #4a4547 on surface        #ffffff  9.40:1
+  textTertiary     #55504f on background     #f2f0f1  6.99:1
+  brandPrimary     #8c3b1a on background     #f2f0f1  6.72:1
+  brandPrimary     #8c3b1a on surface        #ffffff  7.62:1
+  brandSecondary   #2f5d5a on background     #f2f0f1  6.53:1
+  statusDelivered  #1d5b34 on background     #f2f0f1  7.12:1
+  statusFailed     #a11e18 on background     #f2f0f1  6.82:1
+  statusSkipped    #7a4a00 on background     #f2f0f1  6.59:1
+  statusActive     #8c3b1a on background     #f2f0f1  6.72:1
+  border           #6b6567 on surface        #ffffff  5.70:1
+  mapText          #151314 on mapLand        #f1efef  16.15:1
+  mapText          #151314 on mapRoad        #ffffff  18.50:1
+  brandPrimary     chip #f1e7e2  6.27:1
+  success          chip #e3ebe6  6.66:1
+  warning          chip #eee8df  6.14:1
+  error            chip #f3e3e2  6.23:1
+
+===== night (nightShiftNight) =====
+  textPrimary      #f5f1ef on background     #131011  16.86:1
+  textPrimary      #f5f1ef on surface        #1c1918  15.57:1
+  textSecondary    #c8c1bd on background     #131011  10.65:1
+  textSecondary    #c8c1bd on surface        #1c1918  9.84:1
+  textTertiary     #afa7a3 on background     #131011  8.00:1
+  brandPrimary     #dd8256 on background     #131011  6.67:1
+  brandPrimary     #dd8256 on surface        #1c1918  6.16:1
+  brandSecondary   #71b3ae on background     #131011  7.89:1
+  statusDelivered  #59b184 on background     #131011  7.25:1
+  statusFailed     #e8736a on background     #131011  6.39:1
+  statusSkipped    #d8a83c on background     #131011  8.64:1
+  statusActive     #dd8256 on background     #131011  6.67:1
+  border           #7d7674 on surface        #1c1918  3.92:1
+  mapText          #f5f1ef on mapLand        #252220  14.09:1
+  mapText          #f5f1ef on mapRoad        #403b38  9.84:1
+  brandPrimary     chip #342620  5.13:1
+  success          chip #242c26  5.50:1
+  warning          chip #342b1d  6.35:1
+  error            chip #362422  4.95:1
+

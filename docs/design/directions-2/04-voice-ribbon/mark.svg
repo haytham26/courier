@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-labelledby="mark-title">
+  <title id="mark-title">Voice Ribbon: the amplitude ribbon along the bottom edge</title>
+  <g fill="#8c3b1a">
+    <rect x="7" y="24" width="4" height="12" />
+    <rect x="15" y="16" width="4" height="20" />
+    <rect x="23" y="8" width="4" height="28" />
+    <rect x="31" y="18" width="4" height="18" />
+    <rect x="39" y="26" width="4" height="10" />
+  </g>
+  <rect x="4" y="38" width="40" height="3" fill="#151314" />
+</svg>

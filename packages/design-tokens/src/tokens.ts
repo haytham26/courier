@@ -19,6 +19,8 @@
  * `contrast.test.ts` fails the build when a pair drops below the bar.
  */
 
+import { directionMapPalettes } from './mapPalettes';
+
 /**
  * The colour ramps.
  *
@@ -302,6 +304,21 @@ export const motion = {
   springs: {
     sheet: { duration: 150, dampingRatio: 1 },
     settle: { duration: 200, dampingRatio: 1 },
+    /**
+     * The confirmation of a delivery: the one movement of the product that is
+     * allowed to overshoot, and only once (RESEARCH-2 §5.3, `confirm`).
+     */
+    confirm: { duration: 220, dampingRatio: 0.86 },
+    /**
+     * The voice bar changing state: fast and tight, because the bar must
+     * never lag the microphone (RESEARCH-2 §5.3, `voiceBar`).
+     */
+    voiceBar: { duration: 200, dampingRatio: 0.9 },
+    /**
+     * A sign dropping into place: the rail of a run takes the weight of it
+     * (RESEARCH-2 §5.3, the latch of direction 10).
+     */
+    latch: { duration: 220, dampingRatio: 0.94 },
   },
   /**
    * What "reduce motion" means for this product: the transition still happens,
@@ -494,8 +511,149 @@ export const components = {
       geofenceApproach: 'rgba(255, 255, 0, 0.5)',
       geofenceImminent: 'rgba(255, 255, 0, 0.8)',
       userLocation: '#00ffff',
-      userLocationHalo: 'rgba(0, 255, 255, 0.5)',
+      userLocationHalo: 'rgba(255, 255, 0, 0.5)',
     },
+    // The second round of the studio (MASTER_EXECUTION §13.6). Each direction
+    // brings its own map: the colours come from the direction's palette, not
+    // from a stock style with the accent pasted on.
+    // Voice Ribbon - P6 Clay. The route is a ribbon in the teal, the pin is
+    // the sienna, and the roads stay quiet so the address reads over them.
+    voiceRibbon: {
+      background: '#e8e5e6',
+      water: '#dbe2e0',
+      land: '#f1efef',
+      road: '#ffffff',
+      roadOutline: '#ddd7d8',
+      highway: '#e9d3a4',
+      highwayOutline: '#c2a877',
+      building: '#e3e0e1',
+      park: '#dde4da',
+      text: '#151314',
+      textHalo: '#f1efef',
+      stopPin: '#8c3b1a',
+      stopPinHalo: '#ffffff',
+      routeLine: '#2f5d5a',
+      routeLineWidth: '4px',
+      geofenceApproach: 'rgba(47, 93, 90, 0.18)',
+      geofenceImminent: 'rgba(47, 93, 90, 0.32)',
+      userLocation: '#2f5d5a',
+      userLocationHalo: 'rgba(47, 93, 90, 0.25)',
+    },
+    voiceRibbonNight: {
+      background: '#121110',
+      water: '#151d1c',
+      land: '#1b1a19',
+      road: '#242322',
+      roadOutline: '#141312',
+      highway: '#8a7550',
+      highwayOutline: '#5f5138',
+      building: '#201f1e',
+      park: '#1a241c',
+      text: '#f1edeb',
+      textHalo: '#121110',
+      stopPin: '#dd8256',
+      stopPinHalo: '#121110',
+      routeLine: '#71b3ae',
+      routeLineWidth: '4px',
+      geofenceApproach: 'rgba(113, 179, 174, 0.20)',
+      geofenceImminent: 'rgba(113, 179, 174, 0.35)',
+      userLocation: '#71b3ae',
+      userLocationHalo: 'rgba(113, 179, 174, 0.25)',
+    },
+    // X-ray Parcel - P1 HiVis. The buildings are the parcel's world, so they
+    // are drawn a step darker than the land and the extrusion carries the
+    // height.
+    xrayParcel: {
+      background: '#e9ebe5',
+      water: '#d6e4ea',
+      land: '#f0f1ec',
+      road: '#ffffff',
+      roadOutline: '#dde1d6',
+      highway: '#f2c94c',
+      highwayOutline: '#c99f2c',
+      building: '#e0e2db',
+      park: '#dae6d0',
+      text: '#14161a',
+      textHalo: '#f0f1ec',
+      stopPin: '#a63a00',
+      stopPinHalo: '#ffffff',
+      routeLine: '#14563c',
+      routeLineWidth: '4px',
+      geofenceApproach: 'rgba(20, 86, 60, 0.18)',
+      geofenceImminent: 'rgba(20, 86, 60, 0.32)',
+      userLocation: '#14495f',
+      userLocationHalo: 'rgba(20, 73, 95, 0.25)',
+    },
+    xrayParcelNight: {
+      background: '#0f1210',
+      water: '#0e1a1e',
+      land: '#181c19',
+      road: '#212620',
+      roadOutline: '#0f1210',
+      highway: '#96783f',
+      highwayOutline: '#6b5429',
+      building: '#1c201d',
+      park: '#16281a',
+      text: '#f1f2ef',
+      textHalo: '#0f1210',
+      stopPin: '#e07a35',
+      stopPinHalo: '#0f1210',
+      routeLine: '#5fae86',
+      routeLineWidth: '4px',
+      geofenceApproach: 'rgba(95, 174, 134, 0.20)',
+      geofenceImminent: 'rgba(95, 174, 134, 0.35)',
+      userLocation: '#6fa9c4',
+      userLocationHalo: 'rgba(111, 169, 196, 0.25)',
+    },
+    // Scanline - P3 Signal. The style is drawn like a chart: the land is a
+    // ruled ground, the roads are hairlines and only the motorway is loud.
+    scanline: {
+      background: '#e9e9e5',
+      water: '#dde2e3',
+      land: '#f2f2ef',
+      road: '#ffffff',
+      roadOutline: '#d5d5cf',
+      highway: '#e7d9a8',
+      highwayOutline: '#bfae74',
+      building: '#e2e2dd',
+      park: '#dfe5db',
+      text: '#101112',
+      textHalo: '#f2f2ef',
+      stopPin: '#b3261e',
+      stopPinHalo: '#ffffff',
+      routeLine: '#1d2a33',
+      routeLineWidth: '4px',
+      geofenceApproach: 'rgba(29, 42, 51, 0.16)',
+      geofenceImminent: 'rgba(29, 42, 51, 0.28)',
+      userLocation: '#1d2a33',
+      userLocationHalo: 'rgba(29, 42, 51, 0.22)',
+    },
+    scanlineNight: {
+      background: '#101010',
+      water: '#141a1c',
+      land: '#181818',
+      road: '#212121',
+      roadOutline: '#0d0d0d',
+      highway: '#8f8156',
+      highwayOutline: '#665c3e',
+      building: '#1c1c1c',
+      park: '#172014',
+      text: '#f1f1f0',
+      textHalo: '#101010',
+      stopPin: '#e0524a',
+      stopPinHalo: '#101010',
+      routeLine: '#8fa4b3',
+      routeLineWidth: '4px',
+      geofenceApproach: 'rgba(143, 164, 179, 0.18)',
+      geofenceImminent: 'rgba(143, 164, 179, 0.32)',
+      userLocation: '#8fa4b3',
+      userLocationHalo: 'rgba(143, 164, 179, 0.22)',
+    },
+    // The map palettes of the four directions of this team (07 Weather Light,
+    // 08 Haptic City, 09 Night Shift and 10 Gantry Run). They are spread in
+    // from `mapPalettes.ts` so the file that owns the palettes of a team is
+    // the file of that team.
+    ...directionMapPalettes,
   },
 } as const;
 

@@ -19,6 +19,8 @@
  */
 
 import { themes, type ThemeName } from '@courier/design-tokens/themes';
+import { components } from '@courier/design-tokens/tokens';
+import type { MapPalette } from '@courier/design-tokens/mapPalettes';
 import type {
   BackgroundLayerSpecification,
   FillExtrusionLayerSpecification,
@@ -120,6 +122,16 @@ export interface CourierStyleOptions {
    * licence. Without them the mode degrades to the flat map.
    */
   satellite?: { url: string; licence: string } | null;
+  /**
+   * The map palette of a design direction.
+   *
+   * A direction of the studio brings its own map: the road colours, the
+   * label colours and the building treatment come from the tokens of that
+   * direction, not from a stock style with the accent pasted on it
+   * (`docs/design/REVIEW.md` REVIEW-F5 and F6). When the palette is given it
+   * wins over the block of the theme.
+   */
+  palette?: MapPalette;
 }
 
 // The landuse kinds that read as green in the Protomaps schema v4.
@@ -157,6 +169,19 @@ const buildingFilter: FilterSpecification = ['==', ['get', 'kind'], 'building'];
 const addressFilter: FilterSpecification = ['==', ['get', 'kind'], 'address'];
 
 /**
+ * The map palette of the three product themes, read from the token package.
+ *
+ * The other themes of the round are design directions: each one carries its
+ * own palette and passes it in, so the style of the map is the style of the
+ * direction and not a stock style with a filter over it.
+ */
+const PRODUCT_MAP_PALETTES: Partial<Record<ThemeName, MapPalette>> = {
+  day: components.map.day,
+  night: components.map.night,
+  highContrast: components.map.highContrast,
+};
+
+/**
  * Builds the courier style for one theme.
  *
  * The style is the app's own: it is generated from the design tokens, it
@@ -165,7 +190,8 @@ const addressFilter: FilterSpecification = ['==', ['get', 'kind'], 'address'];
  */
 export function buildCourierStyle(options: CourierStyleOptions): StyleSpecification {
   const theme = themes[options.themeName];
-  const map = theme.components.map[options.themeName];
+  const map: MapPalette =
+    options.palette ?? PRODUCT_MAP_PALETTES[options.themeName] ?? components.map.day;
   const satellite = options.satellite ?? null;
   const hasTiles = options.tileUrl !== null;
   const drawBuildings = options.buildings !== false;
@@ -425,7 +451,7 @@ export function getCourierStyle(
   glyphsUrl: string | null = null,
   options: Pick<
     CourierStyleOptions,
-    'labelSize' | 'buildings' | 'buildings3d' | 'satellite'
+    'labelSize' | 'buildings' | 'buildings3d' | 'satellite' | 'palette'
   > = {},
 ): StyleSpecification {
   return buildCourierStyle({ themeName, tileUrl, glyphsUrl, ...options });

@@ -1,0 +1,113 @@
+# voiceRibbon - Voice Ribbon
+
+Measured with packages/design-tokens/src/contrast.ts on 2026-10-22.
+
+## The surfaces
+  background       #e8e5e6
+  surface          #ffffff
+  surfaceElevated  #f1efef
+
+## The text on every surface (bar 4.5:1, and 7:1 for the driving text)
+  role             hex       background  surface    elevated   bar
+  textPrimary      #151314   14.78:1     18.50:1    16.15:1    7:1 driving
+  textSecondary    #4a4547   7.51:1      9.40:1     8.21:1     7:1 driving
+  textTertiary     #55504f   6.34:1      7.93:1     6.93:1     4.5:1
+  brandPrimary     #8c3b1a   6.09:1      7.62:1     6.65:1     4.5:1
+  brandSecondary   #2f5d5a   5.92:1      7.41:1     6.47:1     4.5:1
+  success          #1d5b34   6.46:1      8.08:1     7.06:1     4.5:1
+  warning          #7a4a00   5.98:1      7.48:1     6.53:1     4.5:1
+  error            #a11e18   6.18:1      7.74:1     6.75:1     4.5:1
+  info             #2f5d5a   5.92:1      7.41:1     6.47:1     4.5:1
+  statusPending    #4a4547   7.51:1      9.40:1     8.21:1     4.5:1
+  statusActive     #8c3b1a   6.09:1      7.62:1     6.65:1     4.5:1
+  statusDelivered  #1d5b34   6.46:1      8.08:1     7.06:1     4.5:1
+  statusFailed     #a11e18   6.18:1      7.74:1     6.75:1     4.5:1
+  statusSkipped    #7a4a00   5.98:1      7.48:1     6.53:1     4.5:1
+
+## The boundary (bar 3:1, non-text)
+  border #6b6567 on the background: 4.56:1
+  border #6b6567 on the surface: 5.70:1
+  border #6b6567 on the surfaceElevated: 4.98:1
+
+## The label on a filled surface (bar 4.5:1)
+  brandPrimary     #8c3b1a   inverse #ffffff: 7.62:1
+  brandSecondary   #2f5d5a   inverse #ffffff: 7.41:1
+  success          #1d5b34   inverse #ffffff: 8.08:1
+  warning          #7a4a00   inverse #ffffff: 7.48:1
+  error            #a11e18   inverse #ffffff: 7.74:1
+  statusPending    #4a4547   inverse #ffffff: 9.40:1
+  statusActive     #8c3b1a   inverse #ffffff: 7.62:1
+  statusDelivered  #1d5b34   inverse #ffffff: 8.08:1
+  statusFailed     #a11e18   inverse #ffffff: 7.74:1
+  statusSkipped    #7a4a00   inverse #ffffff: 7.48:1
+
+## The badge pill (the colour at 12.5 % over the surface, bar 4.5:1)
+  brandPrimary     #f1e7e2   6.27:1
+  brandSecondary   #e5ebea   6.14:1
+  success          #e3ebe6   6.66:1
+  warning          #eee8df   6.14:1
+  error            #f3e3e2   6.23:1
+  info             #e5ebea   6.14:1
+
+## The map (the label over the land and over the road, bar 4.5:1)
+  mapText #151314 on mapLand #f1efef: 16.15:1
+  mapText #151314 on mapRoad #ffffff: 18.50:1
+
+## Every pair above clears its bar.
+
+# voiceRibbonNight - Voice Ribbon (night)
+
+Measured with packages/design-tokens/src/contrast.ts on 2026-10-22.
+
+## The surfaces
+  background       #121110
+  surface          #1b1a19
+  surfaceElevated  #242322
+
+## The text on every surface (bar 4.5:1, and 7:1 for the driving text)
+  role             hex       background  surface    elevated   bar
+  textPrimary      #f1edeb   16.21:1     14.94:1    13.49:1    7:1 driving
+  textSecondary    #c8c1bd   10.62:1     9.78:1     8.83:1     7:1 driving
+  textTertiary     #afa7a3   7.97:1      7.35:1     6.63:1     4.5:1
+  brandPrimary     #dd8256   6.65:1      6.13:1     5.53:1     4.5:1
+  brandSecondary   #71b3ae   7.87:1      7.25:1     6.55:1     4.5:1
+  success          #59b184   7.23:1      6.66:1     6.01:1     4.5:1
+  warning          #d8a83c   8.61:1      7.93:1     7.16:1     4.5:1
+  error            #e8736a   6.37:1      5.87:1     5.30:1     4.5:1
+  info             #71b3ae   7.87:1      7.25:1     6.55:1     4.5:1
+  statusPending    #c8c1bd   10.62:1     9.78:1     8.83:1     4.5:1
+  statusActive     #dd8256   6.65:1      6.13:1     5.53:1     4.5:1
+  statusDelivered  #59b184   7.23:1      6.66:1     6.01:1     4.5:1
+  statusFailed     #e8736a   6.37:1      5.87:1     5.30:1     4.5:1
+  statusSkipped    #d8a83c   8.61:1      7.93:1     7.16:1     4.5:1
+
+## The boundary (bar 3:1, non-text)
+  border #7d7674 on the background: 4.24:1
+  border #7d7674 on the surface: 3.90:1
+  border #7d7674 on the surfaceElevated: 3.52:1
+
+## The label on a filled surface (bar 4.5:1)
+  brandPrimary     #dd8256   inverse #121110: 6.65:1
+  brandSecondary   #71b3ae   inverse #121110: 7.87:1
+  success          #59b184   inverse #121110: 7.23:1
+  warning          #d8a83c   inverse #121110: 8.61:1
+  error            #e8736a   inverse #121110: 6.37:1
+  statusPending    #c8c1bd   inverse #121110: 10.62:1
+  statusActive     #dd8256   inverse #121110: 6.65:1
+  statusDelivered  #59b184   inverse #121110: 7.23:1
+  statusFailed     #e8736a   inverse #121110: 6.37:1
+  statusSkipped    #d8a83c   inverse #121110: 8.61:1
+
+## The badge pill (the colour at 12.5 % over the surface, bar 4.5:1)
+  brandPrimary     #332721   5.09:1
+  brandSecondary   #262d2c   5.86:1
+  success          #232d26   5.46:1
+  warning          #332c1d   6.31:1
+  error            #352523   4.92:1
+  info             #262d2c   5.86:1
+
+## The map (the label over the land and over the road, bar 4.5:1)
+  mapText #f1edeb on mapLand #1b1a19: 14.94:1
+  mapText #f1edeb on mapRoad #242322: 13.49:1
+
+## Every pair above clears its bar.

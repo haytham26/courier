@@ -1,0 +1,113 @@
+# topo - Topo
+
+Measured with packages/design-tokens/src/contrast.ts on 2026-10-22.
+
+## The surfaces
+  background       #f2f0f1
+  surface          #ffffff
+  surfaceElevated  #e8e5e6
+
+## The text on every surface (bar 4.5:1, and 7:1 for the driving text)
+  role             hex       background  surface    elevated   bar
+  textPrimary      #151314   16.31:1     18.50:1    14.78:1    7:1 driving
+  textSecondary    #4a4547   8.29:1      9.40:1     7.51:1     7:1 driving
+  textTertiary     #55504f   6.99:1      7.93:1     6.34:1     4.5:1
+  brandPrimary     #2f5d5a   6.53:1      7.41:1     5.92:1     4.5:1
+  brandSecondary   #8c3b1a   6.72:1      7.62:1     6.09:1     4.5:1
+  success          #1d5b34   7.12:1      8.08:1     6.46:1     4.5:1
+  warning          #7a4a00   6.59:1      7.48:1     5.98:1     4.5:1
+  error            #a11e18   6.82:1      7.74:1     6.18:1     4.5:1
+  info             #2f5d5a   6.53:1      7.41:1     5.92:1     4.5:1
+  statusPending    #4a4547   8.29:1      9.40:1     7.51:1     4.5:1
+  statusActive     #2f5d5a   6.53:1      7.41:1     5.92:1     4.5:1
+  statusDelivered  #1d5b34   7.12:1      8.08:1     6.46:1     4.5:1
+  statusFailed     #a11e18   6.82:1      7.74:1     6.18:1     4.5:1
+  statusSkipped    #7a4a00   6.59:1      7.48:1     5.98:1     4.5:1
+
+## The boundary (bar 3:1, non-text)
+  border #6b6567 on the background: 5.03:1
+  border #6b6567 on the surface: 5.70:1
+  border #6b6567 on the surfaceElevated: 4.56:1
+
+## The label on a filled surface (bar 4.5:1)
+  brandPrimary     #2f5d5a   inverse #ffffff: 7.41:1
+  brandSecondary   #8c3b1a   inverse #ffffff: 7.62:1
+  success          #1d5b34   inverse #ffffff: 8.08:1
+  warning          #7a4a00   inverse #ffffff: 7.48:1
+  error            #a11e18   inverse #ffffff: 7.74:1
+  statusPending    #4a4547   inverse #ffffff: 9.40:1
+  statusActive     #2f5d5a   inverse #ffffff: 7.41:1
+  statusDelivered  #1d5b34   inverse #ffffff: 8.08:1
+  statusFailed     #a11e18   inverse #ffffff: 7.74:1
+  statusSkipped    #7a4a00   inverse #ffffff: 7.48:1
+
+## The badge pill (the colour at 12.5 % over the surface, bar 4.5:1)
+  brandPrimary     #e5ebea   6.14:1
+  brandSecondary   #f1e7e2   6.27:1
+  success          #e3ebe6   6.66:1
+  warning          #eee8df   6.14:1
+  error            #f3e3e2   6.23:1
+  info             #e5ebea   6.14:1
+
+## The map (the label over the land and over the road, bar 4.5:1)
+  mapText #151314 on mapLand #f1efef: 16.15:1
+  mapText #151314 on mapRoad #ffffff: 18.50:1
+
+## Every pair above clears its bar.
+
+# topoNight - Topo Night
+
+Measured with packages/design-tokens/src/contrast.ts on 2026-10-22.
+
+## The surfaces
+  background       #131011
+  surface          #1c1918
+  surfaceElevated  #252220
+
+## The text on every surface (bar 4.5:1, and 7:1 for the driving text)
+  role             hex       background  surface    elevated   bar
+  textPrimary      #f5f1ef   16.86:1     15.57:1    14.09:1    7:1 driving
+  textSecondary    #c8c1bd   10.65:1     9.84:1     8.90:1     7:1 driving
+  textTertiary     #afa7a3   8.00:1      7.39:1     6.68:1     4.5:1
+  brandPrimary     #71b3ae   7.89:1      7.29:1     6.60:1     4.5:1
+  brandSecondary   #dd8256   6.67:1      6.16:1     5.57:1     4.5:1
+  success          #59b184   7.25:1      6.70:1     6.06:1     4.5:1
+  warning          #d8a83c   8.64:1      7.98:1     7.22:1     4.5:1
+  error            #e8736a   6.39:1      5.90:1     5.34:1     4.5:1
+  info             #71b3ae   7.89:1      7.29:1     6.60:1     4.5:1
+  statusPending    #c8c1bd   10.65:1     9.84:1     8.90:1     4.5:1
+  statusActive     #71b3ae   7.89:1      7.29:1     6.60:1     4.5:1
+  statusDelivered  #59b184   7.25:1      6.70:1     6.06:1     4.5:1
+  statusFailed     #e8736a   6.39:1      5.90:1     5.34:1     4.5:1
+  statusSkipped    #d8a83c   8.64:1      7.98:1     7.22:1     4.5:1
+
+## The boundary (bar 3:1, non-text)
+  border #7d7674 on the background: 4.25:1
+  border #7d7674 on the surface: 3.92:1
+  border #7d7674 on the surfaceElevated: 3.55:1
+
+## The label on a filled surface (bar 4.5:1)
+  brandPrimary     #71b3ae   inverse #131011: 7.89:1
+  brandSecondary   #dd8256   inverse #131011: 6.67:1
+  success          #59b184   inverse #131011: 7.25:1
+  warning          #d8a83c   inverse #131011: 8.64:1
+  error            #e8736a   inverse #131011: 6.39:1
+  statusPending    #c8c1bd   inverse #131011: 10.65:1
+  statusActive     #71b3ae   inverse #131011: 7.89:1
+  statusDelivered  #59b184   inverse #131011: 7.25:1
+  statusFailed     #e8736a   inverse #131011: 6.39:1
+  statusSkipped    #d8a83c   inverse #131011: 8.64:1
+
+## The badge pill (the colour at 12.5 % over the surface, bar 4.5:1)
+  brandPrimary     #272c2b   5.91:1
+  brandSecondary   #342620   5.13:1
+  success          #242c26   5.50:1
+  warning          #342b1d   6.35:1
+  error            #362422   4.95:1
+  info             #272c2b   5.91:1
+
+## The map (the label over the land and over the road, bar 4.5:1)
+  mapText #f5f1ef on mapLand #252220: 14.09:1
+  mapText #f5f1ef on mapRoad #403b38: 9.84:1
+
+## Every pair above clears its bar.
