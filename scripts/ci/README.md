@@ -7,6 +7,7 @@ Every script here fails the build when its check fails. They are the mechanical 
 |---|---|
 | `check-floor.mjs` | The floor guard: scans the lines the branch adds for a new suppression, a skipped test, an `any`, an empty catch or a stub. `node scripts/ci/check-floor.mjs [base-ref]`. |
 | `check-conflict-markers.mjs` | The merge-marker gate: no `<<<<<<<`, `=======` or `>>>>>>>` line survives anywhere in the tracked tree (lockfiles, vendored code and binaries excluded). `node scripts/ci/check-conflict-markers.mjs`. |
+| `check-control-chars.mjs` | The control-character gate: no BEL, VT or FF byte (an escaping pass once corrupted 31 word-initial letters into these) in any tracked text file. `node scripts/ci/check-control-chars.mjs`. |
 | `check-coverage.mjs` | The coverage ratchet: reads the summaries the test runs produced and fails below the floors. `node scripts/ci/check-coverage.mjs`. |
 | `run-coverage.mjs` | Runs the coverage of the packages, the API and the voice service, then calls the gate. `node scripts/ci/run-coverage.mjs`. |
 | `check-audit.mjs` | The dependency audit: fails on any high or critical advisory that is not a documented build-time exception. `node scripts/ci/check-audit.mjs`. |

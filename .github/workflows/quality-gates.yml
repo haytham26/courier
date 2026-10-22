@@ -34,6 +34,8 @@ jobs:
         run: node scripts/ci/check-conflict-markers.mjs
       - name: Check the links of the documentation
         run: node scripts/ci/check-doc-links.mjs
+      - name: No control characters in the tracked text
+        run: node scripts/ci/check-control-chars.mjs
       - name: Check the voice evaluation set
         run: node scripts/eval/check-voice-eval.mjs
       - name: Check the scanner evaluation set
