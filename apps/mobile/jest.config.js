@@ -12,12 +12,14 @@
  * the window exists without the document (jest-expo aliases `window` and the
  * React Native preset setup redefines it).
  *
- * The resolver is `./jest/resolver.js`: it calls the official resolver of
- * Reanimated 4 for every request (it sends the `react-native-worklets`
- * native files to their web twins, so a test run never reaches for a
- * native module that is not there), and sends the web barrel of Reanimated's
- * layout animations to its inert twin in the test realm - see the header
- * of `jest/motion-void-web-layout.js`.
+ * The resolver is `./jest/resolver.js`: it keeps the official semantics of
+ * the Reanimated 4 and worklets resolvers (the web twins of the listed
+ * worklets files stay forced for jest), with one correction in its
+ * worklets membership test - a Reanimated-internal file must not count as
+ * worklets-bound just because the pnpm virtual-store name of its directory
+ * carries worklets as a peer suffix. jest resolution therefore stops
+ * depending on directory names, and the native build of Reanimated loads
+ * in jest on every machine.
  */
 module.exports = {
   preset: 'jest-expo',

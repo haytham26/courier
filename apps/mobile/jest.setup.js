@@ -12,20 +12,10 @@ jest.useRealTimers();
 // be registered before any screen that uses the theme is imported.
 require('react-native-unistyles/mocks');
 
-// Reanimated 4 and the worklets runtime: the tests run on the web
-// implementation, and the timers are the real ones so a spring settles.
+// Reanimated 4 and the worklets runtime: setUpTests() installs the testing
+// helpers of the library. The resolver (jest/resolver.js) keeps the native
+// build of the library loading in jest on every machine.
 require('react-native-reanimated').setUpTests();
-
-// The mount drivers of Reanimated's web layout animations ask the element
-// for browser-only interfaces that the host instances of the React test
-// renderer do not carry (the diagnostics of the workers, 2026-10-22: the
-// suites crashed at "Array.from(element.style)" when an entering animation
-// mounted). The inert twin (jest/motion-void-web-layout.js) is therefore
-// pinned for every suite regardless of how the library resolves; the real
-// animations remain under test on the emulator, where the Android E2E
-// flows drive the genuine applied build.
-const mockMotionVoid = require('./jest/motion-void-web-layout');
-jest.mock('react-native-reanimated/src/layoutReanimation/web', () => mockMotionVoid);
 
 // The gesture handler ships its own mocks for the native module.
 require('react-native-gesture-handler/jestSetup');
