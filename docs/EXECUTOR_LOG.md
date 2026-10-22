@@ -1259,3 +1259,49 @@ permission dialog and the scroll) were both in the flow, not in the app.
 - PR #2 `feat/p1-emulator-pipeline` - the pipeline and the product
 - PR #1 `feat/v4-company-bootstrap` - the product
 - `feat/t2-expo-58-decision` - the T2/T4 content, ready for its PR
+
+---
+
+## The correction of 2026-10-22 (the founder was right: my summary was wrong)
+
+I wrote that the sections 11-15 were "built, not planned" and that only the
+map pack and the brain pack stood between the product and the release. That
+was false, and `docs/PROGRESS.md` contradicted it. The truth, with the three
+labels and nothing else:
+
+**DONE** (the thing works, with the evidence):
+- P2 the research: the 24 areas at the full V4 depth and the verifier pass
+  (271 cards re-checked, 129 corrected).
+- P5 the sync: the event log on op-sqlite, the sync service, the batch
+  endpoint, the schema, the repository (140 API tests).
+- The security fixes: the voice WebSocket is authenticated, the JWT issuer is
+  required, the audit step no longer hides its findings.
+- P1 the pipeline itself: the two jobs, the readiness gates, the E2E mode,
+  the evidence. Four of the five flows are green and the app renders on the
+  emulator (the run 39691708360). The B.7 compatibility flow is still open.
+
+**PARTIAL** (what exists, and what is missing - both named):
+- P3 the maps: the modes, the toggles, the voice camera, the 3D builder - the
+  pack is not built and never ran on a device.
+- P4 the design: the tokens to the contract and the screen specs - the founder
+  rejected the three directions, the Design Studio restarts at §13.6.
+- P5 the voice: the service exists - on the phone the streaming STT is a TODO,
+  no model packs are bundled, nothing was ever verified on the emulator.
+- P5 the sign-in: the service has MFA, passkeys, the OAuth starts and the
+  teams - the app has no native Google or Apple sign-in (only the passkey
+  plugin), and the magic link, the email verification, the HIBP check, the
+  device binding, the session list and the refresh rotation are open.
+- P5 the routing: the heuristic and the template lock in the API - PyVRP and
+  VROOM over a Valhalla matrix is a seam, not wired.
+- P5 the earnings: the rate card, the money maths, the API and the app - no
+  Stripe, no entitlements, no IRD or Xero export.
+- P5 the door memory, the driving mode, the eval sets, P6 the launch
+  readiness - each with its own missing list in `docs/PROGRESS.md`.
+
+**NOT STARTED**: the scanner screen, the proof of delivery, the web
+dashboard, the billing, the repository hygiene (§16).
+
+**And the rule I broke**: I called scaffolding built. A seam is a seam, a
+stub is a stub, and code that was never run on a device or an emulator is
+not a feature. From now on the labels are DONE, PARTIAL and NOT STARTED, and
+every DONE carries a CI run or a test count.

@@ -1,36 +1,33 @@
-# PROGRESS — Courier Copilot (rewritten 2026-10-20 from PHASE 1 audit)
+# PROGRESS — Courier Copilot (rewritten 2026-10-22 with the truth labels)
 
 Evidence: `docs/evidence/audit/`, `docs/evidence/phase-2.1/`. Details: `docs/AUDIT.md`.
 Previous PROGRESS.md claims were not trusted and have been replaced.
 
-| step ID | status | branch/PR | tests (pass/total) | blocker | next |
-|---|---|---|---|---|---|
-| PHASE0-read-docs | done | main @16afb8d | n/a (docs) | — | — |
-| PHASE1-audit | done | main @e59379e | see audit logs | — | — |
-| PHASE2.1 Better Auth | **done** | feat/2.1-better-auth-service | services/auth 31/31, api 23/23, shared 62/62 | runtime HTTP + Postgres path NOT VERIFIED (no server/DB here) | — |
-| PHASE2.2 themes | **done** | feat/2.2-unistyles-themes | design-tokens 27/27, workspace 101/101, mobile 6/6 | Unistyles native runtime NOT VERIFIED (no emulator/CI yet) | — |
-| PHASE2.3 address engine | **done** | feat/2.3-address-correction | api 48/48 (24 address tests) | LINZ accuracy NOT VERIFIED (data/linz empty) | — |
-| PHASE2.4 cleanup + lint | **done** | feat/2.4-cleanup-and-lint | workspace 107 + api 48 | mobile lint still off (BUG-045) | — |
-| PHASE3.1 CI + emulator | **done** | feat/v4-company-bootstrap (PR #1) | workflows + Maestro + B.7 screen | the emulator job was still running at the last check | link a green run |
-| V4 bootstrap | **done** | feat/v4-company-bootstrap (PR #1) | CONSTRAINTS.md, PARITY.md, design/SYSTEM.md, 10 squads, PR template, floor/coverage/licence/audit gates | the mutation harness lands with the first squad task | T2 |
-| 0.1 repo setup | partial | — | not verified | root package.json now pinned (2.1) | pin remaining ranges |
-| 0.3 docker infra | not verified | — | — | not run in audit | run docker compose |
-| 0.4 local secrets | partial | — | not verified | scripts/check-secrets not tested | test scripts |
-| 0.5 CI pipeline | not verified | — | — | `.github/workflows/` is empty | write CI workflow |
-| A.2 shared packages | done | main | shared 26/26, design-tokens 19/19, nz-address 17/17 | — | — |
-| A.3 Better Auth | **done** | feat/2.1-better-auth-service | 31/31 + 23/23 | Postgres path NOT VERIFIED | docker-compose run |
-| A.4 OpenSpec | not verified | — | — | `openspec/` is empty | write specs |
-| B.1 Expo app | partial | feat/2.2-unistyles-themes | 6/6 (auth) | no jest before this phase; now wired | add screen tests |
-| B.2 design system | **done** | feat/2.2-unistyles-themes | design-tokens 27/27 | Unistyles native runtime NOT VERIFIED (no emulator) | — |
-| B.3 navigation | partial | — | 0 tests | no tests | add tests |
-| B.4 voice module | stub | — | 0 tests | not implemented | later |
-| B.5 maps | not started | — | — | — | — |
-| B.6 sync engine | not started | — | — | — | — |
-| B.7 compat test | **NOT VERIFIED** | feat/3.1-ci-and-android-e2e | compat screen + Maestro flows written | the emulator run was not observed (no `GITHUB_TOKEN`); sherpa models and the PMTiles archive are missing | link a green run |
-| C.1 LINZ import | partial | — | — | `data/linz/` empty → FOUNDER_TODO entry | founder to provide |
-| C.2 address correction (D8) | **done** | feat/2.3-address-correction | 24 address tests, 100% over the 87-address fixture | LINZ ground truth NOT VERIFIED | wire into the API |
-| C.3–G.4 remaining | not started | — | — | — | — |
+**The three labels, and nothing else**: **DONE** (the thing works, with the CI run or the test count as the evidence), **PARTIAL** (what exists and what is missing, both named), **NOT STARTED** (nothing of it exists). A seam, a scaffold, a stub or a code path that was never run is never called built.
 
+| area | status | what exists | what is missing | evidence |
+|---|---|---|---|---|
+| **P1 the Android E2E pipeline** | PARTIAL | the two-job pipeline (the release APK cached by content hash, then the emulator), the readiness gates (boot, install, start, pid, first screen), the E2E mode on local mocks, the permission grants, the evidence uploaded every run | the B.7 compatibility flow is the last one open: the deep link to /compat is in the run of 2026-10-22 00:00 | the run 39691708360: four flows green, the app renders in the new design |
+| **P2 the research (24 areas)** | DONE | every area at the full V4 depth (30+ cards, the query log, the shortlist, the top-5 deep review, the benchmarks, the gaps, the decision, the risks) + the verifier pass (271 of 941 cards re-checked, 129 corrected) | — | docs/research/2026/ + the four VERIFICATION files |
+| **P2 the eval sets** | PARTIAL | the voice set (600 scripts, 840 planned files, 240 real LINZ addresses) and the scanner set (330 synthetic labels with their ground truth, 40 slots for the founder) - both checked in CI | the audio is not generated (it needs the TTS and the licence ledger), the 40 founder photos, the routing eval set, the non-speech corpus | scripts/check-voice-eval.mjs, scripts/check-scanner-eval.mjs |
+| **P3 the map view modes** | PARTIAL | the modes (2D, 3D, Satellite, Auto) with the per-driver memory, the toggles, the voice control of the camera, the 3D buildings builder with the licences checked | the Canterbury pack itself is not built (it needs the LINZ outlines and the OSM extract downloaded) | pps/mobile/src/maps/, 144 mobile tests |
+| **P3 the offline map** | PARTIAL | the style from the tokens (day, night, high contrast), the pack contract, the fallback, the pack builder | the pack is not built and never ran on a device; the frame times and the size are unmeasured | docs/squads/maps/ |
+| **P4 the design** | NOT STARTED | the design tokens to the contract (Figtree, the 17pt floor, the 56/72pt targets, the measured contrast), the motion helpers, the screen specs | the founder rejected the three directions (Roadbook, Beacon, Freight) on 2026-10-22: the Design Studio restarts at MASTER_EXECUTION §13.6 (the research, ten directions) | docs/design/, the founder's verdict in §13.6 |
+| **P5 the on-device voice** | PARTIAL | the voice service (the engine port, the on-device engine, OmniRoute behind D25, the proactive rules, the 8-word driving-safe rule, the memory, the eval) | on the phone: the streaming STT is a TODO, no model packs are bundled, and it has never run on the emulator or a device | services/courier-voice/ (166 tests) |
+| **P5 the sign-in** | PARTIAL | the service (MFA with TOTP and backup codes, the passkeys, the Google and Apple starts, the teams with the roles, the rate limits) and the app (the methods, the MFA step, the teams picker, the offline session, the biometric unlock) | the native Google and Apple sign-in in the app (there is no native library - only the passkey plugin), the magic link/OTP, the email verification, the HIBP check, the device binding, the session list, the refresh rotation, the passkey ceremony on a phone | services/auth (59 tests), pps/mobile (221 tests) |
+| **P5 the scanner** | NOT STARTED | the label eval set and the D8 address correction | no scanner screen (VisionCamera is used only by the compat diagnostics), no crop, no OCR, no smart parsing | docs/squads/scanner/ |
+| **P5 the routing** | PARTIAL | the API (a window-aware seed with a 2-opt pass, the arrival times, the template lock, the route endpoint, the deterministic 50x test) | the real engine (PyVRP + VROOM over a Valhalla matrix) is a seam, not wired; the benchmark against the best known is unmeasured | pps/api/app/routing.py (84 tests) |
+| **P5 the sync** | DONE | the event log on op-sqlite, the sync service (a batch is confirmed only after the server stored it), the API batch endpoint, the schema, the repository | — | pps/mobile/src/sync/, pps/api/app/repo.py, 140 API tests |
+| **P5 the door memory** | PARTIAL | the API (private per courier, the normalised address key), the app (the memory on the stop sheet, the safe places, the offline queue) | never run against a real database | pps/api/app/door_memory.py, pps/mobile/src/doorMemory/ |
+| **P5 the earnings** | PARTIAL | the rate card, the money maths (Decimal, 15 % GST), the API, the app (the net on today's list, the breakdown, the end-of-day summary, the offline fallback) | no Stripe, no entitlements, no dunning, no IRD or Xero export | pps/api/app/earnings.py, pps/mobile/src/earnings/ |
+| **P5 the proof of delivery** | NOT STARTED | — | the POD screen, the photo, the signature, the retention | — |
+| **P5 the web dashboard** | NOT STARTED | — | no pps/web, no dispatcher, no admin | — |
+| **P5 the billing** | NOT STARTED | the rate card only | no Stripe, no subscriptions, no the store rules, no the entitlements | docs/research/2026/payments-subscriptions.md |
+| **P5 driving mode** | PARTIAL | the map modes, the voice commands, the background location permission | no driving mode screen, no earbud protocol on a device, no foreground service, no keep-awake | pps/mobile/src/voice/ |
+| **P6 the launch readiness** | PARTIAL | the production compose, the TLS, the backup with a restore test that ran against a real PostgreSQL, the health endpoints, the alerts, the runbook, the release checklist, StoreReady in CI | the production deployment itself (the founder's approval gate), the store ids, the signing, the background-location video | infra/, docs/operations/ |
+| **S2 the store readiness** | PARTIAL | the privacy policy, the data-safety notes, the background-location declaration, the store listing draft, the local pre-submission check | the founder's store assets, the legal review, the account-deletion link | docs/operations/, 9 store-readiness tests |
+| **The security fixes** | DONE | the voice WebSocket is authenticated, the JWT issuer is required, the audit step no longer hides its findings (the unused pipecat-ai is gone, certifi is constrained) | — | pps/api/tests/auth/test_voice_socket.py, 140 API tests, the audit green |
+| **The repository hygiene (§16)** | NOT STARTED | — | the dead code, the target structure, the test convention, the archive, the log split, the eval data, the dev-only screens | MASTER_EXECUTION §16 |
 ## Current verified check results
 
 | check | result | evidence |
