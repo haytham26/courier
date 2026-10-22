@@ -1,0 +1,13 @@
+﻿# The proof that the dev-only screens are out of the release build (2026-10-22).
+# The command was scripts/dev/check-dev-screens.mjs: it exports the app twice
+# (the release export and the lab export) and reads the two bundles. Only the
+# result lines are kept here; the export output is not.
+
+=== the release export (no EXPO_PUBLIC_DESIGN_LAB, no EXPO_PUBLIC_E2E) ===
+  compat-screen: 0 occurrence(s) in the bundle
+  design-index: 0 occurrence(s) in the bundle
+  today-screen (the product): 1 occurrence(s) in the bundle
+=== the lab export (EXPO_PUBLIC_DESIGN_LAB=1) ===
+  compat-screen: 1 occurrence(s) in the bundle
+  design-index: 1 occurrence(s) in the bundle
+check-dev-screens: the dev-only screens are in the lab build and out of the release build

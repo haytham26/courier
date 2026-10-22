@@ -1,0 +1,30 @@
+﻿corepack : $ turbo run lint && pnpm run lint:api && pnpm run lint:voice
+At line:1 char:108
++ ... ion-16\typecheck.log" -Encoding utf8; corepack pnpm lint 2>&1 | Out-F ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ turbo run lin... run lint:voice:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+   ÔÇó turbo 2.11.9
+   ÔÇó Packages in scope: @courier/auth, @courier/design-tokens, @courier/eslint-config, @courier/nz-address, @courier/shared, mobile
+   ÔÇó Running lint in 6 packages
+   ÔÇó Remote caching disabled
+
+@courier/nz-address:lint: cache miss, executing 9619aeecff3638a6
+@courier/shared:lint: cache miss, executing a951e66443927ab9
+@courier/auth:lint: cache miss, executing 3491b65dad13fe7b
+@courier/design-tokens:lint: cache miss, executing 2192c17e64df25e2
+@courier/nz-address:lint: $ eslint .
+@courier/shared:lint: $ eslint .
+@courier/auth:lint: $ eslint .
+@courier/design-tokens:lint: $ eslint .
+
+ Tasks:    4 successful, 4 total
+Cached:    0 cached, 4 total
+  Time:    4.432s 
+
+$ uv run --directory services/api ruff check .
+All checks passed!
+$ uv run --directory services/courier-voice ruff check .
+All checks passed!

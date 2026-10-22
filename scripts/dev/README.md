@@ -5,6 +5,7 @@ The tools that help a person work in this repository. They are not gates.
 | Script | What it does |
 |---|---|
 | `gh.ps1` | Runs the GitHub CLI with the token from `.env.local`. The token is read at runtime and never printed, logged or committed. `powershell -ExecutionPolicy Bypass -File scripts/dev/gh.ps1 pr list`. |
+| `check-dev-screens.mjs` | The proof that the design lab and the compatibility screen are out of the release build: it exports the app twice and reads the two bundles. `node scripts/dev/check-dev-screens.mjs`. It takes a few minutes (two full exports), so it is not in CI. |
 
 ## The emulator
 
