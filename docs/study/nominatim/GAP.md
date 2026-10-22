@@ -8,7 +8,7 @@ templates, rules · **T7.3** door memory · **T7.4** dictation · **T7.5** live 
 **T7.10** customer SMS · **T7.11** IRD logbook · **T7.12** dashboard/admin · **T7.13** billing ·
 **T7.14** team/franchise · **T7.15** PIA, store, handover.
 
-This table merges into `docs/PARITY.md`. Every `Skip` carries a one-line reason. No row may be
+This table merges into `docs/status/PARITY.md`. Every `Skip` carries a one-line reason. No row may be
 claimed without evidence in `docs/evidence/`. "Acceptance" states how the row is proved.
 
 ---
@@ -139,7 +139,7 @@ claimed without evidence in `docs/evidence/`. "Acceptance" states how the row is
 | I1 | Any Nominatim code, text, identifier, schema or asset in our repository | Skip (reason) | GPL-3.0 contamination risk; V4 §2 forbids GPL/AGPL in the product and the mobile bundle | — | The CI licence scan reports zero GPL/AGPL findings |
 | I2 | Behavioural clean-room study of this project | Have | This file plus `docs/study/nominatim/SPEC.md`; implementation is a separate session that never opens the source | T4 | The build session log records that the source was not opened |
 | I3 | Similarity review of the implemented address engine | Planned (task) | Code review checks for copied functions, comments, strings and file structure (V4 §11.2.5) | T4 | Review notes confirm no similarity, or the code was rewritten |
-| I4 | Licence decision recorded in the licence ledger | Planned (task) | `docs/LICENSES.md` must state GPL-3.0, "studied, not adopted", with the study date | T7.15 | The ledger row exists with today's date |
+| I4 | Licence decision recorded in the licence ledger | Planned (task) | `docs/product/LICENSES.md` must state GPL-3.0, "studied, not adopted", with the study date | T7.15 | The ledger row exists with today's date |
 | I5 | Run a Nominatim instance as the production geocoder | Skip (reason) | The locked decision is LINZ NZ Addresses + our own D8 engine (FINAL_PROMPT §5.1); OSM data is ODbL and unnecessary for NZ addresses | — | — |
 
 ---

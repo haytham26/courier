@@ -2,7 +2,7 @@
 
 **Area:** V4 §13.4 / §13.6 (voice weights: fastest legal path, order of preference) · **Squad:** Voice
 **Date:** 2026-10-21 · **Role:** Voice squad research lead · **Status:** plan, not started
-**Depends on:** `docs/study/omnivoice/SPEC.md` (what we are copying in behaviour), `docs/adr/ADR-004-voice-service-licences.md` (the licence ledger is a shipped surface), `docs/squads/voice/EVAL.md` (the set every number below is measured on), `docs/DECISIONS.md` D22, V4 §13.6 + D23 (founder decision), `docs/LICENSES.md` (provenance ledger).
+**Depends on:** `docs/study/omnivoice/SPEC.md` (what we are copying in behaviour), `docs/decisions/adr/ADR-004-voice-service-licences.md` (the licence ledger is a shipped surface), `docs/squads/voice/EVAL.md` (the set every number below is measured on), `docs/decisions/DECISIONS.md` D22, V4 §13.6 + D23 (founder decision), `docs/product/LICENSES.md` (provenance ledger).
 
 ---
 
@@ -18,7 +18,7 @@ V4 §13.6 orders the options: **(1)** use an open-licensed model, **(2)** ask k2
 
 | Track | What it is | Licence position | When |
 |---|---|---|---|
-| **A — Adapt** | Continue training the released checkpoint with our own adapters on our own/licensed data, per language. | upstream weights are CC-BY-NC; shipped under the founder's decision with the exposure recorded in `docs/LICENSES.md` | weeks 3–6 (pilot) |
+| **A — Adapt** | Continue training the released checkpoint with our own adapters on our own/licensed data, per language. | upstream weights are CC-BY-NC; shipped under the founder's decision with the exposure recorded in `docs/product/LICENSES.md` | weeks 3–6 (pilot) |
 | **B — Own weights** | Train our own checkpoint from the Apache-2.0 backbone on a commercially-licensed mixture we assemble, with our own data on top. | clean, if every corpus in the mixture passes the per-corpus licence gate | weeks 7–12 |
 
 Track A is the fast path to a working multilingual engine; Track B is the path that removes the licence exposure. **The release gate is Track B** unless the founder records a written decision to ship Track A. Both use the same evaluation set, so the choice is made on evidence, not on schedule pressure.
@@ -40,7 +40,7 @@ Track A is the fast path to a working multilingual engine; Track B is the path t
 
 ## 3. Data plan and licences
 
-**Rule (ADR-004 + CONSTRAINTS):** a corpus whose licence we have not read is treated as non-permissive and cannot enter a build. Every row below records the licence *as read on the date shown*, with the evidence link, in `docs/LICENSES.md`.
+**Rule (ADR-004 + CONSTRAINTS):** a corpus whose licence we have not read is treated as non-permissive and cannot enter a build. Every row below records the licence *as read on the date shown*, with the evidence link, in `docs/product/LICENSES.md`.
 
 ### 3.1 Public corpora (licence read 2026-10-21 unless stated)
 
@@ -126,13 +126,13 @@ The upstream mixture is 50 corpora (paper appendix). We do **not** adopt it whol
 | **Piper voices** | repo MIT; per-voice licence to verify | ar, hi, zh, es, en_GB/en_US | no NZ English voice; engine archived |
 | **OmniVoice released weights** | CC-BY-NC | 646 languages incl. en, zh, es, ar, hi, pa, mi | **no sm, to**; reference quality bar (paper, 2026-04-21): FLEURS-102 CER — Māori 1.98 (human 4.90), Hindi 2.64, Punjabi 2.95, Standard Arabic 1.92, Mandarin 3.16, Spanish 0.77, English 1.67; average CER 4.00 % vs human 5.11 %; RTF 0.0319 (16 steps, batch 1, H20) |
 
-**Our bar, in our own numbers (measured on `docs/squads/voice/eval/`):** TTS — WER of the synthesised audio measured through our pinned judge, ≤ 8 % NZ English quiet / ≤ 15 % van noise on addresses, per-language intelligibility no worse than the upstream published CER for Māori, Punjabi, Hindi, Arabic, Mandarin, Spanish; naturalness (predicted MOS) ≥ the upstream reference on the same slice; speaker similarity ≥ 0.80 on our clones; no dropped text; no leading transient; no tail truncation; synthesis latency ≤ 400 ms for an 8-word reply (server) and ≤ 700 ms command→action on device; device battery ≤ 8 %/h. ASR/agent side — intent accuracy ≥ 97 %, wake-word false accepts ≤ 1/h, misses ≤ 3 %, all core commands fully offline.
+**Our bar, in our own numbers (measured on `packages/eval/voice/`):** TTS — WER of the synthesised audio measured through our pinned judge, ≤ 8 % NZ English quiet / ≤ 15 % van noise on addresses, per-language intelligibility no worse than the upstream published CER for Māori, Punjabi, Hindi, Arabic, Mandarin, Spanish; naturalness (predicted MOS) ≥ the upstream reference on the same slice; speaker similarity ≥ 0.80 on our clones; no dropped text; no leading transient; no tail truncation; synthesis latency ≤ 400 ms for an 8-word reply (server) and ≤ 700 ms command→action on device; device battery ≤ 8 %/h. ASR/agent side — intent accuracy ≥ 97 %, wake-word false accepts ≤ 1/h, misses ≤ 3 %, all core commands fully offline.
 
 **Conclusion that drives this plan:** for Arabic, Punjabi, Māori, Samoan and Tongan there is **no licence-clean, quality-verified engine today**. Option 1 cannot close our gap; only our own weights can.
 
 ## 8. Evaluation plan
 
-- **Set:** `docs/squads/voice/eval/` (spec in `docs/squads/voice/EVAL.md`), ≥ 500 utterances, per-language and per-noise slices, plus a non-speech slice for false accepts.
+- **Set:** `packages/eval/voice/` (spec in `docs/squads/voice/EVAL.md`), ≥ 500 utterances, per-language and per-noise slices, plus a non-speech slice for false accepts.
 - **Synthetic-first:** all utterances are generated with licence-clean TTS + noise/RIR augmentation; **real driver audio never enters the repository**.
 - **Judges:** pin the ASR judge per language and record its version + hash; the judge is part of the metric definition. WER/CER, intent accuracy, barge-in false accepts, end-to-end command latency, and battery are all measured by the same harness on the CI emulator profile plus one mid-range Android.
 - **A/B discipline:** every candidate (Kokoro, Qwen3-ASR/TTS, Piper, Track A, Track B) runs on the identical set, in the same harness, with raw per-utterance results published to `docs/squads/voice/benchmarks/`.
@@ -164,7 +164,7 @@ The upstream mixture is 50 corpora (paper appendix). We do **not** adopt it whol
 ## 11. Definition of done for this plan
 
 1. A licence-clean mixture exists and every sample traces to a ledger row.
-2. A Courier Voice checkpoint exists whose lineage is recorded in `docs/LICENSES.md` and whose training run is reproducible from a config + data manifest.
+2. A Courier Voice checkpoint exists whose lineage is recorded in `docs/product/LICENSES.md` and whose training run is reproducible from a config + data manifest.
 3. The eval set is published and the harness runs on the CI emulator profile and one mid-range Android, with raw results in `docs/squads/voice/benchmarks/`.
 4. The published table shows Courier Voice beating Kokoro, Qwen3-ASR/TTS and Piper on our slices, and matching the upstream published intelligibility for Māori, Punjabi, Hindi, Arabic, Mandarin and Spanish.
 5. The device build meets ≤ 700 ms command→action and ≤ 8 %/hour battery in driving mode.

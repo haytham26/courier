@@ -11,6 +11,6 @@ The research that the bench is built on is in
 [`docs/design/DIRECTIONS.md`](DIRECTIONS.md).
 
 The tables of both documents are generated from the snapshots in `docs/design/evidence/` by
-`scripts/build-design-bench-tables.mjs` and
-`scripts/build-design-research-tables.mjs`, so a version or a licence cannot be wrong in the
+`scripts/design/build-design-bench-tables.mjs` and
+`scripts/design/build-design-research-tables.mjs`, so a version or a licence cannot be wrong in the
 document without the snapshot changing too.

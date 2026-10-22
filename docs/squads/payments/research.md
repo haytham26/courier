@@ -65,7 +65,7 @@ Candidates examined: **38**.
 - **REJECT** Lago / Meteroid / Flexprice / Frappe Books (**AGPL-3.0** - clean-room study only, never a dependency, never quoted code) · Akaunting (**BSL** - banned by CONSTRAINTS.md) · Dub (source-available) · InvoicePlane / NocoBase /
   Vendure (custom or dual licences) · twenty / appsmith · `juspay/hyperswitch`, `medusajs/medusa`, `saleor/saleor` (wrong domain or language) · `tipsi/tipsi-stripe` (archived) · a WebView checkout as the primary path (fails the Play policy
   for digital goods and is bad for a driving app; keep only as a documented fallback if policy ever requires it).
-- **ADR trigger** introducing a hosted entitlement service (RevenueCat) into the product boundary, or deciding not to use Play Billing on Android, is a locked-decision change - ADR + `docs/DECISIONS.md`.
+- **ADR trigger** introducing a hosted entitlement service (RevenueCat) into the product boundary, or deciding not to use Play Billing on Android, is a locked-decision change - ADR + `docs/decisions/DECISIONS.md`.
 
 ## UNVERIFIED
 

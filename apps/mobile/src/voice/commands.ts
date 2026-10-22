@@ -4,7 +4,7 @@
  * The parser is the offline path of the voice: it reads the sentence the
  * courier said and turns it into one command of the catalogue in
  * `VoiceService.ts`, without a network and without the language model. The
- * wording follows the server catalogue in `apps/api/app/agents/copilot.py`,
+ * wording follows the server catalogue in `services/api/app/agents/copilot.py`,
  * so the same sentence means the same thing online and offline.
  *
  * The map verbs - the map mode and the camera - are the ones MASTER_EXECUTION

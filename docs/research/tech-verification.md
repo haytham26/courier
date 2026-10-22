@@ -149,7 +149,7 @@ gdal_translate -of PMtiles LINZ_COG_URL christchurch_aerial.pmtiles
 | **NZ Property Titles** | LINZ (paid) | Restricted | — | — | Gate codes, unit numbers (future) |
 | **GNAF (AU)** | Geoscape | Paid | ~14M | Quarterly | Australia expansion |
 
-**Import Pipeline:** `apps/api/jobs/linz_import.py` — Arq job, weekly, upserts with `pg_trgm` fuzzy index.
+**Import Pipeline:** `services/api/jobs/linz_import.py` — Arq job, weekly, upserts with `pg_trgm` fuzzy index.
 
 ---
 

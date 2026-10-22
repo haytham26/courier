@@ -54,10 +54,13 @@ jobs:
             echo "keystore_path=$RUNNER_TEMP/courier.keystore" >> "$GITHUB_OUTPUT"
           else
             echo "signed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::No signing key in the GitHub Secrets: building the unsigned debug APK. Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD to sign the release (see docs/FOUNDER_TODO.md)."
+            echo "::warning::No signing key in the GitHub Secrets: building the unsigned debug APK. Add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD to sign the release (see docs/status/FOUNDER_TODO.md)."
           fi
 
       - name: Build the APK
+        # No EXPO_PUBLIC_DESIGN_LAB and no EXPO_PUBLIC_E2E here: the design
+        # lab and the compatibility screen are diagnostics, and the release
+        # build does not carry them (MASTER_EXECUTION section 16.1.7).
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}

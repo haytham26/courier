@@ -43,7 +43,7 @@ jobs:
           enable-cache: true
 
       - name: Install the API dependencies
-        run: uv sync --directory apps/api --extra dev
+        run: uv sync --directory services/api --extra dev
 
       - name: Install the voice service dependencies
         run: uv sync --directory services/courier-voice --extra dev

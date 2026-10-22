@@ -16,7 +16,7 @@ advisories + supply chain · pricing · what it does better than our current cho
 | Camera in the app | **none yet** — `apps/mobile/package.json` pins **`react-native-vision-camera` 5.2.3** and **`react-native-nitro-modules` 0.37.1**, but **no camera screen exists** (`docs/squads/scanner/README.md`: "Code: `apps/mobile/src/scanner (to be created)`") |
 | Expo camera modules | **not installed** — no `expo-camera`, no `expo-image-manipulator`, no `expo-media-library` in `package.json` (`expo-file-system` ~58.0.9 **is** installed) |
 | Permissions | `app.json` `android.permissions` has **no `CAMERA`** and **no `READ_MEDIA_IMAGES`**; `ios.infoPlist` has **no `NSCameraUsageDescription`**; `app.json` sets **no `android.minSdkVersion`** |
-| POD | **not started** — `docs/PARITY.md` row 23 (photo POD), row 24 (signature), row 26 (barcode) are all `Planned (task)` → **T7.9**; `docs/MASTER_EXECUTION.md` step 9 "POD (photo/signature/voice) + failed-delivery reasons" |
+| POD | **not started** — `docs/status/PARITY.md` row 23 (photo POD), row 24 (signature), row 26 (barcode) are all `Planned (task)` → **T7.9**; `docs/plan/MASTER_EXECUTION.md` step 9 "POD (photo/signature/voice) + failed-delivery reasons" |
 | Product rules that bind this area | **D4**: the default proof of delivery is the driver's word **"delivered"** — photo/signature/barcode are **optional**. **D2**: everything must be reachable by voice. **D5**: customer SMS is optional. V4 §10.2: the scanner is **on-device and offline**; "no images uploaded unless the driver chooses POD" |
 | Squad targets (the bar) | `docs/squads/scanner/README.md`: **≤ 1.5 s per label** on a mid-range Android; **≥ 97 % correct recipient address**; **≤ 1 % wrong-block**. For POD we set the same shape: **a legible, durable POD photo in ≤ 1.5 s**, offline-safe |
 | Locked decisions | Expo SDK 58 · RN New Architecture only · offline-first · **no PII leaving the device without consent** · plain NZ English · no emoji · APK ≤ 80 MB · cold start ≤ 2 s · battery ≤ 8 %/h |
@@ -403,7 +403,7 @@ those are the *2026* defects on *our exact pin* (5.2.3).
 
 **Commits:** `1a69f29` **2026-10-14** "fix: prevent CameraX executor starvation (#4218)" — Ismael Moreira ·
 `91bae1f` 2026-08-29 "chore: Update links for the move to the margelo org (#4176)" — Marc Rousavy (the repo
-**moved from `mrousavy/` to `margelo/`**; our `docs/LICENSES.md` still says `react-native-vision-camera | unknown`
+**moved from `mrousavy/` to `margelo/`**; our `docs/product/LICENSES.md` still says `react-native-vision-camera | unknown`
 and must be corrected) · `3becbfd` 2026-08-26 "feat: Add native zoom gesture change listener (#4171)" ·
 `050ceac` 2026-08-26 "feat: Add native tap-to-focus lifecycle listeners (#4172)" · **`1ca9b7b` 2026-08-23 "feat:
 expose metadata from capturePhotoToFile (#4170)"** — this is the POD geo/timestamp story · `8015396` 2026-08-21
@@ -448,7 +448,7 @@ record" · #4203 (2026-10-02) "`supportedPixelFormats` contains 'unknown' (JPEG 
 
 **Verdict.** Keep the 5.2.3 pin for the **scanner** (the OCR squad's decision, with the frame-processor
 requirement), but the **POD still camera and the manifest scan should be `expo-camera`** until VisionCamera's
-2026 blockers are resolved and a v5.3 lands. Update `docs/LICENSES.md` (it says "unknown" for VisionCamera; the
+2026 blockers are resolved and a v5.3 lands. Update `docs/product/LICENSES.md` (it says "unknown" for VisionCamera; the
 licence is MIT) and the repo URL (`margelo/`, not `mrousavy/`).
 
 ### 3.2 `expo/expo` → `packages/expo-camera` (C1)
@@ -595,12 +595,12 @@ never leaves the device until the driver confirms the POD**.
 ## 4. Benchmark — **UNVERIFIED: no eval set exists**
 
 **I did not run a benchmark and I will not invent one.** `docs/squads/scanner/benchmarks/README.md` says the
-harness is to be created with the first implementation; `docs/squads/scanner/eval/` does not exist; there is no
+harness is to be created with the first implementation; `packages/eval/scanner/` does not exist; there is no
 POD eval set and no camera screen. Every figure below is **UNVERIFIED** until the harness exists.
 
 **The sets that must be built:**
 
-1. **`docs/squads/scanner/eval/labels/`** — ≥ 300 NZ courier label images (the scanner squad's set) — used for
+1. **`packages/eval/scanner/labels/`** — ≥ 300 NZ courier label images (the scanner squad's set) — used for
    the **≤ 1.5 s per label** and **≥ 97 % correct address** gates.
 2. **`docs/squads/pod/eval/`** — ≥ 200 POD photographs taken on a **mid-range Android** in real conditions:
    daylight, shade, **night (van interior, torch)**, rain on the lens, parcel at an angle, parcel behind a
@@ -623,7 +623,7 @@ POD eval set and no camera screen. Every figure below is **UNVERIFIED** until th
 | **Offline behaviour** | with the phone in airplane mode for a whole shift: **every POD photo is captured, compressed, queued and reconciled later**, with **no duplicate upload** and **no lost photo** | Maestro airplane-mode scenarios (V4 §13.3) over the `pod_capture` table; assert idempotency on the photo id. **UNVERIFIED.** |
 | **Manifest flow** | a 3-page A4 manifest photographed at an angle → **all 3 pages detected**, ≤ **6 s** total, **0 images uploaded** | `scanDocumentAsync` page detection + our on-device OCR, on the manifest eval set. **UNVERIFIED.** |
 
-## 5. What we are missing → rows for `docs/PARITY.md`
+## 5. What we are missing → rows for `docs/status/PARITY.md`
 
 The CEO merges these. The **Spoke** column is filled **only** with facts verified in
 `docs/study/spoke/TEARDOWN.md` (read 2026-10-21).
@@ -766,7 +766,7 @@ Re-run on the first working day of each month (V4 §11.3). A camera/image candid
   30 requests/minute and the budget went to the repository scans). The issue lists above are the **first page**
   of `issues?state=open&per_page=30` and of `issues?since=2026-01-01`; GitHub's `since` filters by **updated**,
   so each item carries its real created date.
-- **`docs/LICENSES.md` says `react-native-vision-camera | unknown`** — the licence is **MIT** (verified in the
+- **`docs/product/LICENSES.md` says `react-native-vision-camera | unknown`** — the licence is **MIT** (verified in the
   repository and in the npm metadata); the entry is stale, as is the repo URL (it moved from `mrousavy/` to
   `margelo/` on 2026-08-29, commit `91bae1f` / PR #4176). **The licence ledger must be corrected by the Platform
   squad; this role does not edit it.**

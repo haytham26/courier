@@ -102,7 +102,7 @@ the courier reads one and believes the other. The seven steps of the scale are i
 set with tabular figures.
 
 Both licences are SIL OFL 1.1, which covers use in a shipped application and allows the font to be
-embedded in the binary. The notice goes into `docs/LICENSES.md` with the rest of the ledger.
+embedded in the binary. The notice goes into `docs/product/LICENSES.md` with the rest of the ledger.
 
 ---
 

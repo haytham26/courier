@@ -19,7 +19,7 @@ applies to `facebook/mms-tts-*`, `nllb-200`, `xls-r` (CC-BY-NC-4.0) and the open
 models (CC BY-NC-SA). The Silero VAD weights' licence is **contradictory** in the repo (MIT file vs
 a CC BY-NC badge) — UNVERIFIED until we read the file ourselves.
 
-**Change:** D22 updated; [`ADR-004`](./adr/ADR-004-voice-service-licences.md) records sherpa-onnx +
+**Change:** D22 updated; [`ADR-004`](../../decisions/adr/ADR-004-voice-service-licences.md) records sherpa-onnx +
 Kokoro on device and Qwen3-ASR/TTS (Apache-2.0 weights) on the private service, and makes the
 **licence ledger a shipped surface**: every engine reports its code *and* weights licence, and a
 non-commercial weight in the tree fails the build.
@@ -109,7 +109,7 @@ for every assistant action.
 
 1. **The benchmark gap.** Every benchmark in the sprint is UNVERIFIED: the voice, scanner, address,
    routing, maps and platform eval sets do not exist. The sprint chose well, but nothing is measured
-   yet. The scorecard ([QUALITY_SCORECARD.md](./QUALITY_SCORECARD.md)) tracks it.
+   yet. The scorecard ([QUALITY_SCORECARD.md](../../status/QUALITY_SCORECARD.md)) tracks it.
 2. **The star-trend field of every evidence card is UNVERIFIED** — the token has no stargazer
    scope. A monthly CI snapshot backfills it.
 3. **Licence traps beyond OmniVoice** (Silero VAD's contradictory licence, the HF cards that

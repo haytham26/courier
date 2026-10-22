@@ -8,10 +8,10 @@
 
 | Item                                            | Verified 2026-10-21                                                                                                                               |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Routing service                                 | **none** — `services/routing` does not exist; `apps/api/pyproject.toml` has **no routing dependency at all** (FastAPI + LangGraph + Pipecat only) |
+| Routing service                                 | **none** — `services/routing` does not exist; `services/api/pyproject.toml` has **no routing dependency at all** (FastAPI + LangGraph + Pipecat only) |
 | Our choice (FINAL_PROMPT §3.3)                  | **Valhalla + VROOM + OR-Tools**; OSRM for matrices (SPRINT-SUMMARY)                                                                               |
 | Squad targets (`docs/squads/routing/README.md`) | within **5 % of best-known** · **200 stops ≤ 5 s** · template rebuilds a day in one tap                                                           |
-| Runtime                                         | `apps/api` is Python **≥3.11,<3.13**, FastAPI, `uv`                                                                                               |
+| Runtime                                         | `services/api` is Python **≥3.11,<3.13**, FastAPI, `uv`                                                                                               |
 
 Two things must not be conflated. The **routing engine** (graph → matrix, route, map-matching) and the **VRP solver** (order the stops, split them across vehicles/days, honour time windows) are different products with different licences, runtimes and maintainers; a courier day needs both. The **200-stops-in-5-seconds** budget belongs to the **VRP solver** (once the matrix exists) and to the **matrix build**, not to the router.
 
@@ -186,7 +186,7 @@ included"** (19 comments, open since 2026-02-25 — directly hits "one van per z
 
 ## 4. Benchmarks (V4 §12.5) — **UNVERIFIED: no eval set exists**
 
-**I did not run a benchmark and I will not invent one.** `docs/squads/routing/benchmarks/README.md` says "Harness: _to be created with the first implementation_"; `docs/squads/routing/eval/` does not exist; `apps/api` has no solver installed. Everything below is **UNVERIFIED** until the set exists.
+**I did not run a benchmark and I will not invent one.** `docs/squads/routing/benchmarks/README.md` says "Harness: _to be created with the first implementation_"; `docs/squads/routing/eval/` does not exist; `services/api` has no solver installed. Everything below is **UNVERIFIED** until the set exists.
 
 **The set that must be built (name + shape):**
 
@@ -208,7 +208,7 @@ included"** (19 comments, open since 2026-02-25 — directly hits "one van per z
 
 **First benchmark to run:** `RC208` + `lrc206` + `C201R0.25` under **PyVRP** and **VROOM** with the same matrix and the same 5 s budget, plus the GA baseline (C12). Nothing is declared "the winner" before this table exists (V4 §13.1: no adoption without the benchmark once the eval set exists).
 
-## 5. What we are missing → rows for `docs/PARITY.md`
+## 5. What we are missing → rows for `docs/status/PARITY.md`
 
 The CEO merges these. Each row is a capability that exists in the best OSS repos or in the competitors (`docs/study/spoke/`) and that we do not have today.
 
@@ -255,7 +255,7 @@ The CEO merges these. Each row is a capability that exists in the best OSS repos
 | cuOpt correctness bug (#904)                                                              | Medium   | Do not adopt until fixed; no GPU runner today.                                                              |
 | Matrix cost/memory at scale                                                               | Medium   | 200×200 is trivial; the risk is 50 000×50 000 — mpee's streaming idea is the answer if we ever need it.     |
 | OSM/ODbL attribution for derived matrices                                                 | Medium   | Attribution in the API and the app; the ODbL boundary goes to the founder + counsel.                        |
-| GPL in the dependency tree (ORS in VROOM's engine list)                                   | Medium   | Config lint: no ORS/Nominatim URLs; `docs/LICENSES.md` + the CI licence gate.                               |
+| GPL in the dependency tree (ORS in VROOM's engine list)                                   | Medium   | Config lint: no ORS/Nominatim URLs; `docs/product/LICENSES.md` + the CI licence gate.                               |
 | Time-dependent VRP has no maintainable OSS option                                         | Medium   | Static matrices now; revisit kayros/mpee when ETAs need traffic (T7.10).                                    |
 
 ## 8. What I could not verify

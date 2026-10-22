@@ -11,10 +11,10 @@
 | Our on-device choice | `react-native-sherpa-onnx@0.4.4` (MIT, npm published 2026-09-08) in `apps/mobile/package.json`; a **TurboModule** over `sherpa-onnx`, which it downloads as pinned prebuilts (`third_party/sherpa-onnx-prebuilt/{IOS,ANDROID}_RELEASE_TAG` = **`sherpa-onnx-ios-v1.12.35-1` / `sherpa-onnx-android-v1.12.35-1`**, i.e. sherpa-onnx **v1.12.35**, released 2026-04-03) |
 | Our stack | `expo` `~58.0.14`, `react-native` `0.88.0`, `expo-audio` `58.0.9`, `react-native-nitro-modules` `0.37.1` (`apps/mobile/package.json`). **The brief says RN 0.82; the lockfile says RN 0.88.0 — the lockfile wins, and this file uses 0.88.0.** |
 | What our app actually calls | `apps/mobile/src/voice/VoiceService.ts` imports `react-native-sherpa-onnx/stt` and `/tts` only; its `VoiceConfig` interface declares `vadModelPath` (line 24) and an optional `kwsModelPath` (line 25), and **neither is read anywhere in the module today**. The published npm package exports `./stt`, `./tts`, `./vad`, `./diarization`, `./enhancement`, `./separation`, `./alignment`, `./download`, `./extraction`, `./audio` — **there is no `./kws` export and no keyword-spotting code in the wrapper at all** (published file list + export map read from unpkg 2026-10-21). |
-| Server voice service | **does not exist** — `services/voice` is absent from the repository. `docs/LICENSES.md` exists but every row still reads `licence = unknown`. |
-| Eval set | **does not exist** — `docs/squads/voice/eval/` is absent; only the *specification* `docs/squads/voice/EVAL.md` (2026-10-21) and `docs/squads/voice/benchmarks/README.md` exist. |
+| Server voice service | **does not exist** — `services/voice` is absent from the repository. `docs/product/LICENSES.md` exists but every row still reads `licence = unknown`. |
+| Eval set | **does not exist** — `packages/eval/voice/` is absent; only the *specification* `docs/squads/voice/EVAL.md` (2026-10-21) and `docs/squads/voice/benchmarks/README.md` exist. |
 | Squad targets | `docs/squads/voice/README.md`: WER ≤ 8 % (NZ English quiet) / ≤ 15 % (van noise) on addresses · intent ≥ 97 % · wake false accepts ≤ 1/h, misses ≤ 3 % · command→action ≤ 700 ms · battery ≤ 8 %/h · core commands fully offline |
-| Hard budget | `CONSTRAINTS.md`: **APK ≤ 80 MB** (excluding map/voice packs) · cold start ≤ 2 s · battery ≤ 8 %/h · **no GPL/AGPL/SSPL/Commons-Clause/CC-NC/FSL/BUSL in the shipped app** (`scripts/check-licenses.mjs`) |
+| Hard budget | `CONSTRAINTS.md`: **APK ≤ 80 MB** (excluding map/voice packs) · cold start ≤ 2 s · battery ≤ 8 %/h · **no GPL/AGPL/SSPL/Commons-Clause/CC-NC/FSL/BUSL in the shipped app** (`scripts/ci/check-licenses.mjs`) |
 | Locked decisions | Expo SDK 58 · RN 0.88 · **New Architecture only** · on-device voice by default (D1/D2/D12) · all languages from the start (D3) · ADR-004: sherpa-onnx + Kokoro on device, no non-commercial weights in the product, **the licence ledger is a shipped surface** (not a spreadsheet) |
 
 ### The bar in one sentence
@@ -115,7 +115,7 @@ All reads on **2026-10-21**. GitHub reads went through `scripts\gh.ps1` (token f
 
 **C33 — `espeak-ng/espeak-ng`** https://github.com/espeak-ng/espeak-ng — **6 961 ★** /1 325 f · created 2015-12-08 · last release **1.52.0, 2024-12-12** · trend proxy **67 commits/90 d, 9 humans** · issues 652 open · **GPL-3.0** · note: **sherpa-onnx removed espeak-ng and piper-phonemize from its own build in PR #4055 (merged 2026-10-16)** — upstream got the same licence answer · **DECISION: REJECT (copyleft).**
 
-**C34 — `coqui-ai/TTS`** https://github.com/coqui-ai/TTS — **46 140 ★** /6 167 f · created 2020-05-20 · last push 2024-08-16 · trend proxy 0 commits/90 d · issues 3 open · **MPL-2.0** — **not on our allow-list** in `CONSTRAINTS.md`/`docs/LICENSES.md` (MIT, Apache-2.0, BSD-2/3, ISC, 0BSD, Unlicense, CC0) · **DECISION: REJECT (licence not allow-listed + dormant).**
+**C34 — `coqui-ai/TTS`** https://github.com/coqui-ai/TTS — **46 140 ★** /6 167 f · created 2020-05-20 · last push 2024-08-16 · trend proxy 0 commits/90 d · issues 3 open · **MPL-2.0** — **not on our allow-list** in `CONSTRAINTS.md`/`docs/product/LICENSES.md` (MIT, Apache-2.0, BSD-2/3, ISC, 0BSD, Unlicense, CC0) · **DECISION: REJECT (licence not allow-listed + dormant).**
 
 **C35 — `SWivid/F5-TTS`** https://github.com/SWivid/F5-TTS — **15 428 ★** /2 249 f · created 2024-10-08 · last push 2026-10-14 · issues 65 open · **code MIT; weights CC-BY-NC** — verbatim: *"Our code is released under MIT License. The pre-trained models are licensed under the CC-BY-NC license due to the training data Emilia"* · **DECISION: REJECT (CC-NC weights — the same trap as OmniVoice).**
 
@@ -260,7 +260,7 @@ All reads on **2026-10-21**. GitHub reads went through `scripts\gh.ps1` (token f
 
 *Behaviour checked — the weights licence, verbatim (2026-10-21).* Model card, "## License": **"Our code is released under the Apache 2.0 License. The pre-trained model is licensed under the CC-BY-NC due to constraints from its training data (e.g., Emilia)."** The bundled `audio_tokenizer/` weights are under the **Boson Higgs Audio 2 Community License Agreement** — a Llama-3-style licence with attribution-display obligations, a prohibition on using outputs to improve other models, and an expanded licence required above 100 000 MAU. The HF card itself carries **no `license:` tag**, so the SPDX id of the main checkpoint is **UNVERIFIED** and the README text is the authoritative statement.
 
-*Behaviour checked — what that means for us.* `CONSTRAINTS.md` forbids CC-NC in the shipped app; ADR-004 says the same and adds that **the licence ledger is a shipped surface**. The research confirms ADR-004's finding unchanged — **this is not new information and does not alter a locked decision**. What it *does* support is ADR-004's superseding text (D23): the founder's written legal advice (held in `FOUNDER_TODO.md`, reference only) permits studying, modifying and fine-tuning OmniVoice into our own model, provided the provenance is recorded in `docs/LICENSES.md`, the engine stays behind a swappable interface, and a commercially-licensed alternative keeps running.
+*Behaviour checked — what that means for us.* `CONSTRAINTS.md` forbids CC-NC in the shipped app; ADR-004 says the same and adds that **the licence ledger is a shipped surface**. The research confirms ADR-004's finding unchanged — **this is not new information and does not alter a locked decision**. What it *does* support is ADR-004's superseding text (D23): the founder's written legal advice (held in `FOUNDER_TODO.md`, reference only) permits studying, modifying and fine-tuning OmniVoice into our own model, provided the provenance is recorded in `docs/product/LICENSES.md`, the engine stays behind a swappable interface, and a commercially-licensed alternative keeps running.
 
 *Behaviour checked — capability and its limits.* The model card (read 2026-10-21) states **"over 600 languages"**, zero-shot voice cloning and voice design, and the paper `arXiv 2604.00688`. The per-language tag list (`mi`/`hi`/`ar`/`zh`/`sm`/`to`) was **not re-read in this pass** and is **UNVERIFIED** here — the previous version of this file recorded it from the same card. **te reo Māori is not a known tag** in any case, so it would be handled as an unwritten-accent code-switch inside `en` — which is precisely why the eval set must exist before we commit. It is **server-only** (Python + PyTorch).
 
@@ -270,7 +270,7 @@ All reads on **2026-10-21**. GitHub reads went through `scripts\gh.ps1` (token f
 
 ## 4. Benchmark — **UNVERIFIED: our eval set does not exist**
 
-**I did not run a benchmark and I will not invent one.** `docs/squads/voice/eval/` **does not exist** (verified 2026-10-21); only the specification `docs/squads/voice/EVAL.md` (2026-10-21) and `docs/squads/voice/benchmarks/README.md` exist, and `apps/mobile` has no voice benchmark harness. Every number in this section is either (a) a **vendor claim quoted with its source**, or (b) **UNVERIFIED**. The voice squad's working agreement #1 ("the benchmark exists *before* the library is chosen") is still unmet.
+**I did not run a benchmark and I will not invent one.** `packages/eval/voice/` **does not exist** (verified 2026-10-21); only the specification `docs/squads/voice/EVAL.md` (2026-10-21) and `docs/squads/voice/benchmarks/README.md` exist, and `apps/mobile` has no voice benchmark harness. Every number in this section is either (a) a **vendor claim quoted with its source**, or (b) **UNVERIFIED**. The voice squad's working agreement #1 ("the benchmark exists *before* the library is chosen") is still unmet.
 
 ### 4.1 The set we must build — the 200-utterance NZ courier-phrase set
 
@@ -310,7 +310,7 @@ One command regenerates the set, one scores a candidate (`--manifest --engine --
 
 **Read of the table:** our ≤ 80 MB APK budget can hold **a VAD (0.2 MB) + a KWS model (15 MB) + one streaming English ASR model (~56 MB) = ~71 MB**, and the TTS must be a **separate downloadable pack** (Kokoro 100.8 MB or KittenTTS 30.5 MB). The published RTF and the 2.5×-file-size RAM behaviour mean the **first benchmark must include a memory measurement on the CI emulator and on the mid-range device**, not just a WER number.
 
-## 5. What we are missing → rows for `docs/PARITY.md`
+## 5. What we are missing → rows for `docs/status/PARITY.md`
 
 The CEO merges these. The **Spoke (2026-10-20)** column is filled **only** with facts verified in `docs/study/spoke/TEARDOWN.md` (read 2026-10-21); where Spoke's public sources are silent, the cell is left empty rather than guessed.
 
@@ -339,7 +339,7 @@ The CEO merges these. The **Spoke (2026-10-20)** column is filled **only** with 
 7. **Server side: `Qwen3-ASR` / `Qwen3-TTS` (Apache-2.0 weights)** — the licence-safe path ADR-004 already names; `Parakeet TDT` (CC-BY-4.0) as the measured fallback; `faster-whisper` (MIT) for a cheap Whisper path.
 8. **OmniVoice stays out of the shipped product** (CC-BY-NC weights + Boson community licence). ADR-004 is unchanged. **ADR proposal to the CEO** (not a decision change): add an explicit ledger entry format for founder-licensed derived models, and keep the engine behind the swappable interface ADR-004 already requires.
 9. **Never ship:** openWakeWord's bundled models (CC-BY-NC-SA), F5-TTS weights (CC-BY-NC), piper1-gpl and espeak-ng (GPL-3.0), Coqui TTS (MPL-2.0, not allow-listed), fish-speech (community licence), ten-vad (Agora field-of-use), Porcupine/Cheetah (proprietary, key-gated).
-10. **The licence ledger becomes a shipped surface** (ADR-004 §4): the build reports the licence of the code **and** of the weights for every engine it can load, a non-commercial or unknown weight makes that engine unavailable **with the reason**, and the CI gate fails on a non-commercial weight present in the tree. `docs/LICENSES.md` still lists every dependency as `licence = unknown` — that table must be regenerated before any release.
+10. **The licence ledger becomes a shipped surface** (ADR-004 §4): the build reports the licence of the code **and** of the weights for every engine it can load, a non-commercial or unknown weight makes that engine unavailable **with the reason**, and the CI gate fails on a non-commercial weight present in the tree. `docs/product/LICENSES.md` still lists every dependency as `licence = unknown` — that table must be regenerated before any release.
 
 ## 7. Risks and fallbacks
 
@@ -377,7 +377,7 @@ Re-check on the first Monday of each month; each item has a **trigger**, not a v
 | 12 | `mybigday/whisper.rn` | a stable 0.8.x, or 16 KB alignment | re-test on RN 0.88; re-check Parakeet v3 sizes |
 | 13 | `software-mansion/react-native-executorch` | a release that claims Expo SDK 58 support **and** adds speech KWS | benchmark it on the same harness; if it wins on WER and memory, re-open the "one engine" rule with an ADR |
 | 14 | `pipecat-ai/smart-turn` | a release after 2026-01-29 | measure on-device cost before moving it to the device path |
-| 15 | HF licence tags for every model we ship | any change to `license:` on our model cards | the CI licence gate must fail; re-read `docs/LICENSES.md` (currently all `unknown`) |
+| 15 | HF licence tags for every model we ship | any change to `license:` on our model cards | the CI licence gate must fail; re-read `docs/product/LICENSES.md` (currently all `unknown`) |
 | 16 | npm downloads for our bindings | a 3× drop or a 3× rise in 30 days | a drop is a maintenance warning for a ★41 wrapper; a rise means a competitor shipped |
 | 17 | `CONSTRAINTS.md` performance budgets | any change to the APK/battery/latency numbers | re-run §4.2 on the new profile |
 | 18 | `docs/study/spoke/TEARDOWN.md` | a Spoke changelog entry about voice | re-open PARITY rows 1–11; a Spoke on-device wake word would erase row 3's edge |
@@ -393,7 +393,7 @@ Re-check on the first Monday of each month; each item has a **trigger**, not a v
 | "Kokoro: no Arabic" | confirmed for Kokoro, but the **sherpa/Nabra** path covers Arabic | update the TTS plan |
 | "sherpa-onnx pinned version not stated" | the wrapper pins **`sherpa-onnx-ios-v1.12.35-1` / `sherpa-onnx-android-v1.12.35-1`** → engine **v1.12.35 (2026-04-03)** vs upstream **v1.13.8 (2026-09-10)** | we are **one minor version behind**; that is now a concrete task |
 | "no KWS binding in the wrapper" (not previously checked) | confirmed: no `./kws` export, no keyword-spotting file in the published package | new finding — the wake-word plan needs binding work |
-| "eval set: `docs/squads/voice/eval/` is absent" | still absent, but **`docs/squads/voice/EVAL.md` (2026-10-21) now specifies** the set, the manifest schema and the harness contract | the specification exists; the data does not |
+| "eval set: `packages/eval/voice/` is absent" | still absent, but **`docs/squads/voice/EVAL.md` (2026-10-21) now specifies** the set, the manifest schema and the harness contract | the specification exists; the data does not |
 | "OmniVoice weights are CC-BY-NC" | **re-verified verbatim** from the model card, plus the Boson Higgs Audio 2 Community Licence for `audio_tokenizer/` | unchanged — ADR-004 stands |
 | "sherpa-onnx is the only stack covering STT+TTS+VAD+custom-KWS" | **still true for on-device Android**, and sherpa now also runs Moonshine, SenseVoice, FunASR-Nano, FireRedASR, **Qwen3-ASR**, **Omnilingual-ASR**, Canary, NeMo and Paraformer | the engine grew; the binding did not |
 | "candidates examined: 38" | **60 cards** this round, incl. 4 projects the previous round never saw (`heed-wakeword`, `react-native-voice-activator`, `react-native-nitro-wakeword`, `expo-sherpa-onnx`) | the KWS space changed in 2026 and the previous round missed it |

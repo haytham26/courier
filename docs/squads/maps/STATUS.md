@@ -25,7 +25,7 @@ Updated: 2026-10-22 (MASTER_EXECUTION §11: the view modes, the toggles, the fre
   `apps/mobile/src/voice/__tests__/commandParser.test.ts`.
 - **The voice camera** (`apps/mobile/src/maps/cameraCommands.ts`): the spoken
   camera verbs adapted from **God's Eye View** (MIT, read 2026-10-22) with its
-  notice kept, and the provenance in `docs/LICENSES.md`.
+  notice kept, and the provenance in `docs/product/LICENSES.md`.
 - **The 3D buildings in the style** (`apps/mobile/src/maps/styles.ts`): the
   fill-extrusion layer, the soft light of the theme and the graceful 2D
   fallback when the pack has no outlines.
@@ -33,7 +33,7 @@ Updated: 2026-10-22 (MASTER_EXECUTION §11: the view modes, the toggles, the fre
   (`apps/mobile/src/maps/offlinePack.ts`): the `buildings` section, with the
   licence of **every** input of the bake.
 - **The build script for the buildings**
-  (`scripts/build-3d-buildings.mjs`): it checks the licence of every input,
+  (`scripts/data/build-3d-buildings.mjs`): it checks the licence of every input,
   refuses Google Photorealistic 3D Tiles and Cesium ion by name, refuses an
   unknown source, prints the plan and stops, and writes the licence and the
   credit of every input into the manifest. Tested in
@@ -42,7 +42,7 @@ Updated: 2026-10-22 (MASTER_EXECUTION §11: the view modes, the toggles, the fre
   (`apps/mobile/src/maps/config.ts`): the endpoint and the licence of the
   provider both have to be in the build, and without them the mode says so and
   the map stays flat.
-- **The ADR** (`docs/adr/ADR-005-map-view-modes.md`): the modes, the rule, the
+- **The ADR** (`docs/decisions/adr/ADR-005-map-view-modes.md`): the modes, the rule, the
   storage, the toggles, the 3D buildings, the voice camera and the founder
   gate for a photo-real mode.
 - **The courier style** (`apps/mobile/src/maps/styles.ts`): one recipe generated
@@ -66,7 +66,7 @@ Updated: 2026-10-22 (MASTER_EXECUTION §11: the view modes, the toggles, the fre
   position puck, the attribution on the map, the four map modes, the settings
   sheet and the voice camera. The `map-screen` test id is kept. Tested in
   `apps/mobile/app/(tabs)/__tests__/map.test.tsx`.
-- **The pack build script** (`scripts/build-pmtiles.mjs`): it checks the terms
+- **The pack build script** (`scripts/data/build-pmtiles.mjs`): it checks the terms
   of the tile source, refuses the sources whose terms forbid our offline use,
   prints the plan and stops, and writes the licence and the attribution into
   the pack manifest.
@@ -85,8 +85,8 @@ Updated: 2026-10-22 (MASTER_EXECUTION §11: the view modes, the toggles, the fre
 | Four driver-selectable map modes       | tap and voice, remembered per driver                 | done                                                                        | `apps/mobile/src/maps/viewModes.ts`, `apps/mobile/src/voice/commands.ts` |
 | The satellite mode                     | online only, behind a licensed provider              | done - the seam is in place, no provider is licensed                        | `apps/mobile/src/maps/config.ts`                                         |
 | The toggles in a sheet under the map   | buildings, traffic, closures, weather, labels, theme | done                                                                        | `apps/mobile/src/maps/MapSettingsSheet.tsx`                              |
-| The 3D buildings                       | free, offline, drawn from the pack                   | the style and the build script are done, **the pack is not built**          | `apps/mobile/src/maps/styles.ts`, `scripts/build-3d-buildings.mjs`       |
-| The licence of every input of the bake | checked by the script, recorded in the manifest      | done                                                                        | `scripts/build-3d-buildings.mjs`                                         |
+| The 3D buildings                       | free, offline, drawn from the pack                   | the style and the build script are done, **the pack is not built**          | `apps/mobile/src/maps/styles.ts`, `scripts/data/build-3d-buildings.mjs`       |
+| The licence of every input of the bake | checked by the script, recorded in the manifest      | done                                                                        | `scripts/data/build-3d-buildings.mjs`                                         |
 | Full Canterbury offline                | the pack on the device                               | **not built** - the pack is about 50 MB and has to be built from an extract | the build script, `docs/squads/maps/README.md`                           |
 | Pack size                              | 50 MB or under                                       | **UNVERIFIED**                                                              | no pack has been built                                                   |
 | Pan and zoom                           | 60 fps                                               | **UNVERIFIED**                                                              | no perfetto trace exists                                                 |

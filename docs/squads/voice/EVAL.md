@@ -2,13 +2,13 @@
 
 **Area:** V4 §10.1 (voice squad: ≥ 500 utterances, languages/accents/noise, NZ addresses, numbers, self-corrections) · **Squad:** Voice
 **Date:** 2026-10-21 · **Role:** Voice squad research lead · **Status:** specification — the set and the harness do not exist yet
-**Depends on:** `docs/research/2026/on-device-stt-tts-vad-kws.md` (targets + the slice table this refines), `docs/research/2026/multilingual-voice-i18n.md` (code-switch slice), `docs/squads/voice/README.md` (release gate), `docs/MASTER_EXECUTION.md` §7.9 (data hygiene), `docs/squads/voice/OWN-MODEL.md` (the model this set scores), `docs/study/omnivoice/SPEC.md` (the intelligibility bar).
+**Depends on:** `docs/research/2026/on-device-stt-tts-vad-kws.md` (targets + the slice table this refines), `docs/research/2026/multilingual-voice-i18n.md` (code-switch slice), `docs/squads/voice/README.md` (release gate), `docs/plan/MASTER_EXECUTION.md` §7.9 (data hygiene), `docs/squads/voice/OWN-MODEL.md` (the model this set scores), `docs/study/omnivoice/SPEC.md` (the intelligibility bar).
 
 ---
 
 ## 0. Why this set comes first
 
-Working agreement #1 of the voice squad: **the benchmark exists before the library is chosen.** Today every voice number we hold is a vendor claim; `docs/squads/voice/eval/` is absent, so no candidate (Kokoro, Qwen3-ASR/TTS, Piper, sherpa-onnx, OmniVoice, our own weights) can be compared on evidence. This document is the contract for building it. **The harness itself is out of scope here** — this file specifies the data, the manifest, the consent rules and the scoring so the harness can be written against it.
+Working agreement #1 of the voice squad: **the benchmark exists before the library is chosen.** Today every voice number we hold is a vendor claim; `packages/eval/voice/` is absent, so no candidate (Kokoro, Qwen3-ASR/TTS, Piper, sherpa-onnx, OmniVoice, our own weights) can be compared on evidence. This document is the contract for building it. **The harness itself is out of scope here** — this file specifies the data, the manifest, the consent rules and the scoring so the harness can be written against it.
 
 Two rules that shape everything below:
 
@@ -51,10 +51,10 @@ M4 and M9 are measured on continuous non-speech audio, not on the 500 utterance 
 
 Each utterance carries exactly one primary slice; a file may belong to the noise variants of its slice. Accent tags (`nzo`, `pacific_nz`, `diaspora`, `latin_am`, `eu`) and a `code_switch` flag are mandatory fields.
 
-## 3. Directory layout under `docs/squads/voice/eval/`
+## 3. Directory layout under `packages/eval/voice/`
 
 ```
-docs/squads/voice/eval/
+packages/eval/voice/
 ├── README.md                     # what this is, how to regenerate, how to run the harness
 ├── manifest/
 │   ├── utterances.jsonl          # ONE line per generated audio file (the master index)

@@ -14,7 +14,7 @@ ignoreScripts: true
 # Supply chain (V4 §7): pnpm 12 verifies the lockfile against its own
 # supply-chain policy on every install ("Verifying lockfile against
 # supply-chain policies"), the versions in the tree are pinned exactly, and
-# the audits in scripts/check-audit.mjs fail on any high or critical advisory
+# the audits in scripts/ci/check-audit.mjs fail on any high or critical advisory
 # that is not a documented build-time exception.
 
 overrides:

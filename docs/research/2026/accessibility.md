@@ -27,7 +27,7 @@ mandates · adoption cost · **DECISION**.
 | Where those failures actually reach the screen | `apps/mobile/src/components/Input.tsx:46` (`placeholderTextColor: theme.colors.textTertiary`), `:98`, `:116`, `:123` (icon colours); `apps/mobile/src/components/Avatar.tsx:51` (initials text fallback); `apps/mobile/app/(tabs)/index.tsx:125` (**the delivered count is painted in `statusDelivered`** → 3.77:1 as *text* → 1.4.3 fail) and `:312` (`stopStatusDot` 10 × 10 px); `apps/mobile/app/(tabs)/stops.tsx:79` (`deliveredTime` in `textTertiary`) and `:120` (`emptyText` in `textTertiary`); `stops.tsx:67` paints the stop number in `textInverse` (**white**) on the status colour — on `statusSkipped` (#f59e0b) that is **2.15:1** and on `statusDelivered`/`statusFailed` **3.77:1** → 1.4.3 fail on three of five statuses. |
 | Colour-blind exposure | `status.delivered` = #059669 (green) and `status.failed` = #ef4444 (red) are the only differentiators on the stop row — the green/red pair that ~8 % of men cannot separate. `stops.tsx:76-78` does pair the colour with a **text badge** (`statusLabels`), so 1.4.1 is *partially* met on that screen; the **10 px `stopStatusDot`** beside the address is colour-only. |
 | Our CI position | `CONSTRAINTS.md`: "**Design review** — Maestro screenshots (day/night, small/large, **200 % text**) match the approved mockups — `docs/evidence/design/` — every UI task". `.maestro/` has **five** flows (`compat`, `map`, `smoke`, `stops`, `today-list`) and **none of them** sets a font scale, checks a contrast ratio, checks a focus order, or runs with a screen reader. `packages/eslint-config/package.json` has **no** accessibility plugin. |
-| The bar (from `CONSTRAINTS.md`, `docs/SAAS_CHECKLIST.md` §C, `docs/design/SYSTEM.md`) | **WCAG 2.2 AA** · an **accessibility statement** in the store listings and on the web · **touch targets ≥ 56 pt, primary action 72 pt** · **body ≥ 17 pt** · **dynamic type to 200 % without clipping** · **driving text ≥ 7:1, everything else ≥ 4.5:1** · **status never colour-only** · **reduced motion respected** · **RTL-ready** · an **a11y check in CI** (`docs/COVERAGE_AUDIT-P2.md` M7 names "axe / react-native-a11y" and rates it P4) · a **real-device screen-reader pass** before v1. |
+| The bar (from `CONSTRAINTS.md`, `docs/plan/SAAS_CHECKLIST.md` §C, `docs/design/SYSTEM.md`) | **WCAG 2.2 AA** · an **accessibility statement** in the store listings and on the web · **touch targets ≥ 56 pt, primary action 72 pt** · **body ≥ 17 pt** · **dynamic type to 200 % without clipping** · **driving text ≥ 7:1, everything else ≥ 4.5:1** · **status never colour-only** · **reduced motion respected** · **RTL-ready** · an **a11y check in CI** (`docs/archive/COVERAGE_AUDIT-P2.md` M7 names "axe / react-native-a11y" and rates it P4) · a **real-device screen-reader pass** before v1. |
 
 ### The four things must not be conflated
 
@@ -353,7 +353,7 @@ document, walks the accessibility tree of an HTML page and computes contrast, na
 Native engine.** The GitHub code search `repo:dequelabs/axe-core react-native` returns **1 hit and it is a
 `pnpm-lock.yaml`** — i.e. there is **no RN support in the free engine** · **our fit: it is the *web* dashboard's
 tool (Lighthouse includes it) and the reference for the rule semantics we re-implement** · **DECISION: ADOPT for
-the **web dashboard** only (`apps/web`), and **not** for the mobile app. `docs/COVERAGE_AUDIT-P2.md` M7 says
+the **web dashboard** only (`apps/web`), and **not** for the mobile app. `docs/archive/COVERAGE_AUDIT-P2.md` M7 says
 "axe / react-native-a11y" — that pairing is right for a web+mobile repo, and wrong if read as "axe on the
 mobile app".**
 
@@ -578,7 +578,7 @@ anything at all.
 
 ## 4. Benchmark — **UNVERIFIED: no accessibility eval set exists**
 
-**I did not run a benchmark and I will not invent one.** `docs/COVERAGE_AUDIT-P2.md` M7 lists "an accessibility
+**I did not run a benchmark and I will not invent one.** `docs/archive/COVERAGE_AUDIT-P2.md` M7 lists "an accessibility
 check in CI (axe / react-native-a11y)" as a **P4** gap, which means it has never been built. There is no
 `docs/eval/a11y/`, no seeded failing component, no screen-reader script. Everything below is **UNVERIFIED** until
 the set exists.
@@ -617,10 +617,10 @@ the set exists.
 
 ---
 
-## 5. What we are missing → rows for `docs/PARITY.md`
+## 5. What we are missing → rows for `docs/status/PARITY.md`
 
 The Spoke column is filled **only** with facts verified in `docs/study/spoke/TEARDOWN.md` (read 2026-10-21).
-Where the teardown does not say, the cell is empty. These rows continue the numbering of `docs/PARITY.md` (which
+Where the teardown does not say, the cell is empty. These rows continue the numbering of `docs/status/PARITY.md` (which
 ends at 49).
 
 | # | Family | Feature | Status | Spoke (2026-10-20) | Our edge | Task |
@@ -717,7 +717,7 @@ app offers it explicitly. If the screen-reader pass fails on iOS but passes on A
 ## 7. Monthly radar filter (V4 §11.3)
 
 On the first working day of each month, re-read exactly these and write one line each into
-`docs/EXECUTOR_LOG.md`. If a line changes, it becomes a task the same day.
+`docs/log/2026-W43.md`. If a line changes, it becomes a task the same day.
 
 | Watch item | Trigger | Where to look | What we do |
 |---|---|---|---|
@@ -777,7 +777,7 @@ On the first working day of each month, re-read exactly these and write one line
 
 | Claim (2026-10-20/21) | Verified 2026-10-21 | Correction |
 |---|---|---|
-| `docs/COVERAGE_AUDIT-P2.md` M7 — "an accessibility check in CI (axe / react-native-a11y)" | **`axe-core` has no React Native engine** (one code-search hit in the whole repo, and it is a lockfile). `react-native-a11y` is a 57★ runtime library, not a checker. The only free RN checker is `eslint-plugin-react-native-a11y` (307★, MIT, unmaintained since 2024-11-04, flat-config issue #166 still open). | Rewrite M7 as four checks: **our own ESLint rules** (the 14 Formidable rules + Deque's six) · **RNTL a11y matchers** · **a token-contrast script** · **Maestro at 3 font scales**. `axe-core` belongs to `apps/web` only. |
+| `docs/archive/COVERAGE_AUDIT-P2.md` M7 — "an accessibility check in CI (axe / react-native-a11y)" | **`axe-core` has no React Native engine** (one code-search hit in the whole repo, and it is a lockfile). `react-native-a11y` is a 57★ runtime library, not a checker. The only free RN checker is `eslint-plugin-react-native-a11y` (307★, MIT, unmaintained since 2024-11-04, flat-config issue #166 still open). | Rewrite M7 as four checks: **our own ESLint rules** (the 14 Formidable rules + Deque's six) · **RNTL a11y matchers** · **a token-contrast script** · **Maestro at 3 font scales**. `axe-core` belongs to `apps/web` only. |
 | `docs/design/SYSTEM.md` §2 — "Type: **Figtree**; body ≥ 17 pt; key numbers 48–76 pt" | `packages/design-tokens/src/tokens.ts:166` sets **`Inter`**; `:172` sets **16 px** base; the largest size is **48 px** (`:179`) — there is no 76 pt token | The token file and the contract disagree. The contract wins: the tokens are the finding. |
 | `docs/design/SYSTEM.md` §3 — "One primary action (72 pt)" | `tokens.ts:283-286` — `components.button.height` is **36 / 44 / 52 px**; `Button.tsx:164` uses `minHeight: 44` | There is no 72 pt action in the design system at all. The 72 pt primary action is a **new token plus a component change**. |
 | `docs/design/SYSTEM.md` §6 — "Dynamic type to 200 % without clipping or truncation" | `tokens.ts:297` — `components.input.height` is a **fixed** 44 px; `Input.tsx:38` sets `height: 44`; `Button.tsx:164` sets `minHeight: 44` | Fixed heights clip at 200 %. Every fixed height must become a `minHeight` with a scaled line height. |
@@ -785,4 +785,4 @@ On the first working day of each month, re-read exactly these and write one line
 | `docs/design/SYSTEM.md` §6 — "Contrast: driving text ≥ 7:1, everything else ≥ 4.5:1" | 5 token pairs fail today: day `textTertiary` 2.56:1, day `border.focus`/`brandPrimary` 2.86:1, day `statusSkipped` 2.15:1, night `textTertiary` 4.12:1, and the white stop-number on `statusSkipped` 2.15:1 | Contrast is currently **unmeasured**. A script over the three themes makes it a build failure. |
 | `docs/design/SYSTEM.md` §5 — "Reduce motion is respected" | there is **no** `AccessibilityInfo` usage anywhere in `apps/mobile` and **no** reduce-motion token | The contract describes a feature that is not implemented. `motion.durations.instant` exists but nothing reads it. |
 | `docs/design/SYSTEM.md` §6 — "RTL-ready layouts" | `spacing` in `tokens.ts:147-161` includes **20, 40, 64, 80, 96 px** — off the documented 4-pt grid `4 8 12 16 24 32 48`; and `components.badge.paddingY` references **`{spacing.0.5}`, a key that does not exist** (`tokens.ts:313`) | Two token bugs, independent of RTL, that the contrast/token script should catch. |
-| `docs/SAAS_CHECKLIST.md` §C — "accessibility statement" | not written; the Spoke teardown shows Spoke itself has no declaration | Our declaration is a **differentiator we can evidence**, and it needs the four CI checks behind it. |
+| `docs/plan/SAAS_CHECKLIST.md` §C — "accessibility statement" | not written; the Spoke teardown shows Spoke itself has no declaration | Our declaration is a **differentiator we can evidence**, and it needs the four CI checks behind it. |

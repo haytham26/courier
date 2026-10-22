@@ -16,7 +16,7 @@ Two areas, one file (KICKOFF_V4 §3 areas 1 and 2): **UI kits and design systems
 | Our sheet | `apps/mobile/src/components/Sheet.tsx` — hand-rolled, uses React Native `Animated.timing` (250 ms open / 200 ms close, `Easing.out(Easing.cubic)`), **no gesture, no spring, no reduce-motion branch**. |
 | Our app platform | Expo **`~58.0.14`**, React Native **`0.88.0`**, `newArchEnabled: true` (`apps/mobile/app.json`). **The brief for this sprint said RN 0.82; the repo is on 0.88.0 — the repo wins.** |
 | Our bar (V4 §5 + `docs/design/SYSTEM.md`) | Reanimated 4 on the UI thread · 60/120 fps · **durations 150–250 ms** · **spring physics for sheets** · shared-element transitions only where they carry meaning · reduce-motion respected (transitions become instant, never removed) · haptics on confirm/deliver/error, never on scroll · no layout thrash · FlashList for 300+ stops · WCAG 2.2 AA (driving text ≥ 7:1, rest ≥ 4.5:1) · dynamic type to 200 % without clipping · day/night by **sunset** + manual · RTL-ready · APK ≤ 80 MB · one Material Symbols set, **no emoji anywhere**. |
-| Our constraints (`CONSTRAINTS.md`) | 300 stops at 60 fps · no `any` in application code (exception W1 covers `apps/mobile/src/voice/**` only) · no GPL/AGPL/SSPL/CC-NC in the shipped app · licences recorded in `docs/LICENSES.md`. |
+| Our constraints (`CONSTRAINTS.md`) | 300 stops at 60 fps · no `any` in application code (exception W1 covers `apps/mobile/src/voice/**` only) · no GPL/AGPL/SSPL/CC-NC in the shipped app · licences recorded in `docs/product/LICENSES.md`. |
 | Comparator | Spoke (ex-Circuit) — the #1 NZ competitor (`docs/study/spoke/TEARDOWN.md`, read 2026-10-21). |
 
 ### The authoritative Expo SDK 58 compatibility table
@@ -43,7 +43,7 @@ The star _timeline_ is not readable with the token in `.env.local` (`GET /repos/
 
 ## Queries run
 
-`gh search repos` and `gh api` through the repo's own `scripts/gh.ps1` token wrapper (2026-10-21). The literal query strings:
+`gh search repos` and `gh api` through the repo's own `scripts/dev/gh.ps1` token wrapper (2026-10-21). The literal query strings:
 
 | # | Query | Sort / limit | What it produced |
 |---|---|---|---|
@@ -431,7 +431,7 @@ Two more, both open: **#2671** "let user-initiated snaps interrupt a forceClose"
 
 ## 5. What we are missing
 
-Rows for `docs/PARITY.md`. The **Spoke (2026-10-20)** column carries only facts verified in `docs/study/spoke/TEARDOWN.md`; where I could not verify it, the cell is empty.
+Rows for `docs/status/PARITY.md`. The **Spoke (2026-10-20)** column carries only facts verified in `docs/study/spoke/TEARDOWN.md`; where I could not verify it, the cell is empty.
 
 | # | Family | Feature | Status | Spoke (2026-10-20) | Our edge | Task |
 |---|---|---|---|---|---|---|
@@ -464,7 +464,7 @@ Rows for `docs/PARITY.md`. The **Spoke (2026-10-20)** column carries only facts 
 4. **No UI kit is adopted.** The kit decision is: **we write our own components on `packages/design-tokens` + Unistyles 3, and we read three kits for patterns only** — Paper's accessible modal and portal work (#5124–#5126), reusables' reduce-motion and portal-a11y sweep (2026-07-02) and `NativeOnlyAnimatedView`, and Tamagui's compile-time token flattening idea. Nothing is installed, so there is no second token system and no second styling engine.
 5. **Hard rejections stand and are now evidenced:** NativeWind and everything built on it (`heroui-native`, `nativecn`, `gluestack-ui`, `legend-motion`, the NativeWind path of reusables) — V4 §5; Lottie — our own "calm, not clever, no decorative loops" rule; `expo-blur` — the "no glass" rule.
 6. **ADR proposals (the decisions are not changed here):**
-   - **ADR-005 — Expo SDK 58 in the mobile app.** `docs/DECISIONS.md` D21 (2026-10-20) says "Expo SDK 57 مقفل" (Expo SDK 57 is locked; any version change needs an ADR with an official source), but `apps/mobile/package.json` pins `expo ~58.0.14` and `react-native 0.88.0`, and Expo SDK 58 is what bundles our pinned Reanimated 4.7.1, Worklets 0.13.0, Gesture Handler ~3.3.0 and FlashList 2.3.2. **Proposed: record SDK 58 as the locked platform, with `expo/expo`'s `packages/expo/bundledNativeModules.json` as the official source.** The founder decides; this file does not change D21.
+   - **ADR-005 — Expo SDK 58 in the mobile app.** `docs/decisions/DECISIONS.md` D21 (2026-10-20) says "Expo SDK 57 مقفل" (Expo SDK 57 is locked; any version change needs an ADR with an official source), but `apps/mobile/package.json` pins `expo ~58.0.14` and `react-native 0.88.0`, and Expo SDK 58 is what bundles our pinned Reanimated 4.7.1, Worklets 0.13.0, Gesture Handler ~3.3.0 and FlashList 2.3.2. **Proposed: record SDK 58 as the locked platform, with `expo/expo`'s `packages/expo/bundledNativeModules.json` as the official source.** The founder decides; this file does not change D21.
    - **ADR-006 — the shared-element transition budget.** `SharedTransition` defaults to 500 ms and `ENABLE_SHARED_ELEMENT_TRANSITIONS` is `false` in 4.7.1. **Proposed: enable the flag only for the stop→sheet transition, with an explicit `duration: 200`, behind a build-time flag and a Maestro screenshot gate.** This keeps V4 §5 ("shared-element transitions where they carry meaning") intact and does not weaken `docs/design/SYSTEM.md` §5.
    - **ADR-007 — the styling rule wording.** "Unistyles 3 only" currently also rules out `uniwind`, a Tailwind v4 pipeline that is technically not NativeWind. **Proposed: state explicitly whether "Unistyles 3 only" means "no CSS-in-RN at all" or "no NativeWind".** This does not change the decision; it removes the ambiguity a future squad would hit.
 
@@ -510,7 +510,7 @@ The first Monday of every month, the Design System & Motion squad runs this filt
 | Not in the list | **`software-mansion-labs/react-native-bottom-sheet`** (created 2026-02-16, 447 ★, 12 releases/6 m, 2.1 M npm downloads/30 d) and **`appandflow/react-native-ease`** (created 2026-03-11, 989 ★) and **`Rednegniw/number-flow-react-native`** (created 2026-02-09, 424 ★) | **Add as the 2026 entrants.** C32 becomes the sheet pilot; C44 and C45 join the watchlist. |
 | Not in the list | Reanimated 4.7.1 ships `ENABLE_SHARED_ELEMENT_TRANSITIONS: false` and `SharedTransition` defaults to **500 ms** | Two concrete constraints on V4 §5. Recorded as gaps D8 and in §3.1. |
 | Not in the list | Our own `apps/mobile/src/components/Sheet.tsx` uses RN `Animated.timing`, has `as any` on the transform, has no gesture and no reduce-motion branch; `packages/design-tokens` says Inter/JetBrains Mono (not Figtree), `touchTarget.minimum` 44 px, `fontSizes.base` 16 px, night background `#09090b` | Recorded as gaps D2–D6 and D11. |
-| Not in the list | `docs/DECISIONS.md` D21 locks **Expo SDK 57** while the app runs **58.0.14** | **ADR-005 proposed** in §6. The locked decision is not changed here. |
+| Not in the list | `docs/decisions/DECISIONS.md` D21 locks **Expo SDK 57** while the app runs **58.0.14** | **ADR-005 proposed** in §6. The locked decision is not changed here. |
 
 ## 10. What we could not verify
 

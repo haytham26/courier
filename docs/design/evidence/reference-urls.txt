@@ -1,7 +1,7 @@
 # The public material the Design Studio studies for the reference products.
 #
 # One URL per line. `#` starts a comment. The script
-# `scripts/check-design-reference-urls.ps1` fetches every line and records
+# `scripts/design/check-design-reference-urls.ps1` fetches every line and records
 # the HTTP status, so no link in `docs/design/RESEARCH.md` is a guess.
 
 # --- The NZ and the delivery competitors -----------------------------------

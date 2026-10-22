@@ -6,7 +6,7 @@ official YouTube tutorial, and third-party review mirrors). No code, assets or p
 (their terms forbid it). Spoke was studied as a normal user would.
 
 **Why this file exists:** V4 §13.2 / MASTER_EXECUTION §2 — *"Spoke is the #1 NZ competitor."* This is the
-evidence base for `BEAT-SPOKE.md` and the corrections to `docs/PARITY.md` (PARITY is owned by the CEO; this
+evidence base for `BEAT-SPOKE.md` and the corrections to `docs/status/PARITY.md` (PARITY is owned by the CEO; this
 file only states the corrections).
 
 ---
@@ -399,15 +399,15 @@ phone language, falling back to US English (S3, S4).
 
 Flagged for the CEO; **PARITY.md and QUALITY_SCORECARD.md were not modified by this role.**
 
-1. `docs/QUALITY_SCORECARD.md` §1 says *"Spoke: one-shot dictation only"* — **now stale**. Spoke shipped
+1. `docs/status/QUALITY_SCORECARD.md` §1 says *"Spoke: one-shot dictation only"* — **now stale**. Spoke shipped
    multi-address bulk voice import on 2026-04-22 (S28). The still-true part: Spoke has **no voice control
    while driving** (no spoken "delivered", no spoken re-order, no spoken "next stop").
-2. `docs/PARITY.md` row 19 "Door memory" claims Spoke has no memory of door/access info — **partly wrong**.
+2. `docs/status/PARITY.md` row 19 "Door memory" claims Spoke has no memory of door/access info — **partly wrong**.
    Spoke has **sticky per-address access instructions** (gate code, key location) that reappear whenever the
    same address is added again (S8). What Spoke does **not** have: a door-level **location** (which door on
    which side of a drive-by), an arrival-triggered spoken read-out, a correction ("wrong pin"), or learning
    across addresses. Narrow our claim accordingly.
-3. `docs/PARITY.md` row 3 "Camera label scan (OCR + barcode)" is marked as our differentiator — Spoke has had
+3. `docs/status/PARITY.md` row 3 "Camera label scan (OCR + barcode)" is marked as our differentiator — Spoke has had
    label/manifest OCR since 2026-06-01 and label scanning on Android for longer (S27, S35). Our edge is
    **on-device + offline + NZ-address-only**, not the existence of OCR.
 4. `docs/research/competitors-2026.md` §2.3 lists Spoke Route Planner pricing as Free / $20 Pro / $125 Team

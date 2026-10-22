@@ -16,7 +16,7 @@ Updated: 2026-10-22 (the Design Studio: research, bench, three directions, found
   themes in the token package, three type scales in the token package, all measured against the
   contrast bars — `docs/design/DIRECTIONS.md`, `/design/roadbook`, `/design/beacon`,
   `/design/freight`, renders in `docs/design/directions/`.
-- The founder's pick is on the table: `docs/FOUNDER_TODO.md` asks for **A, B or C**.
+- The founder's pick is on the table: `docs/status/FOUNDER_TODO.md` asks for **A, B or C**.
 
 ## Metrics vs targets
 
@@ -32,7 +32,7 @@ Updated: 2026-10-22 (the Design Studio: research, bench, three directions, found
 
 ## Next
 
-1. The founder picks A, B or C (`docs/FOUNDER_TODO.md`). The work does not wait for it.
+1. The founder picks A, B or C (`docs/status/FOUNDER_TODO.md`). The work does not wait for it.
 2. **The screen inventory of §13.5** — every screen of the app written against the chosen
    direction, the same way `docs/design/mockups/*.md` is written: the content first, then the
    direction.

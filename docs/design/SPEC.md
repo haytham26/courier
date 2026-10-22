@@ -182,7 +182,7 @@ What each direction decides for itself: the character of the movement, the signa
 | The minimum size | 16 px, and it must be legible there. The direction states the minimum size it uses. |
 | The one-colour form | It has a one-colour form for the app icon and the map attribution. |
 | The colour | The mark uses the direction's accent or its ink, and never a colour outside the palette. |
-| The licence | Every family and every asset of the direction has a row in `docs/LICENSES.md`. |
+| The licence | Every family and every asset of the direction has a row in `docs/product/LICENSES.md`. |
 | The misuse | The direction's sheet lists at least three misuses it avoids. |
 
 ---

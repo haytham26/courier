@@ -102,7 +102,7 @@ set with tabular figures.
 
 **The open licence row.** Public Sans is the one family of the round whose licence the research
 marks unverified (RESEARCH-2 §5.1). REVIEW-K1 makes a missing licence row a blocker, so the row for
-Public Sans in `docs/LICENSES.md` has to be closed by reading the licence in the repository before
+Public Sans in `docs/product/LICENSES.md` has to be closed by reading the licence in the repository before
 this direction can ship. If the licence cannot be confirmed, the pairing falls back to
 Geist, whose licence is published.
 

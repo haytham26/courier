@@ -2,7 +2,7 @@
 
 This folder is where the Canterbury pack lives. The pack itself is about 50 MB
 and is **not** in the repository; it is built from an extract with
-`scripts/build-pmtiles.mjs` and delivered to the phone.
+`scripts/data/build-pmtiles.mjs` and delivered to the phone.
 
 ```
 canterbury.pmtiles         the tile archive (PMTiles v3)

@@ -1,0 +1,106 @@
+# PROGRESS — Courier Copilot (rewritten 2026-10-22 with the truth labels)
+
+Evidence: `docs/evidence/audit/`, `docs/evidence/phase-2.1/`. Details: `docs/archive/AUDIT.md`.
+Previous PROGRESS.md claims were not trusted and have been replaced.
+
+**The three labels, and nothing else**: **DONE** (the thing works, with the CI run or the test count as the evidence), **PARTIAL** (what exists and what is missing, both named), **NOT STARTED** (nothing of it exists). A seam, a scaffold, a stub or a code path that was never run is never called built.
+
+| area | status | what exists | what is missing | evidence |
+|---|---|---|---|---|
+| **P1 the Android E2E pipeline** | PARTIAL | the two-job pipeline (the release APK cached by content hash, then the emulator), the readiness gates (boot, install, start, pid, first screen), the E2E mode on local mocks, the permission grants, the evidence uploaded every run | the B.7 compatibility flow is the last one open: the deep link to /compat is in the run of 2026-10-22 00:00 | the run 39691708360: four flows green, the app renders in the new design |
+| **P2 the research (24 areas)** | DONE | every area at the full V4 depth (30+ cards, the query log, the shortlist, the top-5 deep review, the benchmarks, the gaps, the decision, the risks) + the verifier pass (271 of 941 cards re-checked, 129 corrected) | — | docs/research/2026/ + the four VERIFICATION files |
+| **P2 the eval sets** | PARTIAL | the voice set (600 scripts, 840 planned files, 240 real LINZ addresses) and the scanner set (330 synthetic labels with their ground truth, 40 slots for the founder) - both checked in CI | the audio is not generated (it needs the TTS and the licence ledger), the 40 founder photos, the routing eval set, the non-speech corpus | scripts/eval/check-voice-eval.mjs, scripts/eval/check-scanner-eval.mjs |
+| **P3 the map view modes** | PARTIAL | the modes (2D, 3D, Satellite, Auto) with the per-driver memory, the toggles, the voice control of the camera, the 3D buildings builder with the licences checked | the Canterbury pack itself is not built (it needs the LINZ outlines and the OSM extract downloaded) | pps/mobile/src/maps/, 144 mobile tests |
+| **P3 the offline map** | PARTIAL | the style from the tokens (day, night, high contrast), the pack contract, the fallback, the pack builder | the pack is not built and never ran on a device; the frame times and the size are unmeasured | docs/squads/maps/ |
+| **P4 the design** | NOT STARTED | the design tokens to the contract (Figtree, the 17pt floor, the 56/72pt targets, the measured contrast), the motion helpers, the screen specs | the founder rejected the three directions (Roadbook, Beacon, Freight) on 2026-10-22: the Design Studio restarts at MASTER_EXECUTION §13.6 (the research, ten directions) | docs/design/, the founder's verdict in §13.6 |
+| **P5 the on-device voice** | PARTIAL | the voice service (the engine port, the on-device engine, OmniRoute behind D25, the proactive rules, the 8-word driving-safe rule, the memory, the eval) | on the phone: the streaming STT is a TODO, no model packs are bundled, and it has never run on the emulator or a device | services/courier-voice/ (166 tests) |
+| **P5 the sign-in** | PARTIAL | the service (MFA with TOTP and backup codes, the passkeys, the Google and Apple starts, the teams with the roles, the rate limits) and the app (the methods, the MFA step, the teams picker, the offline session, the biometric unlock) | the native Google and Apple sign-in in the app (there is no native library - only the passkey plugin), the magic link/OTP, the email verification, the HIBP check, the device binding, the session list, the refresh rotation, the passkey ceremony on a phone | services/auth (59 tests), pps/mobile (221 tests) |
+| **P5 the scanner** | NOT STARTED | the label eval set and the D8 address correction | no scanner screen (VisionCamera is used only by the compat diagnostics), no crop, no OCR, no smart parsing | docs/squads/scanner/ |
+| **P5 the routing** | PARTIAL | the API (a window-aware seed with a 2-opt pass, the arrival times, the template lock, the route endpoint, the deterministic 50x test) | the real engine (PyVRP + VROOM over a Valhalla matrix) is a seam, not wired; the benchmark against the best known is unmeasured | pps/api/app/routing.py (84 tests) |
+| **P5 the sync** | DONE | the event log on op-sqlite, the sync service (a batch is confirmed only after the server stored it), the API batch endpoint, the schema, the repository | — | pps/mobile/src/sync/, pps/api/app/repo.py, 140 API tests |
+| **P5 the door memory** | PARTIAL | the API (private per courier, the normalised address key), the app (the memory on the stop sheet, the safe places, the offline queue) | never run against a real database | pps/api/app/door_memory.py, pps/mobile/src/doorMemory/ |
+| **P5 the earnings** | PARTIAL | the rate card, the money maths (Decimal, 15 % GST), the API, the app (the net on today's list, the breakdown, the end-of-day summary, the offline fallback) | no Stripe, no entitlements, no dunning, no IRD or Xero export | pps/api/app/earnings.py, pps/mobile/src/earnings/ |
+| **P5 the proof of delivery** | NOT STARTED | — | the POD screen, the photo, the signature, the retention | — |
+| **P5 the web dashboard** | NOT STARTED | — | no pps/web, no dispatcher, no admin | — |
+| **P5 the billing** | NOT STARTED | the rate card only | no Stripe, no subscriptions, no the store rules, no the entitlements | docs/research/2026/payments-subscriptions.md |
+| **P5 driving mode** | PARTIAL | the map modes, the voice commands, the background location permission | no driving mode screen, no earbud protocol on a device, no foreground service, no keep-awake | pps/mobile/src/voice/ |
+| **P6 the launch readiness** | PARTIAL | the production compose, the TLS, the backup with a restore test that ran against a real PostgreSQL, the health endpoints, the alerts, the runbook, the release checklist, StoreReady in CI | the production deployment itself (the founder's approval gate), the store ids, the signing, the background-location video | infra/, docs/operations/ |
+| **S2 the store readiness** | PARTIAL | the privacy policy, the data-safety notes, the background-location declaration, the store listing draft, the local pre-submission check | the founder's store assets, the legal review, the account-deletion link | docs/operations/, 9 store-readiness tests |
+| **The security fixes** | DONE | the voice WebSocket is authenticated, the JWT issuer is required, the audit step no longer hides its findings (the unused pipecat-ai is gone, certifi is constrained) | — | pps/api/tests/auth/test_voice_socket.py, 140 API tests, the audit green |
+| **The repository hygiene (§16)** | DONE | the API is a service (`services/api`), the contracts and the evaluation sets are packages, the scripts and the docs are grouped, the test convention is applied everywhere, the dead code is gone with its proof, the design lab is out of the release build | the Android E2E of the emulator pipeline is still on its own branch (it needs `EXPO_PUBLIC_E2E=1` for the compatibility screen) | MASTER_EXECUTION §16, `docs/evidence/section-16/` |
+## Current verified check results
+
+| check | result | evidence |
+|---|---|---|
+| pnpm install | PASS (workspace: apps/mobile, packages/*, services/auth) | phase-2.4 logs |
+| pnpm lint | **PASS** for every JS package (shared flat config in packages/eslint-config) + ruff for the API and the voice service | section-16/lint.log |
+| pnpm typecheck | **PASS** for 6 packages (incl. the mobile app) + mypy (28 files in the API, 38 in the voice service) | section-16/typecheck.log |
+| pnpm test | **PASS**: shared 26, design-tokens 1767, nz-address 17, services/auth 59, mobile 339, api 140, voice 166, the scripts 9 | section-16/test.log |
+| services/api pytest | PASS 140/140 | section-16/test.log |
+| services/api ruff | PASS | section-16/lint.log |
+| services/api mypy | PASS 28 files | section-16/typecheck.log |
+| pnpm audit | 3 critical cleared (vitest 2.1.9 → 3.2.7); remaining are build-time only (metro/vite/esbuild) | phase-2.1/pnpm-audit.json |
+| banned-item grep | **0 hits** (was 41) | phase-2.4/banned-grep.log |
+
+## PHASE 2.1 what changed
+
+- `services/auth` (new pnpm package): Better Auth 1.7.10 with plugins `organization`, `expo`,
+  `jwt`; fail-fast env validation (no default secrets); ES256 JWKS at `/api/auth/jwks`;
+  tokens at `/api/auth/token`; Postgres (production) or in-memory (tests) storage.
+- `services/api/app/auth/better_auth.py` + `services/api/tests/auth/test_better_auth.py`: **deleted**
+  (the fake Python auth and its test of itself).
+- `services/api/app/auth/jwks.py` (new): PyJWT verification against the JWKS, key-rotation
+  aware, generic 401s; the API refuses to boot without `AUTH_JWKS_URL`.
+- `services/api/app/auth/routes.py`: now only `/auth/me` and `/auth/verify` — the API issues no
+  credentials.
+- Banned Python deps removed: `redis`, `arq`, `passlib`, `python-jose`; `pyjwt[crypto]` and
+  `httpx` added. `services/api/package.json` (a meaningless npm mirror of the Python deps)
+  deleted.
+- Workspace hygiene: root `package.json` pinned to exact versions (was `"latest"`), single
+  `zod@4.6.7` across the workspace (the v3/v4 split broke Better Auth under pnpm hoisting),
+  `vitest` upgraded to 3.2.7 everywhere (clears the critical advisories).
+
+## Task register — SAAS_CHECKLIST + COVERAGE_MAP (MASTER_EXECUTION §4 P1–P7)
+
+Every line of `docs/plan/SAAS_CHECKLIST.md` and `docs/plan/COVERAGE_MAP.md` becomes a task. The register
+below is the authoritative list; each row is worked as a branch + PR with spec, tests and evidence
+(§7.2: one task = one branch = one PR).
+
+| ID | Item | Where it lands | Status |
+|---|---|---|---|
+| S1 | Google sign-in, magic link/OTP, email verification, password policy + HIBP, login-attempt limits, MFA, device binding, session list, refresh rotation, recovery | P5 auth (Better Auth) | **In progress** (2026-10-22, the security squad): Google, Apple, passkeys, email, MFA, the offline session, the biometric unlock and the teams are done (docs/squads/security/STATUS.md); magic link/OTP, e-mail verification, HIBP, device binding, the session list and the refresh rotation are still open |
+| S2 | Play Integrity, Billing policy decision, Data Safety, in-app updates + review, app signing, target API level | P6 launch readiness | Planned |
+| S3 | RBAC (driver/lead/dispatcher/admin/owner), tenant isolation tests, admin audit, OWASP ASVS L2 API rules, MASVS L2 mobile rules | P5 + P6 | Planned |
+| S4 | Encryption at rest/in transit, retention + deletion, export, consent, audio not stored, PIA, privacy policy, DPA, breach plan | P6 | Planned |
+| S5 | Secrets manager, key rotation, backup restore drill, WAF basics, patching, least privilege, audit logs, intrusion alerts, SBOM, signed releases, threat model per module, DAST with OWASP ZAP, pen-test checklist, security.txt | P6 + P7 | Planned |
+| D1 | Keep screen awake while driving, foreground service + notification, Doze survival, audio focus, earbud buttons, lock-screen controls, widget, offline indicator, low-storage/battery, glove mode, crash recovery | P5 (T7.7 driving mode) | Planned |
+| B1 | Plans + billing (NZD, GST, proration, dunning, refunds), entitlements, usage limits, portal, onboarding, support, status page, transactional email/SMS, notifications, admin console, analytics, NPS, changelog, localisation, a11y statement, legal, multi-tenant model, DR, observability, cost monitoring, staged rollouts, data migrations, API versioning | P5 (T7.12–7.14) + P6 | Planned |
+| B2 | SaaS brain: issue triage, dependency updates, release notes, weekly metrics report, error→issue, support→bug | P6 | Planned |
+| C1 | Courier day scenarios: depot sort order, multi-carrier, manifest import, multiple parcels, units/gates, RD, opening hours, special handling, COD, pickups, failed delivery, re-delivery, customer not home, hazards, parking, roadworks, weather, traffic, end-of-day reconciliation, next-day rebuild, peaks | P5 (T7.4, T7.2) | Planned |
+| C2 | Safety/law: hands-free lock above speed, fatigue/break log, SOS/incident, damaged parcel, lone-worker check-in, night readability, older-driver accessibility | P5 (T7.7) | Planned |
+| C3 | Money: earnings per carrier, rate cards, expenses, IRD km, GST, tax estimate, Xero/MYOB/CSV export, carrier invoices, contractor payouts | P5 (T7.11) | Planned |
+| C4 | Intelligence that learns the run: order preferences, service time, door spots, daily brief, anomaly alerts, ETA, template suggestions, end-of-day summary, NL Q&A | P5 (T7.3–7.5) | Planned |
+| C5 | Customer-facing (optional): ETA SMS, live page, photo link, feedback, leave-at, opt-out, branded team | P5 (T7.10) | Planned |
+| C6 | Team/fleet: dispatcher web, live map, reassign, chat, dashboard, training mode, roles, multi-depot | P5 (T7.14) | Planned |
+| C7 | ISO 25010 quality + device lab (CI profiles, low-end Samsung/Oppo/Xiaomi, tablets, foldables, earbuds) | P6 | Planned |
+| C8 | Compliance: NZ Privacy Act IPPs, breach notification, Consumer Guarantees, Fair Trading, GST registration, Play policies, ASVS/MASVS, ODbL/LINZ/CC-BY attribution, AI transparency | P6 | Planned |
+| C9 | Operations: environments, IaC, CI/CD, OTA, feature flags, observability/SLOs, on-call, postmortems, DR drills, cost guard, migrations, capacity | P6 | Planned |
+| C10 | Support: help centre (EN + top languages), guided tours, FAQ, chat post-launch, bug report with logs, status page, release notes, onboarding emails, churn signals, NPS | P6 | Planned |
+| C11 | Go-to-market: brand, website + pricing, Play listing, demo videos, referrals, trial, communities, carrier partnerships, Christchurch-first launch, acquisition analytics | P6 | Planned |
+| C12 | Data: event taxonomy, privacy-safe analytics, funnels, driver KPIs, warehouse views, founder dashboards, retention/deletion jobs | P6 | Planned |
+| I1 | Innovation backlog (`docs/INNOVATION.md`): smart stop entry, one-swipe delivery, auto-arrival, van map, self-updating templates, address confidence + fix pin, live activity, team hazard notes, earnings counter, offline-first, gesture/haptic language, big-glove mode | P5–P6, CEO-owned | Planned |
+| M1 | Spoke teardown (TEARDOWN/REVIEWS/BEAT-SPOKE) and the Spoke column on every PARITY row | P2 | Planned |
+| M2 | Research depth audit: all 24 areas at ≥30 cards, query logs, verifier pass ≥20%, "what we are missing" → PARITY tasks | P2 | Planned |
+| M3 | Own model plan (OWN-MODEL.md) + OmniVoice study SPEC | P2 (voice squad) | Planned |
+| M4 | Eval sets: voice ≥500 utterances, scanner ≥300 labels in `data/labels/`, routing on real Christchurch days, sync chaos scenarios | P2–P5 | Planned |
+| M5 | Mutation score ≥80 % on address, routing, sync, billing, auth (§8.2) | P2–P5 | Planned |
+
+## Next (in order)
+1. Merge PR #1 once the Android emulator job is green (the other gates are already green).
+2. T2 — the Expo version decision (D21): either the SDK 57 downgrade or the ADR that proves
+   SDK 58 with every native module, then DECISIONS.md.
+3. T3 — the emulator run green, the artifacts downloaded into `docs/evidence/b7/`, B.7 marked PASS.
+4. T4 — the real LINZ addresses (`scripts/fetch-linz.py`) and the ≥95 % accuracy report.
+5. T5 — the offline Canterbury PMTiles.
+6. T6 — the design to the approved mockups.
+7. T7 — the product itself (sync, routing, door memory, dictation, voice agent, web, billing, PIA).

@@ -10,7 +10,7 @@ The decisions this squad owns, with the reason and the date.
 | S4 | One device store wrapper, shared everywhere, with `AFTER_FIRST_UNLOCK` | The Expo client keys its write queue by the storage object; a second wrapper would split the queue. The default `WHEN_UNLOCKED` fails while the phone is locked in the van (better-auth #10382) | `apps/mobile/src/lib/session-storage.ts` |
 | S5 | The offline session is a **receipt** next to the cookie, bounded to twelve hours, and the app says it is offline | A courier has to keep working in the dead zones, but the app must never pretend the server confirmed the session | `apps/mobile/src/lib/offline-session.ts` |
 | S6 | The biometric unlock is a convenience: "Not now" opens the app, and a phone without a scanner never shows it | A convenience must never become a lock-out | `apps/mobile/src/lib/biometric.ts`, `apps/mobile/src/components/BiometricUnlock.tsx` |
-| S7 | The passkey **server** side is complete; the phone keeps the button disabled with a reason until the native authenticator is in | React Native has no WebAuthn API. The research flagged the native module as a decision of its own (ADR) | `docs/adr/ADR-006-complete-sign-in.md` |
+| S7 | The passkey **server** side is complete; the phone keeps the button disabled with a reason until the native authenticator is in | React Native has no WebAuthn API. The research flagged the native module as a decision of its own (ADR) | `docs/decisions/adr/ADR-006-complete-sign-in.md` |
 | S8 | The three team roles are the ones Better Auth ships with: owner, admin, member | No custom role system until a courier company asks for one | `services/auth/src/options.ts` |
 | S9 | The backup codes are stored encrypted | A backup code is a credential | `services/auth/src/options.ts` |
 
@@ -19,5 +19,5 @@ The decisions this squad owns, with the reason and the date.
 | # | Open question | Where |
 |---|---------------|-------|
 | A | E-mail verification for the invitations (`requireEmailVerification`) | `docs/research/2026/auth-better-auth-ecosystem.md` §9 (ADR-A) |
-| B | The native passkey module for the phone | `docs/adr/ADR-006-complete-sign-in.md` |
+| B | The native passkey module for the phone | `docs/decisions/adr/ADR-006-complete-sign-in.md` |
 | C | The bump of Better Auth 1.7.10 to 1.7.12 | `docs/research/2026/auth-better-auth-ecosystem.md` §9 (ADR-D) |

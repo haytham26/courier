@@ -31,7 +31,7 @@
    "add community registries" on 2026-10-16 and 2026-10-19), a Tailwind preset, CSS variables for theming and a CLI. The last 20 commits are registry work, CLI fixes and template dependency bumps - **no runtime code churn, because there is
    no runtime: it is source we own after copying**. Every component is a file in our repo, so `docs/design/SYSTEM.md` §2 (tokens only from `packages/design-tokens`, no raw hex/px) can be enforced by our existing lint rule over copied code.
    Accessibility rests on Radix primitives; we must still audit contrast and focus order against WCAG 2.2 AA. Risk: copying ~40 components inflates the repo - the fix is to copy only what the dashboard needs (<= 15) and keep a
-   `docs/LICENSES.md` entry per copied block. **Verdict ADOPT as a source, in a `packages/ui-web` workspace, token-mapped, component-by-component with our own tests.**
+   `docs/product/LICENSES.md` entry per copied block. **Verdict ADOPT as a source, in a `packages/ui-web` workspace, token-mapped, component-by-component with our own tests.**
 2. **vercel/next.js** (143,101 ★, MIT, npm `next@16.4.2`) - App Router, RSC, server actions, `use cache`, Turbopack, image optimisation. The last 20 commits are infrastructure-level work (GitHub Actions OIDC upload, a `pread` compaction
    fix, `<Link prefetch="navigation">`, a removed static render stage, plus test-flakiness fixes) - a healthy, performance-focused upstream. **Security is the headline: 32 advisories with 6 critical**, clustered in 2026 - unauthenticated
    RCE in the Image Optimization API with **SVG** files (GHSA-2464-fhr4-w9xw / CVE-2026-96889, patched 15.5.28), unauthenticated RCE in `use cache` functions returning typed arrays (GHSA-673q-mjm6-r5xr, patched 16.4.1), RCE in `next/og`
@@ -66,7 +66,7 @@
 - **REJECT** `nativewind` / `heroui-native` (locked styling rule) · `ag-grid` (MIT + Commercial, 3.2 GB repo) · `handsontable` (proprietary) · `twentyhq/twenty` (AGPL) · `nocobase` (custom licence) · `appsmith` (a platform, not a dashboard)
   · `tremorlabs/tremor` (unmaintained since 2025-10-10) · `basetool-ai/basetool` (dead since 2022) · `devias-io/material-kit-react` (stale since 2025-06) · `mui/mui-x` (commercial tier + heavier than Radix) · `authjs/next-auth`
   (**UNVERIFIED - the repo did not resolve with this token**; Better Auth is the locked choice anyway).
-- **ADR trigger** adopting Tailwind CSS on the web (a second styling technology next to Unistyles 3) changes a locked decision - ADR + `docs/DECISIONS.md`. The same applies to `react-admin` or `payload`.
+- **ADR trigger** adopting Tailwind CSS on the web (a second styling technology next to Unistyles 3) changes a locked decision - ADR + `docs/decisions/DECISIONS.md`. The same applies to `react-admin` or `payload`.
 
 ## UNVERIFIED
 

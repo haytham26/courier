@@ -2,7 +2,7 @@
 
 **Mission:** Every driving-day action works with no network and syncs later, without losing anything.
 
-**Code:** `packages/sync, apps/api/app/sync (to be created)`
+**Code:** `packages/sync, services/api/app/sync (to be created)`
 
 **Tasks:** T7.1 sync engine
 

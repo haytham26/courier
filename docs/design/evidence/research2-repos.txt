@@ -1,6 +1,6 @@
 # The repository pool of docs/design/RESEARCH-2.md (the Design Studio restart research).
 # One "owner/name" per line. Lines starting with # are comments and are ignored.
-# Read: 2026-10-22 by scripts/fetch-design-research2-evidence.ps1
+# Read: 2026-10-22 by scripts/design/fetch-design-research2-evidence.ps1
 
 # --- React Native design systems and UI kits ---
 callstack/react-native-paper

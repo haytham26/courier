@@ -1,6 +1,6 @@
 ﻿# Platform, DevOps & Security Squad - decisions
 
-ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
+ADRs owned by this squad live in `docs/decisions/adr/`. List them here with one line each.
 
 | Date | Decision | Candidate / basis | Source file | Status |
 |---|---|---|---|---|
@@ -24,5 +24,5 @@ ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
 | 2026-10-20 | REIMPLEMENT the battery-optimisation whitelist intent in our own Android module - the upstream package has **no licence** | `react-native-disable-battery-optimizations-android` (no licence) | `docs/research/2026/background-location-battery.md` | Accepted |
 | 2026-10-20 | WATCH `transistorsoft/react-native-background-geolocation` (best features but a **paid release licence**, 2,457 open issues and a runtime key check - keep only as a benchmarked fallback with a cost line in `COST_PLAN.md` and an ADR), `HyopeR/react-native-location`, `gabriel-sisjr/react-native-background-location` and `react-native-device-info` | various | `docs/research/2026/background-location-battery.md` | Watch |
 | 2026-10-20 | CLEAN-ROOM: `zitadel/zitadel` (AGPL-3.0) and the `traccar/traccar` **server** (AGPL-3.0 - adopt the client SDK's design, never the server) are study material only | AGPL-3.0 projects | `docs/research/2026/auth-better-auth-ecosystem.md`, `background-location-battery.md` | Accepted (clean-room) |
-| 2026-10-20 | ADR trigger: adopting a hosted service (EAS Update, PostHog Cloud, Sentry Cloud, Sherlo, Argos) as a **production data path for driver data** changes a locked privacy decision - ADR + `docs/DECISIONS.md`. Nothing in this research recommends one | V4 §7 | `docs/research/2026/ci-cd-ota-observability-testing.md` | Needs ADR |
+| 2026-10-20 | ADR trigger: adopting a hosted service (EAS Update, PostHog Cloud, Sentry Cloud, Sherlo, Argos) as a **production data path for driver data** changes a locked privacy decision - ADR + `docs/decisions/DECISIONS.md`. Nothing in this research recommends one | V4 §7 | `docs/research/2026/ci-cd-ota-observability-testing.md` | Needs ADR |
 | 2026-10-20 | Build the battery harness before signing off: a fixed 60-minute replayed drive trace on the CI emulator **and** one mid-range Android (and one Samsung/Xiaomi/Huawei device), measuring the driving portion and the parked portion **separately** - <= 8 %/h while driving and ~0 %/h while parked. No battery figure has ever been measured | V4 §6.4 | `docs/research/2026/background-location-battery.md` | Accepted |

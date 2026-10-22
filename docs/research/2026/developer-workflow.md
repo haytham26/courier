@@ -30,12 +30,12 @@ Read out of the repository on 2026-10-21 (not from a doc):
 | Package manager | **pnpm 12.14.0** (`package.json` `packageManager`); `pnpm-workspace.yaml` = `apps/mobile`, `apps/web`, `packages/*`, `services/auth` |
 | Build orchestrator | **Turborepo 2.11.9** (`turbo.json`; tasks `build`, `dev`, `test`, `lint`, `typecheck`, `db:push`, `db:studio`, `clean`) |
 | Lint / format | **ESLint 10.13.0** flat config (`packages/eslint-config/index.js`: `recommendedTypeChecked` + `projectService: true`) + **Prettier 3.9.10** + **ruff** + **mypy** strict (Python) |
-| Test runner | **vitest 4.1.11** (packages/services) + **jest-expo 58.0.9 / jest 30.5.2** (mobile) + **pytest** (`apps/api`) |
+| Test runner | **vitest 4.1.11** (packages/services) + **jest-expo 58.0.9 / jest 30.5.2** (mobile) + **pytest** (`services/api`) |
 | Mobile runtime | **Expo ~58.0.14, RN 0.88.0, React 19.3.0**, New Architecture on |
 | CI | **5 workflows**: `ci.yml` (lint+typecheck+test, `timeout-minutes: 25`), `quality-gates.yml` (floor 10 / coverage 20 / licences 10 / audits 15 / sast 15), `codeql.yml`, `android-e2e.yml`, `release-apk.yml` |
-| Agent skills | **25 skills** mirrored in `.claude/skills/<name>/SKILL.md` **and** `.agents/skills/<name>/SKILL.md`, pinned by `skills-lock.json` (`source: addyosmani/agent-skills`) |
+| Agent skills | **25 skills** in `.claude/skills/<name>/SKILL.md` (the byte-identical copy in `.agents/` was deleted in the repository hygiene of MASTER_EXECUTION section 16), pinned by `skills-lock.json` (`source: addyosmani/agent-skills`) |
 | Agent rules | `AGENTS.md` (auto-read by opencode / Codex / Claude Code / Cursor) + `CLAUDE.md` |
-| Quality bar | `CONSTRAINTS.md` — coverage ratchet ≥72 % / ≥81 %, mutation ≥70 %, floor guard (`scripts/check-floor.mjs`), no copyleft in the shipped app |
+| Quality bar | `CONSTRAINTS.md` — coverage ratchet ≥72 % / ≥81 %, mutation ≥70 %, floor guard (`scripts/ci/check-floor.mjs`), no copyleft in the shipped app |
 | Evidence rule | `docs/evidence/<step>/` — no PASS without evidence (D21) |
 
 ### Six gaps found by reading the repo (not by reading a doc)
@@ -232,7 +232,7 @@ risks: **2 human maintainers**; needs a hook manager to trigger it · **DECISION
 **2019-02-05** · **v2.2.2, 2026-10-13** · 61 commits/90 d, **26 humans** · 68 open issues (89 including pull requests) · **MIT** · npm
 **22 276 365 dl/mo** · better than ours: a **single binary**, no `prepare` script (so it works with
 `ignoreScripts: true`), parallel job groups, and it can run the **floor guard** (`node
-scripts/check-floor.mjs`) before a commit ever reaches CI · risks: it runs lint locally, so a slow lint
+scripts/ci/check-floor.mjs`) before a commit ever reaches CI · risks: it runs lint locally, so a slow lint
 would block commits — the job must be scoped to staged files · **DECISION: ADOPT (hook manager).**
 
 **D20 — `pre-commit/pre-commit`** https://github.com/pre-commit/pre-commit — **15 645 ★** /1 020 f · created
@@ -279,7 +279,7 @@ idea for Cursor ("code review and guarded PR autofix workflows") · risks: effec
 
 **D27 — `sourcery-ai/sourcery`** https://github.com/sourcery-ai/sourcery — **1 877 ★** /101 f · created
 **2019-07-15** · **v1.46.1b7, 2026-09-24** · **3 commits/90 d, 1 human** · 120 open · **MIT** · better than
-ours: **Python-specific quality review**, the half of our stack ESLint does not cover (`apps/api` is ruff +
+ours: **Python-specific quality review**, the half of our stack ESLint does not cover (`services/api` is ruff +
 mypy) · risks: **3 commits in 90 days, one author** — the repo is a shell; the product is the hosted
 service. Open issues are telling: **#487** "Files with PEP 695 or PEP 758 syntax are silently skipped"
 (2026-09-28), **#480** "Sourcery freezes in PyCharm" (2026-06-04), **#470** "Feature Request: Sourcery linter
@@ -355,7 +355,7 @@ and already 32 k stars — the star inflation of the agent-tool year makes the n
 **D38 — `lintsinghua/DeepAudit`** https://github.com/lintsinghua/DeepAudit — **7 182 ★** /870 f · created
 **2025-09-19** · **v3.0.4, 2026-01-24** · **5 commits/90 d, 2 humans** · 96 open · **AGPL-3.0** · better than
 ours: a self-hosted multi-agent vulnerability audit with sandboxed PoC verification · risks: **AGPL-3.0**
-(a service, not a shipped dependency, but it must be recorded in `docs/LICENSES.md`) ·
+(a service, not a shipped dependency, but it must be recorded in `docs/product/LICENSES.md`) ·
 **DECISION: REJECT (AGPL + 5 commits/90 d).**
 
 **D39 — `modem-dev/hunk`** https://github.com/modem-dev/hunk — **9 642 ★** /321 f · created **2026-03-17** ·
@@ -469,7 +469,7 @@ implementations · risks: only 2 human authors; the collection moved many server
 
 **D56 — `modelcontextprotocol/python-sdk`** https://github.com/modelcontextprotocol/python-sdk — **24 623 ★**
 /4 276 f · created **2024-09-24** · **v2.3.0, 2026-10-02** · ≥100 commits/90 d, 7 humans · 360 open ·
-**MIT** · npm `@modelcontextprotocol/sdk` **256 832 284 dl/mo** · better than ours: the SDK our `apps/api`
+**MIT** · npm `@modelcontextprotocol/sdk` **256 832 284 dl/mo** · better than ours: the SDK our `services/api`
 would use to expose the copilot's tools to an agent · risks: none material · **DECISION: ADOPT (SDK) — but
 only for tools we already expose over HTTP.**
 
@@ -882,7 +882,7 @@ repo. Every number below is **UNVERIFIED** and the measurement is named.
 survives the founder stepping away (D10); and the agent-review acceptance rate is the **only** number that
 can settle the CodeRabbit / Sourcery / Greptile / Ellipsis / open-code-review question without a purchase.
 
-## 5. What we are missing → rows for `docs/PARITY.md`
+## 5. What we are missing → rows for `docs/status/PARITY.md`
 
 The CEO merges these. The **Spoke (2026-10-20)** column is left **empty on every row**, and that is a
 finding, not an omission: `docs/study/spoke/TEARDOWN.md` was read on 2026-10-21 and it documents
@@ -892,7 +892,7 @@ filled with a verified fact. Every row is a capability that the best repos in §
 
 | # | Family | Feature | Status | Spoke (2026-10-20) | Our edge | Task |
 |---|--------|---------|--------|----------|------|
-| 1 | Engineering workflow | **Pre-commit gate**: the floor guard (`scripts/check-floor.mjs`) and the formatters run before a commit is created, not only in CI | Planned (task) | | a violation is caught in 2 seconds instead of 12 minutes | **T8.1** (new) |
+| 1 | Engineering workflow | **Pre-commit gate**: the floor guard (`scripts/ci/check-floor.mjs`) and the formatters run before a commit is created, not only in CI | Planned (task) | | a violation is caught in 2 seconds instead of 12 minutes | **T8.1** (new) |
 | 2 | Engineering workflow | **Hash-verified skill installs**: `skills-lock.json` that actually verifies, so a skill cannot be swapped silently | Planned (task) | | the lock is the supply-chain boundary for every agent that writes to this repo | **T8.2** (new) |
 | 3 | Engineering workflow | **Skill validation in CI** (`skills-ref validate` against the open Agent Skills spec) | Planned (task) | | our skills conform to a public format, not to a vendor's | **T8.3** (new) |
 | 4 | Engineering workflow | **Version automation for `packages/`** (changesets), so a published package's version is derived from a written change | Planned (task) | | the version number is evidence, like everything else in `docs/evidence/` | **T8.4** (new) |

@@ -19,7 +19,7 @@ from app.eval_harness import (
     write_results,
 )
 
-MANIFEST = Path("docs/squads/voice/eval/manifest/shift_sims.json")
+MANIFEST = Path("packages/eval/voice/manifest/shift_sims.json")
 
 
 def the_manifest() -> Path:

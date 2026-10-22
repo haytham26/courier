@@ -1,24 +1,33 @@
 # AGENTS.md — read automatically by every coding agent (opencode, Codex, Claude Code, Cursor, …)
 
 Project: **Courier Copilot** — voice-first app for independent parcel couriers in Christchurch/Canterbury, NZ.
-Current instructions: **`docs/MASTER_EXECUTION.md`** — the single entry point (CEO loop, plan P1–P7, autopilot). It references V4 (how), V3 (task details), DECISIONS, mockups.
-Status: `docs/PROGRESS.md`, `docs/AUDIT.md`, `docs/EXECUTOR_LOG.md`.
+Current instructions: **`docs/plan/MASTER_EXECUTION.md`** — the single entry point (CEO loop, plan P1–P7, autopilot). It references V4 (how), V3 (task details), DECISIONS, mockups.
+Status: `docs/status/PROGRESS.md`, `docs/status/PARITY.md`, `docs/status/BUGS.md`, `docs/archive/AUDIT.md`, `docs/log/CURRENT.md`.
+The index of the documentation is `docs/README.md`.
 
 ## Quality bar
 
-`CONSTRAINTS.md` is the written bar: read it before writing code and **do not weaken it to make a
-change pass**. `docs/PARITY.md` says where we beat the market; `docs/design/SYSTEM.md` is the design
-contract; `docs/squads/<module>/` holds each module's research, benchmark and status.
+`docs/plan/CONSTRAINTS.md` is the written bar: read it before writing code and **do not weaken it to
+make a change pass**. `docs/status/PARITY.md` says where we beat the market; `docs/design/SYSTEM.md`
+is the design contract; `docs/squads/<module>/` holds each module's research, benchmark and status.
 
 ## 🔴 Safety (absolute)
 - Work only inside this repo folder. Never read/write/delete outside it (no `~`, `$HOME`, `%USERPROFILE%`, AppData, OneDrive, Desktop, other drives).
 - No destructive commands (`rm -rf`, `Remove-Item -Recurse`, `rmdir /s`, `del /s`, `shutil.rmtree`, `git clean`, `git reset --hard`). Only `node_modules`/`dist`/`build`/`.turbo`/`.expo` inside the repo, by full literal path, never via a variable.
-- No local Android emulator — use `.github/workflows/android-e2e.yml` on GitHub Actions.
+- No local Android emulator — the emulator runs on GitHub Actions (the APK job and the E2E job in `.github/workflows/`).
 - No force-push, no rebase. Secrets only in `.env.local` / GitHub Secrets.
 - No PASS without evidence in `docs/evidence/<step>/`.
 
+## The tree
+
+- `apps/` — the products: `apps/mobile` (the Expo app).
+- `services/` — the backends: `services/api` (FastAPI), `services/auth` (Better Auth), `services/courier-voice`.
+- `packages/` — the shared code and the data: `shared`, `design-tokens`, `nz-address`, `eslint-config`, `contracts` (the OpenAPI file and the database schema), `eval` (the evaluation sets).
+- `scripts/` — the tools, grouped: `ci` (the gates), `data`, `eval`, `design`, `dev`, `secrets`. Each group has a README with a line per script.
+- `docs/` — the documentation, grouped by what it is: `plan`, `status`, `decisions`, `product`, `design`, `research`, `study`, `squads`, `evidence`, `operations`, `log`, `archive`. `docs/README.md` is the index.
+
 ## Skills — you MUST use them
-Skills live in `.claude/skills/<name>/SKILL.md` (mirror in `.agents/`). If your tool doesn't load skills automatically, **open and read the SKILL.md file before starting the matching kind of work**, and follow it.
+Skills live in `.claude/skills/<name>/SKILL.md` (the single source; the pinned copy in `.agents/` was deleted as a byte-identical duplicate). If your tool doesn't load skills automatically, **open and read the SKILL.md file before starting the matching kind of work**, and follow it.
 
 | When you are… | Read and follow |
 |---|---|
@@ -40,4 +49,4 @@ Skills live in `.claude/skills/<name>/SKILL.md` (mirror in `.agents/`). If your 
 | Removing old code (fake auth, NativeWind…) | `deprecation-and-migration` |
 | Release / handover | `shipping-and-launch` |
 
-In `docs/EXECUTOR_LOG.md`, for each step write which skills you applied.
+In `docs/log/<week>.md` (the week you are in), for each step write which skills you applied.

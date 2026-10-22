@@ -4,7 +4,7 @@
 
 ## Why
 
-<!-- The driver-day scenario this solves, and the link to the task in docs/KICKOFF_V3_EN.md. -->
+<!-- The driver-day scenario this solves, and the link to the task in docs/archive/KICKOFF_V3_EN.md. -->
 
 ## Research
 
@@ -12,7 +12,7 @@
 
 ## Parity
 
-<!-- Link to the row in docs/PARITY.md and its new status (Have / Better / Planned / Skip). -->
+<!-- Link to the row in docs/status/PARITY.md and its new status (Have / Better / Planned / Skip). -->
 
 ## Design
 
@@ -27,7 +27,7 @@
 - [ ] Two independent review passes (critical modules: auth, payments, sync, address, voice, routing)
 - [ ] `pnpm check:full` passes locally
 - [ ] Coverage and mutation scores are at or above the floor in CONSTRAINTS.md
-- [ ] No new floor violations (`node scripts/check-floor.mjs`)
+- [ ] No new floor violations (`node scripts/ci/check-floor.mjs`)
 - [ ] PROGRESS.md and EXECUTOR_LOG.md are updated (including the skills and squads applied)
 
 ## Screenshots
@@ -41,6 +41,6 @@
 ## Checklist
 
 - [ ] No secrets, no PII in logs
-- [ ] No banned dependency or pattern (`node scripts/check-banned.mjs` equivalent: `scripts/grep-banned.ps1`)
+- [ ] No banned dependency or pattern (`node scripts/check-banned.mjs` equivalent: `scripts/ci/grep-banned.ps1`)
 - [ ] Offline behaviour defined (does the feature work with no network?)
 - [ ] The tenant scoping of every query is proven by a test

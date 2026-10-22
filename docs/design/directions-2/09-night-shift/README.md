@@ -103,7 +103,7 @@ Fraunces is a variable family with `opsz 9-144`, `wght 100-900`, `SOFT` and `WON
 with tabular figures.
 
 Both licences are SIL OFL 1.1, which covers use in a shipped application and allows the font to be
-embedded in the binary. The notice goes into `docs/LICENSES.md` with the rest of the ledger.
+embedded in the binary. The notice goes into `docs/product/LICENSES.md` with the rest of the ledger.
 
 ---
 

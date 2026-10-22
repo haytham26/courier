@@ -1,7 +1,7 @@
 # Store listing draft - Courier Copilot
 
 The text that goes into the Play Console. The version lines have to match
-`apps/mobile/app.json`, and `scripts/check-store-readiness.mjs` fails when they
+`apps/mobile/app.json`, and `scripts/ci/check-store-readiness.mjs` fails when they
 do not.
 
 - App name: Courier Copilot

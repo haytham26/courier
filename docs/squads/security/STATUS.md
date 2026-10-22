@@ -50,7 +50,7 @@ Updated: 2026-10-22 (MASTER_EXECUTION §14 - the complete sign-in)
 
 ## Next
 
-1. The founder's ids and domains (`docs/FOUNDER_TODO.md`): Google and Apple client ids and
+1. The founder's ids and domains (`docs/status/FOUNDER_TODO.md`): Google and Apple client ids and
    secrets, the Apple team id, the passkey domain, the app store ids.
 2. The passkey native module for the phone: React Native has no WebAuthn API, so the ceremony on
    a device needs the platform authenticator (Android Credential Manager, iCloud Keychain). Until

@@ -41,5 +41,5 @@ Size / line height / weight, in pixels. The tracking and the colours are in
 
 ## The founder's pick
 
-The three directions are in `docs/FOUNDER_TODO.md`: **pick A, B or C**. The work carries on
+The three directions are in `docs/status/FOUNDER_TODO.md`: **pick A, B or C**. The work carries on
 either way — the screen inventory of §13.5 is the next step.

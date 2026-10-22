@@ -43,12 +43,12 @@ Updated: 2026-10-22 (Courier Voice: the service, the engine port and the shift s
   (`useCourierVoice.ts`), the morning brief card (`MorningBriefCard.tsx`) on the Today screen and the
   voice settings on the Settings screen. The command catalogue grew with the tools of the product, so
   a sentence the service understands does something on the phone.
-- **The evaluation**: the shift simulations (`docs/squads/voice/eval/manifest/shift_sims.json`) - three
+- **The evaluation**: the shift simulations (`packages/eval/voice/manifest/shift_sims.json`) - three
   scripted shifts with the voice and the noise - and the harness
   (`services/courier-voice/app/eval_harness.py`) that runs them against the service and writes the
   three result files of the evaluation contract.
 - **The licence ledger**: every model and every library of the voice service is in
-  `docs/LICENSES.md` with its provenance, and the service publishes the ledger itself at
+  `docs/product/LICENSES.md` with its provenance, and the service publishes the ledger itself at
   `GET /v1/licences`. The blocked weights (OmniVoice CC-BY-NC, the community codec, the openWakeWord
   models) are blocked in code.
 
@@ -56,7 +56,7 @@ Updated: 2026-10-22 (Courier Voice: the service, the engine port and the shift s
 
 | Metric | Target | Today | Evidence |
 |--------|--------|-------|----------|
-| Intent accuracy (the shift simulations, M3) | >= 97 % | **100 %** (22 of 22 command turns) | `docs/squads/voice/eval/results/shift-sim/summary.json` |
+| Intent accuracy (the shift simulations, M3) | >= 97 % | **100 %** (22 of 22 command turns) | `packages/eval/voice/results/shift-sim/summary.json` |
 | False action rate (M9) | <= 1 % | **0 %** (0 of 10 non-command turns) | the same summary |
 | The eight word rule while moving | every line | **100 %** (8 of 8 moving turns) | the same summary |
 | Service latency (the part of M6 that is not the phone) | <= 700 ms p95 | **0.0 ms p95** (in process) | the same summary |

@@ -1,6 +1,6 @@
 ﻿# Sync & Data Squad - decisions
 
-ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
+ADRs owned by this squad live in `docs/decisions/adr/`. List them here with one line each.
 
 | Date | Decision | Candidate / basis | Source file | Status |
 |---|---|---|---|---|
@@ -10,7 +10,7 @@ ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
 | 2026-10-20 | ADOPT the WatermelonDB **adapter shape** - `sync({ pullChanges, pushChanges, resolvedChanges })` as the TypeScript interface of `packages/sync`, with a fake implementation for tests - and op-sqlite's `executeBatch` + error codes for atomic event writes and typed failures | `Nozbe/WatermelonDB` (shape only, not a dependency) | `docs/research/2026/offline-first-sync-local-dbs.md` | Accepted |
 | 2026-10-20 | ADOPT TanStack Query for the **web dashboard** only (server state), and Dexie / wa-sqlite if the dashboard ever needs an IndexedDB cache | `TanStack/query` (MIT), `dexie/Dexie.js` (Apache-2.0) | `docs/research/2026/offline-first-sync-local-dbs.md` | Accepted |
 | 2026-10-20 | Keep the encrypted `app.db` and the read-only LINZ slice in **separate** databases: never attach the slice with the same key and always open it read-only, so a bug cannot corrupt the public dataset | V4 §7 (SQLCipher) | `docs/research/2026/offline-first-sync-local-dbs.md` | Accepted |
-| 2026-10-20 | PROTOTYPE (not adopt) **PowerSync** as candidate #2 in the airplane-mode chaos test, so we have a real comparison; the service is **FSL-1.1-ALv2**, a licence decision for the founder that must be recorded in `docs/LICENSES.md` | `powersync-ja/powersync-js` (Apache-2.0 client) + `powersync-service` (FSL-1.1-ALv2) | `docs/research/2026/offline-first-sync-local-dbs.md` | Needs founder sign-off |
+| 2026-10-20 | PROTOTYPE (not adopt) **PowerSync** as candidate #2 in the airplane-mode chaos test, so we have a real comparison; the service is **FSL-1.1-ALv2**, a licence decision for the founder that must be recorded in `docs/product/LICENSES.md` | `powersync-ja/powersync-js` (Apache-2.0 client) + `powersync-service` (FSL-1.1-ALv2) | `docs/research/2026/offline-first-sync-local-dbs.md` | Needs founder sign-off |
 | 2026-10-20 | WATCH Electric (read-path only; hosted tier shutting down), loro (a CRDT is the wrong merge model for our aggregates), libsql/Turso, and `expo-opsqlite-spatialite-demo` (if on-device radius queries over LINZ are ever needed) | `electric-sql/electric`, `loro-dev/loro`, `tursodatabase/libsql` | `docs/research/2026/offline-first-sync-local-dbs.md` | Watch |
 | 2026-10-20 | REJECT Realm JS (vendor-deprecated sync), Replicache (archived), WatermelonDB as a dependency (no default-branch commit since 2025-08-11), Sharedb, Yjs/Automerge/Loro-as-a-database, rqlite, libsql, InstantDB, PouchDB, `op-sqlite-next`, `y-op-sqlite` and `op-sqlite-drizzle-example` (no licence) | various | `docs/research/2026/offline-first-sync-local-dbs.md` | Rejected |
 | 2026-10-20 | Monthly radar: op-sqlite releases and **default-branch** commits (a memory-safety fix is a same-week bump) and **any change to the PowerSync FSL terms** (a licence change is a stop-the-line event) | `OP-Engineering/op-sqlite`, `powersync-ja/powersync-service` | `docs/research/2026/offline-first-sync-local-dbs.md` | Accepted |

@@ -1,7 +1,7 @@
 # Why each repository of the pool is in the Design Studio pool.
 #
 # `owner/name<TAB>the reason` - one line per repository. The table in
-# `docs/design/RESEARCH.md` is built by `scripts/build-design-research-tables.mjs`,
+# `docs/design/RESEARCH.md` is built by `scripts/design/build-design-research-tables.mjs`,
 # which joins this file with `docs/design/evidence/github-repos-<date>.tsv`, so
 # the numbers in the document cannot drift away from the API.
 #

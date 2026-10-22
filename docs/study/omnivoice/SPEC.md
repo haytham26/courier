@@ -30,7 +30,7 @@ A single-stage, non-autoregressive, zero-shot text-to-speech system that turns t
 Two upstream facts (GitHub issues, read 2026-10-21) that change our plan:
 
 1. **The upstream maintainer states the team cannot grant a commercial licence** for the current checkpoint: the reason it is non-commercial is that the training mixture contains open data that does not permit commercial use, "so we do not have the authority to provide a commercial authorisation" (issue #262, 2026-09-07). A separately trained commercially-usable checkpoint is planned, with no timeline (issue #258, 2026-09-07).
-2. Therefore **V4 §13.6 option 2 ("ask k2-fsa for a commercial licence of the OmniVoice weights") is not viable** as written. Our own-weights path (option 3) is the realistic route to a commercial multilingual engine. The founder's decision (V4 §13.6, D23) permits studying and adapting the weights; the licence ledger in `docs/LICENSES.md` must record both the founder's legal advice (held outside git) and the upstream statement above.
+2. Therefore **V4 §13.6 option 2 ("ask k2-fsa for a commercial licence of the OmniVoice weights") is not viable** as written. Our own-weights path (option 3) is the realistic route to a commercial multilingual engine. The founder's decision (V4 §13.6, D23) permits studying and adapting the weights; the licence ledger in `docs/product/LICENSES.md` must record both the founder's legal advice (held outside git) and the upstream statement above.
 
 ## 3. Our locked context (every requirement inherits these)
 

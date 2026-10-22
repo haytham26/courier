@@ -14,7 +14,7 @@
 
 ## Evaluation dataset / benchmark
 
-docs/squads/scanner/eval/ (>= 300 NZ courier label images, synthetic + founder-provided redacted photos)
+packages/eval/scanner/ (>= 300 NZ courier label images, synthetic + founder-provided redacted photos)
 
 ## Research
 

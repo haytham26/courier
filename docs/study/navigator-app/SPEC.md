@@ -3,7 +3,7 @@
 **Project studied:** `fleetbase/navigator-app` (AGPL-3.0) — the white-label driver app shipped by the
 Fleetbase platform, React Native + Tamagui, iOS and Android.
 **Our product:** Courier Copilot — the **driver-side** app: voice-first, offline-first, for independent
-NZ couriers (`docs/PRODUCT_SPEC.md`, `docs/PARITY.md`, `docs/KICKOFF_V3_EN.md`).
+NZ couriers (`docs/product/PRODUCT_SPEC.md`, `docs/status/PARITY.md`, `docs/archive/KICKOFF_V3_EN.md`).
 
 > **Clean-room statement.** Everything below is written in our own words as requirements **for our
 > product**. No code, no identifiers, no schemas, no assets, no copied sentences. Behaviour is
@@ -169,7 +169,7 @@ sound. **We adopt that information architecture and rebuild the interaction mode
 
 ## 3. Our requirements (Navigator-derived)
 
-`AC` = acceptance criterion. Task ids are ours (`docs/KICKOFF_V3_EN.md`).
+`AC` = acceptance criterion. Task ids are ours (`docs/archive/KICKOFF_V3_EN.md`).
 
 ### 3.1 Screens and navigation (drives T7.6, T7.7)
 

@@ -1,6 +1,6 @@
 ﻿# Address Intelligence Squad - decisions
 
-ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
+ADRs owned by this squad live in `docs/decisions/adr/`. List them here with one line each.
 
 | Date | Decision | Candidate / basis | Source file | Status |
 |---|---|---|---|---|

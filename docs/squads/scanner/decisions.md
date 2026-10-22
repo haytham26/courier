@@ -1,6 +1,6 @@
 ﻿# Label Scanner Squad - decisions
 
-ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
+ADRs owned by this squad live in `docs/decisions/adr/`. List them here with one line each.
 
 | Date | Decision | Candidate / basis | Source file | Status |
 |---|---|---|---|---|
@@ -13,5 +13,5 @@ ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
 | 2026-10-20 | Fallback chain: ML Kit bundled -> RapidOCR/PP-OCR ONNX -> tesseract-class -> ask the driver one quick question. **No cloud OCR, ever** | V4 §10.2 (on-device, offline, no images uploaded) | `docs/research/2026/ocr-label-scanning.md` | Accepted |
 | 2026-10-20 | WATCH `opencv` (glare / perspective correction for crumpled labels), `google-ai-edge/mediapipe`, `ahmeterenodaci/rn-mlkit-ocr`, `mrousavy/vision-camera-resize-plugin`, `juliansteenbakker/mobile_scanner` | various | `docs/research/2026/ocr-label-scanning.md` | Watch |
 | 2026-10-20 | REJECT `tesseract.js` (cannot run in Hermes, lowest accuracy), `tesseract`, `chineseocr_lite` (GPL-2.0), Anyline (commercial), the server-class OCR tools (`chandra`, `MinerU`, `EasyOCR`, `zerox`, `Unstructured`), `CRAFT-pytorch`, `gev2002/react-native-vision-camera-text-recognition` (stale, v3-era), `journeyapps/zxing-android-embedded` (Activity-based), `tony-xlh/react-native-document-scanner` (no licence) and the commercial dynamsoft-class plugins | various | `docs/research/2026/ocr-label-scanning.md` | Rejected |
-| 2026-10-20 | Record the Google ML Kit dependency explicitly in `docs/LICENSES.md` - its terms are not OSS, so the FOSS path must stay alive | Google ML Kit terms | `docs/research/2026/ocr-label-scanning.md` | Accepted |
-| 2026-10-20 | Build `docs/squads/scanner/eval/` (>= 300 real-style NZ courier label images) and the benchmark harness before the engine is chosen; >= 97 % correct recipient address, <= 1 % wrong-block and <= 1.5 s per label are all UNVERIFIED until then | V4 §10.2 working agreement #1 | `docs/squads/scanner/README.md` | Accepted |
+| 2026-10-20 | Record the Google ML Kit dependency explicitly in `docs/product/LICENSES.md` - its terms are not OSS, so the FOSS path must stay alive | Google ML Kit terms | `docs/research/2026/ocr-label-scanning.md` | Accepted |
+| 2026-10-20 | Build `packages/eval/scanner/` (>= 300 real-style NZ courier label images) and the benchmark harness before the engine is chosen; >= 97 % correct recipient address, <= 1 % wrong-block and <= 1.5 s per label are all UNVERIFIED until then | V4 §10.2 working agreement #1 | `docs/squads/scanner/README.md` | Accepted |

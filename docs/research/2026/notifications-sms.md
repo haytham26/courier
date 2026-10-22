@@ -15,10 +15,10 @@ vs server · advisories + supply chain · pricing · what it does better than ou
 | Item | Verified 2026-10-21 |
 |---|---|
 | Push notifications in the app | **none** — `apps/mobile/package.json` has **no `expo-notifications`**; `app.json` `android.permissions` has **no `POST_NOTIFICATIONS`**; `ios.infoPlist` has **no** notification usage strings; `expo-notifications` is not in the dependency list |
-| SMS to customers | **none** — `docs/COST_PLAN.md` lists the SMS provider as **[OPEN]**; `docs/FOUNDER_TODO.md` line 46 "SMS Provider (NZ) | **[OPEN]**"; `apps/api` has no SMS dependency; `docs/FINAL_PROMPT.md` §"maszoud SMS" keys `SMS_PROVIDER`, `SMS_API_KEY/SECRET`, `SMS_FROM_NUMBER` are placeholders |
+| SMS to customers | **none** — `docs/product/COST_PLAN.md` lists the SMS provider as **[OPEN]**; `docs/status/FOUNDER_TODO.md` line 46 "SMS Provider (NZ) | **[OPEN]**"; `services/api` has no SMS dependency; `docs/archive/FINAL_PROMPT.md` §"maszoud SMS" keys `SMS_PROVIDER`, `SMS_API_KEY/SECRET`, `SMS_FROM_NUMBER` are placeholders |
 | Our choice (the one the product spec implies) | **`expo-notifications`** for local + remote, **FCM/APNs** as the transport, **Expo Push Service** for the first release, **one SMS adapter behind an interface** (V4 §6.1: "adapters behind interfaces for every external service (maps, STT, LLM, **SMS**, payments)") |
 | Squad target that owns this area | **T7.10** customer SMS/ETAs (optional, off by default — D5) · **T7.1** offline-first sync · **T7.15** NZ Privacy Act PIA + retention |
-| Locked decisions that constrain us | Expo SDK 58, RN New Architecture only, offline-first, **no PII leaving the device without consent**, plain NZ English, no emoji. `docs/DECISIONS.md` **D5**: the customer tracking link (SMS or any channel) is **optional and off by default**; **D2**: every feature must be reachable by voice |
+| Locked decisions that constrain us | Expo SDK 58, RN New Architecture only, offline-first, **no PII leaving the device without consent**, plain NZ English, no emoji. `docs/decisions/DECISIONS.md` **D5**: the customer tracking link (SMS or any channel) is **optional and off by default**; **D2**: every feature must be reachable by voice |
 | Hard bar (V4 §6.4/§10.1) | battery ≤ 8 %/h while driving mode is active · cold start ≤ 2 s · every driving-day action works with **no network** and syncs later |
 
 ### Two things must not be conflated
@@ -108,8 +108,8 @@ without touching the app code · **DECISION: ADOPT (the notification engine, loc
 (server) · production: Expo push tickets/receipts for thousands of apps · docs: README + Expo push docs ·
 **better than ours**: it is the **only** client that implements the Expo push **ticket → receipt** protocol
 correctly, with **automatic throttling and retry** — exactly the "send 600/second" contract, handled for us ·
-risks: it is a Node package and our API is **Python** (`apps/api`, FastAPI, `uv`) → we would call the HTTP API
-directly rather than import it · **DECISION: ADOPT (as the HTTP contract to mirror in `apps/api`, not as a
+risks: it is a Node package and our API is **Python** (`services/api`, FastAPI, `uv`) → we would call the HTTP API
+directly rather than import it · **DECISION: ADOPT (as the HTTP contract to mirror in `services/api`, not as a
 dependency).**
 
 **C3 — `OneSignal/react-native-onesignal`** https://github.com/OneSignal/react-native-onesignal — **1 591 ★**
@@ -123,7 +123,7 @@ unverified** (v5 is a Nitro-free classic bridge; the SDK ships an `expo` sample 
 push + in-app + email + SMS in one SDK, a **dashboard for per-device delivery state**, and the best-documented
 **OEM-delivery coaching** we have read (it tells you exactly how to make a Samsung/Xiaomi/Huawei device deliver) ·
 risks: **the licence is not plain MIT** — under our own `CONSTRAINTS.md` licence gate a use restriction is a
-licence defect we must record in `docs/LICENSES.md`; and if we later drop OneSignal for direct FCM, the SDK
+licence defect we must record in `docs/product/LICENSES.md`; and if we later drop OneSignal for direct FCM, the SDK
 licence forbids us from keeping it in the app · **DECISION: WATCH (vendor platform = good; SDK licence = a
 blocker unless OneSignal is the committed provider).**
 
@@ -143,7 +143,7 @@ same licence question · **DECISION: WATCH.**
 **C6 — `OneSignal/onesignal-node-api`** https://github.com/OneSignal/onesignal-node-api — **52 ★** /22 f · created
 **2021-08-25** · pushed **2026-10-15** · licence **NOASSERTION** · last release **v5.20.0 @ 2026-10-16** (**17
 releases in 6 m**) · **34 commits/90 d, 4 humans** · **server** side (the send API) · **better than ours**: it is
-the **only** one of the OneSignal SDKs that is usable from `apps/api` — but our API is Python, so it would be an
+the **only** one of the OneSignal SDKs that is usable from `services/api` — but our API is Python, so it would be an
 HTTP call, not a dependency · risks: none beyond the vendor · **DECISION: KEEP (documentation of the send API
 shape only).**
 
@@ -174,7 +174,7 @@ was not read) · last release **firebase@13.0.0 @ 2026-10-08** (**9 releases in 
 humans** · 743 open issues incl. PRs · server/web SDK · **better than ours**: the reference for the **FCM HTTP v1**
 request shape and the **admin SDK**'s multicast fan-out, which is what a 200-stop re-notification needs ·
 risks: it is a JavaScript SDK and our API is Python · **DECISION: KEEP (documentation only — we send FCM from
-`apps/api` in Python).**
+`services/api` in Python).**
 
 **C10 — `firebase/firebase-admin-node`** https://github.com/firebase/firebase-admin-node — **1 748 ★** /423 f ·
 created **2017-03-14** · pushed **2026-10-20** · **Apache-2.0** · last release **v14.5.0 @ 2026-09-24** (**8
@@ -299,7 +299,7 @@ NZ rates UNVERIFIED** · **DECISION: KEEP (the webhook-contract reference) + the
 **C27 — `twilio/twilio-python`** https://github.com/twilio/twilio-python — **2 085 ★** /815 f · created
 **2009-09-15** · pushed **2026-10-12** · **MIT** · last release **9.12.0 @ 2026-10-13** (**7 releases in 6 m**) ·
 **16 commits/90 d, 4 humans** · 78 open issues · server · **better than ours**: it is the **Python** SDK, so it
-*can* be a dependency of `apps/api`, and it carries the same webhook-validation helpers · risks: **NZ pricing
+*can* be a dependency of `services/api`, and it carries the same webhook-validation helpers · risks: **NZ pricing
 UNVERIFIED (the NZ pricing pages 404'd on 2026-10-21)**; our own `SmsGateway` interface (V4 §6.1) means we do
 not need to couple to a vendor SDK at all · **DECISION: WATCH (the Python SDK to use if we pick Twilio).**
 
@@ -409,7 +409,7 @@ handler is registered.
 $0.0330 → $0.0160** per tier; 14-day free trial, no card. **Two NZ facts that decide our provider**: *"In New
 Zealand, A2P regulations require a dedicated short code rather than a long code"* and *"In New Zealand, inbound
 charges may apply depending on your short code type"* (both verified verbatim on 2026-10-21). **This contradicts
-our own `docs/FOUNDER_TODO.md` line 46 and `docs/FINAL_PROMPT.md` §207, which assume an NZ *long* number** →
+our own `docs/status/FOUNDER_TODO.md` line 46 and `docs/archive/FINAL_PROMPT.md` §207, which assume an NZ *long* number** →
 see the Decision section. Also: the footer reads "© 2026 Sinch".
 
 **V5 — Telnyx** https://telnyx.com/pricing (read **2026-10-21**) — **Messaging from $0.004 per message part**;
@@ -629,7 +629,7 @@ forward compatibility tests (#1213)" · `c57ec86` 2026-09-10 "[Librarian] Regene
 **Why this matters to us, concretely.** Two 2026 commits define the **delivery-report webhook contract** we
 must implement: **#1220** (validate the URL *as received*, before re-encoded variants — i.e. compare the raw
 bytes the provider sent, not a normalised URL) and **#1218** (replace the deprecated `scmp` with
-`crypto.timingSafeEqual` — a **constant-time** signature comparison). We will implement both in `apps/api`, and
+`crypto.timingSafeEqual` — a **constant-time** signature comparison). We will implement both in `services/api`, and
 we will write the same rule into the ADR: **verify the signature against the raw body, compare in constant time,
 reject on any mismatch, and make the handler idempotent on the provider's event id.**
 
@@ -667,7 +667,7 @@ project's centre of gravity has moved. Adopting it would mean adopting a platfor
 ## 4. Benchmark — **UNVERIFIED: no eval set exists**
 
 **I did not run a benchmark and I will not invent one.** There is no `docs/squads/notifications/` directory, no
-notification eval set, and `apps/api` has no push or SMS client installed. Every number below is **UNVERIFIED**
+notification eval set, and `services/api` has no push or SMS client installed. Every number below is **UNVERIFIED**
 until the harness exists.
 
 **The set that must be built (name + shape):**
@@ -682,7 +682,7 @@ until the harness exists.
 
 | Metric | Gate | How we would measure it |
 |---|---|---|
-| **Delivery reliability (push)** | **≥ 95 %** of "stop changed" pushes observed by the device within 60 s, **and** every non-delivery explained by a receipt/ticket code | Device ACKs the push id to `apps/api`; the server stores ticket id, receipt code and device ACK separately. **UNVERIFIED** until the harness runs. |
+| **Delivery reliability (push)** | **≥ 95 %** of "stop changed" pushes observed by the device within 60 s, **and** every non-delivery explained by a receipt/ticket code | Device ACKs the push id to `services/api`; the server stores ticket id, receipt code and device ACK separately. **UNVERIFIED** until the harness runs. |
 | **Delivery reliability (SMS)** | **≥ 98 %** of exception SMS reach the handset (DLR "delivered") within 120 s | The provider's DLR webhook updates our `sms_events` row; the device's next sync reconciles. **UNVERIFIED**. |
 | **Latency (push, foreground)** | ≤ 700 ms from the voice command to the on-screen change (V4 §6.4) — the same budget as the voice path | On-device timestamp at receipt minus the command timestamp. **UNVERIFIED**. |
 | **Latency (push, background)** | ≤ 10 s from `t_send` to device receipt | Ticket + receipt timestamps. **UNVERIFIED**. |
@@ -693,7 +693,7 @@ until the harness exists.
 | **Offline behaviour** | with the phone in airplane mode for a whole shift: **every SMS and every push is queued locally and flushed in order**, no duplicates, no lost exception | Maestro airplane-mode scenarios (V4 §13.3) against the local outbox table; assert idempotency on the event id. **UNVERIFIED**. |
 | **Noise** | ≤ 1 visible banner per stop; **0** banners for a silent data push | Count `notification_posted` events per 100 stops, by channel. **UNVERIFIED**. |
 
-## 5. What we are missing → rows for `docs/PARITY.md`
+## 5. What we are missing → rows for `docs/status/PARITY.md`
 
 The CEO merges these. The **Spoke** column is filled **only** with facts verified in
 `docs/study/spoke/TEARDOWN.md` (read 2026-10-21); where Spoke is silent the cell says so.
@@ -732,13 +732,13 @@ The CEO merges these. The **Spoke** column is filled **only** with facts verifie
 4. **Do not adopt Notifee, `react-native-push-notification`, `evollu/react-native-fcm` or
    `instamobile/react-native-firebase`** — four of the four most-installed notification libraries in the
    ecosystem are archived or dead, and that is exactly how we lose a feature.
-5. **SMS: one adapter (`SmsGateway`) in `apps/api`, vendor-neutral, transactional only.** Two candidates:
+5. **SMS: one adapter (`SmsGateway`) in `services/api`, vendor-neutral, transactional only.** Two candidates:
    **Telnyx** (verified list price $0.004/part, MIT SDK, 69 releases in 6 months, the cleanest signed-event
    webhook model) and **Sinch Engage / ex-MessageMedia** (NZ-domiciled, verified plan prices, and the only
    vendor whose page states the NZ rule outright). **Decision: approach Telnyx first (API-first, no plan
    minimum), keep Sinch Engage as the NZ fallback.**
-6. **ADR proposal (does not change a locked decision):** our `docs/FOUNDER_TODO.md` (line 46) and
-   `docs/FINAL_PROMPT.md` (§207) assume an **NZ long number**; Sinch's published NZ guidance says *"In New
+6. **ADR proposal (does not change a locked decision):** our `docs/status/FOUNDER_TODO.md` (line 46) and
+   `docs/archive/FINAL_PROMPT.md` (§207) assume an **NZ long number**; Sinch's published NZ guidance says *"In New
    Zealand, A2P regulations require a dedicated short code rather than a long code"* (verified 2026-10-21). The
    provider choice must therefore be **a short code (or a registered aggregator's number), not a long number we
    buy ourselves**. This is an **ADR proposal for the CEO**, not an edit to DECISIONS.md.
@@ -749,7 +749,7 @@ The CEO merges these. The **Spoke** column is filled **only** with facts verifie
    not become marketing. **Any** marketing SMS is out of scope (D5). The Quiet Hours rule and the STOP handling
    stay as a product decision (a driver must be able to say "stop texting this customer"), not a legal
    requirement.
-8. **Delivery-report webhook contract (our own, in `apps/api`):** every provider event is written to
+8. **Delivery-report webhook contract (our own, in `services/api`):** every provider event is written to
    `sms_events` keyed by the provider's event id (idempotent), the signature is verified **against the raw
    body** and **in constant time** (the Twilio 2026 rules, C26 #1220/#1218), unknown states are stored as
    `unknown` and never overwrite a terminal state, and the row is reconciled with the driver's next sync.
@@ -766,13 +766,13 @@ when the network returns**. Nothing in the chain may block a driving-day action.
 | **OEM kills delivery** (force-stop, One UI categories, battery restrictions) | High | Detect the manufacturer, coach once (dontkillmyapp.com + our own copy), offer the local queue as the real path, and use `delivery: 'alarmClock'` for the rare time-critical prompt |
 | **The SMS number type is wrong** (long vs short code) and we provision the wrong thing | High | ADR proposal before any purchase; the founder's account team owns it (FOUNDER_TODO) |
 | **A commercial-looking SMS breaches UEMA** (a discount message, an "offer") | High | Copy review in the tool layer: only exception templates; a template lint in CI; the HDCA principles as a pre-send check |
-| **OneSignal's use-restricted licence sneaks into the bundle** | Medium | Not on the allow-list; `scripts/check-licenses.mjs` gate; record in `docs/LICENSES.md` |
+| **OneSignal's use-restricted licence sneaks into the bundle** | Medium | Not on the allow-list; `scripts/ci/check-licenses.mjs` gate; record in `docs/product/LICENSES.md` |
 | **An archived library is chosen because everyone uses it** (notifee, zo0r) | Medium | The shortlist is explicit; "release in the last 6 months" is a hard filter (V4 §3) |
 | **R8/minification breaks the notification receiver** (SDK 58 turns R8 on by default) | Medium | expo-notifications fixed this in 58.0.10 (#50799); keep the ProGuard rules in the build and add a CI smoke test on the release build |
 | **iOS 27 UIScene changes the background handler registration** | Medium | expo-notifications 58.x already forwards the delegate (#48313); test on the iOS 27 SDK in CI |
 | **Notification noise** (Android 16 cooldown, driver complaints) | Medium | One audible channel, everything else silent, one banner per stop, measured (§4 "Noise") |
 | **Cost creep on SMS** (plan minimums of $99–$2 399/mo) | Medium | API-first pricing only (Telnyx at $0.004/part); D5 keeps SMS optional; a per-courier spend cap in the admin console |
-| **Rate limits** (600/s per project on Expo push) | Low | Batch and throttle in `apps/api`; a queue with retry |
+| **Rate limits** (600/s per project on Expo push) | Low | Batch and throttle in `services/api`; a queue with retry |
 
 ## 8. Monthly radar filter
 

@@ -22,13 +22,13 @@ document / released / draft) · what it mandates · adoption cost · **DECISION*
 |---|---|
 | Mobile hardening today | **almost nothing.** `apps/mobile/app.json` has **no** `android.allowBackup`, **no** `android.dataExtractionRules`, **no** `expo-build-properties` plugin (so no R8/ProGuard, no `networkSecurityConfig`, no `usesCleartextTraffic` policy), **no** `expo-updates` dependency, **no** `expo-crypto`, **no** `expo-local-authentication`, **no** `expo-app-integrity`. The only hardening-relevant dependency installed is **`expo-secure-store` 58.0.2** (`apps/mobile/package.json:25`). `react-native-webview` is **not** installed, so there is no WebView surface yet. |
 | Local database | **two** SQLite stacks are installed: `expo-sqlite ~58.0.13` and **`@op-engineering/op-sqlite` 18.2.5** (`apps/mobile/package.json:26`, `:10`). op-sqlite's README lists "**SQLCipher is supported as a compilation target**" — but whether the published npm artifact ships a SQLCipher build is **UNVERIFIED** (see §4). |
-| API hardening today | `apps/api/pyproject.toml` has **no rate-limiting library, no CORS middleware, no security-header middleware, no SSRF guard, no secrets manager, no SBOM tooling**. `apps/api/app/main.py` builds a bare `FastAPI()` (line 18) and includes only `auth_router` (line 21). |
-| The one real hole we found | `apps/api/app/main.py:76-85` — the voice WebSocket `@app.websocket("/shifts/{shift_id}/voice")` takes **no `Depends(get_current_principal)`** and calls `await ws.accept()` immediately. It is an **unauthenticated** WebSocket that will accept a transcript and answer with `{"type":"say"}`. MASVS-AUTH-1 / ASVS V2. **High.** |
-| Second hole | `apps/api/app/auth/jwks.py:29` — `auth_jwt_issuer: str = ""`, and line 125 passes `issuer=self._settings.auth_jwt_issuer or None`. With the default, **the issuer claim is not verified at all**. The audience *is* enforced (`auth_jwt_audience: str = "courier-api"`, line 30). |
+| API hardening today | `services/api/pyproject.toml` has **no rate-limiting library, no CORS middleware, no security-header middleware, no SSRF guard, no secrets manager, no SBOM tooling**. `services/api/app/main.py` builds a bare `FastAPI()` (line 18) and includes only `auth_router` (line 21). |
+| The one real hole we found | `services/api/app/main.py:76-85` — the voice WebSocket `@app.websocket("/shifts/{shift_id}/voice")` takes **no `Depends(get_current_principal)`** and calls `await ws.accept()` immediately. It is an **unauthenticated** WebSocket that will accept a transcript and answer with `{"type":"say"}`. MASVS-AUTH-1 / ASVS V2. **High.** |
+| Second hole | `services/api/app/auth/jwks.py:29` — `auth_jwt_issuer: str = ""`, and line 125 passes `issuer=self._settings.auth_jwt_issuer or None`. With the default, **the issuer claim is not verified at all**. The audience *is* enforced (`auth_jwt_audience: str = "courier-api"`, line 30). |
 | Auth service | `services/auth/src/options.ts` — Better Auth with the `organization`, `expo` and `jwt` plugins; `rateLimit` is configured (lines 31-36) with `customRules`; `trustedOrigins` is set; **the `jwt` plugin signs with `keyPairConfig: { alg: config.jwks.alg }` — our JWKS is ES256** (D21). |
-| CI gates we already run | `CONSTRAINTS.md`: `gitleaks detect --redact`; `node scripts/check-audit.mjs` (zero high/critical JS advisories, two documented build-time exceptions); `uvx pip-audit` (zero high/critical Python advisories); `semgrep scan --config p/default --config p/owasp-top-ten`; CodeQL (zero high alerts); `scripts/check-licenses.mjs`; `scripts/check-floor.mjs`. **No** osv-scanner, **no** SBOM, **no** image scanning, **no** DAST, **no** mobile binary analysis, **no** artefact signing. |
+| CI gates we already run | `CONSTRAINTS.md`: `gitleaks detect --redact`; `node scripts/ci/check-audit.mjs` (zero high/critical JS advisories, two documented build-time exceptions); `uvx pip-audit` (zero high/critical Python advisories); `semgrep scan --config p/default --config p/owasp-top-ten`; CodeQL (zero high alerts); `scripts/ci/check-licenses.mjs`; `scripts/ci/check-floor.mjs`. **No** osv-scanner, **no** SBOM, **no** image scanning, **no** DAST, **no** mobile binary analysis, **no** artefact signing. |
 | Supply-chain posture | `.npmrc`: `ignore-scripts=true`, `minimum-release-age=10080` (7 days), `trust-policy=no-downgrade`. `pnpm-workspace.yaml`: `ignoreScripts: true`, `overrides.tinypool: 2.2.0`. pnpm is **v12.14.0** (release 2026-10-15) and per pnpm's own docs v11+ ships `minimumReleaseAge` default 1440 and `blockExoticSubdeps` default true. |
-| The bar (`CONSTRAINTS.md`, `docs/SAAS_CHECKLIST.md` §A) | **zero high/critical findings**; **no secrets in git**; **no PII off the device** without consent; **OWASP ASVS L2** for the API; **OWASP MASVS L2** for auth/storage; **SQLCipher DB, keys in the Android Keystore (expo-secure-store), certificate pinning for our API, root/emulator/hook detection (signal only, never blocking the CI emulator), screenshot protection on sensitive screens, no secrets in the APK, obfuscation (R8), tamper detection via Play Integrity**; a **threat model per module (STRIDE)**, security tests in CI (SAST, DAST against staging with OWASP ZAP, secret scanning, dependency audit), a pen-test checklist before v1, and a bug-bounty-ready `security.txt`. |
+| The bar (`CONSTRAINTS.md`, `docs/plan/SAAS_CHECKLIST.md` §A) | **zero high/critical findings**; **no secrets in git**; **no PII off the device** without consent; **OWASP ASVS L2** for the API; **OWASP MASVS L2** for auth/storage; **SQLCipher DB, keys in the Android Keystore (expo-secure-store), certificate pinning for our API, root/emulator/hook detection (signal only, never blocking the CI emulator), screenshot protection on sensitive screens, no secrets in the APK, obfuscation (R8), tamper detection via Play Integrity**; a **threat model per module (STRIDE)**, security tests in CI (SAST, DAST against staging with OWASP ZAP, secret scanning, dependency audit), a pen-test checklist before v1, and a bug-bounty-ready `security.txt`. |
 | Locked decisions | Expo SDK 58 · RN 0.88 · New Architecture only · offline-first · no PII leaving the device without consent · no `AI` in the product copy · APK ≤ 80 MB · cold start ≤ 2 s · battery ≤ 8 %/h |
 
 ### Three things must not be conflated
@@ -186,7 +186,7 @@ V7/V8; the verdict is decided server-side).**
 **V9 — Google Play Data Safety form** — https://play.google.com/console/about/data-safety (first-party, no OSS) ·
 **status: a declaration, not a control** · requires per-data-type collection, sharing, encryption-in-transit,
 deletion-request and purpose declarations · **our fit: it is the *published* surface that the OPC's IPP3/IPP3A and
-our own privacy policy must match** · **our current state: we have **not** written it — `docs/PARITY.md` row 49 is
+our own privacy policy must match** · **our current state: we have **not** written it — `docs/status/PARITY.md` row 49 is
 the only compliance row and it is `Planned (task)` → T7.15** · **DECISION: ADOPT (a release gate: the form must
 match the Play/Apple labels and the privacy policy, and we must prove the match with a test).**
 
@@ -342,7 +342,7 @@ confidence · **DECISION: WATCH (a *signal*, never a block — the SAAS_CHECKLIS
 **A1 — `laurentS/slowapi`** ⭐ — https://github.com/laurentS/slowapi — **2 070 ★** /133 f · created **2020-02-21** ·
 **last commit 2026-06-13, 0 commits/90 d** · last release **v0.1.10, 2026-06-13** · 57 open issues (closed count
 unreadable) · **MIT** · 415 KB · pure Python, no Redis required (in-memory) with an optional Redis backend ·
-**our fit: `apps/api` has no rate limiting at all today, and the API is the thing that a driver hits 300 times a
+**our fit: `services/api` has no rate limiting at all today, and the API is the thing that a driver hits 300 times a
 day with a bearer token** · risks: **one maintainer, no commits for 90 days**; the in-memory store is per-process
 (useless behind more than one uvicorn worker) · **DECISION: ADOPT — but pin the version, and use the Redis backend
 the moment we run more than one worker.**
@@ -356,7 +356,7 @@ when Redis exists for the queue.**
 **A3 — `tiangoli/fastapi`** — https://github.com/tiangolo/fastapi — **MIT** (the repository `LICENSE` is the MIT licence; the API's `license.spdx_id` is `MIT`) · the framework itself ·
 `FastAPI()` ships **no CORS, no security headers, no trusted-host, no rate limiting** unless you add them ·
 `Starlette` underneath ships `TrustedHostMiddleware`, `HTTPSRedirectMiddleware` and `GZipMiddleware` · our
-`apps/api/app/main.py:18` adds **none** of them · **our fit: the SAAS_CHECKLIST §A API line names "CORS
+`services/api/app/main.py:18` adds **none** of them · **our fit: the SAAS_CHECKLIST §A API line names "CORS
 allow-list, security headers, request size limits"** · **DECISION: ADOPT the built-in `TrustedHostMiddleware` +
 `CORSMiddleware` with an explicit allow-list, and add a small security-header middleware we own (we will not take
 a third-party header package for four lines).**
@@ -366,7 +366,7 @@ a third-party header package for four lines).**
 `assert` in production, `subprocess` with `shell=True`, and `requests` without a timeout · **our fit: our CI runs
 **Semgrep** with `p/default` and `p/owasp-top-ten` for both languages, but **Semgrep's Python rules are not a
 substitute for Bandit's Python-specific checks**; the reverse is also true (Semgrep's cross-file dataflow is
-stronger) · **DECISION: ADOPT (add `bandit -r apps/api/app` to the quality gate — it is 3 lines of CI and it
+stronger) · **DECISION: ADOPT (add `bandit -r services/api/app` to the quality gate — it is 3 lines of CI and it
 catches the `shell=True` class that Semgrep can miss).**
 
 **A5 — `Bearer/bearer`** — https://github.com/Bearer/bearer — **2 767 ★** /157 f · created **2022-09-27** · pushed
@@ -396,7 +396,7 @@ silently disables the delay) · **our current state: `.npmrc` sets `minimum-rele
 `trust-policy=no-downgrade` — we are *stricter* than pnpm 12's default; `pnpm-workspace.yaml` sets
 `ignoreScripts: true`** · risks: pnpm's own doc warns that a scanner reading only the first document of the
 two-document lockfile "reports that the project has no dependencies, and no vulnerabilities, without failing" —
-**our `scripts/check-audit.mjs` must read both documents** · **DECISION: KEEP (and keep our stricter 7-day
+**our `scripts/ci/check-audit.mjs` must read both documents** · **DECISION: KEEP (and keep our stricter 7-day
 policy; set `minimumReleaseAgeIgnoreMissingTime: false` and `minimumReleaseAgeStrict: true` so the gate is real).**
 
 **S2 — `google/osv-scanner`** ⭐ — https://github.com/google/osv-scanner — **11 217 ★** /816 f · created
@@ -409,7 +409,7 @@ pinned and its exit code checked, not trusted; #3105 "Memory usage grows beyond 
 file" (open, 2026-09-25); #3111 "Proposal: show SRAC safety context beside SBOM vulnerability results" (closed,
 2026-09-27); #3108 "Cyclonedx missing severity" (closed, 2026-09-27); #3120 (closed, 2026-09-30); #3142 (closed,
 2026-10-11) · **our fit: it is the **cross-ecosystem** scanner — one tool for the JS *and* the Python side, and it
-reads the lockfile rather than the manifest** · **DECISION: ADOPT (replace `scripts/check-audit.mjs` +
+reads the lockfile rather than the manifest** · **DECISION: ADOPT (replace `scripts/ci/check-audit.mjs` +
 `uvx pip-audit` with one `osv-scanner scan --lockfile` invocation in CI, keeping the two existing gates until
 osv-scanner proves equivalent).**
 
@@ -573,8 +573,8 @@ vulnerability results"; #3108 (closed, 2026-09-27) "Cyclonedx missing severity";
 #3107 (closed, 2026-09-26); #3142 (closed, 2026-10-11) "perf: quadratic work in result building and alias
 grouping".
 
-**What it decided for us.** It reads **both** lockfiles — our `pnpm-lock.yaml` **and** `apps/api/uv.lock` — with one
-command and one database, and it needs no npm token. That replaces `scripts/check-audit.mjs` + `uvx pip-audit`
+**What it decided for us.** It reads **both** lockfiles — our `pnpm-lock.yaml` **and** `services/api/uv.lock` — with one
+command and one database, and it needs no npm token. That replaces `scripts/ci/check-audit.mjs` + `uvx pip-audit`
 with one gate that is cross-ecosystem, which is the shape the 2026 campaigns took (one compromised maintainer, two
 registries).
 
@@ -595,7 +595,7 @@ flow**, and the exact two calls: `prepareIntegrityTokenProviderAsync(cloudProjec
 
 1. **The verdict is computed by Google, and the *decision* is ours, on our server.** The mobile app obtains a
    token; our API decides. That is the only architecture that works with a private API and it means **the API
-   needs a Play Integrity verification path** — which is new work in `apps/api`.
+   needs a Play Integrity verification path** — which is new work in `services/api`.
 2. **The CI-emulator problem is solved by the semantics, not by a special case.** The verdicts page says device
    integrity is a **blank value** when the device "has signs of attack (such as API hooking) or system compromise
    (such as being rooted), or the app is not running on a physical device (such as an emulator that does not pass
@@ -649,7 +649,7 @@ op-sqlite as the `encryptionKey`, and **never write it to a file, a log, an erro
 ## 4. Benchmark — **UNVERIFIED: no security eval set exists**
 
 **I did not run a benchmark and I will not invent one.** There is no security eval set in this repository:
-`docs/squads/` has no `security/` squad folder, there is no `docs/eval/` for security, and `apps/api` has no
+`docs/squads/` has no `security/` squad folder, there is no `docs/eval/` for security, and `services/api` has no
 scanner installed. Everything below is **UNVERIFIED** until the set exists.
 
 **The set that must be built (name + shape):**
@@ -667,7 +667,7 @@ scanner installed. Everything below is **UNVERIFIED** until the set exists.
 | Metric | Gate | Source of truth | How we would measure it |
 |-------|------|-----------------|--------------------------|
 | **Finding rate (recall)** | each tool finds **≥ 90 %** of the seeded defects in its category | the seeded corpus | run the tool against the seeded app/API; a seeded defect is "found" if it is reported with the right rule id. **Currently UNVERIFIED.** |
-| **False-positive rate** | **≤ 1 false positive per 100 findings** on our *real* code | the real repo | run the tool on `apps/mobile` and `apps/api`; a human triages every finding once and the labels are kept. **Currently UNVERIFIED — this is the number that decides whether a tool survives the merge gate.** |
+| **False-positive rate** | **≤ 1 false positive per 100 findings** on our *real* code | the real repo | run the tool on `apps/mobile` and `services/api`; a human triages every finding once and the labels are kept. **Currently UNVERIFIED — this is the number that decides whether a tool survives the merge gate.** |
 | **Coverage** | the union of the tools covers **every** MASWE id in our scope (we will publish the matrix) | the MASWE list | a coverage matrix in `docs/squads/security/` mapping each MASWE id → the tool that detects it → the test id that proves it. **Currently UNVERIFIED.** |
 | **Cost in CI** | the whole security gate adds **≤ 6 minutes** to a PR and **≤ 15 minutes** to a nightly | the CI log | measure the wall time of each step on the CI runner. **Currently UNVERIFIED.** |
 | **Time to fix** | a high finding is fixed within **1 working day**; a critical within **4 hours** | the tracker | measure from "finding filed" to "finding closed" in the tracker over the first 20 findings. **Currently UNVERIFIED.** |
@@ -680,10 +680,10 @@ static mode** + **our own grep-based floor checks**, and the seeded API against 
 
 ---
 
-## 5. What we are missing → rows for `docs/PARITY.md`
+## 5. What we are missing → rows for `docs/status/PARITY.md`
 
 The Spoke column is filled **only** with facts verified in `docs/study/spoke/TEARDOWN.md` (read 2026-10-21).
-Where the teardown does not say, the cell is empty. These rows continue the numbering of `docs/PARITY.md` (which
+Where the teardown does not say, the cell is empty. These rows continue the numbering of `docs/status/PARITY.md` (which
 ends at 49).
 
 | # | Family | Feature | Status | Spoke (2026-10-20) | Our edge | Task |
@@ -700,7 +700,7 @@ ends at 49).
 | 59 | Security | **Cross-ecosystem dependency scanning** (npm + PyPI from one SBOM) and a **committed SBOM diff** per release | Planned (task) | | "are we affected?" is answered in minutes, not days | T7.16 |
 | 60 | Security | **API rate limiting** per route, per user and per IP, with a progressive delay and a lockout | Planned (task) | | the driver app is called hundreds of times a day; the limiter protects us without punishing a courier in a dead zone | T7.16 |
 | 61 | Security | **SSRF guard** on every server-side fetch (address geocoding, map tiles, webhooks): no private, loopback or link-local destinations; re-check on redirect | Planned (task) | | one shared `safe_fetch()` in the API, so no endpoint can be turned into a proxy into our own network | T7.16 |
-| 62 | Security | **PostGIS query safety**: every geometry and text query is parameterised; no string-built SQL anywhere in `apps/api` | Planned (task) | | we use one repository helper, so "no concatenated SQL" is a property of the code, not a review habit | T7.16 |
+| 62 | Security | **PostGIS query safety**: every geometry and text query is parameterised; no string-built SQL anywhere in `services/api` | Planned (task) | | we use one repository helper, so "no concatenated SQL" is a property of the code, not a review habit | T7.16 |
 | 63 | Security | **Tenant isolation proved by tests**: every query is scoped to the org; a test asserts driver A cannot read team B | Planned (task) | | the test is the proof, not the review | T7.14, T7.16 |
 | 64 | Security | **Security headers and a CORS allow-list** on the API, plus a trusted-host check and a request-size limit | Planned (task) | | | T7.16 |
 | 65 | Security | **Nightly DAST** against a staging API with OWASP ZAP, and a weekly static + dynamic mobile scan of the release APK with MobSF | Planned (task) | | we scan the artefact we actually ship, not the source we wish we shipped | T7.16 |
@@ -734,7 +734,7 @@ ends at 49).
    SBOM, `cosign` signs the APK and the image, `harden-runner` wraps every CI job, and `gitleaks` stays.**
    (Why: the 2026 campaigns attacked the *pipeline*, not the code.)
 7. **Attestation is a server-side decision.** `@expo/app-integrity` on the phone, a Play Integrity verification
-   endpoint in `apps/api`, a blank device-integrity verdict is a **signal**, and the CI emulator is never blocked.
+   endpoint in `services/api`, a blank device-integrity verdict is a **signal**, and the CI emulator is never blocked.
    (Why: that is what the SAAS_CHECKLIST says and what Play Integrity's own semantics give us.)
 8. **MobSF weekly against the release APK, ZAP nightly against staging.** Both non-blocking, both producing
    tasks, both with a false-positive label file so the rate is measurable.
@@ -745,7 +745,7 @@ ends at 49).
 **Fallbacks.** If the Play Integrity setup (a founder action) slips, the API keeps working and the risk score
 simply omits the attestation signal — we do not gate on it. If op-sqlite #466 does not close, we fall back to
 `expo-sqlite` with its SQLCipher build (UNVERIFIED for SDK 58) or to an encrypted file store. If `osv-scanner`
-panics, `scripts/check-audit.mjs` and `uvx pip-audit` stay in place — we do not delete a gate to make a new one
+panics, `scripts/ci/check-audit.mjs` and `uvx pip-audit` stay in place — we do not delete a gate to make a new one
 green.
 
 **Risks.**
@@ -768,7 +768,7 @@ green.
 ## 7. Monthly radar filter (V4 §11.3)
 
 On the first working day of each month, re-read exactly these and write one line each into
-`docs/EXECUTOR_LOG.md`. If a line changes, it becomes a task the same day.
+`docs/log/2026-W43.md`. If a line changes, it becomes a task the same day.
 
 | Watch item | Trigger | Where to look | What we do |
 |---|---|---|---|
@@ -778,7 +778,7 @@ On the first working day of each month, re-read exactly these and write one line
 | **op-sqlite** | issue **#466** (Android SQLCipher GNU_RELRO) closes or changes | `github.com/OP-Engineering/op-sqlite` issues | unblock or re-block the SQLCipher task |
 | **osv-scanner** | a new major/minor, or a new panic-class issue like **#3127** | `github.com/google/osv-scanner` releases + issues | bump the pin, re-run the seeded corpus (§4) |
 | **syft / cosign** | a new release, or a Sigstore incident | `anchore/syft`, `sigstore/cosign` releases | bump the pin; re-sign a release |
-| **Play Integrity** | a new verdict field, a policy change, or a new request type | `developer.android.com/google/play/integrity/verdicts` | extend the verdict mapping in `apps/api` |
+| **Play Integrity** | a new verdict field, a policy change, or a new request type | `developer.android.com/google/play/integrity/verdicts` | extend the verdict mapping in `services/api` |
 | **Expo SDK / app-integrity** | an SDK bump proposal, or a change in `@expo/app-integrity` | `expo.dev/changelog/sdk-58`, npm `@expo/app-integrity` | propose an ADR (D21 locks the SDK) |
 | **pnpm** | a new major (v13?) or a change to the supply-chain defaults | `pnpm.io/blog/releases/*` | re-check our `minimumReleaseAge` / `trustPolicy` settings |
 | **Supply-chain incidents** | any new registry worm (Mini Shai-Hulud was 2026-05-11; there will be another) | CISA alerts, Socket's tracker, Wiz, Tenable | run `osv-scanner` against the **published** SBOM, list affected versions, rotate secrets |
@@ -828,10 +828,10 @@ On the first working day of each month, re-read exactly these and write one line
 | Claim (2026-10-20/21) | Verified 2026-10-21 | Correction |
 |---|---|---|
 | `CONSTRAINTS.md` exception **W3** — "pnpm 12 verifies the lockfile against its own supply-chain policy on every install" | pnpm **v12.14.0** is real (release 2026-10-15) and pnpm's docs describe `minimumReleaseAge`, `blockExoticSubdeps`, `allowBuilds` and `trustPolicy` | The claim stands, but the *documented* mechanism to cite is pnpm's own supply-chain page, and pnpm's own doc warns that a scanner reading only the first lockfile document reports "no dependencies, and no vulnerabilities, without failing" — our audit script must read both. |
-| `docs/SAAS_CHECKLIST.md` §A Mobile — "certificate pinning for our API" as a checklist item | the only maintained RN pinning library has had no release since **2025-07-21** and is not New-Architecture compatible | Re-frame as a **native config** task (`expo-build-properties` → `networkSecurityConfig` + Android `network_security_config`), not a dependency. |
-| `docs/SAAS_CHECKLIST.md` §A Mobile — "obfuscation (R8)" | `expo-build-properties` is **not installed**, so R8 cannot be enabled | Add the plugin as an explicit task. |
-| `docs/SAAS_CHECKLIST.md` §A Mobile — "root/emulator/hook detection (signal only, not block CI emulator)" | Play Integrity's own semantics give a **blank** device verdict for emulators and hooked devices | The rule is implementable with **no custom detection code**: treat the blank verdict as the signal. |
-| `docs/SAAS_CHECKLIST.md` §A API — "OWASP ASVS L2" | ASVS **5.0.0** (2025-05-30) is the current version; the repo also tags a rolling "Bleeding Edge" | Quote **5.0.0** clause ids in gates. Never quote Bleeding Edge. |
-| `docs/SAAS_CHECKLIST.md` §A Infra — "SBOM, signed releases" | we have **no** SBOM generator, **no** signer and **no** pinned CI actions | Three concrete tasks, named in §6.6. |
-| `docs/SAAS_CHECKLIST.md` §A API — "rate limits per route/user/IP" | `apps/api/pyproject.toml` has **no** rate limiter and `main.py` has no middleware | `slowapi` is the choice; it is a dependency we must add and pin. |
+| `docs/plan/SAAS_CHECKLIST.md` §A Mobile — "certificate pinning for our API" as a checklist item | the only maintained RN pinning library has had no release since **2025-07-21** and is not New-Architecture compatible | Re-frame as a **native config** task (`expo-build-properties` → `networkSecurityConfig` + Android `network_security_config`), not a dependency. |
+| `docs/plan/SAAS_CHECKLIST.md` §A Mobile — "obfuscation (R8)" | `expo-build-properties` is **not installed**, so R8 cannot be enabled | Add the plugin as an explicit task. |
+| `docs/plan/SAAS_CHECKLIST.md` §A Mobile — "root/emulator/hook detection (signal only, not block CI emulator)" | Play Integrity's own semantics give a **blank** device verdict for emulators and hooked devices | The rule is implementable with **no custom detection code**: treat the blank verdict as the signal. |
+| `docs/plan/SAAS_CHECKLIST.md` §A API — "OWASP ASVS L2" | ASVS **5.0.0** (2025-05-30) is the current version; the repo also tags a rolling "Bleeding Edge" | Quote **5.0.0** clause ids in gates. Never quote Bleeding Edge. |
+| `docs/plan/SAAS_CHECKLIST.md` §A Infra — "SBOM, signed releases" | we have **no** SBOM generator, **no** signer and **no** pinned CI actions | Three concrete tasks, named in §6.6. |
+| `docs/plan/SAAS_CHECKLIST.md` §A API — "rate limits per route/user/IP" | `services/api/pyproject.toml` has **no** rate limiter and `main.py` has no middleware | `slowapi` is the choice; it is a dependency we must add and pin. |
 | "the API is protected because it verifies the JWKS" | the **issuer** is optional (`auth_jwt_issuer` defaults to `""`) and the **voice WebSocket is unauthenticated** | Two findings, both in §5 and §6.3. The JWKS verifier itself is sound (fail-closed, 5 s timeout, `kid` refresh, `exp`/`sub`/`aud` required). |

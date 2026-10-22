@@ -18,7 +18,7 @@ const DISPLAY_STEPS: readonly TypeKey[] = ['metric', 'address', 'title'];
  *
  * The display family carries the number, the address and the title; the work
  * family carries everything else. The families are the ones of the licence
- * rows in `docs/LICENSES.md`: they ship with the app when the founder picks
+ * rows in `docs/product/LICENSES.md`: they ship with the app when the founder picks
  * a direction, and the lab falls back to the system face until then.
  */
 export function stepStyle(direction: Direction2a, key: TypeKey): TextStyle {

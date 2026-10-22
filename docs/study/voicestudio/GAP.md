@@ -1,10 +1,10 @@
 # VoiceStudio — gap analysis vs Courier Copilot
 
-**Area:** V4 §11.2 step 3 (feature → have / better / planned / skip, to be merged into `docs/PARITY.md`)
+**Area:** V4 §11.2 step 3 (feature → have / better / planned / skip, to be merged into `docs/status/PARITY.md`)
 **Study date:** 2026-10-20 · **Studied project:** `debpalash/VoiceStudio` (AGPL-3.0)
 **Companion document:** `docs/study/voicestudio/SPEC.md` (the requirements; this file is the verdict)
 
-**Status key** (same as `docs/PARITY.md`): `Have` (shipped) · `Better` (we do it better than the market) ·
+**Status key** (same as `docs/status/PARITY.md`): `Have` (shipped) · `Better` (we do it better than the market) ·
 `Planned (task)` (in the V3/V4 task list) · `Skip (reason)`.
 
 **Legal note.** Nothing below authorises copying. Every "Planned" row means *we build the behaviour
@@ -62,7 +62,7 @@ marked `Skip` or carry an explicit licence-safe substitution.
   R19, R22–R26) and the *privacy/ops discipline* (R2, R16–R18, R20, R21). Everything else is a different
   product.
 
-## 3. Merge into `docs/PARITY.md`
+## 3. Merge into `docs/status/PARITY.md`
 
 Rows 2, 4, 9, 17, 18, 20, 22, 23 are the ones that strengthen **existing** PARITY rows:
 
@@ -87,7 +87,7 @@ Rows that are **new** to PARITY and should be added with status `Planned (task)`
 
 1. **No number in this file was measured by us.** The studied project's quality figures, real-time
    factors, memory floors and language-hour totals are vendor claims on *their* test sets.
-2. Our own voice eval set (`docs/squads/voice/eval/`) and benchmark harness do not exist yet, so the
+2. Our own voice eval set (`packages/eval/voice/`) and benchmark harness do not exist yet, so the
    rows that claim "Better" for the voice substrate are **design** claims, not measured ones.
 3. The licence of every model the studied project can install was not audited individually; only the
    one that changes our plan (the CC-BY-NC weights) was.
@@ -95,5 +95,5 @@ Rows that are **new** to PARITY and should be added with status `Planned (task)`
    released build is UNVERIFIED (the documentation contradicts itself), so no row here relies on it.
 5. The studied project's issue tracker was read only by recent title; maintainer response times,
    closed-issue ratios and 6-month star trends are UNVERIFIED.
-6. `docs/PARITY.md` rows only leave `Planned` when the task is merged **with evidence** in
+6. `docs/status/PARITY.md` rows only leave `Planned` when the task is merged **with evidence** in
    `docs/evidence/` (PARITY rules). Nothing in this file changes a shipped status.

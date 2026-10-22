@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-21 · **Inputs:** `docs/study/spoke/TEARDOWN.md` (evidence, source IDs `S1`–`S44`),
 `docs/study/spoke/REVIEWS.md` (pain points `P1`–`P10`) · **Binding:** V4 §13.2, MASTER_EXECUTION §4 (P5),
-`docs/PARITY.md`, `docs/QUALITY_SCORECARD.md`.
+`docs/status/PARITY.md`, `docs/status/QUALITY_SCORECARD.md`.
 
 **Verdict key**
 - **MATCH** — Spoke has it; we must have it, no worse, in the touch UI *and* the voice UI (§9 of MASTER_EXECUTION).
@@ -14,7 +14,7 @@
 1 Sync, 2 Routing+templates, 3 Door memory, 4 Dictation, 5 Live voice agent, 6 Voice tool catalogue,
 7 Driving mode + nav, 8 Label scanner, 9 POD, 10 Customer SMS, 11 IRD logbook, 12 Web dashboard,
 13 Stripe billing, 14 Teams/dispatch, 15 Import from Spoke, 16 Onboarding, 17 Beta programme).
-`docs/KICKOFF_V3_EN.md` T7 lists only 1–15 and its item 15 is "PIA / store assets / handover / v1.0.0",
+`docs/archive/KICKOFF_V3_EN.md` T7 lists only 1–15 and its item 15 is "PIA / store assets / handover / v1.0.0",
 which is MASTER_EXECUTION P5 items 15–17 split differently. **Both readings are shown in §E.**
 `P1`–`P7` = MASTER_EXECUTION §4 phase order. `T4` = LINZ addresses, `T5` = offline maps, `T6` = design.
 
@@ -164,7 +164,7 @@ earnings** vs nothing (F6).
 ## J. Spoke features WE do not have and must not lose sight of
 
 These are **not** on our P1–P7 list. Each is either a Dispatch-only capability (deferred by design) or a gap
-in `docs/PARITY.md` that should become a task before v1.
+in `docs/status/PARITY.md` that should become a task before v1.
 
 | Spoke feature | Source | Our status | Action |
 |---|---|---|---|
@@ -198,7 +198,7 @@ in `docs/PARITY.md` that should become a task before v1.
    NZ$X/month", verify the NZ storefront price.
 6. **Lite-vs-Standard gap unverified.** If Lite is genuinely crippled, our packaging argument ("one price,
    everything") is stronger than we can currently prove. Verify from a NZ checkout.
-7. **Our own numbers are mostly UNVERIFIED.** `docs/QUALITY_SCORECARD.md` says five of six dimensions are
+7. **Our own numbers are mostly UNVERIFIED.** `docs/status/QUALITY_SCORECARD.md` says five of six dimensions are
    unmeasured. **We cannot ship the beat claims above until the measurements exist** — every "the number we
    publish" in §I is a target, not a result.
 
@@ -226,7 +226,7 @@ in `docs/PARITY.md` that should become a task before v1.
 | T7.16 | Onboarding + in-app tips (≤ 2 min, voice-guided) | 3-step getting started; personalised onboarding on $1000 tier only (S6, S3) | **BEAT** | G5, F10, G2, G3 |
 | T7.17 | Beta programme (5–10 drivers, feedback, crash reports) | — (Spoke ships "bug fixes and lower memory use" (S16)) | **BEAT (new)** | E4; the measurement engine for every claim in §I |
 
-`docs/KICKOFF_V3_EN.md` T7.15 = "PIA, store assets, acceptance test on the CI emulator, handover, v1.0.0" —
+`docs/archive/KICKOFF_V3_EN.md` T7.15 = "PIA, store assets, acceptance test on the CI emulator, handover, v1.0.0" —
 that is MASTER_EXECUTION **T7.15 + T7.16 + T7.17** plus P6. Both readings are recorded here so no task is
 double-counted or dropped.
 

@@ -23,7 +23,7 @@ maintainers/90 d · npm downloads/month**.
 
 ## 0. Scope, our current choice, the bar
 
-### 0.1 Our locked position (read out of the repo and `docs/DECISIONS.md`, 2026-10-21)
+### 0.1 Our locked position (read out of the repo and `docs/decisions/DECISIONS.md`, 2026-10-21)
 
 | Item | Verified state |
 |---|---|
@@ -745,7 +745,7 @@ single worst thing this product can do); M-B6 decides the bill. The two **licenc
 M-B6 are the only ones in this file that could be read without an experiment — and they are the reason
 the decision in §6 is "self-host or stay free", never "use the free hosted tier".
 
-## 5. What we are missing → rows for `docs/PARITY.md`
+## 5. What we are missing → rows for `docs/status/PARITY.md`
 
 The CEO merges these. Every cell in the **Spoke (2026-10-20)** column is quoted or paraphrased from
 `docs/study/spoke/TEARDOWN.md` (read 2026-10-21) — source IDs are given so the claim can be re-checked.
@@ -772,7 +772,7 @@ Where TEARDOWN says nothing, the cell is **empty**.
 | 17 | QA | **A measured pack-size + frame-time benchmark published with the decision** | Planned (task) | | the map claim is a measurement, not a promise | **T5.8** |
 | 18 | Offline maps | **A map that stays correct when OSM changes** — a weekly rebuild with a diff, not a silent replacement | Planned (task) | | the pack updates without the driver re-downloading 50 MB | **T5.5** + **T7.1** |
 
-**Task id note:** `T5` and `T4` exist in `docs/PARITY.md` and in `docs/KICKOFF_V3_EN.md`; `T5.1`–`T5.9` are
+**Task id note:** `T5` and `T4` exist in `docs/status/PARITY.md` and in `docs/archive/KICKOFF_V3_EN.md`; `T5.1`–`T5.9` are
 the sub-ids proposed by the sibling file `docs/research/2026/map-rendering-offline-tiles.md` and are reused
 here so the two map files do not compete for numbers. The CEO owns the numbering.
 
@@ -841,7 +841,7 @@ here so the two map files do not compete for numbers. The CEO owns the numbering
 | The iOS user-location crash (maplibre-native #4796) hits the driving screen | Medium | Test with a **zero-size** map view during location tracking in the Maestro flow; upgrade to 13.7.1 and check whether the fix is in |
 | Valhalla / GraphHopper send a van down a forestry track (NZ rural) | Medium | A "sealed road only" costing profile and the M-B5 rural benchmark; a route the van cannot take is a failed delivery |
 | A single-maintainer upstream (headway 1, openfreemap 1, go-pmtiles 1) | Medium | Pin exact versions + checksums; be ready to vendor the style generator |
-| The OSM-based products we want to copy are copyleft | Medium | Clean-room list in §6; the CI licence gate already scans the bundle; `docs/LICENSES.md` records every exception |
+| The OSM-based products we want to copy are copyleft | Medium | Clean-room list in §6; the CI licence gate already scans the bundle; `docs/product/LICENSES.md` records every exception |
 | The prototype bucket is a **forestry track with a name**: a courier's whole day depends on one OSM tag | Medium | Door memory (T7.3) learns the real entrance from two deliveries, so a wrong OSM tag is corrected by use |
 
 ## 8. Monthly radar filter

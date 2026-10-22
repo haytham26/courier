@@ -5,10 +5,10 @@ the second factor, the offline session, the biometric unlock and the teams of a 
 
 **Code:** `services/auth`, `apps/mobile/src/lib/auth-client.ts`, `apps/mobile/src/lib/offline-session.ts`,
 `apps/mobile/src/lib/biometric.ts`, `apps/mobile/src/providers/AuthProvider.tsx`,
-`apps/mobile/app/(auth)`, `apps/api/app/auth`
+`apps/mobile/app/(auth)`, `services/api/app/auth`
 
 **Binding:** MASTER_EXECUTION §14 (the founder's own text) and §10 (the conflict rules).
-`docs/SAAS_CHECKLIST.md` §A is the squad's checklist.
+`docs/plan/SAAS_CHECKLIST.md` §A is the squad's checklist.
 
 ## Targets (the release gate)
 
@@ -59,4 +59,4 @@ decision, the version facts, the advisory ledger and the findings that became th
 | The offline session | `apps/mobile/src/lib/offline-session.ts` | the receipt, the twelve hour bound |
 | The biometric unlock | `apps/mobile/src/lib/biometric.ts` | `expo-local-authentication` |
 | The device store | `apps/mobile/src/lib/session-storage.ts` | one wrapper, `AFTER_FIRST_UNLOCK` |
-| The token check | `apps/api/app/auth/jwks.py` | the API is a resource server only |
+| The token check | `services/api/app/auth/jwks.py` | the API is a resource server only |

@@ -11,7 +11,7 @@ corepack pnpm check:fast
 corepack pnpm test
 
 # the local pre-submission check, with the release artefact
-node scripts/check-store-readiness.mjs --apk <the release APK>
+node scripts/ci/check-store-readiness.mjs --apk <the release APK>
 ```
 
 The check prints a report. A blocker stops the release; a warning is a task that
@@ -33,7 +33,7 @@ check. The job is red when there is a blocking finding.
 The `Release APK` workflow builds the artefact on the tag and attaches it to the
 GitHub release. The signing secrets come from the GitHub Secrets; without them
 the workflow builds the unsigned debug APK and says so in the log. The key
-never goes into the repository, and `scripts/check-store-readiness.mjs` fails if
+never goes into the repository, and `scripts/ci/check-store-readiness.mjs` fails if
 one is ever committed.
 
 ## 4. The submission (the founder gate)
@@ -53,7 +53,7 @@ production. The release notes for each version come from the founder report.
 | -------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | StoreReady found a CRITICAL finding    | the store would reject the build                                           | fix the finding the report names, run the check again                       |
 | The local check found a blocker        | the release is not ready (a version, a document, a permission, the budget) | the report names the file and the fix                                       |
-| The App Store Connect lane did not run | the Apple credentials or the app id are not set                            | nothing to do for the Play release; the names are in `docs/FOUNDER_TODO.md` |
+| The App Store Connect lane did not run | the Apple credentials or the app id are not set                            | nothing to do for the Play release; the names are in `docs/status/FOUNDER_TODO.md` |
 | The APK is over the budget             | the map pack or the voice pack is inside the bundle                        | move the pack to the Play asset delivery and build again                    |
 
 A missing founder secret never fails the pipeline. The lane is skipped with a

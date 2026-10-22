@@ -4,7 +4,7 @@ The shift companion (D23): the service that turns what the courier said into
 what the voice says, and what the app does next.
 
 **The name the drivers see is "Courier Voice".** The licences of the code and
-of the weights stay internal, in `docs/LICENSES.md` and in the ledger this
+of the weights stay internal, in `docs/product/LICENSES.md` and in the ledger this
 service publishes at `/v1/licences`.
 
 ## What is in here

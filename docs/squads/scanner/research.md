@@ -51,7 +51,7 @@
 
 ## UNVERIFIED
 
-1. **No scanner eval set or benchmark exists** (`docs/squads/scanner/eval/` and `benchmarks/` are empty), so **correct recipient address ≥ 97 %, wrong-block ≤ 1 % and ≤ 1.5 s/label are all unmeasured**.
+1. **No scanner eval set or benchmark exists** (`packages/eval/scanner/` and `benchmarks/` are empty), so **correct recipient address ≥ 97 %, wrong-block ≤ 1 % and ≤ 1.5 s/label are all unmeasured**.
 2. The PaddleOCR **model weights** licence is reported Apache-2.0 by the PaddlePaddle HF org but the HF API returned an empty `cardData.license`; the dictionary files are unchecked. **UNVERIFIED.**
 3. Every timing quoted here (OCR pipeline, ML Kit vs zxing, PP-OCRv6 on an Apple M4) is a **vendor claim**; none is our measurement on a mid-range Android. **UNVERIFIED.**
 4. The third-party 2026 on-device OCR benchmark (Apple Vision 85.4 % F1, ML Kit 75.5 %, PP-OCRv4 74.7 %, tesseract.js 59.0 %) is **one blog on 778 non-NZ images** — a lead, not a verdict.

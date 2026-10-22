@@ -2,7 +2,7 @@
 
 **Mission:** Auth, entitlements, teams and NZD billing that never locks a driver mid-shift.
 
-**Code:** `services/auth, apps/api/app/billing (to be created)`
+**Code:** `services/auth, services/api/app/billing (to be created)`
 
 **Tasks:** T7.13 Stripe NZD, T7.14 team features
 

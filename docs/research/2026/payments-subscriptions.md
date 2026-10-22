@@ -24,11 +24,11 @@ returned exactly 100 entries the number is a **page cap** and is printed as "≥
 | Item | Verified 2026-10-21 |
 |---|---|
 | **Our current choice** | **Stripe** for the card path, **RevenueCat-shaped store billing** for the in-app path, **NZD + GST-inclusive** pricing, **webhook idempotency**, **offline entitlements**. |
-| **What exists in the repo today** | **No billing code at all.** There is no `stripe` dependency in any `package.json`, no `services/billing`, no webhook endpoint, no entitlement store, no store listing configuration. `docs/PARITY.md` row 43 (Pricing/Billing) is `Planned (task)` → **T7.13**. The Payments & Accounts squad is `docs/squads/payments/`. |
+| **What exists in the repo today** | **No billing code at all.** There is no `stripe` dependency in any `package.json`, no `services/billing`, no webhook endpoint, no entitlement store, no store listing configuration. `docs/status/PARITY.md` row 43 (Pricing/Billing) is `Planned (task)` → **T7.13**. The Payments & Accounts squad is `docs/squads/payments/`. |
 | **What the product locks** | Plans **Trial / Solo / Team** (D11); prices **NZD, GST-inclusive**; one customer type (an independent courier) plus **teams** (a courier business with several drivers) → **multi-tenant, org-scoped billing**; webhook **idempotency**; **no PII in logs**; an **audit log for admin actions**; **no provider may train on driver or customer data**; **POD never paywalled** (PARITY row 23). |
 | **The customer** | A tradesperson driving, not a tech person. A payment failure that needs a web checkout, a refund form and a support chat is a failed payment. The whole purchase has to work with gloves on. |
 | **The bar** | `CONSTRAINTS.md`: zero high/critical advisories; no GPL/AGPL/SSPL/Commons-Clause/CC-NC/FSL/**BUSL** in the shipped app; ≥ 81 % coverage on the auth service; **no PII leaves the device** (PARITY differentiator 5); every number names the command that produces the verdict. V4 §10.3: *"Better Auth, Stripe NZD, teams: tenant isolation tests, webhook idempotency."* |
-| **Locked decisions this research must not change** | Better Auth in `services/auth` with `organization` + `expo` + `jwt` and an ES256 JWKS verified by FastAPI; no default secrets; no PII leaving the device. `docs/adr/ADR-001` records *"Supabase Auth → Better Auth (R3: Supabase forbidden)"*. |
+| **Locked decisions this research must not change** | Better Auth in `services/auth` with `organization` + `expo` + `jwt` and an ES256 JWKS verified by FastAPI; no default secrets; no PII leaving the device. `docs/decisions/adr/ADR-001` records *"Supabase Auth → Better Auth (R3: Supabase forbidden)"*. |
 | **NZ reality we must design for** | Apple and Google both matter; Play's **billing-choice programme does not cover New Zealand** (§4); NZ GST is **15 %** with a **NZ$60 000** registration threshold (IRD); Play NZ prices **include GST** (our own teardown, `docs/study/spoke/TEARDOWN.md` §2.1, S16). |
 
 **What must not be conflated.** (1) **The payment processor** (Stripe) sells and settles money. (2) **The store
@@ -375,7 +375,7 @@ endpointFetch response headers` · `#2842`/`#2840`/`#2881` dependabot.
 | # | Opened | State | Title | Why it is ours |
 |---|---|---|---|---|
 | **#2814** | **2026-08-15** | **open** | *[timeout does not bound the response body — requests hang forever if the connection stalls or drops after headers arrive](https://github.com/stripe/stripe-node/issues/2814)* | **Our webhook receiver is an HTTP endpoint that Stripe calls.** If our handler's read of the body hangs, the request never completes and Stripe retries — but our *worker* also never finishes. A hung handler is a payment-down incident, not a slow one. We must set **both** a read timeout and a body-size limit. |
-| **#2897** | **2026-10-15** | **open** | *[Retried requests leave their request timeout armed since 22.6.0 (process stays alive for the full timeout)](https://github.com/stripe/stripe-node/issues/2897)* | The process stays alive for the full timeout after a retry — a resource leak in a service that runs continuously. Relevant to our `apps/api` process budget. |
+| **#2897** | **2026-10-15** | **open** | *[Retried requests leave their request timeout armed since 22.6.0 (process stays alive for the full timeout)](https://github.com/stripe/stripe-node/issues/2897)* | The process stays alive for the full timeout after a retry — a resource leak in a service that runs continuously. Relevant to our `services/api` process budget. |
 | **#2890** | **2026-10-13** | **open** | *[`created` filter typed as numbers on v2 MoneyManagement Transactions/ReceivedCredits list (23.1.0-beta.1), but the API expects RFC 3339 strings](https://github.com/stripe/stripe-node/issues/2890)* | The generated types are ahead of the API contract. **Never let a generated type be the only check** — our billing tables must validate the payload at runtime (zod) as well as at compile time. |
 | **#2833** | 2026-09-01 | closed | *[`decimal_string` params are not coerced on GET requests (`creditNotes.preview` rejects `Stripe.Decimal`)](https://github.com/stripe/stripe-node/issues/2833)* | A money-type coercion bug in a GET path. **Money must be integer cents end-to-end** (our own rule, §6.1). |
 | **#2763** | 2026-06-23 | closed | *[Feedback wanted: event notification handlers](https://github.com/stripe/stripe-node/issues/2763)* | The SDK is moving to push-style notification handlers. Watch it before we bind deep to the SDK's event model. |
@@ -726,7 +726,7 @@ created with the first implementation_". No PSP account was used by this role an
 | **P3 idempotency** | replay the same `event.id` 3× against `stripe-mock`; count the rows written and the audit rows | `services/billing` vitest + `stripe-mock` |
 | **P4 signature** | 4 cases (tampered body, stale timestamp, blank secret, truncated body) × 50 iterations; assert 0 accepts | same suite |
 | **P5 entitlement matrix** | a 100-row JSONL of (plan, source, state, offline?) with the expected `isActive`; compare our resolver to the RevenueCat SDK's `EntitlementInfo.isActive` on the same rows | CI job with a sandbox app |
-| **P6 tenant isolation** | 50 orgs × 20 billing actions each, in parallel; **any** row written against a foreign `organizationId` is a failure | `apps/api` pytest against a real Postgres |
+| **P6 tenant isolation** | 50 orgs × 20 billing actions each, in parallel; **any** row written against a foreign `organizationId` is a failure | `services/api` pytest against a real Postgres |
 | **P7 offline grace** | the device enters airplane mode for 72 h; the app must keep working and then lock; a forced reconnect must refresh the state | Maestro flow on the CI emulator + a device run |
 | **P8 store-price parity** | read the App Store Connect IAP price for NZ and the Play Console price for NZ, compare with the web price | manual, needs the store accounts |
 | **P9 new-arch smoke** | build the app with each SDK, run the Maestro purchase flow on the CI emulator | `.github/workflows/android-e2e.yml` |
@@ -765,7 +765,7 @@ NZ and AU storefronts render the same unlabelled string set *Lite $14.99, Premiu
 Spoke Dispatch (teams) is **USD-only: Starter $125, Premium $200, Expert $1000 per month**. **We are therefore
 pricing into a market whose NZ price we cannot yet read — that is a research gap, and it is the founder's call.**
 
-## 6. What we are missing → rows for `docs/PARITY.md`
+## 6. What we are missing → rows for `docs/status/PARITY.md`
 
 The **Spoke** column is filled **only** where `docs/study/spoke/TEARDOWN.md` states the fact (read 2026-10-21). Where
 the teardown is silent the cell is empty. Note the contradiction for the CEO: PARITY rows 38–40 currently claim
@@ -794,7 +794,7 @@ the sourced document; the rows below follow it.
 
 1. **Card path: `stripe-node@23.0.0` (server, MIT) + `stripe-mock@0.206.0` (test).** MIT, 0 advisories, 94.6 M
    downloads/30 d, published NZ pricing (2.65 % + NZ$0.30 domestic). `stripe-python` stays the option if the webhook
-   handler lives in `apps/api` — **decide once, and pin the Stripe API version on the account.**
+   handler lives in `services/api` — **decide once, and pin the Stripe API version on the account.**
 2. **Store path: the RevenueCat *model*, implemented by our own entitlement resolver.** The SDK (`react-native-purchases`,
    MIT) is the reference implementation; the **hosted service is optional** and must not be the entitlement
    authority. `expo-iap` (P14) is the challenger to re-evaluate in two radar cycles.
@@ -810,7 +810,7 @@ the sourced document; the rows below follow it.
    GST component of a GST-inclusive price is **price × 3 ÷ 23** to 8 dp; **history is never recomputed**.
    **NZD prices on the stores must equal the web price.**
 6. **Exact-version pins for every money library** — `stripe`, `stripe-mock`, `react-native-purchases` (if adopted),
-   `expo-iap` — no ranges, recorded in `docs/LICENSES.md`.
+   `expo-iap` — no ranges, recorded in `docs/product/LICENSES.md`.
 7. **The billing plugin in Better Auth is gated**: do not enable `@better-auth/stripe` until our **own**
    tenant-isolation test for billing actions passes against the pinned version, and keep its webhook behind our own
    idempotency layer.

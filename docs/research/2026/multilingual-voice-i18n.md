@@ -21,9 +21,9 @@ relevance note · **DECISION**.
 | Our stack | `expo` `~58.0.14` (npm `expo` **58.0.16**, MIT, 2026-10-19) · `react-native` **0.88.0** (MIT, 2026-10-20) · `react-native-sherpa-onnx` **0.4.4** · `react-native-nitro-modules` 0.37.1 · `react-native-reanimated` 4.7.1 · `react-native-safe-area-context` ~5.10.1 · `react-native-screens` ~4.30.0 · `react-native-unistyles` 3.5.3 |
 | Our on-device voice engine | **sherpa-onnx** (locked: ADR-004, D22) through `XDcobra/react-native-sherpa-onnx@0.4.4` (MIT, released 2026-09-08) |
 | Our server voice service | **does not exist** — `services/voice` is absent from the repository |
-| Eval set | **does not exist** — `docs/squads/voice/eval/` is absent; only the *specification* `docs/squads/voice/EVAL.md` (2026-10-21) and `docs/squads/voice/benchmarks/README.md` exist |
+| Eval set | **does not exist** — `packages/eval/voice/` is absent; only the *specification* `docs/squads/voice/EVAL.md` (2026-10-21) and `docs/squads/voice/benchmarks/README.md` exist |
 | Locked decisions | Expo SDK 58 · RN 0.88 · **New Architecture only** · on-device voice by default (D1/D2/D12) · all languages from the start (D3) · ADR-004: sherpa-onnx + Kokoro on device, **no non-commercial weights in the product**, the **licence ledger is a shipped surface** |
-| Hard budget | `CONSTRAINTS.md`: APK ≤ 80 MB (**excluding the map/voice packs**) · cold start ≤ 2 s · battery ≤ 8 %/h · voice command → action ≤ 700 ms · **no GPL/AGPL/SSPL/Commons-Clause/CC-NC/FSL/BUSL in the shipped app** (`scripts/check-licenses.mjs`) |
+| Hard budget | `CONSTRAINTS.md`: APK ≤ 80 MB (**excluding the map/voice packs**) · cold start ≤ 2 s · battery ≤ 8 %/h · voice command → action ≤ 700 ms · **no GPL/AGPL/SSPL/Commons-Clause/CC-NC/FSL/BUSL in the shipped app** (`scripts/ci/check-licenses.mjs`) |
 
 ### The bar, in one sentence
 
@@ -847,7 +847,7 @@ in `app.json`, and treat the RTL alignment wrapper + the Maestro RTL matrix as t
 
 ## 5. Benchmark — what we can and cannot say
 
-**The eval set does not exist.** `docs/squads/voice/eval/` is absent (checked 2026-10-21);
+**The eval set does not exist.** `packages/eval/voice/` is absent (checked 2026-10-21);
 `docs/squads/voice/benchmarks/` contains only `README.md`. Everything below is therefore either a
 **published upstream number** (clearly attributed) or **UNVERIFIED**.
 
@@ -870,7 +870,7 @@ in `app.json`, and treat the RTL alignment wrapper + the Maestro RTL matrix as t
 
 | Row | Metric | Definition | Status | How we would measure it |
 |---|---|---|---|---|
-| **WER per language** | WER (CER for `zh`/`yue`) on our slices | against `transcript_final`, per `docs/squads/voice/EVAL.md` §7 | **UNVERIFIED — no eval set** | Build `docs/squads/voice/eval/` per EVAL.md §2 (≥600 utterances, 14 slices, 12 languages incl. `mi`/`sm`/`to`/`pa`/`yue`); score Omnilingual-300M-int8, Whisper, Qwen3-ASR and the on-device English model on the *same* set and the *same* judge |
+| **WER per language** | WER (CER for `zh`/`yue`) on our slices | against `transcript_final`, per `docs/squads/voice/EVAL.md` §7 | **UNVERIFIED — no eval set** | Build `packages/eval/voice/` per EVAL.md §2 (≥600 utterances, 14 slices, 12 languages incl. `mi`/`sm`/`to`/`pa`/`yue`); score Omnilingual-300M-int8, Whisper, Qwen3-ASR and the on-device English model on the *same* set and the *same* judge |
 | **WER for te reo Māori / Samoan / Tongan** | as above, per language | — | **UNVERIFIED** | Same set; add the **FLEURS `mi_nz`** public subset as the external reference so our numbers are comparable to the published literature |
 | **Code-switch WER** | WER on the `code_switch` slice (≥60, with gold switch offsets) | — | **UNVERIFIED** | Same set; the Omnilingual model is language-conditioned, so we also score the **zero-shot (no language id)** path — if it cannot pick the right language from the audio alone, the app must condition it |
 | **Voice latency (end-to-end)** | last spoken word → action in the event log | **≤ 700 ms** (`CONSTRAINTS.md`) | **UNVERIFIED** | `EVAL.md` §7 defines t0/t1 from the recorded waveform; run on the CI emulator profile **and** one mid-range Android; report p50/p90/p95 per slice |
@@ -900,12 +900,12 @@ in `app.json`, and treat the RTL alignment wrapper + the Maestro RTL matrix as t
 
 ---
 
-## 6. What we are missing → rows for `docs/PARITY.md`
+## 6. What we are missing → rows for `docs/status/PARITY.md`
 
 The CEO merges these. Each row is a capability that exists in the best OSS repos or in the competitor
 (`docs/study/spoke/TEARDOWN.md`, read 2026-10-21) and that we do not have today. The **Spoke column**
 is filled **only** with facts verified in TEARDOWN.md; where TEARDOWN is silent, the cell is left
-empty. Task ids follow `docs/PARITY.md`: **T4** LINZ · **T6** design · **T7.x** the product list.
+empty. Task ids follow `docs/status/PARITY.md`: **T4** LINZ · **T6** design · **T7.x** the product list.
 **T7.16** is a **new** task id this area needs (i18n runtime, two catalogues, per-app language) and is
 **not** in the current task list — the CEO assigns it.
 
@@ -1042,7 +1042,7 @@ product as a novelty model in the product copy or the docs.
 ## 9. Monthly radar filter
 
 Run on the **first working day of each month**, by the Researcher role, and write the result into
-`docs/EXECUTOR_LOG.md`. **A card is promoted to the shortlist only if it clears the filter — the filter
+`docs/log/2026-W43.md`. **A card is promoted to the shortlist only if it clears the filter — the filter
 is a gate, not a suggestion.**
 
 | # | Watch | Trigger to act | Source to check |
@@ -1149,8 +1149,8 @@ is a gate, not a suggestion.**
 
 ---
 
-*Files read for this research on 2026-10-21:* `CONSTRAINTS.md` · `docs/DECISIONS.md` ·
-`docs/adr/ADR-004-voice-service-licences.md` · `docs/PARITY.md` · `docs/study/spoke/TEARDOWN.md` ·
+*Files read for this research on 2026-10-21:* `CONSTRAINTS.md` · `docs/decisions/DECISIONS.md` ·
+`docs/decisions/adr/ADR-004-voice-service-licences.md` · `docs/status/PARITY.md` · `docs/study/spoke/TEARDOWN.md` ·
 `docs/squads/voice/EVAL.md` · `docs/squads/voice/STATUS.md` · `apps/mobile/package.json` ·
 `docs/research/2026/on-device-stt-tts-vad-kws.md` (sibling area, to avoid contradicting it) ·
 `docs/research/2026/routing-vrp-engines.md` (the format reference).

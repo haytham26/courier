@@ -227,7 +227,7 @@ The service detects the available accelerator, refuses to start an engine it can
    recent titles.
 4. Whether the studied project's mobile companion runs models on the phone in the released build - the documentation is contradictory (a preview note says device models were planned; a later owner
    note says they are on the phone). **UNVERIFIED**; we did not build or run the apps.
-5. Our own eval set (`docs/squads/voice/eval/`) does not exist yet, so none of R20's metrics can be published. Until it does, every voice number in this repository stays UNVERIFIED.
+5. Our own eval set (`packages/eval/voice/`) does not exist yet, so none of R20's metrics can be published. Until it does, every voice number in this repository stays UNVERIFIED.
 
 ## 8. What users complain about (observed in the studied project's public issue list) and how we do better
 

@@ -7,7 +7,7 @@
 #    policies"), it no longer reads those settings from package.json, and the
 #    current stack (Expo SDK 58, Better Auth 1.7.10) was published inside the
 #    last week, so a seven-day window would block the whole project. The
-#    versions are pinned exactly, the audits in scripts/check-audit.mjs fail on
+#    versions are pinned exactly, the audits in scripts/ci/check-audit.mjs fail on
 #    any high or critical advisory, and the licence inventory covers the
 #    licensing risk. Tracked as the W3 exception in CONSTRAINTS.md.
 #

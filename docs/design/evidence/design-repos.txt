@@ -3,7 +3,7 @@
 # One `owner/name` per line. `#` starts a comment. The order is the order of
 # the evidence cards in `docs/design/RESEARCH.md` and `docs/design/BENCH.md`.
 #
-# The data is fetched with `scripts/fetch-design-evidence.ps1`, which reads
+# The data is fetched with `scripts/design/fetch-design-evidence.ps1`, which reads
 # this file and writes `docs/design/evidence/github-repos-<date>.tsv`. The
 # snapshot is the evidence; the two documents are written from it.
 

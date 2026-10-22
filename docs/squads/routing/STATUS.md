@@ -4,7 +4,7 @@ Updated: 2026-10-21 (T7.2 routing and the saved templates: the routing core, the
 
 ## Done (with evidence)
 
-- **The routing core** (`apps/api/app/routing.py`): the `RouteEngine` seam, the deterministic
+- **The routing core** (`services/api/app/routing.py`): the `RouteEngine` seam, the deterministic
   `HeuristicEngine` (a nearest-neighbour seed, then a 2-opt improvement), the arrival times, the
   distance, the capacity check and the `get_engine()` factory that is where the production engine
   goes. No routing engine, no matrix and no network: the plan is built from the stop coordinates.
@@ -18,15 +18,15 @@ Updated: 2026-10-21 (T7.2 routing and the saved templates: the routing core, the
 - **The day's route** (`GET /shifts/{shift_id}/route`): the ordered stops with the arrival times,
   the distance, the parcels and the capacity; the locked template wins when the run has one, and the
   answer is the same every time it is asked.
-- **The repository** (`apps/api/app/repo.py`): the runs, the templates and the ordered stops, in
+- **The repository** (`services/api/app/repo.py`): the runs, the templates and the ordered stops, in
   both implementations (Postgres and the in-memory one the tests use).
-- **The schema** (`apps/api/db/schema.sql`): the `runs`, `run_templates`, `run_routes` and
+- **The schema** (`packages/contracts/db/schema.sql`): the `runs`, `run_templates`, `run_routes` and
   `run_route_stops` tables, and the priority, the parcels, the service time and the time window on
   the stops.
 - **The shared contract** (`packages/shared/src/schemas.ts`, `packages/shared/src/types.ts`,
   `packages/shared/src/constants.ts`): the template update with its identity and its order, the
   route schema and the route endpoint.
-- **The proof** (`apps/api/tests/test_routing.py`): 35 tests, 84 collected, one of them running
+- **The proof** (`services/api/tests/test_routing.py`): 35 tests, 84 collected, one of them running
   fifty times.
 
 ## Metrics vs targets
@@ -43,7 +43,7 @@ Updated: 2026-10-21 (T7.2 routing and the saved templates: the routing core, the
 | The coverage of the routing core | 90% (the V4 target) | 99% | `pytest --cov=app.routing` |
 | The coverage of the API surface | 90% | 92% | `pytest --cov=app.main` |
 | Within 5% of the best known | on the benchmark sets | **not measured** - the benchmark set does not exist yet | the evaluation dataset in the README |
-| The production engine | PyVRP and VROOM, benchmarked against each other | **not wired** - it needs the routing service | `get_engine()` in `apps/api/app/routing.py` |
+| The production engine | PyVRP and VROOM, benchmarked against each other | **not wired** - it needs the routing service | `get_engine()` in `services/api/app/routing.py` |
 | The real road distance | the matrix | the great-circle distance times 1.25 | the production engine replaces it |
 
 ## Next

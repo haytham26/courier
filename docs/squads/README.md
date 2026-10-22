@@ -8,12 +8,12 @@ targets are met on the CI emulator and recorded.
 |-------|---------|------|---------------|
 | [voice](voice/) | Always with you, all day: on-device STT/TTS/VAD/KWS, the live agent, every language | `apps/mobile/src/voice`, `apps/mobile/modules/voice` | V4 §10.1 |
 | [scanner](scanner/) | A camera that only returns the delivery address | `apps/mobile/src/scanner` | V4 §10.2 |
-| [address](address/) | Parser + D8 + LINZ index + door memory | `packages/nz-address`, `apps/api/app/address_correction.py` | V4 §10.3 |
+| [address](address/) | Parser + D8 + LINZ index + door memory | `packages/nz-address`, `services/api/app/address_correction.py` | V4 §10.3 |
 | [routing](routing/) | Valhalla + VROOM + OR-Tools, templates and rules | `services/routing` (to be created) | V4 §10.3 |
 | [maps](maps/) | PMTiles, styles, offline, turn-by-turn flag | `packages/map-style`, `infra/maps` | V4 §10.3 |
-| [sync](sync/) | op-sqlite event log ↔ Postgres, conflict rules | `packages/sync`, `apps/api/app/sync` | V4 §10.3 |
+| [sync](sync/) | op-sqlite event log ↔ Postgres, conflict rules | `packages/sync`, `services/api/app/sync` | V4 §10.3 |
 | [design](design/) | The design system, motion and the visual gate | `packages/design-tokens`, `apps/mobile/src/components` | V4 §5 |
-| [payments](payments/) | Better Auth, Stripe NZD, entitlements, teams | `services/auth`, `apps/api/app/billing` | V4 §10.3 |
+| [payments](payments/) | Better Auth, Stripe NZD, entitlements, teams | `services/auth`, `services/api/app/billing` | V4 §10.3 |
 | [security](security/) | The complete sign-in: Google, Apple, passkeys, email, MFA, the offline session, the biometric unlock | `services/auth`, `apps/mobile/src/lib`, `apps/mobile/app/(auth)` | MASTER_EXECUTION §14 |
 | [web](web/) | Driver dashboard, dispatcher console, admin | `apps/web` | V4 §10.3 |
 | [platform](platform/) | CI/CD, emulator E2E, OTA, observability, SBOM, releases | `.github`, `scripts`, `infra` | V4 §7, §10.3 |

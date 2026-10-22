@@ -6,7 +6,7 @@ voice takes in a dead spot in rural Canterbury, and it is the floor the
 server brain has to reach: if the on-device brain cannot do it, the command
 does not exist.
 
-The wording of the commands matches the catalogue in `apps/api/app/prompts.py`
+The wording of the commands matches the catalogue in `services/api/app/prompts.py`
 and the parser in `apps/mobile/src/voice/commands.ts`, so the same sentence
 means the same thing online and offline.
 """

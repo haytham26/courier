@@ -134,9 +134,9 @@ Median first-response = median delay from issue creation to the **first comment*
 
 ## Benchmark
 
-**Status: UNVERIFIED — the evaluation set does not exist.** `docs/squads/scanner/benchmarks/README.md` = "Harness: _to be created with the first implementation_"; `docs/squads/scanner/STATUS.md` = "not measured yet"; `docs/squads/scanner/eval/` does not exist; `data/labels/` does not exist. **No number in this file may be claimed as "better than our current choice" until the table below is published.**
+**Status: UNVERIFIED — the evaluation set does not exist.** `docs/squads/scanner/benchmarks/README.md` = "Harness: _to be created with the first implementation_"; `docs/squads/scanner/STATUS.md` = "not measured yet"; `packages/eval/scanner/` does not exist; `data/labels/` does not exist. **No number in this file may be claimed as "better than our current choice" until the table below is published.**
 
-**The set to build (named, per V4 §10.2 / §12.5):** `docs/squads/scanner/eval/` with **≥ 300 real-style NZ courier label images**, gitignored under `data/labels/`:
+**The set to build (named, per V4 §10.2 / §12.5):** `packages/eval/scanner/` with **≥ 300 real-style NZ courier label images**, gitignored under `data/labels/`:
 
 - `synthetic/` — programmatically rendered labels for **8–10 NZ carriers/layouts** (CourierPost, NZ Post, Team Global, DHL, Star Track, Toll, plus generic/plain) × {desktop thermal, 4×6 thermal, A4 dot-matrix, courier pouch sticker} × {clean, low light, glare, 30° tilt, crumpled, thermal fade, over-sticker}.
 - `real/` — founder-provided phone photos, **redacted before they enter the repo** (AGENTS.md safety + NZ Privacy Act 2020).
@@ -168,7 +168,7 @@ Median first-response = median delay from issue creation to the **first comment*
 
 ## What we are missing
 
-Every row below is a capability that exists in the repos above and that we do not have. The CEO merges these into `docs/PARITY.md` (the task column is my proposal; ids marked *(new)* do not exist yet).
+Every row below is a capability that exists in the repos above and that we do not have. The CEO merges these into `docs/status/PARITY.md` (the task column is my proposal; ids marked *(new)* do not exist yet).
 
 | # | feature | family | gap (why it matters) | task id |
 |---|---|---|---|---|
@@ -191,7 +191,7 @@ Every row below is a capability that exists in the repos above and that we do no
 
 **ADOPT (phase 1 — the scanner stack):**
 1. **`margelo/react-native-vision-camera` 5.2.3** (MIT) — already installed; camera + frame processors + GPU resizer + a built-in barcode scanner. **KEEP the pin**; re-check the failing head CI before the first native build.
-2. **ML Kit Text Recognition v2, bundled Latin** via **`jamenamcinteer/react-native-vision-camera-ocr-plus`** (MIT) *or* **`pedrol2b/react-native-vision-camera-mlkit`** (MIT) — both benchmarked before we pick; the plugin sits behind our own `TextRecogniser` interface, so switching is cheap. **ML Kit is proprietary** → record it in `docs/LICENSES.md` and keep the FOSS path alive.
+2. **ML Kit Text Recognition v2, bundled Latin** via **`jamenamcinteer/react-native-vision-camera-ocr-plus`** (MIT) *or* **`pedrol2b/react-native-vision-camera-mlkit`** (MIT) — both benchmarked before we pick; the plugin sits behind our own `TextRecogniser` interface, so switching is cheap. **ML Kit is proprietary** → record it in `docs/product/LICENSES.md` and keep the FOSS path alive.
 3. **`margelo/react-native-nitro-zxing`** (MIT) + **zxing-cpp** (Apache-2.0) — barcode assist and parcel dedupe only, behind an interface.
 4. A **C++/GPU resize before OCR** (the `vision-camera-resize-plugin` idea) implemented in our own frame processor if the plugin does not fit Expo SDK 58.
 5. Our **own address-block classifier** (rules over ML Kit element confidence/geometry). No off-the-shelf NZ model exists, and none should be trusted without our own eval set.
@@ -205,7 +205,7 @@ Every row below is a capability that exists in the repos above and that we do no
 **Fallback chain (V4 §6.1, free-first):** ML Kit bundled → RapidOCR/PP-OCR ONNX → tesseract-class → **ask the driver one quick question**. **No cloud OCR, ever** — images are not uploaded unless the driver chooses POD.
 
 **Risks & fallback**
-- *ML Kit is proprietary* → the FOSS path must stay alive; record the Google dependency in `docs/LICENSES.md` (today that file shows every package as "unknown" — the licence gate is not yet producing real data).
+- *ML Kit is proprietary* → the FOSS path must stay alive; record the Google dependency in `docs/product/LICENSES.md` (today that file shows every package as "unknown" — the licence gate is not yet producing real data).
 - *VisionCamera's open critical issues* (#4213 frame-thread leak, #4219 throw-in-frame-callback kills the process, #4209 iOS GC abort, #4180 SurfaceView leak, #4183 AGP 9 Vulkan shader) — the first native build is the risk; we may have to hold at 5.2.3 and re-evaluate.
 - *New native dependencies* (`react-native-worklets`, `react-native-vision-camera-worklets`, `react-native-nitro-image`) — each needs an exact pin, a licence entry and an Android E2E run; `expo-updates` + VisionCamera v5 + Nitro is an untested combination **for us**.
 - *Unbundled ML Kit stalls on first use* → bundle the Latin model.

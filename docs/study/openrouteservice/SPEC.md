@@ -220,7 +220,7 @@ and any warning worth speaking. Everything else stays server-side.
    cached on the phone; the phone can re-order, re-time and re-speak with no network.
 5. **No licence contamination.** ORS is GPL-3.0. We implement these *behaviours* on Valhalla / VROOM
    / OR-Tools under our own architecture; no ORS code, text, identifier or asset enters this
-   repository (V4 §2 licence gate, `docs/LICENSES.md`).
+   repository (V4 §2 licence gate, `docs/product/LICENSES.md`).
 6. **Error semantics first.** ORS's numbered per-family error codes are the right idea; we adopt the
    concept with our own typed error taxonomy, so the phone can speak "I can't route that one"
    instead of showing a stack trace.

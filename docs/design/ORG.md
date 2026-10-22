@@ -94,7 +94,7 @@ decides what Courier Copilot looks like as a product rather than as a screen: th
 works at 16 px and on a cardboard parcel, the accent that reads in daylight through a windscreen,
 and the two type families the app ships with. The mark must be ours: nothing may be a re-skin of
 a competitor's, and nothing may be a stock logo. Every colour and every family that reaches the
-app has a licence row in `docs/LICENSES.md` before it is drawn, not after.
+app has a licence row in `docs/product/LICENSES.md` before it is drawn, not after.
 
 **Deliverable.** `docs/design/BRAND.md` — the brand board: the mark (construction, clear space,
 minimum sizes, the one-colour and reversed versions, the app icon), the colour system (the
@@ -113,7 +113,7 @@ anti-AI pass over the result.
   and a reversed version, all as drawings in the board.
 - The palette has every pair measured by `pnpm --filter @courier/design-tokens contrast:report`,
   with the measured numbers printed in the board — not estimated.
-- The type pairing names two families, their licences and their two rows in `docs/LICENSES.md`.
+- The type pairing names two families, their licences and their two rows in `docs/product/LICENSES.md`.
 - The misuse list has at least five named misuses, each with the corrected version.
 - The mark is original: the board records how it was drawn, and it is not a re-skin.
 
@@ -288,7 +288,7 @@ glyph at 16, 20, 24 and 32 px, in light and in night.
 **Definition of done.**
 - Every glyph in the four screens is in the set or in the custom list.
 - The custom glyphs share one grid and one stroke rule, and are drawn in the vector set.
-- The set has one licence row in `docs/LICENSES.md`.
+- The set has one licence row in `docs/product/LICENSES.md`.
 - No emoji anywhere in the app: the existing test fails the build if one appears.
 - Every glyph checked at 16 px.
 
@@ -481,7 +481,7 @@ evidence in `docs/design/directions-2/<n>-<name>/`.
    driving screen.
 8. The contrast report of the direction's palette is in the folder.
 9. The licence rows for the fonts, the icons, the sounds and the assets are in
-   `docs/LICENSES.md` and in the folder's `evidence/licences.md`.
+   `docs/product/LICENSES.md` and in the folder's `evidence/licences.md`.
 10. The QA score sheet is signed, with a verdict of PASS.
 
 A direction that is done but not scored is not done.
@@ -498,7 +498,7 @@ path. A direction with four signatures out of five does not enter the founder's 
 | 2 | WCAG 2.2 AA | Accessibility Design Lead | The measured contrast pairs, a label for every interactive element, no clipping at 200 per cent, the night rules. | `contrast.txt`, the 200 per cent PNG, the label list in `docs/design/ACCESSIBILITY.md` |
 | 3 | The driving ergonomics | Product Design Lead | One primary action, two taps at most, the glance time under one second, the voice path for every action, the eight-word driving prompts. | The flow in `docs/design/UX.md` and the video |
 | 4 | 60 and 120 frames a second | Motion Design Lead | The frame trace of the driving screen with no frame over 16.7 ms, and the motion inside the 150-to-250-millisecond window. | `evidence/fps-<n>.txt` from the CI emulator |
-| 5 | The licence ledger | Design Systems Engineer, with the Design Research Lead | Every font, icon set, sound, illustration and asset in the direction has a row in `docs/LICENSES.md`, with the licence and the source. | `evidence/licences.md` and the ledger |
+| 5 | The licence ledger | Design Systems Engineer, with the Design Research Lead | Every font, icon set, sound, illustration and asset in the direction has a row in `docs/product/LICENSES.md`, with the licence and the source. | `evidence/licences.md` and the ledger |
 
 ### 4.5 The review board
 
@@ -527,8 +527,8 @@ Effect: <what changes, and for whom>
 ```
 
 The log holds three kinds of entry: the daily board posts, the decisions and the vetoes, and the
-pick. The pick is also written to `docs/DECISIONS.md` as a founder decision and the gate in
-`docs/FOUNDER_TODO.md` is closed with the date and the reason.
+pick. The pick is also written to `docs/decisions/DECISIONS.md` as a founder decision and the gate in
+`docs/status/FOUNDER_TODO.md` is closed with the date and the reason.
 
 ### 4.7 What the director does not do
 

@@ -2,9 +2,9 @@
 
 **Studied:** `fleetbase/navigator-app` (AGPL-3.0) — the white-label driver app of the Fleetbase
 platform, React Native + Tamagui.
-**Spine:** our own feature families from `docs/PARITY.md` and the tool catalogue in
-`docs/FINAL_PROMPT.md` §4.5, read through the driver app's lens. **Task ids** are ours
-(`docs/KICKOFF_V3_EN.md`).
+**Spine:** our own feature families from `docs/status/PARITY.md` and the tool catalogue in
+`docs/archive/FINAL_PROMPT.md` §4.5, read through the driver app's lens. **Task ids** are ours
+(`docs/archive/KICKOFF_V3_EN.md`).
 
 **Status key** — `Have` shipped · `Better` we ship it and beat it · `Planned (task)` in the V3 list ·
 `Skip (reason)`. A row may only leave `Planned` with evidence in `docs/evidence/`.

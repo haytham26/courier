@@ -37,7 +37,7 @@ how to stop it. The wording is in `apps/mobile/src/constants/legal.ts`
 
 ## Do you provide a video that demonstrates the use of background location?
 
-To be recorded by the founder (the founder item in `docs/FOUNDER_TODO.md`). The
+To be recorded by the founder (the founder item in `docs/status/FOUNDER_TODO.md`). The
 video has to show:
 
 1. the driver starting a run,

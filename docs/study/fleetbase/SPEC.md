@@ -3,7 +3,7 @@
 **Studied:** `fleetbase/fleetbase` (AGPL-3.0, dual-licensed) and its first-party extensions
 (`fleetops`, `fleetops-data`, `ai`, `iam-engine`, `core-api`, `ledger`, `pallet`, `storefront`).
 **Our product:** Courier Copilot — the **driver-side** app: voice-first, offline-first, for
-independent NZ couriers (`docs/PRODUCT_SPEC.md`, `docs/PARITY.md`, `docs/KICKOFF_V3_EN.md`).
+independent NZ couriers (`docs/product/PRODUCT_SPEC.md`, `docs/status/PARITY.md`, `docs/archive/KICKOFF_V3_EN.md`).
 
 > **Clean-room statement.** This document describes *behaviour we observed*, in our own words, and
 > restates it as requirements **for our product**. No code, identifiers, schemas, assets or source
@@ -293,6 +293,6 @@ Each row is a requirement on **our** product. `AC` = acceptance criterion.
 - **UNVERIFIED** — the console's cold-start and page-load behaviour under load (reported in a
   discussion; not measurable here).
 - **UNVERIFIED** — the commercial-licence terms of the studied platform; we relied on the
-  repository's licence files only, and our own licence posture is separate (`docs/LICENSES.md`).
+  repository's licence files only, and our own licence posture is separate (`docs/product/LICENSES.md`).
 - **Open** — whether our console lives in `apps/web` (T7.12) or stays deliberately minimal; the
   studied platform's console breadth is out of proportion to our users.

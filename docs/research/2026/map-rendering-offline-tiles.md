@@ -217,7 +217,7 @@ Corrected by the verifier pass of 2026-10-21 (VERIFICATION-C.md): 8 cards correc
 
 ## What we are missing
 
-Each row is a capability found in the best repos/competitors above that we do **not** have today. The CEO merges these into `docs/PARITY.md`; the task id is where the row becomes work.
+Each row is a capability found in the best repos/competitors above that we do **not** have today. The CEO merges these into `docs/status/PARITY.md`; the task id is where the row becomes work.
 
 | # | Feature | Family | Gap (today) | The task id it becomes |
 |---|---|---|---|---|

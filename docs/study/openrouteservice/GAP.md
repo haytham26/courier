@@ -8,7 +8,7 @@ templates, rules · **T7.3** door memory · **T7.4** dictation · **T7.5** live 
 **T7.10** customer SMS · **T7.11** IRD logbook · **T7.12** dashboard/admin · **T7.13** billing ·
 **T7.14** team/franchise · **T7.15** PIA, store, handover.
 
-This table merges into `docs/PARITY.md`. Every `Skip` carries a one-line reason. No row may be
+This table merges into `docs/status/PARITY.md`. Every `Skip` carries a one-line reason. No row may be
 claimed without evidence in `docs/evidence/`. "Acceptance" states how the row is proved.
 
 ---
@@ -146,7 +146,7 @@ claimed without evidence in `docs/evidence/`. "Acceptance" states how the row is
 | F1 | Any ORS code, text, identifier, schema or asset in our repository | Skip (reason) | GPL-3.0 contamination risk; V4 §2 forbids GPL/AGPL in the product and the mobile bundle | — | CI licence scan shows zero GPL/AGPL findings |
 | F2 | Behavioural clean-room study of this project | Have | This file plus `docs/study/openrouteservice/SPEC.md`; implementation is a separate session that never opens the source | T7.2 | The build session log records that the source was not opened |
 | F3 | Similarity review of the implemented routing service | Planned (task) | Code review must check for copied functions, comments, strings and file structure (V4 §11.2.5) | T7.2 | Review notes confirm no similarity, or the code was rewritten |
-| F4 | Licence decision recorded in the licence ledger | Planned (task) | `docs/LICENSES.md` must state GPL-3.0, "studied, not adopted", with the study date | T7.15 | The ledger row exists with today's date |
+| F4 | Licence decision recorded in the licence ledger | Planned (task) | `docs/product/LICENSES.md` must state GPL-3.0, "studied, not adopted", with the study date | T7.15 | The ledger row exists with today's date |
 | F5 | Self-hosted ORS instance as a fallback router | Skip (reason) | Valhalla + VROOM + OR-Tools is the locked decision; a second engine doubles the data pipeline for no driver-visible gain | — | — |
 
 ---

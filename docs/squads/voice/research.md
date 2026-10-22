@@ -58,7 +58,7 @@ multilingual-voice-i18n, llm-tool-calling}.md`
 
 ## UNVERIFIED
 
-1. **No benchmark exists.** `docs/squads/voice/eval/` and `docs/squads/voice/benchmarks/` contain no dataset and no harness, so **every** performance number here (WER, intent accuracy, false accepts, command->action, battery) is unmeasured
+1. **No benchmark exists.** `packages/eval/voice/` and `docs/squads/voice/benchmarks/` contain no dataset and no harness, so **every** performance number here (WER, intent accuracy, false accepts, command->action, battery) is unmeasured
    by us.
 2. OmniVoice **main checkpoint SPDX id** (the HF card has no `license:` tag) and Silero VAD **model weights** licence (badge vs file contradiction). UNVERIFIED.
 3. New Architecture / Expo SDK 58 / Android API 34 support - not stated for `whisper.rn`, `react-native-sherpa-onnx`, `android-vad`, `ReactNative_WakeWordDetection`, `react-native-openwakeword`, `FluidAudio`, `argmax-oss-swift`, nor for the

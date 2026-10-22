@@ -1,6 +1,6 @@
 ﻿# Maps & Navigation Squad - decisions
 
-ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
+ADRs owned by this squad live in `docs/decisions/adr/`. List them here with one line each.
 
 | Date | Decision | Candidate / basis | Source file | Status |
 |---|---|---|---|---|
@@ -20,4 +20,4 @@ ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
 | 2026-10-21 | The **pack manifest is the contract** between the build and the app (schema, format version, region, licence, attribution, checksum); a pack whose version or region is not the one the app expects is **not used**, and the app falls back to the online source | `apps/mobile/src/maps/offlinePack.ts` | `docs/squads/maps/README.md` | Accepted |
 | 2026-10-21 | The pack is read from the **document directory first**, then the **bundle** (copied into the document directory on first use), then the **online source**, and with none of them the style draws the background and the courier overlay only | MapLibre Native PMTiles reader (`pmtiles://file://`, `pmtiles://asset://`) | `docs/research/2026/oss-maps-courier.md`, `apps/mobile/src/maps/packFiles.ts` | Accepted |
 | 2026-10-21 | The **stop markers are native views** with the sequence number on them, capped at **40** at a time, with the active stop always on the map; the number is drawn on the marker rather than as map text so it reads **without a glyph bundle** | `@maplibre/maplibre-react-native` `Marker`, 60 fps budget | `apps/mobile/src/maps/stops.ts` | Accepted |
-| 2026-10-21 | The **pack build refuses** the sources whose terms forbid our offline use (the OSMF tile servers, the Protomaps hosted API), treats the capped sources as conditional, and **prints the plan and stops** before it builds anything | OSMF Tile Usage Policy, OpenFreeMap terms (3,000 tiles / 50 MB) | `scripts/build-pmtiles.mjs` | Accepted |
+| 2026-10-21 | The **pack build refuses** the sources whose terms forbid our offline use (the OSMF tile servers, the Protomaps hosted API), treats the capped sources as conditional, and **prints the plan and stops** before it builds anything | OSMF Tile Usage Policy, OpenFreeMap terms (3,000 tiles / 50 MB) | `scripts/data/build-pmtiles.mjs` | Accepted |

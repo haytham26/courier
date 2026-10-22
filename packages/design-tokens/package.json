@@ -56,7 +56,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "contrast:report": "vitest run src/contrast.test.ts -t \"contrast table\""
+    "contrast:report": "vitest run src/__tests__/contrast.test.ts -t \"contrast table\""
   },
   "dependencies": {
     "zod": "4.6.7"

@@ -1,6 +1,6 @@
 ﻿# Payments & Accounts Squad - decisions
 
-ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
+ADRs owned by this squad live in `docs/decisions/adr/`. List them here with one line each.
 
 | Date | Decision | Candidate / basis | Source file | Status |
 |---|---|---|---|---|
@@ -15,5 +15,5 @@ ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
 | 2026-10-20 | KEEP `expo/eas-cli` (store credentials and submission path) and the Python Stripe client for admin-side operations (our API service is Python/FastAPI) | `expo/eas-cli`, `stripe/stripe-python` | `docs/research/2026/payments-subscriptions.md` | Accepted |
 | 2026-10-20 | WATCH `hyodotdev/openiap` (the vendor-neutral IAP challenger; re-evaluate at ~1 k stars or a 2.0 release), `polarsource/polar` (the only full billing engine with a clean Apache-2.0 licence - read its subscription lifecycle), `openmeterio/openmeter` (usage metering if we add per-stop pricing), `laravel/cashier-stripe` and `pay-rails/pay` (the subscription state machine to copy), `SolidInvoice/SolidInvoice`, and `stripe/stripe-react-native@0.82.0` only if a card flow is policy-allowed | various | `docs/research/2026/payments-subscriptions.md` | Watch |
 | 2026-10-20 | REJECT Lago, Meteroid, Flexprice and Frappe Books (**AGPL-3.0** - clean-room study only, never a dependency, never quoted code), Akaunting (**BSL** - banned by CONSTRAINTS.md), Dub (source-available), InvoicePlane / NocoBase / Vendure (custom or dual licences), twenty / appsmith, the wrong-domain or wrong-language billing frameworks, `tipsi/tipsi-stripe` (archived) and a WebView checkout as the primary path (fails the Play policy for digital goods) | various | `docs/research/2026/payments-subscriptions.md` | Rejected |
-| 2026-10-20 | ADR trigger: introducing a hosted entitlement service (RevenueCat) into the product boundary, or deciding not to use Play Billing on Android, is a locked-decision change - ADR + `docs/DECISIONS.md` | V4 §3.3 | `docs/research/2026/payments-subscriptions.md` | Needs ADR |
+| 2026-10-20 | ADR trigger: introducing a hosted entitlement service (RevenueCat) into the product boundary, or deciding not to use Play Billing on Android, is a locked-decision change - ADR + `docs/decisions/DECISIONS.md` | V4 §3.3 | `docs/research/2026/payments-subscriptions.md` | Needs ADR |
 | 2026-10-20 | Never recompute history: store `taxInclusive` plus the rate used per invoice, and verify the IRD-compliant invoice fields (GST number, taxable period, GST amount) against an IRD checklist before launch - currently UNVERIFIED | NZ IRD / GST | `docs/research/2026/payments-subscriptions.md` | Accepted |

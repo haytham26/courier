@@ -20,7 +20,7 @@ node_modules/
 dist/
 coverage/
 .coverage
-apps/api/coverage.json
+services/api/coverage.json
 services/courier-voice/coverage.json
 *.tsbuildinfo
 # IDE

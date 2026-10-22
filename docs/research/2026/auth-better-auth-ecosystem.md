@@ -24,13 +24,13 @@ array returned exactly 100 entries the value is a **page cap**, printed as "≥1
 
 | Item | Verified 2026-10-21 (read from the repo, not from memory) |
 |---|---|
-| **Our auth core** | `services/auth` — a standalone Better Auth service (TypeScript, Vitest, Kysely + `pg`). It is a **resource issuer only**; `apps/api` verifies. |
+| **Our auth core** | `services/auth` — a standalone Better Auth service (TypeScript, Vitest, Kysely + `pg`). It is a **resource issuer only**; `services/api` verifies. |
 | **Plugins wired** (`services/auth/src/options.ts`) | `organization()` — `allowUserToCreateOrganization` from config, `creatorRole: "owner"`, `membershipLimit: 100`, `teams: { enabled: true, defaultTeam: { enabled: true }, maximumTeams: 20 }` · `expo()` · `jwt({ jwks: { jwksPath, keyPairConfig: { alg } }, jwt: { issuer, audience, expirationTime } })`. |
 | **Config** (`services/auth/src/config.ts`) | `jwks.path` default `/jwks`, `alg` **ES256** (hard-coded in the type) · `jwt.expirationTime` **15 m** · `jwt.audience` `courier-api` · `jwt.issuer` = `baseURL` · `session.expiresIn` **30 d**, `updateAge` **24 h** · `rateLimit` window 60 s / max 100, custom rules: `/sign-up/email` 10/h, `/sign-in/email` 10/15 min, `/forget-password` 5/15 min · `emailAndPassword.minPasswordLength` 8, **`requireEmailVerification: false`** · `ipAddressHeaders` **empty by default** · `telemetry.enabled: false` · no default secret: a missing `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` / `AUTH_DATABASE_URL` raises `MissingEnvError` naming every missing variable; `memory://` is refused in production. |
-| **API side** (`apps/api/app/auth/jwks.py`) | Resource server only. JWKS cached **300 s**, HTTP timeout **5 s**, `jwt.PyJWK`, algorithms **ES256**, `options={"require": ["exp","sub","aud"]}`, audience `courier-api`; **fails to start** when `AUTH_JWKS_URL` is missing. No local user store, no local password hashing, no shared secret. |
+| **API side** (`services/api/app/auth/jwks.py`) | Resource server only. JWKS cached **300 s**, HTTP timeout **5 s**, `jwt.PyJWK`, algorithms **ES256**, `options={"require": ["exp","sub","aud"]}`, audience `courier-api`; **fails to start** when `AUTH_JWKS_URL` is missing. No local user store, no local password hashing, no shared secret. |
 | **Mobile side** (`apps/mobile/src/lib/auth-client.ts`) | `expoClient({ scheme: appScheme, storage: SecureStore, storagePrefix: 'courier' })`. `appScheme` = `Constants.expoConfig?.scheme` → `courier` (`app.json`: `"scheme": "courier"`, `"newArchEnabled": true`, bundle `com.courier.copilot`). **No `cookiePrefix` set** (server default `better-auth` applies on both sides), **no `disableCache`**, **no `jwtClient()`** → the app has no path to a JWT for the FastAPI API today. An `EXPO_PUBLIC_E2E=1` mock replaces the client for the emulator run. |
 | **Pins** | `better-auth` **1.7.10** and `@better-auth/expo` **1.7.10** (`services/auth/package.json`, `apps/mobile/package.json`) · `jose` 6.2.12 · `expo` ~58.0.14 (latest published `expo@58.0.16`, 2026-10-19) · `expo-secure-store` 58.0.2 · `expo-network` 58.0.3 · `expo-web-browser` 58.0.6 · `expo-linking` 58.0.13 · `expo-constants` 58.0.12. **`expo-crypto` (58.0.7) and `expo-auth-session` (58.0.13) are NOT installed.** |
-| **Tests** | `services/auth/tests/{auth,config,jwt,organization,rate-limit,server}.test.ts` · `apps/api/tests/auth/test_jwks.py`. Auth-service coverage **81.4 %** lines (CONSTRAINTS.md ratchet; V4 target 90 %). |
+| **Tests** | `services/auth/tests/{auth,config,jwt,organization,rate-limit,server}.test.ts` · `services/api/tests/auth/test_jwks.py`. Auth-service coverage **81.4 %** lines (CONSTRAINTS.md ratchet; V4 target 90 %). |
 | **Locked position** (not changed by this research) | Better Auth in `services/auth` with `organization` + `expo` + `jwt`, **ES256 + JWKS** verified by FastAPI, **no default secrets**, **no PII leaving the device**. |
 
 **What must not be conflated.** (1) The **auth server** (Better Auth) issues sessions and JWTs. (2) The **mobile
@@ -46,7 +46,7 @@ means four different products and most of the bad decisions come from mixing the
   an **audit log for admin actions**, and a **NZ Privacy Act 2020 PIA**.
 - `CONSTRAINTS.md`: zero high/critical advisories in the dependency tree; no GPL/AGPL/SSPL/Commons-Clause/CC-NC/
   FSL/BUSL in the shipped app; zero `any` in TS app code; ≥ 81 % coverage on the auth service as a ratchet.
-- No PII leaves the device by default (`docs/PARITY.md` differentiator 5).
+- No PII leaves the device by default (`docs/status/PARITY.md` differentiator 5).
 
 ## Queries run
 
@@ -420,10 +420,10 @@ refresh family revoked when cleanup fails`. URLs: `https://github.com/better-aut
 | **#11082** | **2026-08-31** | closed 2026-09-03 | *[[BUG] [Expo] Chunked cookie-jar write is non-atomic — concurrent reads send no cookie (401s)](https://github.com/better-auth/better-auth/issues/11082)* | Present in 1.6.30 and 1.7.2: the write clears the base key first, so a concurrent read gets `""` and the request goes out **unauthenticated → 401**. A driver signing in on a bad signal would see a 401 with no explanation. |
 | **#10253** | **2026-06-26** | **open** | *[expoClient: optional HTTPS origin for email / App Links (instead of scheme-only expo-origin)](https://github.com/better-auth/better-auth/issues/10253)* | `expoClient` always sends `expo-origin: courier://` and rewrites relative callback URLs to deep links. The reporter: *"mail clients do not open custom schemes reliably"* — so **every magic-link, verify-email and invitation email we send is a deep link that mail clients may not open.** We have `requireEmailVerification: false` today, but invitations do not. |
 | **#10028** / **#10027** | **2026-06-12** | closed 2026-06-15 | *[@better-auth/expo dynamic imports crash Expo SDK 56 native development builds](https://github.com/better-auth/better-auth/issues/10028)* | The closest thing to an Expo-SDK compatibility statement upstream: the failure was specific to **SDK 56 native dev builds**. It was fixed in time for us. |
-| **#11504** | **2026-10-01** | closed | *[better-auth 1.7.x pins @better-auth/utils 0.4.2 but better-call 1.4.0 requires ^0.5.0, so every install gets two copies](https://github.com/better-auth/better-auth/issues/11504)* | Dependency duplication inside the auth package — relevant to `docs/LICENSES.md` and to our bundle-size budget. |
+| **#11504** | **2026-10-01** | closed | *[better-auth 1.7.x pins @better-auth/utils 0.4.2 but better-call 1.4.0 requires ^0.5.0, so every install gets two copies](https://github.com/better-auth/better-auth/issues/11504)* | Dependency duplication inside the auth package — relevant to `docs/product/LICENSES.md` and to our bundle-size budget. |
 | **#11160** | **2026-09-04** | **open** | *[Client: `$sessionSignal` subscription refetches with no damping and aborts the request in flight](https://github.com/better-auth/better-auth/issues/11160)* | The client refetches the session on every cookie change with no damping. On a 3G connection that is wasted radio and battery — we have a **≤ 8 %/h battery** budget. |
 | **#11533** | **2026-10-02** | **open** | *[anonymous plugin: signing in while holding a stale session cookie silently signs the user out again (1.7.6)](https://github.com/better-auth/better-auth/issues/11533)* | A stale-cookie sign-out loop. We do not enable the anonymous plugin, so we are not exposed — but we must not enable it later without reading this. |
-| **#11662** | **2026-10-09** | **open** | *[setActiveOrganization/setActiveTeam are typed as returning Session but can return null](https://github.com/better-auth/better-auth/issues/11662)* | Directly in our path: `organization.teams` is enabled and `apps/api/app/auth/jwks.py` reads `organizationId` / `teamId` claims. A null team must not become an unscoped query. |
+| **#11662** | **2026-10-09** | **open** | *[setActiveOrganization/setActiveTeam are typed as returning Session but can return null](https://github.com/better-auth/better-auth/issues/11662)* | Directly in our path: `organization.teams` is enabled and `services/api/app/auth/jwks.py` reads `organizationId` / `teamId` claims. A null team must not become an unscoped query. |
 | **#11740** | **2026-10-14** | **open** | *[oauth-provider: validateIssuerUrl silently rewrites a configured http:// issuer to https://](https://github.com/better-auth/better-auth/issues/11740)* | Our `issuer` defaults to `baseURL`; if anyone configures `http://` in production the issuer we *sign* differs from the issuer we *advertise*. We do not enable the oauth-provider plugin, but the same discipline applies to `AUTH_JWT_ISSUER`. |
 | **#10515** | **2026-07-24** | closed | *[jwtClient() not assignable to BetterAuthClientPlugin in 1.6.24+ — createAuthClient inference collapses, authClient.token() disappears](https://github.com/better-auth/better-auth/issues/10515)* | We **have no `jwtClient()` on the mobile client today** and need one to get a JWT for the FastAPI API. The type regression was real; it is closed, but the step must be typed and tested. |
 
@@ -503,7 +503,7 @@ error path* (the "interrupted leaked-password lookups as network errors" fix is 
 we must make explicitly too).
 
 **Why not now:** Kratos is a **separate service with its own database and its own session model**. Swapping it in
-means re-specifying the tenancy model, the claim extraction in `apps/api/app/auth/jwks.py`
+means re-specifying the tenancy model, the claim extraction in `services/api/app/auth/jwks.py`
 (`AuthPrincipal.organization_id` / `team_id`) and the whole tenant-isolation test set. That is an ADR, not a sprint
 task.
 
@@ -608,7 +608,7 @@ branches, shifts), with **drivers** as members. Every API query must be scoped b
 | organisation | `organization()` with `creatorRole: "owner"`, `membershipLimit: 100` — **already configured** | built-in orgs + applications | per-org apps, admin roles | identity + Hydra, **no native multi-tenant org model** | realms + clients + groups | Organizations (hosted) | organisations (hosted) |
 | teams | `teams: { enabled, defaultTeam, maximumTeams: 20 }` — **already configured** | roles/permissions inside an org (not the same shape) | per-app roles | no | groups + realm roles | org roles | org roles |
 | invitations | built-in — and the subject of **GHSA-fmh4-wcc4-5jm3** | built-in + invitation records | built-in | built-in (identity traits) | built-in | built-in | built-in (SCIM) |
-| RBAC on the API side | plugin membership roles consumed by `apps/api` as claims (`organizationId`, `teamId` in `AuthPrincipal`) | role/permission sets | roles | Hydra scopes | realm/client roles | org roles | RBAC + fine-grained |
+| RBAC on the API side | plugin membership roles consumed by `services/api` as claims (`organizationId`, `teamId` in `AuthPrincipal`) | role/permission sets | roles | Hydra scopes | realm/client roles | org roles | RBAC + fine-grained |
 | audit log | we build ours (V4 §7 requires it) | full audit-log console | operation logs | admin events | admin events | built-in (hosted) | built-in, $99/mo + $125/mo SIEM |
 | admin UI | we build ours | full Console (large surface) | full admin UI | Kratos admin API (no UI) | full admin console | hosted | Admin Portal |
 | Expo/RN client | **first-party `@better-auth/expo`, 5.1 M dl/30 d** | none first-party | none | none | none (community `keycloak-js`) | **first-party `expo` package, actively shipped** | none first-party |
@@ -617,7 +617,7 @@ branches, shifts), with **drivers** as members. Every API query must be scoped b
 
 **The concrete consequence:** the D11 tenancy model is a **reason to keep Better Auth**, not an implementation
 detail. Swapping to Logto, Casdoor or Keycloak would mean re-specifying the tenancy model, the claim extraction in
-`apps/api/app/auth/jwks.py`, and the tenant-isolation test set. That is an ADR, not a sprint task.
+`services/api/app/auth/jwks.py`, and the tenant-isolation test set. That is an ADR, not a sprint task.
 
 ## 6. Expo SDK 58 / RN 0.88 New-Architecture readiness
 
@@ -643,7 +643,7 @@ The official guide targets **SDK 55 (RN 0.83, React 19.2)** and says SDK 55 requ
 
 `docs/squads/payments/eval/` does not exist; `docs/squads/payments/benchmarks/README.md` reads "Harness: _to be
 created with the first implementation_". There **are** unit tests (`services/auth/tests/*.test.ts`,
-`apps/api/tests/auth/test_jwks.py`), but they are not the squad's metrics and they do not run on a device.
+`services/api/tests/auth/test_jwks.py`), but they are not the squad's metrics and they do not run on a device.
 **Nothing below has been measured. Every row is UNVERIFIED and names the set we must build.**
 
 **The set to build (named, shape):** `docs/squads/payments/eval/auth/`
@@ -660,7 +660,7 @@ created with the first implementation_". There **are** unit tests (`services/aut
 | `a11y-i18n.jsonl` | error messages in the pilot languages, with the exact codes from our catalogue | every code localised |
 
 **Metrics.** `auth_p95_ms` (sign-in and token refresh) · `session_ttl_compliance` (short-lived, rotated) ·
-`cross_tenant_leaks` (must be 0) · `rate_limit_bypass_rate` (must be 0) · `jwt_verify_p95_ms` in `apps/api`
+`cross_tenant_leaks` (must be 0) · `rate_limit_bypass_rate` (must be 0) · `jwt_verify_p95_ms` in `services/api`
 (including the JWKS-cache path) · `advisory_age_at_release` (max age of an unpatched advisory in our tree — must be 0
 high/critical) · `locked_device_session_read_rate` (must be 1.0 after §3.2).
 
@@ -669,9 +669,9 @@ high/critical) · `locked_device_session_read_rate` (must be 1.0 after §3.2).
 | Metric | How it is measured | Where it runs |
 |---|---|---|
 | `auth_p95_ms` | 200 scripted sign-ins against `services/auth` in the CI profile; p95 of the wall time from request to `set-cookie` | `services/auth` vitest + a CI job |
-| `cross_tenant_leaks` | the tenant-isolation JSONL replayed against the running API; **a leak is any row returned for a foreign `organizationId`** — count, must be 0 | `apps/api` pytest + CI |
+| `cross_tenant_leaks` | the tenant-isolation JSONL replayed against the running API; **a leak is any row returned for a foreign `organizationId`** — count, must be 0 | `services/api` pytest + CI |
 | `rate_limit_bypass_rate` | for each limit rule: N requests with rotating IPv6 prefixes; count the requests that were **allowed** past the limit | `services/auth` vitest, against a real Redis |
-| `jwt_verify_p95_ms` | 1 000 `Authorization: Bearer` requests with a warm JWKS cache, then 1 000 after a forced refresh; p95 of `get_current_principal` | `apps/api` pytest |
+| `jwt_verify_p95_ms` | 1 000 `Authorization: Bearer` requests with a warm JWKS cache, then 1 000 after a forced refresh; p95 of `get_current_principal` | `services/api` pytest |
 | `advisory_age_at_release` | `POST https://api.osv.dev/v1/query` for every package in `pnpm-lock.yaml`; max(publish date of an unfixed high/critical advisory) | CI, blocking |
 | `locked_device_session_read_rate` | an iOS device with the screen off, an `EXPO_PUBLIC_E2E` build woken by a background fetch; assert `getSession()` succeeds | **manual, on a real device — no local emulator (AGENTS.md)** |
 | `deep-link` reachability | a signed magic-link e-mail opened in Mail/Gmail on iOS and Android; assert the app is foregrounded | manual + one Maestro flow for the custom scheme |
@@ -681,7 +681,7 @@ high/critical) · `locked_device_session_read_rate` (must be 1.0 after §3.2).
 same `session-lifecycle` and `tenant-isolation` sets — it is a different architecture, so it is a feasibility
 reference, not a drop-in.
 
-## 8. What we are missing → rows for `docs/PARITY.md`
+## 8. What we are missing → rows for `docs/status/PARITY.md`
 
 The CEO merges these. The **Spoke** column is filled **only** where `docs/study/spoke/TEARDOWN.md` states the fact
 (read 2026-10-21; the PARITY header still says 2026-10-20 — the teardown is one day newer). Where the teardown is
@@ -699,7 +699,7 @@ the sourced document and wins; the rows below use the teardown.
 | 5 | Accounts | Passkeys on the phone | Planned (task) | | passkey sign-in without a password; no RN WebAuthn today, needs a native module | T7.15 |
 | 6 | Accounts | Organisation invitations that only the invited person can accept | Planned (task) | | invitation bound to a verified address (upstream GHSA-fmh4-wcc4-5jm3 class) | T7.14 |
 | 7 | Accounts | Rate limiting on the credential endpoints | Planned (task) | | IPv6-proof limiter plus an independent throttle at the API | T7.15 |
-| 8 | Accounts | JWT for the API, verified from a published JWKS | Planned (task) | | ES256 + JWKS, no shared secret, `apps/api` is a resource server only | T7.13 |
+| 8 | Accounts | JWT for the API, verified from a published JWKS | Planned (task) | | ES256 + JWKS, no shared secret, `services/api` is a resource server only | T7.13 |
 | 9 | Accounts | Audit log of admin actions | Planned (task) | | an audit row per admin action, with NZ Privacy Act retention | T7.15 |
 | 10 | Accounts | Multilingual error and auth messages | Planned (task) | 19 languages, phone-language driven; no te reo Māori, Mandarin, Hindi, Samoan or Tongan (S13) | all languages from day one (D3), errors localised at the auth layer | T7.15 |
 | 11 | Accounts | Accessibility declaration and behaviour | Planned (task) | the NZ and AU listings state "The developer has not yet indicated which accessibility features this app supports" (S13, S14) | we declare and meet it; VoiceOver/TalkBack and 200 % text | T7.6 |
@@ -713,7 +713,7 @@ the sourced document and wins; the rows below use the teardown.
 + `jwt`/`jwks` plugin set, ES256 + JWKS, rate limits, secure cookies, and a resource-server-only API with zero
 shared secrets.** Reasons, all verified on 2026-10-21: it is MIT; it is the only candidate with a **first-class
 Expo client** (5.1 M dl/30 d) **and** an organisation+team model that matches D11; it moves fastest (103 humans/90 d,
-≥100 releases/6 m, 44.6 M dl/30 d); and `services/auth` + `apps/api/app/auth/jwks.py` + the test suite already
+≥100 releases/6 m, 44.6 M dl/30 d); and `services/auth` + `services/api/app/auth/jwks.py` + the test suite already
 implement it correctly.
 
 **ADOPT (the concrete delta this research produces).**
@@ -731,7 +731,7 @@ implement it correctly.
 5. **Add `session.cookieCache` to the forbidden-options test** (it is the 2FA-bypass vector) and keep
    `advanced.trustedProxyHeaders` off unless a proxy demands it.
 6. **Model org/team scoping as one policy artefact** (the Casbin idea) so the check is data, not scattered code.
-7. **Record every Better Auth package and its licence in `docs/LICENSES.md`** and keep the exact-version pin.
+7. **Record every Better Auth package and its licence in `docs/product/LICENSES.md`** and keep the exact-version pin.
 8. **OSV in CI as a blocking gate** + a monthly re-read of the advisory list.
 
 **ADR PROPOSALS (flagged, not applied — the locked decision stands).**

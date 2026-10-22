@@ -1,6 +1,6 @@
 ﻿# The reference URLs of docs/design/RESEARCH-2.md.
 # One URL per line. Lines starting with # are comments and are ignored.
-# Checked by scripts/check-design-research2-reference-urls.ps1
+# Checked by scripts/design/check-design-research2-reference-urls.ps1
 
 # --- Awards and design references ---
 https://developer.apple.com/design/awards/2026/

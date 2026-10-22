@@ -13,7 +13,10 @@ services:
       POSTGRES_DB: courier
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      # The schema the API runs against (packages/contracts/db/schema.sql). The
+      # first schema of the repository is kept next to it as
+      # packages/contracts/db/legacy-schema.sql; the API does not read it.
+      - ./packages/contracts/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     ports:
       - "5432:5432"
     healthcheck:

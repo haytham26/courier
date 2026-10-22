@@ -76,7 +76,7 @@ on this ground, so the check is not advisory.
 | REVIEW-B4 | Three weights a screen | No screen uses more than three weights of the same family, and no more than two families. |
 | REVIEW-B5 | The line height | Every step declares a line height of at least 1.2 times its size; the metric at most 1.15. |
 | REVIEW-B6 | The tracking | The display steps carry negative tracking of no more than 0.04 em; the label steps carry positive tracking of no more than 0.12 em. |
-| REVIEW-B7 | The licence | Both families have a row in `docs/LICENSES.md`, and the licence covers use in an application (not only use on a website). |
+| REVIEW-B7 | The licence | Both families have a row in `docs/product/LICENSES.md`, and the licence covers use in an application (not only use on a website). |
 
 ### 2.3 REVIEW-C — the touch targets and the hand
 
@@ -176,7 +176,7 @@ on this ground, so the check is not advisory.
 
 | ID | The rule | How it is checked |
 |---|---|---|
-| REVIEW-K1 | The fonts | Both type families have a row in `docs/LICENSES.md`, with the licence and the source, and the licence covers use in a shipped application. |
+| REVIEW-K1 | The fonts | Both type families have a row in `docs/product/LICENSES.md`, with the licence and the source, and the licence covers use in a shipped application. |
 | REVIEW-K2 | The icons | The icon set has a row; every custom glyph is ours. |
 | REVIEW-K3 | The sounds | Every earcon has a row and is either ours or licensed for application use. |
 | REVIEW-K4 | The assets | Every image, texture and illustration has a row. |
@@ -345,7 +345,7 @@ and the criterion scores zero.
 | The durations | The video, frame by frame, against the table in `docs/design/MOTION.md`. |
 | The pitch, the bearing and the zoom | The values logged by the lab route, written into the sheet by the team and checked against the video. |
 | The frame times | The trace from the CI emulator, in the folder as `evidence/fps-<n>.txt`. |
-| The licences | `docs/LICENSES.md`, one row per font, icon set, sound and asset. |
+| The licences | `docs/product/LICENSES.md`, one row per font, icon set, sound and asset. |
 | The gesture and the tap count | The flow in `docs/design/UX.md`, counted against the lab route. |
 | The emoji | The existing test in the app; the sheet records the run of the test. |
 

@@ -14,7 +14,7 @@ export its database to a single-file SQLite database for offline read-only use. 
 (code); the Lua import configuration is Apache-2.0. Version seen: 5.3.0.
 
 **Why we study it.** We already run our own geocoder: LINZ NZ Addresses offline, an FTS5 index in
-`op-sqlite` on the phone, and the D8 correction engine in `apps/api/app/address_correction.py`.
+`op-sqlite` on the phone, and the D8 correction engine in `services/api/app/address_correction.py`.
 Nominatim is studied for *behaviour coverage* of a production geocoder, for ranking and matching
 ideas worth re-implementing, and — critically — for the usage policy that forbids us from using the
 public service.

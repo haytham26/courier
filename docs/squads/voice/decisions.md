@@ -1,6 +1,6 @@
 ﻿# Voice Assistant Squad - decisions
 
-ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
+ADRs owned by this squad live in `docs/decisions/adr/`. List them here with one line each.
 
 | Date | Decision | Candidate / basis | Source file | Status |
 |---|---|---|---|---|
@@ -20,4 +20,4 @@ ADRs owned by this squad live in `docs/adr/`. List them here with one line each.
 | 2026-10-20 | REJECT the non-commercial multilingual weights (MMS-TTS, NLLB-200, XLS-R) and the Moonshine legacy non-English models; KEEP Whisper/whisper.cpp (MIT) as the licence-clean multilingual fallback | `facebook/mms-tts-*`, `facebook/nllb-200-distilled-600M`, `facebook/xls-r`, `moonshine-ai/moonshine` | `docs/research/2026/multilingual-voice-i18n.md` | Rejected |
 | 2026-10-20 | ADOPT pydantic-ai (Python) + the Vercel AI SDK (TypeScript, direct provider packages only) + MCP as boundary adapters; KEEP zod as the single TypeScript schema source; validate every tool argument before the tool body runs and enforce the confirmation policy in the tool layer | `pydantic/pydantic-ai`, `vercel/ai`, `modelcontextprotocol/*-sdk`, `colinhacks/zod` | `docs/research/2026/llm-tool-calling.md` | Accepted |
 | 2026-10-20 | REJECT any gateway or LLM proxy on the voice hot path (latency, cost, data perimeter); `BerriAI/litellm` is off the hot path only | `BerriAI/litellm` (licence "Other") | `docs/research/2026/llm-tool-calling.md` | Rejected |
-| 2026-10-20 | Build `docs/squads/voice/eval/` (>= 500 utterances) and the benchmark harness **before** any engine or framework adoption PR lands; every number in this file stays UNVERIFIED until then | V4 §10.1 working agreement #1 | `docs/squads/voice/README.md` | Accepted |
+| 2026-10-20 | Build `packages/eval/voice/` (>= 500 utterances) and the benchmark harness **before** any engine or framework adoption PR lands; every number in this file stays UNVERIFIED until then | V4 §10.1 working agreement #1 | `docs/squads/voice/README.md` | Accepted |

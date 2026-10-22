@@ -72,7 +72,7 @@ topic:accessibility` · `"react-native animation library"` · `"react-native ges
 - **REJECT (with reason)** `nativewind/nativewind` - **hard rule**: Unistyles 3 is the only styling engine, not to be used in the mobile app or the web dashboard · `heroui-inc/heroui-native` (NativeWind-based, would drag in a second styling
   engine) · `GeekyAnts/NativeBase` (no release since 2023-03-06) · `react-native-elements/react-native-elements` (0 commits in 90 d) · `GeekyAnts/react-native-aria` (archived) · `satya164/react-native-tab-view` (archived) · the unmaintained
   2024-25 kit cohort (react-native-material-ui, react-virgin, expo-ui-kit, pearl-ui, react-native-swipeable-list, nativecn) · `jsartisan/react-native-magnus` (Laravel-flavoured API).
-- **ADR trigger** replacing Unistyles 3 with Tamagui would change a locked decision - ADR + `docs/DECISIONS.md`. Nothing in this research justifies that.
+- **ADR trigger** replacing Unistyles 3 with Tamagui would change a locked decision - ADR + `docs/decisions/DECISIONS.md`. Nothing in this research justifies that.
 
 ## UNVERIFIED
 

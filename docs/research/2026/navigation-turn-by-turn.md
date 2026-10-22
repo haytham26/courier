@@ -233,7 +233,7 @@ must not send audio to a provider (V4 §7); on-device TTS is the only way to kee
 
 **The reference sets that already exist (control):** `maplibre/maplibre-navigation-android`'s sample app and its GraphHopper rerouting demo (C2/C6); the **OSRM demo server** for neutral reference geometry; and Ferrostar's own `simulation.rs` + `test_utils.rs` + snapshot tests in the Rust core — a ready-made pattern for headless navigation testing.
 
-## 5. What we are missing → rows for `docs/PARITY.md`
+## 5. What we are missing → rows for `docs/status/PARITY.md`
 
 The CEO merges these. Each row is a capability that exists in the best OSS repos or in the competitors (`docs/study/spoke/`) and that we do not have today.
 

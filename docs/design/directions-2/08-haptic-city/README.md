@@ -101,7 +101,7 @@ in `packages/design-tokens/src/directions2.ts` (`hapticCity.type`), and every nu
 set with tabular figures.
 
 Both licences are SIL OFL 1.1, which covers use in a shipped application and allows the font to be
-embedded in the binary. The notice goes into `docs/LICENSES.md` with the rest of the ledger.
+embedded in the binary. The notice goes into `docs/product/LICENSES.md` with the rest of the ledger.
 
 ---
 

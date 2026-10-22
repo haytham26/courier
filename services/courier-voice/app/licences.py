@@ -8,10 +8,10 @@ commercial is unavailable, with the reason.
 The licences below were read on the date in the row. They were not guessed:
 the code licences come from the package metadata of the tree this service runs
 from, and the weights licences come from the model cards and the licence files
-recorded in `docs/adr/ADR-004-voice-service-licences.md` and
+recorded in `docs/decisions/adr/ADR-004-voice-service-licences.md` and
 `docs/research/2026/on-device-stt-tts-vad-kws.md`.
 
-The whole table is also in `docs/LICENSES.md`, which is the ledger the whole
+The whole table is also in `docs/product/LICENSES.md`, which is the ledger the whole
 company reads.
 """
 

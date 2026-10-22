@@ -2,7 +2,7 @@
 
 **Mission:** The whole of Canterbury offline, day and night, at 60 fps.
 
-**Code:** `apps/mobile/src/maps`, `apps/mobile/app/(tabs)/map.tsx`, `scripts/build-pmtiles.mjs`, `scripts/build-3d-buildings.mjs`
+**Code:** `apps/mobile/src/maps`, `apps/mobile/app/(tabs)/map.tsx`, `scripts/data/build-pmtiles.mjs`, `scripts/data/build-3d-buildings.mjs`
 
 **Tasks:** T5 offline PMTiles, T7.7 driving mode, the view modes of MASTER_EXECUTION §11
 
@@ -55,7 +55,7 @@ from **God's Eye View** (MIT, read 2026-10-22) with its notice kept.
 | LINZ NZ Building Outlines (LDS layer 101290) | CC BY 4.0 | "Sourced from the LINZ Data Service and licensed for reuse under the CC BY 4.0 licence"                                    |
 | OpenStreetMap building heights and levels    | ODbL      | "© OpenStreetMap contributors. Contains information from OpenStreetMap, available under the Open Database License (ODbL)." |
 
-`scripts/build-3d-buildings.mjs` is the gate on the licence of **every**
+`scripts/data/build-3d-buildings.mjs` is the gate on the licence of **every**
 input: it refuses the sources whose terms forbid our offline use, it refuses a
 source that is not registered at all, it prints the plan and stops unless
 `--execute` is given, and it writes the licence and the credit of every input
@@ -63,13 +63,13 @@ into the `buildings` section of the pack manifest.
 
 ```bash
 # the plan: the terms are checked, the steps are printed, nothing happens
-node scripts/build-3d-buildings.mjs --source linz-nz-building-outlines
+node scripts/data/build-3d-buildings.mjs --source linz-nz-building-outlines
 
 # the manifest that would be written, with the licence of every input
-node scripts/build-3d-buildings.mjs --source linz-nz-building-outlines --print-manifest
+node scripts/data/build-3d-buildings.mjs --source linz-nz-building-outlines --print-manifest
 
 # the build: the inputs have to be on the machine already
-node scripts/build-3d-buildings.mjs --source linz-nz-building-outlines --execute \
+node scripts/data/build-3d-buildings.mjs --source linz-nz-building-outlines --execute \
   --outlines data/linz/building-outlines.geojson \
   --extract data/linz/newzealand-latest.osm.pbf
 ```
@@ -190,10 +190,10 @@ app falls back to the online source rather than draw a half-understood map.
 
 ```bash
 # the plan: the terms are checked, the steps are printed, nothing happens
-node scripts/build-pmtiles.mjs --source geofabrik-nz
+node scripts/data/build-pmtiles.mjs --source geofabrik-nz
 
 # the build: the extract has to be on the machine already
-node scripts/build-pmtiles.mjs --source geofabrik-nz --execute --input data/linz/newzealand-latest.osm.pbf
+node scripts/data/build-pmtiles.mjs --source geofabrik-nz --execute --input data/linz/newzealand-latest.osm.pbf
 ```
 
 The script never downloads anything. It refuses to build from a source whose
@@ -240,7 +240,7 @@ Two rules the app enforces rather than trusts:
   forbids bulk downloading (read 2026-10-21 at
   https://operations.osmfoundation.org/policies/tiles/). `apps/mobile/src/maps/config.ts`
   refuses the host whatever the configuration says, and
-  `scripts/build-pmtiles.mjs` refuses to build from it.
+  `scripts/data/build-pmtiles.mjs` refuses to build from it.
 - **The hosted free tiers are not a pack.** The OpenFreeMap terms allow an
   offline download only "at most 3,000 tiles or 50 MB", with "at most 4
   parallel requests" and "a unique User-Agent identifying your app" (read
@@ -248,7 +248,7 @@ Two rules the app enforces rather than trusts:
   "free for non-commercial use. For commercial use, become a GitHub Sponsor."
   The build script treats both as a conditional or a forbidden source.
 - **The imagery that needs a commercial licence is refused by name.**
-  `scripts/build-3d-buildings.mjs` registers Google Photorealistic 3D Tiles
+  `scripts/data/build-3d-buildings.mjs` registers Google Photorealistic 3D Tiles
   and Cesium ion with `offlineUse: 'forbidden'` and refuses them whatever the
   operator asks for. The satellite mode of the app is online only and only
   works when the build names the provider **and** its licence; without them

@@ -1,7 +1,7 @@
 # The npm packages the Design Studio bench measures.
 #
 # One package name per line. `#` starts a comment. The data is fetched with
-# `scripts/fetch-design-npm-evidence.ps1` into
+# `scripts/design/fetch-design-npm-evidence.ps1` into
 # `docs/design/evidence/npm-packages-<date>.tsv`.
 #
 # The size column is the **npm unpacked size** of the published tarball. It

@@ -32,11 +32,11 @@ declaration, the data safety answers, the account deletion).
 
 ## The local copy: the script the release manager runs
 
-**`scripts/check-store-readiness.mjs` is the developer's copy of the check.** It
+**`scripts/ci/check-store-readiness.mjs` is the developer's copy of the check.** It
 runs on the machine, in seconds, and reads the things the tool cannot know:
 
 ```bash
-node scripts/check-store-readiness.mjs --apk apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+node scripts/ci/check-store-readiness.mjs --apk apps/mobile/android/app/build/outputs/apk/release/app-release.apk
 ```
 
 The options are `--repo` (the repository folder), `--app` (the app folder,
@@ -52,7 +52,7 @@ Run it before every release, and run it in CI as well: the workflow does both.
    `expo.android.versionCode` in `apps/mobile/app.json`. The version code has
    to go up with every upload. Put the same numbers in
    `docs/operations/STORE-LISTING.md`.
-2. **The local check.** `node scripts/check-store-readiness.mjs --apk <apk>`.
+2. **The local check.** `node scripts/ci/check-store-readiness.mjs --apk <apk>`.
    No blockers, and every warning is either fixed or written down.
 3. **The CI check.** Push the release branch or tag the release. The
    `Store readiness` workflow has to be green, and the job summary has to be
@@ -90,7 +90,7 @@ Run it before every release, and run it in CI as well: the workflow does both.
 ## The founder's part
 
 The founder supplies the accounts, the keys and the legal sign-off. They are all
-in `docs/FOUNDER_TODO.md`. The names of the secrets the workflow reads are
+in `docs/status/FOUNDER_TODO.md`. The names of the secrets the workflow reads are
 there too; the workflow skips those lanes with a clear message when a secret is
 missing, so a missing secret never fails the pipeline.
 

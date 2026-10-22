@@ -63,10 +63,15 @@ jobs:
         run: pnpm --filter @courier/design-tokens build
 
       - name: Build the debug APK
+        # The design lab is a diagnostic, not the product: it is in the dev and
+        # the E2E build only (MASTER_EXECUTION section 16.1.7). This job opens
+        # the lab routes, so the build carries them.
+        env:
+          EXPO_PUBLIC_DESIGN_LAB: '1'
         run: |
           pnpm --filter mobile exec expo prebuild --platform android --no-install
           # The debug build has to carry its own JavaScript bundle: CI has no
-          # Metro and no local emulator is allowed (MASTER_EXECUTION §16.1).
+          # Metro and no local emulator is allowed (MASTER_EXECUTION section 16.1).
           # The React Native Gradle plugin embeds the bundle in every variant
           # that is not listed in `debuggableVariants`.
           GRADLE="apps/mobile/android/app/build.gradle"

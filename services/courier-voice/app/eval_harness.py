@@ -438,12 +438,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Runs the shift simulations of the voice.")
     parser.add_argument(
         "--manifest",
-        default="docs/squads/voice/eval/manifest/shift_sims.json",
+        default="packages/eval/voice/manifest/shift_sims.json",
         help="the manifest of the simulations",
     )
     parser.add_argument(
         "--out",
-        default="docs/squads/voice/eval/results/shift-sim",
+        default="packages/eval/voice/results/shift-sim",
         help="where the results are written",
     )
     arguments = parser.parse_args(argv)

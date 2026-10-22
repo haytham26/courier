@@ -2,7 +2,7 @@
 
 **Mission:** Build the day's route in one tap from the driver's own template, and re-optimise without ever blocking the van.
 
-**Code:** `apps/api/app/routing.py` (the routing core), `apps/api/app/main.py` (the two endpoints), `apps/api/app/repo.py` (the templates and the ordered stops), `apps/api/db/schema.sql` (the tables), `apps/api/tests/test_routing.py` (the proof)
+**Code:** `services/api/app/routing.py` (the routing core), `services/api/app/main.py` (the two endpoints), `services/api/app/repo.py` (the templates and the ordered stops), `packages/contracts/db/schema.sql` (the tables), `services/api/tests/test_routing.py` (the proof)
 
 **Tasks:** T7.2 routing, templates and rules
 
@@ -16,7 +16,7 @@
 
 | Piece | Choice | Why |
 |---|---|---|
-| The seam | the `RouteEngine` protocol in `apps/api/app/routing.py` | one interface, so the engine can be swapped without touching the API, the repository or the tests |
+| The seam | the `RouteEngine` protocol in `services/api/app/routing.py` | one interface, so the engine can be swapped without touching the API, the repository or the tests |
 | The engine that runs today | `HeuristicEngine`: a nearest-neighbour seed, then a 2-opt improvement | no routing engine, no matrix and no network, so the CI (which has no Valhalla, no GraphHopper and no OSRM) can prove the plan end to end |
 | The production engine | PyVRP with VROOM, over a Valhalla or GraphHopper matrix | the research found PyVRP the best licence, installability and reproducibility, and VROOM the richest constraint model; both take our own matrix |
 | The router | GraphHopper for the instructions and the map matching, Valhalla for the truck costs, the matrix and the IRD trace, OSRM as the matrix accelerator | the research decision of 2026-10-20 (`docs/squads/routing/decisions.md`) |
@@ -44,7 +44,7 @@ practice: 200 stops are planned in a tenth of a second.
 
 **3. The groups.** The priority stops are planned first and the ordinary stops after them, and the
 2-opt never moves a stop across that line. This is the same rule the intake graph already applies
-(`apps/api/app/sequencing.py`): the priority stops jump the queue but keep their relative order.
+(`services/api/app/sequencing.py`): the priority stops jump the queue but keep their relative order.
 
 **4. The timings.** The arrival time is when the delivery *starts*: the courier waits for the window
 to open rather than knocking early. The service time is the stop's own when it has one, the run's
@@ -56,12 +56,12 @@ plainly when the load is over the capacity. The heuristic plans one van, so it n
 day: that is the job of the VRP solver.
 
 **6. The determinism.** The same stops and the same constraints give the same order, the same
-arrival times and the same distance. `apps/api/tests/test_routing.py` proves it by running the plan
+arrival times and the same distance. `services/api/tests/test_routing.py` proves it by running the plan
 fifty times and comparing the answers, and again with the `repeat(50)` marker.
 
 ## The API
 
-Two endpoints, both behind the verified principal (`apps/api/app/auth/jwks.py`): a request without a
+Two endpoints, both behind the verified principal (`services/api/app/auth/jwks.py`): a request without a
 valid token is a 401, and a run that belongs to another courier is a 404.
 
 ### `PUT /runs/{run_id}/template` - the Master Template Lock
@@ -124,7 +124,7 @@ stops have not changed. A stop without a pin cannot be placed; it is named in
 
 ## The data model
 
-`apps/api/db/schema.sql`:
+`packages/contracts/db/schema.sql`:
 
 | Table | What it holds |
 |---|---|
@@ -134,7 +134,7 @@ stops have not changed. A stop without a pin cannot be placed; it is named in
 | `run_route_stops` | the ordered stops of the plan, with the arrival and departure times and the distance of each leg |
 | `stops` | the day's stops, with the priority, the parcels, the service time and the time window the routing engine needs |
 
-The repository contract is in `apps/api/app/repo.py`, in both implementations: `SqlAlchemyRepo`
+The repository contract is in `services/api/app/repo.py`, in both implementations: `SqlAlchemyRepo`
 (Postgres) and `InMemoryRepo` (the tests, no database).
 
 ## The performance budget
@@ -154,12 +154,12 @@ engine has to meet is the same one, with the matrix build inside it.
 
 | Check | Count | Command |
 |---|---|---|
-| The routing tests | 35 tests, 84 collected (one of them runs 50 times) | `uv run --directory apps/api pytest tests/test_routing.py -q` |
-| The whole API suite | 140 tests | `uv run --directory apps/api pytest -q` |
+| The routing tests | 35 tests, 84 collected (one of them runs 50 times) | `uv run --directory services/api pytest tests/test_routing.py -q` |
+| The whole API suite | 140 tests | `uv run --directory services/api pytest -q` |
 | The coverage of the routing core | 99% | `pytest --cov=app.routing` |
 | The coverage of the API surface | 92% | `pytest --cov=app.main` |
-| Lint | zero errors | `uv run --directory apps/api ruff check .` |
-| Types | zero errors | `uv run --directory apps/api mypy .` |
+| Lint | zero errors | `uv run --directory services/api ruff check .` |
+| Types | zero errors | `uv run --directory services/api mypy .` |
 
 The SQL half of the repository is not covered by the tests: the tests use the in-memory repository,
 with no database and no network, as the rules require.

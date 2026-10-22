@@ -2,7 +2,7 @@
 
 **Mission:** Parse, correct and remember every NZ address; never send a driver to the wrong house.
 
-**Code:** `packages/nz-address, apps/api/app/address_correction.py`
+**Code:** `packages/nz-address, services/api/app/address_correction.py`
 
 **Tasks:** T4 LINZ data + accuracy, T7.3 door memory
 
@@ -14,7 +14,7 @@
 
 ## Evaluation dataset / benchmark
 
-apps/api/tests/address/fixtures (87 committed) + the LINZ sample once T4 lands
+services/api/tests/fixtures (87 committed) + the LINZ sample once T4 lands
 
 ## Research
 

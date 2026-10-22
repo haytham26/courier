@@ -1,8 +1,8 @@
 # GAP — Fleetbase platform vs Courier Copilot
 
 **Studied:** `fleetbase/fleetbase` + first-party extensions (Fleet-Ops, AI, IAM, Ledger, Pallet, Storefront).
-**Spine:** our own feature families and row numbering from `docs/PARITY.md` (1–49) and the tool
-catalogue in `docs/FINAL_PROMPT.md` §4.5. **Task ids** are the ones we use (`docs/KICKOFF_V3_EN.md`).
+**Spine:** our own feature families and row numbering from `docs/status/PARITY.md` (1–49) and the tool
+catalogue in `docs/archive/FINAL_PROMPT.md` §4.5. **Task ids** are the ones we use (`docs/archive/KICKOFF_V3_EN.md`).
 
 **Status key** — `Have` shipped · `Better` we ship it and beat it · `Planned (task)` in the V3 list ·
 `Skip (reason)`. A row may only leave `Planned` with evidence in `docs/evidence/`.

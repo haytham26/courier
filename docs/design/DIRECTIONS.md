@@ -14,7 +14,7 @@ three routes under `/design`, three themes in the token package, three type scal
 | **B**     | `/design/beacon`   | `apps/mobile/src/design/BeaconToday.tsx`   | `docs/design/directions/b-beacon.html`   | `beacon` in `themes.ts`   |
 | **C**     | `/design/freight`  | `apps/mobile/src/design/FreightToday.tsx`  | `docs/design/directions/c-freight.html`  | `freight` in `themes.ts`  |
 
-**The founder picks one (A, B or C).** The entry is in `docs/FOUNDER_TODO.md`. The work carries
+**The founder picks one (A, B or C).** The entry is in `docs/status/FOUNDER_TODO.md`. The work carries
 on either way — the screen inventory of §13.5 is the next step.
 
 ---

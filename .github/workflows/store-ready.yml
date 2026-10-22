@@ -39,7 +39,7 @@ jobs:
     env:
       # The names only. The values live in the GitHub Secrets: they are never
       # written to the repository, to the log or to an artefact, and a missing
-      # one never fails this job (see docs/FOUNDER_TODO.md).
+      # one never fails this job (see docs/status/FOUNDER_TODO.md).
       APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_P8_BASE64 }}
@@ -105,7 +105,7 @@ jobs:
           if [ -n "$APK_PATH" ]; then
             args+=(--apk "$APK_PATH")
           fi
-          node scripts/check-store-readiness.mjs "${args[@]}" | tee artifacts/store-readiness.txt
+          node scripts/ci/check-store-readiness.mjs "${args[@]}" | tee artifacts/store-readiness.txt
 
       - name: Run the App Store Connect metadata check
         # The only lane of the tool that needs a credential. The key stays in
@@ -130,7 +130,7 @@ jobs:
       - name: The App Store Connect lane was skipped
         if: env.APP_STORE_CONNECT_KEY_ID == '' || env.APP_STORE_CONNECT_APP_ID == ''
         run: |
-          echo "::warning::The App Store Connect lane was skipped: the key (APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_P8_BASE64) or the app id is not set. The names are in docs/FOUNDER_TODO.md. The Google Play check ran anyway."
+          echo "::warning::The App Store Connect lane was skipped: the key (APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_P8_BASE64) or the app id is not set. The names are in docs/status/FOUNDER_TODO.md. The Google Play check ran anyway."
 
       - name: The App Store Connect lane did not run
         if: steps.asc.outcome == 'failure'
@@ -145,13 +145,13 @@ jobs:
             echo "## Store readiness"
             echo ""
             if [ -f artifacts/store-ready-play.json ]; then
-              node scripts/store-ready-summary.mjs artifacts/store-ready-play.json || true
+              node scripts/ci/store-ready-summary.mjs artifacts/store-ready-play.json || true
             else
               echo "The Google Play checkup did not run."
               echo ""
             fi
             if [ -f artifacts/store-ready-asc.json ]; then
-              node scripts/store-ready-summary.mjs artifacts/store-ready-asc.json || true
+              node scripts/ci/store-ready-summary.mjs artifacts/store-ready-asc.json || true
             fi
             echo "### The local pre-submission check"
             echo ""

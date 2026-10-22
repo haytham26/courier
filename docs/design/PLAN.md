@@ -122,8 +122,8 @@ they are ten different answers and not ten drawings of one.
 
 ## 5. When the founder picks
 
-The pick is recorded in `docs/design/DECISION-LOG.md`, mirrored into `docs/DECISIONS.md` as a
-founder decision, and the gate in `docs/FOUNDER_TODO.md` is closed with the date. Then:
+The pick is recorded in `docs/design/DECISION-LOG.md`, mirrored into `docs/decisions/DECISIONS.md` as a
+founder decision, and the gate in `docs/status/FOUNDER_TODO.md` is closed with the date. Then:
 
 | Stage | What happens | The output | The days |
 |---|---|---|---|

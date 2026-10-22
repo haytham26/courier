@@ -13,7 +13,7 @@ import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 
 const REPO_ROOT = resolve(__dirname, '../../../../..');
-const SCRIPT = join(REPO_ROOT, 'scripts', 'build-3d-buildings.mjs');
+const SCRIPT = join(REPO_ROOT, 'scripts', 'data', 'build-3d-buildings.mjs');
 
 interface ScriptResult {
   code: number;

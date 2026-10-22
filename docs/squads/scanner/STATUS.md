@@ -5,10 +5,10 @@ Updated: 2026-10-21 (the evaluation set is built; the founder photos are still m
 ## Done (with evidence)
 
 - Squad skeleton, targets and evaluation plan created.
-- The evaluation set: `docs/squads/scanner/eval/` - the manifest (370 label slots, 330 of them
+- The evaluation set: `packages/eval/scanner/` - the manifest (370 label slots, 330 of them
   synthetic with their ground truth), the field catalogue with the acceptance rules, the licence
   ledger, the builder, the drawing of the synthetic labels and the integrity check
-  (`node scripts/check-scanner-eval.mjs`, wired into the floor guard job in
+  (`node scripts/eval/check-scanner-eval.mjs`, wired into the floor guard job in
   `.github/workflows/quality-gates.yml`). The images live in `data/labels/synthetic/` and are not
   committed.
 
@@ -17,7 +17,7 @@ Updated: 2026-10-21 (the evaluation set is built; the founder photos are still m
 | Metric | Target | Today | Evidence |
 |--------|--------|-------|----------|
 | _(not measured yet)_ | see README | - | - |
-| evaluation set size | >= 300 labels | 330 synthetic labels, 40 slots for the founder | `docs/squads/scanner/eval/manifest/slices.json` |
+| evaluation set size | >= 300 labels | 330 synthetic labels, 40 slots for the founder | `packages/eval/scanner/manifest/slices.json` |
 
 ## Next
 

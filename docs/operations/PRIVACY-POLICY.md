@@ -1,7 +1,7 @@
 # Privacy policy - Courier Copilot
 
 **Draft.** The founder and the lawyer have to read this before the app goes
-live (the legal review is in `docs/FOUNDER_TODO.md`). The privacy officer owns
+live (the legal review is in `docs/status/FOUNDER_TODO.md`). The privacy officer owns
 it under the NZ Privacy Act 2020.
 
 Last updated: 2026-10-21 (version 0.1.0)

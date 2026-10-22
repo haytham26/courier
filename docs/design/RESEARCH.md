@@ -19,11 +19,11 @@ The raw evidence is in `docs/design/evidence/`:
 
 The three scripts that produced it are in `scripts/`:
 
-- `scripts/fetch-design-evidence.ps1` — the GitHub snapshot (`gh api graphql`, the token comes
+- `scripts/design/fetch-design-evidence.ps1` — the GitHub snapshot (`gh api graphql`, the token comes
   from `.env.local` and is never printed).
-- `scripts/fetch-design-npm-evidence.ps1` — the npm snapshot.
-- `scripts/check-design-reference-urls.ps1` — the reference URLs, with their status.
-- `scripts/build-design-research-tables.mjs --write` — rebuilds the tables of this document from
+- `scripts/design/fetch-design-npm-evidence.ps1` — the npm snapshot.
+- `scripts/design/check-design-reference-urls.ps1` — the reference URLs, with their status.
+- `scripts/design/build-design-research-tables.mjs --write` — rebuilds the tables of this document from
   the snapshots, so the numbers cannot drift away from the API.
 
 ---
@@ -154,7 +154,7 @@ operations screen must never reach) and `recharts/recharts` (the earnings chart)
 
 89 repositories, read on 2026-10-22 (83 in the cards below; six more were added for the
 maintenance column of the bench). The tables are generated from the snapshot by
-`scripts/build-design-research-tables.mjs --write`; the reason each repository is in the pool is
+`scripts/design/build-design-research-tables.mjs --write`; the reason each repository is in the pool is
 in `docs/design/evidence/research-notes.tsv`.
 
 <!-- TABLES:START -->
@@ -279,64 +279,64 @@ in `docs/design/evidence/research-notes.tsv`.
 
 | Package | Version | Unpacked size (kB) | Licence | Published | Registry |
 | --- | --- | ---: | --- | --- | --- |
-| `react-native-reanimated` | 4.7.1 | 4885 | MIT | 2026-10-20 | [npm](undefined) |
-| `react-native-worklets` | 0.13.0 | 17409 | MIT | 2026-10-20 | [npm](undefined) |
-| `react-native-gesture-handler` | 3.4.0 | 3190 | MIT | 2026-10-20 | [npm](undefined) |
-| `@swmansion/react-native-bottom-sheet` | 0.17.0 | 337 | MIT | 2026-10-18 | [npm](undefined) |
-| `@gorhom/bottom-sheet` | 5.2.14 | 1298 | MIT | 2026-05-09 | [npm](undefined) |
-| `@lodev09/react-native-true-sheet` | 3.11.18 | 1176 | MIT | 2026-10-21 | [npm](undefined) |
-| `moti` | 0.30.0 | 760 | MIT | 2025-01-29 | [npm](undefined) |
-| `react-native-redash` | 18.1.5 | 258 | MIT | 2026-01-21 | [npm](undefined) |
-| `react-native-ease` | 0.9.0 | 349 | MIT | 2026-10-15 | [npm](undefined) |
-| `number-flow-react-native` | 0.5.1 | 704 | MIT | 2026-08-19 | [npm](undefined) |
-| `@legendapp/motion` | 2.5.3 | 236 | MIT | 2025-10-17 | [npm](undefined) |
-| `react-native-reanimated-dnd` | 2.0.0 | 136 | MIT | 2026-03-16 | [npm](undefined) |
-| `react-native-reorderable-list` | 0.18.2 | 371 | MIT | 2026-10-18 | [npm](undefined) |
-| `react-native-draggable-flatlist` | 4.0.3 | 511 | MIT | 2025-05-06 | [npm](undefined) |
-| `react-native-swipeable-list` | 0.1.2 | 21 | MIT | 2022-05-14 | [npm](undefined) |
-| `react-native-haptic-feedback` | 3.0.0 | 209 | MIT | 2026-03-29 | [npm](undefined) |
-| `react-native-zoom-toolkit` | 5.1.1 | 367 | MIT | 2026-08-30 | [npm](undefined) |
-| `react-native-modalize` | 2.1.1 | 64 | MIT | 2022-08-10 | [npm](undefined) |
-| `@shopify/react-native-skia` | 2.14.0 | 9859 | MIT | 2026-10-01 | [npm](undefined) |
-| `react-native-skia` | 3.7.2 | 10719 | MIT | 2026-10-20 | [npm](undefined) |
-| `lottie-react-native` | 7.5.0 | 288 | Apache-2.0 | 2026-08-22 | [npm](undefined) |
-| `@rive-app/react-native` | 0.5.5 | 1955 | MIT | 2026-10-13 | [npm](undefined) |
-| `react-native-svg` | 15.16.0 | 3738 | MIT | 2026-10-15 | [npm](undefined) |
-| `@expo/vector-icons` | 15.1.1 | 5874 | MIT | 2026-09-23 | [npm](undefined) |
-| `@expo-google-fonts/figtree` | 0.4.1 | 1923 | MIT AND OFL-1.1 | 2025-09-12 | [npm](undefined) |
-| `expo-symbols` | 58.0.4 | 264 | MIT | 2026-10-15 | [npm](undefined) |
-| `@shopify/flash-list` | 2.3.3 | 830 | MIT | 2026-10-01 | [npm](undefined) |
-| `react-native-mmkv` | 4.3.2 | 186 | MIT | 2026-06-22 | [npm](undefined) |
-| `react-native-nitro-modules` | 0.37.1 | 567 | MIT | 2026-10-21 | [npm](undefined) |
-| `react-native-screens` | 4.30.0 | 3597 | MIT | 2026-10-20 | [npm](undefined) |
-| `react-native-safe-area-context` | 5.10.1 | 243 | MIT | 2026-09-29 | [npm](undefined) |
-| `react-native-localize` | 3.7.2 | 214 | MIT | 2026-09-15 | [npm](undefined) |
-| `react-native-unistyles` | 3.6.0 | 1836 | MIT | 2026-10-21 | [npm](undefined) |
-| `react-native-paper` | 5.15.3 | 3680 | MIT | 2026-06-15 | [npm](undefined) |
-| `@ui-kitten/components` | 6.2.1 | 2775 | MIT | 2026-10-06 | [npm](undefined) |
-| `react-native-ui-lib` | 9.1.3 | 2578 | MIT | 2026-09-06 | [npm](undefined) |
-| `heroui-native` | 1.0.11 | 5195 | Apache-2.0 | 2026-10-20 | [npm](undefined) |
-| `@gluestack-ui/themed` | 1.1.73 | 944 | ISC | 2025-09-10 | [npm](undefined) |
-| `tamagui` | 3.1.2 | 5235 | MIT | 2026-10-21 | [npm](undefined) |
-| `@shopify/restyle` | 2.4.5 | 90 | MIT | 2026-04-16 | [npm](undefined) |
-| `@bottom-tabs/react-navigation` | 1.5.0 | 63 | MIT | 2026-10-21 | [npm](undefined) |
-| `react-native-tab-view` | 4.3.4 | 201 | MIT | 2026-10-13 | [npm](undefined) |
-| `@maplibre/maplibre-react-native` | 11.5.0 | 2135 | MIT | 2026-10-04 | [npm](undefined) |
-| `maplibre-gl` | 6.15.0 | 28111 | BSD-3-Clause | 2026-10-18 | [npm](undefined) |
-| `@react-navigation/native` | 7.5.1 | 286 | MIT | 2026-10-13 | [npm](undefined) |
-| `@react-navigation/bottom-tabs` | 7.21.0 | 407 | MIT | 2026-10-13 | [npm](undefined) |
-| `@react-navigation/native-stack` | 7.21.0 | 257 | MIT | 2026-10-13 | [npm](undefined) |
-| `expo-haptics` | 58.0.7 | 94 | MIT | 2026-10-16 | [npm](undefined) |
-| `expo-location` | 58.0.18 | 1279 | MIT | 2026-10-21 | [npm](undefined) |
-| `expo-audio` | 58.0.10 | 1313 | MIT | 2026-10-21 | [npm](undefined) |
-| `expo-blur` | 58.0.5 | 137 | MIT | 2026-10-19 | [npm](undefined) |
-| `expo-linear-gradient` | 58.0.3 | 93 | MIT | 2026-10-15 | [npm](undefined) |
-| `@op-engineering/op-sqlite` | 18.2.5 | 343780 | MIT | 2026-09-20 | [npm](undefined) |
-| `react-native-sherpa-onnx` | 0.4.4 | 2581 | MIT | 2026-09-08 | [npm](undefined) |
-| `react-native-view-shot` | 6.1.1 | 2737 | MIT | 2026-10-07 | [npm](undefined) |
-| `@testing-library/react-native` | 14.1.0 | 851 | MIT | 2026-10-08 | [npm](undefined) |
+| `react-native-reanimated` | 4.7.1 | 4885 | MIT | 2026-10-20 | [npm](https://www.npmjs.com/package/react-native-reanimated) |
+| `react-native-worklets` | 0.13.0 | 17409 | MIT | 2026-10-20 | [npm](https://www.npmjs.com/package/react-native-worklets) |
+| `react-native-gesture-handler` | 3.4.0 | 3190 | MIT | 2026-10-20 | [npm](https://www.npmjs.com/package/react-native-gesture-handler) |
+| `@swmansion/react-native-bottom-sheet` | 0.17.0 | 337 | MIT | 2026-10-18 | [npm](https://www.npmjs.com/package/@swmansion/react-native-bottom-sheet) |
+| `@gorhom/bottom-sheet` | 5.2.14 | 1298 | MIT | 2026-05-09 | [npm](https://www.npmjs.com/package/@gorhom/bottom-sheet) |
+| `@lodev09/react-native-true-sheet` | 3.11.18 | 1176 | MIT | 2026-10-21 | [npm](https://www.npmjs.com/package/@lodev09/react-native-true-sheet) |
+| `moti` | 0.30.0 | 760 | MIT | 2025-01-29 | [npm](https://www.npmjs.com/package/moti) |
+| `react-native-redash` | 18.1.5 | 258 | MIT | 2026-01-21 | [npm](https://www.npmjs.com/package/react-native-redash) |
+| `react-native-ease` | 0.9.0 | 349 | MIT | 2026-10-15 | [npm](https://www.npmjs.com/package/react-native-ease) |
+| `number-flow-react-native` | 0.5.1 | 704 | MIT | 2026-08-19 | [npm](https://www.npmjs.com/package/number-flow-react-native) |
+| `@legendapp/motion` | 2.5.3 | 236 | MIT | 2025-10-17 | [npm](https://www.npmjs.com/package/@legendapp/motion) |
+| `react-native-reanimated-dnd` | 2.0.0 | 136 | MIT | 2026-03-16 | [npm](https://www.npmjs.com/package/react-native-reanimated-dnd) |
+| `react-native-reorderable-list` | 0.18.2 | 371 | MIT | 2026-10-18 | [npm](https://www.npmjs.com/package/react-native-reorderable-list) |
+| `react-native-draggable-flatlist` | 4.0.3 | 511 | MIT | 2025-05-06 | [npm](https://www.npmjs.com/package/react-native-draggable-flatlist) |
+| `react-native-swipeable-list` | 0.1.2 | 21 | MIT | 2022-05-14 | [npm](https://www.npmjs.com/package/react-native-swipeable-list) |
+| `react-native-haptic-feedback` | 3.0.0 | 209 | MIT | 2026-03-29 | [npm](https://www.npmjs.com/package/react-native-haptic-feedback) |
+| `react-native-zoom-toolkit` | 5.1.1 | 367 | MIT | 2026-08-30 | [npm](https://www.npmjs.com/package/react-native-zoom-toolkit) |
+| `react-native-modalize` | 2.1.1 | 64 | MIT | 2022-08-10 | [npm](https://www.npmjs.com/package/react-native-modalize) |
+| `@shopify/react-native-skia` | 2.14.0 | 9859 | MIT | 2026-10-01 | [npm](https://www.npmjs.com/package/@shopify/react-native-skia) |
+| `react-native-skia` | 3.7.2 | 10719 | MIT | 2026-10-20 | [npm](https://www.npmjs.com/package/react-native-skia) |
+| `lottie-react-native` | 7.5.0 | 288 | Apache-2.0 | 2026-08-22 | [npm](https://www.npmjs.com/package/lottie-react-native) |
+| `@rive-app/react-native` | 0.5.5 | 1955 | MIT | 2026-10-13 | [npm](https://www.npmjs.com/package/@rive-app/react-native) |
+| `react-native-svg` | 15.16.0 | 3738 | MIT | 2026-10-15 | [npm](https://www.npmjs.com/package/react-native-svg) |
+| `@expo/vector-icons` | 15.1.1 | 5874 | MIT | 2026-09-23 | [npm](https://www.npmjs.com/package/@expo/vector-icons) |
+| `@expo-google-fonts/figtree` | 0.4.1 | 1923 | MIT AND OFL-1.1 | 2025-09-12 | [npm](https://www.npmjs.com/package/@expo-google-fonts/figtree) |
+| `expo-symbols` | 58.0.4 | 264 | MIT | 2026-10-15 | [npm](https://www.npmjs.com/package/expo-symbols) |
+| `@shopify/flash-list` | 2.3.3 | 830 | MIT | 2026-10-01 | [npm](https://www.npmjs.com/package/@shopify/flash-list) |
+| `react-native-mmkv` | 4.3.2 | 186 | MIT | 2026-06-22 | [npm](https://www.npmjs.com/package/react-native-mmkv) |
+| `react-native-nitro-modules` | 0.37.1 | 567 | MIT | 2026-10-21 | [npm](https://www.npmjs.com/package/react-native-nitro-modules) |
+| `react-native-screens` | 4.30.0 | 3597 | MIT | 2026-10-20 | [npm](https://www.npmjs.com/package/react-native-screens) |
+| `react-native-safe-area-context` | 5.10.1 | 243 | MIT | 2026-09-29 | [npm](https://www.npmjs.com/package/react-native-safe-area-context) |
+| `react-native-localize` | 3.7.2 | 214 | MIT | 2026-09-15 | [npm](https://www.npmjs.com/package/react-native-localize) |
+| `react-native-unistyles` | 3.6.0 | 1836 | MIT | 2026-10-21 | [npm](https://www.npmjs.com/package/react-native-unistyles) |
+| `react-native-paper` | 5.15.3 | 3680 | MIT | 2026-06-15 | [npm](https://www.npmjs.com/package/react-native-paper) |
+| `@ui-kitten/components` | 6.2.1 | 2775 | MIT | 2026-10-06 | [npm](https://www.npmjs.com/package/@ui-kitten/components) |
+| `react-native-ui-lib` | 9.1.3 | 2578 | MIT | 2026-09-06 | [npm](https://www.npmjs.com/package/react-native-ui-lib) |
+| `heroui-native` | 1.0.11 | 5195 | Apache-2.0 | 2026-10-20 | [npm](https://www.npmjs.com/package/heroui-native) |
+| `@gluestack-ui/themed` | 1.1.73 | 944 | ISC | 2025-09-10 | [npm](https://www.npmjs.com/package/@gluestack-ui/themed) |
+| `tamagui` | 3.1.2 | 5235 | MIT | 2026-10-21 | [npm](https://www.npmjs.com/package/tamagui) |
+| `@shopify/restyle` | 2.4.5 | 90 | MIT | 2026-04-16 | [npm](https://www.npmjs.com/package/@shopify/restyle) |
+| `@bottom-tabs/react-navigation` | 1.5.0 | 63 | MIT | 2026-10-21 | [npm](https://www.npmjs.com/package/@bottom-tabs/react-navigation) |
+| `react-native-tab-view` | 4.3.4 | 201 | MIT | 2026-10-13 | [npm](https://www.npmjs.com/package/react-native-tab-view) |
+| `@maplibre/maplibre-react-native` | 11.5.0 | 2135 | MIT | 2026-10-04 | [npm](https://www.npmjs.com/package/@maplibre/maplibre-react-native) |
+| `maplibre-gl` | 6.15.0 | 28111 | BSD-3-Clause | 2026-10-18 | [npm](https://www.npmjs.com/package/maplibre-gl) |
+| `@react-navigation/native` | 7.5.1 | 286 | MIT | 2026-10-13 | [npm](https://www.npmjs.com/package/@react-navigation/native) |
+| `@react-navigation/bottom-tabs` | 7.21.0 | 407 | MIT | 2026-10-13 | [npm](https://www.npmjs.com/package/@react-navigation/bottom-tabs) |
+| `@react-navigation/native-stack` | 7.21.0 | 257 | MIT | 2026-10-13 | [npm](https://www.npmjs.com/package/@react-navigation/native-stack) |
+| `expo-haptics` | 58.0.7 | 94 | MIT | 2026-10-16 | [npm](https://www.npmjs.com/package/expo-haptics) |
+| `expo-location` | 58.0.18 | 1279 | MIT | 2026-10-21 | [npm](https://www.npmjs.com/package/expo-location) |
+| `expo-audio` | 58.0.10 | 1313 | MIT | 2026-10-21 | [npm](https://www.npmjs.com/package/expo-audio) |
+| `expo-blur` | 58.0.5 | 137 | MIT | 2026-10-19 | [npm](https://www.npmjs.com/package/expo-blur) |
+| `expo-linear-gradient` | 58.0.3 | 93 | MIT | 2026-10-15 | [npm](https://www.npmjs.com/package/expo-linear-gradient) |
+| `@op-engineering/op-sqlite` | 18.2.5 | 343780 | MIT | 2026-09-20 | [npm](https://www.npmjs.com/package/@op-engineering/op-sqlite) |
+| `react-native-sherpa-onnx` | 0.4.4 | 2581 | MIT | 2026-09-08 | [npm](https://www.npmjs.com/package/react-native-sherpa-onnx) |
+| `react-native-view-shot` | 6.1.1 | 2737 | MIT | 2026-10-07 | [npm](https://www.npmjs.com/package/react-native-view-shot) |
+| `@testing-library/react-native` | 14.1.0 | 851 | MIT | 2026-10-08 | [npm](https://www.npmjs.com/package/@testing-library/react-native) |
 
-<!-- generated by scripts/build-design-research-tables.mjs from github-repos-2026-10-22.tsv and npm-packages-2026-10-22.tsv -->
+<!-- generated by scripts/design/build-design-research-tables.mjs from github-repos-2026-10-22.tsv and npm-packages-2026-10-22.tsv -->
 <!-- TABLES:END -->
 
 ---
