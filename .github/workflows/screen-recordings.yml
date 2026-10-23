@@ -189,8 +189,20 @@ jobs:
             adb shell input keyevent KEYCODE_WAKEUP || true
             adb shell wm dismiss-keyguard || true
 
+            # The runner's action executes the script line by line, each line
+            # its own shell: nothing set by `export` survives into the next
+            # line (run 39909043491: `maestro: command not found` - the CLI
+            # installed and the PATH line died with its subshell). The binary
+            # is verified by full path and the keeper carries its own PATH.
+            "$HOME/.maestro/bin/maestro" --version
+
+            # The composition needs ffmpeg for the side-by-side (not on the
+            # runner image by default - run 39909043491 recorded the raw
+            # mp4s and then failed at the compose).
+            sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
             # The recordings: one flow per screen file, light pass then dark.
-            bash .maestro/recordings-run.sh
+            PATH="$HOME/.maestro/bin:$PATH" bash .maestro/recordings-run.sh
 
       - name: Upload the recordings
         if: always()
