@@ -47,7 +47,12 @@ name: Driving starts on the Go, the slide delivers the stop
     visible:
       id: "delivered-screen"
     timeout: 15000
-- assertVisible: "45 Papanui Road"
+# The confirm's line carries the street WITH the minute of the delivery (the
+# reference's line, 05): the assert pins both the element and the minute's
+# shape, so a line that lost its clock still fails.
+- assertVisible:
+    id: "delivered-address"
+    text: '45 Papanui Road, \d{2}:\d{2}'
 # Next Stop: the drive comes back with the run's next stop on the panel.
 - tapOn:
     id: "delivered-next"
