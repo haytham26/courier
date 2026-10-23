@@ -1,530 +1,444 @@
 /**
- * Today's list - the opening screen.
+ * Today - the opening screen on the chosen tokens (T6 slice 3).
  *
- * The contract (`docs/design/SYSTEM.md` §3): the big number first, the next
- * stop as the largest element, **one** primary action of 72 pt, and a voice
- * bar that shows the state of the voice engine.
+ * The map is the backdrop (the run lives on it), and the glass sheet on the
+ * sheet envelope carries the day: the morning brief line, the three
+ * numbers, the next stop with its Go, and the day's actions. The Maestro
+ * testIDs (`today-*`) are the contract, so they stay; the settings
+ * affordance moved to the Account tab (D34), which the flow now asserts.
  *
- * The copy is plain NZ English, there is no emoji anywhere, and every
- * control has an accessibility label and a role.
+ * The copy is plain New Zealand English, there is no emoji anywhere, and
+ * every control has an accessibility label and a role.
  */
-import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '@/providers/ThemeProvider';
-import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
-import { Badge } from '@/components/Badge';
-import { VoiceButton } from '@/voice/VoiceButton';
-import { useVoice } from '@/voice/useVoice';
-import { MorningBriefCard } from '@/voice/MorningBriefCard';
-import { useCourierVoice } from '@/voice/useCourierVoice';
-import { useOptionalAuth } from '@/providers/AuthProvider';
+import { Camera, Map as MapView, Marker } from '@maplibre/maplibre-react-native';
+
+import {
+  BottomSheet,
+  MapButton,
+  MapButtonColumn,
+  NoteChips,
+  StatRow,
+  StopPin,
+  TopPills,
+  useChosen,
+} from '@/components/chosen';
+import { errorMessage } from '@/lib/errors';
 import { hapticFor } from '@/motion/haptics';
+import { getCourierStyle } from '@/maps/styles';
+import { mockStops, type Stop } from '@/maps/stops';
+import { useMapBoot } from '@/maps/useMapBoot';
+import { publishVoiceCommand } from '@/voice/commandChannel';
+import { useVoice } from '@/voice/useVoice';
+import { radii, spacing, touch, typography, type Tokens } from '@courier/design-tokens/chosen';
+import { useBriefOfTabs } from './briefContext';
 
-interface Stop {
-  id: string;
-  address: string;
-  suburb: string;
-  status: 'pending' | 'active' | 'delivered' | 'failed' | 'skipped';
-  sequence: number;
-  coordinates?: { lat: number; lng: number };
-}
+/** Christchurch, the middle of the region the pack covers. */
+const MAP_CENTRE: [number, number] = [172.636, -43.533];
 
-const mockStops: Stop[] = [
-  {
-    id: '1',
-    address: '2/14 Riccarton Road',
-    suburb: 'Riccarton',
-    status: 'delivered',
-    sequence: 1,
-  },
-  {
-    id: '2',
-    address: '45 Papanui Road',
-    suburb: 'Merivale',
-    status: 'active',
-    sequence: 2,
-  },
-  {
-    id: '3',
-    address: '120 Blenheim Road',
-    suburb: 'Upper Riccarton',
-    status: 'pending',
-    sequence: 3,
-  },
-  {
-    id: '4',
-    address: '78 Main South Road',
-    suburb: 'Sockburn',
-    status: 'pending',
-    sequence: 4,
-  },
-  {
-    id: '5',
-    address: '234 Colombo Street',
-    suburb: 'Sydenham',
-    status: 'pending',
-    sequence: 5,
-  },
+/** The minutes one delivered stop takes, for the finish estimate. */
+const MINUTES_PER_STOP = 5;
+
+/** The sheet floor sits above the dock: the bar, its caption and its raise. */
+const SHEET_INSET = spacing.space64 + spacing.space32 + spacing.space4;
+
+const RUN_NAME = 'Northwood AM';
+
+const BRIEF_FALLBACK = 'Five stops on the Northwood AM run. Dry until the afternoon.';
+
+const TODAY_NOTE_CHIPS = [
+  { icon: 'home' as const, tone: 'accent' as const, label: 'Side gate' },
+  { icon: 'cube' as const, tone: 'info2' as const, label: 'Shelf B3' },
 ];
 
-/** The words of the status labels, so the screen reader reads a sentence. */
-const statusLabels: Record<Stop['status'], string> = {
-  delivered: 'Delivered',
-  pending: 'Pending',
-  active: 'Active',
-  failed: 'Failed',
-  skipped: 'Skipped',
+/** The clock time the run finishes at, as an estimate the courier can trust. */
+const finishTime = (stopsLeft: number): string => {
+  const at = new Date(Date.now() + stopsLeft * MINUTES_PER_STOP * 60 * 1000);
+  return `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
 };
 
-export default function HomeScreen() {
-  const { theme } = useTheme();
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  map: {
+    flex: 1,
+  },
+  pills: {
+    position: 'absolute',
+    top: spacing.space12,
+    left: spacing.space16,
+    right: spacing.space16,
+  },
+  mapButtons: {
+    position: 'absolute',
+    right: spacing.space16,
+    top: spacing.space64,
+  },
+  sheetScroll: {
+    flex: 1,
+  },
+  sheetContent: {
+    gap: spacing.space16,
+    paddingHorizontal: spacing.space24,
+    paddingBottom: spacing.space64,
+  },
+  greetingRow: {
+    gap: spacing.space8,
+  },
+  greeting: {
+    fontSize: typography.paragraph.size,
+    lineHeight: typography.paragraph.lineHeight,
+    fontWeight: typography.paragraph.weight,
+  },
+  driverName: {
+    fontSize: typography.streetTitle.size,
+    lineHeight: typography.streetTitle.lineHeight,
+    fontWeight: '700',
+    fontFamily: typography.family.numbers.iOS,
+  },
+  briefLine: {
+    fontSize: typography.body.size,
+    lineHeight: typography.body.lineHeight,
+    fontWeight: typography.body.weight,
+  },
+  sectionLabel: {
+    fontSize: typography.secondary.size,
+    lineHeight: typography.secondary.lineHeight,
+    fontWeight: typography.secondary.weight,
+  },
+  nextStopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.space16,
+  },
+  nextStopText: {
+    flex: 1,
+    gap: spacing.space8,
+  },
+  street: {
+    fontSize: typography.streetTitle.size,
+    lineHeight: typography.streetTitle.lineHeight,
+    fontWeight: typography.streetTitle.weight,
+  },
+  chips: {
+    paddingRight: spacing.space8,
+  },
+  goButton: {
+    height: touch.drivingAction,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.space24,
+    minWidth: spacing.space48 + spacing.space48,
+  },
+  goLabel: {
+    fontSize: typography.button.size,
+    lineHeight: typography.button.lineHeight,
+    fontWeight: typography.button.weight,
+  },
+  secondaryRow: {
+    flexDirection: 'row',
+    gap: spacing.space12,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: spacing.space12,
+  },
+  ghostButton: {
+    flex: 1,
+    height: touch.minimum,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.space8,
+  },
+  ghostLabel: {
+    fontSize: typography.body.size,
+    lineHeight: typography.body.lineHeight,
+    fontWeight: typography.body.weight,
+  },
+});
+
+export default function TodayScreen() {
+  const { t } = useChosen();
   const router = useRouter();
-  const { state: voiceState, lastCommand, startListening, stopListening, isReady, speak } =
-    useVoice();
-  const auth = useOptionalAuth();
-  const courierVoice = useCourierVoice({ driverId: auth?.user?.id ?? null });
+  const voice = useVoice();
+  const courierVoice = useBriefOfTabs();
+  const { tileSource, glyphsUrl } = useMapBoot();
 
-  const pendingCount = mockStops.filter((s) => s.status === 'pending').length;
-  const deliveredCount = mockStops.filter((s) => s.status === 'delivered').length;
-  const activeStop = mockStops.find((s) => s.status === 'active');
+  // The day the courier acts on: delivering, skipping and failing a stop all
+  // move the run on. The write path of the stops (the sync) lands with the
+  // Route screen; until then the screen's own list is the state.
+  const [doneIds, setDoneIds] = useState<string[]>([]);
+  const [skippedIds, setSkippedIds] = useState<string[]>([]);
+  const [failedIds, setFailedIds] = useState<string[]>([]);
 
-  const statusColorMap: Record<Stop['status'], keyof typeof theme.colors> = {
-    delivered: 'statusDelivered',
-    pending: 'statusPending',
-    active: 'statusActive',
-    failed: 'statusFailed',
-    skipped: 'statusSkipped',
-  };
+  const remaining = useMemo(
+    () =>
+      mockStops.filter(
+        (stop) =>
+          stop.status !== 'delivered' &&
+          !doneIds.includes(stop.id) &&
+          !skippedIds.includes(stop.id) &&
+          !failedIds.includes(stop.id),
+      ),
+    [doneIds, skippedIds, failedIds],
+  );
+  const delivered = useMemo(
+    () =>
+      mockStops.filter(
+        (stop) => stop.status === 'delivered' || doneIds.includes(stop.id),
+      ),
+    [doneIds],
+  );
+  const nextStop: Stop | null = remaining[0] ?? null;
+  const progress = delivered.length / mockStops.length;
 
-  const getStatusColor = (status: Stop['status']) => {
-    return theme.colors[statusColorMap[status]] || theme.colors.textTertiary;
-  };
+  const style = useMemo(
+    () =>
+      getCourierStyle('day', tileSource.kind === 'none' ? null : tileSource.url, glyphsUrl, {
+        labelSize: 'normal',
+        buildings: true,
+        buildings3d: false,
+        satellite: null,
+      }),
+    [tileSource, glyphsUrl],
+  );
 
-  const getBadgeVariant = (status: Stop['status']) => {
-    switch (status) {
-      case 'delivered':
-        return 'success';
-      case 'active':
-        return 'active';
-      case 'failed':
-        return 'error';
-      case 'skipped':
-        return 'warning';
-      default:
-        return 'default';
-    }
-  };
-
-  const handleVoiceCommand = (command: string) => {
-    // A delivery is confirmed with a haptic, an error with the error one.
-    if (command === 'mark delivered') {
-      hapticFor('deliver');
-    } else if (command === 'fail') {
-      hapticFor('error');
-    } else {
-      hapticFor('confirm');
-    }
-    console.log('Voice command:', command);
-  };
-
-  // Handle voice commands from the voice service
+  // The morning brief, asked for once: the line the voice wants to say
+  // first. A failure keeps the fallback sentence; the screen never goes
+  // quiet because the service did (MASTER_EXECUTION §12).
   useEffect(() => {
-    if (lastCommand) {
-      switch (lastCommand.type) {
-        case 'mark_delivered':
-          handleVoiceCommand('mark delivered');
-          break;
-        case 'mark_skipped':
-          handleVoiceCommand('skip');
-          break;
-        case 'mark_failed':
-          handleVoiceCommand('fail');
-          break;
-        case 'navigate_next':
-          handleVoiceCommand('navigate next');
-          break;
-        case 'navigate_previous':
-          handleVoiceCommand('navigate previous');
-          break;
-        case 'repeat_instruction':
-          handleVoiceCommand('repeat');
-          break;
-        case 'where_am_i':
-          handleVoiceCommand('where am i');
-          break;
-        case 'how_many_left':
-          handleVoiceCommand('how many left');
-          break;
-        case 'start_shift':
-          handleVoiceCommand('start shift');
-          break;
-        case 'end_shift':
-          handleVoiceCommand('end shift');
-          break;
-        case 'emergency':
-          handleVoiceCommand('emergency');
-          break;
+    void (async () => {
+      try {
+        await courierVoice?.refreshBrief();
+      } catch (error) {
+        console.warn(`today: the brief could not be read: ${errorMessage(error)}`);
       }
+    })();
+  }, [courierVoice]);
+
+  const handleMarkDone = useCallback(
+    (stop: Stop) => {
+      setDoneIds((current) => [...current, stop.id]);
+      hapticFor('deliver');
+    },
+    [],
+  );
+
+  const handleSkip = useCallback((stop: Stop) => {
+    setSkippedIds((current) => [...current, stop.id]);
+    hapticFor('confirm');
+  }, []);
+
+  const handleFail = useCallback((stop: Stop) => {
+    setFailedIds((current) => [...current, stop.id]);
+    hapticFor('error');
+  }, []);
+
+  // The Go starts the drive: the command zooms the drive camera to the next
+  // stop, and the router hands the courier to the driving screen.
+  const handleGo = useCallback(() => {
+    if (!nextStop) {
+      return;
     }
-  }, [lastCommand]);
+    publishVoiceCommand({ type: 'zoom_to_next_stop' });
+    router.navigate('/driving');
+  }, [nextStop, router]);
+
+  const handleRecentre = useCallback(() => {
+    publishVoiceCommand({ type: 'zoom_to_next_stop' });
+    router.navigate('/map');
+  }, [router]);
+
+  const handleScan = useCallback(() => {
+    router.push('/scan');
+  }, [router]);
+
+  const handleAddByVoice = useCallback(() => {
+    hapticFor('voice');
+    void voice.startListening();
+  }, [voice]);
+
+  const ghost = (c: Tokens['colors']): { backgroundColor: string; borderRadius: number } => ({
+    backgroundColor: c.fill,
+    borderRadius: radii.ghostButton,
+  });
 
   return (
-    <SafeAreaView
-      testID="today-screen"
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>
-              Good morning
-            </Text>
-            <Text style={[styles.driverName, { color: theme.colors.textPrimary }]}>Driver</Text>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => router.push('/(tabs)/settings')}
-              accessibilityRole="button"
-              accessibilityLabel="Settings"
-              accessibilityHint="Opens the settings"
-              testID="today-settings"
+    <SafeAreaView testID="today-screen" style={styles.container}>
+      {/* The map is the backdrop: the run is on it, the sheet floats above. */}
+      <View style={styles.map}>
+        <MapView testID="today-map" mapStyle={style} style={styles.map}>
+          <Camera initialViewState={{ center: MAP_CENTRE, zoom: 12 }} minZoom={4} maxZoom={19} />
+          {mockStops.map((stop) => (
+            <Marker
+              key={stop.id}
+              testID={`stop-marker-${stop.sequence}`}
+              lngLat={[stop.coordinates.lng, stop.coordinates.lat]}
+              anchor="bottom"
             >
-              <MaterialCommunityIcons name="cog" size={24} color={theme.colors.textPrimary} />
-            </TouchableOpacity>
+              <View testID={`stop-pin-${stop.sequence}`}>
+                <StopPin number={String(stop.sequence)} />
+              </View>
+            </Marker>
+          ))}
+        </MapView>
+      </View>
+
+      <View style={styles.pills}>
+        <TopPills runName={RUN_NAME} weather="Rain 2 pm" weatherIcon="cloud" />
+      </View>
+
+      <View style={styles.mapButtons}>
+        <MapButtonColumn>
+          <MapButton
+            name="layers"
+            tone="label"
+            accessibilityLabel="Map style"
+            onPress={() => router.navigate('/map')}
+            testID="today-map-style"
+          />
+          <MapButton
+            name="locate"
+            tone="accent"
+            accessibilityLabel="Recentre"
+            onPress={handleRecentre}
+            testID="today-recentre"
+          />
+        </MapButtonColumn>
+      </View>
+
+      <BottomSheet height="peek" bottomInset={SHEET_INSET} testID="today-sheet">
+        <ScrollView
+          style={styles.sheetScroll}
+          contentContainerStyle={styles.sheetContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.greetingRow}>
+            <Text style={[styles.greeting, { color: t.colors.secondaryLabel }]}>Good morning</Text>
+            <Text style={[styles.driverName, { color: t.colors.label }]}>Driver</Text>
+            <Text
+              style={[styles.briefLine, { color: t.colors.secondaryLabel }]}
+              maxFontSizeMultiplier={1.4}
+            >
+              {courierVoice?.brief?.text ?? BRIEF_FALLBACK}
+            </Text>
           </View>
-        </View>
 
-        {/* The morning brief */}
-        <MorningBriefCard
-          stops={mockStops.length}
-          newAddresses={0}
-          weather="dry"
-          spoken={courierVoice.brief?.text ?? null}
-          onSpeak={() => {
-            void (async () => {
-              const line = await courierVoice.refreshBrief();
-              if (line !== null && line.text.length > 0) {
-                await speak(line.text);
-              }
-            })();
-          }}
-        />
+          <StatRow
+            items={[
+              { label: 'Delivered', value: String(delivered.length), tone: 'success' as const },
+              { label: 'To go', value: String(remaining.length) },
+              { label: 'Finish', value: finishTime(remaining.length) },
+            ]}
+            progress={progress}
+          />
 
-        {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          <Card style={styles.statCard}>
-            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Delivered</Text>
-            <Text style={[styles.statValue, { color: theme.colors.statusDelivered }]}>
-              {deliveredCount}
-            </Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Remaining</Text>
-            <Text style={[styles.statValue, { color: theme.colors.textPrimary }]}>
-              {pendingCount}
-            </Text>
-          </Card>
-          <Card style={styles.statCard}>
-            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-              Success Rate
-            </Text>
-            <Text style={[styles.statValue, { color: theme.colors.success }]}>98%</Text>
-          </Card>
-        </View>
-
-        {/* Current Run Progress */}
-        {activeStop ? (
-          <Card style={[styles.currentRunCard, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.currentRunHeader}>
-              <Text style={[styles.currentRunTitle, { color: theme.colors.textPrimary }]}>
-                Current Run
+          {nextStop ? (
+            <>
+              <Text style={[styles.sectionLabel, { color: t.colors.secondaryLabel }]}>
+                NEXT STOP
               </Text>
-              <Badge variant="active">IN PROGRESS</Badge>
-            </View>
-            <View style={styles.currentStopInfo}>
-              <View style={styles.stopNumber}>
-                <Text
+              <View style={styles.nextStopRow}>
+                <View style={styles.nextStopText}>
+                  <Text
+                    style={[styles.street, { color: t.colors.label }]}
+                    maxFontSizeMultiplier={1.4}
+                  >
+                    {nextStop.address}
+                  </Text>
+                  <View style={styles.chips}>
+                    <NoteChips chips={TODAY_NOTE_CHIPS} testID="today-notes" />
+                  </View>
+                </View>
+                <Pressable
+                  role="button"
+                  accessibilityLabel={`Go to ${nextStop.address}`}
+                  accessibilityHint="Shows the run on the map"
+                  onPress={handleGo}
+                  testID="today-go"
                   style={[
-                    styles.stopNumberText,
-                    {
-                      color: theme.colors.textInverse,
-                      backgroundColor: theme.colors.brandPrimary,
-                    },
+                    styles.goButton,
+                    { backgroundColor: t.colors.accent, borderRadius: radii.button },
                   ]}
                 >
-                  #{activeStop.sequence}
-                </Text>
+                  <Text style={[styles.goLabel, { color: t.colors.onAccent }]}>Go</Text>
+                </Pressable>
               </View>
-              <View style={styles.stopDetails}>
-                <Text style={[styles.stopAddress, { color: theme.colors.textPrimary }]}>
-                  {activeStop.address}
-                </Text>
-                <Text style={[styles.stopSuburb, { color: theme.colors.textSecondary }]}>
-                  {activeStop.suburb}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.currentRunActions}>
-              <Button
-                variant="primary"
-                size="lg"
-                onPress={() => handleVoiceCommand('mark delivered')}
-                style={styles.actionButton}
-                testID="today-mark-delivered"
-              >
-                Mark Delivered
-              </Button>
-              <Button
-                variant="secondary"
-                onPress={() => handleVoiceCommand('skip')}
-                style={styles.actionButton}
-                testID="today-skip"
-              >
-                Skip
-              </Button>
-              <Button
-                variant="outline"
-                onPress={() => handleVoiceCommand('fail')}
-                style={styles.actionButton}
-                testID="today-fail"
-              >
-                Failed
-              </Button>
-            </View>
-          </Card>
-        ) : null}
+            </>
+          ) : (
+            <Text style={[styles.street, { color: t.colors.label }]}>Every stop is delivered.</Text>
+          )}
 
-        {/* Recent Stops */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
-            Recent Stops
-          </Text>
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/stops')}
-            accessibilityRole="link"
-            accessibilityLabel="See all stops"
-            testID="today-see-all"
-          >
-            <Text style={[styles.seeAll, { color: theme.colors.brandPrimary }]}>See all</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.stopsList}>
-          {mockStops.slice(0, 5).map((stop) => (
-            <TouchableOpacity
-              key={stop.id}
-              style={styles.stopItem}
-              onPress={() => router.push('/(tabs)/stops')}
-              accessibilityRole="button"
-              accessibilityLabel={`Stop ${stop.sequence}, ${stop.address}, ${stop.suburb}, ${statusLabels[stop.status]}`}
-              testID={`today-stop-${stop.id}`}
+          <View style={styles.secondaryRow}>
+            <Pressable
+              role="button"
+              accessibilityLabel="Scan"
+              accessibilityHint="Opens the parcel scanner"
+              onPress={handleScan}
+              testID="today-scan"
+              style={[styles.ghostButton, ghost(t.colors)]}
             >
-              <View
-                style={[styles.stopStatusDot, { backgroundColor: getStatusColor(stop.status) }]}
-                importantForAccessibility="no-hide-descendants"
-                accessibilityElementsHidden
-              />
-              <View style={styles.stopInfo}>
-                <Text style={[styles.stopAddress, { color: theme.colors.textPrimary }]}>
-                  {stop.address}
-                </Text>
-                <Text style={[styles.stopSuburb, { color: theme.colors.textSecondary }]}>
-                  {stop.suburb}
-                </Text>
-              </View>
-              <Badge variant={getBadgeVariant(stop.status)}>{statusLabels[stop.status]}</Badge>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Voice Assistant */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
-            Voice Assistant
-          </Text>
-        </View>
-
-        <VoiceButton
-          size="large"
-          disabled={!isReady}
-          onPress={() => {
-            if (voiceState === 'listening') {
-              void stopListening();
-            } else {
-              void startListening();
-            }
-          }}
-        />
-
-        {/* Voice Status Display */}
-        {voiceState !== 'idle' ? (
-          <View style={[styles.voiceStatus, { backgroundColor: theme.colors.surface }]}>
-            <MaterialCommunityIcons
-              name={
-                voiceState === 'listening'
-                  ? 'microphone'
-                  : voiceState === 'speaking'
-                    ? 'volume-high'
-                    : 'brain'
-              }
-              size={20}
-              color={theme.colors.textSecondary}
-            />
-            <Text style={[styles.voiceStatusText, { color: theme.colors.textSecondary }]}>
-              {voiceState === 'listening'
-                ? 'Listening'
-                : voiceState === 'speaking'
-                  ? 'Speaking'
-                  : voiceState === 'processing'
-                    ? 'Thinking'
-                    : 'Ready'}
-            </Text>
+              <Ionicons name="scan" size={18} color={t.colors.accentText} />
+              <Text style={[styles.ghostLabel, { color: t.colors.accentText }]}>Scan</Text>
+            </Pressable>
+            <Pressable
+              role="button"
+              accessibilityLabel="Add by Voice"
+              accessibilityHint="Adds a stop by saying the address"
+              onPress={handleAddByVoice}
+              testID="today-add-by-voice"
+              style={[styles.ghostButton, ghost(t.colors)]}
+            >
+              <Ionicons name="mic" size={18} color={t.colors.accentText} />
+              <Text style={[styles.ghostLabel, { color: t.colors.accentText }]}>Add by Voice</Text>
+            </Pressable>
           </View>
-        ) : null}
 
-        {/* Quick Commands */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
-            Quick Commands
-          </Text>
-        </View>
-
-        <View style={styles.quickCommands}>
-          {[
-            'Mark delivered',
-            'Skip this stop',
-            'Failed - no access',
-            'Navigate to next',
-            'Call customer',
-            'Rescan label',
-          ].map((cmd) => (
-            <TouchableOpacity
-              key={cmd}
-              style={[
-                styles.quickCommandChip,
-                {
-                  borderColor: theme.colors.border,
-                  backgroundColor: theme.colors.surface,
-                },
-              ]}
-              onPress={() => handleVoiceCommand(cmd.toLowerCase())}
-              accessibilityRole="button"
-              accessibilityLabel={cmd}
-            >
-              <Text style={[styles.quickCommandText, { color: theme.colors.brandPrimary }]}>
-                {cmd}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
+          <Text style={[styles.sectionLabel, { color: t.colors.secondaryLabel }]}>RUN ACTIONS</Text>
+          {nextStop ? (
+            <View style={styles.actionsRow}>
+              <Pressable
+                role="button"
+                accessibilityLabel={`Mark ${nextStop.address} delivered`}
+                accessibilityHint="Confirms the delivery"
+                onPress={() => handleMarkDone(nextStop)}
+                testID="today-mark-delivered"
+                style={[styles.ghostButton, ghost(t.colors)]}
+              >
+                <Ionicons name="checkmark-circle" size={18} color={t.colors.accentText} />
+                <Text style={[styles.ghostLabel, { color: t.colors.accentText }]}>Delivered</Text>
+              </Pressable>
+              <Pressable
+                role="button"
+                accessibilityLabel={`Skip ${nextStop.address}`}
+                accessibilityHint="Leaves the stop for later"
+                onPress={() => handleSkip(nextStop)}
+                testID="today-skip"
+                style={[styles.ghostButton, ghost(t.colors)]}
+              >
+                <Ionicons name="pause-circle" size={18} color={t.colors.accentText} />
+                <Text style={[styles.ghostLabel, { color: t.colors.accentText }]}>Skip</Text>
+              </Pressable>
+              <Pressable
+                role="button"
+                accessibilityLabel={`Mark ${nextStop.address} failed`}
+                accessibilityHint="Records the failed delivery"
+                onPress={() => handleFail(nextStop)}
+                testID="today-fail"
+                style={[styles.ghostButton, ghost(t.colors)]}
+              >
+                <Ionicons name="close-circle" size={18} color={t.colors.accentText} />
+                <Text style={[styles.ghostLabel, { color: t.colors.accentText }]}>Fail</Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </ScrollView>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 100 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  headerText: { flex: 1 },
-  greeting: { fontSize: 19, fontWeight: '400' },
-  driverName: { fontSize: 34, fontWeight: '800' },
-  headerActions: { flexDirection: 'row', gap: 12 },
-  iconButton: {
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  statCard: { flex: 1, padding: 16 },
-  statLabel: { fontSize: 17, fontWeight: '500', marginBottom: 4 },
-  statValue: { fontSize: 34, fontWeight: '800' },
-  currentRunCard: { marginBottom: 24 },
-  currentRunHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  currentRunTitle: { fontSize: 22, fontWeight: '600' },
-  currentStopInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  stopNumber: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stopNumberText: { fontSize: 20, fontWeight: '700' },
-  stopDetails: { flex: 1 },
-  stopAddress: { fontSize: 20, fontWeight: '600' },
-  stopSuburb: { fontSize: 19 },
-  currentRunActions: { flexDirection: 'row', gap: 8 },
-  actionButton: { flex: 1 },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  sectionTitle: { fontSize: 22, fontWeight: '600' },
-  seeAll: { fontSize: 19, fontWeight: '600' },
-  stopsList: { gap: 8 },
-  stopItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: 56,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  stopStatusDot: { width: 12, height: 12, borderRadius: 6 },
-  stopInfo: { flex: 1 },
-  quickCommands: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  quickCommandChip: {
-    minHeight: 56,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    borderRadius: 28,
-    borderWidth: 1,
-  },
-  quickCommandText: { fontSize: 19, fontWeight: '500' },
-  voiceStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignSelf: 'center',
-    marginTop: 8,
-  },
-  voiceStatusText: { fontSize: 19, fontWeight: '500', textAlign: 'center' },
-});

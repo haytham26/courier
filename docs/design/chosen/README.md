@@ -57,7 +57,7 @@ every pair is asserted by its D33 test.
 | grabber (the sheet handle, added in slice 2) | rgba(60,60,67,.22) | rgba(235,235,245,.3) |
 | scan ring (the scanner reticle, added in slice 2; non-text) | #FFD60A | #FFD60A |
 
-Radii: sheet 40, card 24, chip 15, button 27 (pill), map button 24 (circle 48), tab bar 31; slice 2 adds pill 18 (top, scanner and small action pills; the reference's mixed 17 to 18 unified), segmented 12, segmented segment 9, slide track 32, turn card 30, then-strip corner 16.
+Radii: sheet 40, card 24, chip 15, button 27 (pill), map button 24 (circle 48), tab bar 31; slice 2 adds pill 18 (top, scanner and small action pills; the reference's mixed 17 to 18 unified), segmented 12, segmented segment 9, slide track 32, turn card 30, then-strip corner 16; slice 3 adds ghost button 22 (the sheet's 44 pt secondary actions).
 Type: SF Pro on iOS, Inter on Android. Button labels are 18 px bold (D33). Large title 34/41 bold. Numbers use SF Pro Rounded (iOS) or Inter tabular (Android): 24 to 52 bold; slice 2 adds chip label 14/17 semibold (note chips, segmented, timeline), slide label 19/23 bold, street title 20/24 semibold and turn distance 38/40 bold.
 Touch targets: at least 48 pt; the main action while driving is at least 64 pt high.
 

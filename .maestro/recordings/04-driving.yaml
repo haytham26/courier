@@ -1,0 +1,38 @@
+appId: com.courier.copilot
+name: R.04 driving - beside 04-driving.html and 12-driving-night.html
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The Go sits inside the run sheet, and the sheet opens at peek, where the
+# Go is below the fold - a tap aimed at it would land on the dock. The
+# courier raises the sheet first; the Go is then on it.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- tapOn:
+    id: "today-go"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 30000
+# The screen rests on the reference's state first (the half the side-by-side
+# composes), then the one spring that moves the drive - the slide - runs on
+# film. The drag starts on the thumb (the docs' swipe-to-unlock pattern):
+# from the element's centre alone the travel falls short of the slide's
+# threshold and the thumb returns. The screencap after it shows the run
+# having moved on (the numbers belong to the mock run; the geometry is the
+# comparison).
+- waitForAnimationToEnd:
+    timeout: 2500
+- swipe:
+    from:
+      id: "driving-slide"
+      point: "10%, 50%"
+    direction: RIGHT
+- waitForAnimationToEnd:
+    timeout: 3000

@@ -1,0 +1,46 @@
+appId: com.courier.copilot
+name: Driving starts on the Go, the slide delivers the stop
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The Go sits inside the run sheet, and the sheet opens at peek (the morning
+# glance), where the Go is below the fold - a tap aimed at it would land on
+# the dock. The courier raises the sheet first; the Go is then on it.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+# The Go starts the drive: the camera command tells the map where to look
+# and the router hands the driver to the driving screen.
+- tapOn:
+    id: "today-go"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 30000
+# The glance surface of the reference (04-driving.html): the turn card and
+# the Then strip at the top, the drive panel at the bottom, the slide as
+# the one action.
+- assertVisible:
+    id: "driving-turn"
+- assertVisible:
+    id: "driving-panel"
+- assertVisible: "STOP 2 OF 5"
+- assertVisible:
+    id: "driving-slide"
+# The deliver: a slide is required (a tap never marks the run), so the flow
+# drags the thumb across the track; the next stop becomes active. The point
+# starts the drag on the thumb (the docs' swipe-to-unlock example): from the
+# element's centre alone the travel short of the slide's threshold.
+- swipe:
+    from:
+      id: "driving-slide"
+      point: "10%, 50%"
+    direction: RIGHT
+- waitForAnimationToEnd:
+    timeout: 2500
+- assertVisible: "STOP 3 OF 5"

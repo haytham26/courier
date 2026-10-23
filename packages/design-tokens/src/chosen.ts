@@ -143,6 +143,7 @@ export const radii = {
   slideTrack: 32, // the 64 pt capsule of the Slide to Deliver
   turnCard: 30, // the next-turn card
   stripCorner: 16, // the Then strip's hanging bottom corners
+  ghostButton: 22, // the 44 pt secondary actions of the sheet (Scan, Add by Voice, the day's actions)
 } as const;
 
 /**

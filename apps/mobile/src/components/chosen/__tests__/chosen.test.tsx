@@ -10,6 +10,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 
 import {
+  BottomSheet,
   ChosenProvider,
   StatRow,
   NoteChips,
@@ -23,7 +24,7 @@ import {
   resolveOverCard,
 } from '../index';
 import { styleOf } from '../test-support';
-import { tokens } from '@courier/design-tokens/chosen';
+import { spacing, tokens } from '@courier/design-tokens/chosen';
 
 const withMode = (mode: 'light' | 'dark', ui: React.ReactElement) => (
   <ChosenProvider mode={mode}>{ui}</ChosenProvider>
@@ -123,6 +124,20 @@ describe('the segmented control and the timeline', () => {
     );
     expect(styleOf(screen.getByText('45 Papanui Road'))['color']).toBe(t.colors.label);
     expect(styleOf(screen.getByText('10:40'))['color']).toBe(t.colors.secondaryLabel);
+  });
+});
+
+describe('the bottom sheet on a screen that docks a tab bar', () => {
+  it('the sheet keeps its floor above the dock inset (the Today screen)', () => {
+    const inset = spacing.space64 + spacing.space32 + spacing.space4;
+    render(
+      withMode(
+        'light',
+        <BottomSheet height="peek" bottomInset={inset} testID="sheet" />,
+      ),
+    );
+    const sheet = styleOf(screen.getByTestId('sheet'));
+    expect(sheet['paddingBottom']).toBe(inset);
   });
 });
 
