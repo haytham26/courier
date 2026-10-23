@@ -1,13 +1,15 @@
 # CURRENT — the handoff
 
 **Week:** 2026-W43 (the full log is in `docs/log/2026-W43.md`)
-**Branch:** `feat/t6-scan` — step 06 Scan, stacked on the 05 tip (`cefb81b`).
-PR #14 (05 Delivered) is in review on `feat/t6-delivered`: its first E2E went
-red on BOTH legs with a REAL contract break (the flows asserted the bare
-street while the confirm renders the street with its minute), both flows
-fixed and STRENGTHENED on that branch (`876b6e5`), the rerun decides. This
-branch keeps the parent's tip in it (a stacked branch carries its parent), so
-its PR opens clean on main once #14 merges.
+**Branch:** `feat/t6-scan` — step 06 Scan, stacked on the 05 tip and carrying
+it (the parent's tip `876b6e5`, with the repaired flows, is merged in), so
+this PR opens clean on main once #14 lands. PR #14 (05 Delivered) is in
+review on `feat/t6-delivered`: its first E2E went red on BOTH legs with a
+REAL contract break (the flows asserted the bare street while the confirm
+renders the street with its minute), both flows fixed and STRENGTHENED on
+that branch, the rerun decides. Merge #14 first: `gh pr merge --merge` when
+both legs are green, `archive/feat/t6-delivered` tag at the tip, delete the
+remote branch, ff main.
 
 ## Where the company stands
 
@@ -16,7 +18,7 @@ its PR opens clean on main once #14 merges.
 | P1 the Android E2E | HOW IT WORKS | the dual-image matrix (api 34 + 35) rides the gate; PR #13's deciding runs were green on both legs (api-35 first try, api-34 after one flake rerun); PR #14's first E2E went red by a REAL contract break in the 05 diff (the flows vs the address-with-minute line - fixed, the rerun decides); BUG-051's guard rides only the KNOWN signature, every relaunch is counted, a real-device test is FOUNDER_TODO |
 | P2 the research | DONE | 24 areas; the Spoke analysis landed (`docs/research/competitors/spoke.md`) |
 | P3 the map | PARTIAL | the modes, the styles, the builders in (`useMapBoot` is shared now); the Canterbury pack not built |
-| P4 the design | T6 SLICE 3 | slices 1–2 in; step 01 Today MERGED (caf2ef4); step 02 Driving MERGED (d5793b4); step 05 Delivered in review (PR #14); step 06 Scan staged on `feat/t6-scan`; 07–13 next (per-screen PRs with the dual gate) |
+| P4 the design | T6 SLICE 3 | slices 1–2 in; step 01 Today MERGED (caf2ef4); step 02 Driving MERGED (d5793b4); step 05 Delivered in review (PR #14, the confirm + the run state above the stack); step 06 Scan staged on `feat/t6-scan` (the camera, the reader seam, the van load); 07–13 next (per-screen PRs with the dual gate) |
 | P5 the product | PARTIAL | sync done; the scanner camera, the POD, the dashboard, the billing not started |
 | P6 the launch readiness | PARTIAL | the runbook, the checklist, StoreReady in; the deploy sits with the founder |
 | The lint gate | DONE | 0 findings, no suppressions, at 30 suites (PR #5 and on) |
@@ -26,12 +28,16 @@ its PR opens clean on main once #14 merges.
 1. The screen-recording workflow of the 13 screens (light + dark,
    side-by-side emulator-vs-reference per §13.8.7 + the Drive frame-time
    trace), replacing `design-videos.yml` in the same PR as its first run —
-   PR #12 in review: the boot-script fix rode in, its first proper run
-   records the REBUILT Today after main merges in.
-2. Slice 3 steps: 05 Delivered in review (PR #14 — its rerun decides); 06
-   Scan staged on `feat/t6-scan` (the camera, the reader seam, the van load);
-   next to stage are 07 Copilot (the transcript), 08 Route, then 09–13. Every
-   step: components + tests + the E2E flow move, the evidence dir, the PR.
+   PR #12 in review. Its first E2E (39963017321) went red on both legs with
+   NO app diff in it (compat froze 50 s on api-35, driving flaked at STOP 3
+   on api-34) while PR #14's E2E ran concurrently in the same fleet window:
+   retry PR #12's E2E separately, one workflow at a time.
+2. Slice 3 steps: 05 Delivered in review (PR #14 — the rerun decides: the
+   flows vs the address-with-minute line, fixed and STRENGTHENED); 06 Scan
+   staged on `feat/t6-scan` (the camera, the reader seam, the van load, the
+   flow and the permission); next to stage are 07 Copilot (the transcript),
+   08 Route, then 09–13. Every step: components + tests + the E2E flow move,
+   the evidence dir, the PR.
 3. BUG-051 follow-ups (the founder): a real-device launch test when a device
    is available; then the mitigation decision once the api-35 leg has run -
    warm `CookieManager` on the main thread at boot, or move the voice
@@ -68,5 +74,13 @@ its PR opens clean on main once #14 merges.
   arrays, static Skia props.
 - The D33 gate never weakens: a change edits the tokens and the record's
   reason, never the bar.
+- A Maestro `text` selector is a FULL-MATCH regex (docs.maestro.dev,
+  how-to-use-selectors): a screen line that gains a suffix ("45 Papanui
+  Road, 14:00") breaks every flow that asserted the old bare string, and the
+  fix is to assert the element with a minute-shaped regex - never to delete
+  the assert, never to weaken it to a substring.
+- Two 2-runner emulator E2E workflows in one window share the fleet (the api
+  legs' GL preempts, flows freeze or die at `launchApp`): run one E2E at a
+  time and rerun one leg at a time, per PLAYBOOK §1.
 - A claim without a run in `docs/evidence/` is not done; this handoff stays
   short.
