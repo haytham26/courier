@@ -165,30 +165,32 @@ jobs:
           # motion (the flows gate runs under the same rules it asserts).
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          # The runner's `script` is REQUIRED: it is the body that runs on the
+          # booted emulator (run 39905489120 died without it: `Input required
+          # and not supplied: script`). The recording lives inside the boot:
+          # the tool install, the APK and its grants, then the keeper.
+          script: |
+            # The Maestro CLI: the installer is downloaded, printed and
+            # executed - it is never piped into a shell (the V4 §7 rule).
+            curl -Ls "https://get.maestro.mobile.dev" -o "$RUNNER_TEMP/maestro-install.sh"
+            cat "$RUNNER_TEMP/maestro-install.sh"
+            bash "$RUNNER_TEMP/maestro-install.sh"
+            # $GITHUB_PATH lands between steps, so the binary is on PATH here,
+            # before the keeper calls maestro.
+            export PATH="$HOME/.maestro/bin:$PATH"
 
-      - name: Install the Maestro CLI
-        run: |
-          # The installer is downloaded, printed and executed: it is never
-          # piped into a shell (the V4 §7 rule).
-          curl -Ls "https://get.maestro.mobile.dev" -o "$RUNNER_TEMP/maestro-install.sh"
-          cat "$RUNNER_TEMP/maestro-install.sh"
-          bash "$RUNNER_TEMP/maestro-install.sh"
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+            # The app and its permissions: granted up front so the system
+            # dialog never sits on the screen the recording has to show.
+            adb wait-for-device
+            adb install -r apk/app-release.apk
+            adb shell pm grant "$PKG" android.permission.RECORD_AUDIO || true
+            adb shell pm grant "$PKG" android.permission.ACCESS_FINE_LOCATION || true
+            adb shell pm grant "$PKG" android.permission.ACCESS_COARSE_LOCATION || true
+            adb shell input keyevent KEYCODE_WAKEUP || true
+            adb shell wm dismiss-keyguard || true
 
-      - name: Install the APK and grant the device
-        run: |
-          adb wait-for-device
-          adb install -r apk/app-release.apk
-          # The permissions are granted up front: the system dialog would sit
-          # on top of the screen the recording has to show.
-          adb shell pm grant "$PKG" android.permission.RECORD_AUDIO || true
-          adb shell pm grant "$PKG" android.permission.ACCESS_FINE_LOCATION || true
-          adb shell pm grant "$PKG" android.permission.ACCESS_COARSE_LOCATION || true
-          adb shell input keyevent KEYCODE_WAKEUP || true
-          adb shell wm dismiss-keyguard || true
-
-      - name: Record each screen (light and dark)
-        run: bash .maestro/recordings-run.sh
+            # The recordings: one flow per screen file, light pass then dark.
+            bash .maestro/recordings-run.sh
 
       - name: Upload the recordings
         if: always()

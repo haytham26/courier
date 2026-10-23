@@ -32,11 +32,13 @@ script, next to the case that names it).
 
 ## The first run
 
-Pending by design: the workflow dispatches on this branch after PR #11 (the
-rebuilt Today, `feat/t6-screens`) merges and main is merged in — the first
-run then records the REBUILT screen, which is what the side-by-side has to
-show. The rows below fill with the run id, the artifact and the verdict.
+The run that rode the pull_request trigger of the PR itself (before the
+merge of PR #11) was the plumbing's first ride: the BUILD (the same E2E
+recipe) succeeded, all quality gates green, and the render step produced
+the reference PNGs at 390×844 (14 references, the Chrienium wait visible
+in the log). Two defects were read out of its failure:
 
 | Run | Verdict |
 |---|---|
-| — | pending |
+| The E2E on the same tree | RED at the readiness gate, not a flow: the emulator image's own Chromium SIGTRAPs the app 5 s into a cold launch (`libmonochrome` through the WebView factory, run 39905489019, the crash buffer in the artifact) — recorded as BUG-051; the gate gains a relaunch-once when the process dies mid-wait (the run-all.sh of the OTHER branch carries it). The app TREE here is green-on-main; the code is innocent. |
+| 39905489120 (the recording job) | RED before a single frame: the `Boot the emulator` step ran without the `script` input the runner action REQUIRES (`Input required and not supplied: script`). Fixed with this commit: the Maestro install, the APK, its grants and the keeper all move INTO the boot script (the PATH export lands before maestro is called; `$GITHUB_PATH` only lands between steps). |
