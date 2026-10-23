@@ -53,6 +53,11 @@ chrome; the camera lands with the delivered slice).
 
 ## Passed to CI (the §13.8.7 gate needs the device)
 
+- The deciding run on this head (39904905360): compat, map, smoke and stops
+  flows GREEN — the dock verified on device (compat tapped `tab-settings` and
+  completed; the run's a11y dump carries the full dock). today-list was the
+  last red: the centre-started scroll at peek lands on the map, not the sheet
+  (BUG-050; the grabber-raise fix rides with this commit).
 - The E2E job's `today-list` flow now runs against the REBUILT screen; its
   `takeScreenshot` lands in `.maestro/evidence/` (the run-all keeper) and rides
   the `android-e2e-evidence` artifact of the PR run.
