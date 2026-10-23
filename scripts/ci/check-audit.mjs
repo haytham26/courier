@@ -39,6 +39,12 @@ const ALLOW_LIST = [
       'build-time only: @expo/cli code signing during the Android build. It never reaches the shipped app; no patched version exists.',
     reviewBy: '2026-12-01',
   },
+  {
+    package: 'zod',
+    reason:
+      "build-time only: @expo/cli's OWN direct dependency (the expo build toolchain - prebuild, metro, the bundling the E2E APK build uses). It never reaches the shipped app; the patched line is a major version @expo/cli does not declare, so no patched version exists on the pinned expo line.",
+    reviewBy: '2026-12-01',
+  },
 ];
 
 let raw;
