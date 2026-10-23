@@ -144,32 +144,27 @@ export default function TabsLayout() {
       <BriefContext.Provider value={courierVoice}>
         <Tabs
           id="tabs"
-          screenOptions={({ route }) => {
-            const tab = slots(slotKey(route.name as TabRoute));
-            return {
-              headerShown: false,
-              // The native bar is replaced: the D34 bar floats on the glass
-              // dock and the screens keep their edges to the screen.
-              tabBar: () => (
-                <TabBar
-                  left={[tab.today, tab.stops]}
-                  right={[tab.map, tab.settings]}
-                  copilot={{
-                    state: copilotStateOf(voice.state, voice.isReady),
-                    onPress: toggleVoice,
-                    onLongPress: sayBrief,
-                  }}
-                  caption={voice.lastCommand ? commandWords[voice.lastCommand.type] : undefined}
-                />
-              ),
-              tabBarStyle: {
-                position: 'absolute',
-                height: 150,
-                backgroundColor: 'transparent',
-                borderTopWidth: 0,
-                elevation: 0,
-              },
-            };
+          screenOptions={{ headerShown: false }}
+          // The dock is the bar here. The custom bar must be a navigator
+          // prop: the fork (`expo-router/js-tabs`) strips `screenOptions`
+          // for the router (`partitionNavigatorProps`) and nothing reads a
+          // custom bar back from the descriptors, so the option rendered
+          // the default bar instead - the e2e run showed four invisible
+          // default-bar icons and none of the dock's slots.
+          tabBar={({ state: barState }) => {
+            const tab = slots(slotKey(barState.routes[barState.index].name as TabRoute));
+            return (
+              <TabBar
+                left={[tab.today, tab.stops]}
+                right={[tab.map, tab.settings]}
+                copilot={{
+                  state: copilotStateOf(voice.state, voice.isReady),
+                  onPress: toggleVoice,
+                  onLongPress: sayBrief,
+                }}
+                caption={voice.lastCommand ? commandWords[voice.lastCommand.type] : undefined}
+              />
+            );
           }}
         >
           <Tabs.Screen name="index" options={{ title: 'Today' }} />

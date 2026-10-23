@@ -18,7 +18,7 @@ chrome; the camera lands with the delivered slice).
 | The scanner surface | `apps/mobile/app/scan.tsx` (`today-scan` has a destination; the overlay is the real recipe, the camera lands later) |
 | The new token row | `packages/design-tokens/src/chosen.ts`: radii + `ghostButton` 22 (the sheet's 44 pt secondary actions; the reference's raw 22 was never a token) |
 | The sheet API | `BottomSheet` + `bottomInset` (the sheet floor sits above the dock: 64 + 32 + 4 of the spacing scale) |
-| The flow | `.maestro/today-list.yaml`: the `today-settings` assert became the Account tab (`tab-settings`, D34); the intent the flow pins — settings reachable on arrival — stands |
+| The flows | `.maestro/today-list.yaml`: the `today-settings` assert became the Account tab (`tab-settings`, D34); `.maestro/compat.yaml`: the settings tap got the same change (`today-settings` → `tab-settings`, the D34 consequence; the first head missed this one). The intents the flows pin stand: settings reachable on arrival, route-actions reachable in the sheet. |
 
 ## The gates (2026-10-23)
 
@@ -28,6 +28,28 @@ chrome; the camera lands with the delivered slice).
 | `corepack pnpm --filter mobile typecheck` | clean |
 | `corepack pnpm --filter mobile lint` | clean (0 findings, 0 suppressions) |
 | `corepack pnpm --filter mobile test` | 383/383 (30 suites; 7 new: Today's six + the sheet's dock-inset one) |
+| rerun after the bar accounting (2026-10-23) | typecheck clean, lint clean, 383/383 (30 suites) — same numbers |
+
+## The bar accounting (the e2e of the first head, run 39892147848)
+
+- What the run's evidence shows: Today renders (the pills, the pins, the
+  sheet, the numbers) but the a11y tree carries none of the dock's ids and
+  the screenshot shows no dock; every flow step that touches a slot failed.
+- What the logcat caught: four 31×28 boxes at the exact quarter positions
+  (x 25/105/185/265, `importantForAccessibility: false`) — the default bar's
+  missing-icon placeholders, styled transparent by my `tabBarStyle`: a bar
+  nobody can see or tap.
+- Root cause, read in the installed fork
+  (`expo-router@58.0.23/build/standard-navigation/index.js`): the fork's
+  `partitionNavigatorProps` hands `screenOptions` to the router and forwards
+  every other prop verbatim to `BottomTabView`; nothing reads a custom bar
+  back from the descriptors, so a `tabBar` inside `screenOptions` is inert.
+  The fork honours the bar only as a navigator prop
+  (`BottomTabNavigationConfig.tabBar` → `BottomTabView` line 117).
+- Fix (this head): the bar moved to `<Tabs tabBar={...}>` — an element prop
+  — and the inert `tabBarStyle` option dropped with it. `compat.yaml`'s
+  `today-settings` also became `tab-settings` (the first head missed that
+  one; the D34 row above).
 
 ## Passed to CI (the §13.8.7 gate needs the device)
 

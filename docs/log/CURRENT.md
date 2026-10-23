@@ -10,7 +10,7 @@ delete the remote branch, ff main.
 
 | area | status | one line |
 |---|---|---|
-| P1 the Android E2E | GREEN | six flows green on the rebuilt Today (the E2E job runs them + screenshots into the evidence artifact) |
+| P1 the Android E2E | RERUN | the first head's e2e caught the inert default bar (BUG-049); the dock is a navigator prop now, compat's tap renamed; the fresh run decides green |
 | P2 the research | DONE | 24 areas; the Spoke analysis landed (`docs/research/competitors/spoke.md`) |
 | P3 the map | PARTIAL | the modes, the styles, the builders in (`useMapBoot` is shared now); the Canterbury pack not built |
 | P4 the design | T6 SLICE 3 | slices 1–2 in; step 01 Today in review; 02–13 next (per-screen PRs with the dual gate) |

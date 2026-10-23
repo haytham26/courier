@@ -8,9 +8,11 @@ name: B.7 compatibility screen and the voice permission prompt
       id: "today-screen"
     timeout: 60000
 # The compatibility screen is reached from the settings, the way a courier (or
-# a support agent on the phone) would reach it.
+# a support agent on the phone) would reach it. The slot keeps the settings
+# route's testID: the D34 dock's words move with the design, the testIDs do
+# not (`today-settings` became `tab-settings`, the D34 consequence).
 - tapOn:
-    id: "today-settings"
+    id: "tab-settings"
 - extendedWaitUntil:
     visible:
       id: "settings-screen"
