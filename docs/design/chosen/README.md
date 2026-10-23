@@ -45,7 +45,20 @@ Touch targets: at least 48 pt; the main action while driving is at least 64 pt h
 ## Components
 
 1. Glass surface: `expo-glass-effect` GlassView on iOS 26+, with a runtime availability check. Fallback on Android and older iOS: a blur view with the glass token colour. Never a crash, never a plain grey box.
-2. Floating tab bar: a capsule with Today, Route, Map and Account, plus a separate round Copilot button on the right.
+2. Floating tab bar with **Copilot in the centre** (founder decision 2026-10-23, D34; this replaces the right-side button in the reference screens).
+   - **Layout:** Today, Route, [Copilot], Map, Account. Copilot is a raised round glass button of 64 to 72 pt in the middle of the bar, the largest target on the screen.
+   - **Always visible:** it shows on every main screen, including Driving, where it floats bottom centre above the sheet.
+   - **States:**
+     - idle;
+     - listening (a calm live level ring);
+     - thinking;
+     - speaking;
+     - muted (struck through);
+     - offline (the on-device model only).
+   - **Interaction:**
+     - A tap starts talking, and a long press keeps listening.
+     - The wake phrase and the earbud button work hands free.
+     - A small caption under the bar shows the last thing heard, so the driver trusts it.
 3. Bottom sheet with a grabber, three heights (peek, half, full), and the map stays live behind it.
 4. Round map buttons: map style and recentre.
 5. Top pills: run name and weather.

@@ -115,3 +115,6 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
 - 3:1 only for large text (24 px regular or 18.66 px bold); button labels are 18 px bold; 4.5:1 for other text; 7:1 for everything on the driving screen (the Slide to Deliver label is black on green). The test asserts every pair with no silent exclusions (MASTER_EXECUTION §13.9).
 - Order after the current task: mobile lint gate, contrast, repository organisation, then Part B, §17, §18 and Part C (§13.10).
 
+## D34 — Courier Voice sits in the centre of the app (2026-10-23, founder decision)
+- The voice copilot is the heart of the product, so its button is in the centre of the floating tab bar (Today, Route, Copilot, Map, Account): raised, the largest target, visible on every main screen including Driving, with clear states (idle, listening, thinking, speaking, muted, offline) and a caption of the last thing heard. The spec is in `docs/design/chosen/README.md` (component 2); behaviour per MASTER_EXECUTION §12 and D25.
+
