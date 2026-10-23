@@ -85,6 +85,13 @@ remote branch, ff main.
   it. The position carries the intent; a short drag still returns the thumb.
   A red step right after `waitForAnimationToEnd` means the gesture missed, not
   that the app crashed (check the crash buffer first).
+- The sheet's `full` height is capped by the USABLE height (window - dock inset
+  - the grabber's 24 dp), not by its 0.88 fraction: 0.88 of the CI emulator's
+  640 dp window plus the 100 dp dock inset is 663 dp, which lands the card's
+  top 23 dp ABOVE the window and takes the grabber (the one handle that
+  changes the level) off the a11y tree with it. The regression test pins the
+  emulator's 320x640 window, because the jest default window is taller and the
+  cap would never bind there.
 - Two 2-runner emulator E2E workflows in one window share the fleet (the api
   legs' GL preempts, flows freeze or die at `launchApp`): run one E2E at a
   time and rerun one leg at a time, per PLAYBOOK §1.

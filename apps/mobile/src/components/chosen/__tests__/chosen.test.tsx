@@ -8,6 +8,7 @@
  */
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
+import { Dimensions } from 'react-native';
 
 import {
   BottomSheet,
@@ -138,6 +139,50 @@ describe('the bottom sheet on a screen that docks a tab bar', () => {
     );
     const sheet = styleOf(screen.getByTestId('sheet'));
     expect(sheet['paddingBottom']).toBe(inset);
+  });
+
+  it('the full level keeps the card - and so its grabber - inside the window', () => {
+    // The regression this pins (run 39963017224's recording): on the CI
+    // emulator's window (320x640 dp) the sheet's fraction put 0.88 of the
+    // window PLUS the dock's inset ABOVE it, so at full the card's top landed
+    // off the top of the screen and the grabber - the sheet's first child,
+    // the one handle that changes the level - went with it. The a11y tree lost
+    // the handle and the three-level walk could not come back down. The
+    // usable height decides when the fraction would cost the grabber its
+    // place, so the window here is the emulator's, not the default's: on a
+    // taller window the cap would never bind and the test would be vacuous.
+    const inset = spacing.space64 + spacing.space32 + spacing.space4;
+    const height = 640;
+    const windows = jest
+      .spyOn(Dimensions, 'get')
+      .mockReturnValue({ width: 320, height, scale: 2, fontScale: 1 });
+    try {
+      render(withMode('light', <BottomSheet height="full" bottomInset={inset} testID="sheet" />));
+
+      // The card's own height is the glass surface's inline height, read off
+      // the sheet's first child (the tree's children mix strings with the
+      // instances, so the strings are filtered out first).
+      const cardInstance = screen
+        .getByTestId('sheet')
+        .children.find((child) => typeof child !== 'string');
+      if (cardInstance === undefined) {
+        throw new Error('the sheet card never rendered');
+      }
+      const card = styleOf(cardInstance);
+      const cardHeight = card['height'];
+      if (typeof cardHeight !== 'number') {
+        throw new Error('the sheet card carries no numeric height');
+      }
+      const top = height - inset - cardHeight;
+      // The card's top edge lands on the screen, and with the grabber's own
+      // 24 dp of headroom: the handle that changes the level is reachable at
+      // every level, full included.
+      expect(top).toBeGreaterThanOrEqual(0);
+      expect(top).toBeGreaterThanOrEqual(24);
+      expect(screen.getByTestId('sheet-grabber')).toBeTruthy();
+    } finally {
+      windows.mockRestore();
+    }
   });
 });
 
