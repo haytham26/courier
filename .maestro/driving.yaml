@@ -33,9 +33,9 @@ name: Driving starts on the Go, the slide delivers the stop
 - assertVisible:
     id: "driving-slide"
 # The deliver: a slide is required (a tap never marks the run), so the flow
-# drags the thumb across the track; the next stop becomes active. The point
-# starts the drag on the thumb (the docs' swipe-to-unlock example): from the
-# element's centre alone the travel short of the slide's threshold.
+# drags the thumb across the track; the confirm (05) takes over from the
+# slide. The run mark lives in the shared run state, so the drive reads it
+# again when the confirm returns it.
 - swipe:
     from:
       id: "driving-slide"
@@ -43,4 +43,16 @@ name: Driving starts on the Go, the slide delivers the stop
     direction: RIGHT
 - waitForAnimationToEnd:
     timeout: 2500
+- extendedWaitUntil:
+    visible:
+      id: "delivered-screen"
+    timeout: 15000
+- assertVisible: "45 Papanui Road"
+# Next Stop: the drive comes back with the run's next stop on the panel.
+- tapOn:
+    id: "delivered-next"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 15000
 - assertVisible: "STOP 3 OF 5"
