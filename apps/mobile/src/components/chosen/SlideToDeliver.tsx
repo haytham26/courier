@@ -66,16 +66,23 @@ export const SlideToDeliver = forwardRef<SlideToDeliverHandle, SlideToDeliverPro
       .onUpdate((event) => {
         x.value = Math.max(0, Math.min(travel, event.translationX));
       })
-      .onEnd(() => {
+      .onEnd((event) => {
         // The slide is the contract, and the THUMB AT THE END is the
         // contract: the travel being covered is what distinguishes a slide
         // from a bump (a short drag stops below the threshold and returns).
-        // The release velocity used to be a second condition here, and it
-        // was a false negative: a courier who drags to the end and PAUSES
-        // (or a touch stream that ends at rest) delivered nothing - the
-        // position already carries the intent, so it is the only gate.
-        const atEnd = x.value > travel - 6;
-        if (atEnd) {
+        //
+        // The position is read from the END event's own translation as well
+        // as the thumb. RNGH delivers the gesture's end to the JS thread
+        // asynchronously (this gesture runs on JS), so on a busy device - a
+        // cold drive whose map is still settling, a flow's second gesture
+        // seconds after a cold start - the end can arrive BEFORE the
+        // updates were processed, the thumb's value is still near zero, and
+        // the courier's slide silently delivers nothing. The end event
+        // carries the gesture's own final translation, so the delivery reads
+        // the further of the two. A short drag still stops below the
+        // threshold either way.
+        const reached = Math.max(x.value, Math.min(travel, event.translationX));
+        if (reached > travel - 6) {
           onDeliver();
         }
         // A short drag returns the thumb: a slide is required.

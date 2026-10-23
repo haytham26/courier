@@ -80,11 +80,14 @@ remote branch, ff main.
   fix is to assert the element with a minute-shaped regex - never to delete
   the assert, never to weaken it to a substring.
 - The slide (`SlideToDeliver`) delivers on the THUMB AT THE END of the travel
-  and nothing else: the release velocity was a second gate and it was a false
-  negative - a paused drag (or a fast touch stream that ends at rest) failed
-  it. The position carries the intent; a short drag still returns the thumb.
-  A red step right after `waitForAnimationToEnd` means the gesture missed, not
-  that the app crashed (check the crash buffer first).
+  and nothing else. Two false gates are gone: the release velocity (a paused
+  drag delivered nothing, run 40000405667) and the thumb's own value alone
+  (RNGH's end event can be processed BEFORE the updates on a busy device, so a
+  courier's slide silently delivered nothing, run 40025796086) - the delivery
+  now reads the further of the thumb and the end event's translation, and a
+  short drag still fails the threshold either way. A red step right after
+  `waitForAnimationToEnd` means the gesture missed, not that the app crashed
+  (check the crash buffer first).
 - The sheet's `full` height is capped by the USABLE height (window - dock inset
   - the grabber's 24 dp), not by its 0.88 fraction: 0.88 of the CI emulator's
   640 dp window plus the 100 dp dock inset is 663 dp, which lands the card's
@@ -92,6 +95,12 @@ remote branch, ff main.
   changes the level) off the a11y tree with it. The regression test pins the
   emulator's 320x640 window, because the jest default window is taller and the
   cap would never bind there.
+- Two advisory catch-ups in one day, handled by the gate's own rules: zod is
+  ACCEPTED (build-time only, `@expo/cli`'s own dep, no patched version on the
+  pinned expo line); filelock is CONSTRAINED (`tool.uv`
+  constraint-dependencies, the certifi pattern) because a patch exists - and
+  the constraint forces litellm 1.106.0 down to 1.103.7 (1.106.0 pins
+  `filelock<4`), which the api's suite (160 passed) proved safe.
 - Two 2-runner emulator E2E workflows in one window share the fleet (the api
   legs' GL preempts, flows freeze or die at `launchApp`): run one E2E at a
   time and rerun one leg at a time, per PLAYBOOK §1.
