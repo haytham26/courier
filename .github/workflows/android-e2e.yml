@@ -108,10 +108,18 @@ jobs:
           retention-days: 7
 
   e2e:
-    name: Run the Maestro flows on the emulator
+    name: Run the Maestro flows on the emulator (api ${{ matrix.api }})
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    # BUG-051 (the founder): the crash is pinned to the api-34 image's own
+    # Chromium init, so the gate runs on the newer api-35 image next to it:
+    # the flows must be green on both, and a crash that only fires on one
+    # image names itself in the evidence.
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [34, 35]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -139,7 +147,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ~/.android/avd
-          key: avd-${{ runner.os }}-34-google-apis-x86_64
+          key: avd-${{ runner.os }}-${{ matrix.api }}-google-apis-x86_64
 
       - name: Install Maestro
         run: |
@@ -154,7 +162,7 @@ jobs:
       - name: Run the Maestro flows on the emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
-          api-level: 34
+          api-level: ${{ matrix.api }}
           target: google_apis
           arch: x86_64
           disable-animations: true
@@ -166,7 +174,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: android-e2e-evidence
+          name: android-e2e-evidence-api${{ matrix.api }}
           path: |
             .maestro/evidence/**
             apk/**

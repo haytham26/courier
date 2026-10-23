@@ -23,7 +23,43 @@ mkdir -p "$EVIDENCE"
 fail() {
   echo "::error::$1"
   dump_evidence
+  write_summary red "$1"
   exit 1
+}
+
+# BUG-051 (a summary, not a heal — the guard below is temporary): every
+# relaunch is counted and named in the run summary, together with the verdict
+# on the crash signature it rode. The summary lands in the evidence dir and
+# in the GitHub job summary when the runner provides one.
+write_summary() {
+  {
+    echo "run-summary: status=$1"
+    echo "run-summary: relaunches=$relaunches"
+    [ -n "${relaunch_note:-}" ] && echo "run-summary: ${relaunch_note}"
+    [ -n "$2" ] && echo "run-summary: fail=$2"
+  } | tee "$EVIDENCE/summary.txt"
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    cat "$EVIDENCE/summary.txt" >> "$GITHUB_STEP_SUMMARY" || true
+  fi
+}
+
+relaunches=0
+relaunch_note=""
+
+# The tombstone of the newest fatal, from its "Fatal signal" line to the end
+# of the crash buffer, into crash-last.txt. The verdict: the KNOWN image crash
+# of BUG-051 is a SIGTRAP at the Chromium WebView factory init - the tombstone
+# carries the libmonochrome library and the WebView factory frames through the
+# CookieManager chain. A death whose signature is not that one stops the run
+# immediately: the temporary guard may only ride the image crash, nothing else.
+relaunch_signature() {
+  local start
+  start=$(grep -n "Fatal signal" "$EVIDENCE/logcat-crash.txt" 2>/dev/null | tail -1 | cut -d: -f1)
+  [ -n "$start" ] || return 1
+  sed -n "${start},\$p" "$EVIDENCE/logcat-crash.txt" > "$EVIDENCE/crash-last.txt"
+  grep -q "SIGTRAP" "$EVIDENCE/crash-last.txt" || return 1
+  grep -Eq "libmonochrome|WebViewChromiumFactoryProvider|getCookieManager" "$EVIDENCE/crash-last.txt" || return 1
+  return 0
 }
 
 dump_evidence() {
@@ -76,11 +112,15 @@ echo "pid=$pid"
 # mock, so the app lands on the tabs - either is a valid first screen). The
 # emulator image's own Chromium can SIGTRAP the app seconds into a cold
 # launch (BUG-051, run 39905489019: libmonochrome through the WebView
-# factory, the crash buffer carried it): when the process is gone while we
-# wait, the app is relaunched ONCE - the crash keeps its evidence either way
-# - and the wait continues. An app that dies twice still fails the gate: a
-# retry rides out a one-off launch race, it cannot hide a reproducible crash.
-relaunched=""
+# factory, the crash buffer carried it). The relaunch below is a TEMPORARY
+# guard, and a death is inspected BEFORE it is ridden: the tombstone of the
+# newest fatal must be the KNOWN image crash (SIGTRAP at the WebView factory
+# init - React Native's ForwardingCookieHandler forwards every network
+# request to android.webkit.CookieManager, and the first touch starts
+# Chromium on the request thread). Any other signature stops the run
+# immediately with that signature; the known one is ridden once, every
+# relaunch is counted in the run summary, and a death after the relaunch
+# still fails: the retry cannot hide a reproducible crash, image or not.
 screen=""
 for _ in $(seq 1 "$SCREEN_TIMEOUT"); do
   if adb shell uiautomator dump /sdcard/window.xml > /dev/null 2>&1 &&
@@ -90,10 +130,21 @@ for _ in $(seq 1 "$SCREEN_TIMEOUT"); do
     break
   fi
   pid_now="$(adb shell pidof "$PKG" 2>/dev/null | tr -d '\r')"
-  if [ -z "$pid_now" ] && [ -z "$relaunched" ]; then
-    relaunched="yes"
-    echo "the app process died before the first screen; relaunching once"
-    adb shell am start -W -n "$PKG/.MainActivity" >> "$EVIDENCE/am-start.txt" 2>&1 || true
+  if [ -z "$pid_now" ]; then
+    adb logcat -b crash -d > "$EVIDENCE/logcat-crash.txt" 2>/dev/null || true
+    if relaunch_signature; then
+      relaunches=$((relaunches + 1))
+      relaunch_note="the relaunch rode the KNOWN image crash of BUG-051 (SIGTRAP at the WebView factory, libmonochrome; the tombstone is evidence/crash-last.txt)"
+    else
+      sig="$(grep -m1 'Fatal signal' "$EVIDENCE/logcat-crash.txt" 2>/dev/null || echo 'no fatal found in the crash buffer')"
+      fail "the app died before the first screen with an UNKNOWN crash signature: ${sig}"
+    fi
+    if [ "$relaunches" -le 1 ]; then
+      echo "the app process died before the first screen: the signature is the KNOWN image crash (BUG-051); relaunch ${relaunches}"
+      adb shell am start -W -n "$PKG/.MainActivity" >> "$EVIDENCE/am-start.txt" 2>&1 || true
+    else
+      fail "the KNOWN image crash of BUG-051 fired twice (relaunches=${relaunches}); the temporary relaunch cannot ride a reproducible crash"
+    fi
   fi
   sleep 2
 done
@@ -116,4 +167,5 @@ done
 cp ./*.png "$EVIDENCE/" 2>/dev/null || true
 
 dump_evidence
+write_summary "$([ "$status" -eq 0 ] && echo green || echo red)"
 exit "$status"

@@ -10,7 +10,7 @@ rebuilt Today's Go). Merge: `gh pr merge --merge` when green,
 
 | area | status | one line |
 |---|---|---|
-| P1 the Android E2E | HOW IT WORKS | run 39909165246 GREEN on the merged head (all five flows, the relaunch never needed); BUG-050/BUG-051 flip fixed; the driving flow joins the glob with this PR |
+| P1 the Android E2E | HOW IT WORKS | run 39909165246 GREEN on the merged head (all five flows, the relaunch never needed); the driving flow joins the glob with this PR; BUG-051 RE-OPENED on the founder directive - the relaunch stays a temporary guard, the root cause pinned (RN's ForwardingCookieHandler = the webkit bridge; the trigger is the voice client's cold-start fetch), the relaunch now rides only the KNOWN crash signature and every relaunch is counted in the run summary, and the api-35 image leg joins the matrix; a real-device test is FOUNDER_TODO |
 | P2 the research | DONE | 24 areas; the Spoke analysis landed (`docs/research/competitors/spoke.md`) |
 | P3 the map | PARTIAL | the modes, the styles, the builders in (`useMapBoot` is shared now); the Canterbury pack not built |
 | P4 the design | T6 SLICE 3 | slices 1–2 in; step 01 Today MERGED (caf2ef4); step 02 Driving in review; 04–13 next (per-screen PRs with the dual gate) |
@@ -29,7 +29,12 @@ rebuilt Today's Go). Merge: `gh pr merge --merge` when green,
    06 Scan (the camera), 07 Copilot (the transcript), 08 Route, then the
    smaller ones (09–13). Every step: components + tests + the E2E flow move,
    the evidence dir, the PR.
-3. After the 13: delete the legacy token modules (`tokens.ts`, `themes*`,
+3. BUG-051 follow-ups (the founder): a real-device launch test when a device
+   is available; then the mitigation decision once the api-35 leg has run -
+   warm `CookieManager` on the main thread at boot, or move the voice
+   session start behind a user gesture, or replace the forwarded cookie
+   handler (D33: recorded consequence edits only).
+4. After the 13: delete the legacy token modules (`tokens.ts`, `themes*`,
    `directions*`) — the chosen file is the only one left. Nothing but that
    file stays.
 
