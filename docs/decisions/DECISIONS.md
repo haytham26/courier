@@ -117,4 +117,4 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
 
 ## D34 — Courier Voice sits in the centre of the app (2026-10-23, founder decision)
 - The voice copilot is the heart of the product, so its button is in the centre of the floating tab bar (Today, Route, Copilot, Map, Account): raised, the largest target, visible on every main screen including Driving, with clear states (idle, listening, thinking, speaking, muted, offline) and a caption of the last thing heard. The spec is in `docs/design/chosen/README.md` (component 2); behaviour per MASTER_EXECUTION §12 and D25.
-
+- Added the same day: the Copilot button is a real-time 3D glass sphere that reacts to the live voice (the driver's level and Copilot's own voice), with morphing states and haptics, no neon or particles (README component 2).

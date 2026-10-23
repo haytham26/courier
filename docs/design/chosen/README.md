@@ -55,6 +55,17 @@ Touch targets: at least 48 pt; the main action while driving is at least 64 pt h
      - speaking;
      - muted (struck through);
      - offline (the on-device model only).
+   - **The button is a living 3D object, not a flat icon.**
+     - **Material:** a real-time rendered glass sphere (Skia shader, Reanimated 4 on the UI thread) with physically based light: soft refraction of the map behind it, one specular highlight, a contact shadow on the bar. The accent blue is in the glass, not painted on.
+     - **In tune with the voice:** the sphere reacts to the live audio level and pitch.
+       - When the driver speaks, its surface ripples gently with the amplitude.
+       - When Copilot speaks, it breathes with Copilot's own voice envelope, so lips and button move together.
+       - Thinking is a slow inner swirl.
+       - The motion is smoothed (spring, 60 fps), never jittery.
+     - **State changes morph** (scale, light and tint) in 200 to 350 ms with a light haptic: idle, listening, thinking, speaking, muted, offline.
+     - **No neon, rainbow glow or particles** (§13.2). It must look like a premium physical object, in light and dark.
+     - **Reduced motion:** a calm level ring instead of the surface motion.
+     - **Performance:** the audio analysis runs natively and is throttled. The battery and frame budget are measured on the driving screen with the rest of §13.8.
    - **Interaction:**
      - A tap starts talking, and a long press keeps listening.
      - The wake phrase and the earbud button work hands free.
