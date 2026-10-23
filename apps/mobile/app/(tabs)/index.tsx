@@ -78,6 +78,9 @@ const styles = StyleSheet.create({
     right: spacing.space16,
     top: spacing.space64,
   },
+  sheetScroll: {
+    flex: 1,
+  },
   sheetContent: {
     gap: spacing.space16,
     paddingHorizontal: spacing.space24,
@@ -311,6 +314,7 @@ export default function TodayScreen() {
 
       <BottomSheet height="peek" bottomInset={SHEET_INSET} testID="today-sheet">
         <ScrollView
+          style={styles.sheetScroll}
           contentContainerStyle={styles.sheetContent}
           showsVerticalScrollIndicator={false}
         >
