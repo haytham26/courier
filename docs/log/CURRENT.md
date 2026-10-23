@@ -79,6 +79,12 @@ remote branch, ff main.
   Road, 14:00") breaks every flow that asserted the old bare string, and the
   fix is to assert the element with a minute-shaped regex - never to delete
   the assert, never to weaken it to a substring.
+- The slide (`SlideToDeliver`) delivers on the THUMB AT THE END of the travel
+  and nothing else: the release velocity was a second gate and it was a false
+  negative - a paused drag (or a fast touch stream that ends at rest) failed
+  it. The position carries the intent; a short drag still returns the thumb.
+  A red step right after `waitForAnimationToEnd` means the gesture missed, not
+  that the app crashed (check the crash buffer first).
 - Two 2-runner emulator E2E workflows in one window share the fleet (the api
   legs' GL preempts, flows freeze or die at `launchApp`): run one E2E at a
   time and rerun one leg at a time, per PLAYBOOK §1.
