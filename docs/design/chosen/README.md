@@ -53,9 +53,12 @@ every pair is asserted by its D33 test.
 | label on the then strip | rgba(255,255,255,.88) | rgba(255,255,255,.88) |
 | label on a filled success chip and the Slide to Deliver (black by D33) | #000000 | #000000 |
 | label on the dark glass over the camera | #FFFFFF | #FFFFFF |
+| tab active fill (the quiet pill of the active tab, added in slice 2) | rgba(0,0,0,.06) | rgba(255,255,255,.06) (amended: the reference's 10% failed the 4.5 bar over the worst glass branch, so D33 set 6%) |
+| grabber (the sheet handle, added in slice 2) | rgba(60,60,67,.22) | rgba(235,235,245,.3) |
+| scan ring (the scanner reticle, added in slice 2; non-text) | #FFD60A | #FFD60A |
 
-Radii: sheet 40, card 24, chip 15, button 27 (pill), map button 24 (circle 48), tab bar 31.
-Type: SF Pro on iOS, Inter on Android. Button labels are 18 px bold (D33). Large title 34/41 bold. Numbers use SF Pro Rounded (iOS) or Inter tabular (Android): 24 to 52 bold.
+Radii: sheet 40, card 24, chip 15, button 27 (pill), map button 24 (circle 48), tab bar 31; slice 2 adds pill 18 (top, scanner and small action pills; the reference's mixed 17 to 18 unified), segmented 12, segmented segment 9, slide track 32, turn card 30, then-strip corner 16.
+Type: SF Pro on iOS, Inter on Android. Button labels are 18 px bold (D33). Large title 34/41 bold. Numbers use SF Pro Rounded (iOS) or Inter tabular (Android): 24 to 52 bold; slice 2 adds chip label 14/17 semibold (note chips, segmented, timeline), slide label 19/23 bold, street title 20/24 semibold and turn distance 38/40 bold.
 Touch targets: at least 48 pt; the main action while driving is at least 64 pt high.
 
 ## Motion (tokens, MASTER_EXECUTION §13.8)

@@ -62,6 +62,8 @@ describe('the colour sets', () => {
     expect(colors.light.turnCard).toBe('#14382A');
     expect(colors.light.turnStrip).toBe('#0F2C21');
     expect(colors.light.scrim).toBe('rgba(0,0,0,.35)');
+    expect(colors.light.tabActiveFill).toBe('rgba(0,0,0,.06)');
+    expect(colors.light.scanRing).toBe('#FFD60A');
     expect(colors.dark.background).toBe('#000000');
     expect(colors.dark.card).toBe('#1C1C1E');
     expect(colors.dark.label).toBe('#FFFFFF');
@@ -71,6 +73,8 @@ describe('the colour sets', () => {
     expect(colors.dark.turnCard).toBe('#0F2A1F');
     expect(colors.dark.turnStrip).toBe('#0B2018');
     expect(colors.dark.scrim).toBe('rgba(0,0,0,.35)');
+    expect(colors.dark.tabActiveFill).toBe('rgba(255,255,255,.06)');
+    expect(colors.dark.scanRing).toBe('#FFD60A');
   });
 
   it('the text-in-meaning tokens are the D33 values', () => {

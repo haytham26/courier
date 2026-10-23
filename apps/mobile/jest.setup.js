@@ -46,4 +46,66 @@ jest.mock('@expo/vector-icons', () => {
   };
 });
 
+// expo-glass-effect: the Liquid Glass view is iOS 26+ native, so a test run
+// gets a plain view. The availability check is switchable so the tests can
+// pin the branch (the GlassSurface takes that check at startup).
+jest.mock('expo-glass-effect', () => {
+  const ReactActual = jest.requireActual('react');
+  const RN = jest.requireActual('react-native');
+
+  let glassAvailable = false;
+
+  const GlassView = (props) => ReactActual.createElement(RN.View, props, null);
+
+  return {
+    GlassView,
+    GlassContainer: (props) => ReactActual.createElement(RN.View, props, null),
+    isGlassEffectAPIAvailable: () => glassAvailable,
+    isLiquidGlassAvailable: () => glassAvailable,
+    __setGlassAvailable: (value) => {
+      glassAvailable = value;
+    },
+  };
+});
+
+// expo-blur: a stable Android blur needs a real RenderNode; a test run gets
+// a plain view that still takes the tint and the styles (the fill layer on
+// top is what the D33 pairs ride).
+jest.mock('expo-blur', () => {
+  const ReactActual = jest.requireActual('react');
+  const RN = jest.requireActual('react-native');
+  return {
+    BlurView: (props) => ReactActual.createElement(RN.View, props, null),
+    BlurTargetView: (props) => ReactActual.createElement(RN.View, props, null),
+  };
+});
+
+// Skia: the sphere draws through the Skia view, which has no native runtime
+// in a test run; the atomic components resolve to views so the accessibility
+// and the layout can still be asserted.
+jest.mock('@shopify/react-native-skia', () => {
+  const ReactActual = jest.requireActual('react');
+  const RN = jest.requireActual('react-native');
+  const passthrough = (props: { [key: string]: unknown }) => ReactActual.createElement(RN.View, props, null);
+  return {
+    Canvas: (props: { style?: unknown; children?: unknown }) => ReactActual.createElement(RN.View, { style: props.style }, props.children),
+    Circle: passthrough,
+    Path: passthrough,
+    Group: passthrough,
+    RadialGradient: passthrough,
+    BlurMask: passthrough,
+  };
+});
+
+// The haptics: the impact calls are the contract (a scene change haptic, the
+// success haptic on the slide); the mocks record them.
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn().mockResolvedValue(undefined),
+  notificationAsync: jest.fn().mockResolvedValue(undefined),
+  selectionAsync: jest.fn().mockResolvedValue(undefined),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}));
+
+
 
