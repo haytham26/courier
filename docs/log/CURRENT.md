@@ -10,7 +10,7 @@ delete the remote branch, ff main.
 
 | area | status | one line |
 |---|---|---|
-| P1 the Android E2E | RERUN | run 39904905360 on the dock-fix head: BUG-049 verified on device (compat green, the full dock in the a11y dump); the one red is BUG-050 — today-list's center-swipe scroll misses the peek sheet, the grabber-raise fix pushed; the fresh run decides green |
+| P1 the Android E2E | RERUN | BUG-049 verified on device (compat green, the full dock in the a11y dump; run 39904905360); the flow fix (BUG-050, the grabber raise) and the gate's relaunch-once (BUG-051, the image's Chromium race on run 39905489019) are pushed together; the fresh deciding run carries both |
 | P2 the research | DONE | 24 areas; the Spoke analysis landed (`docs/research/competitors/spoke.md`) |
 | P3 the map | PARTIAL | the modes, the styles, the builders in (`useMapBoot` is shared now); the Canterbury pack not built |
 | P4 the design | T6 SLICE 3 | slices 1–2 in; step 01 Today in review; 02–13 next (per-screen PRs with the dual gate) |

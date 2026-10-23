@@ -58,6 +58,11 @@ chrome; the camera lands with the delivered slice).
   completed; the run's a11y dump carries the full dock). today-list was the
   last red: the centre-started scroll at peek lands on the map, not the sheet
   (BUG-050; the grabber-raise fix rides with this commit).
+- The gate's relaunch-once (BUG-051): the image's own Chromium raced a cold
+  launch on run 39905489019 (the recordings PR's e2e on green-on-main code),
+  the app dead 5 s in; the first-screen loop now re-reads the process each
+  round and relaunches once if it died mid-wait — the crash buffer keeps its
+  evidence either way.
 - The E2E job's `today-list` flow now runs against the REBUILT screen; its
   `takeScreenshot` lands in `.maestro/evidence/` (the run-all keeper) and rides
   the `android-e2e-evidence` artifact of the PR run.
