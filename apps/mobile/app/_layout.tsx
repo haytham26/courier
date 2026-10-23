@@ -33,6 +33,8 @@ function AuthNavigator() {
     >
       <Stack.Protected guard={isAuthenticated}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="scan" />
+        <Stack.Screen name="driving" />
       </Stack.Protected>
       <Stack.Protected guard={!isAuthenticated}>
         <Stack.Screen name="(auth)" />

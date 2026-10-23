@@ -239,14 +239,14 @@ export default function TodayScreen() {
     hapticFor('error');
   }, []);
 
-  // The map owns the camera: the command zooms it to the next stop, and
-  // the tab switch puts the courier where the answer is.
+  // The Go starts the drive: the command zooms the drive camera to the next
+  // stop, and the router hands the courier to the driving screen.
   const handleGo = useCallback(() => {
     if (!nextStop) {
       return;
     }
     publishVoiceCommand({ type: 'zoom_to_next_stop' });
-    router.navigate('/map');
+    router.navigate('/driving');
   }, [nextStop, router]);
 
   const handleRecentre = useCallback(() => {
