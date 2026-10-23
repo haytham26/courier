@@ -1,0 +1,65 @@
+appId: com.courier.copilot
+name: "The scanner reads a label, the parcel joins the van, and it stays open for the next one"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The scanner opens from the Today sheet's action row. The sheet stands at
+# peek (the morning glance) and the Scan sits below the fold, so the courier
+# raises it first: a tap aimed at it from peek would land on the dock.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- tapOn:
+    id: "today-scan"
+- extendedWaitUntil:
+    visible:
+      id: "scan-screen"
+    timeout: 30000
+# The scanner's own surface (06-scan.html): the pills at the top, the status
+# line, and the match sheet when the label is read. The E2E build reads the
+# mock run's labels through the reader seam, so the reading is deterministic
+# here: stop 2 first, then stop 3.
+- assertVisible:
+    id: "scan-overlay"
+- assertVisible:
+    id: "scan-done"
+# The lock ring lands on the address block and the status reads the found
+# line (the reference's "Address found. Hold steady.").
+- assertVisible: "Address found. Hold steady."
+# The match sheet (06-scan.html): the check and the matched address, the
+# place it was found, where it sits in the van, and the one action.
+- assertVisible:
+    id: "scan-match-sheet"
+- assertVisible: "45 Papanui Road"
+- assertVisible: "Merivale. Matched to the map."
+- assertVisible: "WHERE IN THE VAN"
+- assertVisible: "Add and Scan Next"
+- takeScreenshot: scan-match
+# Where in the van: the middle is where a parcel sits while the courier
+# decides, so the control starts there and records where it moves.
+- assertVisible:
+    id: "scan-van-middle"
+    selected: true
+- tapOn:
+    id: "scan-van-front"
+- assertVisible:
+    id: "scan-van-front"
+    selected: true
+# "Add and Scan Next" puts the parcel in the van - the pill counts it - and
+# keeps the scanner open, so the next label of the run is what it reads.
+- tapOn:
+    id: "scan-add"
+- assertVisible: "1 scanned"
+- assertVisible: "120 Blenheim Road"
+# The scan is over: the courier leaves with the load in the van.
+- tapOn:
+    id: "scan-done"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 30000

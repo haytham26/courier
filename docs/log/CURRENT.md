@@ -1,20 +1,22 @@
 # CURRENT — the handoff
 
 **Week:** 2026-W43 (the full log is in `docs/log/2026-W43.md`)
-**Branch:** `feat/t6-driving` — step 02 Driving in review (PR #13, deciding
-run on both api legs); `feat/t6-delivered` — step 05 staged, stacked on the
-driving tip, ready to push the moment #13 merges. Merge #13: `gh pr merge
---merge` when green, `archive/feat/t6-driving` tag at the tip, delete the
-remote branch, ff main.
+**Branch:** `feat/t6-scan` — step 06 Scan, stacked on the 05 tip (`cefb81b`).
+PR #14 (05 Delivered) is in review on `feat/t6-delivered`: its first E2E went
+red on BOTH legs with a REAL contract break (the flows asserted the bare
+street while the confirm renders the street with its minute), both flows
+fixed and STRENGTHENED on that branch (`876b6e5`), the rerun decides. This
+branch keeps the parent's tip in it (a stacked branch carries its parent), so
+its PR opens clean on main once #14 merges.
 
 ## Where the company stands
 
 | area | status | one line |
 |---|---|---|
-| P1 the Android E2E | HOW IT WORKS | run 39909165246 GREEN on the merged head (all five flows, the relaunch never needed); the driving flow joins the glob with this PR; BUG-051 RE-OPENED on the founder directive - the relaunch stays a temporary guard, the root cause pinned (RN's ForwardingCookieHandler = the webkit bridge; the trigger is the voice client's cold-start fetch), the relaunch now rides only the KNOWN crash signature and every relaunch is counted in the run summary, and the api-35 image leg joins the matrix; a real-device test is FOUNDER_TODO |
+| P1 the Android E2E | HOW IT WORKS | the dual-image matrix (api 34 + 35) rides the gate; PR #13's deciding runs were green on both legs (api-35 first try, api-34 after one flake rerun); PR #14's first E2E went red by a REAL contract break in the 05 diff (the flows vs the address-with-minute line - fixed, the rerun decides); BUG-051's guard rides only the KNOWN signature, every relaunch is counted, a real-device test is FOUNDER_TODO |
 | P2 the research | DONE | 24 areas; the Spoke analysis landed (`docs/research/competitors/spoke.md`) |
 | P3 the map | PARTIAL | the modes, the styles, the builders in (`useMapBoot` is shared now); the Canterbury pack not built |
-| P4 the design | T6 SLICE 3 | slices 1–2 in; step 01 Today MERGED (caf2ef4); step 02 Driving in review (the dual-api E2E now); step 05 Delivered staged on its own branch (the confirm + the run state); 06–13 next (per-screen PRs with the dual gate) |
+| P4 the design | T6 SLICE 3 | slices 1–2 in; step 01 Today MERGED (caf2ef4); step 02 Driving MERGED (d5793b4); step 05 Delivered in review (PR #14); step 06 Scan staged on `feat/t6-scan`; 07–13 next (per-screen PRs with the dual gate) |
 | P5 the product | PARTIAL | sync done; the scanner camera, the POD, the dashboard, the billing not started |
 | P6 the launch readiness | PARTIAL | the runbook, the checklist, StoreReady in; the deploy sits with the founder |
 | The lint gate | DONE | 0 findings, no suppressions, at 30 suites (PR #5 and on) |
@@ -26,12 +28,10 @@ remote branch, ff main.
    trace), replacing `design-videos.yml` in the same PR as its first run —
    PR #12 in review: the boot-script fix rode in, its first proper run
    records the REBUILT Today after main merges in.
-2. Slice 3 steps: 02 Driving in review (its deciding run rides both api legs
-   now); 05 Delivered staged on `feat/t6-delivered` (the confirm screen + the
-   run state above the stack; the PR opens the moment #13 merges — the 05
-   branch is stacked on the driving tip); next to stage are 06 Scan (the
-   camera), 07 Copilot (the transcript), 08 Route, then 09–13. Every step:
-   components + tests + the E2E flow move, the evidence dir, the PR.
+2. Slice 3 steps: 05 Delivered in review (PR #14 — its rerun decides); 06
+   Scan staged on `feat/t6-scan` (the camera, the reader seam, the van load);
+   next to stage are 07 Copilot (the transcript), 08 Route, then 09–13. Every
+   step: components + tests + the E2E flow move, the evidence dir, the PR.
 3. BUG-051 follow-ups (the founder): a real-device launch test when a device
    is available; then the mitigation decision once the api-35 leg has run -
    warm `CookieManager` on the main thread at boot, or move the voice
@@ -45,6 +45,17 @@ remote branch, ff main.
 
 - `@courier/design-tokens/*` must be BUILT before the app gates (the app
   resolves from `dist/`); after any token edit: `pnpm filter design-tokens build`.
+- The camera: the LIBRARY declares only the camera feature — the app declares
+  `CAMERA` in `app.json`'s `android.permissions` (prebuild generates
+  `apps/mobile/android/`, which is GITIGNORED: a native-file edit under
+  `apps/mobile/android` never ships) and the gate grants it (run-all.sh).
+  VisionCamera 5.2.3's own object scanner is iOS-only; Android's reading is an
+  ML Kit text-recognition plugin (its own slice), so
+  `src/scans/labelReader.ts` is the seam with the mock (E2E build) and the
+  honest `unavailable` camera reader. The native `Camera` takes no `testID`
+  (props pick style/onLayout/pointerEvents/nativeID) and 5.2.3 exposes no
+  `onError` — a missing device is a quiet dark feed, never an invented crash
+  line.
 - The tab slots keep the flows' testIDs: `tab-stops`, `tab-map`,
   `tab-settings`; the Today route's slot is `tab-today` (was `tab-home`).
 - The screens may reach the chosen tokens only through
