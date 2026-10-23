@@ -19,28 +19,68 @@ The screens are built three dimensional and animated: tilted 3D map, driving cam
 
 Every colour, radius, spacing, blur and type size comes from ONE token file in the shared UI package (for example `packages/ui/src/tokens.ts`), with light and dark sets. No screen may hard-code a value. Changing the brand colour, a corner radius or the font in that one file must restyle the whole app. Add a Storybook or a "Design tokens" debug screen that shows every token and component, so the founder can review changes.
 
-## Tokens (starting values)
+## Tokens (starting values, amended by D33 on 2026-10-23)
+
+The starting values below are the founder's reference. The D33 contrast decision
+(MASTER_EXECUTION §13.9) darkened four of them (the secondary label, the green as
+text, the accent as text) and set the success fills' labels to black, so every pair
+the screens form clears its bar; the changed rows say so. The token file is
+`packages/design-tokens/src/chosen.ts`, exported as `@courier/design-tokens/chosen`, and
+every pair is asserted by its D33 test.
 
 | Token | Light | Dark |
 |---|---|---|
 | accent (actions, links, route line) | #0A7CFF | #0A84FF |
+| accent as text (tab labels, links) | #0857B4 | #33A1FF |
 | success (delivered, ahead of plan) | #34C759 | #30D158 |
+| success as text (the "42", Ready) | #14532D | #30D158 |
 | danger (next stop pin, failures) | #FF3B30 | #FF453A |
 | warning (dog, hazards) | #FF9500 | #FF9F0A |
 | info2 (shelf, parcel) | #5856D6 | #5E5CE6 |
 | background | #F2F2F7 | #000000 |
 | card | #FFFFFF | #1C1C1E |
 | label | #000000 | #FFFFFF |
-| secondary label | rgba(60,60,67,.6) | rgba(235,235,245,.6) |
+| secondary label (darkened by D33) | rgba(60,60,67,.9) | rgba(235,235,245,.75) |
 | fill | rgba(120,120,128,.12) | rgba(118,118,128,.24) |
 | separator | rgba(60,60,67,.29) | rgba(84,84,88,.65) |
 | glass | white at 72 to 95% + blur 28 + saturate 180% | #1C1C1E at 62 to 90% + blur 28 |
 | turn card | #14382A | #0F2A1F |
+| then strip | #0F2C21 | #0B2018 |
+| scrim (under overlays over the camera) | rgba(0,0,0,.35) | rgba(0,0,0,.35) |
 | map land, road, water, park | #F3EFE7, #FFFFFF, #AAD3F2, #CDE8C4 | #1B1D21, #34373E, #16243A, #1D2A22 |
+| label on the accent buttons | #FFFFFF | #FFFFFF |
+| label on the turn card | #FFFFFF | #FFFFFF |
+| label on the then strip | rgba(255,255,255,.88) | rgba(255,255,255,.88) |
+| label on a filled success chip and the Slide to Deliver (black by D33) | #000000 | #000000 |
+| label on the dark glass over the camera | #FFFFFF | #FFFFFF |
 
 Radii: sheet 40, card 24, chip 15, button 27 (pill), map button 24 (circle 48), tab bar 31.
-Type: SF Pro on iOS, Inter on Android. Large title 34/41 bold. Numbers use SF Pro Rounded (iOS) or Inter tabular (Android): 24 to 52 bold.
+Type: SF Pro on iOS, Inter on Android. Button labels are 18 px bold (D33). Large title 34/41 bold. Numbers use SF Pro Rounded (iOS) or Inter tabular (Android): 24 to 52 bold.
 Touch targets: at least 48 pt; the main action while driving is at least 64 pt high.
+
+## Motion (tokens, MASTER_EXECUTION §13.8)
+
+Durations and curves are tokens in the same token file (D27). The springs are
+Reanimated 4 configs; the component and screen slices tune them against the
+frame-time evidence, and that change lands in the token file, never in a screen.
+
+| Token | Value | Use |
+|---|---|---|
+| instant | 100 ms | pressed states, small ticks |
+| quick | 180 ms | chips, pills, small fades |
+| standard | 280 ms | sheet content, cards, tab transitions |
+| morph | 280 ms | the Copilot sphere's state changes (inside D34's 200 to 350 ms band) |
+| slow | 420 ms | full screen shared element grows |
+| camera | 600 ms | the driving camera eases |
+| route | 900 ms | the route line draws itself |
+| curve standard | cubic-bezier(0.32, 0.72, 0, 1) | the usual moves |
+| curve enter | cubic-bezier(0.16, 1, 0.3, 1) | arriving in place |
+| curve exit | cubic-bezier(0.4, 0, 1, 1) | leaving |
+| spring sheet | damping 26, stiffness 260, mass 1 | the spring sheets |
+| spring sphere | damping 20, stiffness 180, mass 1 | the Copilot sphere (smoothed, never jittery) |
+| spring thumb | damping 22, stiffness 220, mass 1 | the Slide to Deliver thumb |
+| spring pin | damping 18, stiffness 140, mass 1 | the rising pins |
+| reduced | beats of 0 to 240 ms, linear curves, no springs | a calm 2D path with fades |
 
 ## Components
 
