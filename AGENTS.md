@@ -50,3 +50,5 @@ Skills live in `.claude/skills/<name>/SKILL.md` (the single source; the pinned c
 | Release / handover | `shipping-and-launch` |
 
 In `docs/log/<week>.md` (the week you are in), for each step write which skills you applied.
+
+When anything fails, follow `docs/plan/PLAYBOOK.md` first (triage, evidence order, bisect, the contract check, thinking budget).
