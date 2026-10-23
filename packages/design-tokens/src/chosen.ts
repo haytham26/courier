@@ -56,6 +56,9 @@ export const colors = {
     onDarkGlass: '#FFFFFF', // the label on the dark glass over the camera (both modes, D33)
     onSuccess: '#000000', // D33: the chip label and the Slide to Deliver are black on the green
     successText: '#14532D', // green as text (the delivered stat, Ready): darkened for the bars (D33)
+    tabActiveFill: 'rgba(0,0,0,.06)', // the active tab's quiet pill (the reference's rgba(0,0,0,.06))
+    grabber: 'rgba(60,60,67,.22)', // the sheet's grabber (the reference value)
+    scanRing: '#FFD60A', // the scanner reticle ring (a non-text graphic; the address text inside carries the pair)
   } as const,
 
   dark: {
@@ -89,6 +92,9 @@ export const colors = {
     onDarkGlass: '#FFFFFF',
     onSuccess: '#000000', // D33: black on the green in both modes
     successText: '#30D158',
+    tabActiveFill: 'rgba(255,255,255,.06)', // D33: 10 percent failed the 4.5 bar over the worst glass branch; .06 clears it and stays visible
+    grabber: 'rgba(235,235,245,.3)',
+    scanRing: '#FFD60A',
   } as const,
 };
 
@@ -131,6 +137,12 @@ export const radii = {
   mapButton: 24, // the circle of a 48 pt map button
   tabBar: 31,
   number: 31, // the reference screen of today (the bottom sheet bottom edge)
+  pill: 18, // the top pills, the scanner pills and the small action pills (the reference's 17 to 18 unified)
+  segmented: 12, // the segmented control's track
+  segmentedSegment: 9, // a segment inside the track
+  slideTrack: 32, // the 64 pt capsule of the Slide to Deliver
+  turnCard: 30, // the next-turn card
+  stripCorner: 16, // the Then strip's hanging bottom corners
 } as const;
 
 /**
@@ -169,6 +181,10 @@ export const typography = {
   button: { size: 18, lineHeight: 22, weight: '700' as const }, // D33: every button label is 18 px bold (large text, 3:1)
   stat: { size: 26, lineHeight: 31, weight: '700' as const }, // the big number of a stat row
   largeTitle: { size: 34, lineHeight: 41, weight: '700' as const },
+  chipLabel: { size: 14, lineHeight: 17, weight: '600' as const }, // the note chips and the segmented labels (14/600)
+  slideLabel: { size: 19, lineHeight: 23, weight: '700' as const }, // the Slide to Deliver label
+  streetTitle: { size: 20, lineHeight: 24, weight: '600' as const }, // the street on the turn card
+  turnDistance: { size: 38, lineHeight: 40, weight: '700' as const }, // the distance on the turn card (the rounded numbers)
   statRange: { min: 24, max: 52 } as const, // the bold numbers sit in this band
 } as const;
 

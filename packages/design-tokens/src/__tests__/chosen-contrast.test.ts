@@ -84,12 +84,18 @@ interface RecordDef {
 }
 
 /** The worst-case ratio of a (possibly rgba) text colour over a glass envelope. */
-function worstOverGlass(mode: Mode, text: string, kind: 'sheet' | 'controls'): number {
+function worstOverGlass(mode: Mode, text: string, kind: 'sheet' | 'controls', overlay?: string): number {
   let worst = Number.POSITIVE_INFINITY;
   const envelopes = glass.fillsBySurface[kind][mode];
   for (const fill of [envelopes.min, envelopes.max]) {
     for (const map of MAP_COLOURS[mode]) {
-      const background = mixOver(GLASS_FILL[mode], hexToRgb(map), fill);
+      let background = mixOver(GLASS_FILL[mode], hexToRgb(map), fill);
+      // An overlay (for example the active tab's quiet pill) composites over
+      // the glass before the ratio, so the token pile-up is covered.
+      if (overlay) {
+        const overlayAlpha = colors[mode][overlay as keyof typeof colors.light];
+        background = compositeOver(overlayAlpha as string, background);
+      }
       const bg = toHex(background);
       const paletteValue = text in colors[mode] ? (colors[mode][text as keyof typeof colors.light] as string) : null;
       const rendered = paletteValue === null
@@ -165,7 +171,8 @@ function records(): RecordDef[] {
       record(mode, 'accentText', 'accentTintOnBackground', BARS.large, contrastRatio(c.accentText, toHex(mixOver(c.accent, hexToRgb(c.background), 0.12))), 'the ghost sign-in buttons (18 px bold)'),
       record(mode, 'successText', 'card', BARS.body, contrastRatio(c.successText, c.card), 'the delivered stat (stronger than its large bar)'),
       record(mode, 'danger', 'card', BARS.large, contrastRatio(c.danger, c.card), 'the Not-home stat, 26 px bold'),
-      record(mode, 'accentText', 'glassControls', BARS.body, worstOverGlass(mode, 'accentText', 'controls'), 'the active tab label on the tab bar glass'),
+      record(mode, 'accentText', 'glassControls', BARS.body, worstOverGlass(mode, 'accentText', 'controls', 'tabActiveFill'),
+        'the active tab label on the quiet pill over the tab bar glass (D33: the pill is in the pair)'),
       record(mode, mode === 'light' ? 'card' : 'background', 'label', BARS.large,
         contrastRatio(mode === 'light' ? colors.light.card : colors.dark.background, c.label),
         'the sign-in pill: the label colour is its fill'),
@@ -180,7 +187,7 @@ function records(): RecordDef[] {
  */
 const SURFACE_INGREDIENTS: Record<string, string[]> = {
   glassSheet: ['glass'],
-  glassControls: ['glass'],
+  glassControls: ['glass', 'tabActiveFill'],
   fillOnCard: ['fill'],
   chipOnGlassSheet: ['fill', 'glass'],
   scanOverlay: ['scrim', 'glass'],
@@ -202,6 +209,9 @@ const NON_TEXT: Record<string, string> = {
   scrim: 'a recipe over imagery; asserted through the scanOverlay pair',
   warning: 'an icon and fill colour only (the note chips carry meaning by icon); no screen paints text in it',
   info2: 'an icon and fill colour only; no screen paints text in it',
+  tabActiveFill: 'the active tab pill: a surface; asserted through the glassControls pair (the pill is composited into its worst case)',
+  grabber: 'the sheet grabber: a non-text drag affordance (SC 1.4.11 review covered by the sheet review, not a D33 text bar)',
+  scanRing: 'the scanner reticle ring: a non-text graphic whose meaning is doubled by its shape and the address text it frames (WCAG SC 1.4.11 is the follow-up review, not a D33 text bar)',
 };
 
 describe('the D33 contrast table (every pair asserted, light and dark)', () => {
