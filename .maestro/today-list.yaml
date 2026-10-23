@@ -7,12 +7,22 @@ name: Today's list shows the day
     visible:
       id: "today-screen"
     timeout: 60000
-# The settings gear is in the top bar, visible on arrival.
+# The settings affordance moved to the Account tab of the floating bar
+# (D34); the intent stands - the settings are reachable on arrival.
 - assertVisible:
-    id: "today-settings"
-# The day's actions sit in the Current Run card, under the morning brief and
-# the stats grid, so they need a scroll on the emulator's viewport. The
-# courier scrolls to them; the flow does the same, then asserts each control.
+    id: "tab-settings"
+# The actions live inside the run sheet now (the design moved them there),
+# and the sheet opens at peek - the morning glance - where the screen's
+# centre, where a scroll gesture starts, is the map above the sheet. The
+# courier raises the sheet with its grabber first (the design's own
+# gesture); from half the scroll runs inside the sheet and reaches the
+# actions.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+# The actions are the screen's own testIDs: the copy moves with the design,
+# the testIDs are the contract.
 - scrollUntilVisible:
     element:
       id: "today-mark-delivered"

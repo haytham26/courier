@@ -73,15 +73,27 @@ done
 echo "pid=$pid"
 
 # The first screen must appear: the login screen (the E2E mode signs in with a
-# mock, so the app lands on the tabs - either is a valid first screen).
+# mock, so the app lands on the tabs - either is a valid first screen). The
+# emulator image's own Chromium can SIGTRAP the app seconds into a cold
+# launch (BUG-051, run 39905489019: libmonochrome through the WebView
+# factory, the crash buffer carried it): when the process is gone while we
+# wait, the app is relaunched ONCE - the crash keeps its evidence either way
+# - and the wait continues. An app that dies twice still fails the gate: a
+# retry rides out a one-off launch race, it cannot hide a reproducible crash.
+relaunched=""
 screen=""
 for _ in $(seq 1 "$SCREEN_TIMEOUT"); do
   if adb shell uiautomator dump /sdcard/window.xml > /dev/null 2>&1 &&
-     adb pull /sdcard/window.xml "$EVIDENCE/window.xml" > /dev/null 2>&1; then
-    if grep -q "today-screen\|login-screen\|compat-screen" "$EVIDENCE/window.xml" 2>/dev/null; then
-      screen="yes"
-      break
-    fi
+     adb pull /sdcard/window.xml "$EVIDENCE/window.xml" > /dev/null 2>&1 &&
+     grep -q "today-screen\|login-screen\|compat-screen" "$EVIDENCE/window.xml" 2>/dev/null; then
+    screen="yes"
+    break
+  fi
+  pid_now="$(adb shell pidof "$PKG" 2>/dev/null | tr -d '\r')"
+  if [ -z "$pid_now" ] && [ -z "$relaunched" ]; then
+    relaunched="yes"
+    echo "the app process died before the first screen; relaunching once"
+    adb shell am start -W -n "$PKG/.MainActivity" >> "$EVIDENCE/am-start.txt" 2>&1 || true
   fi
   sleep 2
 done
@@ -98,6 +110,10 @@ for flow in .maestro/*.yaml; do
   fi
   echo "::endgroup::"
 done
+
+# The screens' gate (§13.8.7) starts from the emulator shot each flow
+# captures: the takeScreenshot files land next to the flows' cwd.
+cp ./*.png "$EVIDENCE/" 2>/dev/null || true
 
 dump_evidence
 exit "$status"

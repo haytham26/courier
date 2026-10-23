@@ -2,15 +2,16 @@
  * The bottom sheet: the grabber, three heights (peek, half, full), and the
  * map stays live behind it.
  *
- * The sheet rides the sheet envelope of the glass (`glass.fillsBySurface`)
- * and moves with the sheet spring (damping 26, stiffness 260); reduced
- * motion turns the move into a quick linear fade. The grabber is the
- * 36 x 5 handle in the `grabber` token colour; dragging it (or its
- * accessible actions) changes the height.
+ * The sheet sits on the sheet envelope of the glass (`glass.fillsBySurface`)
+ * and its floor stays pinned above the tab dock (`bottomInset`): the three
+ * heights set the card's height, so the top edge is the thing that moves.
+ * The grabber is the 36 x 5 handle in the `grabber` token colour; dragging
+ * it (or its accessible actions) changes the height. Reduced motion turns
+ * the level change into a plain swap - the heights are discrete states, not
+ * a continuous track.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AccessibilityInfo, Dimensions, PanResponder, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { Dimensions, PanResponder, StyleSheet, View } from 'react-native';
 
 import { GlassSurface } from './GlassSurface';
 import { useChosen } from './context';
@@ -24,6 +25,8 @@ export interface BottomSheetProps {
   /** The ref of the `BlurTargetView` wrapping the map (the Android blur). */
   blurTarget?: React.RefObject<React.ComponentRef<typeof View> | null>;
   reduced?: boolean;
+  /** How far the sheet floor sits above the screen bottom (the tab dock). */
+  bottomInset?: number;
   testID?: string;
 }
 
@@ -40,34 +43,15 @@ export const BottomSheet = ({
   children,
   blurTarget,
   reduced: reducedProp,
+  bottomInset,
   testID,
 }: BottomSheetProps) => {
-  const { t, mode } = useChosen();
-  const [reducedState, setReducedState] = useState(false);
+  const { t } = useChosen();
 
-  const reduced = reducedProp ?? (mode === 'light' ? reducedState : reducedState); // the accessibility check decides
-  void mode;
-
-  useEffect(() => {
-    if (reducedProp !== undefined) {
-      setReducedState(reducedProp);
-    }
-  }, [reducedProp]);
-
-  useEffect(() => {
-    if (reducedProp !== undefined) {
-      return;
-    }
-    let live = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((value) => {
-      if (live) {
-        setReducedState(value);
-      }
-    });
-    return () => {
-      live = false;
-    };
-  }, [reducedProp]);
+  // Levels are discrete states, so reduced motion needs no special path: a
+  // level change is a plain swap either way. The prop is the contract the
+  // components table pins, and every caller may keep passing it.
+  void reducedProp;
 
   const heights = useMemo(() => {
     const window = Dimensions.get('window').height;
@@ -83,17 +67,6 @@ export const BottomSheet = ({
   useEffect(() => {
     setTarget(height);
   }, [height]);
-
-  const translateY = useSharedValue(Dimensions.get('window').height - heights[height]);
-
-  useEffect(() => {
-    const next = Dimensions.get('window').height - heights[target];
-    translateY.value = reduced
-      ? withTiming(next, { duration: t.motion.reduced.duration.standard })
-      : withSpring(next, t.motion.spring.sheet);
-  }, [translateY, target, heights, reduced, t]);
-
-  const animated = useAnimatedStyle(() => ({ transform: [{ translateY: translateY.value }] }), [translateY]);
 
   const bump = useCallback(
     (direction: 1 | -1) => {
@@ -120,11 +93,15 @@ export const BottomSheet = ({
   );
 
   return (
-    <Animated.View
-      style={[StyleSheet.absoluteFill, styles.warp, animated]}
+    <View
+      style={[StyleSheet.absoluteFill, styles.warp, bottomInset ? { paddingBottom: bottomInset } : null]}
       testID={testID}
     >
-      <GlassSurface kind="sheet" runtime={{ blurTarget }} style={{ borderRadius: t.radii.sheet }}>
+      <GlassSurface
+        kind="sheet"
+        runtime={{ blurTarget }}
+        style={{ borderRadius: t.radii.sheet, height: heights[target] }}
+      >
         <View
           accessible
           accessibilityRole="adjustable"
@@ -144,9 +121,9 @@ export const BottomSheet = ({
         >
           <View style={[styles.grabber, { backgroundColor: t.colors.grabber }]} />
         </View>
-        {children}
+        <View style={styles.body}>{children}</View>
       </GlassSurface>
-    </Animated.View>
+    </View>
   );
 };
 
@@ -154,6 +131,9 @@ const styles = StyleSheet.create({
   warp: {
     justifyContent: 'flex-end',
     pointerEvents: 'box-none',
+  },
+  body: {
+    flex: 1,
   },
   grabberArea: {
     height: 24,
