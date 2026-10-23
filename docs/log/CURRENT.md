@@ -67,11 +67,14 @@ delete the remote branch, ff main.
   fix is to assert the element with a minute-shaped regex - never to delete
   the assert, never to weaken it to a substring.
 - The slide (`SlideToDeliver`) delivers on the THUMB AT THE END of the travel
-  and nothing else: the release velocity was a second gate and it was a false
-  negative - a paused drag (or a fast touch stream that ends at rest) failed
-  it. The position carries the intent; a short drag still returns the thumb.
-  A red step right after `waitForAnimationToEnd` means the gesture missed, not
-  that the app crashed (check the crash buffer first).
+  and nothing else. Two false gates are gone: the release velocity (a paused
+  drag delivered nothing, run 40000405667) and the thumb's own value alone
+  (RNGH's end event can be processed BEFORE the updates on a busy device, so a
+  courier's slide silently delivered nothing, run 40025796086) - the delivery
+  now reads the further of the thumb and the end event's translation, and a
+  short drag still fails the threshold either way. A red step right after
+  `waitForAnimationToEnd` means the gesture missed, not that the app crashed
+  (check the crash buffer first).
 - The sheet's `full` height is capped by the USABLE height (window - dock inset
   - the grabber's 24 dp), not by its 0.88 fraction: 0.88 of the CI emulator's
   640 dp window plus the 100 dp dock inset is 663 dp, which lands the card's
