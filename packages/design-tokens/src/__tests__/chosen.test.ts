@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { contrastRatio, parseHex } from '../contrast';
-import { colors, glass, radii, spacing, tokens, touch, typography } from '../chosen';
+import { colors, glass, motion, radii, spacing, tokens, touch, typography } from '../chosen';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const RGBA = /^rgba\((\d{1,3}),(\d{1,3}),(\d{1,3}),(\.\d+)\)$/;
@@ -56,17 +56,36 @@ describe('the colour sets', () => {
     expect(colors.light.background).toBe('#F2F2F7');
     expect(colors.light.card).toBe('#FFFFFF');
     expect(colors.light.label).toBe('#000000');
-    expect(colors.light.secondaryLabel).toBe('rgba(60,60,67,.6)');
+    expect(colors.light.secondaryLabel).toBe('rgba(60,60,67,.9)');
     expect(colors.light.fill).toBe('rgba(120,120,128,.12)');
     expect(colors.light.separator).toBe('rgba(60,60,67,.29)');
     expect(colors.light.turnCard).toBe('#14382A');
+    expect(colors.light.turnStrip).toBe('#0F2C21');
+    expect(colors.light.scrim).toBe('rgba(0,0,0,.35)');
     expect(colors.dark.background).toBe('#000000');
     expect(colors.dark.card).toBe('#1C1C1E');
     expect(colors.dark.label).toBe('#FFFFFF');
-    expect(colors.dark.secondaryLabel).toBe('rgba(235,235,245,.6)');
+    expect(colors.dark.secondaryLabel).toBe('rgba(235,235,245,.75)');
     expect(colors.dark.fill).toBe('rgba(118,118,128,.24)');
     expect(colors.dark.separator).toBe('rgba(84,84,88,.65)');
     expect(colors.dark.turnCard).toBe('#0F2A1F');
+    expect(colors.dark.turnStrip).toBe('#0B2018');
+    expect(colors.dark.scrim).toBe('rgba(0,0,0,.35)');
+  });
+
+  it('the text-in-meaning tokens are the D33 values', () => {
+    expect(colors.light.accentText).toBe('#0857B4');
+    expect(colors.dark.accentText).toBe('#33A1FF');
+    expect(colors.light.successText).toBe('#14532D');
+    expect(colors.dark.successText).toBe('#30D158');
+    expect(colors.light.onSuccess).toBe('#000000');
+    expect(colors.dark.onSuccess).toBe('#000000');
+    expect(colors.light.onTurnStrip).toBe('rgba(255,255,255,.88)');
+    expect(colors.dark.onTurnStrip).toBe('rgba(255,255,255,.88)');
+    expect(colors.light.onTurnCard).toBe('#FFFFFF');
+    expect(colors.dark.onTurnCard).toBe('#FFFFFF');
+    expect(colors.light.onDarkGlass).toBe('#FFFFFF');
+    expect(colors.dark.onDarkGlass).toBe('#FFFFFF');
   });
 
   it('the map palette is the courier style of the reference', () => {
@@ -114,6 +133,40 @@ describe('the glass recipe', () => {
     expect(glass.fills.light).toEqual({ min: 0.72, max: 0.95 });
     expect(glass.fills.dark).toEqual({ min: 0.62, max: 0.9 });
   });
+
+  it('carries the fill envelopes of the two surfaces the screens show', () => {
+    expect(glass.fillsBySurface.sheet).toEqual({ light: { min: 0.86, max: 0.95 }, dark: { min: 0.9, max: 0.9 } });
+    expect(glass.fillsBySurface.controls).toEqual({ light: { min: 0.72, max: 0.72 }, dark: { min: 0.62, max: 0.72 } });
+  });
+});
+
+describe('the motion tokens (MASTER_EXECUTION 13.8 rule 6, D29)', () => {
+  it('carries the durations of the reference', () => {
+    expect(motion.duration).toEqual({
+      instant: 100, quick: 180, standard: 280, morph: 280, slow: 420, camera: 600, route: 900,
+    });
+  });
+
+  it('carries the curves of the reference', () => {
+    expect(motion.curve.standard).toBe('cubic-bezier(0.32, 0.72, 0, 1)');
+    expect(motion.curve.enter).toBe('cubic-bezier(0.16, 1, 0.3, 1)');
+    expect(motion.curve.exit).toBe('cubic-bezier(0.4, 0, 1, 1)');
+    expect(motion.curve.linear).toBe('linear');
+  });
+
+  it('carries the four springs', () => {
+    expect(motion.spring.sheet).toEqual({ damping: 26, stiffness: 260, mass: 1 });
+    expect(motion.spring.sphere).toEqual({ damping: 20, stiffness: 180, mass: 1 });
+    expect(motion.spring.thumb).toEqual({ damping: 22, stiffness: 220, mass: 1 });
+    expect(motion.spring.pin).toEqual({ damping: 18, stiffness: 140, mass: 1 });
+  });
+
+  it('reduced motion swaps the springs for quick linear fades', () => {
+    expect(motion.reduced.springs).toBe(false);
+    expect(Object.values(motion.reduced.curve)).toEqual(['linear', 'linear', 'linear', 'linear']);
+    expect(motion.reduced.duration.camera).toBe(150);
+    expect(Math.max(...Object.values(motion.reduced.duration))).toBeLessThanOrEqual(240);
+  });
 });
 
 describe('the corner radii', () => {
@@ -159,6 +212,7 @@ describe('the type scale', () => {
     ['body', 15, 19, '600'],
     ['paragraph', 17, 22, '400'],
     ['emphasis', 17, 22, '600'],
+    ['button', 18, 22, '700'],
     ['stat', 26, 31, '700'],
   ] as const)('%s has the reference size, line height and weight', (name, size, lineHeight, weight) => {
     expect(typography[name]).toEqual({ size, lineHeight, weight });
@@ -180,6 +234,8 @@ describe('the tokens view', () => {
     expect(light.glass.fillMin).toBe(0.72);
     expect(light.glass.fillMax).toBe(0.95);
     expect(light.glass.saturate).toBe(1.8);
+    expect(light.glass.fillsBySurface).toBe(glass.fillsBySurface);
+    expect(light.motion).toBe(motion);
 
     const dark = tokens('dark');
     expect(dark.mode).toBe('dark');
@@ -189,10 +245,11 @@ describe('the tokens view', () => {
     expect(dark.glass.saturate).toBe(1);
   });
 
-  it('serves the same radii, spacing, typography and touch in both modes', () => {
+  it('serves the same radii, spacing, typography, touch and motion in both modes', () => {
     expect(tokens('light').radii).toBe(tokens('dark').radii);
     expect(tokens('light').spacing).toBe(tokens('dark').spacing);
     expect(tokens('light').typography).toBe(tokens('dark').typography);
     expect(tokens('light').touch).toBe(tokens('dark').touch);
+    expect(tokens('light').motion).toBe(tokens('dark').motion);
   });
 });

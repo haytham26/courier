@@ -73,6 +73,12 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
 - The design must be **editable**: one token file with light and dark sets drives every colour, radius, spacing, blur and type size; no hard-coded values in screens; a token and component review screen (Storybook or a debug screen).
 - Glass uses `expo-glass-effect` (Expo SDK 58) on iOS 26+ with a runtime check; Android and older iOS fall back to a blur view with the glass token. `@callstack/liquid-glass` is the alternative if the Design squad's benchmark prefers it (record in an ADR).
 - Delivery uses **Slide to Deliver** (no single-tap delivery while driving), with an accessible alternative.
+- **Implemented 2026-10-23** per `docs/decisions/adr/ADR-008-design-system-maps-first.md`: the ONE token
+  file `packages/design-tokens/src/chosen.ts` exported as `@courier/design-tokens/chosen` (no new package),
+  the D33 contrast gate (48 asserted pairs, light and dark, worst-case glass maths, no silent
+  exclusions), the motion tokens (§13.8 rule 6, D29, D34) and the D33-mandated design changes: black
+  labels on the success fills, the darkened `successText` and `accentText`, the darker secondary label,
+  the pin number chip pattern, the scanner scrim and the 18 px bold button labels.
 
 ## D28 — StoreReady is the primary pre-submission checker (2026-10-21; renumbered from D27 when D27 became the Maps First decision)
 - **StoreReady** (github.com/MaTriXy/StoreReady, MPL-2.0, a Go CLI by MaTriXy, a friend of the founder) is the **primary** pre-submission checker, in the workflow `.github/workflows/store-ready.yml` (MASTER_EXECUTION §15). Verified on 2026-10-21: the latest release is **v0.1.0** (8 March 2026, commit `7552a29`), the command is `storeready playstore-checkup <path> --format json --output <file>`, CRITICAL blocks and WARN is a task. The version and the SHA-256 of the asset are pinned; the actions are SHA-pinned like every other workflow.
