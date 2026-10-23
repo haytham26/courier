@@ -1,0 +1,202 @@
+name: Screen recordings (13 reference screens)
+
+# MASTER_EXECUTION §13.8.7 (the evidence rule of §13.8.6): every screen PR
+# records the screen on the emulator beside its reference — light AND dark —
+# and the driving screen's frame-time trace (ADR-008 §4 tunes the motion
+# tokens against this evidence; the change lands in ADR-008, never in a
+# screen). This workflow replaces `design-videos.yml` (deleted in the same
+# PR): the ten directions are history; the 13 chosen screens are the product.
+#
+# How the gate fills in: `.maestro/recordings/` holds one flow per screen,
+# named after its reference (`03-today.yaml` records against
+# `docs/design/chosen/screens/03-today.html`). A screen PR adds its flow —
+# until then the workflow simply records what exists. The side-by-side
+# composition and every mp4 ride the `screen-recordings` artifact; the ONLY
+# emulator is the CI one (no local emulator, §16.1).
+#
+# Dark alias: the night driving is its own reference (12-driving-night), so
+# the dark pass of the driving flow is composed against that one.
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'services/**'
+      - '.maestro/**'
+      - '.github/workflows/screen-recordings.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: screen-recordings-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 12.14.0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up Java 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+
+      - name: Install the dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the design tokens
+        # The app bundles @courier/design-tokens from its built output: the
+        # package must exist before Metro can resolve it (dist/ is not
+        # committed).
+        run: pnpm --filter @courier/design-tokens build
+
+      - name: Build the release APK
+        env:
+          # The recording runs against the same E2E build the flows run on
+          # (local mocks): no Metro, no auth service, no API.
+          EXPO_PUBLIC_E2E: '1'
+        run: |
+          pnpm --filter mobile exec expo prebuild --platform android --no-install
+          cd apps/mobile/android
+          ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: recordings-app
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  record:
+    name: Record the screens on the emulator
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PKG: com.courier.copilot
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Download the APK
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: recordings-app
+          path: apk
+
+      - name: Set up Java 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache the Chromium of Playwright
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-1.49.1
+
+      - name: Render the 13 reference screens
+        # The references are static HTML at a fixed 390×844 (the phone the
+        # design was drawn on): they render to the PNG the side-by-side
+        # composes against. Chromium is the renderer; the browser is cached.
+        run: |
+          mkdir -p ~/.cache/ms-playwright
+          npx --yes playwright@1.49.1 install chromium --with-deps
+          mkdir -p render
+          for html in docs/design/chosen/screens/*.html; do
+            name="$(basename "$html" .html)"
+            npx --yes playwright@1.49.1 screenshot \
+              --viewport-size=390,844 --wait-for-timeout=2500 \
+              "file://$PWD/$html" "render/$name.png"
+            echo "rendered: $name"
+          done
+          ls -la render
+
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Cache the AVD snapshot
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.android/avd
+          key: avd-${{ runner.os }}-34-google-apis-x86_64
+
+      - name: Boot the emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: Nexus 6
+          # The animations stay on: the recording is the evidence of the
+          # motion (the flows gate runs under the same rules it asserts).
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+
+      - name: Install the Maestro CLI
+        run: |
+          # The installer is downloaded, printed and executed: it is never
+          # piped into a shell (the V4 §7 rule).
+          curl -Ls "https://get.maestro.mobile.dev" -o "$RUNNER_TEMP/maestro-install.sh"
+          cat "$RUNNER_TEMP/maestro-install.sh"
+          bash "$RUNNER_TEMP/maestro-install.sh"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Install the APK and grant the device
+        run: |
+          adb wait-for-device
+          adb install -r apk/app-release.apk
+          # The permissions are granted up front: the system dialog would sit
+          # on top of the screen the recording has to show.
+          adb shell pm grant "$PKG" android.permission.RECORD_AUDIO || true
+          adb shell pm grant "$PKG" android.permission.ACCESS_FINE_LOCATION || true
+          adb shell pm grant "$PKG" android.permission.ACCESS_COARSE_LOCATION || true
+          adb shell input keyevent KEYCODE_WAKEUP || true
+          adb shell wm dismiss-keyguard || true
+
+      - name: Record each screen (light and dark)
+        run: bash .maestro/recordings-run.sh
+
+      - name: Upload the recordings
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: screen-recordings
+          path: |
+            .maestro/recordings/**
+            render/**
+          if-no-files-found: warn
+          retention-days: 14

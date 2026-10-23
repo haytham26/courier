@@ -1,0 +1,39 @@
+appId: com.courier.copilot
+name: R.03 today — the sheet's three levels on the floating dock
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+- assertVisible:
+    id: "today-sheet"
+# The sheet walks its three levels: the grabber's pan raises past peek to
+# half, then to full — the springs between the levels are the motion the
+# recording keeps (§13.8.7). It settles back down to peek, the state the
+# reference (03-today.html) shows.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- waitForAnimationToEnd:
+    timeout: 2500
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- waitForAnimationToEnd:
+    timeout: 2500
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: DOWN
+- waitForAnimationToEnd:
+    timeout: 2500
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: DOWN
+- waitForAnimationToEnd:
+    timeout: 2500

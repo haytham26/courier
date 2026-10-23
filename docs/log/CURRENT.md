@@ -1,10 +1,10 @@
 # CURRENT — the handoff
 
 **Week:** 2026-W43 (the full log is in `docs/log/2026-W43.md`)
-**Branch:** `feat/t6-components` — T6 slice 2 (the components of
-`docs/design/chosen/README.md` on the ONE token file) ready to push as PR #10.
-After merge: `archive/feat/t6-components` tag at the tip, delete the remote
-branch, ff main.
+**Branch:** `feat/t6-recordings` — the screen-recording workflow of the 13
+screens (this PR): ADR-008/P4 replaces `design-videos.yml`, and the first
+dispatch waits for T6 step 01 (PR #11 on `feat/t6-screens`) to merge so the
+first side-by-side records the REBUILT Today. After merge: ff main.
 
 ## Where the company stands
 
@@ -20,13 +20,17 @@ branch, ff main.
 
 ## The queue
 
-1. T6 slice 3 — the 13 screens light and dark on the chosen components, each with
-   the side-by-side emulator-vs-reference gate and the Drive frame-time trace
-   (§13.8.7); then the legacy token modules (`tokens.ts`, `themes*`, `directions*`)
-   are deleted (Nothing but the chosen file stays).
-2. Screens to wire: Today, Route, Stop, Scan, Delivered, Turn-by-turn, Copilot,
-   Account — the component prop surfaces are in `apps/mobile/src/components/chosen/index.ts`.
-3. After T6: T5 per plan order; the Spoke table's tasks enter via INNOVATION.md.
+1. In review: T6 slice 3 step 01 — Today on the chosen tokens (PR
+   `feat/t6-screens`, the D34 dock as a navigator prop; BUG-049 has the
+   bar's accounting).
+2. This PR: the recording workflow (queue item 1); after both merge, the
+   first dispatch records the rebuilt Today beside `03-today.html`.
+3. Slice 3 steps: 04 Driving (TurnCard + slide over the map), 05 Delivered,
+   06 Scan (the camera), 07 Copilot (the transcript), 08 Route, then the
+   smaller ones (09–13). Every step adds ITS flow to
+   `.maestro/recordings/` with the PR.
+4. After the 13: delete the legacy token modules (`tokens.ts`, `themes*`,
+   `directions*`) — the chosen file is the only one left.
 
 ## The traps
 
