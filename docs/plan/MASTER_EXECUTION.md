@@ -553,6 +553,9 @@ Quality stays at the top; these rules only remove waste.
 8. **Memory.** After each task, update `docs/log/CURRENT.md` in at most 30 lines: state, next item, traps. A new or compacted session starts from that file, STATUS.md and this plan, not from scratch.
 9. **Cost line.** Report the week's agent cost and CI minutes in the company report (§17.1).
 
+### 19.2b Never stop between items (founder directive 2026-10-23, binding)
+The plan is the approval. When an item of the queue is finished, start the next one immediately in the same session. Never end with "say the word and it starts" or any request for permission to continue. Stop only at the §6 Definition of Done, or for an item that truly needs the founder (write it in FOUNDER_TODO and keep working on everything else).
+
 ### 19.3 Definition of done for every task (so nothing is redone)
 - The spec or task text is linked.
 - The tests are written first, or with the change (test-driven-development).
