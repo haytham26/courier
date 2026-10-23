@@ -21,6 +21,9 @@ now on, each item on its own branch from `main`.
 
 1. T6 Maps First in slices: ADR-008 ("Design system: Maps First") and the ONE token
    file (light and dark, motion durations and curves included) first.
+   The token file ships WITH the §13.9 contrast test (D33: 3:1 only for large
+   text, buttons 18 px bold, 4.5:1 other text, 7:1 driving, every pair asserted).
+   Also delete the leftover branch `docs/status-report` after its archive tag.
 2. The components of `docs/design/chosen/README.md` (glass, tab bar, sheet, map
    buttons, slide-to-deliver), then the 13 screens light and dark — each with the
    side-by-side emulator-vs-reference gate and the Drive frame-time trace (§13.8.7).
