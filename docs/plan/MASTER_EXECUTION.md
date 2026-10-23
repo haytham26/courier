@@ -437,6 +437,38 @@ Cover each of these with evidence:
 
 For each one, give our plan to be clearly better, measured: fewer taps per stop, faster scan-to-route, works offline, hands-free.
 
+### 17.7 Close every competitor gap and lead (founder directive 2026-10-23, binding)
+1. **Every gap is scheduled.** Every row marked **missing** in the capability table of `docs/research/competitors/spoke.md` becomes a scheduled task with a squad, a spec, tests and a slot in the §4 order. "Recorded, not scheduled" is not allowed for gaps. This covers:
+   - the solver;
+   - partial reopt;
+   - zone priorities;
+   - van load chips;
+   - address dictation;
+   - finish-time honesty;
+   - the share link;
+   - the break row;
+   - POD for the solo courier;
+   - Android Auto and CarPlay readiness.
+
+   Each one is built so we are clearly better, measured (taps per stop, time to route, works offline, hands-free).
+2. **Innovation ideas.** Ideas 39 to 44 and the B-1 to B-6 drafts get a decision within the week: scheduled with a slot, or rejected with a reason in INNOVATION.md.
+3. **Extend the research to the whole market** with the same depth (§17.6), from public sources only:
+   - Circuit (Spoke);
+   - Routific;
+   - Upper;
+   - MyRouteOnline;
+   - Route4Me;
+   - OptimoRoute;
+   - Onfleet and Tookan driver apps;
+   - Google Maps and Waze multi-stop.
+
+   One file per competitor in `docs/research/competitors/`, and one merged capability matrix (`docs/research/competitors/MATRIX.md`). Every missing row becomes a task as in step 1.
+4. **The Innovation and Creative squads meet weekly** (an agent session). They:
+   - review the matrix, store reviews and driver feedback;
+   - propose at least 3 ideas where we leapfrog everyone (voice, offline, NZ address truth, scanner, 3D driving camera, safety), each with the driver problem it solves and how we measure it;
+   - send the chosen ones to the queue with an owner.
+5. **Every squad keeps its own improvement list**, reviewed in the weekly company report (§17.1): Product, Design, Mobile, Backend, Maps, Voice, QA, Security, Growth and Operations.
+
 ## 18. Company completeness: the gaps to close (founder's chief adviser, 2026-10-23, binding; see D31)
 Each item below becomes a task with an owner squad, a spec and evidence, merged into the §4 order. Items that need the founder (money, legal signatures, real people) go to FOUNDER_TODO with a recommendation and a deadline.
 
