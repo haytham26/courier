@@ -99,5 +99,9 @@ for flow in .maestro/*.yaml; do
   echo "::endgroup::"
 done
 
+# The screens' gate (§13.8.7) starts from the emulator shot each flow
+# captures: the takeScreenshot files land next to the flows' cwd.
+cp ./*.png "$EVIDENCE/" 2>/dev/null || true
+
 dump_evidence
 exit "$status"

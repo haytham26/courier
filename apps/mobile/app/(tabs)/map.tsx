@@ -17,9 +17,9 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { Button } from '@/components/Button';
 import { Sheet } from '@/components/Sheet';
 import { subscribeToVoiceCommands } from '@/voice/commandChannel';
-import { getConfiguredGlyphsUrl, getConfiguredTileUrl, getSatelliteSource } from '@/maps/config';
-import { describe, resolveTileSource, type TileSource } from '@/maps/offlinePack';
-import { loadOfflinePack, localGlyphsUrl, type OfflinePackRuntime } from '@/maps/packFiles';
+import { getSatelliteSource } from '@/maps/config';
+import { describe } from '@/maps/offlinePack';
+import { useMapBoot } from '@/maps/useMapBoot';
 import { ATTRIBUTION_LINES, getCourierStyle } from '@/maps/styles';
 import {
   markerLabelColor,
@@ -74,8 +74,6 @@ export default function MapScreen() {
   const { theme, themeName, themePreference, setThemePreference } = useTheme();
   const driverId = useDriverId();
   const [selectedStop, setSelectedStop] = useState<Stop | null>(null);
-  const [pack, setPack] = useState<OfflinePackRuntime | null>(null);
-  const [glyphsUrl, setGlyphsUrl] = useState<string | null>(null);
   const [bounds, setBounds] = useState<LngLatBounds | null>(null);
   const [locationAllowed, setLocationAllowed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -90,34 +88,10 @@ export default function MapScreen() {
 
   const { toggles, setToggles } = useMapToggles({ driverId });
 
-  // The offline pack and the glyph bundle are read once, when the screen
-  // opens. Neither needs the network, and neither may take the screen down.
-  useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const result = await loadOfflinePack();
-        if (!cancelled) {
-          setPack(result);
-        }
-      } catch (error) {
-        console.warn(`maps: the offline pack could not be loaded: ${describe(error)}`);
-      }
-      try {
-        const local = localGlyphsUrl();
-        if (!cancelled) {
-          setGlyphsUrl(local ?? getConfiguredGlyphsUrl());
-        }
-      } catch (error) {
-        console.warn(`maps: the glyph bundle could not be read: ${describe(error)}`);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // The offline pack and the glyphs, read once by the shared boot (SYSTEM
+  // §6): the tiles of the pack when it is ready, the online tiles when it
+  // is not, and the grey style when there is nothing at all.
+  const { tileSource, glyphsUrl, pack } = useMapBoot();
 
   // The position puck is only drawn when the courier has allowed the
   // location. Without the permission the map still works.
@@ -186,14 +160,6 @@ export default function MapScreen() {
       subscription?.remove();
     };
   }, [locationAllowed]);
-
-  const tileSource: TileSource = useMemo(() => {
-    const onlineTiles = getConfiguredTileUrl();
-    if (!pack) {
-      return onlineTiles ? { kind: 'online', url: onlineTiles } : { kind: 'none' };
-    }
-    return resolveTileSource(pack.state, pack.locations, onlineTiles);
-  }, [pack]);
 
   // The satellite imagery is only ever used when the build names the
   // provider and its licence.

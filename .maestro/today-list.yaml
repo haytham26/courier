@@ -7,9 +7,10 @@ name: Today's list shows the day
     visible:
       id: "today-screen"
     timeout: 60000
-# The settings gear is in the top bar, visible on arrival.
+# The settings affordance moved to the Account tab of the floating bar
+# (D34); the intent stands - the settings are reachable on arrival.
 - assertVisible:
-    id: "today-settings"
+    id: "tab-settings"
 # The day's actions sit in the Current Run card, under the morning brief and
 # the stats grid, so they need a scroll on the emulator's viewport. The
 # courier scrolls to them; the flow does the same, then asserts each control.

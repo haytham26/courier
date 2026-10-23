@@ -24,6 +24,8 @@ export interface BottomSheetProps {
   /** The ref of the `BlurTargetView` wrapping the map (the Android blur). */
   blurTarget?: React.RefObject<React.ComponentRef<typeof View> | null>;
   reduced?: boolean;
+  /** How far the sheet floor sits above the screen bottom (the tab dock). */
+  bottomInset?: number;
   testID?: string;
 }
 
@@ -40,6 +42,7 @@ export const BottomSheet = ({
   children,
   blurTarget,
   reduced: reducedProp,
+  bottomInset,
   testID,
 }: BottomSheetProps) => {
   const { t, mode } = useChosen();
@@ -121,7 +124,7 @@ export const BottomSheet = ({
 
   return (
     <Animated.View
-      style={[StyleSheet.absoluteFill, styles.warp, animated]}
+      style={[StyleSheet.absoluteFill, styles.warp, bottomInset ? { paddingBottom: bottomInset } : null, animated]}
       testID={testID}
     >
       <GlassSurface kind="sheet" runtime={{ blurTarget }} style={{ borderRadius: t.radii.sheet }}>

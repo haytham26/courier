@@ -1,100 +1,183 @@
-import React from 'react';
-import { Tabs } from 'expo-router/js-tabs';
-import { useTheme } from '@/providers/ThemeProvider';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
-
 /**
- * The four tabs of the app.
+ * The tabs' layout with the floating bar of D34.
  *
- * One icon set for the whole app: Material Symbols through
- * `@expo/vector-icons` (`docs/design/SYSTEM.md` §7 - no emoji, ever).
+ * The navigator keeps the four routes (Today, Route, Map, Account); its
+ * native bar is replaced by the chosen `TabBar`, whose centre is the raised
+ * Copilot sphere on glass. The slot testIDs are the contract the Maestro
+ * flows tap (`tab-stops`, `tab-map`), so the Route slot keeps the stops
+ * route's testID and the Account slot keeps the settings route's one - the
+ * words move with the design, the testIDs do not.
  *
- * Every tab has an accessibility label and a testID, because the Maestro
- * flows find the tabs by their label.
+ * The sphere is the voice: a tap toggles the microphone (a haptic per D34),
+ * a long press says the morning brief again, and the caption under the bar
+ * is the last thing the phone heard. The chosen tokens wrap everything, so
+ * the bar and every screen on it resolve light or dark from the system.
  */
-const tabs = {
-  index: {
-    title: 'Home',
-    label: 'Home',
-    focused: 'home',
-    unfocused: 'home-outline',
-  },
-  map: {
-    title: 'Map',
-    label: 'Map',
-    focused: 'map',
-    unfocused: 'map-outline',
-  },
-  stops: {
-    title: 'Stops',
-    label: 'Stops',
-    focused: 'view-list',
-    unfocused: 'view-list-outline',
-  },
-  settings: {
-    title: 'Settings',
-    label: 'Settings',
-    focused: 'cog',
-    unfocused: 'cog-outline',
-  },
-} as const;
+import React, { useCallback } from 'react';
+import { Tabs } from 'expo-router/js-tabs';
+import { useRouter } from 'expo-router';
+import { useColorScheme } from 'react-native';
 
-type TabName = keyof typeof tabs;
+import { ChosenProvider, TabBar } from '@/components/chosen';
+import type { CopilotState, TabSlot } from '@/components/chosen';
+import { hapticFor } from '@/motion/haptics';
+import { useOptionalAuth } from '@/providers/AuthProvider';
+import type { VoiceCommand, VoiceState } from '@/voice/VoiceService';
+import { useCourierVoice } from '@/voice/useCourierVoice';
+import { useVoice } from '@/voice/useVoice';
 
-// The app is opened from the launcher without a deep link most of the time:
-// the URL is then empty and the router needs to know which screen to open
-// first, or the tabs have no child to render.
+import { BriefContext } from './briefContext';
+
+/** The words of the command types: what the caption of the bar reads. */
+const commandWords: Record<VoiceCommand['type'], string> = {
+  mark_delivered: 'Marked delivered',
+  mark_skipped: 'Marked skipped',
+  mark_failed: 'Marked failed',
+  add_stop: 'New stop added',
+  start_break: 'On a break',
+  end_break: 'Back on the run',
+  add_location_note: 'Note added',
+  navigate_next: 'Next stop',
+  navigate_previous: 'Back a stop',
+  repeat_instruction: 'Say it again',
+  where_am_i: 'Where am I',
+  how_many_left: 'How many left',
+  start_shift: 'Shift started',
+  end_shift: 'Shift ended',
+  emergency: 'Emergency',
+  set_map_mode: 'Map mode',
+  zoom_to_next_stop: 'Next stop',
+  tilt_map: 'Tilt',
+  follow_me: 'Follow me',
+  look_back: 'Look back',
+  reset_camera: 'Camera reset',
+  set_quiet_mode: 'Quiet mode',
+  set_verbosity: 'Detail level',
+};
+
+/** The words for each state of the voice engine, as the sphere announces them. */
+const copilotStateOf = (state: VoiceState, ready: boolean): CopilotState => {
+  if (!ready || state === 'error') {
+    return 'offline';
+  }
+  switch (state) {
+    case 'listening':
+      return 'listening';
+    case 'processing':
+      return 'thinking';
+    case 'speaking':
+      return 'speaking';
+    default:
+      return 'idle';
+  }
+};
+
+type TabRoute = 'index' | 'stops' | 'map' | 'settings';
+
+/** The active key of a route, as the bar's slots spell it. */
+const slotKey = (route: TabRoute): 'today' | 'stops' | 'map' | 'settings' =>
+  route === 'index' ? 'today' : route;
+
 export const unstable_settings = {
   initialRouteName: 'index',
 };
 
 export default function TabsLayout() {
-  const { theme } = useTheme();
+  const router = useRouter();
+  const scheme = useColorScheme();
+  const auth = useOptionalAuth();
+  const voice = useVoice();
+  const courierVoice = useCourierVoice({ driverId: auth?.user?.id ?? null });
 
-  const activeColor = String(theme.colors.brandPrimary);
-  const inactiveColor = String(theme.colors.textSecondary);
-  const surfaceColor = String(theme.colors.surface);
-  const borderColor = String(theme.colors.border);
+  const toggleVoice = useCallback(() => {
+    hapticFor('voice');
+    if (voice.state === 'listening') {
+      void voice.stopListening();
+    } else {
+      void voice.startListening();
+    }
+  }, [voice]);
+
+  const sayBrief = useCallback(() => {
+    const line = courierVoice.brief?.text;
+    if (line && line.length > 0) {
+      hapticFor('voice');
+      void voice.speak(line);
+    }
+  }, [courierVoice.brief, voice]);
+
+  const slots = useCallback((active: 'today' | 'stops' | 'map' | 'settings') => {
+    const onClick = (route: string) => () => router.navigate(route);
+    const today: TabSlot = {
+      key: 'today',
+      label: 'Today',
+      name: 'calendar' as const,
+      active: active === 'today',
+      onPress: onClick('/'),
+    };
+    const stops: TabSlot = {
+      key: 'stops',
+      label: 'Route',
+      name: 'list' as const,
+      active: active === 'stops',
+      onPress: onClick('/stops'),
+    };
+    const map: TabSlot = {
+      key: 'map',
+      label: 'Map',
+      name: 'map' as const,
+      active: active === 'map',
+      onPress: onClick('/map'),
+    };
+    const settings: TabSlot = {
+      key: 'settings',
+      label: 'Account',
+      name: 'person' as const,
+      active: active === 'settings',
+      onPress: onClick('/settings'),
+    };
+    return { today, stops, map, settings } as const;
+  }, [router]);
 
   return (
-    <Tabs
-      id="tabs"
-      screenOptions={({ route }) => {
-        const routeTab = tabs[route.name as TabName] ?? tabs.index;
-        return {
-          tabBarActiveTintColor: activeColor,
-          tabBarInactiveTintColor: inactiveColor,
-          tabBarStyle: {
-            backgroundColor: surfaceColor,
-            borderTopColor: borderColor,
-            borderTopWidth: 1,
-            height: 64,
-            paddingBottom: Platform.OS === 'ios' ? 12 : 0,
-          },
-          tabBarLabelStyle: {
-            fontSize: 17,
-            fontWeight: '600',
-            marginTop: 2,
-          },
-          tabBarIcon: ({ focused, color, size }) => (
-            <MaterialCommunityIcons
-              name={focused ? routeTab.focused : routeTab.unfocused}
-              size={size}
-              color={color as string}
-            />
-          ),
-          // The tab is a control: it needs a name and a role, and the Maestro
-          // flows find it by the name.
-          tabBarAccessibilityLabel: routeTab.label,
-          tabBarButtonTestID: `tab-${route.name}`,
-        };
-      }}
-    >
-      <Tabs.Screen name="index" options={{ title: 'Home', tabBarButtonTestID: 'tab-home' }} />
-      <Tabs.Screen name="map" options={{ title: 'Map', tabBarButtonTestID: 'tab-map' }} />
-      <Tabs.Screen name="stops" options={{ title: 'Stops', tabBarButtonTestID: 'tab-stops' }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarButtonTestID: 'tab-settings' }} />
-    </Tabs>
+    <ChosenProvider mode={scheme === 'dark' ? 'dark' : 'light'}>
+      <BriefContext.Provider value={courierVoice}>
+        <Tabs
+          id="tabs"
+          screenOptions={({ route }) => {
+            const tab = slots(slotKey(route.name as TabRoute));
+            return {
+              headerShown: false,
+              // The native bar is replaced: the D34 bar floats on the glass
+              // dock and the screens keep their edges to the screen.
+              tabBar: () => (
+                <TabBar
+                  left={[tab.today, tab.stops]}
+                  right={[tab.map, tab.settings]}
+                  copilot={{
+                    state: copilotStateOf(voice.state, voice.isReady),
+                    onPress: toggleVoice,
+                    onLongPress: sayBrief,
+                  }}
+                  caption={voice.lastCommand ? commandWords[voice.lastCommand.type] : undefined}
+                />
+              ),
+              tabBarStyle: {
+                position: 'absolute',
+                height: 150,
+                backgroundColor: 'transparent',
+                borderTopWidth: 0,
+                elevation: 0,
+              },
+            };
+          }}
+        >
+          <Tabs.Screen name="index" options={{ title: 'Today' }} />
+          <Tabs.Screen name="stops" options={{ title: 'Route' }} />
+          <Tabs.Screen name="map" options={{ title: 'Map' }} />
+          <Tabs.Screen name="settings" options={{ title: 'Account' }} />
+        </Tabs>
+      </BriefContext.Provider>
+    </ChosenProvider>
   );
 }
