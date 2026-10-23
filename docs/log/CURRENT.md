@@ -82,6 +82,12 @@ delete the remote branch, ff main.
   changes the level) off the a11y tree with it. The regression test pins the
   emulator's 320x640 window, because the jest default window is taller and the
   cap would never bind there.
+- Two advisory catch-ups in one day, handled by the gate's own rules: zod is
+  ACCEPTED (build-time only, `@expo/cli`'s own dep, no patched version on the
+  pinned expo line); filelock is CONSTRAINED (`tool.uv`
+  constraint-dependencies, the certifi pattern) because a patch exists - and
+  the constraint forces litellm 1.106.0 down to 1.103.7 (1.106.0 pins
+  `filelock<4`), which the api's suite (160 passed) proved safe.
 - Two 2-runner emulator E2E workflows in one window share the fleet (the api
   legs' GL preempts, flows freeze or die at `launchApp`): run one E2E at a
   time and rerun one leg at a time, per PLAYBOOK §1.
