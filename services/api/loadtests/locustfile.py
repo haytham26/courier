@@ -174,7 +174,8 @@ def assert_the_slos(environment: Any, **_kwargs: Any) -> None:
     """The run's verdict: the SLOs as thresholds, red on breach."""
     failures = 0
     wanted = (
-        ("GET", "/shifts/", ROUTE_P95_MS),
+        ("GET", "/route", ROUTE_P95_MS),
+        ("GET", "/stops", SYNC_P95_MS),
         ("POST", "/events:batch", SYNC_P95_MS),
         ("POST", "/pod", POD_P95_MS),
     )
@@ -187,7 +188,16 @@ def assert_the_slos(environment: Any, **_kwargs: Any) -> None:
                     print(f"SLO BREACH: {method} {entry.name} p95 {p95:.0f} ms > {threshold} ms")
                     failures += 1
     total = environment.stats.total
-    if total.num_requests and total.fail_ratio > MAX_ERROR_RATE:
+    # The vacuous-green guard (the review's must-fix): a run that greets
+    # nothing - no identity, a path mismatch, a dead API - measures nothing,
+    # and "nothing failed" is not "the SLOs are met". The floor is the
+    # profile's own expectation: 50 users x 60 s with the day-loop task mix
+    # lands well past 200 requests; anything under is a broken run.
+    if total.num_requests < 200:
+        environment.process_exit_code = 1
+        print(f"VACUOUS RUN: only {total.num_requests} requests - the gate needs a seeded, reachable API")
+        failures += 1
+    elif total.fail_ratio > MAX_ERROR_RATE:
         environment.process_exit_code = 1
         print(f"ERROR BUDGET BREACH: fail ratio {total.fail_ratio:.4f} > {MAX_ERROR_RATE}")
         failures += 1

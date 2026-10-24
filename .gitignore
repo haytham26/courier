@@ -51,3 +51,6 @@ data/labels/
 /NEXT_SHIFT_PROMPT.md
 
 research-private/
+
+# The load test's minted identity (a throwaway key, never a credential)
+.loadtest/
