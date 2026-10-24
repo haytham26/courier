@@ -87,13 +87,19 @@ function ScannerSurface() {
   const found = reading !== null && reading.kind === 'found' ? reading.match : null;
   const unavailable = reading !== null && reading.kind === 'unavailable' ? reading.reason : null;
 
+  // The precedence is the reader's, not the camera's: what the reader says
+  // wins. The E2E build's reader is a mock that reads the run's labels without
+  // a camera (the emulator is started with -camera-back none, so no back
+  // device exists there), and putting the device check first meant the mock's
+  // answer could never reach the screen. A device with no camera now reads as
+  // "nothing to point at", which is only said while nothing has been read yet.
   const status =
-    device === undefined
-      ? 'This device has no camera.'
-      : unavailable !== null
-        ? 'This build cannot read labels yet.'
-        : found !== null
-          ? 'Address found. Hold steady.'
+    unavailable !== null
+      ? 'This build cannot read labels yet.'
+      : found !== null
+        ? 'Address found. Hold steady.'
+        : device === undefined
+          ? 'This device has no camera.'
           : 'Point the camera at the label.';
 
   const statusHint = unavailable ?? undefined;
