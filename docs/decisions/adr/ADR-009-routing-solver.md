@@ -51,10 +51,14 @@ rounded **up**, so a solution PyVRP calls feasible stays feasible under the core
 and hands a `ProblemData(locations, clients, depots, vehicle_types, [distances], [durations])`
 to the free function `pyvrp.solve(data, MaxIterations(n), seed, collect_stats=False, display=False)`.
 
-- Direct construction, not the `Model` helper: the probes measured 200-stop solves through `Model`
-  creeping from ~1.6 s to ~7.5 s in-process — ~31 000 pybind11 `Edge` objects per build stress the
-  GC generations (evidence: `creep_probe.py` run, timing flat when the same `ProblemData` was
-  re-solved). Direct construction removed the object storm entirely.
+- Direct construction, not the `Model` helper: the pre-engine probes measured 200-stop solves
+  through `Model` creeping from ~1.6 s to ~7.5 s in-process — ~31 000 pybind11 `Edge` objects per
+  build stress the GC generations. Direct construction keeps the **build** flat (~0.37 s per
+  200-stop build, `creep_probe.py`); what still creeps in one process is the **solve** itself on
+  long runs (1.53 → 5.94 s over three 1000-iteration solves in one process) — which is why the
+  production budget is 250 iterations, at which the benchmark's three in-process attempts are flat
+  (4.80 / 4.70 / 4.67 s, `benchmark.json` `runs`). Probe evidence: `creep_probe.py` (committed
+  beside this evidence in `docs/evidence/backend-solver/`).
 - `Location(x=lon, y=lat)` only names the points; every real value lives in the matrices.
 - One vehicle; `unit_distance_cost=0`, `unit_duration_cost=1` — the objective is the day's length,
   which is what the courier feels and what the budget is written on. (At uniform speed the drive
@@ -121,15 +125,19 @@ the engine's constructor, never by editing the test).
 
 ### 6. The contract changes the rest of the system sees
 
-- `RoutePlan.engine` is now `"pyvrp"` | `"heuristic-nn-2opt"` (plus the internal seed/baseline
-  names `"heuristic-nn"` and `"template-lock"` used by `seed_plan`/`schedule_plan`).
+- `RoutePlan.engine` is now `"pyvrp"` | `"heuristic-nn-2opt"` (plus the internal names
+  `"heuristic-nn"` and `"template-lock"` used by `seed_plan`/`schedule_plan`, and
+  `"partial-reopt"` emitted by `build_reopt_plan` — the runs API must accept all five).
 - `COURIER_ROUTE_ENGINE` selects the release lever: `pyvrp` (default) or `heuristic-nn-2opt`; an
-  unknown value raises; a missing PyVRP installs a `RuntimeWarning` and falls back.
+  unknown value raises; a missing PyVRP installs a `RuntimeWarning` and falls back. (Read once per
+  process — `lru_cache`; the lever is a deploy-time setting, not a per-request one.)
 - The break/finish fields (`break_start_at`, `break_end_at`, `break_violation`) and the reopt
   surface (`build_reopt_plan` → `ReoptResult.plan/finish_delta_s`) carry through unchanged from
-  the core.
-- Infeasible days (`Solution.is_feasible()` false on both phases) fall back to the heuristic,
-  which reports the violations honestly; the fallback is visible in `RoutePlan.engine`.
+  the core; an explicitly told `break_position` outside the day raises (never silently re-placed).
+- Infeasible days (`Solution.is_feasible()` false on **either** phase) fall back to the heuristic,
+  which reports the violations honestly; the fallback is visible in `RoutePlan.engine`. A load
+  over the capacity is not a fallback trigger when every phase fits on its own — the plan's
+  `over_capacity` flag stays the verdict (the engine name must not be read as "the day fits").
 
 ### 7. Deliberate test changes (recorded, none weakened)
 

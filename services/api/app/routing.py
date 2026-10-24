@@ -7,9 +7,11 @@ no GraphHopper and no OSRM) can prove the plan end to end.
 The engine behind the `RouteEngine` protocol decides the order; this module
 decides the times. `get_engine()` returns the production solver
 (`PyVRPEngine`, in `app/solver.py`, ADR-009), and falls back to the
-deterministic heuristic both when the solver is not available and when the
-day cannot be solved feasibly - a window that cannot be met, a load over the
-capacity - so every violation is still reported rather than a stop dropped.
+deterministic heuristic both when the solver is not available and when a
+phase of the day cannot be planned feasibly at all - a window that cannot be
+met - so every violation is still reported rather than a stop dropped. A load
+over the capacity is flagged by the plan, never silently fixed: when every
+phase fits, the day is planned and `over_capacity` says so.
 
 The heuristic is a nearest-neighbour seed followed by a 2-opt improvement.
 Both run inside the priority group and the ordinary group separately, so the
@@ -294,12 +296,16 @@ def _schedule(
 ) -> _Timing:
     """Times an order, placing the break where it is told to, or greedily well.
 
-    `break_position` is the number of stops before the break. Between two
-    stops only - 0 and the stop count are refused - and when it is not given
-    the position comes out of the same score as the reopt slots: the least
-    violation, then the earliest finish, then the front of the day.
+    `break_position` is the number of stops before the break. It must stand
+    strictly between two stops - 1 up to the stop count - 1 - and anything
+    else raises: a told position is never silently re-read as "not given".
+    When it is not given the position comes out of the same score as the
+    reopt slots: the least violation, then the earliest finish, then the
+    front of the day.
     """
     constraint = request.constraints.break_constraint
+    if break_position is not None and not 1 <= break_position < len(order):
+        raise ValueError("the break position must stand strictly between two stops of the day")
     if constraint is None:
         return _walk(order, request, None)
     candidates: Iterable[int] = (

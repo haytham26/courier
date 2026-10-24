@@ -8,6 +8,7 @@ Date: 2026-10-24 · Branch: `feat/routing-solver` · ADR-009 · D35
 |---|---|
 | `benchmark.json` | the solver benchmark: the reconstructed 174-stop Christchurch day (break + windows), 12 timed runs through the seam, the licence, the budget row |
 | `services/api/benchmarks/benchmark_solver.py` | the harness itself: `uv run --directory services/api python -m benchmarks.benchmark_solver` regenerates the day and the JSON (seeded, the seed recorded inside) |
+| `creep_probe.py` | the raw GC-creep probe ADR-009 §2 cites: direct `ProblemData` builds flat (~0.37 s), repeated long (1000-iter) solves creep in one process (1.53→5.94 s), production 250-iter attempts flat — with its 2026-10-24 output in the header |
 
 ## The headline table (from `benchmark.json`, 3 timed attempts per config)
 
@@ -27,8 +28,9 @@ rule of `docs/plan/CONSTRAINTS.md` — same construction as the suite's budget t
 
 ## What the running of the benchmark found
 
-Two defects were found by the first benchmark attempts and fixed in the same task, both visible
-in the JSON deltas:
+Two defects were found by the first benchmark attempts and fixed in the same task. The committed
+JSON holds the **after** state only (the final run); the before-fix numbers are quoted here and in
+ADR-009 §3, captured in the session log:
 
 1. **The two-phase hand-over anchor was the day's depot, not the van.** Phase-2's model must start
    where the van stands (the last priority stop). Before the fix: `pyvrp-250` = 177.5 km,

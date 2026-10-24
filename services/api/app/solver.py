@@ -23,10 +23,12 @@ orders. The core's own scored placement decides where the break goes, and
 the same walk that times the day reports whether the break window, and
 every stop window, was met.
 
-When the day cannot be solved feasibly - a window that cannot be met, a
-load over the capacity - the engine falls back to the deterministic
-heuristic, which reports the violations honestly instead of dropping a
-stop.
+When a phase of the day cannot be planned feasibly at all - a window that
+cannot be met - the engine falls back to the deterministic heuristic, which
+reports the violations honestly instead of dropping a stop. A load over the
+van's capacity does not force the fallback when every phase fits on its own:
+the day is planned and the plan's `over_capacity` flag - the walk's own
+verdict - says so.
 """
 
 from __future__ import annotations

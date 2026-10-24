@@ -2,12 +2,15 @@
 
 The engine that plans production days is `PyVRPEngine` (ADR-009): PyVRP 0.14.1
 solves the day with the same distance model the heuristic uses, the priority
-stops are solved first as their own tour, and the break of the day is part of
-the model as a required zero-travel stop. The routing core alone times the
-plan, so both engines give the same arrival times for the same order. When
-the day cannot be solved feasibly - a window that cannot be met, a load over
-the capacity - the engine falls back to the deterministic heuristic, which
-reports the violations plainly.
+stops are solved first as their own tour, and the break of the day is NOT in
+the solver's model - PyVRP plans the order break-free and the routing core
+places the break (ADR-009 §4). The routing core alone times the plan, so both
+engines give the same arrival times for the same order. When a phase of the
+day cannot be planned feasibly at all - a window that cannot be met - the
+engine falls back to the deterministic heuristic, which reports the
+violations plainly; a load over the capacity does not force the fallback when
+every phase fits - the plan's own `over_capacity` flag stays the honest
+verdict.
 
 The partial reopt changes only the affected stops: the unchanged stops keep
 their place in the order, the affected stops are re-placed by deterministic
