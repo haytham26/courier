@@ -26,6 +26,20 @@ jest.mock('expo-router', () => ({
   useRouter: () => mockRouter,
 }));
 
+// The Copilot centre is the voice engine, and the engine reaches the native
+// audio module, which has no place in a unit test: the Today screen's tests
+// mock the hook the same way, so no service is called here either.
+jest.mock('@/voice/useVoice', () => ({
+  useVoice: () => ({
+    state: 'idle',
+    isReady: false,
+    lastCommand: null,
+    startListening: jest.fn(() => Promise.resolve()),
+    stopListening: jest.fn(() => Promise.resolve()),
+    speak: jest.fn(() => Promise.resolve()),
+  }),
+}));
+
 function renderScreen() {
   return render(
     <GestureHandlerRootView>

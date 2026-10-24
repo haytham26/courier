@@ -24,7 +24,10 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+import { copilotStateOf } from '@/voice/copilotState';
+import { useVoice } from '@/voice/useVoice';
 import { TabBar, useChosen, type TabSlot } from '@/components/chosen';
+import { hapticFor } from '@/motion/haptics';
 import {
   REFERENCE_DAY,
   barHeightFraction,
@@ -45,7 +48,19 @@ const TALLEST = barHeightFraction(REFERENCE_DAY.bars);
 export default function SummaryScreen() {
   const { t } = useChosen();
   const router = useRouter();
+  const voice = useVoice();
   const day = REFERENCE_DAY;
+
+  // The Copilot centre is on every main screen (D34): a tap toggles the
+  // microphone with the voice haptic, and the sphere reads the engine's state.
+  const toggleVoice = useCallback(() => {
+    hapticFor('voice');
+    if (voice.state === 'listening') {
+      void voice.stopListening();
+    } else {
+      void voice.startListening();
+    }
+  }, [voice]);
 
   const slots = useCallback(
     (): [TabSlot, TabSlot] => [
@@ -184,7 +199,11 @@ export default function SummaryScreen() {
         <TabBar
           left={slots()}
           right={rightSlots()}
-          copilot={{ state: 'idle', onPress: () => undefined, onLongPress: () => undefined }}
+          copilot={{
+            state: copilotStateOf(voice.state, voice.isReady),
+            onPress: toggleVoice,
+            onLongPress: () => undefined,
+          }}
         />
       </View>
     </SafeAreaView>
