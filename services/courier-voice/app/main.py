@@ -173,7 +173,7 @@ def create_app(
         """The courier makes the service forget the shift."""
         memory = session_of(session_id, principal)
         memory.forget()
-        memory_store.save(memory)
+        memory_store.delete(session_id)
         return {"forgotten": True}
 
     @service.post("/v1/sessions/{session_id}/turn", response_model=TurnResponse)

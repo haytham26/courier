@@ -319,7 +319,7 @@ class ReasoningReply(Frozen):
 class TurnRequest(Frozen):
     """One turn of the conversation."""
 
-    transcript: str = ""
+    transcript: str = Field(default="", max_length=4000)
     trigger: Trigger = Trigger.PUSH_TO_TALK
     speed_kmh: float = 0.0
     audio_focus: AudioFocus = AudioFocus.NORMAL

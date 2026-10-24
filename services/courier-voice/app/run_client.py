@@ -21,6 +21,13 @@ from .models import RunContext, Stop, StopStatus
 logger = logging.getLogger("courier_voice.run_client")
 
 
+def _text_of(value: object) -> str | None:
+    """A display field as text, or None when the row carries junk there."""
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
+
+
 class RunClient:
     """Reads the day from the Courier API."""
 
@@ -64,19 +71,23 @@ class RunClient:
         identifier = row.get("id") or row.get("stop_id")
         if not isinstance(identifier, str):
             return None
+        try:
+            sequence = int(row.get("sequence") or 0)
+        except (TypeError, ValueError):
+            return None
         status = row.get("status")
         return Stop(
             id=identifier,
-            sequence=int(row.get("sequence") or 0),
+            sequence=sequence,
             number=str(row.get("number") or ""),
             street=str(row.get("street") or ""),
             suburb=str(row.get("suburb") or ""),
             status=StopStatus(str(status)) if status in set(StopStatus) else StopStatus.PENDING,
-            van_zone=row.get("van_zone"),
-            size_class=row.get("size_class"),
-            tip=row.get("tip"),
-            hazard=row.get("hazard"),
-            parcel_for=row.get("parcel_for"),
+            van_zone=_text_of(row.get("van_zone")),
+            size_class=_text_of(row.get("size_class")),
+            tip=_text_of(row.get("tip")),
+            hazard=_text_of(row.get("hazard")),
+            parcel_for=_text_of(row.get("parcel_for")),
         )
 
     def context(self, shift_id: str, token: str, fallback: RunContext | None = None) -> RunContext:

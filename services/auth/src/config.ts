@@ -49,6 +49,7 @@ export interface AuthConfig {
   emailAndPassword: {
     enabled: boolean;
     minPasswordLength: number;
+    requireEmailVerification: boolean;
   };
   /**
    * The social providers that are switched on.
@@ -133,6 +134,7 @@ const envSchema = z.object({
   AUTH_JWKS_PATH: z.string().min(1).optional(),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().optional(),
   AUTH_SESSION_EXPIRES_IN: z.coerce.number().int().positive().optional(),
+  AUTH_REQUIRE_EMAIL_VERIFICATION: z.enum(['true', 'false']).optional(),
   AUTH_TRUSTED_IP_HEADERS: z.string().optional(),
   PORT: z.coerce.number().int().positive().optional(),
   AUTH_GOOGLE_CLIENT_ID: z.string().min(1).optional(),
@@ -252,6 +254,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,
+      requireEmailVerification:
+        values.AUTH_REQUIRE_EMAIL_VERIFICATION === "true",
     },
     socialProviders: {
       google,
