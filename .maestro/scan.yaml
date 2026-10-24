@@ -7,13 +7,25 @@ name: "The scanner reads a label, the parcel joins the van, and it stays open fo
     visible:
       id: "today-screen"
     timeout: 60000
-# The scanner opens from the Today sheet's action row. The sheet stands at
+# The scanner opens from the Today sheet's secondary row. The sheet stands at
 # peek (the morning glance) and the Scan sits below the fold, so the courier
-# raises it first: a tap aimed at it from peek would land on the dock.
+# raises it first: a tap aimed at it from peek would land on the dock. Raising
+# the grabber alone reaches half, where the NEXT STOP block is the visible part
+# and the Scan row is still below the fold - the first E2E run of this flow
+# failed on BOTH api legs at exactly this tap (run 40060608949: "Element not
+# found: Id matching regex: today-scan", with the evidence's a11y tree carrying
+# today-sheet and today-go but no today-scan). The scroll is what today-list.yaml
+# already does for its action row, so the app keeps its contract and the flow
+# follows the design's own gesture.
 - swipe:
     from:
       id: "today-sheet-grabber"
     direction: UP
+- scrollUntilVisible:
+    element:
+      id: "today-scan"
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: "today-scan"
 - extendedWaitUntil:
