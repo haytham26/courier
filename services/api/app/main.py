@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .agents import copilot
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
@@ -41,6 +41,46 @@ class IntakeText(BaseModel):
     text: str
 
 
+class DepotPoint(BaseModel):
+    """The depot as numbers: the GeoJSON wrapper of the contract carried no
+    information the runs table does not already have in two columns."""
+
+    lat: float = Field(ge=-90.0, le=90.0)
+    lon: float = Field(ge=-180.0, le=180.0)
+
+
+class CreateRunRequest(BaseModel):
+    """The phone's first write of the day (ADR-010 §3).
+
+    Unknown fields are refused, never dropped silently: `territory` from the
+    older contract sketch comes back as 422 until the schema has a home for
+    it, because accepting-and-ignoring input is a lie. The same rule keeps the
+    finish point and the break window out until the runs table gains columns
+    for them - they shape the plan, so they must be storable first.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=120)
+    shift_id: uuid.UUID
+    depot: DepotPoint
+    start_at: datetime
+    capacity_parcels: int | None = Field(default=None, ge=0, le=9999)
+    speed_kmh: float = Field(default=30.0, ge=1.0, le=120.0)
+
+
+class RunBody(BaseModel):
+    """The run as the phone sees it."""
+
+    id: uuid.UUID
+    shift_id: uuid.UUID
+    name: str
+    depot: DepotPoint
+    capacity_parcels: int | None
+    speed_kmh: float
+    start_at: datetime
+
+
 class DeliveryEvent(BaseModel):
     id: uuid.UUID                     # client-generated -> idempotent offline replay
     stop_id: uuid.UUID
@@ -68,6 +108,19 @@ class TemplateRequest(BaseModel):
     template_id: str = Field(min_length=1, max_length=64)
     segments: list[TemplateSegment] = Field(default_factory=list)
     stop_order: list[uuid.UUID]
+
+
+def _run_body(run: RunRecord) -> dict[str, Any]:
+    """The run as the phone sees it."""
+    return {
+        "id": str(run.id),
+        "shift_id": str(run.shift_id),
+        "name": run.name,
+        "depot": {"lat": run.depot_lat, "lon": run.depot_lon},
+        "capacity_parcels": run.capacity_parcels,
+        "speed_kmh": run.speed_kmh,
+        "start_at": run.start_at.isoformat(),
+    }
 
 
 def _order_problem(order: list[uuid.UUID], stop_ids: list[uuid.UUID]) -> str | None:
@@ -181,6 +234,58 @@ def _route_body(
     }
 
 
+@app.post("/runs", status_code=201)
+def create_run(
+    body: CreateRunRequest,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Create the courier's run: the day the routing engine plans.
+
+    The run belongs to the authenticated courier from birth; nothing else in
+    the request can say otherwise (ASVS V4 - the owner comes from the token,
+    never from the body).
+    """
+    record = RunRecord(
+        id=uuid.uuid4(),
+        shift_id=body.shift_id,
+        courier_id=principal.user_id,
+        name=body.name,
+        depot_lat=body.depot.lat,
+        depot_lon=body.depot.lon,
+        capacity_parcels=body.capacity_parcels,
+        speed_kmh=body.speed_kmh,
+        start_at=body.start_at,
+    )
+    try:
+        repo.put_run(record)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return _run_body(record)
+
+
+@app.get("/runs")
+def list_runs(
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The courier's own runs, newest first (bounded at 500, ASVS V13)."""
+    return [_run_body(run) for run in repo.list_runs(principal.user_id)]
+
+
+@app.get("/runs/{run_id}")
+def get_run(
+    run_id: uuid.UUID,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """One run of the day, for the courier who owns it; foreign runs are 404."""
+    run = repo.get_run(run_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run with this id")
+    return _run_body(run)
+
+
 @app.put("/runs/{run_id}/template")
 def put_template(
     run_id: uuid.UUID,
@@ -257,8 +362,39 @@ async def intake_manifest(shift_id: uuid.UUID, image: UploadFile, principal: Aut
 
 
 @app.get("/shifts/{shift_id}/stops")
-def list_stops(shift_id: uuid.UUID, status: str | None = None, principal: AuthPrincipal = Depends(get_current_principal)):
-    ...
+def list_stops(
+    shift_id: uuid.UUID,
+    status: Literal["pending", "delivered", "skipped", "deferred", "failed"] | None = None,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The shift's stops with their live statuses (ADR-010 §2).
+
+    The status vocabulary is the contract's (`pending`/`delivered`/`skipped`/
+    `deferred`/`failed`); an unknown filter value is refused by the type
+    itself, never silently treated as "all".
+    """
+    run = repo.get_run_for_shift(shift_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run for this shift")
+    rows = repo.get_run_stops(run.id)
+    return [
+        {
+            "id": str(row.id),
+            "address": row.address,
+            "seq": seq,
+            "status": row.status,
+            "lat": row.lat,
+            "lon": row.lon,
+            "priority": row.priority,
+            "parcels": row.parcels,
+            "service_time_s": row.service_time_s,
+            "window_start": row.window_start.isoformat() if row.window_start else None,
+            "window_end": row.window_end.isoformat() if row.window_end else None,
+        }
+        for seq, row in enumerate(rows, start=1)
+        if status is None or row.status == status
+    ]
 
 
 @app.post("/shifts/{shift_id}/events:batch")
