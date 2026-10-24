@@ -18,6 +18,8 @@ Every script here fails the build when its check fails. They are the mechanical 
 | `backtest.mjs` | The 50x backtest of the three package suites: the flakiness number. It is not in a workflow yet. `node scripts/ci/backtest.mjs`. |
 | `check-store-readiness.mjs` | The local copy of the StoreReady check (the release manager's copy of the CI gate). `node scripts/ci/check-store-readiness.mjs [--repo .] [--app apps/mobile] [--apk <file>] [--json <file>]`. |
 | `store-ready-summary.mjs` | Renders the StoreReady report as a job summary. `node scripts/ci/store-ready-summary.mjs <report.json>`. |
+| `check-doc-links.mjs` | The link gate: every relative link in the live documentation resolves (`docs/archive`, `docs/evidence` and `docs/log` are history and skipped). `node scripts/ci/check-doc-links.mjs`. |
+| `check-emulator-gpu.mjs` | The emulator-GL gate (BUG-053): every workflow step that boots an Android emulator sets `-gpu swiftshader_indirect`, a second `-gpu` fails, and an anchor the gate cannot read fails loudly. `node scripts/ci/check-emulator-gpu.mjs [workflow-directory]` (the default is this repository's own `.github/workflows`, resolved from the module so the cwd does not matter). |
 
 ## The tests
 
@@ -26,5 +28,6 @@ Every script here fails the build when its check fails. They are the mechanical 
 | `__tests__/check-audit.test.mjs` | An acceptance needs an owner and a review date, and an expired review date fails the gate; an unaccepted high advisory still fails; the repository's own list can never carry a permanent accept. |
 | `__tests__/check-store-readiness.test.mjs` | A good app passes the check and a missing privacy policy is a blocking problem. |
 | `__tests__/store-ready-summary.test.mjs` | A blocking finding stays a blocking finding in the summary. |
+| `__tests__/check-emulator-gpu.test.mjs` | A boot without the flag, a boot with no options, a second `-gpu`, an anchor, a comment naming the action, an inverted step and a wrong directory all fail; the fixed forms pass; the real tree is scanned so the gate cannot go vacuous; and the CLI's exit codes (0, 1, 2) are the contract CI runs. |
 
 `node --test "scripts/*/__tests__/*.test.mjs"`
