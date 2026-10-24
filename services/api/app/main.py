@@ -2,16 +2,34 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from typing import Any, Literal
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Annotated, Any, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import (
+    Depends,
+    FastAPI,
+    Form,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from .agents import copilot
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
+from .pod import (
+    POD_MAX_BYTES,
+    pod_path,
+    pod_settings,
+    save_pod,
+    sniff_image_kind,
+    stored_pod_fingerprint,
+)
 from .repo import DeliveryEventRow, Repo, RouteStopRow, RunRecord, get_repo
 from .routing import (
     RoutePlan,
@@ -284,6 +302,95 @@ def get_run(
     if run is None or run.courier_id != principal.user_id:
         raise HTTPException(status_code=404, detail="no run with this id")
     return _run_body(run)
+
+
+class StopPaths:
+    """The run and the stop from the path (ASVS V4: both resolve to the caller's own)."""
+
+    def __init__(self, run_id: uuid.UUID, stop_id: uuid.UUID) -> None:
+        self.run_id = run_id
+        self.stop_id = stop_id
+
+
+class PodForm:
+    """The POD upload's form fields (the image itself stays its own parameter)."""
+
+    def __init__(
+        self,
+        occurred_at: datetime = Form(...),
+        safe_place: str | None = Form(None),
+        event_id: uuid.UUID | None = Form(None),
+    ) -> None:
+        self.occurred_at = occurred_at
+        self.safe_place = safe_place
+        self.event_id = event_id
+
+
+@app.post("/runs/{run_id}/stops/{stop_id}/pod", status_code=201)
+def upload_pod(
+    paths: Annotated[StopPaths, Depends()],
+    image: UploadFile,
+    form: Annotated[PodForm, Depends()],
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The at-the-door photo of a delivery (ADR-010 §4-5).
+
+    The bytes decide everything: capped before anything is stored, sniffed by
+    magic (the client's name and declared type are never trusted), named by
+    the server after the event. A replayed client event id returns the first
+    upload's answer and rewrites nothing - the offline replay is idempotent.
+    """
+    run = repo.get_run(paths.run_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run with this id")
+    if paths.stop_id not in {row.id for row in repo.get_run_stops(run.id)}:
+        raise HTTPException(status_code=404, detail="no stop with this id in this run")
+
+    content = image.file.read(POD_MAX_BYTES + 1)
+    if len(content) > POD_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="the image is over the 10 MiB cap")
+    if sniff_image_kind(content) is None:
+        raise HTTPException(status_code=415, detail="the upload is not a JPEG, PNG or HEIC image")
+
+    directory = Path(pod_settings().pod_storage_dir)
+    resolved_id = form.event_id if form.event_id is not None else uuid.uuid4()
+    path = pod_path(directory, resolved_id)
+    replayed = path.exists()
+    if replayed:
+        stored_bytes, digest = stored_pod_fingerprint(path)
+    else:
+        _, digest = save_pod(directory, resolved_id, content)
+        stored_bytes = len(content)
+
+    stored = repo.append_events(
+        shift_id=run.shift_id,
+        events=[
+            DeliveryEventRow(
+                id=resolved_id,
+                shift_id=run.shift_id,
+                stop_id=paths.stop_id,
+                kind="pod_captured",
+                utterance=None,
+                safe_place=form.safe_place,
+                lat=None,
+                lon=None,
+                accuracy_m=None,
+                occurred_at=form.occurred_at,
+            )
+        ],
+    )
+    return JSONResponse(
+        status_code=200 if replayed else 201,
+        content={
+            "event_id": str(resolved_id),
+            "stop_id": str(paths.stop_id),
+            "sha256": digest,
+            "bytes": stored_bytes,
+            "stored_at": datetime.now(UTC).isoformat(),
+            "already_stored": replayed or stored == 0,
+        },
+    )
 
 
 @app.put("/runs/{run_id}/template")

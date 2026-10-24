@@ -9,9 +9,11 @@ run is 404, not 403).
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -136,51 +138,47 @@ class TestCreatingARun:
         assert listed.status_code == 401
 
 
-class TestListingTheStops:
-    def seed_run_with_two_stops(self, repo: InMemoryRepo) -> tuple[uuid.UUID, uuid.UUID]:
-        """A run with two pending stops, as the intake slice would leave it."""
-        run_id, shift_id = uuid.uuid4(), uuid.uuid4()
-        repo.runs[run_id] = RunRecord(
-            id=run_id,
-            shift_id=shift_id,
-            courier_id=COURIER,
-            name="Hornby run",
-            depot_lat=-43.5330,
-            depot_lon=172.6300,
-            capacity_parcels=None,
-            speed_kmh=30.0,
-            start_at=START_AT,
+def seed_run_with_stops(
+    repo: InMemoryRepo,
+    *,
+    count: int = 2,
+    courier_id: str = COURIER,
+) -> tuple[uuid.UUID, uuid.UUID]:
+    """A run with `count` pending stops, as the intake slice would leave it."""
+    run_id, shift_id = uuid.uuid4(), uuid.uuid4()
+    repo.runs[run_id] = RunRecord(
+        id=run_id,
+        shift_id=shift_id,
+        courier_id=courier_id,
+        name="Hornby run",
+        depot_lat=-43.5330,
+        depot_lon=172.6300,
+        capacity_parcels=None,
+        speed_kmh=30.0,
+        start_at=START_AT,
+    )
+    repo.run_stops[run_id] = [
+        RouteStopRow(
+            id=uuid.uuid4(),
+            lat=-43.5400 + 0.01 * index,
+            lon=172.6000 + 0.01 * index,
+            priority=index == 1,
+            parcels=1 + index,
+            service_time_s=120 if index == 0 else None,
+            window_start=None,
+            window_end=None,
+            address=f"{12 + index} Riccarton Road",
         )
-        repo.run_stops[run_id] = [
-            RouteStopRow(
-                id=uuid.uuid4(),
-                lat=-43.5400,
-                lon=172.6000,
-                priority=False,
-                parcels=1,
-                service_time_s=120,
-                window_start=None,
-                window_end=None,
-                address="45 Papanui Road",
-            ),
-            RouteStopRow(
-                id=uuid.uuid4(),
-                lat=-43.5200,
-                lon=172.6400,
-                priority=True,
-                parcels=2,
-                service_time_s=None,
-                window_start=None,
-                window_end=None,
-                address="12 Riccarton Road",
-            ),
-        ]
-        return run_id, shift_id
+        for index in range(count)
+    ]
+    return run_id, shift_id
 
+
+class TestListingTheStops:
     def test_the_stops_list_their_address_and_status(
         self, client: TestClient, repo: InMemoryRepo
     ) -> None:
-        _, shift_id = self.seed_run_with_two_stops(repo)
+        run_id, shift_id = seed_run_with_stops(repo)
 
         listed = client.get(f"/shifts/{shift_id}/stops")
 
@@ -188,17 +186,17 @@ class TestListingTheStops:
         stops = listed.json()
         assert [stop["status"] for stop in stops] == ["pending", "pending"]
         assert [stop["address"] for stop in stops] == [
-            "45 Papanui Road",
-            "12 Riccarton Road",
+            row.address for row in repo.run_stops[run_id]
         ]
         assert [stop["seq"] for stop in stops] == [1, 2]
-        assert (stops[0]["lat"], stops[0]["lon"]) == (-43.5400, 172.6000)
-        assert (stops[1]["lat"], stops[1]["lon"]) == (-43.5200, 172.6400)
+        assert [(stop["lat"], stop["lon"]) for stop in stops] == [
+            (row.lat, row.lon) for row in repo.run_stops[run_id]
+        ]
 
     def test_a_delivery_event_flips_the_stop_status(
         self, client: TestClient, repo: InMemoryRepo
     ) -> None:
-        run_id, shift_id = self.seed_run_with_two_stops(repo)
+        run_id, shift_id = seed_run_with_stops(repo)
         stop_id = repo.run_stops[run_id][0].id
         marked = client.post(
             f"/shifts/{shift_id}/events:batch",
@@ -220,7 +218,7 @@ class TestListingTheStops:
     def test_the_status_filter_keeps_only_the_matching_stops(
         self, client: TestClient, repo: InMemoryRepo
     ) -> None:
-        run_id, shift_id = self.seed_run_with_two_stops(repo)
+        run_id, shift_id = seed_run_with_stops(repo)
         client.post(
             f"/shifts/{shift_id}/events:batch",
             json=[
@@ -236,10 +234,10 @@ class TestListingTheStops:
         delivered = client.get(f"/shifts/{shift_id}/stops?status=delivered")
 
         assert [stop["status"] for stop in delivered.json()] == ["delivered"]
-        assert delivered.json()[0]["address"] == "45 Papanui Road"
+        assert delivered.json()[0]["address"] == repo.run_stops[run_id][0].address
 
     def test_an_unknown_status_filter_is_refused(self, client: TestClient, repo: InMemoryRepo) -> None:
-        _, shift_id = self.seed_run_with_two_stops(repo)
+        _, shift_id = seed_run_with_stops(repo)
 
         refused = client.get(f"/shifts/{shift_id}/stops?status=someday")
 
@@ -248,11 +246,161 @@ class TestListingTheStops:
     def test_a_foreign_shift_is_not_found(
         self, client: TestClient, other_client: TestClient, repo: InMemoryRepo
     ) -> None:
-        _, shift_id = self.seed_run_with_two_stops(repo)
+        _, shift_id = seed_run_with_stops(repo)
 
         foreign = other_client.get(f"/shifts/{shift_id}/stops")
 
         assert foreign.status_code == 404
+
+
+def png_bytes(size: int = 64) -> bytes:
+    """A payload with the PNG magic and `size` bytes total."""
+    return b"\x89PNG\r\n\x1a\n" + b"\x00" * (size - 8)
+
+
+class TestUploadingTheProofOfDelivery:
+    def test_a_pod_is_stored_and_said_back(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        payload = png_bytes()
+
+        stored = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": START_AT.isoformat(), "safe_place": "by the meter box"},
+        )
+
+        assert stored.status_code == 201, stored.text
+        body = stored.json()
+        assert body["stop_id"] == str(stop_id)
+        assert body["sha256"] == hashlib.sha256(payload).hexdigest()
+        assert body["bytes"] == len(payload)
+        assert uuid.UUID(body["event_id"])
+
+        event = repo.events[uuid.UUID(body["event_id"])]
+        assert event.kind == "pod_captured"
+        assert event.safe_place == "by the meter box"
+        assert event.stop_id == stop_id
+        assert (Path(str(tmp_path)) / f"{body['event_id']}.bin").read_bytes() == payload
+
+    def test_a_replayed_pod_returns_the_first_upload_and_rewrites_nothing(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        event_id = uuid.uuid4()
+        payload = png_bytes()
+
+        first = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": START_AT.isoformat(), "event_id": str(event_id)},
+        )
+        (Path(str(tmp_path)) / f"{event_id}.bin").write_bytes(b"tampered-marker")
+
+        replay = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": START_AT.isoformat(), "event_id": str(event_id)},
+        )
+
+        assert first.status_code == 201
+        assert replay.status_code == 200, replay.text
+        assert replay.json()["event_id"] == str(event_id)
+        assert replay.json()["sha256"] == hashlib.sha256(b"tampered-marker").hexdigest()
+        assert len([e for e in repo.events.values() if e.stop_id == stop_id]) == 1
+
+    def test_a_pod_of_a_foreign_run_is_not_found(
+        self,
+        client: TestClient,
+        other_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+
+        foreign = other_client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", png_bytes(), "image/png")},
+            data={"occurred_at": START_AT.isoformat()},
+        )
+
+        assert foreign.status_code == 404
+
+    def test_a_pod_for_a_stop_outside_the_run_is_not_found(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+
+        stray = client.post(
+            f"/runs/{run_id}/stops/{uuid.uuid4()}/pod",
+            files={"image": ("door.jpg", png_bytes(), "image/png")},
+            data={"occurred_at": START_AT.isoformat()},
+        )
+
+        assert stray.status_code == 404
+
+    def test_an_oversized_image_is_refused_before_anything_is_stored(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        oversized = png_bytes(10 * 1024 * 1024 + 1)
+
+        refused = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", oversized, "image/png")},
+            data={"occurred_at": START_AT.isoformat()},
+        )
+
+        assert refused.status_code == 413
+        assert repo.events == {}
+        assert list(Path(str(tmp_path)).iterdir()) == []
+
+    def test_a_non_image_is_refused_by_its_bytes_not_its_name(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+
+        refused = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("photo.jpg", b"<html>not an image</html>", "image/jpeg")},
+            data={"occurred_at": START_AT.isoformat()},
+        )
+
+        assert refused.status_code == 415
+        assert repo.events == {}
 
 
 class TestCreateRunValidation:
