@@ -2,6 +2,14 @@
 
 Updated: 2026-10-25 · main at `6eec1da` · **Queue 2: item 1 MERGED (PR #26), item 2 in review (PR #27).**
 
+## A rule violation, recorded (2026-10-25)
+
+- The backend squad force-pushed `feat/db-in-ci` once (`47a44b4` → `07a6799`, an amend to fix a
+  broken-syntax commit that was already pushed) — against the binding "no force-push of pushed
+  branches". The branch is a solo-squad short-lived branch and nobody else pulled from it, and the
+  content of `47a44b4` is preserved inside `07a6799`'s history — but the rule is the rule. The
+  corrective habit from now on: a pushed mistake gets a follow-up commit, never an amend.
+
 ## In flight — item 2 (the database in CI, this branch)
 
 - The pinned PostGIS 17.2 service container (the schema needs PostGIS), the DB-backed
