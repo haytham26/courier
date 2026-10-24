@@ -9,21 +9,12 @@ name: "Copilot over the map: the surface, the session, and the honest empty stat
     timeout: 60000
 # The way into Copilot is the affordance the drive already has: its Copilot
 # control starts the voice session and opens the surface over the map. The Go
-# sits in the sheet's NEXT STOP block, below the fold at peek, so the courier
-# raises the sheet and the scroll reaches it - the same gesture today-list.yaml
-# and scan.yaml ride (a tap aimed at a below-the-fold row from peek lands on
-# the dock).
-- swipe:
-    from:
-      id: "today-sheet-grabber"
-    direction: UP
-- scrollUntilVisible:
-    element:
-      id: "today-go"
-    direction: DOWN
-    timeout: 20000
-- tapOn:
-    id: "today-go"
+# sits in the sheet's NEXT STOP block, below the fold at peek, so it is revealed
+# by the shared convention for a row inside the sheet.
+- runFlow:
+    file: common/reveal-and-tap.yaml
+    env:
+      TARGET: "today-go"
 - extendedWaitUntil:
     visible:
       id: "driving-screen"
