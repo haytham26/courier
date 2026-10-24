@@ -15,6 +15,26 @@ jobs:
     name: lint, typecheck, test
     runs-on: ubuntu-latest
     timeout-minutes: 25
+
+    # The database the DB-backed suite (tests/test_repo_db.py), the restore
+    # drill and the Locust SLO profile run against. Pinned version; never a
+    # production database - the service container lives and dies with the
+    # runner (RUNBOOK section 12-13).
+    services:
+      postgres:
+        image: postgres:17.2
+        env:
+          POSTGRES_USER: courier
+          POSTGRES_PASSWORD: courier
+          POSTGRES_DB: courier
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U courier"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -62,6 +82,48 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Test the API against Postgres
+        env:
+          DATABASE_URL: postgresql://courier:courier@127.0.0.1:5432/courier
+        run: uv run --directory services/api pytest -m db -q
+
+      - name: The restore drill (the backup round-trip, RUNBOOK section 13)
+        env:
+          PGPASSWORD: courier
+          DATABASE_URL: postgresql://courier:courier@127.0.0.1:5432/courier
+        run: |
+          set -euo pipefail
+          pg_dump --no-owner --no-privileges courier > "$RUNNER_TEMP/drill-backup.sql"
+          psql -h 127.0.0.1 -U courier -d postgres -c "DROP DATABASE IF EXISTS drill;"
+          psql -h 127.0.0.1 -U courier -d postgres -c "CREATE DATABASE drill;"
+          uv run --directory services/api python ops/restore_drill.py \
+            --dump "$RUNNER_TEMP/drill-backup.sql" \
+            --target postgresql://courier:courier@127.0.0.1:5432/drill
+
+      - name: The Locust SLO profile (the short CI gate; the full run is for staging)
+        env:
+          PGPASSWORD: courier
+          DATABASE_URL: postgresql://courier:courier@127.0.0.1:5432/courier
+          AUTH_JWKS_URL: http://127.0.0.1:8090/jwks.json
+          AUTH_JWT_ISSUER: http://127.0.0.1:8090
+          LOADTEST_TOKEN_FILE: .loadtest/token.txt
+        run: |
+          set -euo pipefail
+          uv run --directory services/api --extra load python loadtests/mint_token.py \
+            --out-dir .loadtest --issuer http://127.0.0.1:8090 --subject loadtest-driver
+          python -m http.server 8090 --directory .loadtest &
+          uv run --directory services/api \
+            uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/healthz > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/healthz
+          uv run --directory services/api --extra load \
+            locust -f loadtests/locustfile.py --headless --only-summary \
+            --host http://127.0.0.1:8000 -u 50 -r 10 --run-time 60s
+          kill %1 %2
 
       - name: Upload the evidence logs
         if: always()

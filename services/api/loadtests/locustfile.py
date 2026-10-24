@@ -30,6 +30,7 @@ import os
 import random
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from locust import HttpUser, between, events, task
@@ -54,9 +55,17 @@ class DriverDay(HttpUser):
     wait_time = between(30, 90)  # a courier acts, then drives
 
     def on_start(self) -> None:
-        token = os.environ.get("LOADTEST_TOKEN")
+        token_file = os.environ.get("LOADTEST_TOKEN_FILE")
+        token = os.environ.get("LOADTEST_TOKEN") or (
+            Path(token_file).read_text(encoding="utf-8").strip()
+            if token_file and Path(token_file).exists()
+            else ""
+        )
         if not token:
-            raise StopUser("LOADTEST_TOKEN is not set: the load test runs against a real JWKS")
+            raise StopUser(
+                "no load-test identity: set LOADTEST_TOKEN or LOADTEST_TOKEN_FILE "
+                "(mint_token.py writes the file)"
+            )
         self.client.headers.update({"Authorization": f"Bearer {token}"})
         self.run_id: uuid.UUID | None = None
         self.shift_id = uuid.uuid4()

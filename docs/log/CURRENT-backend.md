@@ -2,6 +2,21 @@
 
 Updated: 2026-10-25 · main at `c50a083` · **The founder's backend queue (items 1–4) is COMPLETE.**
 
+## In flight — queue 2 (the founder's second queue, 2026-10-25)
+
+- **Item 1 (the quality audit)** is on `chore/audit-backend` (PR #26): the coverage summaries
+  untracked, the API contract whole + the drift guard, the deep-audit security/correctness fixes
+  (the sync bounds, the voice-WS ownership, the LLM failure paths, the middleware logging), the
+  repo-wide sweep filed as BUG-053..BUG-057 for the lead (the tracked scratch renders, the
+  gitignore gaps, the stale STATUS/PROGRESS, the ci.yml permissions, the dead design-videos
+  workflow) and BUG-058/059 (the ASVS items + the backend backlog).
+- **Item 2 (the database in CI)** is on `feat/db-in-ci` (this branch): the pinned Postgres 17.2
+  service container, the DB-backed `SqlAlchemyRepo` suite (9 tests, the `db` marker — the
+  executemany-rowcount and IntegrityError questions close with evidence in CI), the restore drill
+  as a CI step (dump → clean DB → the API round-trip), and the short Locust SLO profile with a
+  minted JWKS identity (the full 1,000-driver run stays documented for staging, RUNBOOK §12).
+  No script points at anything but the runner's own service container.
+
 ## Merged (all with merge commits + archive tags, branches deleted)
 
 - **Item 1** — the routing solver: PR #19, ADR-009/D35 (`archive/feat/routing-solver`). PyVRP 0.14.1
