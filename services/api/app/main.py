@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -12,6 +13,8 @@ from fastapi import (
     FastAPI,
     Form,
     HTTPException,
+    Request,
+    Response,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
@@ -52,6 +55,26 @@ app = FastAPI(title="Courier Copilot", version="0.1.0")
 
 # Include auth routes
 app.include_router(auth_router)
+
+
+@app.middleware("http")
+async def hardening_headers(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    """The ASVS V14 hardening on every response, errors included.
+
+    The API serves JSON only, so the content policy allows nothing and the
+    authenticated bodies are never cached by anything between the phone and
+    the server.
+    """
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
 
 Direction = Literal["asc", "desc", "odd_first", "even_first", "zigzag"]
 

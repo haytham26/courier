@@ -519,6 +519,29 @@ class TestThePartialReopt:
         assert added_id in {uuid.UUID(stop["stop_id"]) for stop in route.json()["stops"]}
 
 
+class TestTheSecurityHeaders:
+    """ASVS V14: the API's hardening headers ride every response, errors included."""
+
+    def test_every_response_carries_the_hardening_headers(self, client: TestClient) -> None:
+        response = client.get("/runs")
+
+        assert response.headers["x-content-type-options"] == "nosniff"
+        assert response.headers["x-frame-options"] == "DENY"
+        assert (
+            response.headers["content-security-policy"]
+            == "default-src 'none'; frame-ancestors 'none'"
+        )
+        assert response.headers["cache-control"] == "no-store"
+        assert response.headers["referrer-policy"] == "no-referrer"
+
+    def test_an_error_response_carries_them_too(self, anonymous_client: TestClient) -> None:
+        refused = anonymous_client.get("/runs")
+
+        assert refused.status_code == 401
+        assert refused.headers["x-content-type-options"] == "nosniff"
+        assert refused.headers["cache-control"] == "no-store"
+
+
 class TestCreateRunValidation:
     def test_unknown_fields_are_refused_not_dropped(self, client: TestClient) -> None:
         refused = client.post("/runs", json=run_body(territory={"type": "MultiPolygon"}))

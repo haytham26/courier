@@ -176,7 +176,7 @@ contract becomes `courier_id`, which is what the storage and the authz checks ac
 | V7 Logging | no PII, no tokens, no image bytes in logs; POD events log ids only |
 | V8 Data protection | POD bytes at rest under server-side names; sha256 recorded for integrity |
 | V13 API | input caps everywhere (name ≤ 120 chars, capacity 0–9999, speed 1–120, lists bounded ≤ 500) |
-| V14 Config | the POD directory comes from settings, never from the request |
+| V14 Config | the POD directory comes from settings, never from the request; the hardening middleware (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`) rides **every** response, errors included — asserted by tests |
 
 ### 6. Consequences
 
