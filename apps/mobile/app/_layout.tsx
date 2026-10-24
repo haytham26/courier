@@ -41,6 +41,10 @@ function AuthNavigator() {
           <Stack.Screen name="scan" />
           <Stack.Screen name="driving" />
           <Stack.Screen name="delivered" />
+          {/* Copilot over the map (screen 07): opened by the D34 sphere's
+              tap, which starts talking, so the driver sees the conversation
+              while it happens. */}
+          <Stack.Screen name="copilot" />
         </Stack.Protected>
         <Stack.Protected guard={!isAuthenticated}>
           <Stack.Screen name="(auth)" />
