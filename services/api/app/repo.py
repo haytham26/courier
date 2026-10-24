@@ -8,6 +8,7 @@ arrive twice (a retry after a dropped connection).
 `SqlAlchemyRepo` is the production implementation. `InMemoryRepo` is the one
 the tests use: the same contract, no database.
 """
+
 from __future__ import annotations
 
 import json
@@ -20,6 +21,7 @@ from uuid import UUID
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 
 from .routing import PlannedStop, RoutePlan, RunTemplate
 from .sequencing import Segment
@@ -38,7 +40,9 @@ def _parse_segments(document: object) -> tuple[Segment, ...]:
             continue
         direction = item.get("direction")
         segments.append(
-            Segment(street_key=street_key, direction=direction if isinstance(direction, str) else "asc")
+            Segment(
+                street_key=street_key, direction=direction if isinstance(direction, str) else "asc"
+            )
         )
     return tuple(segments)
 
@@ -101,10 +105,30 @@ class RouteStopRow:
     service_time_s: int | None
     window_start: datetime | None
     window_end: datetime | None
+    address: str | None = None
+    status: str = "pending"
 
 
 class Repo(Protocol):
     """What the API needs from the database."""
+
+    def put_run(self, run: RunRecord) -> None:
+        """Store a new run (the phone's first write of the day).
+
+        A shift carries exactly one run (the schema's `UNIQUE(shift_id)`); a
+        retry of the create call must meet the same 409 the database would
+        give, in both repositories, so the tests exercise what production
+        does.
+        """
+        ...
+
+    def get_event(self, event_id: UUID) -> DeliveryEventRow | None:
+        """One delivery event by id - the POD replay's ownership check."""
+        ...
+
+    def list_runs(self, courier_id: str, limit: int = 500) -> list[RunRecord]:
+        """The courier's own runs, newest first, bounded."""
+        ...
 
     def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> int:
         """Stores the events, ignoring the ones already stored.
@@ -142,6 +166,10 @@ class Repo(Protocol):
         """The stored plan of the run, when there is one."""
 
 
+STATUS_KINDS = frozenset({"delivered", "skipped", "deferred", "failed"})
+"""The delivery-event kinds that decide a stop's status (ADR-010 §2)."""
+
+
 @dataclass
 class InMemoryRepo:
     """The repository the tests use: the same contract, no database."""
@@ -166,6 +194,21 @@ class InMemoryRepo:
     def cursor(self, shift_id: UUID) -> int:
         return len(self.by_shift.get(shift_id, []))
 
+    def put_run(self, run: RunRecord) -> None:
+        if run.id in self.runs:
+            raise ValueError(f"run {run.id} already exists")
+        if any(existing.shift_id == run.shift_id for existing in self.runs.values()):
+            raise ValueError("this shift already has a run")
+        self.runs[run.id] = run
+
+    def list_runs(self, courier_id: str, limit: int = 500) -> list[RunRecord]:
+        mine = [run for run in self.runs.values() if run.courier_id == courier_id]
+        mine.sort(key=lambda run: run.start_at, reverse=True)
+        return mine[:limit]
+
+    def get_event(self, event_id: UUID) -> DeliveryEventRow | None:
+        return self.events.get(event_id)
+
     def get_run(self, run_id: UUID) -> RunRecord | None:
         return self.runs.get(run_id)
 
@@ -176,7 +219,41 @@ class InMemoryRepo:
         return None
 
     def get_run_stops(self, run_id: UUID) -> list[RouteStopRow]:
-        return list(self.run_stops.get(run_id, []))
+        """The run's stops, with the status the delivery events imply.
+
+        The in-memory repo has no `stops.status` column, so the status is
+        derived the way the phone experiences it: the latest delivery event
+        per stop decides (delivered / skipped / deferred / failed), and a
+        stop no event ever touched is pending. The same vocabulary the SQL
+        repo reads from the table.
+        """
+        run = self.runs.get(run_id)
+        if run is None:
+            return []
+        latest: dict[UUID, tuple[datetime, int, str]] = {}
+        for position, event_id in enumerate(self.by_shift.get(run.shift_id, [])):
+            event = self.events.get(event_id)
+            if event is None or event.kind not in STATUS_KINDS:
+                continue
+            previous = latest.get(event.stop_id)
+            if previous is not None and previous[0] > event.occurred_at:
+                continue
+            latest[event.stop_id] = (event.occurred_at, position, event.kind)
+        return [
+            RouteStopRow(
+                id=row.id,
+                lat=row.lat,
+                lon=row.lon,
+                priority=row.priority,
+                parcels=row.parcels,
+                service_time_s=row.service_time_s,
+                window_start=row.window_start,
+                window_end=row.window_end,
+                address=row.address,
+                status=latest.get(row.id, ("", 0, "pending"))[2],
+            )
+            for row in self.run_stops.get(run_id, [])
+        ]
 
     def put_run_template(self, run_id: UUID, template: RunTemplate) -> None:
         self.templates[run_id] = template
@@ -230,10 +307,99 @@ class SqlAlchemyRepo:
             result = connection.execute(statement, parameters)
             return int(result.rowcount or 0)
 
+    def get_event(self, event_id: UUID) -> DeliveryEventRow | None:
+        statement = text(
+            """
+            SELECT id, shift_id, stop_id, kind, utterance, safe_place,
+                   lat, lon, accuracy_m, occurred_at
+            FROM delivery_events
+            WHERE id = :event_id
+            """
+        )
+        with self._engine.connect() as connection:
+            row = connection.execute(statement, {"event_id": event_id}).mappings().one_or_none()
+        if row is None:
+            return None
+        return DeliveryEventRow(
+            id=row["id"],
+            shift_id=row["shift_id"],
+            stop_id=row["stop_id"],
+            kind=row["kind"],
+            utterance=row["utterance"],
+            safe_place=row["safe_place"],
+            lat=row["lat"],
+            lon=row["lon"],
+            accuracy_m=row["accuracy_m"],
+            occurred_at=row["occurred_at"],
+        )
+
     def cursor(self, shift_id: UUID) -> int:
         statement = text("SELECT count(*) FROM delivery_events WHERE shift_id = :shift_id")
         with self._engine.connect() as connection:
             return int(connection.execute(statement, {"shift_id": shift_id}).scalar_one())
+
+    def put_run(self, run: RunRecord) -> None:
+        statement = text(
+            """
+            INSERT INTO runs (id, shift_id, courier_id, name, depot_lat, depot_lon,
+                              capacity_parcels, speed_kmh, start_at)
+            VALUES (:id, :shift_id, :courier_id, :name, :depot_lat, :depot_lon,
+                    :capacity_parcels, :speed_kmh, :start_at)
+            """
+        )
+        try:
+            with self._engine.begin() as connection:
+                connection.execute(
+                    statement,
+                    {
+                        "id": run.id,
+                        "shift_id": run.shift_id,
+                        "courier_id": run.courier_id,
+                        "name": run.name,
+                        "depot_lat": run.depot_lat,
+                        "depot_lon": run.depot_lon,
+                        "capacity_parcels": run.capacity_parcels,
+                        "speed_kmh": run.speed_kmh,
+                        "start_at": run.start_at,
+                    },
+                )
+        except IntegrityError as error:
+            # The schema carries the 1:1 shift contract (UNIQUE(shift_id));
+            # the caller sees the same ValueError the in-memory repo raises,
+            # so the API's 409 is one rule in both worlds.
+            raise ValueError("this shift already has a run") from error
+
+    def list_runs(self, courier_id: str, limit: int = 500) -> list[RunRecord]:
+        statement = text(
+            """
+            SELECT id, shift_id, courier_id, name, depot_lat, depot_lon,
+                   capacity_parcels, speed_kmh, start_at
+            FROM runs
+            WHERE courier_id = :courier_id
+            ORDER BY start_at DESC
+            LIMIT :limit
+            """
+        )
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(statement, {"courier_id": courier_id, "limit": limit})
+                .mappings()
+                .all()
+            )
+        return [
+            RunRecord(
+                id=row["id"],
+                shift_id=row["shift_id"],
+                courier_id=row["courier_id"],
+                name=row["name"],
+                depot_lat=row["depot_lat"],
+                depot_lon=row["depot_lon"],
+                capacity_parcels=row["capacity_parcels"],
+                speed_kmh=row["speed_kmh"],
+                start_at=row["start_at"],
+            )
+            for row in rows
+        ]
 
     def get_run(self, run_id: UUID) -> RunRecord | None:
         statement = text(
@@ -289,7 +455,8 @@ class SqlAlchemyRepo:
         statement = text(
             """
             SELECT s.id, s.latitude, s.longitude, s.priority, s.parcels,
-                   s.service_time_s, s.time_window_start, s.time_window_end
+                   s.service_time_s, s.time_window_start, s.time_window_end,
+                   s.address, s.status
             FROM stops s
             JOIN runs r ON r.shift_id = s.shift_id
             WHERE r.id = :run_id
@@ -308,6 +475,8 @@ class SqlAlchemyRepo:
                 service_time_s=row["service_time_s"],
                 window_start=row["time_window_start"],
                 window_end=row["time_window_end"],
+                address=row["address"],
+                status=row["status"],
             )
             for row in rows
         ]
@@ -328,7 +497,10 @@ class SqlAlchemyRepo:
             "run_id": run_id,
             "template_id": template.id,
             "segments": json.dumps(
-                [{"street_key": segment.street_key, "direction": segment.direction} for segment in template.segments]
+                [
+                    {"street_key": segment.street_key, "direction": segment.direction}
+                    for segment in template.segments
+                ]
             ),
             "stop_order": json.dumps([str(stop_id) for stop_id in template.stop_order]),
         }
@@ -337,7 +509,9 @@ class SqlAlchemyRepo:
             connection.execute(
                 text("DELETE FROM run_route_stops WHERE run_id = :run_id"), {"run_id": run_id}
             )
-            connection.execute(text("DELETE FROM run_routes WHERE run_id = :run_id"), {"run_id": run_id})
+            connection.execute(
+                text("DELETE FROM run_routes WHERE run_id = :run_id"), {"run_id": run_id}
+            )
 
     def get_run_template(self, run_id: UUID) -> RunTemplate | None:
         statement = text(
@@ -396,8 +570,12 @@ class SqlAlchemyRepo:
             for stop in plan.stops
         ]
         with self._engine.begin() as connection:
-            connection.execute(text("DELETE FROM run_route_stops WHERE run_id = :run_id"), {"run_id": run_id})
-            connection.execute(text("DELETE FROM run_routes WHERE run_id = :run_id"), {"run_id": run_id})
+            connection.execute(
+                text("DELETE FROM run_route_stops WHERE run_id = :run_id"), {"run_id": run_id}
+            )
+            connection.execute(
+                text("DELETE FROM run_routes WHERE run_id = :run_id"), {"run_id": run_id}
+            )
             connection.execute(header, parameters)
             if rows:
                 connection.execute(legs, rows)
