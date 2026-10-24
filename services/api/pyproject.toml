@@ -18,8 +18,6 @@ dependencies = [
     "anthropic>=0.40",
     "psycopg[binary]>=3.2",
     "sqlalchemy>=2.0",
-    "alembic>=1.12",
-    "litellm>=1.83.0",
     "pyjwt[crypto]>=2.15.1",
     "httpx>=0.28.1",
     "python-multipart>=0.0.6",
@@ -51,7 +49,7 @@ load = [
 [tool.uv]
 # The security patches for transitive dependencies (the audits must stay
 # clean): PYSEC-2026-4320 in certifi, and CVE-2026-112940 in filelock, which
-# rides in through litellm and huggingface-hub (the audit gates fail on it:
+# (litellm carried huggingface-hub and rode in until the audit dropped it; the audit gates failed on it:
 # filelock 3.32.7 -> the patched 4.2.1).
 constraint-dependencies = [
     "certifi>=2026.10.19",
