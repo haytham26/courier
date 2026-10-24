@@ -166,7 +166,15 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
-          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 2048
+          # BUG-053: software GL. Without a -gpu flag the emulator picks its own
+          # host GL mode, and on the headless runner it took the gate down with
+          # "no first screen appeared in 90s" and today-screen asserts failing
+          # while the GL chatter lines still appear in a green run.
+          # swiftshader_indirect is the standard headless setting and is what
+          # design-videos.yml already uses here (PR #12's screen-recordings.yml
+          # carries it on its own branch). The gate that keeps it:
+          # scripts/ci/check-emulator-gpu.mjs.
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 2048
           script: bash .maestro/run-all.sh
           working-directory: .
 
