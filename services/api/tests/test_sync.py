@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from app.auth.jwks import get_verifier
 from app.main import app
-from app.repo import InMemoryRepo, RunRecord, get_repo
+from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 
 COURIER = "driver-7"
@@ -30,8 +30,9 @@ def seeded_run(repo: InMemoryRepo) -> InMemoryRepo:
     """The run the shift's events belong to (the sync endpoint refuses an
     unowned shift: events decide stop statuses, so the shift must be the
     caller's own - ASVS V4)."""
-    repo.runs[uuid.uuid4()] = RunRecord(
-        id=uuid.uuid4(),
+    run_id = uuid.uuid4()
+    repo.runs[run_id] = RunRecord(
+        id=run_id,
         shift_id=SHIFT_ID,
         courier_id=COURIER,
         name="Hornby run",
@@ -41,6 +42,18 @@ def seeded_run(repo: InMemoryRepo) -> InMemoryRepo:
         speed_kmh=30.0,
         start_at=datetime.now(UTC),
     )
+    repo.run_stops[run_id] = [
+        RouteStopRow(
+            id=STOP_ID,
+            lat=-43.54,
+            lon=172.60,
+            priority=False,
+            parcels=1,
+            service_time_s=None,
+            window_start=None,
+            window_end=None,
+        )
+    ]
     return repo
 
 
@@ -102,6 +115,34 @@ class TestEventSync:
         assert response.status_code == 200
         assert response.json() == {"accepted": 0, "cursor": 0}
 
+    def test_an_event_for_a_stop_outside_the_run_is_refused(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        invented = client.post(
+            f"/shifts/{SHIFT_ID}/events:batch",
+            json=[
+                {
+                    "id": str(uuid.uuid4()),
+                    "stop_id": str(uuid.uuid4()),
+                    "kind": "delivered",
+                    "occurred_at": datetime.now(UTC).isoformat(),
+                }
+            ],
+        )
+
+        assert invented.status_code == 422, invented.text
+        assert "not in this run" in invented.json()["detail"]
+
+    def test_a_batch_over_the_cap_is_refused(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        flood = client.post(
+            f"/shifts/{SHIFT_ID}/events:batch",
+            json=[event() for _ in range(501)],
+        )
+
+        assert flood.status_code == 422, flood.text
+
     def test_a_malformed_event_is_refused(
         self, client: TestClient, seeded_run: InMemoryRepo
     ) -> None:
@@ -116,8 +157,9 @@ class TestEventSync:
         event_id = uuid.uuid4()
         client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[event(event_id)])
         other_shift = uuid.uuid4()
-        repo.runs[uuid.uuid4()] = RunRecord(
-            id=uuid.uuid4(),
+        other_run = uuid.uuid4()
+        repo.runs[other_run] = RunRecord(
+            id=other_run,
             shift_id=other_shift,
             courier_id=COURIER,
             name="Second run",
@@ -127,6 +169,18 @@ class TestEventSync:
             speed_kmh=30.0,
             start_at=datetime.now(UTC),
         )
+        repo.run_stops[other_run] = [
+            RouteStopRow(
+                id=STOP_ID,
+                lat=-43.54,
+                lon=172.60,
+                priority=False,
+                parcels=1,
+                service_time_s=None,
+                window_start=None,
+                window_end=None,
+            )
+        ]
         client.post(f"/shifts/{other_shift}/events:batch", json=[event(event_id)])
         assert len(repo.events) == 1
         assert repo.cursor(other_shift) == 0

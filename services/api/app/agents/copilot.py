@@ -118,9 +118,24 @@ def fast_path(transcript: str) -> Intent | None:
     return None
 
 
+def fallback_intent(transcript: str) -> Intent:
+    """The answer when the LLM is unreachable or unparseable: the copilot
+    never dies on the courier - it says it did not catch that, and the
+    offline fast paths still get their chance first."""
+    return Intent("none", {}, speech="I did not catch that. Say it again.")
+
+
 def interpret(transcript: str, state: dict, client=None, region: str = "Christchurch") -> Intent:
+    """The transcript, bounded and wrapped in the state envelope.
+
+    The transcript is untrusted input (a label read aloud, a caller's voice):
+    it travels inside its own tagged block, never concatenated into the
+    instructions, and the reply is parsed defensively - a gateway answer
+    without a tool call is a fallback, not a crash.
+    """
     if hit := fast_path(transcript):
         return hit
+    bounded = transcript[:2000]
     client = client or anthropic.Anthropic()
     resp = client.messages.create(
         model=MODEL,
@@ -131,20 +146,16 @@ def interpret(transcript: str, state: dict, client=None, region: str = "Christch
         messages=[
             {
                 "role": "user",
-                "content": f"<state>{json.dumps(state)}</state>\n<transcript>{transcript}</transcript>",
+                "content": (
+                    f"<state>{json.dumps(state)}</state>\n"
+                    f"<transcript>{bounded}</transcript>"
+                ),
             }
         ],
     )
-    call = next(b for b in resp.content if b.type == "tool_use")
+    calls = [b for b in resp.content if b.type == "tool_use"]
+    if not calls:
+        return fallback_intent(bounded)
     speech = " ".join(b.text for b in resp.content if b.type == "text").strip() or None
-    return Intent(call.name, call.input, speech)
+    return Intent(calls[0].name, calls[0].input, speech)
 
-
-def next_stop_line(stop: dict) -> str:
-    """Deterministic spoken template; the LLM is not in the loop for this."""
-    parts = [f"{stop['spoken_address']}."]
-    if stop.get("van_zone"):
-        parts.append(f"{stop['van_zone_spoken']}, {stop.get('size_class') or 'parcel'}.")
-    if stop.get("tip"):
-        parts.append(stop["tip"].rstrip(".") + ".")
-    return " ".join(parts)
