@@ -35,6 +35,7 @@ from typing import Any
 
 from locust import HttpUser, between, events, task
 from locust.exception import StopUser
+from seed_day import loadtest_shift_id, loadtest_stop_id
 
 # The SLO thresholds, encoded as this test's own contract.
 ROUTE_P95_MS = 5_000
@@ -52,7 +53,12 @@ _PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 1020
 class DriverDay(HttpUser):
     """One courier doing a day."""
 
-    wait_time = between(30, 90)  # a courier acts, then drives
+    # The day-loop cadence is 30-90 s; the CI profile tightens it (env) so
+    # a 60 s gate produces real volume. The staging run keeps the day shape.
+    wait_time = between(
+        float(os.environ.get("LOADTEST_WAIT_MIN", "30")),
+        float(os.environ.get("LOADTEST_WAIT_MAX", "90")),
+    )
 
     def on_start(self) -> None:
         token_file = os.environ.get("LOADTEST_TOKEN_FILE")
@@ -68,9 +74,23 @@ class DriverDay(HttpUser):
             )
         self.client.headers.update({"Authorization": f"Bearer {token}"})
         self.run_id: uuid.UUID | None = None
-        self.shift_id = uuid.uuid4()
-        self.stop_ids: list[uuid.UUID] = []
+        # The claim: one of the seeded shifts (deterministic ids from
+        # seed_day.py, which the CI step ran before this test). Two users
+        # claiming the same shift meet the API's honest 409 and read back.
+        self.shift_index = DriverDay._next_index() % int(os.environ.get("LOADTEST_SHIFTS", "60"))
+        self.shift_id = loadtest_shift_id(self.shift_index)
+        self.stop_ids = [
+            loadtest_stop_id(self.shift_index, k)
+            for k in range(int(os.environ.get("LOADTEST_STOPS_PER_SHIFT", "5")))
+        ]
         self._delivered: set[uuid.UUID] = set()
+
+    _user_counter = 0
+
+    @classmethod
+    def _next_index(cls) -> int:
+        cls._user_counter += 1
+        return cls._user_counter - 1
 
     def _slo(self, response: Any, p95_ms: int) -> None:
         """The per-request SLO: a 5xx or a 10x-SLO request is a failure."""
@@ -195,7 +215,9 @@ def assert_the_slos(environment: Any, **_kwargs: Any) -> None:
     # lands well past 200 requests; anything under is a broken run.
     if total.num_requests < 200:
         environment.process_exit_code = 1
-        print(f"VACUOUS RUN: only {total.num_requests} requests - the gate needs a seeded, reachable API")
+        print(
+            f"VACUOUS RUN: only {total.num_requests} requests - the gate needs a seeded, reachable API"
+        )
         failures += 1
     elif total.fail_ratio > MAX_ERROR_RATE:
         environment.process_exit_code = 1

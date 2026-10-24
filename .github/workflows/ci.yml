@@ -120,11 +120,19 @@ jobs:
           AUTH_JWKS_URL: http://127.0.0.1:8090/jwks.json
           AUTH_JWT_ISSUER: http://127.0.0.1:8090
           LOADTEST_TOKEN_FILE: ${{ github.workspace }}/.loadtest/token.txt
+          LOADTEST_SHIFTS: '60'
+          LOADTEST_STOPS_PER_SHIFT: '5'
+          LOADTEST_WAIT_MIN: '3'
+          LOADTEST_WAIT_MAX: '8'
         run: |
           set -euo pipefail
           # uv run --directory changes the cwd: the JWKS goes to an
           # absolute path so the static server serves the same file the
           # minted token was signed with.
+          # The seeded day: the shifts and the stops the users claim (the
+          # foreign key is real - a run for an unseeded shift is refused).
+          uv run --directory services/api python loadtests/seed_day.py \
+            --shifts 60 --stops-per-shift 5
           uv run --directory services/api --extra load python loadtests/mint_token.py \
             --out-dir "$GITHUB_WORKSPACE/.loadtest" --issuer http://127.0.0.1:8090 \
             --subject loadtest-driver
