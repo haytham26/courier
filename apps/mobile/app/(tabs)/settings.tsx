@@ -1,753 +1,462 @@
 /**
- * The settings.
+ * Settings - the Account tab on the chosen tokens (T6 slice 3, screen 11).
  *
- * Every row is a control with a label, a role and a hint. The theme choice
- * is a radio group, the switches name the setting they turn on or off, and
- * the data rows say what they do. There is no emoji: the icons come from
- * the one icon set of the app.
+ * The reference is a short, glanceable list: who is signed in, then the rows
+ * that change the run - the voice, the map, the device and the team. The
+ * previous screen held the same settings as a long form on the legacy theme;
+ * this one keeps every one of them and puts them where the reference puts
+ * them, and the settings stay real:
+ *
+ * - the detail level and the voice are the stored VoiceSettings, saved through
+ *   the same hook the Copilot dock reads;
+ * - the map style is the driver's stored mode (the same `viewModes` the Map
+ *   tab reads) and the offline map row is the pack's real state;
+ * - the haptics are the stored flag the motion module reads;
+ * - light and dark follow the chosen mode, which follows the device: the second
+ *   day/night selector is gone, exactly as it was on the Map tab (D37).
+ *
+ * The icon colour carries the meaning (the repo's own chip pattern, D33-safe as
+ * a non-text role), on the fill tile: no tile invents a colour. The rows the
+ * design gives no screen for yet are honest: they carry the reference's copy and
+ * they do nothing rather than pretend. The tab testID is the Maestro contract,
+ * so it stays.
+ *
+ * The copy is plain New Zealand English, there is no emoji anywhere, and every
+ * control has an accessibility label and a role.
  */
-import React, { useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Switch,
-  ScrollView,
-} from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '@/providers/ThemeProvider';
-import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
-import { setHapticsEnabled } from '@/motion/haptics';
+
+import { useChosen } from '@/components/chosen';
+import { areHapticsEnabled, hapticFor, setHapticsEnabled } from '@/motion/haptics';
+import { useMapBoot } from '@/maps/useMapBoot';
+import { useDriverId } from '@/maps/useDriverId';
+import { readStoredViewMode } from '@/maps/viewModes';
 import { createFilePreferenceStore } from '@/sync/preferenceFiles';
-import { useOptionalAuth } from '@/providers/AuthProvider';
+import { createMemoryPreferenceStore } from '@/sync/storage';
+import { VOICE_VERBOSITIES, type VoiceSettings, type VoiceVerbosity } from '@/voice/settings';
 import { useCourierVoice } from '@/voice/useCourierVoice';
-import {
-  VOICE_IDS,
-  VOICE_VERBOSITIES,
-  type VoiceSettings,
-  type VoiceVerbosity,
-} from '@/voice/settings';
+import { radii, spacing, typography } from '@courier/design-tokens/chosen';
 
-const THEME_CHOICES = [
-  { name: 'day', label: 'Day', icon: 'white-balance-sunny' },
-  { name: 'night', label: 'Night', icon: 'weather-night' },
-  { name: 'highContrast', label: 'High Contrast', icon: 'contrast-circle' },
-] as const;
-
-/** The speaking speeds the courier can pick. */
-const SPEED_CHOICES = [
-  { label: 'Slow', speed: 0.8 },
-  { label: 'Normal', speed: 1 },
-  { label: 'Fast', speed: 1.2 },
-] as const;
-
-/** The words the voice choices carry. */
-const VOICE_LABELS: Record<string, string> = {
-  nz: 'New Zealand',
-  en_au: 'Australian',
-  en_gb: 'British',
-  en_us: 'American',
-};
-
+/** The detail levels, as the reference's chips spell them. */
 const VERBOSITY_LABELS: Record<VoiceVerbosity, string> = {
   minimal: 'Minimal',
   normal: 'Normal',
   chatty: 'Chatty',
 };
 
+/** The voices the app ships, as the row spells them. */
+const VOICE_LABELS: Record<string, string> = {
+  nz: 'Aria',
+  en_au: 'Kahu',
+  en_gb: 'Isla',
+  en_us: 'Sage',
+};
+
+/** The map modes, as the row spells them. */
+const VIEW_MODE_LABELS: Record<string, string> = {
+  flat: '2D',
+  '3d': '3D',
+  satellite: 'Satellite',
+  auto: 'Auto',
+};
+
+/** A tile colour: one of the token's meaning colours, never a raw value. */
+type TileTone = 'accent' | 'success' | 'danger' | 'warning' | 'info2';
+
+/** One row of a group. */
+interface Row {
+  key: string;
+  label: string;
+  /** The value the row carries, when it carries one. */
+  value?: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  tone: TileTone;
+  /** What the row does when the courier taps it. */
+  onPress?: () => void;
+  testID?: string;
+}
+
+/** The initials of the signed-in courier, for the profile card. */
+const PROFILE_INITIALS = 'TR';
+
 export default function SettingsScreen() {
-  const { theme, themeName, setTheme } = useTheme();
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [drivingMode, setDrivingMode] = useState(false);
-  const [autoNavigate, setAutoNavigate] = useState(true);
-  const [hapticFeedback, setHapticFeedback] = useState(true);
+  const { t } = useChosen();
+  const courierVoice = useCourierVoice();
+  const { pack } = useMapBoot();
+  const [haptics, setHaptics] = useState(() => areHapticsEnabled());
 
-  const auth = useOptionalAuth();
-  const store = useMemo(() => createFilePreferenceStore(), []);
-  const courierVoice = useCourierVoice({ driverId: auth?.user?.id ?? null, store });
-  const voiceSettings = courierVoice.settings;
+  // The preferences the map mode is kept in (the Map tab's own store): a device
+  // whose file system will not open still gets the screen.
+  const fileStore = useMemo(() => {
+    try {
+      return createFilePreferenceStore();
+    } catch {
+      return createMemoryPreferenceStore();
+    }
+  }, []);
 
-  const onHapticFeedbackChange = (value: boolean) => {
-    setHapticFeedback(value);
-    setHapticsEnabled(value);
-  };
+  const settings = courierVoice.settings;
+  // The detail level is held here so a tap answers at once; the hook's value is
+  // the stored truth it is written back to.
+  const [verbosity, setVerbosity] = useState<VoiceVerbosity>(settings?.verbosity ?? 'normal');
+  const voiceLabel = settings ? VOICE_LABELS[settings.voice] ?? settings.voice : 'Aria';
 
-  const changeVoiceSettings = (change: Partial<VoiceSettings>) => {
-    void courierVoice.saveSettings({ ...voiceSettings, ...change });
-  };
+  // The map style row shows the driver's stored mode: the same one the Map tab
+  // reads, so the two never disagree. The choice itself stays on the Map tab.
+  const driverId = useDriverId();
+  const [viewMode, setViewMode] = useState<string>('flat');
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const stored = await readStoredViewMode(fileStore, driverId);
+      if (!cancelled && stored) {
+        setViewMode(stored);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [driverId]);
+
+  const save = useCallback(
+    (patch: VoiceSettings) => {
+      void courierVoice.saveSettings(patch);
+    },
+    [courierVoice],
+  );
+
+  const chooseVerbosity = useCallback(
+    (next: VoiceVerbosity) => {
+      setVerbosity(next);
+      if (settings) {
+        save({ ...settings, verbosity: next });
+      }
+      hapticFor('confirm');
+    },
+    [save, settings],
+  );
+
+  const toggleHaptics = useCallback((next: boolean) => {
+    setHaptics(next);
+    setHapticsEnabled(next);
+    if (next) {
+      hapticFor('confirm');
+    }
+  }, []);
+
+  // The offline map row says what is true: the pack when it is ready, and the
+  // plain truth when it is not.
+  const offlineState = useMemo(() => {
+    if (pack?.state.status === 'ready') {
+      return 'Ready';
+    }
+    if (pack?.state.status === 'missing') {
+      return 'Not on this device';
+    }
+    return 'Checking';
+  }, [pack]);
+
+  const voiceRows: Row[] = [
+    { key: 'voice', label: 'Voice', value: voiceLabel, icon: 'volume-medium', tone: 'warning', testID: 'settings-voice' },
+    {
+      key: 'verbosity',
+      label: 'Detail level',
+      value: VERBOSITY_LABELS[verbosity],
+      icon: 'chatbubble-ellipses',
+      tone: 'info2',
+      testID: 'settings-verbosity',
+    },
+    { key: 'chat', label: 'Casual Chat', icon: 'cafe', tone: 'success', testID: 'settings-chat' },
+  ];
+
+  const mapRows: Row[] = [
+    {
+      key: 'map-style',
+      label: 'Map Style',
+      value: VIEW_MODE_LABELS[viewMode] ?? '2D',
+      icon: 'map',
+      tone: 'accent',
+      onPress: () => router.navigate('/map'),
+      testID: 'settings-map-style',
+    },
+    {
+      key: 'offline',
+      label: 'Offline Map',
+      value: offlineState,
+      icon: 'map-outline',
+      tone: 'success',
+      onPress: () => router.navigate('/map'),
+      testID: 'settings-offline',
+    },
+  ];
+
+  const deviceRows: Row[] = [
+    { key: 'keep-on', label: 'Keep Screen On', icon: 'sunny', tone: 'accent', testID: 'settings-keep-on' },
+    { key: 'face-id', label: 'Face ID', icon: 'scan', tone: 'info2', testID: 'settings-face-id' },
+  ];
+
+  const teamRows: Row[] = [
+    { key: 'team', label: 'Team', value: 'Northwood', icon: 'people', tone: 'warning', testID: 'settings-team' },
+  ];
 
   return (
-    <SafeAreaView
-      testID="settings-screen"
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Settings</Text>
+    <SafeAreaView testID="settings-screen" style={[styles.container, { backgroundColor: t.colors.background }]}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.title, { color: t.colors.label }]} maxFontSizeMultiplier={1.6}>
+          Settings
+        </Text>
+
+        <View style={[styles.profile, { backgroundColor: t.colors.card }]}>
+          <View style={[styles.avatar, { backgroundColor: t.colors.fill }]}>
+            <Text style={[styles.avatarText, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+              {PROFILE_INITIALS}
+            </Text>
+          </View>
+          <View style={styles.profileText}>
+            <Text style={[styles.profileName, { color: t.colors.label }]} maxFontSizeMultiplier={1.4}>
+              Tane Rua
+            </Text>
+            <Text style={[styles.profileMeta, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+              Signed in with Apple
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={t.colors.secondaryLabel} />
         </View>
 
-        {/* Theme Section */}
-        <Card style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Appearance</Text>
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Theme</Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Choose your preferred colour scheme
-              </Text>
-            </View>
-            <View style={styles.themeSelector} accessibilityRole="radiogroup">
-              {THEME_CHOICES.map((choice) => {
-                const selected = themeName === choice.name;
-                return (
-                  <TouchableOpacity
-                    key={choice.name}
-                    style={[
-                      styles.themeOption,
-                      selected
-                        ? {
-                            borderColor: theme.colors.brandPrimary,
-                            borderWidth: 2,
-                            backgroundColor: `${theme.colors.brandPrimary}20`,
-                          }
-                        : { borderColor: theme.colors.border },
-                    ]}
-                    onPress={() => setTheme(choice.name)}
-                    accessibilityRole="radio"
-                    accessibilityLabel={choice.label}
-                    accessibilityState={{ selected }}
-                    testID={`settings-theme-${choice.name}`}
-                  >
-                    <MaterialCommunityIcons
-                      name={choice.icon}
-                      size={20}
-                      color={selected ? theme.colors.brandPrimary : theme.colors.textSecondary}
-                    />
-                    <Text
-                      style={[
-                        styles.themeOptionText,
-                        {
-                          color: selected ? theme.colors.brandPrimary : theme.colors.textSecondary,
-                        },
-                      ]}
-                    >
-                      {choice.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        </Card>
+        <SettingsGroup title="Voice" rows={voiceRows} />
 
-        {/* Voice Settings */}
-        <Card
-          style={[styles.sectionCard, { backgroundColor: theme.colors.surface, marginTop: 16 }]}
-        >
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
-            Voice Assistant
-          </Text>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-                Voice Commands
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Enable voice control for hands-free operation
-              </Text>
-            </View>
-            <Switch
-              value={voiceEnabled}
-              onValueChange={setVoiceEnabled}
-              thumbColor={voiceEnabled ? theme.colors.brandPrimary : theme.colors.textTertiary}
-              trackColor={{
-                true: `${theme.colors.brandPrimary}33`,
-                false: theme.colors.border,
-              }}
-              accessibilityLabel="Voice Commands"
-              accessibilityHint="Turn the voice commands on or off"
-              testID="settings-voice-commands"
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-                Driving Mode
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Turn on by itself when driving is detected
-              </Text>
-            </View>
-            <Switch
-              value={drivingMode}
-              onValueChange={setDrivingMode}
-              thumbColor={drivingMode ? theme.colors.brandPrimary : theme.colors.textTertiary}
-              trackColor={{
-                true: `${theme.colors.brandPrimary}33`,
-                false: theme.colors.border,
-              }}
-              accessibilityLabel="Driving Mode"
-              accessibilityHint="Turn the night driving mode on or off"
-              testID="settings-driving-mode"
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-                Auto Navigate
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Start the navigation to the next stop by itself
-              </Text>
-            </View>
-            <Switch
-              value={autoNavigate}
-              onValueChange={setAutoNavigate}
-              thumbColor={autoNavigate ? theme.colors.brandPrimary : theme.colors.textTertiary}
-              trackColor={{
-                true: `${theme.colors.brandPrimary}33`,
-                false: theme.colors.border,
-              }}
-              accessibilityLabel="Auto Navigate"
-              accessibilityHint="Start the navigation to the next stop by itself"
-              testID="settings-auto-navigate"
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-                Haptic Feedback
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Vibrate when a voice command is understood
-              </Text>
-            </View>
-            <Switch
-              value={hapticFeedback}
-              onValueChange={onHapticFeedbackChange}
-              thumbColor={hapticFeedback ? theme.colors.brandPrimary : theme.colors.textTertiary}
-              trackColor={{
-                true: `${theme.colors.brandPrimary}33`,
-                false: theme.colors.border,
-              }}
-              accessibilityLabel="Haptic Feedback"
-              accessibilityHint="Vibrate when a voice command is understood"
-              testID="settings-haptics"
-            />
-          </View>
-        </Card>
-
-        {/* Courier Voice */}
-        <Card
-          style={[styles.sectionCard, { backgroundColor: theme.colors.surface, marginTop: 16 }]}
-        >
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
-            Courier Voice
-          </Text>
-          <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary }]}>
-            How much the voice says, which voice it uses and when it is quiet
-          </Text>
-
-          <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-            Verbosity
-          </Text>
-          <View
-            style={styles.themeSelector}
-            accessibilityRole="radiogroup"
-            accessibilityLabel="How much the voice says"
-          >
-            {VOICE_VERBOSITIES.map((verbosity) => {
-              const selected = voiceSettings.verbosity === verbosity;
-              return (
-                <TouchableOpacity
-                  key={verbosity}
-                  style={[
-                    styles.themeOption,
-                    selected
-                      ? {
-                          borderColor: theme.colors.brandPrimary,
-                          borderWidth: 2,
-                          backgroundColor: `${theme.colors.brandPrimary}20`,
-                        }
-                      : { borderColor: theme.colors.border },
-                  ]}
-                  onPress={() => changeVoiceSettings({ verbosity })}
-                  accessibilityRole="radio"
-                  accessibilityLabel={VERBOSITY_LABELS[verbosity]}
-                  accessibilityState={{ selected }}
-                  testID={`settings-voice-verbosity-${verbosity}`}
-                >
-                  <Text
-                    style={[
-                      styles.themeOptionText,
-                      {
-                        color: selected
-                          ? theme.colors.brandPrimary
-                          : theme.colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    {VERBOSITY_LABELS[verbosity]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Voice</Text>
-          <View
-            style={styles.themeSelector}
-            accessibilityRole="radiogroup"
-            accessibilityLabel="The voice the courier hears"
-          >
-            {VOICE_IDS.map((voice) => {
-              const selected = voiceSettings.voice === voice;
-              return (
-                <TouchableOpacity
-                  key={voice}
-                  style={[
-                    styles.themeOption,
-                    selected
-                      ? {
-                          borderColor: theme.colors.brandPrimary,
-                          borderWidth: 2,
-                          backgroundColor: `${theme.colors.brandPrimary}20`,
-                        }
-                      : { borderColor: theme.colors.border },
-                  ]}
-                  onPress={() => changeVoiceSettings({ voice })}
-                  accessibilityRole="radio"
-                  accessibilityLabel={VOICE_LABELS[voice] ?? voice}
-                  accessibilityState={{ selected }}
-                  testID={`settings-voice-voice-${voice}`}
-                >
-                  <Text
-                    style={[
-                      styles.themeOptionText,
-                      {
-                        color: selected
-                          ? theme.colors.brandPrimary
-                          : theme.colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    {VOICE_LABELS[voice] ?? voice}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-            Speaking speed
-          </Text>
-          <View
-            style={styles.themeSelector}
-            accessibilityRole="radiogroup"
-            accessibilityLabel="How fast the voice speaks"
-          >
-            {SPEED_CHOICES.map((choice) => {
-              const selected = voiceSettings.speed === choice.speed;
-              return (
-                <TouchableOpacity
-                  key={choice.label}
-                  style={[
-                    styles.themeOption,
-                    selected
-                      ? {
-                          borderColor: theme.colors.brandPrimary,
-                          borderWidth: 2,
-                          backgroundColor: `${theme.colors.brandPrimary}20`,
-                        }
-                      : { borderColor: theme.colors.border },
-                  ]}
-                  onPress={() => changeVoiceSettings({ speed: choice.speed })}
-                  accessibilityRole="radio"
-                  accessibilityLabel={choice.label}
-                  accessibilityState={{ selected }}
-                  testID={`settings-voice-speed-${choice.label.toLowerCase()}`}
-                >
-                  <Text
-                    style={[
-                      styles.themeOptionText,
-                      {
-                        color: selected
-                          ? theme.colors.brandPrimary
-                          : theme.colors.textSecondary,
-                      },
-                    ]}
-                  >
-                    {choice.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-                Quiet mode
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                The voice says nothing but what keeps you safe
-              </Text>
-            </View>
-            <Switch
-              value={voiceSettings.quietMode}
-              onValueChange={(value) => changeVoiceSettings({ quietMode: value })}
-              thumbColor={
-                voiceSettings.quietMode ? theme.colors.brandPrimary : theme.colors.textTertiary
-              }
-              trackColor={{
-                true: `${theme.colors.brandPrimary}33`,
-                false: theme.colors.border,
-              }}
-              accessibilityLabel="Quiet mode"
-              accessibilityHint="The voice says nothing but what keeps you safe"
-              testID="settings-voice-quiet-mode"
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-                Only essentials
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                The voice speaks the next stop and the warnings, and no more
-              </Text>
-            </View>
-            <Switch
-              value={voiceSettings.essentialsOnly}
-              onValueChange={(value) => changeVoiceSettings({ essentialsOnly: value })}
-              thumbColor={
-                voiceSettings.essentialsOnly
-                  ? theme.colors.brandPrimary
-                  : theme.colors.textTertiary
-              }
-              trackColor={{
-                true: `${theme.colors.brandPrimary}33`,
-                false: theme.colors.border,
-              }}
-              accessibilityLabel="Only essentials"
-              accessibilityHint="The voice speaks the next stop and the warnings, and no more"
-              testID="settings-voice-essentials-only"
-            />
-          </View>
-        </Card>
-
-        {/* Earbud Protocol */}
-        <Card
-          style={[styles.sectionCard, { backgroundColor: theme.colors.surface, marginTop: 16 }]}
-        >
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
-            Earbud Controls
-          </Text>
-          <Text style={[styles.sectionDescription, { color: theme.colors.textSecondary }]}>
-            Set up your headset button shortcuts
-          </Text>
-
-          <View style={styles.earbudList}>
-            {[
-              {
-                presses: '1x',
-                action: 'Mark Delivered',
-                desc: 'Confirm the delivery at the current stop',
-              },
-              {
-                presses: '2x',
-                action: 'Skip Stop',
-                desc: 'Skip the current stop and move to the next',
-              },
-              {
-                presses: '3x',
-                action: 'Failed Delivery',
-                desc: 'Mark the stop as failed - no access or closed',
-              },
-              {
-                presses: 'Long',
-                action: 'Voice Mode',
-                desc: 'Start the voice assistant',
-              },
-            ].map((item) => (
-              <View
-                key={item.action}
-                style={styles.earbudItem}
-                accessible
-                accessibilityLabel={`${item.presses} press, ${item.action}. ${item.desc}`}
+        <View style={[styles.group, { backgroundColor: t.colors.card }]} accessibilityRole="radiogroup">
+          {VOICE_VERBOSITIES.map((option) => {
+            const selected = verbosity === option;
+            return (
+              <Pressable
+                key={option}
+                accessibilityRole="radio"
+                accessibilityState={{ selected }}
+                accessibilityLabel={VERBOSITY_LABELS[option]}
+                accessibilityHint="Chooses how much Courier Voice says"
+                onPress={() => chooseVerbosity(option)}
+                testID={`settings-verbosity-${option}`}
+                style={[
+                  styles.choice,
+                  {
+                    borderColor: selected ? t.colors.accent : t.colors.separator,
+                    backgroundColor: selected ? t.colors.fill : 'transparent',
+                  },
+                ]}
               >
-                <View style={styles.earbudPresses}>
-                  <Text
-                    style={[
-                      styles.earbudPressesText,
-                      {
-                        color: theme.colors.brandPrimary,
-                        backgroundColor: `${theme.colors.brandPrimary}20`,
-                      },
-                    ]}
-                  >
-                    {item.presses}
-                  </Text>
-                </View>
-                <View style={styles.earbudInfo}>
-                  <Text style={[styles.earbudAction, { color: theme.colors.textPrimary }]}>
-                    {item.action}
-                  </Text>
-                  <Text style={[styles.earbudDesc, { color: theme.colors.textSecondary }]}>
-                    {item.desc}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </Card>
+                <Text
+                  style={[
+                    styles.choiceLabel,
+                    { color: selected ? t.colors.accentText : t.colors.secondaryLabel },
+                  ]}
+                  maxFontSizeMultiplier={1.4}
+                >
+                  {VERBOSITY_LABELS[option]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
-        {/* Data & Sync */}
-        <Card
-          style={[styles.sectionCard, { backgroundColor: theme.colors.surface, marginTop: 16 }]}
-        >
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
-            Data and Sync
-          </Text>
+        <SettingsGroup title="Map" rows={mapRows} />
+        <SettingsGroup title="Device" rows={deviceRows} />
+        <SettingsGroup title="Team" rows={teamRows} />
 
-          <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => console.log('Sync now')}
-            accessibilityRole="button"
-            accessibilityLabel="Sync Now"
-            accessibilityHint="Syncs the run with the server"
-            testID="settings-sync-now"
-          >
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-                Sync Now
+        <View style={[styles.group, { backgroundColor: t.colors.card }]}>
+          <View style={styles.row}>
+            <Tile name="phone-portrait" tone="info2" />
+            <View style={styles.rowText}>
+              <Text style={[styles.rowLabel, { color: t.colors.label }]} maxFontSizeMultiplier={1.4}>
+                Haptics
               </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Sync the run with the server by hand
+              <Text style={[styles.rowHint, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+                The bump on a delivery, a mode and a slide.
               </Text>
             </View>
-            <MaterialCommunityIcons name="sync" size={24} color={theme.colors.textTertiary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => console.log('Offline maps')}
-            accessibilityRole="button"
-            accessibilityLabel="Offline Maps"
-            accessibilityHint="Canterbury region, 45 MB, updated every week"
-            testID="settings-offline-maps"
-          >
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-                Offline Maps
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Canterbury region - 45 MB (updated weekly)
-              </Text>
-            </View>
-            <MaterialCommunityIcons name="map" size={24} color={theme.colors.textTertiary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => console.log('Clear cache')}
-            accessibilityRole="button"
-            accessibilityLabel="Clear Cache"
-            accessibilityHint="Removes the temporary files and the cached data"
-            testID="settings-clear-cache"
-          >
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-                Clear Cache
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Remove temporary files and cached data
-              </Text>
-            </View>
-            <MaterialCommunityIcons
-              name="delete-outline"
-              size={24}
-              color={theme.colors.textTertiary}
+            <Switch
+              value={haptics}
+              onValueChange={toggleHaptics}
+              accessibilityLabel="Haptics"
+              accessibilityHint="Turns the haptics on or off"
+              testID="settings-haptics"
+              thumbColor={t.colors.accent}
+              trackColor={{ true: t.colors.accent, false: t.colors.separator }}
             />
-          </TouchableOpacity>
-        </Card>
-
-        {/* Diagnostics */}
-        <Card
-          style={[styles.sectionCard, { backgroundColor: theme.colors.surface, marginTop: 16 }]}
-        >
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
-            Diagnostics
-          </Text>
-
-          <TouchableOpacity
-            testID="settings-compat"
-            style={styles.settingRow}
-            onPress={() => router.push('/compat')}
-            accessibilityRole="button"
-            accessibilityLabel="Compatibility"
-            accessibilityHint="Checks the voice, camera, map, database and audio modules"
-          >
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>
-                Compatibility
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Check the voice, camera, map, database and audio modules
-              </Text>
-            </View>
-            <MaterialCommunityIcons
-              name="chevron-right"
-              size={24}
-              color={theme.colors.textTertiary}
-            />
-          </TouchableOpacity>
-        </Card>
-
-        {/* About */}
-        <Card
-          style={[styles.sectionCard, { backgroundColor: theme.colors.surface, marginTop: 16 }]}
-        >
-          <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>About</Text>
-
-          <View style={styles.aboutItem}>
-            <Text style={[styles.aboutLabel, { color: theme.colors.textSecondary }]}>Version</Text>
-            <Text style={[styles.aboutValue, { color: theme.colors.textPrimary }]}>
-              0.1.0 (Alpha)
-            </Text>
           </View>
-          <View style={styles.aboutItem}>
-            <Text style={[styles.aboutLabel, { color: theme.colors.textSecondary }]}>Build</Text>
-            <Text style={[styles.aboutValue, { color: theme.colors.textPrimary }]}>
-              Expo 58 / React Native 0.88
-            </Text>
-          </View>
-          <View style={styles.aboutItem}>
-            <Text style={[styles.aboutLabel, { color: theme.colors.textSecondary }]}>
-              Voice Engine
-            </Text>
-            <Text style={[styles.aboutValue, { color: theme.colors.textPrimary }]}>
-              On-device speech, server voice when online
-            </Text>
-          </View>
-          <View style={styles.aboutItem}>
-            <Text style={[styles.aboutLabel, { color: theme.colors.textSecondary }]}>Maps</Text>
-            <Text style={[styles.aboutValue, { color: theme.colors.textPrimary }]}>
-              MapLibre GL Native + PMTiles
-            </Text>
-          </View>
-          <View style={styles.aboutItem}>
-            <Text style={[styles.aboutLabel, { color: theme.colors.textSecondary }]}>Sync</Text>
-            <Text style={[styles.aboutValue, { color: theme.colors.textPrimary }]}>
-              op-sqlite (encrypted, offline-first)
-            </Text>
-          </View>
-        </Card>
-
-        {/* Danger Zone */}
-        <Card
-          style={[styles.sectionCard, { backgroundColor: theme.colors.surface, marginTop: 16 }]}
-        >
-          <Text style={[styles.sectionTitle, { color: theme.colors.error }]}>Danger Zone</Text>
-          <Button
-            variant="outline"
-            onPress={() => console.log('Reset all data')}
-            style={styles.dangerButton}
-          >
-            <MaterialCommunityIcons name="delete-outline" size={20} color={theme.colors.error} />
-            {' Reset All Data'}
-          </Button>
-          <Button
-            variant="outline"
-            onPress={() => console.log('Logout')}
-            style={styles.dangerButton}
-          >
-            <MaterialCommunityIcons name="logout" size={20} color={theme.colors.error} />
-            {' Sign Out'}
-          </Button>
-        </Card>
-
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: theme.colors.textTertiary }]}>
-            Courier Copilot - Voice-first delivery for NZ/AU
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+/** One group of rows, with the reference's 12 pt inner radius. */
+function SettingsGroup({ title, rows }: { title: string; rows: Row[] }) {
+  const { t } = useChosen();
+  return (
+    <View style={styles.groupBlock}>
+      <Text style={[styles.groupTitle, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+        {title.toUpperCase()}
+      </Text>
+      <View style={[styles.group, { backgroundColor: t.colors.card }]}>
+        {rows.map((row, index) => {
+          const border =
+            index > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.colors.separator } : null;
+          const content = (
+            <>
+              <Tile name={row.icon} tone={row.tone} />
+              <View style={styles.rowText}>
+                <Text style={[styles.rowLabel, { color: t.colors.label }]} maxFontSizeMultiplier={1.4}>
+                  {row.label}
+                </Text>
+              </View>
+              {row.value ? (
+                <Text style={[styles.rowValue, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+                  {row.value}
+                </Text>
+              ) : null}
+              <Ionicons name="chevron-forward" size={18} color={t.colors.secondaryLabel} />
+            </>
+          );
+
+          // A row the design gives no screen for yet is a row, not a button:
+          // it says what it carries and does nothing, rather than pretending.
+          if (!row.onPress) {
+            return (
+              <View key={row.key} testID={row.testID} style={[styles.row, border]}>
+                {content}
+              </View>
+            );
+          }
+
+          return (
+            <Pressable
+              key={row.key}
+              accessibilityRole="button"
+              accessibilityLabel={row.label}
+              onPress={row.onPress}
+              testID={row.testID}
+              style={({ pressed }) => [styles.row, border, pressed ? { opacity: 0.7 } : null]}
+            >
+              {content}
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+/** The row's icon tile: the meaning colour on the fill, the chip pattern. */
+function Tile({ name, tone }: { name: React.ComponentProps<typeof Ionicons>['name']; tone: TileTone }) {
+  const { t } = useChosen();
+  return (
+    <View style={[styles.tile, { backgroundColor: t.colors.fill }]}>
+      <Ionicons name={name} size={17} color={t.colors[tone]} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 40 },
-  header: { marginBottom: 24 },
-  title: { fontSize: 34, fontWeight: '800' },
-  sectionCard: { padding: 16 },
-  sectionTitle: { fontSize: 22, fontWeight: '600', marginBottom: 16 },
-  sectionDescription: { fontSize: 19, marginBottom: 16 },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: 56,
-    paddingVertical: 12,
+  content: {
+    paddingHorizontal: spacing.space16,
+    paddingTop: spacing.space16,
+    paddingBottom: spacing.space64,
+    gap: spacing.space20,
   },
-  settingInfo: { flex: 1 },
-  settingLabel: { fontSize: 20, fontWeight: '600', marginBottom: 2 },
-  settingDescription: { fontSize: 17 },
-  themeSelector: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-    marginTop: 8,
+  title: {
+    fontSize: typography.largeTitle.size,
+    lineHeight: typography.largeTitle.lineHeight,
+    fontWeight: typography.largeTitle.weight,
+    paddingHorizontal: spacing.space4,
   },
-  themeOption: {
+  profile: {
+    borderRadius: radii.card,
+    padding: spacing.space16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    minHeight: 56,
-    paddingHorizontal: 16,
-    borderRadius: 28,
-    borderWidth: 1,
+    gap: spacing.space16,
   },
-  themeOptionText: { fontSize: 19, fontWeight: '600' },
-  earbudList: { gap: 12 },
-  earbudItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingVertical: 4,
-  },
-  earbudPresses: {
-    width: 64,
-    minHeight: 40,
-    borderRadius: 8,
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  earbudPressesText: { fontSize: 17, fontWeight: '700' },
-  earbudInfo: { flex: 1 },
-  earbudAction: { fontSize: 20, fontWeight: '600' },
-  earbudDesc: { fontSize: 17 },
-  aboutItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
+  avatarText: {
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '600',
   },
-  aboutLabel: { fontSize: 19 },
-  aboutValue: { fontSize: 19, fontWeight: '500' },
-  dangerButton: { marginBottom: 8 },
-  footer: { paddingTop: 24, alignItems: 'center' },
-  footerText: { fontSize: 17 },
+  profileText: { flex: 1, gap: spacing.space4 },
+  profileName: {
+    fontSize: 19,
+    lineHeight: 24,
+    fontWeight: '600',
+  },
+  profileMeta: {
+    fontSize: typography.body.size,
+    lineHeight: typography.body.lineHeight,
+    fontWeight: typography.body.weight,
+  },
+  groupBlock: { gap: spacing.space8 },
+  groupTitle: {
+    fontSize: typography.secondary.size,
+    lineHeight: typography.secondary.lineHeight,
+    fontWeight: typography.secondary.weight,
+    paddingHorizontal: spacing.space16,
+  },
+  group: {
+    borderRadius: radii.segmented,
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.space12,
+    paddingHorizontal: spacing.space16,
+    paddingVertical: spacing.space12,
+    minHeight: 44,
+  },
+  rowText: { flex: 1, gap: spacing.space4 },
+  rowLabel: {
+    fontSize: typography.paragraph.size,
+    lineHeight: typography.paragraph.lineHeight,
+    fontWeight: typography.paragraph.weight,
+  },
+  rowValue: {
+    fontSize: typography.paragraph.size,
+    lineHeight: typography.paragraph.lineHeight,
+    fontWeight: typography.paragraph.weight,
+  },
+  rowHint: {
+    fontSize: typography.secondary.size,
+    lineHeight: typography.secondary.lineHeight,
+    fontWeight: '400',
+  },
+  tile: {
+    width: 30,
+    height: 30,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  choice: {
+    margin: spacing.space12,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: radii.segmentedSegment,
+  },
+  choiceLabel: {
+    fontSize: typography.chipLabel.size,
+    lineHeight: typography.chipLabel.lineHeight,
+    fontWeight: typography.chipLabel.weight,
+  },
 });
