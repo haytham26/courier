@@ -1,7 +1,31 @@
+/**
+ * Map - the map tab on the chosen tokens (T6 slice 3, screen 09).
+ *
+ * The map is the app: the run lives on it and everything else floats above it
+ * on glass. This screen is the reference's 09 Map style sheet - the four modes
+ * with their previews and their one line each, and the offline map row under
+ * them. The map logic is the existing modules (`viewModes`, `offlinePack`,
+ * `styles`): this is a re-skin, not new map code.
+ *
+ * The Maestro testIDs (`map-screen`, `map-mode-*`, `map-mode-message`,
+ * `map-pack-status`, `map-attribution`, `map-settings`) are the contract, so
+ * they stay. Two contract changes are deliberate:
+ *
+ * 1. **Light and dark have ONE source.** The map style follows the chosen mode
+ *    (`useChosen`, which follows the OS and can be pinned), so the legacy
+ *    day/night selector that MapSettingsSheet used to carry is gone: a second
+ *    light/dark control on one screen is a lie waiting to happen.
+ * 2. **A marker tap zooms, it does not open the run actions.** Delivered, Skip
+ *    and Navigate are the Today and Driving screens' business (the reference 09
+ *    carries no stop card); the map orients the courier, it does not duplicate
+ *    the day's actions.
+ *
+ * The copy is plain New Zealand English, there is no emoji anywhere, and every
+ * control has an accessibility label and a role.
+ */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ComponentProps } from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Dimensions, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import {
   Camera,
@@ -13,22 +37,22 @@ import {
   type MapRef,
 } from '@maplibre/maplibre-react-native';
 
-import { useTheme } from '@/providers/ThemeProvider';
-import { Button } from '@/components/Button';
-import { Sheet } from '@/components/Sheet';
+import {
+  BottomSheet,
+  MapButton,
+  MapButtonColumn,
+  StopPin,
+  TopPills,
+  useChosen,
+  type SheetHeight,
+} from '@/components/chosen';
+import { hapticFor } from '@/motion/haptics';
 import { subscribeToVoiceCommands } from '@/voice/commandChannel';
 import { getSatelliteSource } from '@/maps/config';
 import { describe } from '@/maps/offlinePack';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { ATTRIBUTION_LINES, getCourierStyle } from '@/maps/styles';
-import {
-  markerLabelColor,
-  mockStops,
-  statusColor,
-  stopsBounds,
-  stopsForMap,
-  type Stop,
-} from '@/maps/stops';
+import { mockStops, stopsBounds, stopsForMap, type Stop } from '@/maps/stops';
 import { LOOK_BACK_BEARING, TILTED_PITCH, cameraForMode } from '@/maps/cameraCommands';
 import { isInTown, isMoving, type MapPosition } from '@/maps/driving';
 import { MapSettingsSheet } from '@/maps/MapSettingsSheet';
@@ -37,52 +61,166 @@ import { useDriverId } from '@/maps/useDriverId';
 import { useMapToggles } from '@/maps/useMapToggles';
 import { useMapViewMode } from '@/maps/useMapViewMode';
 import type { MapViewMode } from '@/maps/viewModes';
-
-/** The words of the status labels, so the screen reader reads a sentence. */
-const statusLabels: Record<Stop['status'], string> = {
-  delivered: 'Delivered',
-  pending: 'Pending',
-  active: 'Active',
-  failed: 'Failed',
-  skipped: 'Skipped',
-};
+import { motion, radii, spacing, tokens, typography } from '@courier/design-tokens/chosen';
 
 /** Christchurch, the middle of the region the pack covers. */
 const MAP_CENTRE: [number, number] = [172.636, -43.533];
 
-/** The zoom the camera goes to when it is sent to the next stop. */
+/** The zoom the camera goes to when it is sent to a stop. */
 const STOP_ZOOM = 17;
 
+/** The sheet floor sits above the dock: the bar, its caption and its raise. */
+const SHEET_INSET = spacing.space64 + spacing.space32 + spacing.space4;
+
+const RUN_NAME = 'Northwood AM';
+
+/** The height the sheet opens at: the mode picker, per the reference. */
+const OPEN_HEIGHT: SheetHeight = 'half';
+
 /**
- * The four map modes, in the order they are shown.
- *
- * The courier picks the mode with one tap, and the voice can pick it too
- * ("3D on", "flat map", "satellite", "auto").
+ * The four modes, in the order the reference shows them, each with the one
+ * line that tells the courier what they are choosing.
  */
-const MODE_CHOICES: readonly {
-  mode: MapViewMode;
-  label: string;
-  icon: ComponentProps<typeof MaterialCommunityIcons>['name'];
-}[] = [
-  { mode: 'flat', label: 'Flat', icon: 'map-outline' },
-  { mode: '3d', label: '3D', icon: 'cube-outline' },
-  { mode: 'satellite', label: 'Satellite', icon: 'satellite-variant' },
-  { mode: 'auto', label: 'Auto', icon: 'auto-fix' },
+const MODE_CHOICES: readonly { mode: MapViewMode; label: string; description: string }[] = [
+  { mode: 'flat', label: '2D', description: 'Flat and clear' },
+  { mode: '3d', label: '3D', description: 'Buildings and depth' },
+  { mode: 'satellite', label: 'Satellite', description: 'Real roofs and yards' },
+  { mode: 'auto', label: 'Auto', description: '3D in town, dark at night' },
 ];
 
+/** The dark set, read once: the Auto preview's night half is the dark land. */
+const DARK = tokens('dark');
+
+/** One MB, in bytes, for the offline row. */
+const BYTES_PER_MB = 1024 * 1024;
+
+const WEEKDAYS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+] as const;
+
+/** The size of the pack in whole megabytes. */
+const sizeInMb = (bytes: number): string => (Math.round(bytes / BYTES_PER_MB) || 1).toString();
+
+/** The day the pack was built on, the way a courier says it. */
+const updatedDay = (builtAt: string): string => {
+  const parsed = new Date(builtAt);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'recently';
+  }
+  return WEEKDAYS[parsed.getDay()];
+};
+
+/** What the offline map row says. */
+interface OfflineRow {
+  title: string;
+  detail: string;
+  state: string;
+  ready: boolean;
+}
+
+/**
+ * The mode preview: the same fragment of map in each mode's own reading, drawn
+ * with the map palette tokens and nothing else. 3D stands two buildings up,
+ * Satellite is the imagery reading (dark ground, light roads) and Auto carries
+ * the dark land under the day one, which is the whole promise of "3D in town,
+ * dark at night".
+ */
+function ModePreview({ mode }: { mode: MapViewMode }) {
+  const { t } = useChosen();
+  const satellite = mode === 'satellite';
+  const ground = satellite ? t.colors.mapRoad : t.colors.mapLand;
+  const roads = satellite ? t.colors.mapLand : t.colors.mapRoad;
+
+  return (
+    <View style={[styles.preview, { backgroundColor: ground }]} pointerEvents="none">
+      <View style={[styles.previewWater, { backgroundColor: t.colors.mapWater }]} />
+      <View style={[styles.previewPark, { backgroundColor: t.colors.mapPark }]} />
+      <View style={[styles.previewRoad, { backgroundColor: roads }]} />
+      <View style={[styles.previewRoadShort, { backgroundColor: roads }]} />
+      {mode === '3d' ? (
+        <>
+          <View style={[styles.previewBuilding, { backgroundColor: roads, borderColor: ground }]} />
+          <View
+            style={[styles.previewBuildingSmall, { backgroundColor: roads, borderColor: ground }]}
+          />
+        </>
+      ) : null}
+      {mode === 'auto' ? <View style={[styles.previewNight, { backgroundColor: DARK.colors.mapLand }]} /> : null}
+      <View style={[styles.previewRoute, { backgroundColor: t.colors.accent }]} />
+    </View>
+  );
+}
+
+/** One mode card: the preview, the name and the one line, selected or not. */
+function ModeCard({
+  mode,
+  label,
+  description,
+  selected,
+  onPress,
+}: {
+  mode: MapViewMode;
+  label: string;
+  description: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const { t } = useChosen();
+  const cardWidth = useCardWidth();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      accessibilityLabel={`${label} map, ${description}`}
+      accessibilityHint="Chooses the map mode"
+      onPress={onPress}
+      testID={`map-mode-${mode}`}
+      style={[
+        styles.modeCard,
+        {
+          backgroundColor: t.colors.fill,
+          borderRadius: radii.pill,
+          borderColor: selected ? t.colors.accent : 'transparent',
+          width: cardWidth,
+        },
+      ]}
+    >
+      <ModePreview mode={mode} />
+      <Text
+        style={[styles.modeName, { color: t.colors.label }]}
+        maxFontSizeMultiplier={1.4}
+      >
+        {label}
+      </Text>
+      <Text
+        style={[styles.modeDescription, { color: t.colors.secondaryLabel }]}
+        maxFontSizeMultiplier={1.4}
+      >
+        {description}
+      </Text>
+    </Pressable>
+  );
+}
+
 export default function MapScreen() {
-  const { theme, themeName, themePreference, setThemePreference } = useTheme();
+  const { t, mode } = useChosen();
   const driverId = useDriverId();
-  const [selectedStop, setSelectedStop] = useState<Stop | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [bounds, setBounds] = useState<LngLatBounds | null>(null);
   const [locationAllowed, setLocationAllowed] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [online, setOnline] = useState(false);
   const [position, setPosition] = useState<MapPosition | null>(null);
   const [moving, setMoving] = useState(false);
   const [tilted, setTilted] = useState<boolean | null>(null);
   const [lookBack, setLookBack] = useState(false);
   const [followMe, setFollowMe] = useState(false);
+  const [sheetHeight, setSheetHeight] = useState<SheetHeight>(OPEN_HEIGHT);
   const mapRef = useRef<MapRef | null>(null);
   const cameraRef = useRef<CameraRef | null>(null);
 
@@ -173,7 +311,7 @@ export default function MapScreen() {
   const townBounds = useMemo(() => stopsBounds(mockStops), []);
   const inTown = useMemo(() => isInTown(position, townBounds), [position, townBounds]);
 
-  const { mode, decision, setMode } = useMapViewMode({
+  const { mode: viewMode, decision, setMode } = useMapViewMode({
     driverId,
     batterySaver: toggles.batterySaver,
     moving,
@@ -183,16 +321,18 @@ export default function MapScreen() {
     buildingsInPack: packHasBuildings,
   });
 
+  // The map style follows the chosen mode: ONE light/dark truth (the OS, or a
+  // pinned test), never a second selector.
   const style = useMemo(
     () =>
-      getCourierStyle(themeName, tileSource.kind === 'none' ? null : tileSource.url, glyphsUrl, {
+      getCourierStyle(mode === 'dark' ? 'night' : 'day', tileSource.kind === 'none' ? null : tileSource.url, glyphsUrl, {
         labelSize: toggles.labelSize,
         buildings: toggles.buildings,
         buildings3d: decision.effective === '3d' && packHasBuildings,
         satellite: decision.effective === 'satellite' ? satelliteSource : null,
       }),
     [
-      themeName,
+      mode,
       tileSource,
       glyphsUrl,
       toggles.labelSize,
@@ -222,44 +362,44 @@ export default function MapScreen() {
       });
   }, []);
 
-  const handleNavigateToStop = useCallback((stop: Stop) => {
-    // The turn-by-turn hand-off arrives with the navigation module (T7.7);
-    // until then the stop is the only thing the driver can act on here.
-    console.info(`maps: navigate to stop ${stop.sequence}, ${stop.address}`);
-  }, []);
-
-  const handleMarkDelivered = useCallback((stop: Stop) => {
-    console.info(`maps: stop ${stop.sequence} delivered`);
-    setSelectedStop(null);
-  }, []);
-
-  const handleSkipStop = useCallback((stop: Stop) => {
-    console.info(`maps: stop ${stop.sequence} skipped`);
-    setSelectedStop(null);
-  }, []);
-
-  // The camera, in the mode the courier is in. The voice can tilt the map and
-  // turn it around; the mode decides what it is when nothing else has.
-  const modeCamera = cameraForMode(decision.effective);
-  const camera = useMemo(
-    () => ({
-      pitch: tilted === null ? modeCamera.pitch : tilted ? TILTED_PITCH : 0,
-      bearing: lookBack ? LOOK_BACK_BEARING : modeCamera.bearing,
-    }),
-    [lookBack, modeCamera, tilted],
-  );
-
-  const zoomToNextStop = useCallback(() => {
-    const stop = mockStops.find((entry) => entry.status === 'active') ?? mockStops[0];
-    if (!stop) {
-      return;
-    }
+  /** Sends the camera to a stop: the one action a marker needs. */
+  const zoomTo = useCallback((coordinates: { lat: number; lng: number }) => {
     cameraRef.current?.easeTo({
-      center: [stop.coordinates.lng, stop.coordinates.lat],
+      center: [coordinates.lng, coordinates.lat],
       zoom: STOP_ZOOM,
-      duration: 600,
+      duration: motion.duration.camera,
     });
   }, []);
+
+  const zoomToNextStop = useCallback(() => {
+    const stop = activeStop ?? mockStops[0];
+    if (stop) {
+      zoomTo(stop.coordinates);
+    }
+  }, [activeStop, zoomTo]);
+
+  const handleMarkerPress = useCallback(
+    (stop: Stop) => {
+      zoomTo(stop.coordinates);
+    },
+    [zoomTo],
+  );
+
+  const handleRecentre = useCallback(() => {
+    if (position) {
+      zoomTo(position);
+      return;
+    }
+    zoomToNextStop();
+  }, [position, zoomTo, zoomToNextStop]);
+
+  const handleChooseMode = useCallback(
+    (next: MapViewMode) => {
+      setMode(next);
+      hapticFor('confirm');
+    },
+    [setMode],
+  );
 
   // The voice commands the map understands.
   useEffect(() => {
@@ -293,24 +433,127 @@ export default function MapScreen() {
     return unsubscribe;
   }, [setMode, zoomToNextStop]);
 
-  const packLabel = useMemo(() => {
-    if (!pack) {
-      return 'Looking for the offline map';
-    }
-    if (pack.state.status === 'ready') {
-      return `Offline map: ${pack.state.manifest.region} (${pack.state.origin})`;
+  // The camera, in the mode the courier is in. The voice can tilt the map and
+  // turn it around; the mode decides what it is when nothing else has.
+  const modeCamera = cameraForMode(decision.effective);
+  const camera = useMemo(
+    () => ({
+      pitch: tilted === null ? modeCamera.pitch : tilted ? TILTED_PITCH : 0,
+      bearing: lookBack ? LOOK_BACK_BEARING : modeCamera.bearing,
+    }),
+    [lookBack, modeCamera, tilted],
+  );
+
+  // What the offline map row says, honestly: the pack when it is ready, the
+  // online map when it is not, and the plain truth when there is nothing.
+  const offlineRow = useMemo<OfflineRow>(() => {
+    if (pack?.state.status === 'ready') {
+      const manifest = pack.state.manifest;
+      return {
+        title: 'Canterbury offline map',
+        detail: `${sizeInMb(manifest.bytes)} MB, updated ${updatedDay(manifest.builtAt)}`,
+        state: 'Ready',
+        ready: true,
+      };
     }
     if (tileSource.kind === 'online') {
-      return 'Online map: the offline pack is not on the device';
+      return {
+        title: 'Canterbury offline map',
+        detail: 'Online map: the offline pack is not on the device',
+        state: 'Online',
+        ready: false,
+      };
     }
-    return 'No map tiles: the stops are still here';
+    return {
+      title: 'Canterbury offline map',
+      detail: 'No map tiles: the stops are still here',
+      state: 'Offline',
+      ready: false,
+    };
   }, [pack, tileSource]);
 
-  return (
-    <SafeAreaView
-      testID="map-screen"
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+  /** The row is the peek content and the bottom of the picker: it is the way back up. */
+  const offlineRowNode = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${offlineRow.title}, ${offlineRow.detail}, ${offlineRow.state}`}
+      accessibilityHint="Shows the map modes"
+      onPress={() => setSheetHeight('half')}
+      testID="map-pack-status"
+      style={[styles.offlineRow, { backgroundColor: t.colors.fill, borderRadius: radii.stripCorner }]}
     >
+      <Ionicons
+        name="map-outline"
+        size={22}
+        color={offlineRow.ready ? t.colors.success : t.colors.secondaryLabel}
+      />
+      <View style={styles.offlineText}>
+        <Text style={[styles.offlineTitle, { color: t.colors.label }]} maxFontSizeMultiplier={1.4}>
+          {offlineRow.title}
+        </Text>
+        <Text style={[styles.offlineDetail, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+          {offlineRow.detail}
+        </Text>
+      </View>
+      <Text
+        style={[
+          styles.offlineState,
+          { color: offlineRow.ready ? t.colors.successText : t.colors.secondaryLabel },
+        ]}
+        maxFontSizeMultiplier={1.4}
+      >
+        {offlineRow.state}
+      </Text>
+    </Pressable>
+  );
+
+  const modePicker = (
+    <View style={styles.sheetContent}>
+      <View style={styles.sheetHeader}>
+        <Text style={[styles.sheetTitle, { color: t.colors.label }]} maxFontSizeMultiplier={1.4}>
+          Map
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Done"
+          accessibilityHint="Puts the map style away"
+          onPress={() => setSheetHeight('peek')}
+          testID="map-style-close"
+          style={[styles.closeButton, { backgroundColor: t.colors.fill }]}
+        >
+          <Ionicons name="close" size={16} color={t.colors.secondaryLabel} />
+        </Pressable>
+      </View>
+
+      <View style={styles.modeGrid}>
+        {MODE_CHOICES.map((choice) => (
+          <ModeCard
+            key={choice.mode}
+            mode={choice.mode}
+            label={choice.label}
+            description={choice.description}
+            selected={viewMode === choice.mode}
+            onPress={() => handleChooseMode(choice.mode)}
+          />
+        ))}
+      </View>
+
+      {decision.message ? (
+        <Text
+          testID="map-mode-message"
+          style={[styles.modeMessage, { color: t.colors.secondaryLabel }]}
+          maxFontSizeMultiplier={1.4}
+        >
+          {decision.message}
+        </Text>
+      ) : null}
+
+      {offlineRowNode}
+    </View>
+  );
+
+  return (
+    <SafeAreaView testID="map-screen" style={styles.container}>
       <View style={styles.mapContainer}>
         <Map
           ref={mapRef}
@@ -335,50 +578,44 @@ export default function MapScreen() {
               testID={`stop-marker-${stop.sequence}`}
               lngLat={[stop.coordinates.lng, stop.coordinates.lat]}
               anchor="bottom"
-              onPress={() => setSelectedStop(stop)}
+              onPress={() => handleMarkerPress(stop)}
             >
-              <View
-                style={[
-                  styles.marker,
-                  {
-                    backgroundColor: statusColor(stop.status, theme),
-                    borderColor: theme.colors.background,
-                  },
-                ]}
-              >
-                <Text style={[styles.markerLabel, { color: markerLabelColor(stop.status, theme) }]}>
-                  {stop.sequence}
-                </Text>
+              <View testID={`stop-pin-${stop.sequence}`}>
+                <StopPin number={String(stop.sequence)} />
               </View>
             </Marker>
           ))}
         </Map>
 
-        <View
-          testID="map-pack-status"
-          style={[
-            styles.packStatus,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}
-          pointerEvents="none"
-        >
-          <Text style={[styles.packStatusText, { color: theme.colors.textSecondary }]}>
-            {packLabel}
-          </Text>
+        <View style={styles.pills}>
+          <TopPills runName={RUN_NAME} weather="Rain 2 pm" weatherIcon="cloud" />
         </View>
 
-        <View
-          testID="map-attribution"
-          style={[styles.attribution, { backgroundColor: theme.colors.surface }]}
-          pointerEvents="none"
-        >
+        <View style={styles.mapButtons}>
+          <MapButtonColumn>
+            <MapButton
+              name="options"
+              tone="label"
+              accessibilityLabel="Map settings"
+              onPress={() => setSettingsOpen(true)}
+              testID="map-settings"
+            />
+            <MapButton
+              name="locate"
+              tone="accent"
+              accessibilityLabel="Recentre"
+              onPress={handleRecentre}
+              testID="map-recentre"
+            />
+          </MapButtonColumn>
+        </View>
+
+        <View style={styles.attribution} pointerEvents="none" testID="map-attribution">
           {ATTRIBUTION_LINES.map((line) => (
             <Text
               key={line}
-              style={[styles.attributionText, { color: theme.colors.textSecondary }]}
+              style={[styles.attributionText, { color: t.colors.secondaryLabel }]}
+              maxFontSizeMultiplier={1.2}
             >
               {line}
             </Text>
@@ -386,284 +623,212 @@ export default function MapScreen() {
         </View>
       </View>
 
-      <View
-        style={[
-          styles.bottomControls,
-          {
-            backgroundColor: theme.colors.surface,
-            borderTopColor: theme.colors.border,
-          },
-        ]}
+      <BottomSheet
+        height={sheetHeight}
+        onHeightChange={setSheetHeight}
+        bottomInset={SHEET_INSET}
+        testID="map-sheet"
       >
-        <View style={styles.controlRow}>
-          {MODE_CHOICES.map((choice) => {
-            const selected = mode === choice.mode;
-            return (
-              <TouchableOpacity
-                key={choice.mode}
-                testID={`map-mode-${choice.mode}`}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={`${choice.label} map`}
-                style={[
-                  styles.controlButton,
-                  {
-                    borderColor: selected ? theme.colors.brandPrimary : theme.colors.border,
-                    backgroundColor: selected ? theme.colors.background : theme.colors.surface,
-                  },
-                ]}
-                onPress={() => setMode(choice.mode)}
-              >
-                <MaterialCommunityIcons
-                  name={choice.icon}
-                  size={22}
-                  color={selected ? theme.colors.brandPrimary : theme.colors.textSecondary}
-                />
-                <Text style={[styles.controlLabel, { color: theme.colors.textSecondary }]}>
-                  {choice.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {decision.message ? (
-          <Text
-            testID="map-mode-message"
-            style={[styles.modeMessage, { color: theme.colors.textSecondary }]}
+        {sheetHeight === 'peek' ? (
+          <View style={styles.peekContent}>{offlineRowNode}</View>
+        ) : (
+          <ScrollView
+            style={styles.sheetScroll}
+            contentContainerStyle={styles.sheetScrollContent}
+            showsVerticalScrollIndicator={false}
           >
-            {decision.message}
-          </Text>
-        ) : null}
-
-        <View style={styles.controlRow}>
-          <Button
-            variant="secondary"
-            leftIcon={
-              <MaterialCommunityIcons
-                name="crosshairs-gps"
-                size={20}
-                color={theme.colors.textPrimary}
-              />
-            }
-            onPress={() => console.info('maps: centre the map on the courier')}
-            accessibilityLabel="My location"
-          >
-            My location
-          </Button>
-          {activeStop ? (
-            <Button
-              variant="primary"
-              leftIcon={
-                <MaterialCommunityIcons
-                  name="arrow-right"
-                  size={20}
-                  color={theme.colors.textInverse}
-                />
-              }
-              onPress={() => handleNavigateToStop(activeStop)}
-              accessibilityLabel="Next stop"
-            >
-              Next stop
-            </Button>
-          ) : null}
-          <Button
-            variant="outline"
-            leftIcon={
-              <MaterialCommunityIcons
-                name="tune-variant"
-                size={20}
-                color={theme.colors.textPrimary}
-              />
-            }
-            onPress={() => setSettingsOpen(true)}
-            accessibilityLabel="Map settings"
-            testID="map-settings"
-          >
-            Settings
-          </Button>
-        </View>
-      </View>
+            {modePicker}
+          </ScrollView>
+        )}
+      </BottomSheet>
 
       <MapSettingsSheet
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         toggles={toggles}
         onTogglesChange={setToggles}
-        themePreference={themePreference}
-        onThemePreferenceChange={setThemePreference}
       />
-
-      <Sheet
-        isOpen={selectedStop !== null}
-        onClose={() => setSelectedStop(null)}
-        title={selectedStop ? `Stop ${selectedStop.sequence}` : undefined}
-        subtitle={selectedStop ? statusLabels[selectedStop.status] : undefined}
-        size="medium"
-        testID="map-stop-sheet"
-      >
-        {selectedStop ? (
-          <>
-            <View style={styles.modalBody}>
-              <Text style={[styles.modalAddress, { color: theme.colors.textPrimary }]}>
-                {selectedStop.address}
-              </Text>
-              <Text style={[styles.modalSuburb, { color: theme.colors.textSecondary }]}>
-                {selectedStop.suburb}
-              </Text>
-              <View style={[styles.modalCoordinates, { borderTopColor: theme.colors.border }]}>
-                <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary }]}>
-                  Coordinates
-                </Text>
-                <Text style={[styles.modalCoordValue, { color: theme.colors.textSecondary }]}>
-                  {selectedStop.coordinates.lat.toFixed(6)},{' '}
-                  {selectedStop.coordinates.lng.toFixed(6)}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.modalActions}>
-              <Button
-                variant={selectedStop.status === 'delivered' ? 'outline' : 'primary'}
-                leftIcon={
-                  <MaterialCommunityIcons
-                    name="check"
-                    size={20}
-                    color={
-                      selectedStop.status === 'delivered'
-                        ? theme.colors.textPrimary
-                        : theme.colors.textInverse
-                    }
-                  />
-                }
-                onPress={() => handleMarkDelivered(selectedStop)}
-                disabled={selectedStop.status === 'delivered'}
-                style={styles.modalActionButton}
-                accessibilityLabel="Mark Delivered"
-              >
-                Delivered
-              </Button>
-              <Button
-                variant="secondary"
-                leftIcon={
-                  <MaterialCommunityIcons
-                    name="skip-next"
-                    size={20}
-                    color={theme.colors.textPrimary}
-                  />
-                }
-                onPress={() => handleSkipStop(selectedStop)}
-                style={styles.modalActionButton}
-                accessibilityLabel="Skip"
-              >
-                Skip
-              </Button>
-              <Button
-                variant="outline"
-                leftIcon={
-                  <MaterialCommunityIcons
-                    name="navigation-variant"
-                    size={20}
-                    color={theme.colors.textPrimary}
-                  />
-                }
-                onPress={() => handleNavigateToStop(selectedStop)}
-                style={styles.modalActionButton}
-                accessibilityLabel="Navigate"
-              >
-                Navigate
-              </Button>
-            </View>
-          </>
-        ) : null}
-      </Sheet>
     </SafeAreaView>
   );
 }
+
+/** The card width: two to a row inside the sheet's 24 pt padding, with a 12 pt gutter. */
+const useCardWidth = (): number =>
+  useMemo(() => {
+    const usable = Dimensions.get('window').width - spacing.space24 * 2 - spacing.space12;
+    return Math.floor(usable / 2);
+  }, []);
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   mapContainer: { flex: 1, position: 'relative' },
   map: { flex: 1 },
-  packStatus: {
+  pills: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    maxWidth: '80%',
+    top: spacing.space12,
+    left: spacing.space16,
+    right: spacing.space16,
   },
-  packStatusText: { fontSize: 12, fontWeight: '500' },
+  mapButtons: {
+    position: 'absolute',
+    right: spacing.space16,
+    top: spacing.space64,
+  },
   attribution: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.space8,
+    paddingVertical: spacing.space4,
   },
   attributionText: { fontSize: 10, lineHeight: 13 },
-  marker: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
+  sheetScroll: { flex: 1 },
+  sheetScrollContent: { paddingBottom: spacing.space32 },
+  sheetContent: {
+    gap: spacing.space16,
+    paddingHorizontal: spacing.space24,
+    paddingBottom: spacing.space48,
+  },
+  peekContent: {
+    paddingHorizontal: spacing.space24,
+    paddingBottom: spacing.space16,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sheetTitle: {
+    fontSize: typography.streetTitle.size,
+    lineHeight: typography.streetTitle.lineHeight,
+    fontWeight: typography.streetTitle.weight,
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  markerLabel: { fontSize: 12, fontWeight: '700' },
-  bottomControls: { padding: 16, paddingBottom: 32, borderTopWidth: 1 },
-  controlRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  controlButton: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+  modeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.space12,
   },
-  controlLabel: { fontSize: 12, fontWeight: '500' },
-  modeMessage: { fontSize: 17, marginBottom: 12 },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  modeCard: {
+    padding: spacing.space4,
+    borderWidth: 2.5,
   },
-  modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 32,
-    maxHeight: '85%',
+  preview: {
+    height: 80,
+    borderRadius: radii.segmented,
+    overflow: 'hidden',
   },
-  modalHandle: {
-    width: 40,
+  previewWater: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 26,
+    height: 10,
+  },
+  previewPark: {
+    position: 'absolute',
+    left: 8,
+    bottom: 8,
+    width: 26,
+    height: 18,
+    borderRadius: 4,
+  },
+  previewRoad: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 52,
     height: 5,
-    borderRadius: 2.5,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 20,
   },
-  modalHeader: {
+  previewRoadShort: {
+    position: 'absolute',
+    left: 22,
+    top: 0,
+    bottom: 0,
+    width: 5,
+  },
+  previewBuilding: {
+    position: 'absolute',
+    left: 12,
+    bottom: 20,
+    width: 22,
+    height: 20,
+    borderWidth: 2,
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomLeftRadius: 2,
+  },
+  previewBuildingSmall: {
+    position: 'absolute',
+    right: 14,
+    bottom: 20,
+    width: 14,
+    height: 13,
+    borderWidth: 2,
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomLeftRadius: 2,
+  },
+  previewNight: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 30,
+  },
+  previewRoute: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '46%',
+    height: 5,
+  },
+  modeName: {
+    fontSize: typography.body.size,
+    lineHeight: typography.body.lineHeight,
+    fontWeight: typography.body.weight,
+    marginTop: spacing.space8,
+    marginLeft: spacing.space4,
+  },
+  modeDescription: {
+    fontSize: typography.secondary.size,
+    lineHeight: typography.secondary.lineHeight,
+    fontWeight: '400',
+    marginLeft: spacing.space4,
+    marginBottom: spacing.space4,
+  },
+  modeMessage: {
+    fontSize: typography.secondary.size,
+    lineHeight: typography.secondary.lineHeight,
+    fontWeight: typography.secondary.weight,
+  },
+  offlineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 24,
-    marginBottom: 16,
+    gap: spacing.space12,
+    padding: spacing.space12,
   },
-  modalStatusBadge: { width: 12, height: 12, borderRadius: 6 },
-  modalStopNumber: { fontSize: 18, fontWeight: '600', flex: 1 },
-  modalBody: { paddingHorizontal: 24, marginBottom: 24 },
-  modalAddress: { fontSize: 20, fontWeight: '500', marginBottom: 4 },
-  modalSuburb: { fontSize: 16, marginBottom: 12 },
-  modalCoordinates: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
+  offlineText: { flex: 1, gap: spacing.space4 },
+  offlineTitle: {
+    fontSize: typography.body.size,
+    lineHeight: typography.body.lineHeight,
+    fontWeight: typography.body.weight,
   },
-  modalCoordLabel: { fontSize: 13, fontWeight: '500' },
-  modalCoordValue: { fontSize: 13 },
-  modalActions: { flexDirection: 'row', gap: 8, paddingHorizontal: 24 },
-  modalActionButton: { flex: 1 },
+  offlineDetail: {
+    fontSize: typography.secondary.size,
+    lineHeight: typography.secondary.lineHeight,
+    fontWeight: '400',
+  },
+  offlineState: {
+    fontSize: typography.body.size,
+    lineHeight: typography.body.lineHeight,
+    fontWeight: typography.body.weight,
+  },
 });
