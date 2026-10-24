@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
@@ -53,6 +54,9 @@ get_auth_settings()
 
 app = FastAPI(title="Courier Copilot", version="0.1.0")
 
+# The unhandled-error trail the PLAYBOOK triage reads (RUNBOOK section 10).
+logger = logging.getLogger("courier_api")
+
 # Include auth routes
 app.include_router(auth_router)
 
@@ -72,6 +76,7 @@ async def hardening_headers(
     try:
         response = await call_next(request)
     except Exception:
+        logger.exception("unhandled API error on %s %s", request.method, request.url.path)
         response = JSONResponse(status_code=500, content={"detail": "an internal error occurred"})
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -115,6 +120,14 @@ class CreateRunRequest(BaseModel):
     start_at: datetime
     capacity_parcels: int | None = Field(default=None, ge=0, le=9999)
     speed_kmh: float = Field(default=30.0, ge=1.0, le=120.0)
+
+    @field_validator("start_at")
+    @classmethod
+    def _aware_start_at(cls, value: datetime) -> datetime:
+        """A naive start would be silently read as UTC by the routing walk."""
+        if value.tzinfo is None:
+            raise ValueError("start_at must carry its timezone")
+        return value
 
 
 class ReoptRequest(BaseModel):
@@ -416,10 +429,16 @@ def upload_pod(
     directory = Path(pod_settings().pod_storage_dir)
     resolved_id = form.event_id if form.event_id is not None else uuid.uuid4()
     existing = repo.get_event(resolved_id)
-    if existing is not None and existing.shift_id != run.shift_id:
-        # The id belongs to another courier's run: refuse without
-        # disclosing anything, and never touch their bytes or rows.
-        raise HTTPException(status_code=404, detail="no event with this id")
+    if existing is not None:
+        if existing.shift_id != run.shift_id:
+            # The id belongs to another courier's run: refuse without
+            # disclosing anything, and never touch their bytes or rows.
+            raise HTTPException(status_code=404, detail="no event with this id")
+        if existing.stop_id != paths.stop_id:
+            # The caller's own event id, but for a different stop of the
+            # same run: a 200 here would echo a stop the bytes never saw.
+            raise HTTPException(status_code=409, detail="this event id belongs to another stop")
+
     replayed = existing is not None
 
     path = pod_path(directory, run.id, resolved_id)
@@ -635,11 +654,20 @@ def sync_events(
     """Offline-first sync: INSERT ... ON CONFLICT (id) DO NOTHING; returns server cursor.
 
     The shift has to be the caller's own run (ASVS V4): events decide stop
-    statuses, so an unowned shift id must be 404, never writable.
+    statuses, so an unowned shift id must be 404, never writable. The batch
+    is bounded (500, the reopt's cap too), and every event's stop must belong
+    to the run's stops - an event for an invented stop would sit in the log
+    forever, never flipping a status, inflating the cursor.
     """
     run = repo.get_run_for_shift(shift_id)
     if run is None or run.courier_id != principal.user_id:
         raise HTTPException(status_code=404, detail="no run for this shift")
+    if len(events) > 500:
+        raise HTTPException(status_code=422, detail="the batch is over the 500-event cap")
+    known = {row.id for row in repo.get_run_stops(run.id)}
+    unknown = [event.stop_id for event in events if event.stop_id not in known]
+    if unknown:
+        raise HTTPException(status_code=422, detail=f"stop {unknown[0]} is not in this run")
     rows = [
         DeliveryEventRow(
             id=event.id,
@@ -661,7 +689,10 @@ def sync_events(
 
 @app.websocket("/shifts/{shift_id}/voice")
 async def voice(
-    ws: WebSocket, shift_id: uuid.UUID, principal: AuthPrincipal = Depends(get_websocket_principal)
+    ws: WebSocket,
+    shift_id: uuid.UUID,
+    principal: AuthPrincipal = Depends(get_websocket_principal),
+    repo: Repo = Depends(get_repo),
 ):
     """Bidirectional voice channel.
     client -> server: {"type":"transcript","text":..., "final":true, "gps":{lat,lon,acc,speed}}
@@ -670,20 +701,48 @@ async def voice(
     server -> client: {"type":"say","text":..., "priority":"now|queue"}  (client TTS / Cartesia)
                       {"type":"state","stop":...}
     """
+    run = repo.get_run_for_shift(shift_id)
+    if run is None or run.courier_id != principal.user_id:
+        # The token is valid but the shift is not the caller's: the voice
+        # channel carries the day's addresses, so a foreign shift is closed
+        # without a word (ASVS V4 - the same 404 discipline as the routes).
+        await ws.close(code=4404)
+        return
     await ws.accept()
     try:
         while True:
-            msg = await ws.receive_json()
-            if msg["type"] == "gps":
+            try:
+                msg = await ws.receive_json()
+            except ValueError:
+                # A frame that is not JSON: log-and-continue - a voice
+                # channel gets noise, and one bad frame must not kill it.
+                await ws.send_json({"type": "say", "text": "Say that again.", "priority": "now"})
+                continue
+            kind = msg.get("type") if isinstance(msg, dict) else None
+            if kind == "gps":
                 # repo.approaching(shift_id, lat, lon, 50) -> ST_DWithin(entry_point, pos, 50)
                 continue
-            if msg["type"] == "transcript" and msg.get("final"):
+            if kind == "transcript" and msg.get("final"):
+                text = msg.get("text")
+                if not isinstance(text, str) or not text.strip():
+                    await ws.send_json(
+                        {"type": "say", "text": "Say that again.", "priority": "now"}
+                    )
+                    continue
+                text = text[:2000]
                 state: dict[
                     str, Any
                 ] = {}  # repo.copilot_state(shift_id) | {"speed_kmh": msg["gps"]["speed"]}
-                intent = copilot.interpret(msg["text"], state)
+                try:
+                    intent = copilot.interpret(text, state)
+                except Exception:  # any LLM failure falls back, never a dead socket
+                    intent = copilot.fallback_intent(text)
                 # repo.apply(shift_id, intent) -> delivery_event / stop mutation
                 if intent.speech:
                     await ws.send_json({"type": "say", "text": intent.speech, "priority": "now"})
+                continue
+            # An unknown frame type is noise: answer and stay open - the
+            # channel never leaves the courier (or a test) hanging.
+            await ws.send_json({"type": "say", "text": "Say that again.", "priority": "now"})
     except WebSocketDisconnect:
         return
