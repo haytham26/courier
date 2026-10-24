@@ -22,7 +22,10 @@ jobs:
     # runner (RUNBOOK section 12-13).
     services:
       postgres:
-        image: postgres:17.2
+        # The schema requires PostGIS (packages/contracts/db/schema.sql line
+        # 131), so the container is the official PostGIS build of the same
+        # PostgreSQL major — pinned, and never a production database.
+        image: postgis/postgis:17-3.5
         env:
           POSTGRES_USER: courier
           POSTGRES_PASSWORD: courier
