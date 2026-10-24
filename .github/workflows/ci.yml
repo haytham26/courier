@@ -6,6 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# BUG-056: the least privilege the job needs. Every other workflow declares its
+# permissions; without this block the repository's default applies, and the
+# default is wider than a read.
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
