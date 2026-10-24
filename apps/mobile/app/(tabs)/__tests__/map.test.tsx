@@ -5,11 +5,16 @@
  * is the wiring - the style, the tile source, the stop markers, the
  * attribution, the map modes and the settings sheet - and none of that needs
  * a device, a map server or a network.
+ *
+ * The screen is built on the chosen tokens, so the render wraps it in a
+ * ChosenProvider; light and dark are pinned through it, which is the ONE
+ * light/dark truth the screen reads (the legacy day/night selector is gone).
  */
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ChosenProvider } from '@/components/chosen';
 import { ThemeProvider } from '@/providers/ThemeProvider';
 import MapScreen from '../map';
 
@@ -47,6 +52,8 @@ jest.mock('@expo/vector-icons', () => {
   return {
     MaterialCommunityIcons: (props: { name: string }) =>
       ReactActual.createElement(RN.Text, { accessibilityLabel: props.name }, props.name),
+    Ionicons: (props: { name: string }) =>
+      ReactActual.createElement(RN.Text, { accessibilityLabel: props.name }, props.name),
   };
 });
 
@@ -81,12 +88,18 @@ jest.mock('@/sync/preferenceFiles', () => {
   };
 });
 
-async function renderScreen() {
+async function renderScreen(mode: 'light' | 'dark' = 'light') {
   const view = render(
     <GestureHandlerRootView>
-      <ThemeProvider>
-        <MapScreen />
-      </ThemeProvider>
+      <ChosenProvider mode={mode}>
+        {/* The map settings sheet is the one legacy island left on this
+            screen: it still reads the legacy theme, and the app's root
+            provider carries it in production. The test gives it the same
+            island until the legacy tokens go. */}
+        <ThemeProvider>
+          <MapScreen />
+        </ThemeProvider>
+      </ChosenProvider>
     </GestureHandlerRootView>,
   );
 
@@ -108,7 +121,7 @@ describe('the map screen', () => {
     expect(screen.getByTestId('map-screen')).toBeTruthy();
   });
 
-  it('gives the map the courier style of the current theme', async () => {
+  it('gives the map the courier style of the chosen mode', async () => {
     await renderScreen();
 
     expect(mockMapProps.mapStyle?.version).toBe(8);
@@ -121,11 +134,8 @@ describe('the map screen', () => {
     expect(Object.keys(mockMapProps.mapStyle?.sources ?? {})).toHaveLength(0);
   });
 
-  it('follows the theme when the courier switches to the night style', async () => {
-    await renderScreen();
-
-    fireEvent.press(screen.getByTestId('map-settings'));
-    fireEvent.press(screen.getByTestId('map-theme-night'));
+  it('follows the device when the chosen mode is the dark one', async () => {
+    await renderScreen('dark');
 
     expect(mockMapProps.mapStyle?.name).toBe('courier-copilot-night');
   });
@@ -200,6 +210,37 @@ describe('the map screen', () => {
           'Satellite needs a network and a licence',
         ),
       );
+    });
+
+    it("shows each mode's one line, the way the reference does", async () => {
+      await renderScreen();
+
+      expect(screen.getByText('Flat and clear')).toBeTruthy();
+      expect(screen.getByText('Buildings and depth')).toBeTruthy();
+      expect(screen.getByText('Real roofs and yards')).toBeTruthy();
+      expect(screen.getByText('3D in town, dark at night')).toBeTruthy();
+    });
+  });
+
+  describe('the map style sheet', () => {
+    it('puts the modes away and keeps the offline map row', async () => {
+      await renderScreen();
+
+      expect(screen.getByText('Flat and clear')).toBeTruthy();
+
+      fireEvent.press(screen.getByTestId('map-style-close'));
+
+      expect(screen.queryByText('Flat and clear')).toBeNull();
+      expect(screen.getByTestId('map-pack-status')).toBeTruthy();
+    });
+
+    it('has no second day/night control: the mode above is the only truth', async () => {
+      await renderScreen();
+
+      fireEvent.press(screen.getByTestId('map-settings'));
+
+      expect(screen.queryByTestId('map-theme-day')).toBeNull();
+      expect(screen.queryByTestId('map-theme-night')).toBeNull();
     });
   });
 
