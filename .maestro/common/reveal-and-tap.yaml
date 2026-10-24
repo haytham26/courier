@@ -1,0 +1,39 @@
+appId: com.courier.copilot
+name: "Reveal a row inside Today's sheet and tap it"
+---
+# The ONE convention for tapping a row inside the run sheet.
+#
+# The sheet opens at PEEK (the morning glance), where the screen's centre -
+# where a scroll gesture starts - is the MAP above the sheet, and the rows
+# below NEXT STOP are below the fold of the sheet's own ScrollView. So a row
+# that is on the screen but not visible is NOT tappable: from peek a tap aimed
+# at it lands on the dock, and a scroll aimed at it does nothing.
+#
+# This subflow is the repo-wide gesture for that, and it is in `common/` on
+# purpose: `run-all.sh` runs every TOP-LEVEL `.maestro/*.yaml` as a flow, so a
+# subflow at the top level would be executed on its own and fail. A file in a
+# subfolder is only reached by `runFlow`.
+#
+# USE IT (from a flow):
+#   - runFlow:
+#       file: common/reveal-and-tap.yaml
+#       env:
+#         TARGET: "today-scan"
+#
+# It never weakens the caller's assert: the target keeps its full-match text
+# or id, and the wait inside is the repo's own `extendedWaitUntil` idiom rather
+# than a bare assert. Two flows learned this the hard way - scan.yaml's
+# `today-scan` (run 40060608949, both legs, plain "Element not found") and
+# copilot.yaml's `today-go` (run 40072959461, same signature) - and the lesson
+# was that it is a CONTRACT, not a per-flow choice.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- scrollUntilVisible:
+    element:
+      id: "${TARGET}"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "${TARGET}"
