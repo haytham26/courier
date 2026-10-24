@@ -176,7 +176,7 @@ contract becomes `courier_id`, which is what the storage and the authz checks ac
 | V7 Logging | no PII, no tokens, no image bytes in logs; POD events log ids only |
 | V8 Data protection | POD bytes at rest under server-side names; sha256 recorded for integrity |
 | V13 API | input caps everywhere (name ≤ 120 chars, capacity 0–9999, speed 1–120, lists bounded ≤ 500) |
-| V14 Config | the POD directory comes from settings, never from the request; the hardening middleware (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`) rides **every** response, errors included — asserted by tests |
+| V14 Config | the POD directory comes from settings, never from the request; the hardening middleware (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`) rides **every** response — including errors and unhandled 500s (the middleware catches the exception itself and answers a clean, header-carrying 500; asserted by tests) |
 
 ### 6. Consequences
 
@@ -199,6 +199,13 @@ contract becomes `courier_id`, which is what the storage and the authz checks ac
 - All gates re-run on the branch; the floor guard diff-scoped against main.
 
 ## Limitations (honest)
+
+- The reopt is O(affected x slots x stops): 500 affected ids on a 200-stop day is minutes of
+  threadpool CPU - an authenticated self-DoS bounded by the 500-id cap, recorded here rather than
+  hidden. The reopt also does not re-apply a locked template: its stored plan wins the next route
+  read (the template path is a later slice together with the told-break-position contract).
+- A crashed retry of `POST /runs` (the response never reached the phone) meets 409 on the retry -
+  the client contract is "409 means read your run back", not a silent second run.
 
 - POD storage is a local directory, not object storage — the production wiring (S3/R2 + signed
   URLs) is a later slice; the repo/storage seam isolates it.

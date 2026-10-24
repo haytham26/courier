@@ -21,6 +21,7 @@ from uuid import UUID
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 
 from .routing import PlannedStop, RoutePlan, RunTemplate
 from .sequencing import Segment
@@ -112,7 +113,17 @@ class Repo(Protocol):
     """What the API needs from the database."""
 
     def put_run(self, run: RunRecord) -> None:
-        """Store a new run (the phone's first write of the day)."""
+        """Store a new run (the phone's first write of the day).
+
+        A shift carries exactly one run (the schema's `UNIQUE(shift_id)`); a
+        retry of the create call must meet the same 409 the database would
+        give, in both repositories, so the tests exercise what production
+        does.
+        """
+        ...
+
+    def get_event(self, event_id: UUID) -> DeliveryEventRow | None:
+        """One delivery event by id - the POD replay's ownership check."""
         ...
 
     def list_runs(self, courier_id: str, limit: int = 500) -> list[RunRecord]:
@@ -186,12 +197,17 @@ class InMemoryRepo:
     def put_run(self, run: RunRecord) -> None:
         if run.id in self.runs:
             raise ValueError(f"run {run.id} already exists")
+        if any(existing.shift_id == run.shift_id for existing in self.runs.values()):
+            raise ValueError("this shift already has a run")
         self.runs[run.id] = run
 
     def list_runs(self, courier_id: str, limit: int = 500) -> list[RunRecord]:
         mine = [run for run in self.runs.values() if run.courier_id == courier_id]
         mine.sort(key=lambda run: run.start_at, reverse=True)
         return mine[:limit]
+
+    def get_event(self, event_id: UUID) -> DeliveryEventRow | None:
+        return self.events.get(event_id)
 
     def get_run(self, run_id: UUID) -> RunRecord | None:
         return self.runs.get(run_id)
@@ -291,6 +307,32 @@ class SqlAlchemyRepo:
             result = connection.execute(statement, parameters)
             return int(result.rowcount or 0)
 
+    def get_event(self, event_id: UUID) -> DeliveryEventRow | None:
+        statement = text(
+            """
+            SELECT id, shift_id, stop_id, kind, utterance, safe_place,
+                   lat, lon, accuracy_m, occurred_at
+            FROM delivery_events
+            WHERE id = :event_id
+            """
+        )
+        with self._engine.connect() as connection:
+            row = connection.execute(statement, {"event_id": event_id}).mappings().one_or_none()
+        if row is None:
+            return None
+        return DeliveryEventRow(
+            id=row["id"],
+            shift_id=row["shift_id"],
+            stop_id=row["stop_id"],
+            kind=row["kind"],
+            utterance=row["utterance"],
+            safe_place=row["safe_place"],
+            lat=row["lat"],
+            lon=row["lon"],
+            accuracy_m=row["accuracy_m"],
+            occurred_at=row["occurred_at"],
+        )
+
     def cursor(self, shift_id: UUID) -> int:
         statement = text("SELECT count(*) FROM delivery_events WHERE shift_id = :shift_id")
         with self._engine.connect() as connection:
@@ -305,21 +347,27 @@ class SqlAlchemyRepo:
                     :capacity_parcels, :speed_kmh, :start_at)
             """
         )
-        with self._engine.begin() as connection:
-            connection.execute(
-                statement,
-                {
-                    "id": run.id,
-                    "shift_id": run.shift_id,
-                    "courier_id": run.courier_id,
-                    "name": run.name,
-                    "depot_lat": run.depot_lat,
-                    "depot_lon": run.depot_lon,
-                    "capacity_parcels": run.capacity_parcels,
-                    "speed_kmh": run.speed_kmh,
-                    "start_at": run.start_at,
-                },
-            )
+        try:
+            with self._engine.begin() as connection:
+                connection.execute(
+                    statement,
+                    {
+                        "id": run.id,
+                        "shift_id": run.shift_id,
+                        "courier_id": run.courier_id,
+                        "name": run.name,
+                        "depot_lat": run.depot_lat,
+                        "depot_lon": run.depot_lon,
+                        "capacity_parcels": run.capacity_parcels,
+                        "speed_kmh": run.speed_kmh,
+                        "start_at": run.start_at,
+                    },
+                )
+        except IntegrityError as error:
+            # The schema carries the 1:1 shift contract (UNIQUE(shift_id));
+            # the caller sees the same ValueError the in-memory repo raises,
+            # so the API's 409 is one rule in both worlds.
+            raise ValueError("this shift already has a run") from error
 
     def list_runs(self, courier_id: str, limit: int = 500) -> list[RunRecord]:
         statement = text(

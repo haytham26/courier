@@ -289,7 +289,9 @@ class TestUploadingTheProofOfDelivery:
         assert event.kind == "pod_captured"
         assert event.safe_place == "by the meter box"
         assert event.stop_id == stop_id
-        assert (Path(str(tmp_path)) / f"{body['event_id']}.bin").read_bytes() == payload
+        assert (
+            Path(str(tmp_path)) / str(run_id) / f"{body['event_id']}.bin"
+        ).read_bytes() == payload
 
     def test_a_replayed_pod_returns_the_first_upload_and_rewrites_nothing(
         self,
@@ -309,7 +311,7 @@ class TestUploadingTheProofOfDelivery:
             files={"image": ("door.jpg", payload, "image/png")},
             data={"occurred_at": START_AT.isoformat(), "event_id": str(event_id)},
         )
-        (Path(str(tmp_path)) / f"{event_id}.bin").write_bytes(b"tampered-marker")
+        (Path(str(tmp_path)) / str(run_id) / f"{event_id}.bin").write_bytes(b"tampered-marker")
 
         replay = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
@@ -519,6 +521,77 @@ class TestThePartialReopt:
         assert added_id in {uuid.UUID(stop["stop_id"]) for stop in route.json()["stops"]}
 
 
+class TestTheEventIdOwnership:
+    """The review finding: a shared flat namespace answered one courier with
+    another courier's fingerprint, and a pre-seeded file could swallow a
+    genuine upload. The event id is only a replay when the row belongs to
+    the caller's own run."""
+
+    def test_a_foreign_event_id_is_refused_not_answered(
+        self,
+        client: TestClient,
+        other_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        a_run_id, _ = seed_run_with_stops(repo)
+        a_stop_id = repo.run_stops[a_run_id][0].id
+        b_run_id, _ = seed_run_with_stops(repo, courier_id=OTHER)
+        b_stop_id = repo.run_stops[b_run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        stolen_id = uuid.uuid4()
+        a_payload = png_bytes(32)
+        client.post(
+            f"/runs/{a_run_id}/stops/{a_stop_id}/pod",
+            files={"image": ("door.jpg", a_payload, "image/png")},
+            data={"occurred_at": START_AT.isoformat(), "event_id": str(stolen_id)},
+        )
+
+        replayed = other_client.post(
+            f"/runs/{b_run_id}/stops/{b_stop_id}/pod",
+            files={"image": ("door.jpg", png_bytes(48), "image/png")},
+            data={"occurred_at": START_AT.isoformat(), "event_id": str(stolen_id)},
+        )
+
+        assert replayed.status_code == 404, replayed.text
+        assert "sha256" not in replayed.json()
+        # and the control: the owner still gets their own fingerprint
+        own = client.post(
+            f"/runs/{a_run_id}/stops/{a_stop_id}/pod",
+            files={"image": ("door.jpg", a_payload, "image/png")},
+            data={"occurred_at": START_AT.isoformat(), "event_id": str(stolen_id)},
+        )
+        assert own.status_code == 200
+        assert own.json()["sha256"] == hashlib.sha256(a_payload).hexdigest()
+
+    def test_a_pre_seeded_file_cannot_swallow_a_genuine_upload(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        planted_id = uuid.uuid4()
+        (Path(tmp_path) / str(run_id)).mkdir(parents=True)
+        (Path(tmp_path) / str(run_id) / f"{planted_id}.bin").write_bytes(b"junk")
+
+        genuine = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", png_bytes(64), "image/png")},
+            data={"occurred_at": START_AT.isoformat(), "event_id": str(planted_id)},
+        )
+
+        assert genuine.status_code == 201, genuine.text
+        assert genuine.json()["already_stored"] is False
+        stored = (Path(tmp_path) / str(run_id) / f"{planted_id}.bin").read_bytes()
+        assert stored != b"junk"
+        assert stored.startswith(b"\x89PNG")
+
+
 class TestTheSecurityHeaders:
     """ASVS V14: the API's hardening headers ride every response, errors included."""
 
@@ -567,3 +640,154 @@ class TestCreateRunValidation:
         ):
             refused = client.post("/runs", json=bad)
             assert refused.status_code == 422, bad
+
+
+class TestTheHardenedEdges:
+    """The rest of the review's findings: the shift contract, the naive
+    timestamps, the unhandled 500, and the authz the new endpoints owe."""
+
+    def test_a_second_run_on_one_shift_is_refused(self, client: TestClient) -> None:
+        body = run_body()
+
+        first = client.post("/runs", json=body)
+        second = client.post("/runs", json=run_body(shift_id=body["shift_id"]))
+
+        assert first.status_code == 201
+        assert second.status_code == 409, second.text
+
+    def test_a_naive_occurred_at_is_refused(self, client: TestClient, repo: InMemoryRepo) -> None:
+        run_id, shift_id = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+
+        naive = client.post(
+            f"/shifts/{shift_id}/events:batch",
+            json=[
+                {
+                    "id": str(uuid.uuid4()),
+                    "stop_id": str(stop_id),
+                    "kind": "delivered",
+                    "occurred_at": "2026-10-24T07:30:00",
+                }
+            ],
+        )
+
+        assert naive.status_code == 422
+
+    def test_an_unknown_event_kind_is_refused(self, client: TestClient, repo: InMemoryRepo) -> None:
+        run_id, shift_id = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+
+        refused = client.post(
+            f"/shifts/{shift_id}/events:batch",
+            json=[
+                {
+                    "id": str(uuid.uuid4()),
+                    "stop_id": str(stop_id),
+                    "kind": "teleported",
+                    "occurred_at": START_AT.isoformat(),
+                }
+            ],
+        )
+
+        assert refused.status_code == 422
+
+    def test_a_foreign_shift_cannot_receive_events(
+        self, client: TestClient, other_client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        _, shift_id = seed_run_with_stops(repo)
+
+        foreign = other_client.post(
+            f"/shifts/{shift_id}/events:batch",
+            json=[
+                {
+                    "id": str(uuid.uuid4()),
+                    "stop_id": str(uuid.uuid4()),
+                    "kind": "delivered",
+                    "occurred_at": START_AT.isoformat(),
+                }
+            ],
+        )
+
+        assert foreign.status_code == 404
+        assert repo.events == {}
+
+    def test_the_headers_ride_an_unhandled_error_too(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        def a_broken_repo() -> object:
+            raise RuntimeError("the database is gone")
+
+        app.dependency_overrides[get_repo] = a_broken_repo
+        try:
+            broken = client.get("/runs")
+        finally:
+            app.dependency_overrides[get_repo] = lambda: repo
+
+        assert broken.status_code == 500
+        assert broken.headers["x-content-type-options"] == "nosniff"
+        assert broken.headers["cache-control"] == "no-store"
+        assert broken.json() == {"detail": "an internal error occurred"}
+
+    def test_a_device_heic_is_accepted(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        heic = b"\0\0\0ftypmif1\0\0\0\0" + b"\0" * 20
+
+        stored = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.heic", heic, "image/heic")},
+            data={"occurred_at": START_AT.isoformat()},
+        )
+
+        assert stored.status_code == 201, stored.text
+
+    def test_an_overlong_safe_place_is_refused(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+
+        refused = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", png_bytes(), "image/png")},
+            data={"occurred_at": START_AT.isoformat(), "safe_place": "x" * 201},
+        )
+
+        assert refused.status_code == 422
+
+    def test_the_new_endpoints_refuse_the_anonymous(
+        self,
+        anonymous_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, shift_id = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+
+        pod = anonymous_client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", png_bytes(), "image/png")},
+            data={"occurred_at": START_AT.isoformat()},
+        )
+        reopt = anonymous_client.post(
+            f"/runs/{run_id}/route:reopt", json={"affected_stop_ids": [str(stop_id)]}
+        )
+        stops = anonymous_client.get(f"/shifts/{shift_id}/stops")
+
+        assert pod.status_code == 401
+        assert reopt.status_code == 401
+        assert stops.status_code == 401

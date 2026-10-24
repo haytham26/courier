@@ -20,7 +20,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .agents import copilot
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
@@ -65,9 +65,14 @@ async def hardening_headers(
 
     The API serves JSON only, so the content policy allows nothing and the
     authenticated bodies are never cached by anything between the phone and
-    the server.
+    the server. An unhandled exception gets the same headers on a clean 500 -
+    the review finding was that a bare 500 skipped the middleware entirely,
+    which is exactly when a caller most needs `nosniff` and `no-store`.
     """
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception:
+        response = JSONResponse(status_code=500, content={"detail": "an internal error occurred"})
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
@@ -112,18 +117,6 @@ class CreateRunRequest(BaseModel):
     speed_kmh: float = Field(default=30.0, ge=1.0, le=120.0)
 
 
-class RunBody(BaseModel):
-    """The run as the phone sees it."""
-
-    id: uuid.UUID
-    shift_id: uuid.UUID
-    name: str
-    depot: DepotPoint
-    capacity_parcels: int | None
-    speed_kmh: float
-    start_at: datetime
-
-
 class ReoptRequest(BaseModel):
     """The stops whose place in the day changed; everything else stays."""
 
@@ -133,13 +126,31 @@ class ReoptRequest(BaseModel):
 class DeliveryEvent(BaseModel):
     id: uuid.UUID  # client-generated -> idempotent offline replay
     stop_id: uuid.UUID
-    kind: str
-    utterance: str | None = None
-    safe_place: str | None = None
-    lat: float | None = None
-    lon: float | None = None
-    accuracy_m: float | None = None
+    kind: str = Field(min_length=1, max_length=64)
+    utterance: str | None = Field(default=None, max_length=2000)
+    safe_place: str | None = Field(default=None, max_length=200)
+    lat: float | None = Field(default=None, ge=-90.0, le=90.0)
+    lon: float | None = Field(default=None, ge=-180.0, le=180.0)
+    accuracy_m: float | None = Field(default=None, ge=0.0)
     occurred_at: datetime
+
+    @field_validator("occurred_at")
+    @classmethod
+    def _aware_occurred_at(cls, value: datetime) -> datetime:
+        """A naive timestamp would break the status ordering (and lie about
+        when it happened) - the phone always knows its zone."""
+        if value.tzinfo is None:
+            raise ValueError("occurred_at must carry its timezone")
+        return value
+
+    @field_validator("kind")
+    @classmethod
+    def _known_kind(cls, value: str) -> str:
+        """The vocabulary the status derivation (and the phone) understand."""
+        allowed = {"delivered", "skipped", "deferred", "failed", "pod_captured"}
+        if value not in allowed:
+            raise ValueError(f"unknown event kind: {value}")
+        return value
 
 
 class TemplateSegment(BaseModel):
@@ -347,9 +358,11 @@ class PodForm:
     def __init__(
         self,
         occurred_at: datetime = Form(...),
-        safe_place: str | None = Form(None),
+        safe_place: str | None = Form(None, max_length=200),
         event_id: uuid.UUID | None = Form(None),
     ) -> None:
+        if occurred_at.tzinfo is None:
+            raise HTTPException(status_code=422, detail="occurred_at must carry its timezone")
         self.occurred_at = occurred_at
         self.safe_place = safe_place
         self.event_id = event_id
@@ -367,8 +380,11 @@ def upload_pod(
 
     The bytes decide everything: capped before anything is stored, sniffed by
     magic (the client's name and declared type are never trusted), named by
-    the server after the event. A replayed client event id returns the first
-    upload's answer and rewrites nothing - the offline replay is idempotent.
+    the server after the event, under the run's own directory. A replayed
+    client event id is only a replay when the event row exists **and belongs
+    to this run** - a foreign event id is 404, never a fingerprint from
+    another courier's namespace, and a pre-seeded file cannot swallow a
+    genuine upload (the review finding).
     """
     run = repo.get_run(paths.run_id)
     if run is None or run.courier_id != principal.user_id:
@@ -384,12 +400,21 @@ def upload_pod(
 
     directory = Path(pod_settings().pod_storage_dir)
     resolved_id = form.event_id if form.event_id is not None else uuid.uuid4()
-    path = pod_path(directory, resolved_id)
-    replayed = path.exists()
-    if replayed:
+    existing = repo.get_event(resolved_id)
+    if existing is not None and existing.shift_id != run.shift_id:
+        # The id belongs to another courier's run: refuse without
+        # disclosing anything, and never touch their bytes or rows.
+        raise HTTPException(status_code=404, detail="no event with this id")
+    replayed = existing is not None
+
+    path = pod_path(directory, run.id, resolved_id)
+    if replayed and path.exists():
         stored_bytes, digest = stored_pod_fingerprint(path)
     else:
-        _, digest = save_pod(directory, resolved_id, content)
+        # Not a replay: the upload is the record, and a file that sits
+        # there without its own event row (a crash orphan, or a planted
+        # file) is overwritten by the genuine bytes.
+        _, digest = save_pod(directory, run.id, resolved_id, content)
         stored_bytes = len(content)
 
     stored = repo.append_events(
@@ -592,7 +617,14 @@ def sync_events(
     principal: AuthPrincipal = Depends(get_current_principal),
     repo: Repo = Depends(get_repo),
 ):
-    """Offline-first sync: INSERT ... ON CONFLICT (id) DO NOTHING; returns server cursor."""
+    """Offline-first sync: INSERT ... ON CONFLICT (id) DO NOTHING; returns server cursor.
+
+    The shift has to be the caller's own run (ASVS V4): events decide stop
+    statuses, so an unowned shift id must be 404, never writable.
+    """
+    run = repo.get_run_for_shift(shift_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run for this shift")
     rows = [
         DeliveryEventRow(
             id=event.id,
