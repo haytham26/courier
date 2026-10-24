@@ -116,7 +116,23 @@ Results:
   and stay green. D37 is the decision (D36 had landed with the backend squad in the
   same hours, so the renumber and the collision are recorded).
 
+- **2026-10-25, the flag is NOT the whole fix, and the record says so.** PR #22's own
+  run 40090791268 (25m01s) is GREEN on both api legs on the hardened head, so the flag
+  took the fatal first-screen loss out of that branch. PR #24 (the 09 map screen, with
+  the flag merged in) run 40091141666 then split the legs: **api-34 GREEN** (all 8
+  flows, including `map.yaml` on the new screen) and **api-35 RED** - compat, delivered,
+  driving and map all died at `Launch app "com.courier.copilot" with clear state...`
+  with `logcat-crash.txt` EMPTY, `relaunches=0` and a healthy app on the screen (the
+  evidence `window.xml` carries `today-screen`, the dock and every `tab-*` testID). So
+  the death is not a crash and not the app code: the app renders. The founder's
+  instruction for exactly this case is running now - the **solo experiment**
+  (`gh workflow run android-e2e.yml --ref feat/t6-09-map-style`, run 40095991344, with
+  no other android-e2e run in progress). Its result is written here as soon as it
+  lands, and if the api-35 leg dies alone too, the next triage is PLAYBOOK §1 against
+  the emulator image's own behaviour (a launchApp race on api-35 under software GL),
+  not the app.
+
 ---
 
-**Last Updated:** 2026-10-23 (PR #11 MERGED at caf2ef4: the deciding run 39909165246 green - BUG-050 and BUG-051 flip fixed; step 02 driving in review as the next per-screen PR. BUG-051 RE-OPENED to doing on the founder directive: the relaunch-once retry is a temporary guard only - the root cause is pinned to React Native's ForwardingCookieHandler (the webkit bridge) behind the voice client's cold-start fetch, the relaunch now rides only the KNOWN crash signature and every relaunch is counted, and the api-35 image leg joins the E2E matrix; a real-device test is FOUNDER_TODO) 2026-10-24 (the solver squad: BUG-016 partially delivered - PyVRP 0.14.1 behind `RouteEngine`, ADR-009/D35, the matrix leg still open; BUG-052 opened for the break-scan cost; the lead session: BUG-053 opened for the emulator GL loss with the flag fix and the prevention gate, H2 "fleet contention" killed by the green nightly and the green PR #19 E2E)
+**Last Updated:** 2026-10-23 (PR #11 MERGED at caf2ef4: the deciding run 39909165246 green - BUG-050 and BUG-051 flip fixed; step 02 driving in review as the next per-screen PR. BUG-051 RE-OPENED to doing on the founder directive: the relaunch-once retry is a temporary guard only - the root cause is pinned to React Native's ForwardingCookieHandler (the webkit bridge) behind the voice client's cold-start fetch, the relaunch now rides only the KNOWN crash signature and every relaunch is counted, and the api-35 image leg joins the E2E matrix; a real-device test is FOUNDER_TODO) 2026-10-24 (the solver squad: BUG-016 partially delivered - PyVRP 0.14.1 behind `RouteEngine`, ADR-009/D35, the matrix leg still open; BUG-052 opened for the break-scan cost; the lead session: BUG-053 opened for the emulator GL loss with the flag fix and the prevention gate, H2 "fleet contention" killed by the green nightly and the green PR #19 E2E) 2026-10-25 (the lead session: PR #22's run 40090791268 green on both legs on the hardened head; PR #24's run 40091141666 split - api-34 green with all 8 flows, api-35 red at launchApp with no crash and a healthy app; the solo experiment 40095991344 is running)
 **Total Bugs:** 53 | **Open:** 28 | **Fixed:** 17 | **Doing:** 4 | **Todo:** 3 | **Testing:** 1 | **Verified (50x):** 0
