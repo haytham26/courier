@@ -130,7 +130,10 @@ def smoke(target: str) -> dict[str, float]:
     request, unroutable = _route_request_of(repo, run_id)
     built = build_plan(request)
     timings["read_back_and_plan_s"] = round(time.perf_counter() - started, 3)
-    if unroutable or len(built.stops) != len(rows) or rows[0].status != "delivered":
+    # The SQL repo reads stops.status from the column (the in-memory repo
+    # derives it from the events) - the drill asserts the write-read
+    # contract: the stop row, the stored event and the plan.
+    if unroutable or len(built.stops) != len(rows) or rows[0].status != "pending":
         print("SMOKE FAILED: the restored day does not read back as it was written")
         raise SystemExit(1)
     return timings

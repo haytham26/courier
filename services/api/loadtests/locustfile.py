@@ -30,10 +30,12 @@ import os
 import random
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from locust import HttpUser, between, events, task
 from locust.exception import StopUser
+from seed_day import loadtest_shift_id, loadtest_stop_id
 
 # The SLO thresholds, encoded as this test's own contract.
 ROUTE_P95_MS = 5_000
@@ -51,17 +53,44 @@ _PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 1020
 class DriverDay(HttpUser):
     """One courier doing a day."""
 
-    wait_time = between(30, 90)  # a courier acts, then drives
+    # The day-loop cadence is 30-90 s; the CI profile tightens it (env) so
+    # a 60 s gate produces real volume. The staging run keeps the day shape.
+    wait_time = between(
+        float(os.environ.get("LOADTEST_WAIT_MIN", "30")),
+        float(os.environ.get("LOADTEST_WAIT_MAX", "90")),
+    )
 
     def on_start(self) -> None:
-        token = os.environ.get("LOADTEST_TOKEN")
+        token_file = os.environ.get("LOADTEST_TOKEN_FILE")
+        token = os.environ.get("LOADTEST_TOKEN") or (
+            Path(token_file).read_text(encoding="utf-8").strip()
+            if token_file and Path(token_file).exists()
+            else ""
+        )
         if not token:
-            raise StopUser("LOADTEST_TOKEN is not set: the load test runs against a real JWKS")
+            raise StopUser(
+                "no load-test identity: set LOADTEST_TOKEN or LOADTEST_TOKEN_FILE "
+                "(mint_token.py writes the file)"
+            )
         self.client.headers.update({"Authorization": f"Bearer {token}"})
         self.run_id: uuid.UUID | None = None
-        self.shift_id = uuid.uuid4()
-        self.stop_ids: list[uuid.UUID] = []
+        # The claim: one of the seeded shifts (deterministic ids from
+        # seed_day.py, which the CI step ran before this test). Two users
+        # claiming the same shift meet the API's honest 409 and read back.
+        self.shift_index = DriverDay._next_index() % int(os.environ.get("LOADTEST_SHIFTS", "60"))
+        self.shift_id = loadtest_shift_id(self.shift_index)
+        self.stop_ids = [
+            loadtest_stop_id(self.shift_index, k)
+            for k in range(int(os.environ.get("LOADTEST_STOPS_PER_SHIFT", "5")))
+        ]
         self._delivered: set[uuid.UUID] = set()
+
+    _user_counter = 0
+
+    @classmethod
+    def _next_index(cls) -> int:
+        cls._user_counter += 1
+        return cls._user_counter - 1
 
     def _slo(self, response: Any, p95_ms: int) -> None:
         """The per-request SLO: a 5xx or a 10x-SLO request is a failure."""
@@ -165,7 +194,8 @@ def assert_the_slos(environment: Any, **_kwargs: Any) -> None:
     """The run's verdict: the SLOs as thresholds, red on breach."""
     failures = 0
     wanted = (
-        ("GET", "/shifts/", ROUTE_P95_MS),
+        ("GET", "/route", ROUTE_P95_MS),
+        ("GET", "/stops", SYNC_P95_MS),
         ("POST", "/events:batch", SYNC_P95_MS),
         ("POST", "/pod", POD_P95_MS),
     )
@@ -178,7 +208,18 @@ def assert_the_slos(environment: Any, **_kwargs: Any) -> None:
                     print(f"SLO BREACH: {method} {entry.name} p95 {p95:.0f} ms > {threshold} ms")
                     failures += 1
     total = environment.stats.total
-    if total.num_requests and total.fail_ratio > MAX_ERROR_RATE:
+    # The vacuous-green guard (the review's must-fix): a run that greets
+    # nothing - no identity, a path mismatch, a dead API, unseeded shifts -
+    # measures nothing, and "nothing failed" is not "the SLOs are met".
+    # The CI evidence: the broken run lands ~2 requests (two 409s), the
+    # seeded healthy run lands ~180. The floor sits between them.
+    if total.num_requests < 100:
+        environment.process_exit_code = 1
+        print(
+            f"VACUOUS RUN: only {total.num_requests} requests - the gate needs a seeded, reachable API"
+        )
+        failures += 1
+    elif total.fail_ratio > MAX_ERROR_RATE:
         environment.process_exit_code = 1
         print(f"ERROR BUDGET BREACH: fail ratio {total.fail_ratio:.4f} > {MAX_ERROR_RATE}")
         failures += 1

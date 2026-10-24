@@ -64,6 +64,10 @@ include = ["app*"]
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+addopts = "-m 'not db'"
+markers = [
+    "db: touches the real Postgres (needs DATABASE_URL; run with `-m db`)",
+]
 
 [tool.ruff]
 line-length = 100

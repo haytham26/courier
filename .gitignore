@@ -52,6 +52,8 @@ data/labels/
 
 research-private/
 
+# The load test's minted identity (a throwaway key, never a credential)
+.loadtest/
 # Maestro writes the evidence and the screenshots under the repo on every
 # E2E run (run-all.sh), and the APK lands there too (android-e2e.yml): none
 # of it is source.
@@ -60,3 +62,4 @@ research-private/
 # The audits job exports the API's dependencies to a requirements file at the
 # root (quality-gates.yml) so pip-audit can read it: generated, never source.
 /requirements.txt
+
