@@ -172,6 +172,17 @@ class TestTheRunLifecycle:
         with pytest.raises(ValueError, match="this shift already has a run"):
             repo.put_run(a_run(shift_id))
 
+    def test_a_foreign_shift_key_is_named_honestly(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """A run whose shift row does not exist is a foreign-key break, not a
+        "shift already has a run" - the audit flagged the earlier version for
+        collapsing every IntegrityError into one lying 409."""
+        run = a_run(uuid.uuid4())  # no shift row
+
+        with pytest.raises(ValueError, match="already exists"):
+            repo.put_run(run)
+
     def test_a_duplicate_run_id_is_refused(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
         shift_id = a_shift(engine)
         run = a_run(shift_id)

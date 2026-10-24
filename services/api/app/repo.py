@@ -364,10 +364,17 @@ class SqlAlchemyRepo:
                     },
                 )
         except IntegrityError as error:
-            # The schema carries the 1:1 shift contract (UNIQUE(shift_id));
-            # the caller sees the same ValueError the in-memory repo raises,
-            # so the API's 409 is one rule in both worlds.
-            raise ValueError("this shift already has a run") from error
+            # The schema carries both contracts (the run's primary key and
+            # the 1:1 shift UNIQUE) - the constraint name says which one
+            # broke, so the caller gets the same ValueError the in-memory
+            # repo raises, and the API's 409 is one rule in both worlds.
+            # (The audit flagged the earlier version: any IntegrityError
+            # became the shift message - a lying 409.)
+            constraint = getattr(getattr(error, "orig", None), "diag", None)
+            name = getattr(constraint, "constraint_name", "") or ""
+            if "shift_id" in name:
+                raise ValueError("this shift already has a run") from error
+            raise ValueError(f"run {run.id} already exists") from error
 
     def list_runs(self, courier_id: str, limit: int = 500) -> list[RunRecord]:
         statement = text(
