@@ -3,19 +3,19 @@
  *
  * The sheet holds the choices a courier makes once and then forgets about:
  * the buildings, the traffic, the road closures, the weather, the size of the
- * labels and whether the map is day, night or whatever the device says.
+ * labels and the battery saver.
  *
  * Every control has a label, a role and a test id, the colours come from the
  * theme and the sizes from the design tokens, and the copy is plain NZ
- * English.
+ * English. The day/night choice is NOT here: light and dark have one source
+ * (the chosen mode, which follows the device), and a second selector on this
+ * sheet would be a second truth.
  */
 import React from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { Sheet } from '@/components/Sheet';
 import { useTheme } from '@/providers/ThemeProvider';
-import { THEME_PREFERENCES, type ThemePreference } from '@/constants/theme';
 
 import {
   MAP_LABEL_SIZES,
@@ -33,10 +33,6 @@ interface MapSettingsSheetProps {
   toggles: MapToggles;
   /** The courier changed something. */
   onTogglesChange: (toggles: MapToggles) => void;
-  /** The theme the courier chose. */
-  themePreference: ThemePreference;
-  /** The courier chose another theme. */
-  onThemePreferenceChange: (preference: ThemePreference) => void;
 }
 
 const LAYER_LABELS: Record<MapLayer, string> = {
@@ -51,20 +47,7 @@ const LABEL_SIZE_LABELS: Record<MapLabelSize, string> = {
   large: 'Large',
 };
 
-const THEME_LABELS: Record<'day' | 'night' | 'auto', string> = {
-  day: 'Day',
-  night: 'Night',
-  auto: 'Auto',
-};
-
-export function MapSettingsSheet({
-  isOpen,
-  onClose,
-  toggles,
-  onTogglesChange,
-  themePreference,
-  onThemePreferenceChange,
-}: MapSettingsSheetProps) {
+export function MapSettingsSheet({ isOpen, onClose, toggles, onTogglesChange }: MapSettingsSheetProps) {
   const { theme } = useTheme();
 
   const setFlag =
@@ -178,50 +161,6 @@ export function MapSettingsSheet({
             accessibilityHint="Keeps the map flat to save the battery"
             testID="map-toggle-battery-saver"
           />
-        </View>
-
-        <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>Theme</Text>
-        <View style={styles.choices} accessibilityRole="radiogroup">
-          {THEME_PREFERENCES.map((preference) => {
-            const selected = themePreference === preference;
-            const icon =
-              preference === 'day'
-                ? 'white-balance-sunny'
-                : preference === 'night'
-                  ? 'weather-night'
-                  : 'theme-light-dark';
-            return (
-              <TouchableOpacity
-                key={preference}
-                onPress={() => onThemePreferenceChange(preference)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected }}
-                accessibilityLabel={`${THEME_LABELS[preference]} theme`}
-                testID={`map-theme-${preference}`}
-                style={[
-                  styles.choice,
-                  {
-                    borderColor: selected ? theme.colors.brandPrimary : theme.colors.border,
-                    backgroundColor: selected ? theme.colors.background : theme.colors.surface,
-                  },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name={icon}
-                  size={20}
-                  color={selected ? theme.colors.brandPrimary : theme.colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.choiceLabel,
-                    { color: selected ? theme.colors.brandPrimary : theme.colors.textSecondary },
-                  ]}
-                >
-                  {THEME_LABELS[preference]}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
         </View>
       </View>
     </Sheet>
