@@ -40,9 +40,18 @@ name: "The scanner reads a label, the parcel joins the van, and it stays open fo
     id: "scan-overlay"
 - assertVisible:
     id: "scan-done"
-# The lock ring lands on the address block and the status reads the found
-# line (the reference's "Address found. Hold steady.").
-- assertVisible: "Address found. Hold steady."
+# The status starts at "Point the camera at the label." and the mock reader
+# answers after its own beat (labelReader.ts's MOCK_READ_BEAT_MS) plus the
+# permission settling, so the found line is WAITED for, not assumed: the
+# second emulator run of this flow failed on both legs at a bare assert here
+# (run 40063068694) with the ring and the pills already on screen - the
+# screen was right and the assertion was early. The wait is the repo's own
+# idiom (extendedWaitUntil), and it holds the full-match text rule: the
+# assert still names the reference's exact line.
+- extendedWaitUntil:
+    visible:
+      text: "Address found. Hold steady."
+    timeout: 30000
 # The match sheet (06-scan.html): the check and the matched address, the
 # place it was found, where it sits in the van, and the one action.
 - assertVisible:
