@@ -1,6 +1,8 @@
 # Constraints — Courier Copilot
 
-Last reviewed: 2026-10-20 by the lead executor (V4 §2, skill `constraint-driven-development`).
+Last reviewed: 2026-10-24 by the lead executor (V4 §2, skill `constraint-driven-development`): the
+accepted-advisory table gained its Owner column and its never-permanent rule (an acceptance with no
+owner, no review date, or a past review date now fails the gate). Previous: 2026-10-20.
 
 This file is the project's written quality bar. **It is not weakened to make a change pass.**
 Every number below names the command that produces the verdict.
@@ -83,11 +85,21 @@ stub), `services/api/app/agents/copilot.py` (64 % — the LLM call path needs a 
 `scripts/ci/check-audit.mjs` fails on every high/critical advisory except these three, which live in the
 build toolchain and never reach the shipped app:
 
-| Package | Severity | Why it is accepted | Review by |
-|---------|----------|---------------------|-----------|
-| `braces` | high | `metro-file-map` (the React Native bundler's file matching) — build time only, no patched version | 2026-12-01 |
-| `node-forge` | high | `@expo/cli` code signing during the Android build — build time only, no patched version | 2026-12-01 |
-| `zod` | high | `@expo/cli`'s own direct dependency (the expo build toolchain: prebuild, metro, the bundling the E2E APK build uses) — build time only; the patched line is a major version `@expo/cli` does not declare | 2026-12-01 |
+| Package | Severity | Why it is accepted | Owner | Review by |
+|---------|----------|---------------------|-------|-----------|
+| `braces` | high | `metro-file-map` (the React Native bundler's file matching) — build time only, no patched version | Platform squad | 2026-12-01 |
+| `node-forge` | high | `@expo/cli` code signing during the Android build — build time only, no patched version | Platform squad | 2026-12-01 |
+| `zod` | high | `@expo/cli`'s own direct dependency (the expo build toolchain: prebuild, metro, the bundling the E2E APK build uses) — build time only; the patched line (`zod@4.6.6`) is a major version `@expo/cli` does not declare on the pinned expo line | Platform squad | 2026-12-01 |
+
+**An acceptance is never permanent.** The gate refuses an allow-list entry that carries no owner, no
+review date, or a review date already in the past: those are reported as `MALFORMED ACCEPTANCE` and
+fail the gate, so the date cannot be pushed forward after it has lapsed. The owner is the one who
+re-attempts the upstream fix; the review date is when that attempt is due. The contract is asserted by
+`scripts/ci/__tests__/check-audit.test.mjs` (8 tests), which also fails if an entry is added to the
+repository's own list without both.
+
+`braces` currently produces no high/critical advisory — the entry is kept so the gate's answer is
+unchanged if the feed returns it, and it is still reviewed by its date.
 
 The two criticals that were in the tree (`tinypool` prototype pollution, reachable through the
 test runner) are **fixed**: the test runner moved to `vitest@4.1.11`, which no longer pulls the

@@ -1,17 +1,39 @@
 """FastAPI surface. Persistence is behind `repo` (PostGIS, see packages/contracts/db/schema.sql)."""
+
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
-from typing import Any, Literal
+from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Annotated, Any, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, Field
+from fastapi import (
+    Depends,
+    FastAPI,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .agents import copilot
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
+from .pod import (
+    POD_MAX_BYTES,
+    pod_path,
+    pod_settings,
+    save_pod,
+    sniff_image_kind,
+    stored_pod_fingerprint,
+)
 from .repo import DeliveryEventRow, Repo, RouteStopRow, RunRecord, get_repo
 from .routing import (
     RoutePlan,
@@ -21,6 +43,7 @@ from .routing import (
     RunTemplate,
     TimeWindow,
     build_plan,
+    build_reopt_plan,
     schedule_plan,
 )
 from .sequencing import Segment
@@ -33,6 +56,31 @@ app = FastAPI(title="Courier Copilot", version="0.1.0")
 # Include auth routes
 app.include_router(auth_router)
 
+
+@app.middleware("http")
+async def hardening_headers(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    """The ASVS V14 hardening on every response, errors included.
+
+    The API serves JSON only, so the content policy allows nothing and the
+    authenticated bodies are never cached by anything between the phone and
+    the server. An unhandled exception gets the same headers on a clean 500 -
+    the review finding was that a bare 500 skipped the middleware entirely,
+    which is exactly when a caller most needs `nosniff` and `no-store`.
+    """
+    try:
+        response = await call_next(request)
+    except Exception:
+        response = JSONResponse(status_code=500, content={"detail": "an internal error occurred"})
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
 Direction = Literal["asc", "desc", "odd_first", "even_first", "zigzag"]
 
 
@@ -41,16 +89,68 @@ class IntakeText(BaseModel):
     text: str
 
 
+class DepotPoint(BaseModel):
+    """The depot as numbers: the GeoJSON wrapper of the contract carried no
+    information the runs table does not already have in two columns."""
+
+    lat: float = Field(ge=-90.0, le=90.0)
+    lon: float = Field(ge=-180.0, le=180.0)
+
+
+class CreateRunRequest(BaseModel):
+    """The phone's first write of the day (ADR-010 §3).
+
+    Unknown fields are refused, never dropped silently: `territory` from the
+    older contract sketch comes back as 422 until the schema has a home for
+    it, because accepting-and-ignoring input is a lie. The same rule keeps the
+    finish point and the break window out until the runs table gains columns
+    for them - they shape the plan, so they must be storable first.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=120)
+    shift_id: uuid.UUID
+    depot: DepotPoint
+    start_at: datetime
+    capacity_parcels: int | None = Field(default=None, ge=0, le=9999)
+    speed_kmh: float = Field(default=30.0, ge=1.0, le=120.0)
+
+
+class ReoptRequest(BaseModel):
+    """The stops whose place in the day changed; everything else stays."""
+
+    affected_stop_ids: list[uuid.UUID] = Field(max_length=500)
+
+
 class DeliveryEvent(BaseModel):
-    id: uuid.UUID                     # client-generated -> idempotent offline replay
+    id: uuid.UUID  # client-generated -> idempotent offline replay
     stop_id: uuid.UUID
-    kind: str
-    utterance: str | None = None
-    safe_place: str | None = None
-    lat: float | None = None
-    lon: float | None = None
-    accuracy_m: float | None = None
+    kind: str = Field(min_length=1, max_length=64)
+    utterance: str | None = Field(default=None, max_length=2000)
+    safe_place: str | None = Field(default=None, max_length=200)
+    lat: float | None = Field(default=None, ge=-90.0, le=90.0)
+    lon: float | None = Field(default=None, ge=-180.0, le=180.0)
+    accuracy_m: float | None = Field(default=None, ge=0.0)
     occurred_at: datetime
+
+    @field_validator("occurred_at")
+    @classmethod
+    def _aware_occurred_at(cls, value: datetime) -> datetime:
+        """A naive timestamp would break the status ordering (and lie about
+        when it happened) - the phone always knows its zone."""
+        if value.tzinfo is None:
+            raise ValueError("occurred_at must carry its timezone")
+        return value
+
+    @field_validator("kind")
+    @classmethod
+    def _known_kind(cls, value: str) -> str:
+        """The vocabulary the status derivation (and the phone) understand."""
+        allowed = {"delivered", "skipped", "deferred", "failed", "pod_captured"}
+        if value not in allowed:
+            raise ValueError(f"unknown event kind: {value}")
+        return value
 
 
 class TemplateSegment(BaseModel):
@@ -68,6 +168,19 @@ class TemplateRequest(BaseModel):
     template_id: str = Field(min_length=1, max_length=64)
     segments: list[TemplateSegment] = Field(default_factory=list)
     stop_order: list[uuid.UUID]
+
+
+def _run_body(run: RunRecord) -> dict[str, Any]:
+    """The run as the phone sees it."""
+    return {
+        "id": str(run.id),
+        "shift_id": str(run.shift_id),
+        "name": run.name,
+        "depot": {"lat": run.depot_lat, "lon": run.depot_lon},
+        "capacity_parcels": run.capacity_parcels,
+        "speed_kmh": run.speed_kmh,
+        "start_at": run.start_at.isoformat(),
+    }
 
 
 def _order_problem(order: list[uuid.UUID], stop_ids: list[uuid.UUID]) -> str | None:
@@ -120,9 +233,7 @@ def _route_request(
     return RouteRequest(stops=tuple(stops), constraints=constraints), unroutable
 
 
-def _locked_order(
-    template: RunTemplate | None, request: RouteRequest
-) -> list[RouteStop] | None:
+def _locked_order(template: RunTemplate | None, request: RouteRequest) -> list[RouteStop] | None:
     """The locked order, when it still covers every stop of the run."""
     if template is None or not template.stop_order:
         return None
@@ -179,6 +290,222 @@ def _route_body(
             for stop in plan.stops
         ],
     }
+
+
+@app.get("/healthz")
+def healthz():
+    """The uptime probe's target (RUNBOOK section 9): data-free by construction.
+
+    It answers without auth (the probe cannot hold a courier token) and
+    without any request data, any id or any address - the status, the
+    version and the engine names are the whole body.
+    """
+    return {
+        "status": "ok",
+        "version": app.version,
+        "engines": ["pyvrp", "heuristic-nn-2opt"],
+    }
+
+
+@app.post("/runs", status_code=201)
+def create_run(
+    body: CreateRunRequest,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Create the courier's run: the day the routing engine plans.
+
+    The run belongs to the authenticated courier from birth; nothing else in
+    the request can say otherwise (ASVS V4 - the owner comes from the token,
+    never from the body).
+    """
+    record = RunRecord(
+        id=uuid.uuid4(),
+        shift_id=body.shift_id,
+        courier_id=principal.user_id,
+        name=body.name,
+        depot_lat=body.depot.lat,
+        depot_lon=body.depot.lon,
+        capacity_parcels=body.capacity_parcels,
+        speed_kmh=body.speed_kmh,
+        start_at=body.start_at,
+    )
+    try:
+        repo.put_run(record)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return _run_body(record)
+
+
+@app.get("/runs")
+def list_runs(
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The courier's own runs, newest first (bounded at 500, ASVS V13)."""
+    return [_run_body(run) for run in repo.list_runs(principal.user_id)]
+
+
+@app.get("/runs/{run_id}")
+def get_run(
+    run_id: uuid.UUID,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """One run of the day, for the courier who owns it; foreign runs are 404."""
+    run = repo.get_run(run_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run with this id")
+    return _run_body(run)
+
+
+class StopPaths:
+    """The run and the stop from the path (ASVS V4: both resolve to the caller's own)."""
+
+    def __init__(self, run_id: uuid.UUID, stop_id: uuid.UUID) -> None:
+        self.run_id = run_id
+        self.stop_id = stop_id
+
+
+class PodForm:
+    """The POD upload's form fields (the image itself stays its own parameter)."""
+
+    def __init__(
+        self,
+        occurred_at: datetime = Form(...),
+        safe_place: str | None = Form(None, max_length=200),
+        event_id: uuid.UUID | None = Form(None),
+    ) -> None:
+        if occurred_at.tzinfo is None:
+            raise HTTPException(status_code=422, detail="occurred_at must carry its timezone")
+        self.occurred_at = occurred_at
+        self.safe_place = safe_place
+        self.event_id = event_id
+
+
+@app.post("/runs/{run_id}/stops/{stop_id}/pod", status_code=201)
+def upload_pod(
+    paths: Annotated[StopPaths, Depends()],
+    image: UploadFile,
+    form: Annotated[PodForm, Depends()],
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The at-the-door photo of a delivery (ADR-010 §4-5).
+
+    The bytes decide everything: capped before anything is stored, sniffed by
+    magic (the client's name and declared type are never trusted), named by
+    the server after the event, under the run's own directory. A replayed
+    client event id is only a replay when the event row exists **and belongs
+    to this run** - a foreign event id is 404, never a fingerprint from
+    another courier's namespace, and a pre-seeded file cannot swallow a
+    genuine upload (the review finding).
+    """
+    run = repo.get_run(paths.run_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run with this id")
+    if paths.stop_id not in {row.id for row in repo.get_run_stops(run.id)}:
+        raise HTTPException(status_code=404, detail="no stop with this id in this run")
+
+    content = image.file.read(POD_MAX_BYTES + 1)
+    if len(content) > POD_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="the image is over the 10 MiB cap")
+    if sniff_image_kind(content) is None:
+        raise HTTPException(status_code=415, detail="the upload is not a JPEG, PNG or HEIC image")
+
+    directory = Path(pod_settings().pod_storage_dir)
+    resolved_id = form.event_id if form.event_id is not None else uuid.uuid4()
+    existing = repo.get_event(resolved_id)
+    if existing is not None and existing.shift_id != run.shift_id:
+        # The id belongs to another courier's run: refuse without
+        # disclosing anything, and never touch their bytes or rows.
+        raise HTTPException(status_code=404, detail="no event with this id")
+    replayed = existing is not None
+
+    path = pod_path(directory, run.id, resolved_id)
+    if replayed and path.exists():
+        stored_bytes, digest = stored_pod_fingerprint(path)
+    else:
+        # Not a replay: the upload is the record, and a file that sits
+        # there without its own event row (a crash orphan, or a planted
+        # file) is overwritten by the genuine bytes.
+        _, digest = save_pod(directory, run.id, resolved_id, content)
+        stored_bytes = len(content)
+
+    stored = repo.append_events(
+        shift_id=run.shift_id,
+        events=[
+            DeliveryEventRow(
+                id=resolved_id,
+                shift_id=run.shift_id,
+                stop_id=paths.stop_id,
+                kind="pod_captured",
+                utterance=None,
+                safe_place=form.safe_place,
+                lat=None,
+                lon=None,
+                accuracy_m=None,
+                occurred_at=form.occurred_at,
+            )
+        ],
+    )
+    return JSONResponse(
+        status_code=200 if replayed else 201,
+        content={
+            "event_id": str(resolved_id),
+            "stop_id": str(paths.stop_id),
+            "sha256": digest,
+            "bytes": stored_bytes,
+            "stored_at": datetime.now(UTC).isoformat(),
+            "already_stored": replayed or stored == 0,
+        },
+    )
+
+
+@app.post("/runs/{run_id}/route:reopt")
+def reopt_route(
+    run_id: uuid.UUID,
+    body: ReoptRequest,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Re-place only the affected stops; the rest of the day stays (ADR-010 §4).
+
+    The affected stops go back into the order deterministically (nearest to
+    the depot first, each at its best slot), the answer carries the
+    finish-time delta so the copilot can say "this adds N minutes", and the
+    stored route is refreshed so the phone's next route read serves the same
+    day. An affected stop that is not part of the run is 422, with the
+    reason.
+    """
+    run = repo.get_run(run_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run with this id")
+    rows = repo.get_run_stops(run.id)
+    request, unroutable = _route_request(run, rows)
+    stored = repo.get_run_route(run.id)
+    if stored is not None:
+        # The phone's own day is the anchor: the delta is what the change
+        # does TO that day, so it anchors even when the day has grown past
+        # it (the common case - a stop added at the door).
+        current = stored
+    else:
+        # No plan stored: the day "before" is the kept stops, planned as the
+        # template would time them.
+        affected = set(body.affected_stop_ids)
+        current = schedule_plan(
+            [stop for stop in request.stops if stop.id not in affected], request
+        )
+    try:
+        result = build_reopt_plan(request, current, body.affected_stop_ids)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    repo.put_run_route(run.id, result.plan)
+    body_out = _route_body(
+        shift_id=run.shift_id, run=run, plan=result.plan, template=None, unroutable=unroutable
+    )
+    body_out["finish_delta_s"] = result.finish_delta_s
+    return body_out
 
 
 @app.put("/runs/{run_id}/template")
@@ -244,21 +571,58 @@ def shift_route(
 
 
 @app.post("/shifts/{shift_id}/intake")
-def intake_text(shift_id: uuid.UUID, body: IntakeText, principal: AuthPrincipal = Depends(get_current_principal)):
+def intake_text(
+    shift_id: uuid.UUID, body: IntakeText, principal: AuthPrincipal = Depends(get_current_principal)
+):
     """Starts the intake graph (thread_id = shift_id). Returns either the briefing or the
     first interrupt question; answers flow back over the voice socket."""
     ...
 
 
 @app.post("/shifts/{shift_id}/intake/manifest")
-async def intake_manifest(shift_id: uuid.UUID, image: UploadFile, principal: AuthPrincipal = Depends(get_current_principal)):
+async def intake_manifest(
+    shift_id: uuid.UUID,
+    image: UploadFile,
+    principal: AuthPrincipal = Depends(get_current_principal),
+):
     """Photo of paper manifest -> vision extraction -> same intake graph with source='ocr'."""
     ...
 
 
 @app.get("/shifts/{shift_id}/stops")
-def list_stops(shift_id: uuid.UUID, status: str | None = None, principal: AuthPrincipal = Depends(get_current_principal)):
-    ...
+def list_stops(
+    shift_id: uuid.UUID,
+    status: Literal["pending", "delivered", "skipped", "deferred", "failed"] | None = None,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The shift's stops with their live statuses (ADR-010 §2).
+
+    The status vocabulary is the contract's (`pending`/`delivered`/`skipped`/
+    `deferred`/`failed`); an unknown filter value is refused by the type
+    itself, never silently treated as "all".
+    """
+    run = repo.get_run_for_shift(shift_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run for this shift")
+    rows = repo.get_run_stops(run.id)
+    return [
+        {
+            "id": str(row.id),
+            "address": row.address,
+            "seq": seq,
+            "status": row.status,
+            "lat": row.lat,
+            "lon": row.lon,
+            "priority": row.priority,
+            "parcels": row.parcels,
+            "service_time_s": row.service_time_s,
+            "window_start": row.window_start.isoformat() if row.window_start else None,
+            "window_end": row.window_end.isoformat() if row.window_end else None,
+        }
+        for seq, row in enumerate(rows, start=1)
+        if status is None or row.status == status
+    ]
 
 
 @app.post("/shifts/{shift_id}/events:batch")
@@ -268,7 +632,14 @@ def sync_events(
     principal: AuthPrincipal = Depends(get_current_principal),
     repo: Repo = Depends(get_repo),
 ):
-    """Offline-first sync: INSERT ... ON CONFLICT (id) DO NOTHING; returns server cursor."""
+    """Offline-first sync: INSERT ... ON CONFLICT (id) DO NOTHING; returns server cursor.
+
+    The shift has to be the caller's own run (ASVS V4): events decide stop
+    statuses, so an unowned shift id must be 404, never writable.
+    """
+    run = repo.get_run_for_shift(shift_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run for this shift")
     rows = [
         DeliveryEventRow(
             id=event.id,
@@ -289,7 +660,9 @@ def sync_events(
 
 
 @app.websocket("/shifts/{shift_id}/voice")
-async def voice(ws: WebSocket, shift_id: uuid.UUID, principal: AuthPrincipal = Depends(get_websocket_principal)):
+async def voice(
+    ws: WebSocket, shift_id: uuid.UUID, principal: AuthPrincipal = Depends(get_websocket_principal)
+):
     """Bidirectional voice channel.
     client -> server: {"type":"transcript","text":..., "final":true, "gps":{lat,lon,acc,speed}}
                       (STT runs on-device or via Deepgram streaming; we only receive finals)
@@ -305,7 +678,9 @@ async def voice(ws: WebSocket, shift_id: uuid.UUID, principal: AuthPrincipal = D
                 # repo.approaching(shift_id, lat, lon, 50) -> ST_DWithin(entry_point, pos, 50)
                 continue
             if msg["type"] == "transcript" and msg.get("final"):
-                state: dict[str, Any] = {}  # repo.copilot_state(shift_id) | {"speed_kmh": msg["gps"]["speed"]}
+                state: dict[
+                    str, Any
+                ] = {}  # repo.copilot_state(shift_id) | {"speed_kmh": msg["gps"]["speed"]}
                 intent = copilot.interpret(msg["text"], state)
                 # repo.apply(shift_id, intent) -> delivery_event / stop mutation
                 if intent.speech:
