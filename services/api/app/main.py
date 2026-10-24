@@ -706,6 +706,9 @@ async def voice(
         # The token is valid but the shift is not the caller's: the voice
         # channel carries the day's addresses, so a foreign shift is closed
         # without a word (ASVS V4 - the same 404 discipline as the routes).
+        # Accepted first: uvicorn only delivers a close CODE to an accepted
+        # socket; rejecting the handshake discards the code.
+        await ws.accept()
         await ws.close(code=4404)
         return
     await ws.accept()
@@ -713,8 +716,9 @@ async def voice(
         while True:
             try:
                 msg = await ws.receive_json()
-            except ValueError:
-                # A frame that is not JSON: log-and-continue - a voice
+            except (ValueError, KeyError, TypeError):
+                # A frame that is not JSON - or a binary frame (receive_json
+                # raises KeyError on it): answer and continue. A voice
                 # channel gets noise, and one bad frame must not kill it.
                 await ws.send_json({"type": "say", "text": "Say that again.", "priority": "now"})
                 continue

@@ -98,6 +98,22 @@ def test_every_contract_operation_is_served() -> None:
     )
 
 
+def test_a_planned_path_is_not_served() -> None:
+    """The contract cannot UNDERSTATE a serving API either: a path marked
+    planned must have no real route behind it (the review's follow-up)."""
+    document = yaml.safe_load(CONTRACT.read_text(encoding="utf-8"))
+    served = served_routes()
+    planned_served = [
+        (method.upper(), path)
+        for path, item in document["paths"].items()
+        if item.get("x-status") == "planned"
+        for method in item
+        if method.lower() in ("get", "post", "put", "patch", "delete")
+        if (method.upper(), path) in served
+    ]
+    assert planned_served == [], f"paths marked planned but actually served: {planned_served}"
+
+
 def test_the_operation_ids_match() -> None:
     served = served_routes()
     declared = contract_operations()

@@ -423,8 +423,8 @@ paths:
               schema: { $ref: '#/components/schemas/PodResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '413': { description: The image exceeds 10 MiB }
-        '415': { description: Not a JPEG/PNG/HEIC image (checked by magic bytes, not by name) }
+        '413': { description: "The image exceeds 10 MiB" }
+        '415': { description: "Not a JPEG/PNG/HEIC image (checked by magic bytes, not by name)" }
 
   /runs/{run_id}/route:reopt:
     post:

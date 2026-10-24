@@ -115,12 +115,15 @@ class TestVoiceSocket:
         private_key, _ = key_pair
         token = sign(private_key, subject="someone-else")
         try:
-            with (
-                TestClient(app) as bare, pytest.raises(WebSocketDisconnect) as refused,
-                bare.websocket_connect(f"/shifts/{SHIFT_ID}/voice?token={token}"),
-            ):
-                pass
-            assert refused.value.code == 4404
+            with TestClient(app) as bare, bare.websocket_connect(
+                f"/shifts/{SHIFT_ID}/voice?token={token}"
+            ) as session:
+                first_frame = session.receive()  # the accept lands, then the close
+                if first_frame["type"] == "websocket.close":
+                    code = first_frame.get("code")
+                else:
+                    code = session.receive().get("code")
+            assert code == 4404  # delivered: the socket was accepted first
         finally:
             app.dependency_overrides.clear()
 
@@ -139,6 +142,11 @@ class TestVoiceSocket:
             ws.send_text("not json at all")  # a frame that is not JSON
             reply = ws.receive_json()
             assert reply["text"] == "Say that again."
+            ws.send_bytes(b"\x00\x01binary")  # a binary frame is noise too
+            raw = ws.receive()  # the raw frame: the transport's mode handling
+            # is not what this test proves - the channel's survival is.
+            assert raw["type"] == "websocket.send"
+            assert "Say that again." in raw.get("text", "")
             ws.send_json({"type": "transcript", "final": True, "text": "how many left?"})
             reply = ws.receive_json()
             assert reply["type"] == "say"
