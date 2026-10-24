@@ -21,15 +21,18 @@ from app.auth.jwks import get_verifier
 from app.main import app
 from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from app.routing import (
+    BreakConstraint,
     HeuristicEngine,
     RouteRequest,
     RouteStop,
     RunConstraints,
     TimeWindow,
+    _schedule,
     build_plan,
     get_engine,
     seed_plan,
 )
+from app.solver import PyVRPEngine
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 
 COURIER = "driver-7"
@@ -66,6 +69,7 @@ def make_request(
     start_at: datetime = START_AT,
     capacity_parcels: int | None = None,
     speed_kmh: float = 30.0,
+    break_constraint: BreakConstraint | None = None,
 ) -> RouteRequest:
     """The run the engine is asked to plan."""
     return RouteRequest(
@@ -76,6 +80,7 @@ def make_request(
             start_at=start_at,
             capacity_parcels=capacity_parcels,
             speed_kmh=speed_kmh,
+            break_constraint=break_constraint,
         ),
     )
 
@@ -319,7 +324,7 @@ class TestTheEngine:
             for stop in stops
         ]
 
-        plan = build_plan(make_request(tight))
+        plan = build_plan(make_request(tight), engine=HeuristicEngine())
 
         assert plan.window_violations == 0
         assert plan.total_distance_m == seeded.total_distance_m
@@ -334,7 +339,7 @@ class TestTheEngine:
         ]
         request = make_request(stops)
 
-        improved = build_plan(request)
+        improved = build_plan(request, engine=HeuristicEngine())
         seeded = seed_plan(request)
 
         assert improved.total_distance_m <= seeded.total_distance_m
@@ -353,7 +358,7 @@ class TestTheEngine:
         ]
         request = make_request([make_stop(lat=lat, lon=lon) for lat, lon in points])
 
-        improved = build_plan(request)
+        improved = build_plan(request, engine=HeuristicEngine())
         seeded = seed_plan(request)
 
         assert improved.total_distance_m < seeded.total_distance_m
@@ -385,11 +390,36 @@ class TestTheEngine:
         with pytest.raises(ValueError):
             build_plan(request)
 
-    def test_the_engine_seam_returns_the_deterministic_engine(self) -> None:
+    def test_a_told_break_position_outside_the_day_is_refused(self) -> None:
+        """A told break position stands strictly between two stops - anything else raises.
+
+        The contract of the told position (the template path of the runs API
+        will rely on it): 0 and the stop count are refused, never silently
+        re-read as "not given" - a break placed by guesswork behind the
+        caller's back is a lie.
+        """
+        stops = [make_stop(lat=-43.5400, lon=172.6000), make_stop(lat=-43.5200, lon=172.6400)]
+        request = make_request(
+            stops,
+            break_constraint=BreakConstraint(
+                earliest=START_AT + timedelta(minutes=270),
+                latest=START_AT + timedelta(minutes=360),
+                minutes=30,
+            ),
+        )
+
+        for position in (0, 2, 9):
+            with pytest.raises(ValueError):
+                _schedule(stops, request, position)
+
+        placed = _schedule(stops, request, 1)
+        assert placed.break_violation is False
+
+    def test_the_engine_seam_returns_the_production_solver(self) -> None:
         engine = get_engine()
 
-        assert isinstance(engine, HeuristicEngine)
-        assert engine.name == "heuristic-nn-2opt"
+        assert isinstance(engine, PyVRPEngine)
+        assert engine.name == "pyvrp"
 
     def test_two_hundred_stops_stay_inside_the_five_second_budget(self) -> None:
         """The V4 budget: a day of 200 stops is planned in five seconds."""
@@ -564,7 +594,7 @@ class TestTheRouteEndpoint:
         assert body["stops"][0]["arrival_at"] < body["stops"][1]["arrival_at"]
         assert body["stops"][0]["distance_m"] > 0
         assert body["total_distance_m"] > 0
-        assert body["engine"] == "heuristic-nn-2opt"
+        assert body["engine"] == "pyvrp"
         assert body["locked"] is False
 
     def test_the_route_follows_the_locked_template(

@@ -74,3 +74,9 @@ After every fix:
 | app dies seconds after a cold launch on api-34 | the image's Chromium CookieManager crash (BUG-051); counted relaunch only for the known signature |
 | `gh pr checks --watch` never exits | a stuck duplicate check row; read `gh run view <id>` instead |
 | a push did not reach GitHub | redirected output hid the error; push with the output on screen and confirm with `gh run list` |
+
+## 10. Experiments never live in the repo
+- Probe files, bisect scripts and scratch files go in the approved temp folder OUTSIDE the repo (C:\Users\DCL\AppData\Local\Temp\opencode), never in apps/mobile/app (that is the router: every file there is a screen), apps/mobile/src, docs/ or any tracked folder.
+- Before every commit, `git status` must show no `tmp-*`, `probe` or scratch file. Cleaning up means deleting only UNTRACKED files you created (`??` in git status). A tracked file is removed only with `git rm` in a commit that says why.
+- A harness is code too: check its spelling and imports first. A probe that fails for its own reason proves nothing.
+- Every experiment counts against the 45-minute time box of §19.1.

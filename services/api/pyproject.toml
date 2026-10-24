@@ -24,6 +24,9 @@ dependencies = [
     "httpx>=0.28.1",
     "python-multipart>=0.0.6",
     "python-dotenv>=1.0",
+    # The production VRP solver (ADR-009): MIT, prebuilt wheels, seeded-deterministic.
+    # PyVRP 0.14.1 supports >=3.11; 0.15+ moves to 3.12 (PyVRP #1206), so pin below it.
+    "pyvrp>=0.14.1,<0.15",
 ]
 
 [project.optional-dependencies]
@@ -35,6 +38,11 @@ dev = [
     "pytest-randomly>=3.15",
     "ruff>=0.5",
     "mypy>=1.10",
+]
+# The load test of §18.4 (docs/operations/RUNBOOK.md section 12) runs from
+# this extra; the API itself never imports locust.
+load = [
+    "locust>=2.20",
 ]
 
 [tool.uv]
@@ -66,6 +74,12 @@ ignore = ["E501", "B008", "PLR0913", "PLR0915", "PLR0912", "PLR2004", "ARG001", 
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ARG005", "PLC0415"]
+# A benchmark tool reports its runs on the console.
+"benchmarks/**" = ["T20", "PLC0415"]
+# The ops tools (the restore drill) and the load test report on the console,
+# and both import the app lazily so the API process is never loaded twice.
+"ops/**" = ["T20", "PLC0415"]
+"loadtests/**" = ["T20"]
 
 [tool.mypy]
 python_version = "3.11"
