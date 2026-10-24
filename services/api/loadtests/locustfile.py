@@ -209,11 +209,11 @@ def assert_the_slos(environment: Any, **_kwargs: Any) -> None:
                     failures += 1
     total = environment.stats.total
     # The vacuous-green guard (the review's must-fix): a run that greets
-    # nothing - no identity, a path mismatch, a dead API - measures nothing,
-    # and "nothing failed" is not "the SLOs are met". The floor is the
-    # profile's own expectation: 50 users x 60 s with the day-loop task mix
-    # lands well past 200 requests; anything under is a broken run.
-    if total.num_requests < 200:
+    # nothing - no identity, a path mismatch, a dead API, unseeded shifts -
+    # measures nothing, and "nothing failed" is not "the SLOs are met".
+    # The CI evidence: the broken run lands ~2 requests (two 409s), the
+    # seeded healthy run lands ~180. The floor sits between them.
+    if total.num_requests < 100:
         environment.process_exit_code = 1
         print(
             f"VACUOUS RUN: only {total.num_requests} requests - the gate needs a seeded, reachable API"
