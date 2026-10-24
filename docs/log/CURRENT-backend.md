@@ -1,26 +1,30 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-24 · Branch: `feat/backend-api` (queue item 2, PR pending) · item 1 MERGED as PR #19 (archive/feat/routing-solver)
-## Done — queue item 1 (the real routing solver) — MERGED
-- `PyVRPEngine` (ADR-009, D35): 174-stop break-day 4.7 s / 0 violations vs the heuristic's 50 s / 17;
-  200-stop budget 3.2 s ≤ 5 s. Reviewer-verified (no blockers); the five-pass record is on PR #19.
-- The told break position now RAISES outside the day (RED-GREEN test); ADR-009 §6 lists all five
-  engine names; `creep_probe.py` committed with its real output.
-## Done this session — queue item 2 (the runs/stops API, ADR-010, D36)
-- Slices 1-5, TDD each: `POST/GET /runs`, `GET /runs/{id}` (owner-from-token; foreign run 404);
-  `GET /shifts/{id}/stops` for real (status derived from delivery events in-memory, read from the
-  table in SQL); `POST /runs/{run_id}/stops/{stop_id}/pod` (10 MiB cap, magic-byte sniff, server-named
-  file, replay-idempotent); `POST /runs/{run_id}/route:reopt` (stored plan anchors the delta; stored
-  route refreshed); the V14 hardening headers on every response incl. errors.
-- Suite: 217 passed + 1 skipped; ruff/mypy clean.
+Updated: 2026-10-25 · main at `c50a083` · **The founder's backend queue (items 1–4) is COMPLETE.**
+
+## Merged (all with merge commits + archive tags, branches deleted)
+
+- **Item 1** — the routing solver: PR #19, ADR-009/D35 (`archive/feat/routing-solver`). PyVRP 0.14.1
+  behind the seam; 174-stop break-day 4.7 s / 0 violations; 200-stop budget 3.2 s ≤ 5 s.
+- **Item 2** — the runs/stops API: PR #21, ADR-010/D36 (`archive/feat/backend-api`). Runs CRUD, the
+  live stop list, the POD upload (event-id ownership per run after the review's POC), the partial
+  reopt, the V14 hardening headers; the review's three must-fixes landed pre-merge.
+- **Item 3** — the Courier Voice brain through OmniRoute: verified BUILT (166 tests, the fake-gateway
+  tests); the real gateway + keys are the FOUNDER_TODO row (`docs/status/FOUNDER_TODO.md`).
+- **Item 4** — §18.4 reliability: PR #23 (`archive/feat/backend-ops`). The RUNBOOK §8–§13 (SLOs,
+  error budget, incident process, on-call quiet hours, the alert payload contract), `GET /healthz`
+  (data-free), the 1,000-driver Locust model with the SLOs as thresholds, the restore drill script.
+
+## Honest gaps (recorded, not hidden)
+
+- The SLO load run + the first DR drill have NOT executed (no DB daemon on the dev machine) — both
+  scripts refuse honestly; they are the launch gates on staging/CI (`docs/evidence/backend-ops/`).
+- The location-notes endpoints (door_memory mapping) are NOT STARTED; POD object storage and the
+  rate limiter are later slices (ADR-010 §Limitations).
+- The two intake stubs remain for the next voice slice.
+
 ## For the lead (contract note)
-- The NEW endpoints' OpenAPI fragments (pod upload, route:reopt, the narrowed createRun/run response —
-  `territory` refused 422 until the schema gains a column; finish/break deferred likewise) live in
-  ADR-010 §4. `packages/contracts/openapi.yaml` needs the contracts owner to merge them; until then
-  the implementation is the contract of record for these endpoints.
-- Honest gaps (ADR-010 §Limitations): POD storage is a local dir (not object storage); no rate
-  limiter; the location-notes endpoints (door_memory mapping) are NOT STARTED; the two intake stubs
-  stay for queue item 3.
-## Next (queue items 3-4)
-3. Courier Voice server brain through OmniRoute — a fake provider in the tests; real keys FOUNDER_TODO.
-4. §18.4 SLOs, the load test and the restore drill.
+
+- The OpenAPI fragments for the runs/stops/POD/reopt endpoints live in ADR-010 §4;
+  `packages/contracts/openapi.yaml` needs the contracts owner to merge them. The n8n alert lanes
+  (RUNBOOK §11) are the infra squad's; the API's duty (healthz + the payload contract) is shipped.
