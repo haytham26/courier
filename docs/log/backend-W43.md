@@ -89,3 +89,31 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 - The location-notes endpoints: NOT STARTED (the door_memory mapping needs its own slice).
 - POD storage is a local directory; object storage is a later slice (the seam isolates it).
 - No rate limiter (recorded in ADR-010 §Limitations, not silently skipped).
+
+## 2026-10-25 — Queue 2, item 1: the quality audit (branch ' + chr(96) + 'chore/audit-backend' + chr(96) + ')
+
+- **The founder findings fixed**: (a) the generated coverage summaries untracked (.gitignore
+  already listed them - the entries never took effect on tracked files); (b) the contract whole
+  again (it never had the route endpoint the app reads daily, the auth routes or /healthz; the
+  /locations path was a duplicate YAML key) + the drift guard (' + chr(96) + 'tests/test_contract.py' + chr(96) +
+  ': served subset-of contract, non-planned contract subset-of served, operationIds equal -
+  reconciled to the API route names).
+- **The deep audit (services/)**: 8 must-fixes, all applied - the sync batch bound + the event
+  stop-id ownership, the voice-WS ownership (4404 on a foreign shift) + malformed-frame honesty +
+  the transcript bound, the LLM failure paths (fallback_intent; the OmniRoute malformed-JSON
+  fallback), the middleware exception logging, the POD replay-on-another-stop 409, the timezone
+  honesty, the auth email-verification option (tested, env-gated), litellm + alembic dropped.
+- **The repo-wide sweep (read-only, item 1c)**: findings filed as BUG-053..BUG-057 (lead-owned) +
+  BUG-058/059 (the auth items + the backend backlog). The short list for the lead is in
+  CURRENT-backend.md.
+- Verified by running: both suites green (api 236+1, voice 166), pip-audit clean on both runtime
+  trees, the licence sweep (one psycopg LGPL note for the lead ledger), ruff/mypy clean.
+
+### Skills applied (AGENTS.md map) - item 1
+
+| Step | Skills read and followed | How they changed the work |
+| --- | --- | --- |
+| The audit | ' + chr(96) + 'code-review-and-quality' + chr(96) + ', ' + chr(96) + 'security-and-hardening' + chr(96) + ' | Two fresh-context auditors (services/ deep, repo-wide read-only) ran BEFORE any new feature, per the founder order; the route-by-route authz walk and the STRIDE pass produced the findings. |
+| The fixes | ' + chr(96) + 'test-driven-development' + chr(96) + ' | The stop-ownership and the WS-frame fixes carry tests that reproduce the abuse (the invented stop, the foreign shift, the malformed frame); the drift guard carries a not-vacuous test. |
+| The findings ledger | ' + chr(96) + 'constraint-driven-development' + chr(96) + ', ' + chr(96) + 'documentation-and-adrs' + chr(96) + ' | Nothing parked in memory: BUG-053..059 carry file, evidence and owner; the lead list is in CURRENT-backend.md. |
+

@@ -369,10 +369,13 @@ class SqlAlchemyRepo:
             # broke, so the caller gets the same ValueError the in-memory
             # repo raises, and the API's 409 is one rule in both worlds.
             # (The audit flagged the earlier version: any IntegrityError
-            # became the shift message - a lying 409.)
+            # became the shift message - a lying 409. And a foreign-key
+            # break is named for what it is: the shift does not exist.)
             constraint = getattr(getattr(error, "orig", None), "diag", None)
             name = getattr(constraint, "constraint_name", "") or ""
-            if "shift_id" in name:
+            if name.endswith("_fkey"):
+                raise ValueError("the shift does not exist") from error
+            if name.endswith("_key") and "shift_id" in name:
                 raise ValueError("this shift already has a run") from error
             raise ValueError(f"run {run.id} already exists") from error
 

@@ -1,45 +1,46 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-25 · main at `c50a083` · **The founder's backend queue (items 1–4) is COMPLETE.**
+Updated: 2026-10-25 · main at `6eec1da` · **Queue 2: item 1 MERGED (PR #26), item 2 in review (PR #27).**
 
-## In flight — queue 2 (the founder's second queue, 2026-10-25)
+## In flight — item 2 (the database in CI, this branch)
 
-- **Item 1 (the quality audit)** is on `chore/audit-backend` (PR #26): the coverage summaries
-  untracked, the API contract whole + the drift guard, the deep-audit security/correctness fixes
-  (the sync bounds, the voice-WS ownership, the LLM failure paths, the middleware logging), the
-  repo-wide sweep filed as BUG-053..BUG-057 for the lead (the tracked scratch renders, the
-  gitignore gaps, the stale STATUS/PROGRESS, the ci.yml permissions, the dead design-videos
-  workflow) and BUG-058/059 (the ASVS items + the backend backlog).
-- **Item 2 (the database in CI)** is on `feat/db-in-ci` (this branch): the pinned Postgres 17.2
-  service container, the DB-backed `SqlAlchemyRepo` suite (9 tests, the `db` marker — the
-  executemany-rowcount and IntegrityError questions close with evidence in CI), the restore drill
-  as a CI step (dump → clean DB → the API round-trip), and the short Locust SLO profile with a
-  minted JWKS identity (the full 1,000-driver run stays documented for staging, RUNBOOK §12).
-  No script points at anything but the runner's own service container.
+- The pinned PostGIS 17.2 service container (the schema needs PostGIS), the DB-backed
+  `SqlAlchemyRepo` suite (10 tests, the `db` marker — the executemany-rowcount and
+  IntegrityError questions close with evidence in CI; the first run showed the lying-409
+  conflation live and the constraint-name translation landed in the same pass), the restore
+  drill as a CI step (dump → clean DB → the API round-trip), and the short Locust SLO profile
+  with a minted JWKS identity (the full 1,000-driver run stays documented for staging, RUNBOOK
+  §12). No script points at anything but the runner's own service container.
 
-## Merged (all with merge commits + archive tags, branches deleted)
+## Queue 2 item 1 — MERGED (PR #26, `archive/chore/audit-backend`)
 
-- **Item 1** — the routing solver: PR #19, ADR-009/D35 (`archive/feat/routing-solver`). PyVRP 0.14.1
-  behind the seam; 174-stop break-day 4.7 s / 0 violations; 200-stop budget 3.2 s ≤ 5 s.
-- **Item 2** — the runs/stops API: PR #21, ADR-010/D36 (`archive/feat/backend-api`). Runs CRUD, the
-  live stop list, the POD upload (event-id ownership per run after the review's POC), the partial
-  reopt, the V14 hardening headers; the review's three must-fixes landed pre-merge.
-- **Item 3** — the Courier Voice brain through OmniRoute: verified BUILT (166 tests, the fake-gateway
-  tests); the real gateway + keys are the FOUNDER_TODO row (`docs/status/FOUNDER_TODO.md`).
-- **Item 4** — §18.4 reliability: PR #23 (`archive/feat/backend-ops`). The RUNBOOK §8–§13 (SLOs,
-  error budget, incident process, on-call quiet hours, the alert payload contract), `GET /healthz`
-  (data-free), the 1,000-driver Locust model with the SLOs as thresholds, the restore drill script.
+- **Fixed at the root** (founder findings + the deep audit's must-fixes): the coverage summaries
+  untracked; the contract whole + the **drift guard** (the contract never had the route endpoint,
+  `/auth/*` or `/healthz`; the duplicate `/locations` YAML key fixed; the not-served paths marked
+  `x-status: planned`; the planned-implies-not-served guard direction); the sync batch bounded +
+  every event stop_id belonging to the run; the voice WS: foreign shift closed 4404 (delivered
+  post-accept), malformed/binary frames answered (never a dead socket), the transcript bounded;
+  the LLM failure path is `fallback_intent`; the middleware logs the swallowed 500s; the POD
+  same-run-different-stop replay is 409; `start_at` tz-aware; the auth
+  `AUTH_REQUIRE_EMAIL_VERIFICATION` option (tested, default off — no email lane yet); `litellm` +
+  `alembic` dropped; `put_run` names the broken constraint (the FK break, the 1:1 shift, the
+  duplicate id — each honest).
+- **For the lead — the sweep's findings, filed in BUGS.md (BUG-053..BUG-057, owner: lead):**
+  1. `.design-render/`: 24 scratch PNGs tracked, contradicting `.gitignore:44-46` itself (BUG-053).
+  2. `.gitignore` gaps: `.maestro/evidence/`, `apk/`, root `requirements.txt` are generated per-run
+     but not ignored (BUG-054).
+  3. `docs/STATUS.md` + `docs/status/PROGRESS.md` are stale: "PyVRP is a seam, not wired", "POD not
+     started", "160 tests", "five flows" — all contradicted by PRs #19/#21/#23 (BUG-055).
+  4. `ci.yml` has no top-level `permissions:` block (BUG-056).
+  5. `design-videos.yml` is still present although its own header says it was to be deleted; the
+     `store-ready.yml` step-name duplicate is cosmetic (BUG-057).
+- **Parked (backend, BUG-059):** the test-fixture hoist, response_models on 11 handlers, the voice
+  stores bound, the WS token-in-query NIT, the psycopg LGPL note for the lead's licence ledger.
 
-## Honest gaps (recorded, not hidden)
+## Still queued (queue 2)
 
-- The SLO load run + the first DR drill have NOT executed (no DB daemon on the dev machine) — both
-  scripts refuse honestly; they are the launch gates on staging/CI (`docs/evidence/backend-ops/`).
-- The location-notes endpoints (door_memory mapping) are NOT STARTED; POD object storage and the
-  rate limiter are later slices (ADR-010 §Limitations).
-- The two intake stubs remain for the next voice slice.
+3. POD object storage (S3-compatible, signed URLs, retention; moto in tests — no MinIO, AGPL).
+4. Location notes (the door-memory endpoints + the cross-courier tests).
+5. Voice intake (close the two stubs through the fake OmniRoute provider).
+6. Sync conflict rules (the ADR first).
 
-## For the lead (contract note)
-
-- The OpenAPI fragments for the runs/stops/POD/reopt endpoints live in ADR-010 §4;
-  `packages/contracts/openapi.yaml` needs the contracts owner to merge them. The n8n alert lanes
-  (RUNBOOK §11) are the infra squad's; the API's duty (healthz + the payload contract) is shipped.

@@ -34,7 +34,7 @@ export function buildAuthOptions(config: AuthConfig): BetterAuthOptions {
       enabled: config.emailAndPassword.enabled,
       minPasswordLength: config.emailAndPassword.minPasswordLength,
       autoSignIn: true,
-      requireEmailVerification: false,
+      requireEmailVerification: config.emailAndPassword.requireEmailVerification,
     },
     session: {
       expiresIn: config.session.expiresIn,
