@@ -97,7 +97,7 @@ jobs:
           DATABASE_URL: postgresql://courier:courier@127.0.0.1:5432/courier
         run: |
           set -euo pipefail
-          pg_dump -h 127.0.0.1 -U courier --no-owner --no-privileges courier > "$RUNNER_TEMP/drill-backup.sql"
+          docker exec ${{ job.services.postgres.id }} pg_dump -U courier --no-owner --no-privileges courier > "$RUNNER_TEMP/drill-backup.sql"
           psql -h 127.0.0.1 -U courier -d postgres -c "DROP DATABASE IF EXISTS drill;"
           psql -h 127.0.0.1 -U courier -d postgres -c "CREATE DATABASE drill;"
           uv run --directory services/api python ops/restore_drill.py \
