@@ -1,4 +1,4 @@
-// The test for the emulator-GL gate (BUG-053).
+// The test for the emulator-GL gate (BUG-060).
 //
 //   node --test scripts/ci/__tests__/check-emulator-gpu.test.mjs
 //
@@ -56,8 +56,8 @@ const BOOT_WITH_GPU = BOOT_WITHOUT_GPU.replace(
   '-no-window -gpu swiftshader_indirect -no-snapshot',
 );
 
-test('the bug id is the tracker\'s BUG-053, not the brief\'s BUG-052', () => {
-  assert.equal(BUG_ID, 'BUG-053');
+test('the bug id is the tracker\'s BUG-060, renumbered past the audit\'s BUG-053', () => {
+  assert.equal(BUG_ID, 'BUG-060');
 });
 
 test('a boot without a -gpu flag fails the gate', () => {
