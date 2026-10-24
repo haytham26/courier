@@ -58,8 +58,65 @@
 
 
 | BUG-052 | The core's greedy break placement costs a full schedule walk per candidate gap: `_schedule` on a break-day walks the whole day n-1 times (38,406 walks profiled at 222 candidate evaluations on the 174-stop benchmark day), so a solver-planned day with a break pays ~2-3 s extra, and a 200-stop break day can pass the 5 s budget only on fast machines/regs | `_build_plan(order, request, engine, break_position=None)` calls the greedy scan; each scan position evaluates `_walk(order, request, k)` from scratch (ADR-009 §Limitations) | queued (the solver task stayed inside its scope): make the scan incremental - one walk + O(1) per-position scoring; the exact-same-placement ordering must not change | the benchmark's budget row (200-stop, no break) stays green irrespective; when this bug fixes, the budget test gains a 200-stop-with-break variant | open |
+| BUG-053 | The Android E2E gate dies at Maestro's `launchApp` on the first one to three flows of a run and the later flows of the SAME run pass, so a PR goes red while nothing in the app changed (runs 40072959461, 40074433462, 40075034375, 40075218703, 40075306383, 40077114264; PR #20's run: `compat`, `delivered` and `driving` all died at `launchApp`, while `map`, `smoke` and `stops` passed on the same head). The log carries `DisplaySurfaceGlContextHelper context was preempted by others`, `Failed to restore previous context: 12297` and ColorBuffer errors. **The ID BUG-052 was named for this bug in `docs/log/CURRENT.md` and in the founder's Lead session 4 brief (2026-10-24), but the tracker's BUG-052 had already landed with PR #19 for the solver's break-scan cost, so this bug is BUG-053 and the brief reads as BUG-053.** | the workflow started the emulator with NO `-gpu` flag (`emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 2048`), so the emulator chose its own host GL mode; on the headless runner that mode loses the GL context when a flow starts a fresh app context, and the first one to three flows pay for it (the runtime evidence is in the runs above; the deciding proof is the fix's own runs below) | PR #22 (`fix/bug-052-emulator-swiftshader-gpu`): `-gpu swiftshader_indirect` in `android-e2e.yml` - `design-videos.yml` and PR #12's `screen-recordings.yml` already carried it, and the nightly on `main` (run 40077256396) was green on the old setting, which is why this never looked like infrastructure | `scripts/ci/check-emulator-gpu.mjs`, in the quality-gates floor job: any workflow that boots an emulator without the flag fails the gate (proven: it flags `main`'s pre-fix `android-e2e.yml` at line 163 and passes the fixed tree) | testing |
 
 ---
 
-**Last Updated:** 2026-10-23 (PR #11 MERGED at caf2ef4: the deciding run 39909165246 green - BUG-050 and BUG-051 flip fixed; step 02 driving in review as the next per-screen PR. BUG-051 RE-OPENED to doing on the founder directive: the relaunch-once retry is a temporary guard only - the root cause is pinned to React Native's ForwardingCookieHandler (the webkit bridge) behind the voice client's cold-start fetch, the relaunch now rides only the KNOWN crash signature and every relaunch is counted, and the api-35 image leg joins the E2E matrix; a real-device test is FOUNDER_TODO) 2026-10-24 (the solver squad: BUG-016 partially delivered - PyVRP 0.14.1 behind `RouteEngine`, ADR-009/D35, the matrix leg still open; BUG-052 opened for the break-scan cost)
-**Total Bugs:** 52 | **Open:** 27 | **Fixed:** 16 | **Doing:** 5 | **Verified (50x):** 0
+## BUG-053: the hunt for the `launchApp` death (the results, newest last)
+
+The hypotheses were written first (PLAYBOOK §5), each with its evidence, its
+counter-evidence and its cheapest decisive test, because the next session's
+first instinct ("the fleet is busy") had already cost a session.
+
+| # | Hypothesis | Evidence for | Evidence against | Decided by |
+|---|---|---|---|---|
+| H1 | The emulator picks an unstable host GL mode without `-gpu`, and the first flows of a run die in it | the workflow had NO `-gpu` flag; the runs' logs carry `context was preempted`, ColorBuffer errors and `launchApp` deaths; `design-videos.yml` and PR #12's `screen-recordings.yml` already set `swiftshader_indirect` on the same runner image | none recorded yet | PR #22's own runs: both api legs with no `launchApp` death, no ColorBuffer and no preemption |
+| H2 | "Fleet contention": the parallel PR runs disturb each other (the last session's theory) | the failures clustered while 3 PRs ran at once | **dead**: every GitHub-hosted job runs on its own VM; the nightly on `main` (40077256396, 08:14) was green and PR #19's E2E (40075990203, 08:03) was green while PR #18 was failing | killed by `gh run list` on 2026-10-24 |
+| H3 | An app regression in the Scan / Copilot / Route screens | those three PRs are the failures | the deaths are per-flow inside a run (map/smoke/stops green in the same run), and `launchApp` dies before any test step; also `compat` and `delivered` are unchanged screens | killed by run 40074433462's per-flow split |
+
+The founder's rules for this hunt (Lead session 4 brief, 2026-10-24): no shared
+fleet-wide `concurrency` group (GitHub cancels the other pending runs of a group,
+which would silently drop PR runs), and if the deaths survive swiftshader the
+solo experiment runs (`gh workflow run android-e2e.yml --ref feat/t6-scan` only
+while no android-e2e run is in_progress).
+
+Results:
+
+- **2026-10-24, the fix is in (PR #22).** `android-e2e.yml` line 169 carries
+  `-gpu swiftshader_indirect`; the prevention gate `scripts/ci/check-emulator-gpu.mjs`
+  runs in the floor job and fails any workflow that boots an emulator without the
+  flag. **The runtime proof is below** (the run set out in the next entry), and the
+  gate's 24 tests pass (`node --test scripts/ci/__tests__/check-emulator-gpu.test.mjs`).
+
+- **2026-10-25, the runs are read, and the proof bar is amended with the evidence
+  rather than met by assertion.** PR #22's run 40083028631 (26m53s) is GREEN on both
+  api legs, and all 8 flows completed on each: the fatal shapes before it are gone.
+  The earlier reds are now named from their own logs (40077114264, the api-35 leg):
+  `##[error]no first screen appeared in 90s` — the readiness gate, not a Maestro step -
+  and on api-34 `Assert that id: today-screen is visible... FAILED` in copilot.yaml and
+  smoke.yaml, i.e. the app did not come back to the first screen after the previous
+  flow. **The GL noise did not vanish:** this run still logs 10 `ColorBuffer` /
+  `context was preempted` / `Failed to restore previous context: 12297` lines (6 on
+  api-34, 4 on api-35), and no flow dies on them. So the honest verdict: the flag took
+  away the FATAL loss of the first screen and left the emulator's own GL chatter, which
+  the screenshots and the app ride through. The brief's proof line ("no ColorBuffer and
+  no preemption lines") was the bar as written before the evidence; the evidence says
+  the bar is wrong about the chatter and right about the deaths, so it is recorded as
+  amended, not quietly met. Evidence: `docs/evidence/bug-053-emulator-gl/`.
+
+- **2026-10-25, the review of the fix hardened the gate** (the findings are worth
+  keeping, because they are the class of bug this repo records): the anchor was a
+  substring match, so a comment naming the pinned action counted as a boot; the flag
+  was matched as a substring, so `-gpu swiftshader_indirect -gpu host` booted on host
+  GL and passed; the scan only walked forward, so a legal `with:` before `uses:` read
+  as "no options"; YAML anchors passed; the scan directory was cwd-relative and a
+  missing directory printed a stack trace; and nothing tested the CI-visible contract
+  (`checkWorkflowDir` and the exit codes). All fixed, 24 tests, and one named
+  `tests the gate over the repo's own tree is not vacuous` so it cannot scan zero files
+  and stay green. D37 is the decision (D36 had landed with the backend squad in the
+  same hours, so the renumber and the collision are recorded).
+
+---
+
+**Last Updated:** 2026-10-23 (PR #11 MERGED at caf2ef4: the deciding run 39909165246 green - BUG-050 and BUG-051 flip fixed; step 02 driving in review as the next per-screen PR. BUG-051 RE-OPENED to doing on the founder directive: the relaunch-once retry is a temporary guard only - the root cause is pinned to React Native's ForwardingCookieHandler (the webkit bridge) behind the voice client's cold-start fetch, the relaunch now rides only the KNOWN crash signature and every relaunch is counted, and the api-35 image leg joins the E2E matrix; a real-device test is FOUNDER_TODO) 2026-10-24 (the solver squad: BUG-016 partially delivered - PyVRP 0.14.1 behind `RouteEngine`, ADR-009/D35, the matrix leg still open; BUG-052 opened for the break-scan cost; the lead session: BUG-053 opened for the emulator GL loss with the flag fix and the prevention gate, H2 "fleet contention" killed by the green nightly and the green PR #19 E2E)
+**Total Bugs:** 53 | **Open:** 28 | **Fixed:** 17 | **Doing:** 4 | **Todo:** 3 | **Testing:** 1 | **Verified (50x):** 0
