@@ -1,4 +1,8 @@
-# Evidence: BUG-053, the emulator boots with software GL
+# Evidence: BUG-060, the emulator boots with software GL
+
+(The folder keeps the name `bug-053-emulator-gl`, the id the bug was filed under
+before the queue-2 audit's BUG-053 landed on main: the renumber and the
+collision are recorded in `docs/status/BUGS.md`.)
 
 The claim: every workflow that boots an Android emulator sets
 `-gpu swiftshader_indirect`, the setting is asserted by a gate in the floor job,

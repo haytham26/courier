@@ -1,7 +1,8 @@
 // The emulator-GL gate: every workflow that boots an Android emulator must ask
-// for software rendering explicitly (BUG-053 — the founder's session 4 brief and
-// this branch name call it BUG-052, which the tracker had already given to the
-// solver's break-scan cost; see D37).
+// for software rendering explicitly (BUG-060 — the founder's session 4 brief and
+// this branch name call it BUG-052/053, which the tracker had already given to
+// the solver's break-scan cost and then to the queue-2 audit; see D37 and the
+// collision note in docs/status/BUGS.md).
 //
 //   node scripts/ci/check-emulator-gpu.mjs [workflow-directory]
 //
@@ -28,7 +29,7 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const BUG_ID = 'BUG-053';
+export const BUG_ID = 'BUG-060';
 export const REQUIRED_GPU_FLAG = '-gpu swiftshader_indirect';
 const RUNNER_USES = /^\s*(?:-\s+)?uses:\s*reactivecircus\/android-emulator-runner@/;
 const LIST_ITEM = /^(\s*)-\s/;
