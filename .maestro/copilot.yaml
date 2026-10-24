@@ -1,0 +1,49 @@
+appId: com.courier.copilot
+name: "Copilot over the map: the surface, the session, and the honest empty state"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The way into Copilot is the affordance the drive already has: its Copilot
+# control starts the voice session and opens the surface over the map.
+- tapOn:
+    id: "today-go"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 30000
+- tapOn:
+    id: "driving-copilot"
+- extendedWaitUntil:
+    visible:
+      id: "copilot-screen"
+    timeout: 30000
+# The map keeps the scene and the card reads the conversation.
+- assertVisible:
+    id: "copilot-map"
+- assertVisible:
+    id: "copilot-panel"
+- assertVisible:
+    id: "tab-bar"
+- assertVisible:
+    id: "copilot-title"
+- assertVisible: "COPILOT"
+- assertVisible:
+    id: "copilot-level"
+# Nothing is invented: with no turn on the channel the surface says so, and
+# the conversation path itself is covered by the unit suite (the emulator has
+# no engine to produce a turn).
+- assertVisible:
+    id: "copilot-empty"
+- assertVisible:
+    id: "copilot-stop"
+- takeScreenshot: copilot-surface
+- tapOn:
+    id: "copilot-stop"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 30000

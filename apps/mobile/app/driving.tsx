@@ -214,7 +214,10 @@ function DrivingScreen() {
   const handleCopilot = useCallback(() => {
     hapticFor('voice');
     void voice.startListening();
-  }, [voice]);
+    // The voice session starts, and Copilot's own surface opens over the
+    // map so the driver can read what was said (screen 07).
+    router.push('/copilot');
+  }, [router, voice]);
 
   return (
     <SafeAreaView testID="driving-screen" style={styles.container}>
