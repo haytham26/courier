@@ -292,6 +292,21 @@ def _route_body(
     }
 
 
+@app.get("/healthz")
+def healthz():
+    """The uptime probe's target (RUNBOOK section 9): data-free by construction.
+
+    It answers without auth (the probe cannot hold a courier token) and
+    without any request data, any id or any address - the status, the
+    version and the engine names are the whole body.
+    """
+    return {
+        "status": "ok",
+        "version": app.version,
+        "engines": ["pyvrp", "heuristic-nn-2opt"],
+    }
+
+
 @app.post("/runs", status_code=201)
 def create_run(
     body: CreateRunRequest,
