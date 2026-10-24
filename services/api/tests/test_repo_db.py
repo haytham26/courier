@@ -180,7 +180,7 @@ class TestTheRunLifecycle:
         collapsing every IntegrityError into one lying 409."""
         run = a_run(uuid.uuid4())  # no shift row
 
-        with pytest.raises(ValueError, match="already exists"):
+        with pytest.raises(ValueError, match="the shift does not exist"):
             repo.put_run(run)
 
     def test_a_duplicate_run_id_is_refused(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
