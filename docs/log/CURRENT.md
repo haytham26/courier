@@ -1,39 +1,70 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W43 (the full log is in `docs/log/2026-W43.md`). Local `main` == `origin/main`.
+**Week:** 2026-W43. Local `main` == `origin/main` == `b06b20e`.
+**Merged this session:** PR #14 (05 Delivered, `da3ef19`), PR #16 (the audit allowlist), PR #17
+(status + handoff).
 
-**Merged this session:** PR #14 (05 Delivered, merge `da3ef19`, tag `archive/feat/t6-delivered`) and
-PR #16 (the audit allowlist gets an owner, a review date, and a gate that refuses a permanent accept,
-merge `72da461`, tag `archive/fix/audit-owner-review-date`). The archive tags sit on the **merge
-commit**, not the branch tip — the convention of t6-tokens, t6-components, t6-driving, now
-t6-delivered and audit-owner-review-date.
+## Open PRs, in queue order
 
-**Open: PR #15 (06 Scan, `feat/t6-scan` at `54d86ee`).** Its first E2E failed on **both** legs at
-`Tap on id: today-scan`: the flow raised the sheet but never scrolled, and the Scan row is below the
-fold (run 40060608949, `relaunches=0` on both). Fixed **in the flow** with `today-list.yaml`'s own
-raise-then-scroll pattern; the app's contract is unchanged and no assert was deleted. Rerun:
-`40063068694`. **PR #12 (recordings) and the nightly rerun on main are queued behind it — run ONE
-E2E at a time** (two 2-runner workflows in one window share the fleet).
+| PR | Screen | Branch | State |
+|---|---|---|---|
+| **#15** | 06 Scan | `feat/t6-scan` @ `d408ce5` | flow fixed (3rd), **waiting for the BUG-052 solo run** |
+| **#18** | 07 Copilot | `feat/t6-copilot` @ `d8141e7` | flow fixed (2nd), E2E re-running |
+| **#20** | 08 Route | `feat/t6-route` @ `b9a62d6` | E2E red on the **fleet**, not on code (see below) |
+| **#12** | recordings | `feat/t6-recordings` | next |
+| **#19** | **the backend session's** routing solver | `feat/routing-solver` | **NOT MINE** |
 
-**The nightly on main was RED** (run 39926210799 at `d5793b4`, both legs): `driving.yaml` failed at
-`"STOP 3 OF 5"` after the slide — the end event beating the drag updates. PR #14's range fixed it and
-its green run `40036866832` has it COMPLETED on both legs. **Still PARTIAL**: the nightly has not been
-re-run on current main, so do not call it closed until `gh workflow run android-e2e.yml --ref main`
-has run green.
+## The fleet is the blocker (BUG-052)
 
-**The traps (new this session):**
-- Never append to a tracked text file through PowerShell's `Add-Content` — it wrote 5 BEL and 5 FF
-  into the W43 log (a word-initial `a` and a word-initial `f` collapsing), and PR #16's Quality gates
-  went red on `check-control-chars`. Append with node or the editor.
-- A flow that was traced and parse-checked but never RUN is not proven: the first emulator run of
-  `scan.yaml` failed because the Scan row sits below the fold. Raise the sheet **and**
-  `scrollUntilVisible` (the selector inside `element:`, per BUG-048).
+Every E2E red this session has the same shape: **`launchApp` never completes** on the first one to
+three flows (`DisplaySurfaceGlContextHelper context was preempted by others`, `Failed to restore
+previous context: 12297`), then the emulator settles and the later flows pass. PR #20's run
+`40074433462` is the proof it is not code: `compat`, `delivered` and `driving` all died at
+`launchApp`, while `map`, `smoke` and `stops` (the Route screen I had just rewritten) **passed** in
+the same run.
+
+**Do not push to a branch while its own E2E is queued, and run E2E ONE at a time.** The founder's
+solo experiment for #15 — `gh workflow run android-e2e.yml --ref feat/t6-scan` **only when
+`gh run list --workflow android-e2e.yml --status in_progress` is empty** — is still untried. It is the
+only experiment that can separate "fleet" from "image".
+
+## DONE: the shared Maestro convention (founder's item 4)
+
+`.maestro/common/reveal-and-tap.yaml` — **ONE** subflow for tapping a row inside Today's sheet
+(raise the grabber → `scrollUntilVisible` → tap). It sits in `common/` on purpose: `run-all.sh`
+discovers flows with a top-level glob (`.maestro/*.yaml`), so a subflow at the top level would be
+executed on its own and fail. `scan.yaml` (the flow that learned the contract on both legs) and
+`copilot.yaml` (the flow that then hit the identical trap) both ride it via `runFlow` with
+`env: TARGET:`. **Every remaining flow that taps inside the sheet must use it.**
+
+## Next items, in order
+
+1. **The BUG-052 solo run** for #15 (above), then the merge ritual for #15, #18 and #20 as they go
+   green (merge commit → `archive/<branch>` at it → delete the branch → ff main).
+2. **PR #12** — merge `main` in, then the recordings and the E2E one workflow at a time.
+3. **The screens**, each on its own branch from `main`, `origin/main` merged in before the PR:
+   09 Map style (`(tabs)/map.tsx` — 669 lines, still on the LEGACY theme; the real modules
+   `viewModes` / `offlinePack` / `styles` already exist, so it is a re-skin plus the reference's mode
+   sheet with its four descriptions, not new map logic) · 10 Summary · 11 Settings ·
+   12 Driving at night · 13 Lock screen (Android built + E2E-tested; **iOS Live Activity stays
+   PARTIAL** — FOUNDER_TODO needs an Apple developer account for a build lane) · 01 Welcome ·
+   02 Sign in (neither is rebuilt on the chosen tokens — only the legacy `(auth)/login` + `register`
+   are on main).
+4. **The legacy token deletion**, with proof.
+5. **§17.3, §17.7, §18, Part C** on the app side.
+
+## The traps
+
+- **Never use PowerShell `Add-Content`/`Set-Content`/`Out-File` on a tracked file** — it writes
+  BEL/FF control bytes (a word-initial `a` or `f` collapsing). It has done so 4+ times this session.
+  Write with node (`fs.writeFileSync`, utf8, no BOM) or the edit tool, and run
+  `node scripts/ci/check-control-chars.mjs` **before every commit**.
+- **Never commit to `main`** — commit to the branch you are pushing. That cost two recovery steps.
+- A Maestro flow that was never run on the emulator is not proven: a first run is when
+  below-the-fold rows and not-yet-answered statuses surface.
+- A `text` selector is a full-match regex — copy the app's exact string, never retype it.
 - `braces` no longer produces a high/critical advisory; its allowlist entry is kept and still dated.
+- Push with the output on screen, and confirm the runs with `gh run list --branch <branch>`.
 
-**The queue, unchanged:** PR #15 green and merged; PR #12 (merge main in, then the recordings and the
-E2E one workflow at a time); the nightly rerun on main; then screen 07 Copilot (the live transcript,
-the result card with Undo and Text customer, the D34 sphere), 08 Route, 09 Map style, 10 Summary,
-11 Settings, 12 Driving at night, 13 Lock screen (the Android notification built and E2E-tested; the
-iOS Live Activity stays PARTIAL until an iOS build lane exists). Then §17.3, §17.7, §17.5, §18 and
-Part C. **FOUNDER_TODO:** an Apple Developer account for the iOS build lane, and a real-device
+**FOUNDER_TODO (unchanged):** an Apple Developer account for the iOS build lane; a real-device
 BUG-051 launch test.
