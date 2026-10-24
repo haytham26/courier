@@ -5,6 +5,7 @@
 
 LLMs only touch `ingest` (extraction) and `ask_driver` (phrasing); everything that
 decides where a parcel goes is plain code and PostGIS."""
+
 from __future__ import annotations
 
 import operator
@@ -19,6 +20,7 @@ from .. import nz_address, sequencing
 
 class Geo(Protocol):
     """Implemented by the PostGIS repository; fakeable in tests."""
+
     def geocode(self, address_key: str) -> tuple[float, float] | None: ...
     def in_territory(self, run_id: str, lat: float, lon: float) -> bool: ...
     def template(self, run_id: str) -> list[sequencing.Segment]: ...
@@ -42,33 +44,44 @@ class IntakeState(TypedDict, total=False):
     parcels: list[Parcel]
     pending_questions: list[str]
     answers: Annotated[list[dict], operator.add]
-    ordered: list[str]          # address_keys in delivery order
+    ordered: list[str]  # address_keys in delivery order
     briefing: str
 
 
 def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
     def ingest(s: IntakeState) -> dict[str, Any]:
-        rows = llm_extract(s["source"], s["text"])            # list[{"raw":..., "size_class":...}]
+        rows = llm_extract(s["source"], s["text"])  # list[{"raw":..., "size_class":...}]
         return {"parcels": [{"raw": r["raw"], "size_class": r.get("size_class")} for r in rows]}
 
     def normalise(s: IntakeState) -> dict[str, Any]:
         out = []
         for p in s["parcels"]:
             pa = nz_address.parse(p["raw"])
-            out.append({**p, "parsed": pa.__dict__ | {"address_key": pa.address_key,
-                                                     "street_key": pa.street_key,
-                                                     "complete": pa.complete}})
+            out.append(
+                {
+                    **p,
+                    "parsed": pa.__dict__
+                    | {
+                        "address_key": pa.address_key,
+                        "street_key": pa.street_key,
+                        "complete": pa.complete,
+                    },
+                }
+            )
         return {"parcels": out}
 
     def verify(s: IntakeState) -> dict[str, Any]:
-        for a in s.get("answers", []):                          # apply driver corrections
+        for a in s.get("answers", []):  # apply driver corrections
             s["parcels"][a["index"]]["raw"] = a["raw"]
         seen, questions, out = set(), [], []
         for i, p in enumerate(s["parcels"]):
             if any(a["index"] == i for a in s.get("answers", [])):
                 pa = nz_address.parse(p["raw"])
-                p["parsed"] = pa.__dict__ | {"address_key": pa.address_key,
-                                             "street_key": pa.street_key, "complete": pa.complete}
+                p["parsed"] = pa.__dict__ | {
+                    "address_key": pa.address_key,
+                    "street_key": pa.street_key,
+                    "complete": pa.complete,
+                }
             if p.get("anomaly") == "set_aside":
                 out.append(p)
                 continue
@@ -82,7 +95,7 @@ def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
                 if not geo.in_territory(s["run_id"], *pt):
                     p["anomaly"] = "out_of_territory"
             if p["anomaly"] is None and pp["address_key"] in seen:
-                p["anomaly"] = "duplicate"   # informational: same stop, multiple parcels
+                p["anomaly"] = "duplicate"  # informational: same stop, multiple parcels
             seen.add(pp["address_key"])
             if p["anomaly"] in ("incomplete", "ungeocodable", "out_of_territory"):
                 questions.append(f"{i}|{llm_phrase(p['anomaly'], p['raw'])}")
@@ -111,12 +124,16 @@ def build_graph(llm_extract, llm_phrase, geo: Geo, checkpointer=None):
         for p in good:
             k = p["parsed"]["address_key"]
             num = int("".join(c for c in (p["parsed"]["number"] or "0") if c.isdigit()) or 0)
-            stops.setdefault(k, sequencing.Stop(k, p["parsed"]["street_key"], num, p["lat"], p["lon"]))
+            stops.setdefault(
+                k, sequencing.Stop(k, p["parsed"]["street_key"], num, p["lat"], p["lon"])
+            )
         ordered = sequencing.sequence(list(stops.values()), geo.template(s["run_id"]))
         return {"ordered": [st.location_id for st in ordered]}
 
     def zone(s: IntakeState) -> dict[str, Any]:
-        sizes = {p["parsed"]["address_key"]: p.get("size_class") for p in s["parcels"] if "parsed" in p}
+        sizes = {
+            p["parsed"]["address_key"]: p.get("size_class") for p in s["parcels"] if "parsed" in p
+        }
         dummy = [sequencing.Stop(k, "", 0, 0, 0) for k in s["ordered"]]
         zones = sequencing.assign_van_zones(dummy, sizes)
         for p in s["parcels"]:

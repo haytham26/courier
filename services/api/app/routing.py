@@ -19,6 +19,7 @@ priority stops keep the front of the day. The result stays deterministic:
 the same stops and the same constraints always give the same order, the same
 arrival times and the same distance.
 """
+
 from __future__ import annotations
 
 import importlib

@@ -4,6 +4,7 @@ The API never issues credentials: sign-up, sign-in, session and organisation
 membership live in the Better Auth service (`services/auth`). These routes
 only expose the identity that a verified access token carries.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

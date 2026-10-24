@@ -615,6 +615,21 @@ class TestTheSecurityHeaders:
         assert refused.headers["cache-control"] == "no-store"
 
 
+class TestTheHealthProbe:
+    def test_the_health_probe_answers_without_auth_or_data(
+        self, anonymous_client: TestClient
+    ) -> None:
+        probe = anonymous_client.get("/healthz")
+
+        assert probe.status_code == 200
+        body = probe.json()
+        assert body["status"] == "ok"
+        assert body["version"] == app.version
+        assert isinstance(body["engines"], list)
+        # Data-free: no ids, no addresses, no timestamps that could leak.
+        assert set(body) == {"status", "version", "engines"}
+
+
 class TestCreateRunValidation:
     def test_unknown_fields_are_refused_not_dropped(self, client: TestClient) -> None:
         refused = client.post("/runs", json=run_body(territory={"type": "MultiPolygon"}))

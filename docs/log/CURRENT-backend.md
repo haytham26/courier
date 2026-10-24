@@ -1,26 +1,31 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-24 · Branch: `feat/backend-api` (queue item 2, PR pending) · item 1 MERGED as PR #19 (archive/feat/routing-solver)
-## Done — queue item 1 (the real routing solver) — MERGED
-- `PyVRPEngine` (ADR-009, D35): 174-stop break-day 4.7 s / 0 violations vs the heuristic's 50 s / 17;
-  200-stop budget 3.2 s ≤ 5 s. Reviewer-verified (no blockers); the five-pass record is on PR #19.
-- The told break position now RAISES outside the day (RED-GREEN test); ADR-009 §6 lists all five
-  engine names; `creep_probe.py` committed with its real output.
-## Done this session — queue item 2 (the runs/stops API, ADR-010, D36)
-- Slices 1-5, TDD each: `POST/GET /runs`, `GET /runs/{id}` (owner-from-token; foreign run 404);
-  `GET /shifts/{id}/stops` for real (status derived from delivery events in-memory, read from the
-  table in SQL); `POST /runs/{run_id}/stops/{stop_id}/pod` (10 MiB cap, magic-byte sniff, server-named
-  file, replay-idempotent); `POST /runs/{run_id}/route:reopt` (stored plan anchors the delta; stored
-  route refreshed); the V14 hardening headers on every response incl. errors.
-- Suite: 217 passed + 1 skipped; ruff/mypy clean.
+Updated: 2026-10-24 · Branch: `feat/backend-ops` (queue item 4, PR pending)
+## Merged
+- PR #19 (queue item 1, the routing solver — ADR-009/D35, `archive/feat/routing-solver`).
+- PR #21 (queue item 2, the runs/stops API — ADR-010/D36, `archive/feat/backend-api`): runs CRUD,
+  the live stop list, the POD upload (event-id ownership enforced per run after the review's POC),
+  the partial reopt, the V14 hardening headers; 227 tests. The review's three must-fixes landed
+  before the merge (`b4e902e`).
+- Queue item 3 verified BUILT (`services/courier-voice`, 166 tests, the fake-gateway OmniRoute
+  tests); the real gateway + keys are the FOUNDER_TODO row added this session.
+## Done this session — queue item 4 (§18.4 reliability, on this branch)
+- `docs/operations/RUNBOOK.md` §8–§13: the SLO table, the error-budget rule, the incident process,
+  the on-call quiet hours, the alert payload contract, the load-test model, the DR drill procedure.
+- `GET /healthz`: the probe's target, unauthenticated and data-free by construction (tested).
+- `services/api/loadtests/locustfile.py`: the 1,000-driver day-loop model with the SLOs AS the run's
+  thresholds; the `load` extra (locust 2.47.0).
+- `services/api/ops/restore_drill.py`: the rehearsed restore — refuses a non-empty target, restores,
+  runs the API round-trip, prints the verdict for the evidence file.
+- Honest: the SLO RUN and the DR RUN have not executed (no DB daemon on this machine — the same
+  environment finding as the VROOM leg); both scripts refuse honestly, and the DB-backed runs are
+  the launch gates on staging/CI. Evidence: `docs/evidence/backend-ops/README.md`.
 ## For the lead (contract note)
-- The NEW endpoints' OpenAPI fragments (pod upload, route:reopt, the narrowed createRun/run response —
-  `territory` refused 422 until the schema gains a column; finish/break deferred likewise) live in
-  ADR-010 §4. `packages/contracts/openapi.yaml` needs the contracts owner to merge them; until then
-  the implementation is the contract of record for these endpoints.
-- Honest gaps (ADR-010 §Limitations): POD storage is a local dir (not object storage); no rate
-  limiter; the location-notes endpoints (door_memory mapping) are NOT STARTED; the two intake stubs
-  stay for queue item 3.
-## Next (queue items 3-4)
-3. Courier Voice server brain through OmniRoute — a fake provider in the tests; real keys FOUNDER_TODO.
-4. §18.4 SLOs, the load test and the restore drill.
+- The OpenAPI fragments for the runs/stops/POD/reopt endpoints live in ADR-010 §4;
+  `packages/contracts/openapi.yaml` needs the contracts owner to merge them.
+- The n8n alert lanes (RUNBOOK §11) are the infra squad's; the API's duty (the healthz endpoint and
+  the alert payload contract) is shipped.
+## The queue is EMPTY
+- Items 1–4 of the founder's backend brief are delivered or verified; the remaining gaps are
+  recorded as FOUNDER_TODO (the OmniRoute gateway + keys) and launch gates (the DB-backed load run,
+  the first DR drill, the location-notes endpoints, object storage for POD).

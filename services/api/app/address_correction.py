@@ -9,6 +9,7 @@ what the driver said, checks the house number against the address store, and
 either corrects it, says why, or asks a single question with the options the
 driver can answer out loud.
 """
+
 from __future__ import annotations
 
 import json
@@ -127,7 +128,9 @@ class InMemoryAddressStore:
         return list(self._by_road.get(road, []))
 
     def roads(self) -> list[str]:
-        return sorted({address.road for addresses in self._by_road.values() for address in addresses})
+        return sorted(
+            {address.road for addresses in self._by_road.values() for address in addresses}
+        )
 
     def suburbs_for_road(self, road: str) -> list[str]:
         return sorted({address.suburb for address in self._by_road.get(road, [])})
@@ -163,9 +166,7 @@ class SqliteAddressStore:
     def by_road(self, road: str) -> list[Address]:
         conn = self._connect()
         try:
-            rows = conn.execute(
-                "SELECT * FROM addresses WHERE road_key = ?", (road,)
-            ).fetchall()
+            rows = conn.execute("SELECT * FROM addresses WHERE road_key = ?", (road,)).fetchall()
         finally:
             conn.close()
         return [_row_to_address(row) for row in rows]
@@ -220,13 +221,43 @@ def _row_to_address(row: sqlite3.Row) -> Address:
 # ---------------------------------------------------------------------------
 
 _STREET_TYPES = {
-    "street": "st", "st": "st", "road": "rd", "rd": "rd", "avenue": "ave", "ave": "ave",
-    "drive": "dr", "dr": "dr", "place": "pl", "pl": "pl", "crescent": "cres", "cres": "cres",
-    "terrace": "tce", "tce": "tce", "lane": "ln", "ln": "ln", "close": "cl", "cl": "cl",
-    "court": "ct", "ct": "ct", "way": "way", "grove": "gr", "gr": "gr", "mews": "mews",
-    "quay": "quay", "parade": "pde", "pde": "pde", "highway": "hwy", "hwy": "hwy",
-    "square": "sq", "sq": "sq", "esplanade": "esp", "esp": "esp", "bypass": "byp",
-    "byp": "byp", "motorway": "shwy", "shwy": "shwy",
+    "street": "st",
+    "st": "st",
+    "road": "rd",
+    "rd": "rd",
+    "avenue": "ave",
+    "ave": "ave",
+    "drive": "dr",
+    "dr": "dr",
+    "place": "pl",
+    "pl": "pl",
+    "crescent": "cres",
+    "cres": "cres",
+    "terrace": "tce",
+    "tce": "tce",
+    "lane": "ln",
+    "ln": "ln",
+    "close": "cl",
+    "cl": "cl",
+    "court": "ct",
+    "ct": "ct",
+    "way": "way",
+    "grove": "gr",
+    "gr": "gr",
+    "mews": "mews",
+    "quay": "quay",
+    "parade": "pde",
+    "pde": "pde",
+    "highway": "hwy",
+    "hwy": "hwy",
+    "square": "sq",
+    "sq": "sq",
+    "esplanade": "esp",
+    "esp": "esp",
+    "bypass": "byp",
+    "byp": "byp",
+    "motorway": "shwy",
+    "shwy": "shwy",
 }
 
 _UNIT_WORDS = ("unit", "flat", "apartment", "apt", "suite")
@@ -391,7 +422,7 @@ class AddressCorrector:
         new_number = number.group(1)
         if not before:
             # "no, 17 Main North Rd" -> the whole address follows the correction.
-            return f"{new_number} {after[number.end():].strip()}".strip()
+            return f"{new_number} {after[number.end() :].strip()}".strip()
 
         # "7 Main North Rd, Papanui, no sorry 17" -> keep the address, take the new number.
         cleaned = re.sub(r"\b\d+[a-z]?\b", " ", before, count=1)
@@ -445,8 +476,7 @@ class AddressCorrector:
         exact = [
             item
             for item in candidates
-            if _as_int(item.number) == number
-            and (item.suffix or "").upper() == (suffix or "")
+            if _as_int(item.number) == number and (item.suffix or "").upper() == (suffix or "")
         ]
         if exact:
             exact = _prefer_plain_address(exact, parsed.unit)
@@ -499,10 +529,7 @@ class AddressCorrector:
             return Correction(
                 original=original,
                 corrected=None,
-                reason=(
-                    f"rural delivery address: house number {parsed.number} is not on "
-                    f"'{road}'"
-                ),
+                reason=(f"rural delivery address: house number {parsed.number} is not on '{road}'"),
                 confidence=round(min(1.0, 0.6 + 0.3 * road_score), 3),
                 needs_question=True,
                 options=[f"{value} {road}" for value in nearest_rd],
