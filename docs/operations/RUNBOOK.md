@@ -124,10 +124,18 @@ red SLO with budget left is still an incident to triage.
 
 - Tool: Locust (Python — the repo's own toolchain). Scripts: `services/api/loadtests/locustfile.py`.
 - The model of 1,000 drivers: 1,000 concurrent couriers, each in one session doing the day loop —
-  create run (once), read route every 5 min, list stops every 2 min, sync a batch (2–8 events)
-  every 60 s, POD upload 6×/shift. The staged ramp: 100 → 300 → 600 → 1,000 over 15 min.
-- The thresholds ARE the SLOs (the route p95 ≤ 5 s, the sync p95 ≤ 300 ms, the POD p95 ≤ 2 s, the
-  error rate ≤ 0.1 %) — a red threshold fails the run, never a lowered number.
+  create run (once), then the task mix of a real day: two stop lists per route read, five sync
+  batches (2–8 events) per two stop lists, one POD upload per ten sync batches (deliberately
+  over-weighted against its once-in-a-shift reality, so the gate exercises the heaviest write).
+  The staged ramp: 100 → 300 → 600 → 1,000 over 15 min.
+- The seeded day: the stop ids come from the run's own stops list — the day is seeded before the
+  run (the intake flow, or SQL as the restore drill does). Without a seeded day the loop honestly
+  exercises runs/route/stops-list only, and the POD and sync tasks step aside instead of hammering
+  ids that do not exist.
+- The thresholds ARE the SLOs (the route p95 ≤ 5 s, the sync p95 ≤ 300 ms, the POD p95 ≤ 2 s) — a
+  red threshold fails the run, never a lowered number. The run's error budget is the strictest of
+  §8 (the sync's 0.1 %, applied globally); the per-surface budgets (1 %) are for the ops dashboard,
+  not for a green gate.
 - What the first run measures honestly: the application layer against the in-memory repo (no
   database on the dev machine). The DB-backed run (a Postgres service container in CI, or the
   staging server) is the gate before launch — recorded as such, not claimed.

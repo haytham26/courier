@@ -16,7 +16,7 @@ Date: 2026-10-24 · Branch: `feat/backend-ops` · `docs/operations/RUNBOOK.md` �
 - **The SLO load run**: the dev machine has no database daemon, so the measured run is the
   application layer only. The DB-backed run (a Postgres service container in CI or the staging
   server) is the **launch gate** — the script and its thresholds are the deliverable that is
-  verified here (the file compiles, imports and its thresholds match §8; the locust extra resolves
+  verified here (the file compiles, imports, its p95 thresholds match section 8 exactly and the run error budget is the strictest of section 8 (the sync 0.1 percent, applied globally); the stop ids come from the run own stops list so a healthy, seeded API can actually pass the gate; the locust extra resolves §8; the locust extra resolves
   and imports: `locust 2.47.0`).
 - **The DR drill run**: the drill script refuses honestly when no clean Postgres is reachable
   (`DRILL NOT RUN: the target is not reachable`), which is the state of this machine (the Docker
