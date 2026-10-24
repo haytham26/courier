@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import DrivingRoute from '../driving';
+import { RunProvider } from '@/maps/runState';
 
 jest.mock('@maplibre/maplibre-react-native', () => {
   const ReactActual = jest.requireActual<typeof import('react')>('react');
@@ -83,12 +84,15 @@ const theMic = (): jest.Mock => {
   return mockMic;
 };
 
-/** The render helper: the slide's gestures need the root handler above them. */
+/** The render helper: the slide's gestures need the root handler above them,
+ * and the run state sits above the route the way the root layout holds it. */
 const renderDrive = () =>
   render(
-    <GestureHandlerRootView>
-      <DrivingRoute />
-    </GestureHandlerRootView>,
+    <RunProvider>
+      <GestureHandlerRootView>
+        <DrivingRoute />
+      </GestureHandlerRootView>
+    </RunProvider>,
   );
 
 describe('Driving', () => {

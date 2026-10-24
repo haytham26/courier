@@ -32,7 +32,7 @@ Checked by `scripts/ci/check-floor.mjs` (diff-scoped, exit 1 on a violation) —
 | Mutation (core modules) | ≥ 70 % mutation score on the address engine and the auth service | `pnpm mutation` (Stryker) | every PR (scoped to the changed files) |
 | Floor | zero violations in the diff | `scripts/ci/check-floor.mjs` | every PR |
 | Secrets | zero findings | `gitleaks detect --redact` (CI job `secrets`) | every PR |
-| Dependency audit (JS) | zero high/critical advisories (the two documented build-time advisories are accepted) | `node scripts/ci/check-audit.mjs` | every PR |
+| Dependency audit (JS) | zero high/critical advisories (the three documented build-time advisories are accepted) | `node scripts/ci/check-audit.mjs` | every PR |
 | Dependency audit (Python) | zero high/critical advisories | `uvx pip-audit` | every PR |
 | Static analysis (SAST) | zero high findings | `semgrep scan --config p/default --config p/owasp-top-ten` | every PR |
 | Code scanning | zero high alerts | CodeQL (`codeql.yml`) | every PR |
@@ -80,13 +80,14 @@ stub), `services/api/app/agents/copilot.py` (64 % — the LLM call path needs a 
 
 ### Accepted dependency advisories (build-time only, no upstream fix)
 
-`scripts/ci/check-audit.mjs` fails on every high/critical advisory except these two, which live in the
+`scripts/ci/check-audit.mjs` fails on every high/critical advisory except these three, which live in the
 build toolchain and never reach the shipped app:
 
 | Package | Severity | Why it is accepted | Review by |
 |---------|----------|---------------------|-----------|
 | `braces` | high | `metro-file-map` (the React Native bundler's file matching) — build time only, no patched version | 2026-12-01 |
 | `node-forge` | high | `@expo/cli` code signing during the Android build — build time only, no patched version | 2026-12-01 |
+| `zod` | high | `@expo/cli`'s own direct dependency (the expo build toolchain: prebuild, metro, the bundling the E2E APK build uses) — build time only; the patched line is a major version `@expo/cli` does not declare | 2026-12-01 |
 
 The two criticals that were in the tree (`tinypool` prototype pollution, reachable through the
 test runner) are **fixed**: the test runner moved to `vitest@4.1.11`, which no longer pulls the

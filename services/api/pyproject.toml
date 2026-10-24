@@ -38,10 +38,13 @@ dev = [
 ]
 
 [tool.uv]
-# The security patch for a transitive dependency (the audits must stay clean):
-# PYSEC-2026-4320 in certifi.
+# The security patches for transitive dependencies (the audits must stay
+# clean): PYSEC-2026-4320 in certifi, and CVE-2026-112940 in filelock, which
+# rides in through litellm and huggingface-hub (the audit gates fail on it:
+# filelock 3.32.7 -> the patched 4.2.1).
 constraint-dependencies = [
     "certifi>=2026.10.19",
+    "filelock>=4.2.1",
 ]
 
 [tool.setuptools.packages.find]

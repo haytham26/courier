@@ -59,6 +59,23 @@ export function formatDistance(meters: number): string {
 }
 
 /**
+ * The minute of a delivery, as the confirm panel reads it: the local clock
+ * at the moment the stop was marked, "10:43" — the reference's line puts
+ * the street together with this minute. A delivery time is a clock read
+ * (the event's moment), never an estimate, and the 24-hour line reads
+ * unambiguous with gloves on.
+ */
+export function hourMinuteOf(at: number): string {
+  if (!Number.isFinite(at) || at < 0) {
+    return '—';
+  }
+  const moment = new Date(at);
+  const hours = String(moment.getHours()).padStart(2, '0');
+  const minutes = String(moment.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+/**
  * The street line of an address: the number tokens at the front drop (the
  * plain '45', the unit slash '2/14', the lettered '14A', the range
  * '10-12'), the street keeps. An address with nothing in front of it — or

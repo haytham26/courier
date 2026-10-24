@@ -36,7 +36,7 @@ write_summary() {
     echo "run-summary: status=$1"
     echo "run-summary: relaunches=$relaunches"
     [ -n "${relaunch_note:-}" ] && echo "run-summary: ${relaunch_note}"
-    [ -n "$2" ] && echo "run-summary: fail=$2"
+    [ -n "${2:-}" ] && echo "run-summary: fail=$2"
   } | tee "$EVIDENCE/summary.txt"
   if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
     cat "$EVIDENCE/summary.txt" >> "$GITHUB_STEP_SUMMARY" || true
