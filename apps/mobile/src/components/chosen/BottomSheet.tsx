@@ -37,6 +37,9 @@ const FRACTIONS: Record<SheetHeight, number> = {
   full: 0.88,
 };
 
+/** The grabber's own area at the card's top (its height is the headroom). */
+const GRABBER_AREA = 24;
+
 export const BottomSheet = ({
   height,
   onHeightChange,
@@ -55,12 +58,23 @@ export const BottomSheet = ({
 
   const heights = useMemo(() => {
     const window = Dimensions.get('window').height;
+    // The full level is capped by the USABLE height, not by the window: the
+    // sheet sits above the dock (the bottom inset) and the grabber - the one
+    // handle that changes the level - is the sheet's FIRST child, inside its
+    // own 24 px area. Run 39963017224's recording caught the cap missing:
+    // 0.88 of a 640 dp window plus the 100 dp inset is 663 dp, so the card's
+    // top landed 23 dp ABOVE the window and the grabber with it - the a11y
+    // tree lost the handle and the three-level walk could not come back
+    // down. The reference's full sheet keeps its handle on screen, so the
+    // geometry keeps it too: the fraction stands until it would cost the
+    // grabber its place, then the usable height decides.
+    const usable = window - (bottomInset ?? 0) - GRABBER_AREA;
     return {
       peek: Math.round(window * FRACTIONS.peek),
       half: Math.round(window * FRACTIONS.half),
-      full: Math.round(window * FRACTIONS.full),
+      full: Math.min(Math.round(window * FRACTIONS.full), usable),
     };
-  }, []);
+  }, [bottomInset]);
 
   const [target, setTarget] = useState<SheetHeight>(height);
 

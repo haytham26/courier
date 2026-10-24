@@ -185,6 +185,7 @@ export const typography = {
   chipLabel: { size: 14, lineHeight: 17, weight: '600' as const }, // the note chips and the segmented labels (14/600)
   slideLabel: { size: 19, lineHeight: 23, weight: '700' as const }, // the Slide to Deliver label
   streetTitle: { size: 20, lineHeight: 24, weight: '600' as const }, // the street on the turn card
+  confirmTitle: { size: 24, lineHeight: 29, weight: '700' as const }, // the delivered confirm's title (the reference's 24 px header)
   turnDistance: { size: 38, lineHeight: 40, weight: '700' as const }, // the distance on the turn card (the rounded numbers)
   statRange: { min: 24, max: 52 } as const, // the bold numbers sit in this band
 } as const;
