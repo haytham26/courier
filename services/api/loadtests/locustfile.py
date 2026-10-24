@@ -146,7 +146,7 @@ class DriverDay(HttpUser):
         if self.run_id is None or not self.stop_ids:
             return  # no seeded day: nothing honest to upload against
         pending = [
-            stop_id for stop_id in self.stop_ids if uuid.UUID(stop_id) not in self._delivered
+            stop_id for stop_id in self.stop_ids if stop_id not in self._delivered
         ] or self.stop_ids
         stop_id = random.choice(pending)
         with self.client.post(
@@ -157,7 +157,7 @@ class DriverDay(HttpUser):
         ) as response:
             self._slo(response, POD_P95_MS)
             if response.status_code == 201:
-                self._delivered.add(uuid.UUID(stop_id))
+                self._delivered.add(stop_id)
 
 
 @events.test_stop.add_listener
