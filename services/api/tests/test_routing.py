@@ -30,6 +30,7 @@ from app.routing import (
     get_engine,
     seed_plan,
 )
+from app.solver import PyVRPEngine
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 
 COURIER = "driver-7"
@@ -319,7 +320,7 @@ class TestTheEngine:
             for stop in stops
         ]
 
-        plan = build_plan(make_request(tight))
+        plan = build_plan(make_request(tight), engine=HeuristicEngine())
 
         assert plan.window_violations == 0
         assert plan.total_distance_m == seeded.total_distance_m
@@ -334,7 +335,7 @@ class TestTheEngine:
         ]
         request = make_request(stops)
 
-        improved = build_plan(request)
+        improved = build_plan(request, engine=HeuristicEngine())
         seeded = seed_plan(request)
 
         assert improved.total_distance_m <= seeded.total_distance_m
@@ -353,7 +354,7 @@ class TestTheEngine:
         ]
         request = make_request([make_stop(lat=lat, lon=lon) for lat, lon in points])
 
-        improved = build_plan(request)
+        improved = build_plan(request, engine=HeuristicEngine())
         seeded = seed_plan(request)
 
         assert improved.total_distance_m < seeded.total_distance_m
@@ -385,11 +386,11 @@ class TestTheEngine:
         with pytest.raises(ValueError):
             build_plan(request)
 
-    def test_the_engine_seam_returns_the_deterministic_engine(self) -> None:
+    def test_the_engine_seam_returns_the_production_solver(self) -> None:
         engine = get_engine()
 
-        assert isinstance(engine, HeuristicEngine)
-        assert engine.name == "heuristic-nn-2opt"
+        assert isinstance(engine, PyVRPEngine)
+        assert engine.name == "pyvrp"
 
     def test_two_hundred_stops_stay_inside_the_five_second_budget(self) -> None:
         """The V4 budget: a day of 200 stops is planned in five seconds."""
@@ -564,7 +565,7 @@ class TestTheRouteEndpoint:
         assert body["stops"][0]["arrival_at"] < body["stops"][1]["arrival_at"]
         assert body["stops"][0]["distance_m"] > 0
         assert body["total_distance_m"] > 0
-        assert body["engine"] == "heuristic-nn-2opt"
+        assert body["engine"] == "pyvrp"
         assert body["locked"] is False
 
     def test_the_route_follows_the_locked_template(
