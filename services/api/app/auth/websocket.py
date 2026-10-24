@@ -1,4 +1,4 @@
-﻿"""Authentication for the WebSocket surfaces.
+"""Authentication for the WebSocket surfaces.
 
 A WebSocket handshake cannot use the HTTP `Authorization` header in every
 client, so the token is accepted from the header (the native client) or from
