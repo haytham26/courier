@@ -8,6 +8,7 @@ arrive twice (a retry after a dropped connection).
 `SqlAlchemyRepo` is the production implementation. `InMemoryRepo` is the one
 the tests use: the same contract, no database.
 """
+
 from __future__ import annotations
 
 import json
@@ -38,7 +39,9 @@ def _parse_segments(document: object) -> tuple[Segment, ...]:
             continue
         direction = item.get("direction")
         segments.append(
-            Segment(street_key=street_key, direction=direction if isinstance(direction, str) else "asc")
+            Segment(
+                street_key=street_key, direction=direction if isinstance(direction, str) else "asc"
+            )
         )
     return tuple(segments)
 
@@ -446,7 +449,10 @@ class SqlAlchemyRepo:
             "run_id": run_id,
             "template_id": template.id,
             "segments": json.dumps(
-                [{"street_key": segment.street_key, "direction": segment.direction} for segment in template.segments]
+                [
+                    {"street_key": segment.street_key, "direction": segment.direction}
+                    for segment in template.segments
+                ]
             ),
             "stop_order": json.dumps([str(stop_id) for stop_id in template.stop_order]),
         }
@@ -455,7 +461,9 @@ class SqlAlchemyRepo:
             connection.execute(
                 text("DELETE FROM run_route_stops WHERE run_id = :run_id"), {"run_id": run_id}
             )
-            connection.execute(text("DELETE FROM run_routes WHERE run_id = :run_id"), {"run_id": run_id})
+            connection.execute(
+                text("DELETE FROM run_routes WHERE run_id = :run_id"), {"run_id": run_id}
+            )
 
     def get_run_template(self, run_id: UUID) -> RunTemplate | None:
         statement = text(
@@ -514,8 +522,12 @@ class SqlAlchemyRepo:
             for stop in plan.stops
         ]
         with self._engine.begin() as connection:
-            connection.execute(text("DELETE FROM run_route_stops WHERE run_id = :run_id"), {"run_id": run_id})
-            connection.execute(text("DELETE FROM run_routes WHERE run_id = :run_id"), {"run_id": run_id})
+            connection.execute(
+                text("DELETE FROM run_route_stops WHERE run_id = :run_id"), {"run_id": run_id}
+            )
+            connection.execute(
+                text("DELETE FROM run_routes WHERE run_id = :run_id"), {"run_id": run_id}
+            )
             connection.execute(header, parameters)
             if rows:
                 connection.execute(legs, rows)

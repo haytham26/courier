@@ -19,8 +19,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.auth.jwks import get_verifier
-from app.main import app
+from app.main import _route_request, app
 from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
+from app.routing import schedule_plan
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 
 COURIER = "driver-7"
@@ -66,7 +67,9 @@ def verifier_key(repo: InMemoryRepo) -> Iterator[object]:
 @pytest.fixture()
 def client(verifier_key: object) -> Iterator[TestClient]:
     with TestClient(app) as test_client:
-        test_client.headers.update({"Authorization": f"Bearer {sign(verifier_key, subject=COURIER)}"})
+        test_client.headers.update(
+            {"Authorization": f"Bearer {sign(verifier_key, subject=COURIER)}"}
+        )
         yield test_client
 
 
@@ -101,9 +104,7 @@ class TestCreatingARun:
         assert read.status_code == 200
         assert read.json() == run
 
-    def test_the_runs_list_holds_the_runs_the_courier_created(
-        self, client: TestClient
-    ) -> None:
+    def test_the_runs_list_holds_the_runs_the_courier_created(self, client: TestClient) -> None:
         first = client.post("/runs", json=run_body(name="First"))
         second = client.post("/runs", json=run_body(name="Second"))
 
@@ -112,9 +113,7 @@ class TestCreatingARun:
         assert listed.status_code == 200
         names = {item["name"] for item in listed.json()}
         assert names == {"First", "Second"}
-        assert {first.json()["id"], second.json()["id"]} == {
-            item["id"] for item in listed.json()
-        }
+        assert {first.json()["id"], second.json()["id"]} == {item["id"] for item in listed.json()}
 
     def test_another_courier_neither_reads_nor_lists_the_run(
         self, client: TestClient, other_client: TestClient
@@ -236,7 +235,9 @@ class TestListingTheStops:
         assert [stop["status"] for stop in delivered.json()] == ["delivered"]
         assert delivered.json()[0]["address"] == repo.run_stops[run_id][0].address
 
-    def test_an_unknown_status_filter_is_refused(self, client: TestClient, repo: InMemoryRepo) -> None:
+    def test_an_unknown_status_filter_is_refused(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
         _, shift_id = seed_run_with_stops(repo)
 
         refused = client.get(f"/shifts/{shift_id}/stops?status=someday")
@@ -401,6 +402,121 @@ class TestUploadingTheProofOfDelivery:
 
         assert refused.status_code == 415
         assert repo.events == {}
+
+
+class TestThePartialReopt:
+    def seed_planned_run(
+        self, repo: InMemoryRepo, *, extra_stops: int = 0
+    ) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
+        """A run, its stops and the plan the phone already holds.
+
+        With `extra_stops`, that many additional rows exist in the run but
+        not in the stored plan - the day changed under the phone (a stop was
+        added at the door), which is exactly when the reopt is called.
+        """
+        run_id, shift_id = seed_run_with_stops(repo)
+        request, _ = _route_request(repo.runs[run_id], repo.run_stops[run_id])
+        planned_ids = [row.id for row in repo.run_stops[run_id]][: 2 - extra_stops]
+        plan = schedule_plan([stop for stop in request.stops if stop.id in planned_ids], request)
+        repo.put_run_route(run_id, plan)
+        return run_id, shift_id, repo.run_stops[run_id][-1].id
+
+    def test_a_reopt_places_the_new_stop_and_says_the_delta(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        run_id, shift_id, added_id = self.seed_planned_run(repo, extra_stops=1)
+
+        reopt = client.post(
+            f"/runs/{run_id}/route:reopt",
+            json={"affected_stop_ids": [str(added_id)]},
+        )
+
+        assert reopt.status_code == 200, reopt.text
+        body = reopt.json()
+        assert body["run_id"] == str(run_id)
+        assert body["engine"] == "partial-reopt"
+        assert body["finish_delta_s"] > 0.0
+        assert added_id in {uuid.UUID(stop["stop_id"]) for stop in body["stops"]}
+        before = repo.get_run_route(run_id)
+        assert before is not None
+        assert added_id in {stop.stop_id for stop in before.stops}
+
+    def test_the_unchanged_stops_keep_their_relative_order(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        run_id, _, added_id = self.seed_planned_run(repo, extra_stops=1)
+        stored_before = repo.get_run_route(run_id)
+        assert stored_before is not None
+        before = [stop.stop_id for stop in stored_before.stops]
+
+        body = client.post(
+            f"/runs/{run_id}/route:reopt",
+            json={"affected_stop_ids": [str(added_id)]},
+        ).json()
+
+        after = [uuid.UUID(stop["stop_id"]) for stop in body["stops"]]
+        kept = [stop_id for stop_id in after if stop_id != added_id]
+        assert kept == before
+
+    def test_the_same_reopt_is_the_same_day_and_reapplies_to_nothing(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        """The second identical reopt finds its own change already in the day.
+
+        The placement is deterministic (the same stops in the same order as
+        the first answer, the same day length), and the delta is 0: the
+        change is already absorbed, so applying it again moves nothing.
+        """
+        run_id, _, added_id = self.seed_planned_run(repo, extra_stops=1)
+
+        first = client.post(
+            f"/runs/{run_id}/route:reopt", json={"affected_stop_ids": [str(added_id)]}
+        ).json()
+        second = client.post(
+            f"/runs/{run_id}/route:reopt", json={"affected_stop_ids": [str(added_id)]}
+        ).json()
+
+        assert [stop["stop_id"] for stop in second["stops"]] == [
+            stop["stop_id"] for stop in first["stops"]
+        ]
+        assert second["total_duration_s"] == first["total_duration_s"]
+        assert second["finish_delta_s"] == 0.0
+
+    def test_an_affected_stop_outside_the_run_is_refused(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        run_id, _, _ = self.seed_planned_run(repo)
+
+        refused = client.post(
+            f"/runs/{run_id}/route:reopt",
+            json={"affected_stop_ids": [str(uuid.uuid4())]},
+        )
+
+        assert refused.status_code == 422
+        assert "not part of this run" in refused.json()["detail"]
+
+    def test_a_foreign_run_is_not_found(
+        self, client: TestClient, other_client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        run_id, _, added_id = self.seed_planned_run(repo, extra_stops=1)
+
+        foreign = other_client.post(
+            f"/runs/{run_id}/route:reopt",
+            json={"affected_stop_ids": [str(added_id)]},
+        )
+
+        assert foreign.status_code == 404
+
+    def test_the_phone_serves_the_reopted_day_afterwards(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        run_id, shift_id, added_id = self.seed_planned_run(repo, extra_stops=1)
+
+        client.post(f"/runs/{run_id}/route:reopt", json={"affected_stop_ids": [str(added_id)]})
+        route = client.get(f"/shifts/{shift_id}/route")
+
+        assert route.status_code == 200
+        assert added_id in {uuid.UUID(stop["stop_id"]) for stop in route.json()["stops"]}
 
 
 class TestCreateRunValidation:

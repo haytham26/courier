@@ -1,4 +1,5 @@
 """FastAPI surface. Persistence is behind `repo` (PostGIS, see packages/contracts/db/schema.sql)."""
+
 from __future__ import annotations
 
 import uuid
@@ -39,6 +40,7 @@ from .routing import (
     RunTemplate,
     TimeWindow,
     build_plan,
+    build_reopt_plan,
     schedule_plan,
 )
 from .sequencing import Segment
@@ -99,8 +101,14 @@ class RunBody(BaseModel):
     start_at: datetime
 
 
+class ReoptRequest(BaseModel):
+    """The stops whose place in the day changed; everything else stays."""
+
+    affected_stop_ids: list[uuid.UUID] = Field(max_length=500)
+
+
 class DeliveryEvent(BaseModel):
-    id: uuid.UUID                     # client-generated -> idempotent offline replay
+    id: uuid.UUID  # client-generated -> idempotent offline replay
     stop_id: uuid.UUID
     kind: str
     utterance: str | None = None
@@ -191,9 +199,7 @@ def _route_request(
     return RouteRequest(stops=tuple(stops), constraints=constraints), unroutable
 
 
-def _locked_order(
-    template: RunTemplate | None, request: RouteRequest
-) -> list[RouteStop] | None:
+def _locked_order(template: RunTemplate | None, request: RouteRequest) -> list[RouteStop] | None:
     """The locked order, when it still covers every stop of the run."""
     if template is None or not template.stop_order:
         return None
@@ -393,6 +399,52 @@ def upload_pod(
     )
 
 
+@app.post("/runs/{run_id}/route:reopt")
+def reopt_route(
+    run_id: uuid.UUID,
+    body: ReoptRequest,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Re-place only the affected stops; the rest of the day stays (ADR-010 §4).
+
+    The affected stops go back into the order deterministically (nearest to
+    the depot first, each at its best slot), the answer carries the
+    finish-time delta so the copilot can say "this adds N minutes", and the
+    stored route is refreshed so the phone's next route read serves the same
+    day. An affected stop that is not part of the run is 422, with the
+    reason.
+    """
+    run = repo.get_run(run_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run with this id")
+    rows = repo.get_run_stops(run.id)
+    request, unroutable = _route_request(run, rows)
+    stored = repo.get_run_route(run.id)
+    if stored is not None:
+        # The phone's own day is the anchor: the delta is what the change
+        # does TO that day, so it anchors even when the day has grown past
+        # it (the common case - a stop added at the door).
+        current = stored
+    else:
+        # No plan stored: the day "before" is the kept stops, planned as the
+        # template would time them.
+        affected = set(body.affected_stop_ids)
+        current = schedule_plan(
+            [stop for stop in request.stops if stop.id not in affected], request
+        )
+    try:
+        result = build_reopt_plan(request, current, body.affected_stop_ids)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    repo.put_run_route(run.id, result.plan)
+    body_out = _route_body(
+        shift_id=run.shift_id, run=run, plan=result.plan, template=None, unroutable=unroutable
+    )
+    body_out["finish_delta_s"] = result.finish_delta_s
+    return body_out
+
+
 @app.put("/runs/{run_id}/template")
 def put_template(
     run_id: uuid.UUID,
@@ -456,14 +508,20 @@ def shift_route(
 
 
 @app.post("/shifts/{shift_id}/intake")
-def intake_text(shift_id: uuid.UUID, body: IntakeText, principal: AuthPrincipal = Depends(get_current_principal)):
+def intake_text(
+    shift_id: uuid.UUID, body: IntakeText, principal: AuthPrincipal = Depends(get_current_principal)
+):
     """Starts the intake graph (thread_id = shift_id). Returns either the briefing or the
     first interrupt question; answers flow back over the voice socket."""
     ...
 
 
 @app.post("/shifts/{shift_id}/intake/manifest")
-async def intake_manifest(shift_id: uuid.UUID, image: UploadFile, principal: AuthPrincipal = Depends(get_current_principal)):
+async def intake_manifest(
+    shift_id: uuid.UUID,
+    image: UploadFile,
+    principal: AuthPrincipal = Depends(get_current_principal),
+):
     """Photo of paper manifest -> vision extraction -> same intake graph with source='ocr'."""
     ...
 
@@ -532,7 +590,9 @@ def sync_events(
 
 
 @app.websocket("/shifts/{shift_id}/voice")
-async def voice(ws: WebSocket, shift_id: uuid.UUID, principal: AuthPrincipal = Depends(get_websocket_principal)):
+async def voice(
+    ws: WebSocket, shift_id: uuid.UUID, principal: AuthPrincipal = Depends(get_websocket_principal)
+):
     """Bidirectional voice channel.
     client -> server: {"type":"transcript","text":..., "final":true, "gps":{lat,lon,acc,speed}}
                       (STT runs on-device or via Deepgram streaming; we only receive finals)
@@ -548,7 +608,9 @@ async def voice(ws: WebSocket, shift_id: uuid.UUID, principal: AuthPrincipal = D
                 # repo.approaching(shift_id, lat, lon, 50) -> ST_DWithin(entry_point, pos, 50)
                 continue
             if msg["type"] == "transcript" and msg.get("final"):
-                state: dict[str, Any] = {}  # repo.copilot_state(shift_id) | {"speed_kmh": msg["gps"]["speed"]}
+                state: dict[
+                    str, Any
+                ] = {}  # repo.copilot_state(shift_id) | {"speed_kmh": msg["gps"]["speed"]}
                 intent = copilot.interpret(msg["text"], state)
                 # repo.apply(shift_id, intent) -> delivery_event / stop mutation
                 if intent.speech:
