@@ -296,6 +296,35 @@ class TestTheEvents:
         assert batch.conflicts == (clash_id,)
         assert repo.get_event(clash_id) == original
 
+    def test_the_rowcount_of_a_partly_stored_batch_is_the_stored_rows(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """BUG-063: the rowcount the fast path trusts is the real one.
+
+        CI's run 40185490916 breached the sync SLO at 370 ms p95 because ADR-014
+        selected the batch's rows before every insert. The comparison now runs
+        only when the rowcount says some rows were refused - which means the
+        rowcount itself has to be exactly the number of rows the INSERT stored.
+        A batch of three with one row already there must store two.
+        """
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        stop_id = uuid.uuid4()
+        seed_stop(engine, shift_id, stop_id, "45 Papanui Road")
+        earlier = an_event(shift_id, stop_id, "delivered")
+        assert repo.append_events(shift_id, [earlier]).stored == 1
+
+        fresh = [
+            an_event(shift_id, stop_id, "delivered"),
+            an_event(shift_id, stop_id, "skipped"),
+        ]
+        later = repo.append_events(shift_id, [earlier, *fresh])
+
+        assert later.stored == 2  # the one already there is not counted
+        assert later.conflicts == ()
+        assert repo.cursor(shift_id) == 3
+
     def test_an_event_is_readable_by_id(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
         shift_id = a_shift(engine)
         run = a_run(shift_id)

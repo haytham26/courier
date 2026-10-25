@@ -251,3 +251,34 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 | The prompt hygiene | `security-and-hardening` | Untrusted text in tagged blocks - the same defence the copilot and the voice service already use; the review proved the wiring would have bypassed it. |
 | The failure paths | `debugging-and-error-recovery` | The asymmetric design (raise vs fall back) came from asking what the courier experiences, not what the code finds easiest. |
 | The async fix | `performance-optimization` | The event-loop stall was measured (0.55s), not guessed; the fix is the sibling's pattern. |
+## 2026-10-25 - BUG-063: the sync SLO breach after ADR-014 (branch `feat/slo-runs-insert`)
+
+- **The evidence first:** CI run 40185490916 failed only at the Locust SLO profile - `SLO BREACH:
+  POST /shifts/{id}/events:batch p95 370 ms > 300 ms` - with every request returning 2xx. Per
+  PLAYBOOK §12 an intermittent failure is a bug, so it was root-caused rather than rerun.
+- **The root cause is mine, and it is the ADR-014 change:** the divergent-replay comparison selected
+  the batch's stored rows (`WHERE id IN :ids`) *before* every INSERT, so the courier's most frequent
+  call paid for a rare case. The insert itself is unchanged.
+- **The Postgres log's constraint violations are a red herring** and are recorded as such in the bug:
+  `runs_shift_id_fkey` (the shift does not exist), `runs_shift_id_key` (the shift already has a run)
+  and `runs_pkey` (the run exists) are the API's *translated* IntegrityErrors - `put_run` names each
+  constraint and answers the honest 409, which the load profile treats as a retried create. The
+  actual failure was the sync latency, not the runs insert.
+- **The fix:** the comparison now sits behind the INSERT's rowcount. An all-new batch - the common
+  case - is exactly the one statement it was before ADR-014; only when the rowcount says rows were
+  refused does the SELECT run. The courier's sync call is back to its old shape.
+- **Proven, not asserted:** the same PostGIS 17 container CI uses, run locally (Docker Desktop), for
+  the full `db`-marked suite - 13 tests, including the new one (a batch of 3 with 1 row already
+  stored must report `stored == 2`, which is the rowcount the fast path trusts) - plus a
+  statement-count suite that needs no database and pins the cost property itself.
+- The map-pack review's fixes are in the same session (`feat/map-pack-pipeline`): the pmtiles version
+  subcommand, the real release assets with checksums, the 3D script's profile gate, and the argv tests.
+
+### Skills applied - BUG-063
+
+| Step | Skills read and followed | How it changed the work |
+| --- | --- | --- |
+| The triage | `debugging-and-error-recovery` | Evidence before theory: the SLO verdict was read out of the run's log before a hypothesis existed, which is what separated the sync latency from the runs-insert noise. |
+| The fix | `performance-optimization` | The extra round-trip was found by reading the statement order, and the fix restores the old shape rather than optimising a new one. |
+| The proof | `test-driven-development`, `constraint-driven-development` | A Docker Postgres ran the db suite before the commit; a test whose name promised a divergence it did not produce was rewritten rather than kept. |
+

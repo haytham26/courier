@@ -369,21 +369,15 @@ class SqlAlchemyRepo:
     def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
         if not events:
             return AppendResult(stored=0)
-        existing = self._existing_events([event.id for event in events])
-        conflicts = [
-            event.id
-            for event in events
-            if event.id in existing and not _same_event(existing[event.id], event)
-        ]
         # A batch carrying the same id twice with different content is a
         # divergence too: the insert keeps the first copy, and the phone is
         # told - the in-memory repo answers the same way.
         first_copy: dict[UUID, DeliveryEventRow] = {}
+        intra_batch: set[UUID] = set()
         for event in events:
             first = first_copy.setdefault(event.id, event)
             if first is not event and not _same_event(first, event):
-                conflicts.append(event.id)
-        deduped = tuple(dict.fromkeys(conflicts))
+                intra_batch.add(event.id)
         statement = text(
             """
             INSERT INTO delivery_events
@@ -411,7 +405,27 @@ class SqlAlchemyRepo:
         ]
         with self._engine.begin() as connection:
             result = connection.execute(statement, parameters)
-        return AppendResult(stored=int(result.rowcount or 0), conflicts=deduped)
+        stored = int(result.rowcount or 0)
+
+        # BUG-063: the comparison is only needed when the INSERT refused rows.
+        # The rowcount already says how many of the batch it stored, and when
+        # it is the whole batch there is nothing to compare against - so the
+        # courier's most frequent call stays the one statement it was before
+        # ADR-014, instead of paying for a rare case on every sync. (The
+        # pre-SELECT breached the 300 ms sync SLO in CI at run 40185490916:
+        # p95 370 ms.)
+        existing: dict[UUID, DeliveryEventRow] = {}
+        if stored < len(parameters):
+            existing = self._existing_events([event.id for event in events])
+
+        conflicts = [
+            event.id
+            for event in events
+            if (event.id in existing and not _same_event(existing[event.id], event))
+            or event.id in intra_batch
+        ]
+        deduped = tuple(dict.fromkeys(conflicts))
+        return AppendResult(stored=stored, conflicts=deduped)
 
     def _existing_events(self, ids: list[UUID]) -> dict[UUID, DeliveryEventRow]:
         """The stored rows for the batch's ids, for the conflict comparison."""
