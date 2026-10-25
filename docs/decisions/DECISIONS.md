@@ -164,3 +164,9 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
 - ADR-014. The event log is append-only: an identical replay is an ack, a divergent same-id replay is a conflict whose id returns in `SyncResponse.conflicts` (the stored row wins; silent divergence is forbidden). A correction is a new event.
 - The stop status is the latest event by `occurred_at`, ties by arrival; no kind outranks another (the sync squad's C3, "first accepted wins", is superseded). `occurred_at` beyond 1 hour in the future or 7 days in the past is a 422 for the batch.
 - `append_events` answers `AppendResult(stored, conflicts)` in both repositories, so the rules are pinned by the same tests on the in-memory and SQL paths.
+
+## D43 — Android first, then iOS; one cross-platform code base (2026-10-25, founder decision)
+
+- Android reaches full quality first (MASTER_EXECUTION §6 Definition of Done, all 13 screens, E2E green 3 runs in a row, the founder's "Android OK" on a real phone). iOS starts only after that gate.
+- From now on: no Android-only solution when a cross-platform one exists, and every new native dependency must document iOS support (IOS_PLAN §0).
+- The full iOS plan (the founder's accounts, the simulator build, iOS E2E in CI, the Apple-specific items, TestFlight, the App Store) is `docs/plan/IOS_PLAN.md`.
