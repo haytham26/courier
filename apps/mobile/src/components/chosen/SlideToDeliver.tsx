@@ -6,11 +6,13 @@
  *   REQUIRED, so a bump or a tap never marks a parcel delivered (a short
  *   drag returns the thumb); the main action while driving is at least
  *   64 pt high (`touch.drivingAction`);
- *   the delivery is the THUMB AT THE END of the travel - a drag that covers
- *   it delivers whether the courier lets go while moving or pauses at the
- *   end (the release velocity was a second gate until run 40000405667: a
- *   paused drag delivered nothing, and the E2E's fast swipe failed the same
- *   way; the position is the contract, not the fling);
+ *   the delivery is the slide covering most of the thumb's travel: the
+ *   gesture's own final translation is the contract, and the fraction
+ *   (SLIDE_FRACTION) is chosen so a slide always clears it and a bump never
+ *   does. Nothing in the decision reads the thumb's animated position or the
+ *   device's frame rate (PLAYBOOK section 12): the first slide after a cold
+ *   launch - the busiest moment the app has - delivers exactly like the
+ *   tenth.
  * - the label is BLACK on the success fill in both modes (`onSuccess`) at
  *   `slideLabel` 19/700;
  * - a haptic on success;
@@ -40,6 +42,16 @@ export interface SlideToDeliverHandle {
 
 const THUMB = 54;
 
+/**
+ * The fraction of the thumb's travel a slide must cover to deliver.
+ *
+ * The design's own gesture is a swipe from 10% to 90% of the track, which
+ * covers essentially the whole travel; a bump or a tap covers a fifth of it at
+ * most. Three quarters sits between the two with room on both sides, so the
+ * decision is a property of the GESTURE and never of the device's frame rate.
+ */
+const SLIDE_FRACTION = 0.75;
+
 export const SlideToDeliver = forwardRef<SlideToDeliverHandle, SlideToDeliverProps>(
   ({ label = 'Slide to Deliver', onDeliver, disabled = false, testID }, ref) => {
     const { t } = useChosen();
@@ -67,22 +79,30 @@ export const SlideToDeliver = forwardRef<SlideToDeliverHandle, SlideToDeliverPro
         x.value = Math.max(0, Math.min(travel, event.translationX));
       })
       .onEnd((event) => {
-        // The slide is the contract, and the THUMB AT THE END is the
-        // contract: the travel being covered is what distinguishes a slide
-        // from a bump (a short drag stops below the threshold and returns).
+        // The delivery's decision is the GESTURE'S OWN FINAL TRANSLATION, and
+        // nothing else (PLAYBOOK section 12: an action that works most of the
+        // time is an app bug, and never fix the flow).
         //
-        // The position is read from the END event's own translation as well
-        // as the thumb. RNGH delivers the gesture's end to the JS thread
-        // asynchronously (this gesture runs on JS), so on a busy device - a
-        // cold drive whose map is still settling, a flow's second gesture
-        // seconds after a cold start - the end can arrive BEFORE the
-        // updates were processed, the thumb's value is still near zero, and
-        // the courier's slide silently delivers nothing. The end event
-        // carries the gesture's own final translation, so the delivery reads
-        // the further of the two. A short drag still stops below the
-        // threshold either way.
-        const reached = Math.max(x.value, Math.min(travel, event.translationX));
-        if (reached > travel - 6) {
+        // Two things made the old decision depend on the device's frame
+        // timing, and both cost real deliveries on a cold launch:
+        //
+        // 1. It read the THUMB's animated value (`x.value`). That value is
+        //    visual feedback driven by the frames the JS thread processes, so
+        //    on a busy thread - the first slide of a run, whose bundle and map
+        //    are still settling - it lags the gesture, and the delivery's
+        //    answer changed with the frame rate. RNGH's end event carries the
+        //    drag's own final translation, which is the gesture's ground truth
+        //    whether the frames arrived or not.
+        // 2. The threshold was the last 6 PIXELS of the travel. A real slide
+        //    (the design's own 10% to 90% swipe) clears it by a few pixels on
+        //    a wide window and by a comfortable margin on a narrow one, so the
+        //    same courier gesture delivered on one device and not on another.
+        //
+        // The threshold is now a fraction of the travel: a slide covers most
+        // of it, a bump never gets past a quarter, and the line between them
+        // is not a measurement of the device's speed.
+        const covered = Math.min(travel, event.translationX);
+        if (covered >= travel * SLIDE_FRACTION) {
           onDeliver();
         }
         // A short drag returns the thumb: a slide is required.

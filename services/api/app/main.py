@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
 from fastapi import (
@@ -26,6 +26,7 @@ from .agents import copilot
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
+from .locations import location_id_for
 from .pod import (
     POD_MAX_BYTES,
     pod_settings,
@@ -33,7 +34,7 @@ from .pod import (
     validate_pod_settings,
 )
 from .pod_store import LocalPodStore, pod_store
-from .repo import DeliveryEventRow, Repo, RouteStopRow, RunRecord, get_repo
+from .repo import DeliveryEventRow, LocationNoteRow, Repo, RouteStopRow, RunRecord, get_repo
 from .routing import (
     RoutePlan,
     RouteRequest,
@@ -155,6 +156,15 @@ class DeliveryEvent(BaseModel):
         when it happened) - the phone always knows its zone."""
         if value.tzinfo is None:
             raise ValueError("occurred_at must carry its timezone")
+        now = datetime.now(UTC)
+        if value > now + timedelta(hours=1):
+            raise ValueError(
+                "occurred_at is more than an hour in the future: the phone's clock is wrong"
+            )
+        if value < now - timedelta(days=7):
+            raise ValueError(
+                "occurred_at is more than 7 days old: the log is stale or the clock is wrong"
+            )
         return value
 
     @field_validator("kind")
@@ -165,6 +175,23 @@ class DeliveryEvent(BaseModel):
         if value not in allowed:
             raise ValueError(f"unknown event kind: {value}")
         return value
+
+
+class CreateLocationNote(BaseModel):
+    """One learned note for a door (ADR-012 §2)."""
+
+    kind: Literal["entry", "gate_code", "hazard", "safe_place", "access"]
+    body: str = Field(min_length=1, max_length=500)
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+
+    @field_validator("body")
+    @classmethod
+    def _non_blank(cls, value: str) -> str:
+        """A note of spaces teaches nothing; the body is the memory."""
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("body must not be blank")
+        return cleaned
 
 
 class TemplateSegment(BaseModel):
@@ -451,7 +478,7 @@ def upload_pod(
         digest = store.save(run.id, resolved_id, content)
         stored_bytes = len(content)
 
-    stored = repo.append_events(
+    outcome = repo.append_events(
         shift_id=run.shift_id,
         events=[
             DeliveryEventRow(
@@ -476,7 +503,7 @@ def upload_pod(
             "sha256": digest,
             "bytes": stored_bytes,
             "stored_at": datetime.now(UTC).isoformat(),
-            "already_stored": replayed or stored == 0,
+            "already_stored": replayed or outcome.stored == 0,
         },
     )
 
@@ -698,7 +725,9 @@ def list_stops(
 
     The status vocabulary is the contract's (`pending`/`delivered`/`skipped`/
     `deferred`/`failed`); an unknown filter value is refused by the type
-    itself, never silently treated as "all".
+    itself, never silently treated as "all". Each stop carries its
+    `location_id` (ADR-012 §1), so the phone calls the notes endpoints with
+    the id the server honours.
     """
     run = repo.get_run_for_shift(shift_id)
     if run is None or run.courier_id != principal.user_id:
@@ -708,6 +737,7 @@ def list_stops(
         {
             "id": str(row.id),
             "address": row.address,
+            "location_id": str(row.location_id or location_id_for(row.address or "", row.suburb)),
             "seq": seq,
             "status": row.status,
             "lat": row.lat,
@@ -721,6 +751,75 @@ def list_stops(
         for seq, row in enumerate(rows, start=1)
         if status is None or row.status == status
     ]
+
+
+def _location_note_body(note: LocationNoteRow) -> dict[str, object]:
+    """The note as the contract's LocationNote (ADR-012 §2)."""
+    return {
+        "id": str(note.id),
+        "kind": note.kind,
+        "body": note.body,
+        "confidence": note.confidence,
+        "last_confirmed": note.last_confirmed.isoformat(),
+    }
+
+
+@app.get("/locations/{location_id}/notes")
+def get_location_notes(
+    location_id: uuid.UUID,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The caller's door memory for the location (ADR-012).
+
+    The gate sits on `courier_location_key`: a location the caller has never
+    had a stop at is 404, never an empty list - existence is not disclosed
+    cross-courier, and the notes themselves are keyed by (courier, location,
+    kind), so two couriers at one door keep two private memories.
+    """
+    if repo.courier_location_key(principal.user_id, location_id) is None:
+        raise HTTPException(status_code=404, detail="no location with this id")
+    return [
+        _location_note_body(note)
+        for note in repo.get_location_notes(principal.user_id, location_id)
+    ]
+
+
+@app.post("/locations/{location_id}/notes")
+def add_location_note(
+    location_id: uuid.UUID,
+    body: CreateLocationNote,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Upsert one note by kind: 201 when new, 200 when corrected (ADR-012 §2).
+
+    One gate code per door, not five: the unique key is (courier, location,
+    kind) and the repository's ON CONFLICT DO NOTHING makes the race
+    impossible. The response carries the stored row, so a correction returns
+    the row's original id.
+    """
+    address_key = repo.courier_location_key(principal.user_id, location_id)
+    if address_key is None:
+        raise HTTPException(status_code=404, detail="no location with this id")
+    created = repo.put_location_note(
+        LocationNoteRow(
+            id=uuid.uuid4(),
+            courier_id=principal.user_id,
+            location_id=location_id,
+            address_key=address_key,
+            kind=body.kind,
+            body=body.body,
+            confidence=body.confidence,
+            last_confirmed=datetime.now(UTC),
+        )
+    )
+    stored = next(
+        note
+        for note in repo.get_location_notes(principal.user_id, location_id)
+        if note.kind == body.kind
+    )
+    return JSONResponse(status_code=201 if created else 200, content=_location_note_body(stored))
 
 
 @app.post("/shifts/{shift_id}/events:batch")
@@ -762,8 +861,12 @@ def sync_events(
         )
         for event in events
     ]
-    stored = repo.append_events(shift_id, rows)
-    return {"accepted": stored, "cursor": repo.cursor(shift_id)}
+    outcome = repo.append_events(shift_id, rows)
+    return {
+        "accepted": outcome.stored,
+        "cursor": repo.cursor(shift_id),
+        "conflicts": [str(event_id) for event_id in outcome.conflicts],
+    }
 
 
 @app.websocket("/shifts/{shift_id}/voice")

@@ -80,3 +80,22 @@ After every fix:
 - Before every commit, `git status` must show no `tmp-*`, `probe` or scratch file. Cleaning up means deleting only UNTRACKED files you created (`??` in git status). A tracked file is removed only with `git rm` in a commit that says why.
 - A harness is code too: check its spelling and imports first. A probe that fails for its own reason proves nothing.
 - Every experiment counts against the 45-minute time box of §19.1.
+
+## 11. Known noise in the emulator log (never chase these)
+These lines appear in GREEN runs too. They are not a cause unless a flow fails on the same step AND the evidence ties them to it.
+- `ERROR | Unable to connect to adb daemon on port: 5037` at emulator start: adb has simply not started yet. A few seconds later the log says `daemon started successfully`.
+- `Failed to find ColorBuffer`, `Failed to bind to texture: invalid color buffer`, `DisplaySurfaceGlContextHelper context was preempted`, `Failed to restore previous context`: software GL chatter (swiftshader). Flows pass right after them.
+- `stop: Not implemented`, `Emulator client has not yet been configured`, and the netsim and snapshot lines at shutdown.
+
+How to read a red E2E run, in this order:
+1. List the flows that FAILED (`##[error]the flow failed:`) and the exact failed step of each.
+2. Compare with the same flow in other legs and runs. Does the same step fail, and does an identical step pass elsewhere in the same run?
+3. Only then look at the app evidence of that flow (screen.png, window.xml, logcat-crash.txt).
+
+## 12. Known app pattern: an action that works most of the time is an app bug
+If the same gesture or tap passes in one flow and fails in another of the same run, the app is not robust under load. A courier on a slow phone hits the same thing. Make the app robust, never the flow:
+- Reproduce it in jest with late, missing or reordered events.
+- Fix the decision so it never depends on timing.
+- Never slow the flow down, add waits, or retry the gesture to hide it.
+
+Example (BUG-061 family, 2026-10-25): the first Slide to Deliver after a cold launch did not deliver, while the identical swipe in the next flow did.
