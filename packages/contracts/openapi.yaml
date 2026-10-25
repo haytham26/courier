@@ -271,11 +271,15 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
 
   /locations/{location_id}/notes:
-    x-status: planned
     get:
       tags: [locations]
-      summary: Get learned notes for a location (entry codes, hazards, etc.)
-      operationId: getLocationNotes
+      summary: The caller's learned notes for a location (entry codes, hazards)
+      description: |
+        The door memory: one note per (courier, location, kind), private to
+        the courier. A location the caller has never had a stop at is 404,
+        never an empty list - existence is not disclosed cross-courier. The
+        id is the stop response's `StopResponse.location_id` (ADR-012).
+      operationId: get_location_notes
       security: [{ bearerAuth: [] }]
       parameters:
         - name: location_id
@@ -284,17 +288,22 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         '200':
-          description: Location notes
+          description: The courier's notes, ordered by kind
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/LocationNote'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
     post:
       tags: [locations]
-      summary: Add a learned note for a location
-      operationId: addLocationNote
+      summary: Add or correct a learned note for a location
+      description: |
+        Upsert by kind: 201 when the kind is new, 200 when an existing note
+        is corrected. One gate code per door, not five.
+      operationId: add_location_note
       security: [{ bearerAuth: [] }]
       parameters:
         - name: location_id
@@ -309,11 +318,19 @@ paths:
               $ref: '#/components/schemas/CreateLocationNoteRequest'
       responses:
         '201':
-          description: Note stored
+          description: The note stored
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LocationNote'
+        '200':
+          description: The existing note corrected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationNote'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /healthz:
     get:
@@ -759,13 +776,18 @@ components:
       description: >-
         The stop as listStops returns it (ADR-010 §2): the routing
         coordinates and the live status ride beside the contract's original
-        shape. `van_zone` and `tip` return when the van-loading and the door
-        memory land.
-      required: [id, seq, status]
+        shape. `location_id` (ADR-012) is the door's stable id the notes
+        endpoints take; `van_zone` and `tip` return when the van-loading
+        lands.
+      required: [id, seq, status, location_id]
       properties:
         id:
           type: string
           format: uuid
+        location_id:
+          type: string
+          format: uuid
+          description: The stable door id (ADR-012) the notes endpoints take
         address:
           type: string
           nullable: true
@@ -862,6 +884,7 @@ components:
 
     LocationNote:
       type: object
+      required: [id, kind, body, confidence, last_confirmed]
       properties:
         id:
           type: string
@@ -887,9 +910,13 @@ components:
           enum: [entry, gate_code, hazard, safe_place, access]
         body:
           type: string
+          minLength: 1
+          maxLength: 500
         confidence:
           type: number
           format: float
+          minimum: 0
+          maximum: 1
           default: 0.5
 
   # WebSocket message schemas (for documentation)
