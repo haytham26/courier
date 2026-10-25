@@ -1,30 +1,24 @@
 /**
- * The Copilot button (D34): a living 3D glass sphere, the centre of the
- * floating tab bar, raised 64 to 72 pt, the largest target on the bar, on
- * every main screen.
+ * BUG-061 EXPERIMENT — the scratch branch exp/bug-061-no-sphere, NEVER merged.
  *
- * The spec (docs/design/chosen/README.md component 2, DECISIONS D34):
- * - the states: idle, listening, thinking, speaking, muted, offline;
- * - a state change morphs (scale, light and tint) in 200 to 350 ms with a
- *   light haptic; the token duration `morph` (280 ms) carries the timing and
- *   the sphere spring (damping 20, stiffness 180) the smoothing;
- * - the sphere reacts to the live voice: the level drives a ripple ring on
- *   the surface; thinking adds a slow inner swirl; reduced motion keeps a
- *   calm ring and no surface motion;
- * - one specular highlight, a contact shadow on the bar, the accent blue in
- *   the glass: a premium physical object, never neon, never particles;
- * - a tap starts talking, a long press keeps listening.
+ * The founder's hypothesis: the D34 Copilot sphere renders through Skia, which
+ * is native GPU code, and the emulator now runs on software GL (swiftshader,
+ * BUG-060) — so the sphere may be what dies at cold start with the
+ * SIGSEGV/gwp_asan tombstone PR #18 keeps producing.
  *
- * The sphere is drawn with Skia primitives and no runtime shader: three
- * circles (the contact shadow, the refraction body with the accent radial
- * fill, the specular highlight) plus the stroked level ripple. The motion
- * rides Reanimated on the wrappers (the morph scale, the thinking swirl),
- * which keeps every Skia prop static and the UI thread free.
+ * The experiment: the Skia surface is replaced by a plain View of the same
+ * size and the same testID. Deliberately NOT the reduced-motion path (it may
+ * still render through Skia) and NOT an EXPO_PUBLIC_ flag (it would be baked
+ * into a build). Everything else — the Pressable, the accessibility label, the
+ * morph scale — stays, so the interaction contract the flows assert is intact
+ * and only the drawing surface changes.
+ *
+ * Real devices with a GPU keep the live 3D sphere: whatever this experiment
+ * proves, the feature is not removed to get green.
  */
 import React, { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Canvas, Circle, RadialGradient, BlurMask } from '@shopify/react-native-skia';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming, withRepeat } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 import { useChosen, resolveOverCard } from './context';
@@ -68,7 +62,6 @@ export const CopilotSphere = ({
 
   // The morph: scale and light with the sphere spring; reduced stays linear.
   const scale = useSharedValue(1);
-  const swirl = useSharedValue(0);
 
   useEffect(() => {
     const firstMount = previousState.current === null;
@@ -85,23 +78,10 @@ export const CopilotSphere = ({
     }
   }, [state, reduced, scale, t]);
 
-  // The thinking swirl: a slow drift, smoothed; reduced keeps it still.
-  useEffect(() => {
-    if (state === 'thinking' && !reduced) {
-      swirl.value = withRepeat(withTiming(360, { duration: t.motion.duration.slow * 4 }), -1);
-      return () => {
-        swirl.value = 0;
-      };
-    }
-  }, [state, reduced, swirl, t]);
-
   const morphStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
     // speaking breathes with Copilot's own voice envelope
     opacity: state === 'speaking' && !reduced ? 0.72 + 0.28 * Math.min(1, level) : 1,
-  }));
-  const swirlStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${swirl.value}deg` }],
   }));
 
   // The muted and the offline states strike through; the label says it too.
@@ -119,47 +99,17 @@ export const CopilotSphere = ({
       style={[styles.button, { width: size, height: size }]}
     >
       <Animated.View style={[StyleSheet.absoluteFill, morphStyle]}>
-        <Canvas style={{ width: size, height: size }}>
-          {/* the contact shadow on the bar */}
-          <Circle cx={size / 2} cy={size / 2 + 3} r={size / 2 - 3} color="rgba(0,0,0,0.3)">
-            <BlurMask blur={6} />
-          </Circle>
-          {/* the glass body: the meaning colour sits IN the glass */}
-          <Circle cx={size / 2} cy={size / 2} r={size / 2 - 3}>
-            <RadialGradient
-              c={{ x: size * 0.4, y: size * 0.38 }}
-              r={size / 2}
-              positions={[0, 0.85, 1]}
-              colors={[core, core, core]}
-            />
-          </Circle>
-          {/* the one specular highlight, riding the light from the top left */}
-          <Circle cx={size * 0.34} cy={size * 0.28} r={size * 0.13} color="rgba(255,255,255,0.7)">
-            <BlurMask blur={3} />
-          </Circle>
-          {/* the live level ripple; reduced motion keeps a calm surface */}
-          {!reduced && level > 0 && (
-            <Circle
-              cx={size / 2}
-              cy={size / 2}
-              r={size * (0.34 + 0.1 * Math.min(1, level))}
-              style="stroke"
-              strokeWidth={2.5}
-              color="rgba(255,255,255,0.5)"
-            >
-              <BlurMask blur={2} />
-            </Circle>
-          )}
-        </Canvas>
-        {/* the inner swirl of thinking: a faint arc grazing the rim */}
-        {state === 'thinking' && !reduced && (
-          <Animated.View style={[StyleSheet.absoluteFill, styles.arcSpin, swirlStyle]} pointerEvents="none">
-            <View style={styles.arc} />
-          </Animated.View>
-        )}
-        {struck && (
-          <View style={styles.strike} pointerEvents="none" />
-        )}
+        {/* THE EXPERIMENT: a plain View where the Skia Canvas used to be. The
+            same size, the same radius, and the colour the glass carried, so
+            the a11y tree, the layout and the flows all see the same button. */}
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: core, borderRadius: size / 2 },
+          ]}
+        />
+        {struck && <View style={styles.strike} pointerEvents="none" />}
       </Animated.View>
     </Pressable>
   );
@@ -169,20 +119,6 @@ const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  arcSpin: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  arc: {
-    width: '46%',
-    aspectRatio: 1,
-    borderRadius: '50%',
-    borderWidth: 2.5,
-    borderTopColor: 'rgba(255,255,255,0.85)',
-    borderRightColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: 'transparent',
   },
   strike: {
     position: 'absolute',
