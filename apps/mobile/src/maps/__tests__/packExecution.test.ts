@@ -35,8 +35,16 @@ type Commands = {
   headerJson: string[];
 };
 
+/** How each tool is asked for its version. */
+type VersionArgs = Record<string, string[]>;
+
+interface ModuleAnswer {
+  commands: Commands;
+  versionArgs: VersionArgs;
+}
+
 /** The argv the script builds, read from the module itself. */
-function commandsFor(plan: unknown): Commands {
+function commandsFor(plan: unknown): ModuleAnswer {
   const printed = execFileSync(
     'node',
     [
@@ -49,10 +57,12 @@ function commandsFor(plan: unknown): Commands {
     ],
     { encoding: 'utf8' },
   );
-  return JSON.parse(printed) as Commands & { versionArgs: Record<string, string[]> };
+  return JSON.parse(printed) as ModuleAnswer;
 }
 
-const { commands: printed, versionArgs } = commandsFor(PLAN);
+const built = commandsFor(PLAN);
+const printed: Commands = built.commands;
+const versionArgs: VersionArgs = built.versionArgs;
 
 describe('the planetiler invocation', () => {
   it('hands planetiler the extract on disk, the output and the overwrite flag', () => {
