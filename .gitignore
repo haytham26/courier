@@ -69,3 +69,4 @@ research-private/
 # Scratch helper scripts (GitHub-listing, merges): never source, and they must
 not reach gitleaks' view of the repo.
 /.opencode-tmp/
+graphify-out/cache/
