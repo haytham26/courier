@@ -10,3 +10,8 @@ import os
 os.environ.setdefault("AUTH_JWKS_URL", "http://127.0.0.1:9/api/auth/jwks")
 os.environ.setdefault("AUTH_JWT_AUDIENCE", "courier-api")
 os.environ.setdefault("AUTH_JWT_ISSUER", "http://localhost:3001")
+# The local POD store refuses to boot without a real signing key; tests get a
+# fixed throwaway one (the forged-grant test uses a different key on purpose).
+os.environ.setdefault(
+    "POD_URL_SIGNING_SECRET", "test-only-pod-url-signing-secret-0123456789"
+)

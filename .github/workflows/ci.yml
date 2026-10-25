@@ -78,7 +78,7 @@ jobs:
           enable-cache: true
 
       - name: Install the API dependencies
-        run: uv sync --directory services/api --extra dev
+        run: uv sync --directory services/api --extra dev --extra s3test
 
       - name: Install the voice service dependencies
         run: uv sync --directory services/courier-voice --extra dev

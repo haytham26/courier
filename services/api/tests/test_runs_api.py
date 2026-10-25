@@ -21,9 +21,12 @@ from fastapi.testclient import TestClient
 from app.auth.jwks import get_verifier
 from app.main import _route_request, app
 from app.pod_store import LocalPodStore
-from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
+from app.repo import DeliveryEventRow, InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from app.routing import schedule_plan
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+
+POD_TEST_SECRET = "test-only-pod-url-signing-secret-0123456789"
+FORGED_SECRET = "not-the-server-key-0123456789abcdef"
 
 COURIER = "driver-7"
 OTHER = "driver-8"
@@ -221,11 +224,99 @@ class TestThePodUrl:
     ) -> None:
         run_id, _, event_id, _ = self._upload(client, repo, tmp_path, monkeypatch)
         monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
-        expired_url, _ = LocalPodStore(Path(str(tmp_path)), ttl_seconds=-1).presign_url(
+        expired_url, _ = LocalPodStore(
+            Path(str(tmp_path)), POD_TEST_SECRET, ttl_seconds=-1
+        ).presign_url(run_id, event_id)
+
+        assert anonymous_client.get(expired_url).status_code == 404
+
+    def test_a_grant_signed_with_another_key_is_refused(
+        self,
+        client: TestClient,
+        anonymous_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The review's blocker: the grant key may never be a public value."""
+        run_id, _, event_id, _ = self._upload(client, repo, tmp_path, monkeypatch)
+        forged_url, _ = LocalPodStore(Path(str(tmp_path)), FORGED_SECRET).presign_url(
             run_id, event_id
         )
 
-        assert anonymous_client.get(expired_url).status_code == 404
+        assert anonymous_client.get(forged_url).status_code == 404
+
+    def test_a_non_hex_signature_is_a_404_not_a_500(
+        self,
+        client: TestClient,
+        anonymous_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, stop_id, event_id, _ = self._upload(client, repo, tmp_path, monkeypatch)
+        url = client.get(f"/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url").json()["url"]
+        forged = url.split("&signature=")[0] + "&signature=not-a-hex-signature"
+
+        assert anonymous_client.get(forged).status_code == 404
+
+    def test_a_non_pod_event_gets_no_url(self, client: TestClient, repo: InMemoryRepo) -> None:
+        run_id, shift_id = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        event_id = uuid.uuid4()
+        repo.append_events(
+            shift_id,
+            [
+                DeliveryEventRow(
+                    id=event_id,
+                    shift_id=shift_id,
+                    stop_id=stop_id,
+                    kind="delivered",
+                    utterance=None,
+                    safe_place=None,
+                    lat=None,
+                    lon=None,
+                    accuracy_m=None,
+                    occurred_at=START_AT,
+                )
+            ],
+        )
+
+        got = client.get(f"/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url")
+
+        assert got.status_code == 404
+
+    def test_a_grant_for_a_missing_object_is_a_404(
+        self,
+        anonymous_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, shift_id = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        event_id = uuid.uuid4()
+        repo.append_events(
+            shift_id,
+            [
+                DeliveryEventRow(
+                    id=event_id,
+                    shift_id=shift_id,
+                    stop_id=stop_id,
+                    kind="pod_captured",
+                    utterance=None,
+                    safe_place=None,
+                    lat=None,
+                    lon=None,
+                    accuracy_m=None,
+                    occurred_at=START_AT,
+                )
+            ],
+        )
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        url, _ = LocalPodStore(Path(str(tmp_path)), POD_TEST_SECRET).presign_url(run_id, event_id)
+
+        assert anonymous_client.get(url).status_code == 404
 
     def test_another_courier_gets_no_url(
         self,

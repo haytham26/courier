@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import importlib
 import shutil
 import time
 import uuid
@@ -21,7 +22,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
-from .pod import POD_URL_TTL_SECONDS, PodSettings
+from .pod import POD_URL_TTL_SECONDS, PodSettings, pod_settings
 
 
 def object_key(run_id: uuid.UUID, event_id: uuid.UUID) -> str:
@@ -61,8 +62,13 @@ class PodStore(Protocol):
 class LocalPodStore:
     """The ADR-010 directory store, behind the ADR-011 interface."""
 
-    def __init__(self, directory: Path, ttl_seconds: int = POD_URL_TTL_SECONDS) -> None:
+    def __init__(
+        self, directory: Path, signing_secret: str, ttl_seconds: int = POD_URL_TTL_SECONDS
+    ) -> None:
+        if len(signing_secret) < 32:
+            raise ValueError("the POD signing secret must be at least 32 characters")
         self._directory = directory
+        self._signing_secret = signing_secret.encode("utf-8")
         self._ttl = ttl_seconds
 
     def save(self, run_id: uuid.UUID, event_id: uuid.UUID, content: bytes) -> str:
@@ -86,7 +92,7 @@ class LocalPodStore:
         (run, event, expiry) - self-verifying, no client-trusted state."""
         expires = int(time.time()) + self._ttl
         message = f"{run_id}/{event_id}/{expires}".encode()
-        signature = hmac.new(self._secret(), message, hashlib.sha256).hexdigest()
+        signature = hmac.new(self._signing_secret, message, hashlib.sha256).hexdigest()
         return (
             f"/runs/{run_id}/pod/{event_id}/bytes?expires={expires}&signature={signature}",
             datetime.fromtimestamp(expires, tz=UTC),
@@ -99,9 +105,14 @@ class LocalPodStore:
         if expires < int(time.time()):
             return False
         expected = hmac.new(
-            self._secret(), f"{run_id}/{event_id}/{expires}".encode(), hashlib.sha256
+            self._signing_secret, f"{run_id}/{event_id}/{expires}".encode(), hashlib.sha256
         ).hexdigest()
-        return hmac.compare_digest(signature, expected)
+        try:
+            provided = bytes.fromhex(signature)
+        except ValueError:
+            # A non-hex signature is a forgery attempt, not a server error.
+            return False
+        return hmac.compare_digest(provided, bytes.fromhex(expected))
 
     def read_bytes(self, run_id: uuid.UUID, event_id: uuid.UUID) -> bytes:
         return self._path(run_id, event_id).read_bytes()
@@ -114,11 +125,6 @@ class LocalPodStore:
         shutil.rmtree(directory)
         return count
 
-    def _secret(self) -> bytes:
-        from app.auth.jwks import get_auth_settings  # noqa: PLC0415 - lazy: avoids the import cycle
-
-        return get_auth_settings().auth_jwt_issuer.encode("utf-8") or b"pod-store"
-
     def _path(self, run_id: uuid.UUID, event_id: uuid.UUID) -> Path:
         return self._directory / str(run_id) / f"{event_id}.bin"
 
@@ -130,32 +136,42 @@ class S3PodStore:
         self._settings = settings
         self._client = client
         if self._client is None:
-            import boto3  # noqa: PLC0415 - the s3 extra is optional; imported lazily
-
-            self._client = boto3.client(
-                "s3",
-                endpoint_url=settings.pod_s3_endpoint_url or None,
-                region_name=settings.pod_s3_region or None,
-                aws_access_key_id=settings.pod_s3_access_key_id,
-                aws_secret_access_key=settings.pod_s3_secret_access_key,
+            self._client = _s3_client(
+                settings.pod_s3_endpoint_url,
+                settings.pod_s3_region,
+                settings.pod_s3_access_key_id,
+                settings.pod_s3_secret_access_key,
             )
         self._bucket = settings.pod_s3_bucket
         self._ttl = settings.pod_url_ttl_seconds
 
     def save(self, run_id: uuid.UUID, event_id: uuid.UUID, content: bytes) -> str:
         key = object_key(run_id, event_id)
-        self._client.put_object(Bucket=self._bucket, Key=key, Body=content)
-        return hashlib.sha256(content).hexdigest()
+        digest = hashlib.sha256(content).hexdigest()
+        extra: dict[str, Any] = {"Metadata": {"sha256": digest}}
+        if self._settings.pod_s3_server_side_encryption:
+            extra["ServerSideEncryption"] = self._settings.pod_s3_server_side_encryption
+        self._client.put_object(Bucket=self._bucket, Key=key, Body=content, **extra)
+        return digest
 
     def fingerprint(self, run_id: uuid.UUID, event_id: uuid.UUID) -> tuple[int, str]:
-        head = self._client.head_object(Bucket=self._bucket, Key=object_key(run_id, event_id))
-        return int(head["ContentLength"]), str(head["ETag"]).strip('"')
+        key = object_key(run_id, event_id)
+        head = self._client.head_object(Bucket=self._bucket, Key=key)
+        digest = head.get("Metadata", {}).get("sha256")
+        if not digest:
+            raise RuntimeError(f"the stored POD object {key} has no sha256 metadata")
+        return int(head["ContentLength"]), str(digest)
 
     def exists(self, run_id: uuid.UUID, event_id: uuid.UUID) -> bool:
         try:
             self._client.head_object(Bucket=self._bucket, Key=object_key(run_id, event_id))
-        except self._client.exceptions.ClientError:
-            return False
+        except self._client.exceptions.ClientError as error:
+            code = str(error.response.get("Error", {}).get("Code", ""))
+            if code in ("404", "NoSuchKey", "NotFound"):
+                return False
+            # A 403 or a 5xx is not "absent": treating it as absent would let a
+            # replay overwrite the first upload.
+            raise
         return True
 
     def presign_url(self, run_id: uuid.UUID, event_id: uuid.UUID) -> tuple[str, datetime]:
@@ -167,25 +183,58 @@ class S3PodStore:
         return url, datetime.fromtimestamp(int(time.time()) + self._ttl, tz=UTC)
 
     def delete_run(self, run_id: uuid.UUID) -> int:
+        """Delete every object under the run's prefix, in honest batches.
+
+        The list API pages at 1,000 keys and the delete API takes at most
+        1,000 per call; a single unpaginated call left the tail of a long run
+        alive while reporting success (the review finding). Per-key errors are
+        raised, never swallowed - the retention claim is a DATA-SAFETY one.
+        """
         prefix = f"{run_id}/"
-        listed = self._client.list_objects_v2(Bucket=self._bucket, Prefix=prefix)
-        objects = [{"Key": item["Key"]} for item in listed.get("Contents", [])]
-        if not objects:
-            return 0
-        self._client.delete_objects(
-            Bucket=self._bucket, Delete={"Objects": objects, "Quiet": True}
-        )
-        return len(objects)
+        paginator = self._client.get_paginator("list_objects_v2")
+        objects = [
+            {"Key": item["Key"]}
+            for page in paginator.paginate(Bucket=self._bucket, Prefix=prefix)
+            for item in page.get("Contents", [])
+        ]
+        deleted = 0
+        for start in range(0, len(objects), 1000):
+            response = self._client.delete_objects(
+                Bucket=self._bucket,
+                Delete={"Objects": objects[start : start + 1000], "Quiet": False},
+            )
+            errors = response.get("Errors", [])
+            if errors:
+                raise RuntimeError(
+                    f"the POD retention left {len(errors)} object(s) behind: {errors[:3]}"
+                )
+            deleted += len(response.get("Deleted", []))
+        return deleted
 
 
-def pod_store(settings: Any | None = None) -> PodStore:
-    """The store the API uses, selected by `POD_STORAGE_BACKEND`.
+def _s3_client(
+    endpoint_url: str, region: str, access_key: str, secret_key: str
+) -> Any:
+    """One boto3 client per configuration (a client carries a connection
+    pool; building one per request is waste)."""
+    boto3: Any = importlib.import_module("boto3")
 
-    The settings are duck-typed: the module's own `PodSettings` or the
-    caller's equivalent (the ADR-010 `pod.PodSettings` carries the same
-    fields — one source of truth per deployment, chosen in the endpoint).
-    """
-    settings = settings or PodSettings()
+    return boto3.client(
+        "s3",
+        endpoint_url=endpoint_url or None,
+        region_name=region or None,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+    )
+
+
+def pod_store(settings: PodSettings | None = None) -> PodStore:
+    """The store the API uses, selected by `POD_STORAGE_BACKEND`."""
+    settings = settings or pod_settings()
     if settings.pod_storage_backend == "s3":
         return S3PodStore(settings)
-    return LocalPodStore(settings.pod_storage_dir, settings.pod_url_ttl_seconds)
+    return LocalPodStore(
+        settings.pod_storage_dir,
+        settings.pod_url_signing_secret,
+        settings.pod_url_ttl_seconds,
+    )

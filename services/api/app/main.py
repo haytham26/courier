@@ -30,6 +30,7 @@ from .pod import (
     POD_MAX_BYTES,
     pod_settings,
     sniff_image_kind,
+    validate_pod_settings,
 )
 from .pod_store import LocalPodStore, pod_store
 from .repo import DeliveryEventRow, Repo, RouteStopRow, RunRecord, get_repo
@@ -48,6 +49,9 @@ from .sequencing import Segment
 
 # Fail fast when the API cannot verify tokens (no default secrets).
 get_auth_settings()
+# And when the POD store is misconfigured: a missing signing key or bucket
+# must stop the boot, not the first photo of the day.
+validate_pod_settings()
 
 app = FastAPI(title="Courier Copilot", version="0.1.0")
 
@@ -501,10 +505,20 @@ def pod_bytes(
 
     run = repo.get_run(run_id)
     event = repo.get_event(event_id)
-    if run is None or event is None or event.shift_id != run.shift_id:
+    if (
+        run is None
+        or event is None
+        or event.shift_id != run.shift_id
+        or event.kind != "pod_captured"
+    ):
         raise HTTPException(status_code=404, detail="no photo at this URL")
 
-    content = store.read_bytes(run_id, event_id)
+    try:
+        content = store.read_bytes(run_id, event_id)
+    except FileNotFoundError:
+        # A valid grant for an event whose bytes are gone (a deleted run, a
+        # failed upload) is still a 404, never a 500.
+        raise HTTPException(status_code=404, detail="no photo at this URL") from None
     kind = sniff_image_kind(content)
     media = {"jpeg": "image/jpeg", "png": "image/png", "heic": "image/heic"}.get(
         kind or "", "application/octet-stream"
@@ -532,7 +546,12 @@ def pod_url(
     if paths.stop_id not in {row.id for row in repo.get_run_stops(run.id)}:
         raise HTTPException(status_code=404, detail="no stop with this id in this run")
     event = repo.get_event(event_id)
-    if event is None or event.shift_id != run.shift_id or event.stop_id != paths.stop_id:
+    if (
+        event is None
+        or event.shift_id != run.shift_id
+        or event.stop_id != paths.stop_id
+        or event.kind != "pod_captured"
+    ):
         raise HTTPException(status_code=404, detail="no event with this id for this stop")
 
     url, expires_at = pod_store(pod_settings()).presign_url(paths.run_id, event_id)

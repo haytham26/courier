@@ -67,7 +67,7 @@ jobs:
         with:
           enable-cache: true
       - run: pnpm install --frozen-lockfile
-      - run: uv sync --directory services/api --extra dev
+      - run: uv sync --directory services/api --extra dev --extra s3test
       - name: Coverage
         run: node scripts/ci/run-coverage.mjs
       - name: Upload the coverage report

@@ -22,11 +22,22 @@ Updated: 2026-10-25 · main at `5e463a6` · **Queue 2: items 1–2 MERGED (PR #2
   cannot send a bearer header). The upload now writes **through the store**, so
   `POD_STORAGE_BACKEND=s3` writes where the URL points.
 - **Retention:** `delete_run(run_id)` on the store (local: the run's directory; S3: the run's
-  prefix) — the primitive the run-deletion and account-deletion slices will call (DATA-SAFETY:
-  the photos die with the run; accounts within 30 days). The scheduler stays the infra lane.
+  prefix, paginated and deleted in 1,000-key batches with per-key errors raised) — the primitive
+  the run-deletion and account-deletion slices will call (DATA-SAFETY: the photos die with the run;
+  accounts within 30 days). The scheduler stays the infra lane.
+- **The fresh-context review found a blocker, fixed before merge:** the streaming grant's HMAC key
+  was derived from `AUTH_JWT_ISSUER` — a public value in every access token — so any authenticated
+  caller could forge a grant and read another courier's photo. The key is now the dedicated
+  `POD_URL_SIGNING_SECRET` (≥32 chars, validated at boot; the local backend refuses to start
+  without it). The same pass fixed the ETag-vs-sha256 lie on S3 (the sha256 is object metadata),
+  `exists()` swallowing 403/5xx (a replay could overwrite), the unpaginated `delete_run` (a long
+  run's tail survived), a non-POD event id minting a 200 URL, a non-hex signature returning 500,
+  and the moto suite skipping in CI (both workflows now sync `--extra s3test`; the module raises
+  when CI lacks it). Each has a test.
 - **For the lead:** the new env names are in `.env.example` (`POD_STORAGE_BACKEND`,
-  `POD_S3_*`, `POD_URL_TTL_SECONDS`); real buckets and keys are FOUNDER_TODO items. The `s3`
-  runtime extra and the `s3test` (moto) extra are in `services/api/pyproject.toml`.
+  `POD_URL_SIGNING_SECRET`, `POD_S3_*`, `POD_S3_SERVER_SIDE_ENCRYPTION`, `POD_URL_TTL_SECONDS`);
+  real buckets, keys and a signing secret are FOUNDER_TODO items. The `s3` runtime extra and the
+  `s3test` (moto) extra are in `services/api/pyproject.toml`.
 
 ## Queue 2 item 2 — MERGED (PR #27, `archive/feat/db-in-ci`)
 
