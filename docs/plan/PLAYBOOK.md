@@ -125,3 +125,18 @@ A test that passes without proving anything is worse than no test: it hides the 
 1. **15 minutes without output is a stop.** Any wait (a subagent, a CI poll, a build) that produces no new output for 15 minutes is stopped, and the session writes what hung and what it does instead. A wait is never left open-ended.
 2. **Size the review to the change.** A docs-only or config-only PR gets pass 5 done inline by the session in under 10 minutes. A fresh-context review subagent is for code changes, with a 20-minute budget and an explicit output (the findings list), never "review until satisfied".
 3. **The founder sees progress.** A session that has worked 30 minutes without a commit, a push or a PR comment writes a one-line status in its own output: what it is doing and what it waits on.
+
+## 16. Two sessions, one repo: never chase the other session's failure (founder directive 2026-10-25)
+
+**Who owns what:**
+- The lead owns `apps/mobile`, `.maestro`, `packages/design-tokens` and the Android E2E workflow.
+- The backend owns `services/`, `infra/`, `db/`, the API and voice contracts, and the CI steps that test them: the Postgres suite, the restore drill and the Locust SLO profile.
+- The docs and registers are shared; take numbers per §13.
+
+**Before investigating any red check:**
+1. Read the failing step's name. If it tests the other session's paths, it is theirs.
+2. Read the other session's `docs/log/CURRENT*.md` and its open PRs (`gh pr list`). If an open PR or a `doing` BUG row already covers it, it is theirs.
+3. If it is theirs, do not investigate and do not touch their paths. Write one line in your own log, "red step X is <owner>'s, covered by PR #N / BUG-N", and treat your PR as green on its own changes, provided its own PR run passed that step on the same code. Continue your queue.
+4. If nobody covers it, write it as a new BUG row assigned to the owner, and continue.
+
+**Each session keeps its CURRENT file true** at every push: what it is on, its open PRs, and the red steps it is fixing. That file is how the other session knows.
