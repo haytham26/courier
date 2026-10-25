@@ -63,3 +63,7 @@ research-private/
 # root (quality-gates.yml) so pip-audit can read it: generated, never source.
 /requirements.txt
 
+# The squad worktrees live inside the repo for tooling convenience; they are
+# working copies, never source (an accidental gitlink was committed once).
+/.worktrees/
+

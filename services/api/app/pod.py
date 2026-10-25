@@ -16,6 +16,7 @@ import hashlib
 import uuid
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 POD_MAX_BYTES = 10 * 1024 * 1024
@@ -26,17 +27,60 @@ POD_MAX_BYTES = 10 * 1024 * 1024
 HEIC_MAJOR_BRANDS = (b"heic", b"heix", b"heim", b"hevc", b"mif1", b"msf1")
 
 
+POD_URL_TTL_SECONDS = 900
+"""The signed URL lives 15 minutes - long enough to render, short enough to
+die before it is worth stealing (ASVS V8)."""
+
+POD_URL_SIGNING_SECRET_MIN_LENGTH = 32
+"""The minimum signing key: 32 characters (ASVS V6). The grant is the only
+authorization on the photo URL, so it may never be a public value - the first
+cut derived it from the JWT issuer, which every authenticated caller can read
+(the review's blocker)."""
+
+
 class PodSettings(BaseSettings):
-    """Where the POD bytes land (the directory comes from the env, ASVS V14)."""
+    """Where the POD bytes land and who keeps them (ASVS V14: env-only)."""
 
     model_config = SettingsConfigDict(env_file=".env.local", extra="ignore")
 
+    pod_storage_backend: str = "local"
     pod_storage_dir: Path = Path(__file__).resolve().parent.parent / "pod-store"
+    pod_url_signing_secret: str = ""
+    pod_s3_bucket: str = ""
+    pod_s3_endpoint_url: str = ""
+    pod_s3_region: str = ""
+    pod_s3_access_key_id: str = ""
+    pod_s3_secret_access_key: str = ""
+    pod_s3_server_side_encryption: str = ""
+    pod_url_ttl_seconds: int = Field(default=POD_URL_TTL_SECONDS, ge=1, le=604800)
 
 
 def pod_settings() -> PodSettings:
     """Read fresh, so a deployment (or a test) can point the dir anywhere."""
     return PodSettings()
+
+
+def validate_pod_settings(settings: PodSettings | None = None) -> PodSettings:
+    """Refuse a misconfigured store at boot, not on the first upload.
+
+    The local backend's grant is only as strong as its key, and a missing S3
+    bucket must not surface as a 500 on the first photo of the day.
+    """
+    settings = settings or pod_settings()
+    if settings.pod_storage_backend not in ("local", "s3"):
+        raise RuntimeError(
+            "POD_STORAGE_BACKEND must be 'local' or 's3', "
+            f"not {settings.pod_storage_backend!r}"
+        )
+    if settings.pod_storage_backend == "local":
+        if len(settings.pod_url_signing_secret) < POD_URL_SIGNING_SECRET_MIN_LENGTH:
+            raise RuntimeError(
+                "POD_URL_SIGNING_SECRET must be at least 32 characters: the streaming "
+                "grant is the only authorization on the photo URL"
+            )
+    elif not settings.pod_s3_bucket:
+        raise RuntimeError("POD_S3_BUCKET is required when POD_STORAGE_BACKEND=s3")
+    return settings
 
 
 def sniff_image_kind(content: bytes) -> str | None:
