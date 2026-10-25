@@ -52,3 +52,8 @@ Skills live in `.claude/skills/<name>/SKILL.md` (the single source; the pinned c
 In `docs/log/<week>.md` (the week you are in), for each step write which skills you applied.
 
 When anything fails, follow `docs/plan/PLAYBOOK.md` first (triage, evidence order, bisect, the contract check, thinking budget).
+
+## Code map (graphify)
+- Install once: `pip install graphifyy`. Build or refresh the map: `graphify update .` (code only, local, no API cost). Run it after every `git pull` and after code changes.
+- Before reading or searching source, ask the map: `graphify query "<question>"`, `graphify path "<A>" "<B>"`, `graphify explain "<name>"`. Read files only at the lines it points to.
+- `graphify-out/` is generated and git-ignored: never commit it.

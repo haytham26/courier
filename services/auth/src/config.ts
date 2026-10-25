@@ -49,6 +49,15 @@ export interface AuthConfig {
   emailAndPassword: {
     enabled: boolean;
     minPasswordLength: number;
+    /** ASVS V2.1.12: a bound, so a megabyte body is never hashed. */
+    maxPasswordLength: number;
+    /**
+     * ASVS V6.2.x / BUG-058: the breached-password check through the
+     * `haveIBeenPwned` plugin (k-anonymity; only the SHA-1's first five
+     * characters leave the server). On unless switched off for a deployment
+     * without the service.
+     */
+    breachedPasswordCheck: boolean;
     requireEmailVerification: boolean;
   };
   /**
@@ -135,6 +144,8 @@ const envSchema = z.object({
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().optional(),
   AUTH_SESSION_EXPIRES_IN: z.coerce.number().int().positive().optional(),
   AUTH_REQUIRE_EMAIL_VERIFICATION: z.enum(['true', 'false']).optional(),
+  AUTH_MAX_PASSWORD_LENGTH: z.coerce.number().int().positive().optional(),
+  AUTH_HIBP_ENABLED: z.enum(['true', 'false']).optional(),
   AUTH_TRUSTED_IP_HEADERS: z.string().optional(),
   PORT: z.coerce.number().int().positive().optional(),
   AUTH_GOOGLE_CLIENT_ID: z.string().min(1).optional(),
@@ -254,6 +265,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,
+      maxPasswordLength: values.AUTH_MAX_PASSWORD_LENGTH ?? 128,
+      breachedPasswordCheck: values.AUTH_HIBP_ENABLED !== "false",
       requireEmailVerification:
         values.AUTH_REQUIRE_EMAIL_VERIFICATION === "true",
     },
