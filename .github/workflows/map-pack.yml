@@ -9,8 +9,13 @@ name: Map pack (the Canterbury offline pack, D26)
 #
 #   - on the schedule below (twice a week, D26),
 #   - on dispatch (the founder builds by hand),
-#   - when the scripts or the workflow file change, so a change to the
+#   - when the scripts or the workflow file change on main, so a change to the
 #     pipeline itself is exercised (the only trigger that can break main's CI).
+#
+# BUG-064: the `push` filter proved not enough on its own - a feature-branch push
+# started a run (40226600536) against a trigger that says `branches: [main]`.
+# The guard below states the intent where it cannot be read as an edge case: this
+# build runs for a push to `main` only, never for a PR's head branch.
 #
 # The licence gates live in the scripts: `build-pmtiles.mjs` refuses a source
 # whose terms forbid the offline use, whatever the workflow asks for.
@@ -41,6 +46,9 @@ permissions:
 
 jobs:
   build:
+    # A push builds the pack on main; the schedule and the founder's dispatch
+    # build it anywhere. A feature branch's push never does (BUG-064).
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
