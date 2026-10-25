@@ -46,7 +46,7 @@ describe('the planetiler invocation', () => {
 describe('the pmtiles invocations', () => {
   const commands = buildCommands(PLAN);
 
-  it('extracts to the envelope in the CLI\'s own bbox order', () => {
+  it("extracts to the envelope in the CLI's own bbox order", () => {
     expect(commands.pmtiles[0]).toBe('extract');
     expect(commands.pmtiles[1]).toBe(PLAN.tileset);
     expect(commands.pmtiles[2]).toBe(PLAN.output);
