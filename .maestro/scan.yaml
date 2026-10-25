@@ -1,0 +1,75 @@
+appId: com.courier.copilot
+name: "The scanner reads a label, the parcel joins the van, and it stays open for the next one"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The scanner opens from the Today sheet's secondary row. The shared convention
+# for tapping a row inside the sheet lives in common/reveal-and-tap.yaml: the
+# Scan sits below the fold at peek, so it is revealed before it is tapped. This
+# flow was the FIRST to learn that contract, on BOTH api legs (run
+# 40060608949: "Element not found: Id matching regex: today-scan", with the
+# evidence's a11y tree carrying today-sheet and today-go but no today-scan).
+- runFlow:
+    file: common/reveal-and-tap.yaml
+    env:
+      TARGET: "today-scan"
+- extendedWaitUntil:
+    visible:
+      id: "scan-screen"
+    timeout: 30000
+# The scanner's own surface (06-scan.html): the pills at the top, the status
+# line, and the match sheet when the label is read. The E2E build reads the
+# mock run's labels through the reader seam, so the reading is deterministic
+# here: stop 2 first, then stop 3.
+- assertVisible:
+    id: "scan-overlay"
+- assertVisible:
+    id: "scan-done"
+# The status starts at "Point the camera at the label." and the mock reader
+# answers after its own beat (labelReader.ts's MOCK_READ_BEAT_MS) plus the
+# permission settling, so the found line is WAITED for, not assumed: the
+# second emulator run of this flow failed on both legs at a bare assert here
+# (run 40063068694) with the ring and the pills already on screen - the
+# screen was right and the assertion was early. The wait is the repo's own
+# idiom (extendedWaitUntil), and it holds the full-match text rule: the
+# assert still names the reference's exact line.
+- extendedWaitUntil:
+    visible:
+      text: "Address found. Hold steady."
+    timeout: 30000
+# The match sheet (06-scan.html): the check and the matched address, the
+# place it was found, where it sits in the van, and the one action.
+- assertVisible:
+    id: "scan-match-sheet"
+- assertVisible: "45 Papanui Road"
+- assertVisible: "Merivale. Matched to the map."
+- assertVisible: "WHERE IN THE VAN"
+- assertVisible: "Add and Scan Next"
+- takeScreenshot: scan-match
+# Where in the van: the middle is where a parcel sits while the courier
+# decides, so the control starts there and records where it moves.
+- assertVisible:
+    id: "scan-van-middle"
+    selected: true
+- tapOn:
+    id: "scan-van-front"
+- assertVisible:
+    id: "scan-van-front"
+    selected: true
+# "Add and Scan Next" puts the parcel in the van - the pill counts it - and
+# keeps the scanner open, so the next label of the run is what it reads.
+- tapOn:
+    id: "scan-add"
+- assertVisible: "1 scanned"
+- assertVisible: "120 Blenheim Road"
+# The scan is over: the courier leaves with the load in the van.
+- tapOn:
+    id: "scan-done"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 30000

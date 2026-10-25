@@ -1,71 +1,91 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W43. **Local `main` == `origin/main` == `ba29e87`** (PR #22 merged and
-tagged `archive/fix/bug-052-emulator-swiftshader-gpu`; the branch is deleted).
+**Week:** 2026-W43. **Local `main` == `origin/main` == `5964340`.**
 
-## The queue, in order
+## Merged this session (each: merge commit → archive tag at the merge tip → branch deleted)
 
-| PR | Screen | Branch | State |
+| PR | What | Tag |
+|---|---|---|
+| **#22** | the emulator boots with software GL (BUG-060) + the gate `scripts/ci/check-emulator-gpu.mjs` | `archive/fix/bug-052-emulator-swiftshader-gpu` |
+| **#29** | the lead's five audit findings (BUG-053..BUG-057) | `archive/fix/audit-lead-findings` |
+| **#24** | 09 Map style on the chosen tokens | `archive/feat/t6-09-map-style` |
+| **#20** | 08 Route on the chosen tokens (the run as a timeline) | `archive/feat/t6-route` |
+| **#28** | 11 Settings on the chosen tokens | `archive/feat/t6-11-settings` |
+| **#15** | 06 Scan on the chosen tokens + the status precedence fix | `archive/feat/t6-scan` |
+| **#32** | 12 Driving at night (the same drive with the mode pinned) | `archive/feat/t6-12-driving-night` |
+
+## Open, with their blockers
+
+| PR | What | Branch | Blocker |
 |---|---|---|---|
-| **#28** | 11 Settings | `feat/t6-11-settings` @ `c448433` | CI running |
-| **#24** | 09 Map style | `feat/t6-09-map-style` @ `0e30f17` | CI running |
-| **#20** | 08 Route | `feat/t6-route` @ `b0bae7e` | CI running |
-| **#18** | 07 Copilot | `feat/t6-copilot` @ `6aaaf8a` | CI running |
-| **#15** | 06 Scan | `feat/t6-scan` @ `4cbea15` | CI running |
-| **#12** | recordings | `feat/t6-recordings` | next |
+| **#30** | 10 Summary | `feat/t6-10-summary` @ `af95c5c` | **BUG-062** |
+| **#18** | 07 Copilot | `feat/t6-copilot` @ `6aaaf8a` | **BUG-061** |
+| **#12** | the screen recordings | `feat/t6-recordings` | queued |
 
-## BUG-060 is MERGED (the emulator boots with software GL)
+## The three open bugs, and what the next session starts with
 
-The workflow starts the emulator with `-gpu swiftshader_indirect` and
-`scripts/ci/check-emulator-gpu.mjs` (24 tests) in the floor job fails any
-workflow that boots an emulator without it. PR #22's run 40112419901 was GREEN
-on BOTH api legs on the hardened head. The GL chatter lines still appear in a
-green run and no flow dies on them - the honest record is in
-`docs/status/BUGS.md`, and the evidence is
-`docs/evidence/bug-053-emulator-gl/README.md` (the folder keeps its old name;
-the renumber is recorded).
+- **BUG-062 (PR #30, the summary flow).** The tap on `today-end-of-day`
+  COMPLETES and `summary-screen` never mounts, on both api legs, on every run,
+  while every other flow in the same run passes. The app is proven right from
+  three sides (the Today test asserts the navigation, the route is registered
+  on the head the APK was built from, no crash in logcat), so the unknown is the
+  runtime route resolution. **First experiment: deep-link it** -
+  `adb shell am start -W -n com.courier.copilot/.MainActivity -d
+  "courier:///summary"` - to see whether the route resolves at all.
+- **BUG-061 (PR #18, the Copilot screen).** Four reds with two shapes: three
+  runner deaths and one real `SIGSEGV`/gwp_asan death at cold start. The branch's
+  diff is JS-only; if the SIGSEGV repeats with the same tombstone, bisect the
+  APK.
+- **BUG-060** is CLOSED and merged (the emulator boots with software GL; the
+  gate keeps it that way).
 
-**The BUG-053 collision is resolved:** the founder's instruction was to keep
-both rows and take the next free number. The queue-2 audit (PR #26) landed
-BUG-053..BUG-058 for lead-owned findings first, so the emulator GL bug is
-**BUG-060** everywhere (the gate prints it, `android-e2e.yml`'s comment reads
-it, D37 reads it). Both rows are in the tracker and the collision note is at
-the end of the hunt log.
+## The trap that caught me this session, recorded once
+
+**I force-pushed a branch that was already pushed** (`--force-with-lease` on
+`feat/t6-10-summary`), which the rules forbid. Nothing was lost, but the rule
+is the rule. The cause was **branch hygiene**: two commits landed on branches I
+believed were `main`. Check `git branch --show-current` before every commit.
+
+## Two real catches worth keeping
+
+- **The scan screen's precedence**: `device === undefined` was checked before the
+  reading, and the E2E emulator has `-camera-back none`, so the mock reader's
+  answer could never show. The reader's answer now wins.
+- **A screen nobody can open is dead code**: the summary route was never
+  registered in the root `Stack`. Now registered, and
+  `app/__tests__/routes.test.tsx` asserts it (a mutation check proved the test
+  fails without it).
 
 ## Next items, in order
 
-1. The merge ritual for #28, #24, #20, #18, #15 as each goes green: merge
-   commit → `archive/<branch>` tag at the merge tip → delete the branch → ff
-   main. **The lead-owned findings of the audit (BUG-053..BUG-058) are the next
-   work after the screens land** - the founder named them as the queue's
-   content.
-2. PR #12 (the recordings).
-3. The remaining screens: 10 Summary (built and GREEN locally on
-   `feat/t6-10-summary` @ `1598008` - its own branch, not yet pushed),
-   12 Driving at night, 13 Lock screen (iOS parts stay PARTIAL), 01 Welcome,
-   02 Sign in.
+1. PR #30: follow BUG-062's first experiment (the deep link); the flow's evidence
+   is in the run logs, and the code side is proven. The branch now carries main,
+   so it merges cleanly once the gate is green.
+2. PR #12 (the recordings), then PR #18 per BUG-061.
+3. The remaining screens: 13 Lock screen (the iOS parts stay PARTIAL),
+   01 Welcome, 02 Sign in.
 4. Then the whole of `docs/plan/MASTER_EXECUTION.md` in its §4 order.
 
 ## The traps
 
 - **Never use PowerShell `Add-Content`/`Set-Content`/`Out-File` on a tracked
-  file** - it writes BEL/FF control bytes. Write with node or the edit tool,
-  and run `node scripts/ci/check-control-chars.mjs` before every commit.
-  (The settings.tsx rename `radius.` → `radii.` used `Set-Content` once and was
-  verified clean afterwards; do not repeat it.)
-- **A hook outside a component is a crash on import**: `useMemo` at module
-  level in settings.tsx took the suite down; the store now lives inside the
-  component.
-- **Probes never live in the repo** (PLAYBOOK §10): scratch goes in
+  file** - it writes BEL/FF control bytes. Write with node or the edit tool, and
+  run `node scripts/ci/check-control-chars.mjs` before every commit.
+- **Rebuild the tokens before a local typecheck**:
+  `node_modules/.bin/tsc -p packages/design-tokens/tsconfig.build.json`.
+- **Run eslint after ADDING a file**, not only after editing one: the CI lint
+  gate caught a generic call in a file I had never linted locally.
+- **`git branch --show-current` before every commit.**
+- Probes never live in the repo (PLAYBOOK §10): scratch goes in
   `C:\Users\DCL\AppData\Local\Temp\opencode`.
-- A jest test path containing `(tabs)` is a regex group: use `-c
-  apps/mobile/jest.config.js` and a pattern without the parentheses.
-- The locale's PowerShell wraps `gh.ps1`'s output in error records: a push
-  ending `Exited with code 1` has still succeeded - read the output, then
-  confirm with `gh run list`.
+- The PowerShell console wraps `gh.ps1`'s output in error records; a push ending
+  `Exited with code 1` may still have succeeded - read the output, then confirm
+  with `gh run list`.
 - Merging main into a PR that changed `docs/log/CURRENT.md` or the week log
-  conflicts by design: take theirs (main's handoff is the common history).
-- Never push to a branch while its own E2E is queued; one E2E at a time.
+  conflicts by design: take theirs.
+- A jest test path containing `(tabs)` is a regex group: use
+  `-c apps/mobile/jest.config.js` with a pattern without the parentheses.
+- One E2E at a time; never push to a branch while its own E2E is queued.
 - Merge commits only; archive tag at the merge tip before deleting the branch;
   no force-push, no rebase of pushed branches, never delete tags.
 

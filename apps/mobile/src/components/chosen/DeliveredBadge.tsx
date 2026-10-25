@@ -22,12 +22,19 @@ export const DELIVERED_CHECK = 28;
 export interface DeliveredBadgeProps {
   reduced?: boolean;
   testID?: string;
+  /**
+   * The circle's diameter. The delivered confirm uses the reference's 52;
+   * the scanner's match row uses its own 44 (06-scan.html). The check keeps
+   * the reference's proportion (28 in 52), so the pair reads the same.
+   */
+  size?: number;
 }
 
-export const DeliveredBadge = ({ reduced = false, testID }: DeliveredBadgeProps) => {
+export const DeliveredBadge = ({ reduced = false, testID, size = DELIVERED_BADGE }: DeliveredBadgeProps) => {
   const { t } = useChosen();
   const [reducedState, setReducedState] = useState(false);
   const effective = reduced || reducedState;
+  const checkSize = Math.round((size * DELIVERED_CHECK) / DELIVERED_BADGE);
 
   useEffect(() => {
     if (reduced) {
@@ -68,10 +75,13 @@ export const DeliveredBadge = ({ reduced = false, testID }: DeliveredBadgeProps)
     >
       <View
         testID={testID ?? 'delivered-badge'}
-        style={[styles.badge, { backgroundColor: t.colors.success }]}
+        style={[
+          styles.badge,
+          { width: size, height: size, borderRadius: size / 2, backgroundColor: t.colors.success },
+        ]}
       >
         <View testID={`${testID ?? 'delivered-badge'}-check`} style={styles.check}>
-          <Ionicons name="checkmark" size={DELIVERED_CHECK} color={t.colors.onSuccess} />
+          <Ionicons name="checkmark" size={checkSize} color={t.colors.onSuccess} />
         </View>
       </View>
     </Animated.View>
@@ -80,9 +90,6 @@ export const DeliveredBadge = ({ reduced = false, testID }: DeliveredBadgeProps)
 
 const styles = StyleSheet.create({
   badge: {
-    width: DELIVERED_BADGE,
-    height: DELIVERED_BADGE,
-    borderRadius: DELIVERED_BADGE / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
