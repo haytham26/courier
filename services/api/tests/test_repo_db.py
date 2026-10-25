@@ -29,8 +29,10 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
+from app.locations import location_id_for
 from app.repo import (
     DeliveryEventRow,
+    LocationNoteRow,
     RunRecord,
     RunTemplate,
     SqlAlchemyRepo,
@@ -41,6 +43,7 @@ pytestmark = pytest.mark.db
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 COURIER = "driver-7"
+
 
 @pytest.fixture()
 def engine() -> Iterator[Engine]:
@@ -95,10 +98,15 @@ def seed_stop(engine: Engine, shift_id: uuid.UUID, stop_id: uuid.UUID, address: 
         connection.execute(
             text(
                 "INSERT INTO stops (id, shift_id, sequence, address, latitude, longitude, "
-                "status, priority, parcels) VALUES (:id, :shift, 1, :address, "
-                "-43.54, 172.60, 'pending', false, 1)"
+                "status, priority, parcels, location_id) VALUES (:id, :shift, 1, :address, "
+                "-43.54, 172.60, 'pending', false, 1, :location)"
             ),
-            {"id": stop_id, "shift": shift_id, "address": address},
+            {
+                "id": stop_id,
+                "shift": shift_id,
+                "address": address,
+                "location": location_id_for(address, None),
+            },
         )
 
 
@@ -299,3 +307,65 @@ class TestTheTemplateAndTheRoute:
         assert read.stops[0].sequence == 1
         assert read.stops[0].arrival_at == start
         assert read.stops[0].late is False
+
+
+class TestTheLocationNotes:
+    def test_the_authz_key_the_upsert_and_the_cross_courier_isolation(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """The SQL half of ADR-012: the key lookup, the ON CONFLICT upsert."""
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        stop_id = uuid.uuid4()
+        seed_stop(engine, shift_id, stop_id, "45 Papanui Road")
+        location = location_id_for("45 Papanui Road", None)
+
+        assert repo.courier_location_key(COURIER, location) == "45 papanui road"
+        assert repo.courier_location_key("driver-8", location) is None
+
+        first = LocationNoteRow(
+            id=uuid.uuid4(),
+            courier_id=COURIER,
+            location_id=location,
+            address_key="45 papanui road",
+            kind="gate_code",
+            body="1234",
+            confidence=0.8,
+            last_confirmed=datetime(2026, 10, 25, 8, 0, tzinfo=UTC),
+        )
+        assert repo.put_location_note(first) is True
+        assert [note.body for note in repo.get_location_notes(COURIER, location)] == ["1234"]
+
+        corrected = LocationNoteRow(
+            id=uuid.uuid4(),
+            courier_id=COURIER,
+            location_id=location,
+            address_key="45 papanui road",
+            kind="gate_code",
+            body="9944",
+            confidence=0.9,
+            last_confirmed=datetime(2026, 10, 25, 9, 0, tzinfo=UTC),
+        )
+        assert repo.put_location_note(corrected) is False
+
+        notes = repo.get_location_notes(COURIER, location)
+        assert len(notes) == 1
+        assert notes[0].id == first.id  # the row's own id survived the correction
+        assert notes[0].body == "9944"
+        assert notes[0].confidence == 0.9
+
+        # Another courier at the same door keeps an empty, private memory.
+        assert repo.get_location_notes("driver-8", location) == []
+
+    def test_the_stops_carry_their_location_id(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        stop_id = uuid.uuid4()
+        seed_stop(engine, shift_id, stop_id, "45 Papanui Road")
+
+        rows = repo.get_run_stops(run.id)
+
+        assert rows[0].location_id == location_id_for("45 Papanui Road", None)
+        assert rows[0].suburb is None

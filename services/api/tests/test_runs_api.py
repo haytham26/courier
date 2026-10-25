@@ -19,6 +19,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.auth.jwks import get_verifier
+from app.locations import location_id_for
 from app.main import _route_request, app
 from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from app.routing import schedule_plan
@@ -167,6 +168,7 @@ def seed_run_with_stops(
             window_start=None,
             window_end=None,
             address=f"{12 + index} Riccarton Road",
+            location_id=location_id_for(f"{12 + index} Riccarton Road", None),
         )
         for index in range(count)
     ]

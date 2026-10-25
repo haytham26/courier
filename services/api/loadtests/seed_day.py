@@ -20,6 +20,8 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import create_engine, text
 
+from app.locations import location_id_for
+
 NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "courier-copilot/loadtest")
 """The namespace of the deterministic load-test ids."""
 
@@ -64,8 +66,9 @@ def main() -> None:
                 connection.execute(
                     text(
                         "INSERT INTO stops (id, shift_id, sequence, address, latitude, longitude, "
-                        "status, priority, parcels) "
-                        "VALUES (:id, :shift, :seq, :address, -43.54, 172.60, 'pending', false, 1) "
+                        "status, priority, parcels, location_id) "
+                        "VALUES (:id, :shift, :seq, :address, -43.54, 172.60, 'pending', false, 1, "
+                        ":location) "
                         "ON CONFLICT (id) DO NOTHING"
                     ),
                     {
@@ -73,6 +76,7 @@ def main() -> None:
                         "shift": shift_id,
                         "seq": k + 1,
                         "address": f"{12 + k} Loadtest Street",
+                        "location": location_id_for(f"{12 + k} Loadtest Street", None),
                     },
                 )
     print(
