@@ -109,7 +109,7 @@ def smoke(target: str) -> dict[str, float]:
     timings["write_run_and_stops_s"] = round(time.perf_counter() - started, 3)
 
     started = time.perf_counter()
-    stored = repo.append_events(
+    outcome = repo.append_events(
         shift_id,
         [
             DeliveryEventRow(
@@ -127,7 +127,7 @@ def smoke(target: str) -> dict[str, float]:
         ],
     )
     timings["sync_batch_s"] = round(time.perf_counter() - started, 3)
-    if stored != 1:
+    if outcome.stored != 1:
         print("SMOKE FAILED: the event did not store")
         raise SystemExit(1)
 
