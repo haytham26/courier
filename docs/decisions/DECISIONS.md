@@ -223,3 +223,24 @@ expired`) and the decision (`entitlement_of`). `past_due` never removes access o
 - **Not in this slice:** no provider client (Play needs a test track, Stripe needs keys), no paywall
   UI, no Team org billing or seats, no NZ GST calculation. Provider slices are FOUNDER_TODO switches
   with `stripe-mock` tests when they land; the ingest path is designed here, not exercised.
+
+## D46 — The billing providers: one fact shape, three signature rules, an idempotent ingest (2026-10-26, backend squad decision, the provider side of D44)
+
+- ADR-018. `services/api/app/providers.py` defines the fact a provider sends (`ProviderFact`), the
+  verifier protocol (`ProviderVerifier.verify`) and `StripeVerifier`, the first implementation, plus
+  `apply_facts` — which writes through ADR-017's `put_subscription`, so the ingest is idempotent per
+  courier and monotonic in the source's own `renews_at`.
+- The three signature rules the payments squad took from the Stripe client are enforced once, before
+  the body is parsed: **no secret, no comparison** (a misconfiguration, not a permissive default);
+  **a constant tolerance** (300 s, a module constant with a test that it is one, not a per-call
+  window); and **a truncated body is not an event** (the signature is over the exact bytes, so a body
+  that fails it never becomes a partial fact).
+- `POST /billing/webhooks/{{source}}` is the boundary: an unaccepted source is 404 (it is not this
+  API's endpoint), a failed signature rule is 400 with the reason, and an accepted fact is stored.
+  `BILLING_SOURCES` names what this deployment accepts; `BILLING_WEBHOOK_SECRET_<SOURCE>` is read
+  from the environment with no default.
+- The in-memory repo now answers the same monotonic rule the SQL repo's `DO UPDATE` carries — the
+  review of ADR-017 found the two disagreeing, and the rule lives in one place each.
+- **Still the founder's:** the live endpoints, the webhook secrets, and the store verifiers (Play
+  first per D44, through the RevenueCat-shaped layer). The verifiers are exercised against fixtures
+  with locally-computed signatures — no network, no keys.

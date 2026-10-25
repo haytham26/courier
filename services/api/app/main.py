@@ -35,6 +35,7 @@ from .agents.omniroute import (
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
+from .billing import billing_sources
 from .entitlements import entitlement_of
 from .locations import location_id_for
 from .pod import (
@@ -832,6 +833,38 @@ def intake_manifest(
         text=text,
         shift_id=shift_id,
     )
+
+
+@app.post("/billing/webhooks/{source}")
+async def billing_webhook(
+    source: str,
+    request: Request,
+    repo: Repo = Depends(get_repo),
+):
+    """A provider's webhook: verify it, then ingest the fact (ADR-018).
+
+    The signature rules run before the body is ever parsed, so a misconfigured
+    deployment (no secret), a replay, a truncated body and an unaccepted source
+    each fail closed with a stated reason. Nothing here decides what the fact
+    means - that is ADR-017's job, and this endpoint only feeds it.
+    """
+    from .providers import VERIFIERS, apply_facts, webhook_secret_for
+
+    accepted = billing_sources()
+    if source not in accepted or source not in VERIFIERS:
+        # An unaccepted source is 404, not 403: it is not this API's endpoint.
+        raise HTTPException(status_code=404, detail="this deployment does not accept that source")
+    body = await request.body()
+    try:
+        facts = VERIFIERS[source].verify(
+            body,
+            {key: value for key, value in request.headers.items()},
+            webhook_secret_for(source),
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    apply_facts(repo, facts, accepted=accepted)
+    return {"accepted": True}
 
 
 @app.get("/account/entitlements")

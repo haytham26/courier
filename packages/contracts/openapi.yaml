@@ -146,6 +146,40 @@ paths:
         '503':
           description: No OCR provider is configured yet (the OmniRoute gateway is a founder item)
 
+  /billing/webhooks/{source}:
+    post:
+      tags: [account]
+      summary: A billing provider's webhook (the facts the entitlement layer ingests)
+      description: |
+        The signature rules run before the body is parsed (ADR-018 section 2): an
+        empty signing secret, a replayed timestamp, a truncated body and a source
+        this deployment does not accept each fail closed. The response says only
+        whether the fact was accepted - what it means is the entitlement layer's
+        decision, never the provider's.
+      operationId: billing_webhook
+      parameters:
+        - name: source
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The source this deployment accepts (BILLING_SOURCES)
+      responses:
+        '200':
+          description: The fact was accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted]
+                properties:
+                  accepted:
+                    type: boolean
+        '400':
+          description: The webhook failed a signature rule (no secret, a replay, a truncated body)
+        '404':
+          description: This deployment does not accept that source
+
   /account/entitlements:
     get:
       tags: [account]
