@@ -6,7 +6,7 @@
  * does nothing at all, which is exactly how the summary flow failed on its
  * first emulator run (the app stayed on Today). The routes the app owns outside
  * the tabs are asserted here, so a new screen cannot ship without its
- * registration.
+ * registration. When a screen lands, its route joins this list.
  */
 import React from 'react';
 import { render } from '@testing-library/react-native';
@@ -52,7 +52,7 @@ jest.mock('@/scans/scanLoad', () => ({
 jest.mock('@/config/buildFlags', () => ({ DEV_SCREENS_IN_BUNDLE: false }));
 
 describe('the root stack', () => {
-  it('registers the summary route the end-of-day action navigates to', () => {
+  it('registers the routes the app owns outside the tabs', () => {
     mockRegisteredRoutes.length = 0;
     render(
       <GestureHandlerRootView>
@@ -60,10 +60,29 @@ describe('the root stack', () => {
       </GestureHandlerRootView>,
     );
 
-    expect(mockRegisteredRoutes).toContain('summary');
+    expect(mockRegisteredRoutes).toContain('(tabs)');
     expect(mockRegisteredRoutes).toContain('scan');
     expect(mockRegisteredRoutes).toContain('driving');
     expect(mockRegisteredRoutes).toContain('delivered');
+    expect(mockRegisteredRoutes).toContain('driving-night');
+    // The summary route rides this branch: the end-of-day action navigates to
+    // it, and a screen nobody can open is dead code (the flow that caught this
+    // is what this row is for).
+    expect(mockRegisteredRoutes).toContain('summary');
+  });
+
+  it('registers the routes the app owns outside the tabs', () => {
+    mockRegisteredRoutes.length = 0;
+    render(
+      <GestureHandlerRootView>
+        <RootLayout />
+      </GestureHandlerRootView>,
+    );
+
     expect(mockRegisteredRoutes).toContain('(tabs)');
+    expect(mockRegisteredRoutes).toContain('scan');
+    expect(mockRegisteredRoutes).toContain('driving');
+    expect(mockRegisteredRoutes).toContain('delivered');
+    expect(mockRegisteredRoutes).toContain('driving-night');
   });
 });

@@ -49,6 +49,10 @@ function AuthNavigator() {
                 it, and it is a root-stack route rather than a tab because the
                 day is finished - the dock behind it has nothing selected. */}
             <Stack.Screen name="summary" />
+            {/* The drive in the dark theme (screen 12): the same drive with
+                the mode pinned, so the design gate compares light against
+                dark side by side. */}
+            <Stack.Screen name="driving-night" />
           </Stack.Protected>
           <Stack.Protected guard={!isAuthenticated}>
             <Stack.Screen name="(auth)" />
