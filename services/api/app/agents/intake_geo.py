@@ -24,6 +24,7 @@ class RepoGeo:
     def __init__(self, repo: Repo, run: RunRecord) -> None:
         self._repo = repo
         self._run = run
+        self._geocoded: dict[str, tuple[float, float] | None] = {}
 
     def geocode(self, address_key: str) -> tuple[float, float] | None:
         """The coordinates of a stop the run already carries, by number+street.
@@ -31,12 +32,16 @@ class RepoGeo:
         The key's suburb is dropped for the match: a dispatcher-seeded stop
         may not carry one, and within one run the number+street is the door.
         """
+        if address_key in self._geocoded:
+            return self._geocoded[address_key]
         wanted = address_key.split(",", 1)[0]
         for row in self._repo.get_run_stops(self._run.id):
             if row.lat is None or row.lon is None or not row.address:
                 continue
             if nz_address.parse(row.address).address_key.split(",", 1)[0] == wanted:
+                self._geocoded[address_key] = (row.lat, row.lon)
                 return (row.lat, row.lon)
+        self._geocoded[address_key] = None
         return None
 
     def in_territory(self, run_id: str, lat: float, lon: float) -> bool:

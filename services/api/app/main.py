@@ -104,6 +104,15 @@ class IntakeText(BaseModel):
     source: Literal["voice", "ocr", "scan", "manual"] = "voice"
     text: str = Field(min_length=1, max_length=50_000)
 
+    @field_validator("text")
+    @classmethod
+    def _non_blank(cls, value: str) -> str:
+        """A blank dictation teaches nothing; the graph would brief 0 stops."""
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("text must not be blank")
+        return cleaned
+
 
 class DepotPoint(BaseModel):
     """The depot as numbers: the GeoJSON wrapper of the contract carried no
@@ -675,7 +684,7 @@ def intake_text(
 
 
 @app.post("/shifts/{shift_id}/intake/manifest")
-async def intake_manifest(
+def intake_manifest(
     shift_id: uuid.UUID,
     image: UploadFile,
     principal: AuthPrincipal = Depends(get_current_principal),
@@ -694,10 +703,16 @@ async def intake_manifest(
     content = image.file.read(POD_MAX_BYTES + 1)
     if len(content) > POD_MAX_BYTES:
         raise HTTPException(status_code=413, detail="the image is over the 10 MiB cap")
-    if sniff_image_kind(content) is None:
+    kind = sniff_image_kind(content)
+    if kind is None:
         raise HTTPException(status_code=415, detail="the upload is not a JPEG, PNG or HEIC image")
+    if kind == "heic":
+        raise HTTPException(
+            status_code=415,
+            detail="the OCR provider does not read HEIC yet: share the manifest as JPEG or PNG",
+        )
     try:
-        text = provider.ocr(content)
+        text = provider.ocr(content, media_type=f"image/{kind}")
     except ProviderUnavailableError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
     except OmniRouteError as error:

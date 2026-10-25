@@ -29,6 +29,7 @@ COURIER = "driver-7"
 OTHER = "driver-8"
 START_AT = datetime(2026, 10, 25, 7, 30, tzinfo=UTC)
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+HEIC = b"\x00\x00\x00\x20ftypheic" + b"\x00" * 16
 SPOKEN = "12 Riccarton Road Riccarton"
 
 
@@ -146,6 +147,13 @@ class TestTheVoiceIntake:
 
         assert client.post(f"/shifts/{shift_id}/intake", json={"text": ""}).status_code == 422
 
+    def test_a_blank_text_is_refused(self, client: TestClient, repo: InMemoryRepo) -> None:
+        _, shift_id = seed_run(repo)
+
+        refused = client.post(f"/shifts/{shift_id}/intake", json={"text": "   "})
+
+        assert refused.status_code == 422
+
     def test_an_unknown_source_is_refused(self, client: TestClient, repo: InMemoryRepo) -> None:
         _, shift_id = seed_run(repo)
 
@@ -182,6 +190,19 @@ class TestTheVoiceIntake:
 
         assert failed.status_code == 502
         assert "did not answer" in failed.json()["detail"]
+
+    def test_a_second_post_restarts_the_intake(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        """No resume over HTTP yet: a new POST restarts with the new text
+        (the voice-socket resume is the recorded next slice)."""
+        _, shift_id = seed_run(repo)
+        client.post(f"/shifts/{shift_id}/intake", json={"text": SPOKEN})
+
+        again = client.post(f"/shifts/{shift_id}/intake", json={"text": "9 Nowhere Road Riccarton"})
+
+        assert again.status_code == 200
+        assert "Nowhere" in again.json()["speak"]
 
     def test_another_couriers_shift_is_404(
         self, other_client: TestClient, repo: InMemoryRepo
@@ -240,6 +261,33 @@ class TestTheManifestIntake:
         )
 
         assert refused.status_code == 415
+
+    def test_heic_is_refused_because_the_ocr_cannot_read_it(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        app.dependency_overrides[get_intake_provider] = lambda: FakeOmniRoute(ocr_text=SPOKEN)
+        _, shift_id = seed_run(repo)
+
+        refused = client.post(
+            f"/shifts/{shift_id}/intake/manifest",
+            files={"image": ("manifest.heic", HEIC, "image/heic")},
+        )
+
+        assert refused.status_code == 415
+        assert "HEIC" in refused.json()["detail"]
+
+    def test_the_owner_check_precedes_the_ocr(
+        self, other_client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        """A foreign shift is 404 before any provider call (no 503 leak)."""
+        _, shift_id = seed_run(repo)
+
+        refused = other_client.post(
+            f"/shifts/{shift_id}/intake/manifest",
+            files={"image": ("manifest.png", PNG, "image/png")},
+        )
+
+        assert refused.status_code == 404
 
     def test_an_oversized_photo_is_refused(self, client: TestClient, repo: InMemoryRepo) -> None:
         app.dependency_overrides[get_intake_provider] = lambda: FakeOmniRoute(ocr_text=SPOKEN)

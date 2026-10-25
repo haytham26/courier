@@ -54,7 +54,10 @@ failure falls back to `"Confirm <raw>?"` — the courier must always get a quest
 A process-wide `MemorySaver`, `thread_id = shift_id`. A restart loses a pending question and the
 courier simply repeats it; the persistent checkpointer (Postgres) rides with the staging
 deployment, together with the worker-count decision (an in-process saver pins a shift to one
-worker).
+worker). Two recorded behaviours for the resume slice: a plain POST on an interrupted thread
+**restarts from `ingest`** (the old question is discarded), and `answers` accumulates across
+restarts, so the resumed slice must reset the state per intake rather than apply stale
+corrections.
 
 ### 4. The geography the graph sees
 
@@ -68,8 +71,10 @@ not change when it lands.
 
 ## Consequences
 
-- The phone can run morning intake today: the voice path works end-to-end with the fake, and the
-  manifest path reports honestly that OCR awaits the gateway.
+- The phone can run morning intake today for a dispatcher-seeded run: the voice path extracts and
+  briefs through the fake, and an address the run cannot geocode comes back as a question that the
+  voice-socket resume slice will answer; the manifest path reports honestly that OCR awaits the
+  gateway.
 - The gateway decision (D25, the provider allow-list, the cost guard in the voice service) is
   unchanged; the API speaks the same OpenAI-compatible shape.
 - When the gateway lands, only environment settings change — no client update.
@@ -80,4 +85,6 @@ not change when it lands.
   prose-wrapped JSON, the error paths, the fake's determinism and OCR refusal, the env selection.
 - `tests/test_intake_api.py`: the question and briefing responses, the OCR-unavailable 503, the
   same graph through `ocr_text`, the 502, the owner 404, the anonymous 401, and the upload bounds.
-- The contract drift guard (the paths were already served; no contract change).
+- The contract gained the manifest's real responses (413/415/502/503) and the text path's 502;
+  the paths and operationIds were already served and did not change. The drift guard covers the
+  paths; the schema details here are the review's follow-up.

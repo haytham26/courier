@@ -89,6 +89,23 @@ class TestTheGatewayClient:
         with pytest.raises(OmniRouteError):
             provider.extract("voice", "12 Riccarton Road")
 
+    def test_extract_raises_on_a_null_choices_shape(self) -> None:
+        """A malformed gateway shape is a 502, never an uncaught TypeError."""
+        provider = OmniRouteProvider(
+            SETTINGS, a_gateway(lambda r: httpx.Response(200, json={"choices": None}))
+        )
+
+        with pytest.raises(OmniRouteError):
+            provider.extract("voice", "12 Riccarton Road")
+
+    def test_extract_raises_on_a_null_parcels_shape(self) -> None:
+        provider = OmniRouteProvider(
+            SETTINGS, a_gateway(lambda r: a_completion('{"parcels": null}'))
+        )
+
+        with pytest.raises(OmniRouteError):
+            provider.extract("voice", "12 Riccarton Road")
+
     def test_phrase_speaks_the_model_line(self) -> None:
         provider = OmniRouteProvider(
             SETTINGS, a_gateway(lambda r: a_completion("Fourteen Smith: Redwood or Northwood?"))
@@ -147,7 +164,10 @@ class TestTheDeterministicFake:
     def test_ocr_returns_the_configured_text_when_a_test_provides_one(self) -> None:
         fake = FakeOmniRoute(ocr_text="12 Riccarton Road Riccarton")
 
-        assert fake.ocr(b"\xff\xd8\xff fake jpeg") == "12 Riccarton Road Riccarton"
+        assert (
+            fake.ocr(b"\xff\xd8\xff fake jpeg", media_type="image/png")
+            == "12 Riccarton Road Riccarton"
+        )
 
 
 class TestTheProviderSelection:

@@ -60,7 +60,7 @@ class IntakeProvider(Protocol):
         """One spoken question for an anomaly, at most 12 words."""
         ...
 
-    def ocr(self, image: bytes) -> str:
+    def ocr(self, image: bytes, media_type: str = "image/jpeg") -> str:
         """The manifest photo as text, one line per parcel."""
         ...
 
@@ -104,7 +104,7 @@ class OmniRouteProvider:
             )
             response.raise_for_status()
             answer: Any = response.json()["choices"][0]["message"]["content"]
-        except (httpx.HTTPError, KeyError, IndexError, ValueError) as error:
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as error:
             raise OmniRouteError("the gateway did not answer") from error
         if not isinstance(answer, str) or not answer.strip():
             raise OmniRouteError("the gateway answered nonsense")
@@ -114,7 +114,7 @@ class OmniRouteProvider:
         answer = self._chat(INGEST_EXTRACT.format(source=source, text=text))
         payload = _json_object(answer)
         parcels = []
-        for item in payload.get("parcels", []):
+        for item in payload.get("parcels") or []:
             raw = item.get("raw") if isinstance(item, dict) else None
             if isinstance(raw, str) and raw.strip():
                 parcels.append({"raw": raw.strip(), "size_class": item.get("size_class")})
@@ -130,8 +130,8 @@ class OmniRouteProvider:
         line = answer.strip().splitlines()[0].strip()[:120]
         return line or f"Confirm {raw[:60]}?"
 
-    def ocr(self, image: bytes) -> str:
-        data_url = "data:image/jpeg;base64," + base64.b64encode(image).decode("ascii")
+    def ocr(self, image: bytes, media_type: str = "image/jpeg") -> str:
+        data_url = f"data:{media_type};base64," + base64.b64encode(image).decode("ascii")
         answer = self._chat(
             [
                 {"type": "text", "text": OCR_PROMPT},
@@ -162,12 +162,10 @@ class FakeOmniRoute:
     def phrase(self, problem: str, raw: str) -> str:
         return f"Confirm {raw[:60]}?"
 
-    def ocr(self, image: bytes) -> str:
+    def ocr(self, image: bytes, media_type: str = "image/jpeg") -> str:
         if self._ocr_text is None:
-            raise ProviderUnavailableError(
-                "the OCR provider is not configured: set OMNIROUTE_BASE_URL and "
-                "OMNIROUTE_API_KEY (FOUNDER_TODO), or send the text via /intake"
-            )
+            # Terse on the wire; the founder item is in .env.example and the ADR.
+            raise ProviderUnavailableError("the OCR provider is not configured yet")
         return self._ocr_text
 
 
