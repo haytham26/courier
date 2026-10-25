@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: The pinned tools
         run: |
@@ -68,10 +68,12 @@ jobs:
           .tools/pmtiles version | tee .tools/pmtiles.version
 
       - name: The extract
+        env:
+          EXTRACT_URL: ${{ inputs.extract_url }}
         run: |
           set -euo pipefail
           mkdir -p data/maps
-          url="${{ inputs.extract_url }}"
+          url="$EXTRACT_URL"
           if [ -z "$url" ]; then
             # Geofabrik's New Zealand extract (ODbL; an OSM extract carries the
             # data, so the OSMF tile servers and their policy are not involved).
@@ -82,13 +84,25 @@ jobs:
           ls -lh data/maps/newzealand-latest.osm.pbf
 
       - name: The plan (and the licence gates)
-        run: node scripts/data/build-pmtiles.mjs --source "${{ inputs.source_id || 'geofabrik-nz' }}" --input data/maps/newzealand-latest.osm.pbf
-
-      - name: Build the pack
+        env:
+          SOURCE_ID: ${{ inputs.source_id }}
         run: |
           set -euo pipefail
-          node scripts/data/build-pmtiles.mjs \
-            --source "${{ inputs.source_id || 'geofabrik-nz' }}" \
+          # A dispatch that names a source uses it; otherwise the registered
+          # Geofabrik NZ extract, whose terms the script checks.
+          source="$SOURCE_ID"
+          [ -n "$source" ] || source=geofabrik-nz
+          node scripts/data/build-pmtiles.mjs --source "$source" \
+            --input data/maps/newzealand-latest.osm.pbf
+
+      - name: Build the pack
+        env:
+          SOURCE_ID: ${{ inputs.source_id }}
+        run: |
+          set -euo pipefail
+          source="$SOURCE_ID"
+          [ -n "$source" ] || source=geofabrik-nz
+          node scripts/data/build-pmtiles.mjs --source "$source" \
             --input data/maps/newzealand-latest.osm.pbf \
             --execute
 
@@ -112,7 +126,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the pack
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: canterbury-pack
           path: |
