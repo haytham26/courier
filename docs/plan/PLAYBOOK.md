@@ -140,3 +140,24 @@ A test that passes without proving anything is worse than no test: it hides the 
 4. If nobody covers it, write it as a new BUG row assigned to the owner, and continue.
 
 **Each session keeps its CURRENT file true** at every push: what it is on, its open PRs, and the red steps it is fixing. That file is how the other session knows.
+
+## 17. The E2E is deterministic, and main is never silently red (founder directive 2026-10-25)
+
+**Why this section exists.** On 2026-10-25, api-35 went red on four PRs (#18, #30, #36, #40) right after they took main, while one of them (#36) does not touch the app. Nobody saw it on main itself, because the Android E2E runs only on PRs and nightly. The workflow also takes inputs that change without a commit:
+- Maestro is installed from `get.maestro.mobile.dev` at its latest version;
+- the emulator binary and the system image are whatever the runner downloads that day;
+- the AVD cache key (`avd-<os>-<api>-google-apis-x86_64`) does not change when those change, or when the emulator options change (#37 changed `-memory` and `-cores`).
+
+**The rules:**
+1. **Everything the E2E uses is pinned, and a change to it is a commit.** This covers:
+   - the Maestro version, through `MAESTRO_VERSION` in the installer's environment, with its checksum recorded;
+   - the emulator build, through `emulator-build`;
+   - the system image, through its revision where the action allows it, recorded otherwise;
+   - the Java version.
+
+   The AVD cache key includes all of them and a hash of `emulator-options`. A tool upgrade is its own PR with a green run on both legs.
+2. **Main is tested after every merge.** The Android E2E also runs on push to main for app, `.maestro` and workflow paths. A red main stops the line: no other mobile PR merges until main is green again, and the fix comes first.
+3. **One shared failure is fixed once.** When the same leg is red on several PRs after they took main, it is main's failure (§16 applies within one session too): root-cause it once, on main, in one PR, then re-run the others. Never patch each PR.
+4. **Flake is measured, not argued.** Nightly runs the full suite 5 times per leg on main and records the pass rate in `docs/evidence/e2e-health.md`. Any flow under 100 % is a bug with a number. A merge needs both legs green on the final head. At most one re-run is allowed, only for a runner death before any flow ran, and the PR says so with the run link.
+5. **Every red run explains itself.** The failure dump (#36) is kept for every failing flow: the screenshot, the a11y tree, logcat filtered to the app and the emulator's own log. The root cause is written in BUGS with that evidence before the fix.
+6. **No weakening, ever.** No retries inside flows, no longer timeouts to hide slowness, no skipped flows and no dropped legs (§12, CONSTRAINTS).
