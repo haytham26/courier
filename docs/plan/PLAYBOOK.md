@@ -109,3 +109,34 @@ Example (BUG-061 family, 2026-10-25): the first Slide to Deliver after a cold la
    - If a path is listed, `git checkout origin/main -- <path>` and amend the merge before pushing (the merge is not yet pushed, so this is allowed).
    - If the merge shows unexpected deletions while still in progress: `git merge --abort` and start again from the right branch.
 4. **The PR diff is read before merging:** `git diff --stat origin/main...origin/<branch>` lists only files the PR owns. A backend path in a mobile PR (or the reverse) blocks the merge.
+
+## 14. A test must prove what its name says (founder directive 2026-10-25)
+
+A test that passes without proving anything is worse than no test: it hides the gap. Every PR that adds or changes a test:
+
+1. **Red first.** Run the new test against the code before the fix (or with the fix reverted) and paste the failing output in the PR. A test that was never red proves nothing. The only exception is a test that pins behaviour that already works, and the PR says so.
+2. **The name is the claim.** The assertions must prove exactly what the test's name says. If the setup cannot produce the case (for example a fake that returns no stored rows for a "divergent replay" test), fix the setup or rename the test.
+3. **Fakes are not proof of real behaviour.** When a fix depends on what the real system returns (a database rowcount, a platform API), add one test against the real thing too (the `db`-marked Postgres suite, the emulator).
+4. **The reviewer pass checks 1 to 3** for every new test, as part of the 5-pass check.
+5. **Mutation testing covers the core.** CONSTRAINTS runs Stryker on the address engine and the auth service. The backend squad extends it to the Python services that hold money, sync and routing (`services/api`: sync, runs, auth; `services/courier-voice`: the turn machine) with mutmut, scoped to the changed files on each PR, with the same ≥ 70 % floor. Until that lands, the reviewer flips one comparison in the changed code by hand and confirms a test goes red.
+
+## 15. No silent waits (founder directive 2026-10-25)
+
+1. **15 minutes without output is a stop.** Any wait (a subagent, a CI poll, a build) that produces no new output for 15 minutes is stopped, and the session writes what hung and what it does instead. A wait is never left open-ended.
+2. **Size the review to the change.** A docs-only or config-only PR gets pass 5 done inline by the session in under 10 minutes. A fresh-context review subagent is for code changes, with a 20-minute budget and an explicit output (the findings list), never "review until satisfied".
+3. **The founder sees progress.** A session that has worked 30 minutes without a commit, a push or a PR comment writes a one-line status in its own output: what it is doing and what it waits on.
+
+## 16. Two sessions, one repo: never chase the other session's failure (founder directive 2026-10-25)
+
+**Who owns what:**
+- The lead owns `apps/mobile`, `.maestro`, `packages/design-tokens` and the Android E2E workflow.
+- The backend owns `services/`, `infra/`, `db/`, the API and voice contracts, and the CI steps that test them: the Postgres suite, the restore drill and the Locust SLO profile.
+- The docs and registers are shared; take numbers per §13.
+
+**Before investigating any red check:**
+1. Read the failing step's name. If it tests the other session's paths, it is theirs.
+2. Read the other session's `docs/log/CURRENT*.md` and its open PRs (`gh pr list`). If an open PR or a `doing` BUG row already covers it, it is theirs.
+3. If it is theirs, do not investigate and do not touch their paths. Write one line in your own log, "red step X is <owner>'s, covered by PR #N / BUG-N", and treat your PR as green on its own changes, provided its own PR run passed that step on the same code. Continue your queue.
+4. If nobody covers it, write it as a new BUG row assigned to the owner, and continue.
+
+**Each session keeps its CURRENT file true** at every push: what it is on, its open PRs, and the red steps it is fixing. That file is how the other session knows.

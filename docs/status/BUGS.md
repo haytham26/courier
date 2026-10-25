@@ -158,3 +158,27 @@ is **BUG-060** from here on, and every reference to it was updated (the gate
 `scripts/ci/check-emulator-gpu.mjs` prints BUG-060, `android-e2e.yml`'s comment reads
 BUG-060, D37 reads BUG-060). The evidence folder keeps its name
 `docs/evidence/bug-053-emulator-gl/` and says so.
+
+## BUG-061: the root cause, the two experiments, and what is still open (2026-10-25)
+
+**The root cause (the founder's correction, proven):** the tombstone is a gwp_asan
+`GuardedPoolAllocator::deallocate` - a double or invalid free in how the sphere uses
+Skia - so it is NOT only the emulator's GL and it can hit real devices. Following the
+lifecycle found it: the thinking swirl is `withRepeat(..., -1)`, which never stops by
+itself, and the cleanup only reset the shared value. The animation kept writing to the
+shared value after the Skia canvas was gone. The fix on `feat/t6-copilot` cancels both
+shared values with `cancelAnimation` on unmount and builds the Skia drawing tree once
+with `useMemo` instead of on every render.
+
+**The three scratch experiments, each recorded and each tagged before deletion:**
+
+| Branch (`exp/`, never merged) | What it proved | Result |
+|---|---|---|
+| `exp/bug-061-no-sphere` (1de1d80) | the negative control: the Skia sphere replaced by a plain `View` of the same size and testID, so a crash with the sphere removed cannot be blamed on it | the with-sphere runs produced the SIGSEGV; this control ran without it, which is what pinned the crash to the sphere's Skia tree |
+| `exp/bug-061-live-sphere` (fbbaf4f) | the decisive test of the root-cause fix: the live Skia sphere FORCED on the emulator (the fallback disabled) on the fixed code | 28 minutes with no SIGSEGV, where the with-sphere runs had produced it - so the lifecycle fix is proven and the emulator fallback stays a **TEMPORARY guard**, recorded as such |
+| `exp/bug-062-failure-dump` (c7d30d3) | the runner keeps Maestro's own test dir when a flow fails, so the failure's dump survives the run | this is what solved **BUG-062**: the dump carried `JavascriptException: useChosen needs a ChosenProvider above it / at SummaryScreen`, which three runs of infrastructure-chasing never reached (logcat's window never covered the moment). The same change is PR #36 |
+
+**What stays open on BUG-061:** the live 3D sphere must be checked on a REAL device
+before the emulator fallback is removed. That is a FOUNDER_TODO item, not something a
+CI emulator can answer. The branch head also keeps the mount and unmount regression
+test, and the feature is never removed to get a green run.
