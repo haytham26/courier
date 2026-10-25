@@ -6,7 +6,6 @@ import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastapi import (
