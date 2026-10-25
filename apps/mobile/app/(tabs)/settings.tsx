@@ -195,6 +195,21 @@ export default function SettingsScreen() {
 
   const deviceRows: Row[] = [
     { key: 'keep-on', label: 'Keep Screen On', icon: 'sunny', tone: 'accent', testID: 'settings-keep-on' },
+    // The lock screen's glance (screen 13): the reference's content, opened
+    // here because the phone's own lock screen is the OS surface (the Live
+    // Activity and the ongoing notification) and this is the way to see it
+    // without locking the phone.
+    {
+      key: 'lock-screen',
+      label: 'Lock Screen',
+      icon: 'lock-closed',
+      tone: 'info2',
+      onPress: () => {
+        hapticFor('confirm');
+        router.navigate('/lock-screen');
+      },
+      testID: 'settings-lock-screen',
+    },
     { key: 'face-id', label: 'Face ID', icon: 'scan', tone: 'info2', testID: 'settings-face-id' },
   ];
 

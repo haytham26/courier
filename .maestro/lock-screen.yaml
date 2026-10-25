@@ -1,0 +1,41 @@
+appId: com.courier.copilot
+name: "The lock screen's glance - the run's Live Activity (screen 13)"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The way in: the lock screen's content is opened from the Account tab's row,
+# because the phone's own lock screen is the OS surface (the Live Activity on
+# iOS, the ongoing notification on Android) and this is the way to see the
+# design without locking the phone.
+- tapOn:
+    id: "tab-settings"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 30000
+- tapOn:
+    id: "settings-lock-screen"
+- extendedWaitUntil:
+    visible:
+      id: "lock-screen"
+    timeout: 30000
+# The reference (13-lock-screen.html): the pill with the distance and the ETA,
+# the clock, the Live Activity card with the run's progress, and the two
+# lock-screen actions.
+- assertVisible:
+    id: "lock-pill"
+- assertVisible:
+    id: "lock-activity"
+- assertVisible:
+    id: "lock-delivered"
+- assertVisible:
+    id: "lock-call"
+- assertVisible: "120 m"
+- assertVisible:
+    id: "lock-progress"
+- takeScreenshot:
+    path: "lock-screen"

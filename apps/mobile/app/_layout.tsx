@@ -49,6 +49,9 @@ function AuthNavigator() {
                 the mode pinned, so the design gate compares light against
                 dark side by side. */}
             <Stack.Screen name="driving-night" />
+            {/* The lock screen's glance (screen 13): the run's Live Activity,
+                which on a device is the OS surface. */}
+            <Stack.Screen name="lock-screen" />
           </Stack.Protected>
           <Stack.Protected guard={!isAuthenticated}>
             <Stack.Screen name="(auth)" />
