@@ -51,6 +51,11 @@ function AuthNavigator() {
             <Stack.Screen name="driving-night" />
           </Stack.Protected>
           <Stack.Protected guard={!isAuthenticated}>
+            {/* The welcome is a courier's first screen: it sits in front of the
+                auth group so a signed-out phone opens on the mark, the line and
+                the two ways in. The draft session (the E2E mode's mock) skips
+                it entirely, which is what every flow expects. */}
+            <Stack.Screen name="welcome" />
             <Stack.Screen name="(auth)" />
           </Stack.Protected>
         {/* The design lab is outside the guard: the founder has to be able to
