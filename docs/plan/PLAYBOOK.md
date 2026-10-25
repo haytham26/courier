@@ -119,3 +119,9 @@ A test that passes without proving anything is worse than no test: it hides the 
 3. **Fakes are not proof of real behaviour.** When a fix depends on what the real system returns (a database rowcount, a platform API), add one test against the real thing too (the `db`-marked Postgres suite, the emulator).
 4. **The reviewer pass checks 1 to 3** for every new test, as part of the 5-pass check.
 5. **Mutation testing covers the core.** CONSTRAINTS runs Stryker on the address engine and the auth service. The backend squad extends it to the Python services that hold money, sync and routing (`services/api`: sync, runs, auth; `services/courier-voice`: the turn machine) with mutmut, scoped to the changed files on each PR, with the same ≥ 70 % floor. Until that lands, the reviewer flips one comparison in the changed code by hand and confirms a test goes red.
+
+## 15. No silent waits (founder directive 2026-10-25)
+
+1. **15 minutes without output is a stop.** Any wait (a subagent, a CI poll, a build) that produces no new output for 15 minutes is stopped, and the session writes what hung and what it does instead. A wait is never left open-ended.
+2. **Size the review to the change.** A docs-only or config-only PR gets pass 5 done inline by the session in under 10 minutes. A fresh-context review subagent is for code changes, with a 20-minute budget and an explicit output (the findings list), never "review until satisfied".
+3. **The founder sees progress.** A session that has worked 30 minutes without a commit, a push or a PR comment writes a one-line status in its own output: what it is doing and what it waits on.
