@@ -523,7 +523,9 @@ def pod_bytes(
     media = {"jpeg": "image/jpeg", "png": "image/png", "heic": "image/heic"}.get(
         kind or "", "application/octet-stream"
     )
-    return Response(content=content, media_type=media, headers={"Cache-Control": "private, max-age=900"})
+    return Response(
+        content=content, media_type=media, headers={"Cache-Control": "private, max-age=900"}
+    )
 
 
 @app.get("/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url")
