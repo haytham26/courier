@@ -208,12 +208,7 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 | The upsert   | `test-driven-development`                             | RED first (the suite caught the in-memory `replace` not preserving the id), then the SQL `ON CONFLICT DO NOTHING RETURNING id` else UPDATE. |
 | The review   | `code-review-and-quality`, `doubt-driven-development` | The two must-fixes both came from "what breaks silently in two years", not from the happy path.                                             |
 
-## 2026-10-25 - Queue 2, item 5: voice intake (branch `feat/voice-intake`, MERGED PR #34)
-
-- Merged as `2cc0aec` (merge commit), archive tag `archive/feat/voice-intake`, branch deleted.
-- CI green at `0069b20`: the API suite 319 passed + 1 skipped + 12 db-deselected, the db suite,
-  the drill, the SLOs, gitleaks, CodeQL. Android E2E green on both legs (the api-35 leg passed on
-  attempt 2 after the emulator's GL/adb environment signature - the app content was byte-identical).
+## 2026-10-25 - Queue 2, item 5: voice intake (branch `feat/voice-intake`, PR #34 in review)
 
 - ADR-013: the two contract stubs (`POST /shifts/{shift_id}/intake`, `/intake/manifest`) now run the
   real LangGraph intake and answer the contract's briefing or first interrupt question.
@@ -257,6 +252,45 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 | The failure paths  | `debugging-and-error-recovery` | The asymmetric design (raise vs fall back) came from asking what the courier experiences, not what the code finds easiest.                                  |
 | The async fix      | `performance-optimization`     | The event-loop stall was measured (0.55s), not guessed; the fix is the sibling's pattern.                                                                   |
 
+## 2026-10-25 - BUG-063: the sync SLO breach after ADR-014 (branch `feat/slo-runs-insert`)
+
+- **The evidence first:** CI run 40185490916 failed only at the Locust SLO profile - `SLO BREACH:
+POST /shifts/{id}/events:batch p95 370 ms > 300 ms` - with every request returning 2xx. Per
+  PLAYBOOK §12 an intermittent failure is a bug, so it was root-caused rather than rerun.
+- **The root cause is mine, and it is the ADR-014 change:** the divergent-replay comparison selected
+  the batch's stored rows (`WHERE id IN :ids`) _before_ every INSERT, so the courier's most frequent
+  call paid for a rare case. The insert itself is unchanged.
+- **The Postgres log's constraint violations are a red herring** and are recorded as such in the bug:
+  `runs_shift_id_fkey` (the shift does not exist), `runs_shift_id_key` (the shift already has a run)
+  and `runs_pkey` (the run exists) are the API's _translated_ IntegrityErrors - `put_run` names each
+  constraint and answers the honest 409, which the load profile treats as a retried create. The
+  actual failure was the sync latency, not the runs insert.
+- **The fix:** the comparison now sits behind the INSERT's rowcount. An all-new batch - the common
+  case - is exactly the one statement it was before ADR-014; only when the rowcount says rows were
+  refused does the SELECT run. The courier's sync call is back to its old shape.
+- **Proven, not asserted:** the same PostGIS 17 container CI uses, run locally (Docker Desktop), for
+  the full `db`-marked suite - 13 tests, including the new one (a batch of 3 with 1 row already
+  stored must report `stored == 2`, which is the rowcount the fast path trusts) - plus a
+  statement-count suite that needs no database and pins the cost property itself.
+- The map-pack review's fixes are in the same session (`feat/map-pack-pipeline`): the pmtiles version
+  subcommand, the real release assets with checksums, the 3D script's profile gate, and the argv tests.
+
+### Skills applied - BUG-063
+
+| Step       | Skills read and followed                                   | How it changed the work                                                                                                                                                 |
+| ---------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The triage | `debugging-and-error-recovery`                             | Evidence before theory: the SLO verdict was read out of the run's log before a hypothesis existed, which is what separated the sync latency from the runs-insert noise. |
+| The fix    | `performance-optimization`                                 | The extra round-trip was found by reading the statement order, and the fix restores the old shape rather than optimising a new one.                                     |
+| The proof  | `test-driven-development`, `constraint-driven-development` | A Docker Postgres ran the db suite before the commit; a test whose name promised a divergence it did not produce was rewritten rather than kept.                        |
+
+## 2026-10-25 - Queue 2, item 6: the sync conflict rules (branch `feat/sync-conflicts`, MERGED PR #35)
+
+- ADR-014: the event log is append-only - an identical replay is an ack, a divergent same-id replay
+  reports the id in `SyncResponse.conflicts`, and the status is the latest event with ties broken by
+  arrival. `occurred_at` beyond an hour in the future or seven days in the past is a 422.
+- `append_events` answers `AppendResult(stored, conflicts)` in both repositories, so the rules are
+  pinned by the same tests on the in-memory and SQL paths.
+
 ### The review that changed the item 6 - the sync conflict rules
 
 - Must-fix 1: **the test rot.** `test_runs_api.py` posted a pinned `START_AT` as the batch's
@@ -279,35 +313,32 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 | The clock  | `security-and-hardening`                              | A wrong phone clock must not pin a stop's status for hours: the bound is the control, and the exemption (the POD's event) is named rather than implied. |
 | The review | `code-review-and-quality`, `doubt-driven-development` | The must-fix list was three ways the change would rot: a timestamp, an untested edge, and a doc claim that outran the code.                             |
 
-## 2026-10-25 - Queue 2, item 7: the map pack pipeline (branch `feat/map-pack-pipeline`)
+## 2026-10-25 - Queue 2, item 7: the map pack pipeline (branch `feat/map-pack-pipeline`, PR #43)
 
-- ADR-016. The pack had never been built, and reading the two build scripts against the tools' own
-  documentation (planetiler's README, the pmtiles CLI reference - both read 2026-10-25) found the
-  reason in four places:
-  - the CLI was invented: `--area=christchurch` (Geofabrik publishes `new-zealand`, not
-    Christchurch), `--download` pointed at a local extract (a file on disk is `--osm-path`), and
-    the plan printed a `versatiles reduce` step that does not exist in the build at all;
-  - the 3D bake ran `--overlay=<outlines> --profile=courier`, and planetiler has no such flags: a
-    second data source rides a profile. The bake now refuses and names what it needs, while the
-    pack build already bakes OSM buildings with `render_height`, so the app draws buildings without
-    the LINZ footprints;
-  - both scripts resolved the repo root one directory short, so the pack would have been written
-    into `scripts/apps/mobile/assets/maps` - a plan's printed path was the only thing that betrayed
-    it;
-  - neither recorded the tool versions, the archive's real header, or the credit the OpenMapTiles
-    schema and profile require.
-- The build runs the documented steps: `planetiler --osm-path=<extract> --output=<tileset>
---force` (the heap in `JAVA_TOOL_OPTIONS`, per the README's ~0.5x-the-input rule), then
-  `pmtiles extract` clipped to the Canterbury bbox and zooms in the CLI's own order, `pmtiles
-verify`, and `pmtiles show --header-json` recorded in the manifest **verbatim** - the tool prints
-  snake_case keys (its own test asserts `tile_type`/`tile_compression`), so the first version of
-  this step read camelCase guesses that would have recorded `undefined`.
-- `.github/workflows/map-pack.yml` runs the pipeline twice a week (D26), on dispatch (extract URL
-  and source id as inputs), and on a push that touches the pipeline or the scripts; it publishes
-  the pack, the manifest and the evidence as artifacts and never gates a PR. Both Semgrep findings
-  it raised were fixed structurally: every `uses:` pinned to the full SHA the repo's other
-  workflows use, and the dispatch inputs passed through `env:` rather than interpolated into a
-  `run:` block.
+- ADR-016/D42. The pack had never been built, and reading the two build scripts against the tools'
+  own documentation (planetiler's README, the pmtiles CLI reference - both read 2026-10-25) found
+  the reason in four places: the CLI was invented (`--area=christchurch`, which Geofabrik does not
+  publish; `--download` pointed at a file on disk; a `versatiles reduce` step that never existed),
+  the 3D bake used flags planetiler does not have (`--overlay`, `--profile=courier`), both scripts
+  resolved the repo root one directory short (the pack would have landed in `scripts/apps/...`), and
+  the manifest recorded neither the tool versions, the archive header nor the OpenMapTiles credit.
+- The build now runs the documented steps, and the manifest carries the tool's own header JSON
+  **verbatim** - the tool prints snake_case keys (its own test asserts `tile_type` and
+  `tile_compression`), so the first version of this step read camelCase guesses that would have
+  recorded `undefined`.
+- The fresh-context review then found four more, all landed: `requireTool` asked pmtiles for
+  `--version` (the CLI only knows the `version` subcommand, so the check failed on a machine that
+  _had_ the tool), the workflow downloaded an asset that does not exist (`pmtiles_linux_amd64`;
+  the release publishes `go-pmtiles_<version>_Linux_x86_64.tar.gz`, verified via the releases API,
+  and planetiler's published sha256 is now checked on download), the 3D bake's gate read a profile
+  the plan never set (the documented `--profile <file>` invocation could never work), and the tests
+  pinned the plan's prose rather than the invocation (`buildCommands` is exported so the argv is a
+  decision the suite can hold, on Windows too).
+- `.github/workflows/map-pack.yml` runs the pipeline twice a week (D26), on dispatch (extract URL and
+  source id as inputs), and on a push that touches the pipeline or the scripts; it publishes the
+  pack, the manifest and the evidence as artifacts and never gates a PR. Both Semgrep findings it
+  raised were fixed structurally: every `uses:` pinned to the full SHA the repo's other workflows
+  use, and the dispatch inputs passed through `env:` rather than interpolated into a `run:` block.
 - Not claimed as done: the 50 MB ceiling is checked but has never been observed, the LINZ overlay
   profile is not written, and the frame/battery/latency numbers are still the maps squad's to
   measure.

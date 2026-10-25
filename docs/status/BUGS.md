@@ -4,6 +4,7 @@
 
 | ID | Description | Root Cause | Fix (PR) | Prevention Test | Status |
 |----|-------------|------------|----------|-----------------|--------|
+| BUG-063 | The sync batch's SLO breached after ADR-014 (CI run 40185490916: `SLO BREACH: POST /shifts/{id}/events:batch p95 370 ms > 300 ms`, every request 2xx, so it was intermittent, not a server error) | The divergent-replay comparison selected the batch's stored rows before *every* INSERT, so the courier's most frequent call paid for a rare case; the constraint violations in the Postgres log (runs_shift_id_fkey / runs_shift_id_key / runs_pkey) are the API's translated, handled 409s - not the failure | The comparison moved behind the INSERT's rowcount (an all-new batch is the one statement it was before); proven against real Postgres (13 db tests, incl. a batch of 3 with 1 existing row storing 2) and by a statement-count suite | `tests/test_sync_conflict_cost.py`: the all-new batch issues exactly one statement, the partly-refused batch pays for the SELECT, and ADR-014's conflict rules still hold; the db suite pins the rowcount the fast path trusts | fixed |
 | BUG-001 | `app/nz_address.py`: Suburbs list is hardcoded + uses `difflib`; confusion between suffix and unit. "42B" = number 42 + suffix B. Unit written as `2/14`. | Legacy prototype code, not LINZ-based | Fixed in packages/nz-address | Unit tests for 50 Canterbury addresses with suffixes/units | fixed |
 | BUG-002 | `app/agents/intake_graph.py` (`verify`): Mutates input in place; replay of applied answers is incorrect. | State mutation during verification | - | Property test: replay produces identical result | open |
 | BUG-003 | `requirements.txt`: Uses `>=` version ranges instead of locked hashes. | No dependency locking | - | `uv lock --generate-hashes` produces reproducible lockfile | open |
@@ -157,3 +158,27 @@ is **BUG-060** from here on, and every reference to it was updated (the gate
 `scripts/ci/check-emulator-gpu.mjs` prints BUG-060, `android-e2e.yml`'s comment reads
 BUG-060, D37 reads BUG-060). The evidence folder keeps its name
 `docs/evidence/bug-053-emulator-gl/` and says so.
+
+## BUG-061: the root cause, the two experiments, and what is still open (2026-10-25)
+
+**The root cause (the founder's correction, proven):** the tombstone is a gwp_asan
+`GuardedPoolAllocator::deallocate` - a double or invalid free in how the sphere uses
+Skia - so it is NOT only the emulator's GL and it can hit real devices. Following the
+lifecycle found it: the thinking swirl is `withRepeat(..., -1)`, which never stops by
+itself, and the cleanup only reset the shared value. The animation kept writing to the
+shared value after the Skia canvas was gone. The fix on `feat/t6-copilot` cancels both
+shared values with `cancelAnimation` on unmount and builds the Skia drawing tree once
+with `useMemo` instead of on every render.
+
+**The three scratch experiments, each recorded and each tagged before deletion:**
+
+| Branch (`exp/`, never merged) | What it proved | Result |
+|---|---|---|
+| `exp/bug-061-no-sphere` (1de1d80) | the negative control: the Skia sphere replaced by a plain `View` of the same size and testID, so a crash with the sphere removed cannot be blamed on it | the with-sphere runs produced the SIGSEGV; this control ran without it, which is what pinned the crash to the sphere's Skia tree |
+| `exp/bug-061-live-sphere` (fbbaf4f) | the decisive test of the root-cause fix: the live Skia sphere FORCED on the emulator (the fallback disabled) on the fixed code | 28 minutes with no SIGSEGV, where the with-sphere runs had produced it - so the lifecycle fix is proven and the emulator fallback stays a **TEMPORARY guard**, recorded as such |
+| `exp/bug-062-failure-dump` (c7d30d3) | the runner keeps Maestro's own test dir when a flow fails, so the failure's dump survives the run | this is what solved **BUG-062**: the dump carried `JavascriptException: useChosen needs a ChosenProvider above it / at SummaryScreen`, which three runs of infrastructure-chasing never reached (logcat's window never covered the moment). The same change is PR #36 |
+
+**What stays open on BUG-061:** the live 3D sphere must be checked on a REAL device
+before the emulator fallback is removed. That is a FOUNDER_TODO item, not something a
+CI emulator can answer. The branch head also keeps the mount and unmount regression
+test, and the feature is never removed to get a green run.
