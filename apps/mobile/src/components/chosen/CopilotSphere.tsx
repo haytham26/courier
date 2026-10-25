@@ -58,7 +58,14 @@ import type { CopilotState } from './types';
  * surface) ran ~35 minutes on the emulator with no SIGSEGV at all, where the
  * with-sphere runs had produced it.
  */
-const liveSphereIsSafe = (): boolean => Constants.isDevice !== false;
+/**
+ * BUG-061 EXPERIMENT (scratch branch exp/bug-061-live-sphere, never merged):
+ * the live Skia sphere is FORCED on the emulator, so the E2E run proves the
+ * root-cause fix (the animations cancelled on unmount, the drawing tree built
+ * once) holds where the crash used to happen - on software GL. The emulator
+ * fallback is the temporary guard and stays on feat/t6-copilot.
+ */
+const liveSphereIsSafe = (): boolean => true;
 
 export interface CopilotSphereProps {
   state: CopilotState;
