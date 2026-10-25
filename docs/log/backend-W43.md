@@ -371,3 +371,23 @@ POST /shifts/{id}/events:batch p95 370 ms > 300 ms` - with every request returni
   the frame/battery numbers stay honestly unverified in the maps status.
 - Two merge conflicts carried this session's register (D42 against the lead's D43/D44) and both squad
   logs; each was resolved as both-sides-kept and re-checked prettier-clean.
+
+## 2026-10-26 — The entitlement layer (PR #50, ADR-017/D45), BUG-064 (PR #51), queue 2 closed
+
+- **ADR-017/D45.** The app's only billing question is "is this subscription active", never how it was
+  paid, and now the server answers it: `GET /account/entitlements`, `entitlement_of` (the plan
+  vocabulary, the state machine with its grace window, the cancelled-but-paid rule) and
+  `subscriptions` in the schema. 373 passed + 15 db tests against the pinned PostGIS 17.2 container.
+- **The review changed it in one pass**: the upsert's monotonic guard (`WHERE renews_at IS NULL OR
+:renews_at IS NULL OR :renews_at >= renews_at`, so a stale webhook cannot rewind a courier's
+  access), `RETURNING (xmax = 0)` for the protocol's return, the 3.1-correct nullable (`oneOf`, not
+  `nullable` + `null` in the enum), the cancelled-period access rule (the sharpest product finding:
+  a courier with 30 paid days was locked out), the state×plan test matrix (a Solo-only mutation had
+  survived the whole suite), and the sorted-features pin.
+- **BUG-064/PR #51.** A feature-branch push started a map-pack.yml run against a trigger that says
+  `branches: [main]`, and failed — 90 minutes of runner per push and a red check the PR did not own.
+  The build now carries an explicit `if:` guard, its truth table verified locally.
+- **Queue 2 is closed**: items 1–7 and BUG-063 are merged. The week's skills tables sit above this
+  entry; the two merge conflicts carried in the register and the squad logs (D42 against the lead's
+  D43/D44, and both logs' additive sections) were each resolved as both-sides-kept and re-checked
+  prettier-clean.
