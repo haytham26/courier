@@ -604,3 +604,7 @@ The plan is the approval. When an item of the queue is finished, start the next 
 ## 20. iOS (founder decision 2026-10-25, binding; see D43)
 
 Android first, then iOS. The rules in `docs/plan/IOS_PLAN.md` §0 apply now; phases I1 to I5 start only after the gate in its §1. Read that file; it is the iOS plan.
+
+## 21. The 2026-10-25 audit (founder directive, binding)
+
+`docs/plan/AUDIT_2026-10-25.md` is the priority queue after the open PRs. Its P0 items (the app connected to the server, on-device voice wired, the voice eval set, no mocks in release builds, a staging server, the real-device acceptance script) come before any new feature, in the order its last section gives. Each item closes only by its done-when.
