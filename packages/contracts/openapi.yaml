@@ -590,6 +590,15 @@ components:
         accepted:
           type: integer
           description: Number of events accepted
+        conflicts:
+          type: array
+          description: >-
+            Event ids whose replay differed from the stored row; the stored
+            copy wins and the incoming copy is discarded (ADR-014) - the phone
+            surfaces them to the courier, it never overwrites.
+          items:
+            type: string
+            format: uuid
 
     RouteResponse:
       type: object

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -154,6 +154,15 @@ class DeliveryEvent(BaseModel):
         when it happened) - the phone always knows its zone."""
         if value.tzinfo is None:
             raise ValueError("occurred_at must carry its timezone")
+        now = datetime.now(UTC)
+        if value > now + timedelta(hours=1):
+            raise ValueError(
+                "occurred_at is more than an hour in the future: the phone's clock is wrong"
+            )
+        if value < now - timedelta(days=7):
+            raise ValueError(
+                "occurred_at is more than 7 days old: the log is stale or the clock is wrong"
+            )
         return value
 
     @field_validator("kind")
@@ -451,7 +460,7 @@ def upload_pod(
         _, digest = save_pod(directory, run.id, resolved_id, content)
         stored_bytes = len(content)
 
-    stored = repo.append_events(
+    outcome = repo.append_events(
         shift_id=run.shift_id,
         events=[
             DeliveryEventRow(
@@ -476,7 +485,7 @@ def upload_pod(
             "sha256": digest,
             "bytes": stored_bytes,
             "stored_at": datetime.now(UTC).isoformat(),
-            "already_stored": replayed or stored == 0,
+            "already_stored": replayed or outcome.stored == 0,
         },
     )
 
@@ -683,8 +692,12 @@ def sync_events(
         )
         for event in events
     ]
-    stored = repo.append_events(shift_id, rows)
-    return {"accepted": stored, "cursor": repo.cursor(shift_id)}
+    outcome = repo.append_events(shift_id, rows)
+    return {
+        "accepted": outcome.stored,
+        "cursor": repo.cursor(shift_id),
+        "conflicts": [str(event_id) for event_id in outcome.conflicts],
+    }
 
 
 @app.websocket("/shifts/{shift_id}/voice")

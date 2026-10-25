@@ -42,6 +42,7 @@ pytestmark = pytest.mark.db
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 COURIER = "driver-7"
 
+
 @pytest.fixture()
 def engine() -> Iterator[Engine]:
     if not DATABASE_URL:
@@ -230,9 +231,29 @@ class TestTheEvents:
         # THE rowcount question the in-memory repo cannot answer: the
         # executemany with ON CONFLICT DO NOTHING must count only the
         # inserted rows, or the sync's `accepted` lies to the phone.
-        assert first == 2
-        assert replay == 0
+        assert first.stored == 2
+        assert first.conflicts == ()
+        assert replay.stored == 0
+        assert replay.conflicts == ()
         assert repo.cursor(shift_id) == 2
+
+        divergent = DeliveryEventRow(
+            id=rows[0].id,
+            shift_id=shift_id,
+            stop_id=stop_id,
+            kind="failed",
+            utterance=None,
+            safe_place=None,
+            lat=None,
+            lon=None,
+            accuracy_m=None,
+            occurred_at=rows[0].occurred_at,
+        )
+        conflict = repo.append_events(shift_id, [divergent])
+
+        assert conflict.stored == 0
+        assert conflict.conflicts == (rows[0].id,)
+        assert repo.get_event(rows[0].id) == rows[0]  # the stored row wins
 
     def test_an_event_is_readable_by_id(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
         shift_id = a_shift(engine)
