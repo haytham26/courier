@@ -45,6 +45,10 @@ function AuthNavigator() {
             <Stack.Screen name="scan" />
             <Stack.Screen name="driving" />
             <Stack.Screen name="delivered" />
+            {/* The drive in the dark theme (screen 12): the same drive with
+                the mode pinned, so the design gate compares light against
+                dark side by side. */}
+            <Stack.Screen name="driving-night" />
           </Stack.Protected>
           <Stack.Protected guard={!isAuthenticated}>
             <Stack.Screen name="(auth)" />
