@@ -12,21 +12,32 @@ from __future__ import annotations
 import hashlib
 import uuid
 from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.auth.jwks import get_verifier
+from app.locations import location_id_for
 from app.main import _route_request, app
-from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
+from app.pod_store import LocalPodStore
+from app.repo import DeliveryEventRow, InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from app.routing import schedule_plan
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+
+POD_TEST_SECRET = "test-only-pod-url-signing-secret-0123456789"
+FORGED_SECRET = "not-the-server-key-0123456789abcdef"
 
 COURIER = "driver-7"
 OTHER = "driver-8"
 START_AT = datetime(2026, 10, 24, 7, 30, tzinfo=UTC)
+
+
+def recent_iso(minutes: int = 5) -> str:
+    """A phone event from a few minutes ago: the sync endpoint bounds the
+    clock (ADR-014), so a pinned timestamp would rot into a 422."""
+    return (datetime.now(UTC) - timedelta(minutes=minutes)).isoformat()
 
 
 def run_body(**overrides: object) -> dict[str, object]:
@@ -137,6 +148,227 @@ class TestCreatingARun:
         assert listed.status_code == 401
 
 
+class TestThePodUrl:
+    """ADR-011 §2: the owner gets a URL that dies; a foreign anything is 404."""
+
+    def _upload(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID, bytes]:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        payload = png_bytes()
+        stored = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": START_AT.isoformat()},
+        )
+        assert stored.status_code == 201, stored.text
+        return run_id, stop_id, uuid.UUID(stored.json()["event_id"]), payload
+
+    def test_the_owner_gets_a_dying_url(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, stop_id, event_id, _ = self._upload(client, repo, tmp_path, monkeypatch)
+
+        got = client.get(f"/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url")
+
+        assert got.status_code == 200, got.text
+        body = got.json()
+        assert body["event_id"] == str(event_id)
+        assert "expires=" in body["url"] and "signature=" in body["url"]
+        expires_at = datetime.fromisoformat(body["expires_at"])
+        now = datetime.now(UTC)
+        assert now < expires_at <= now + timedelta(seconds=901)
+
+    def test_the_url_fetches_the_bytes_without_a_bearer(
+        self,
+        client: TestClient,
+        anonymous_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, stop_id, event_id, payload = self._upload(client, repo, tmp_path, monkeypatch)
+        url = client.get(f"/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url").json()["url"]
+
+        # An image loader cannot send the bearer header: the grant is the auth.
+        fetched = anonymous_client.get(url)
+
+        assert fetched.status_code == 200, fetched.text
+        assert fetched.content == payload
+        assert fetched.headers["content-type"] == "image/png"
+
+    def test_a_tampered_signature_serves_nothing(
+        self,
+        client: TestClient,
+        anonymous_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, stop_id, event_id, _ = self._upload(client, repo, tmp_path, monkeypatch)
+        url = client.get(f"/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url").json()["url"]
+        tampered = url.replace("signature=", "signature=0")
+
+        assert anonymous_client.get(tampered).status_code == 404
+
+    def test_an_expired_grant_serves_nothing(
+        self,
+        client: TestClient,
+        anonymous_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _, event_id, _ = self._upload(client, repo, tmp_path, monkeypatch)
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        expired_url, _ = LocalPodStore(
+            Path(str(tmp_path)),
+            POD_TEST_SECRET,
+            ttl_seconds=-1,
+        ).presign_url(run_id, event_id)
+
+        assert anonymous_client.get(expired_url).status_code == 404
+
+    def test_a_grant_signed_with_another_key_is_refused(
+        self,
+        client: TestClient,
+        anonymous_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The review's blocker: the grant key may never be a public value."""
+        run_id, _, event_id, _ = self._upload(client, repo, tmp_path, monkeypatch)
+        forged_url, _ = LocalPodStore(Path(str(tmp_path)), FORGED_SECRET).presign_url(
+            run_id, event_id
+        )
+
+        assert anonymous_client.get(forged_url).status_code == 404
+
+    def test_a_non_hex_signature_is_a_404_not_a_500(
+        self,
+        client: TestClient,
+        anonymous_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, stop_id, event_id, _ = self._upload(client, repo, tmp_path, monkeypatch)
+        url = client.get(f"/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url").json()["url"]
+        forged = url.split("&signature=")[0] + "&signature=not-a-hex-signature"
+
+        assert anonymous_client.get(forged).status_code == 404
+
+    def test_a_non_pod_event_gets_no_url(self, client: TestClient, repo: InMemoryRepo) -> None:
+        run_id, shift_id = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        event_id = uuid.uuid4()
+        repo.append_events(
+            shift_id,
+            [
+                DeliveryEventRow(
+                    id=event_id,
+                    shift_id=shift_id,
+                    stop_id=stop_id,
+                    kind="delivered",
+                    utterance=None,
+                    safe_place=None,
+                    lat=None,
+                    lon=None,
+                    accuracy_m=None,
+                    occurred_at=START_AT,
+                )
+            ],
+        )
+
+        got = client.get(f"/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url")
+
+        assert got.status_code == 404
+
+    def test_a_grant_for_a_missing_object_is_a_404(
+        self,
+        anonymous_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, shift_id = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        event_id = uuid.uuid4()
+        repo.append_events(
+            shift_id,
+            [
+                DeliveryEventRow(
+                    id=event_id,
+                    shift_id=shift_id,
+                    stop_id=stop_id,
+                    kind="pod_captured",
+                    utterance=None,
+                    safe_place=None,
+                    lat=None,
+                    lon=None,
+                    accuracy_m=None,
+                    occurred_at=START_AT,
+                )
+            ],
+        )
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        url, _ = LocalPodStore(Path(str(tmp_path)), POD_TEST_SECRET).presign_url(run_id, event_id)
+
+        assert anonymous_client.get(url).status_code == 404
+
+    def test_another_courier_gets_no_url(
+        self,
+        client: TestClient,
+        other_client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, stop_id, event_id, _ = self._upload(client, repo, tmp_path, monkeypatch)
+
+        foreign = other_client.get(f"/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url")
+
+        assert foreign.status_code == 404
+
+    def test_an_event_id_for_another_stop_gets_no_url(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _, event_id, _ = self._upload(client, repo, tmp_path, monkeypatch)
+        other_stop = repo.run_stops[run_id][1].id
+
+        got = client.get(f"/runs/{run_id}/stops/{other_stop}/pod/{event_id}/url")
+
+        assert got.status_code == 404
+
+    def test_an_unknown_event_gets_no_url(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, stop_id, _, _ = self._upload(client, repo, tmp_path, monkeypatch)
+
+        got = client.get(f"/runs/{run_id}/stops/{stop_id}/pod/{uuid.uuid4()}/url")
+
+        assert got.status_code == 404
+
+
 def seed_run_with_stops(
     repo: InMemoryRepo,
     *,
@@ -167,6 +399,7 @@ def seed_run_with_stops(
             window_start=None,
             window_end=None,
             address=f"{12 + index} Riccarton Road",
+            location_id=location_id_for(f"{12 + index} Riccarton Road", None),
         )
         for index in range(count)
     ]
@@ -204,7 +437,7 @@ class TestListingTheStops:
                     "id": str(uuid.uuid4()),
                     "stop_id": str(stop_id),
                     "kind": "delivered",
-                    "occurred_at": START_AT.isoformat(),
+                    "occurred_at": recent_iso(),
                 }
             ],
         )
@@ -225,7 +458,7 @@ class TestListingTheStops:
                     "id": str(uuid.uuid4()),
                     "stop_id": str(repo.run_stops[run_id][0].id),
                     "kind": "delivered",
-                    "occurred_at": START_AT.isoformat(),
+                    "occurred_at": recent_iso(),
                 }
             ],
         )
@@ -275,7 +508,7 @@ class TestUploadingTheProofOfDelivery:
         stored = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", payload, "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "safe_place": "by the meter box"},
+            data={"occurred_at": recent_iso(), "safe_place": "by the meter box"},
         )
 
         assert stored.status_code == 201, stored.text
@@ -309,14 +542,14 @@ class TestUploadingTheProofOfDelivery:
         first = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", payload, "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(event_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(event_id)},
         )
         (Path(str(tmp_path)) / str(run_id) / f"{event_id}.bin").write_bytes(b"tampered-marker")
 
         replay = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", payload, "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(event_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(event_id)},
         )
 
         assert first.status_code == 201
@@ -340,7 +573,7 @@ class TestUploadingTheProofOfDelivery:
         foreign = other_client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", png_bytes(), "image/png")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
 
         assert foreign.status_code == 404
@@ -358,7 +591,7 @@ class TestUploadingTheProofOfDelivery:
         stray = client.post(
             f"/runs/{run_id}/stops/{uuid.uuid4()}/pod",
             files={"image": ("door.jpg", png_bytes(), "image/png")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
 
         assert stray.status_code == 404
@@ -378,7 +611,7 @@ class TestUploadingTheProofOfDelivery:
         refused = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", oversized, "image/png")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
 
         assert refused.status_code == 413
@@ -399,7 +632,7 @@ class TestUploadingTheProofOfDelivery:
         refused = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("photo.jpg", b"<html>not an image</html>", "image/jpeg")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
 
         assert refused.status_code == 415
@@ -545,13 +778,13 @@ class TestTheEventIdOwnership:
         client.post(
             f"/runs/{a_run_id}/stops/{a_stop_id}/pod",
             files={"image": ("door.jpg", a_payload, "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(stolen_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(stolen_id)},
         )
 
         replayed = other_client.post(
             f"/runs/{b_run_id}/stops/{b_stop_id}/pod",
             files={"image": ("door.jpg", png_bytes(48), "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(stolen_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(stolen_id)},
         )
 
         assert replayed.status_code == 404, replayed.text
@@ -560,7 +793,7 @@ class TestTheEventIdOwnership:
         own = client.post(
             f"/runs/{a_run_id}/stops/{a_stop_id}/pod",
             files={"image": ("door.jpg", a_payload, "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(stolen_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(stolen_id)},
         )
         assert own.status_code == 200
         assert own.json()["sha256"] == hashlib.sha256(a_payload).hexdigest()
@@ -582,7 +815,7 @@ class TestTheEventIdOwnership:
         genuine = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", png_bytes(64), "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(planted_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(planted_id)},
         )
 
         assert genuine.status_code == 201, genuine.text
@@ -699,7 +932,7 @@ class TestTheHardenedEdges:
                     "id": str(uuid.uuid4()),
                     "stop_id": str(stop_id),
                     "kind": "teleported",
-                    "occurred_at": START_AT.isoformat(),
+                    "occurred_at": recent_iso(),
                 }
             ],
         )
@@ -718,7 +951,7 @@ class TestTheHardenedEdges:
                     "id": str(uuid.uuid4()),
                     "stop_id": str(uuid.uuid4()),
                     "kind": "delivered",
-                    "occurred_at": START_AT.isoformat(),
+                    "occurred_at": recent_iso(),
                 }
             ],
         )
@@ -758,7 +991,7 @@ class TestTheHardenedEdges:
         stored = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.heic", heic, "image/heic")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
 
         assert stored.status_code == 201, stored.text
@@ -777,7 +1010,7 @@ class TestTheHardenedEdges:
         refused = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", png_bytes(), "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "safe_place": "x" * 201},
+            data={"occurred_at": recent_iso(), "safe_place": "x" * 201},
         )
 
         assert refused.status_code == 422
@@ -796,7 +1029,7 @@ class TestTheHardenedEdges:
         pod = anonymous_client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", png_bytes(), "image/png")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
         reopt = anonymous_client.post(
             f"/runs/{run_id}/route:reopt", json={"affected_stop_ids": [str(stop_id)]}

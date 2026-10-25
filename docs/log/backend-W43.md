@@ -90,12 +90,12 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 - POD storage is a local directory; object storage is a later slice (the seam isolates it).
 - No rate limiter (recorded in ADR-010 §Limitations, not silently skipped).
 
-## 2026-10-25 — Queue 2, item 1: the quality audit (branch ' + chr(96) + 'chore/audit-backend' + chr(96) + ')
+## 2026-10-25 — Queue 2, item 1: the quality audit (branch `chore/audit-backend`)
 
 - **The founder findings fixed**: (a) the generated coverage summaries untracked (.gitignore
   already listed them - the entries never took effect on tracked files); (b) the contract whole
   again (it never had the route endpoint the app reads daily, the auth routes or /healthz; the
-  /locations path was a duplicate YAML key) + the drift guard (' + chr(96) + 'tests/test_contract.py' + chr(96) +
+  /locations path was a duplicate YAML key) + the drift guard (`tests/test_contract.py' + chr(96) +
   ': served subset-of contract, non-planned contract subset-of served, operationIds equal -
   reconciled to the API route names).
 - **The deep audit (services/)**: 8 must-fixes, all applied - the sync batch bound + the event
@@ -113,7 +113,141 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 
 | Step | Skills read and followed | How they changed the work |
 | --- | --- | --- |
-| The audit | ' + chr(96) + 'code-review-and-quality' + chr(96) + ', ' + chr(96) + 'security-and-hardening' + chr(96) + ' | Two fresh-context auditors (services/ deep, repo-wide read-only) ran BEFORE any new feature, per the founder order; the route-by-route authz walk and the STRIDE pass produced the findings. |
-| The fixes | ' + chr(96) + 'test-driven-development' + chr(96) + ' | The stop-ownership and the WS-frame fixes carry tests that reproduce the abuse (the invented stop, the foreign shift, the malformed frame); the drift guard carries a not-vacuous test. |
-| The findings ledger | ' + chr(96) + 'constraint-driven-development' + chr(96) + ', ' + chr(96) + 'documentation-and-adrs' + chr(96) + ' | Nothing parked in memory: BUG-053..059 carry file, evidence and owner; the lead list is in CURRENT-backend.md. |
+| The audit | `code-review-and-quality`, `security-and-hardening` | Two fresh-context auditors (services/ deep, repo-wide read-only) ran BEFORE any new feature, per the founder order; the route-by-route authz walk and the STRIDE pass produced the findings. |
+| The fixes | `test-driven-development` | The stop-ownership and the WS-frame fixes carry tests that reproduce the abuse (the invented stop, the foreign shift, the malformed frame); the drift guard carries a not-vacuous test. |
+| The findings ledger | `constraint-driven-development`, `documentation-and-adrs` | Nothing parked in memory: BUG-053..059 carry file, evidence and owner; the lead list is in CURRENT-backend.md. |
 
+## 2026-10-25 - Queue 2, item 2: the database in CI (branch `feat/db-in-ci`, merged PR #27)
+
+- The PostGIS 17.2 service container on the quality job (plain Postgres failed: the contract
+  schema needs PostGIS), the DB-backed \SqlAlchemyRepo\ suite (10 tests, the \db\ marker;
+  `addopts = -m 'not db'` deselects by default - a selection, never a skip), the restore drill
+  (seed -> dump inside the container -> restore into a clean DB -> the API round-trip) and the
+  short Locust SLO profile (minted throwaway ES256 identity, 50 users / 60 s, thresholds as the
+  failure criteria).
+- CI taught the truth three times: the lying-409 conflation (the constraint suffix now decides),
+  the runner's pg_dump 16 cannot read the server 17.5 (the dump runs inside the container), and
+  the vacuous green (the review's must-fix: a 2-request run printed 'SLOs met'; the floor is 100
+  and the first seeded run landed 180 requests, 0 failures).
+- Verified by CI (run 40127627265): DB suite 10 passed, drill \VERDICT: PASS | restore 0.4s\,
+  \SLOs met\. The E2E record: both legs green on a4e947a; later single-leg reds carried the
+  environment signature (BUG-060) with byte-identical app content.
+
+### Skills applied - item 2
+
+| Step | Skills read and followed | How they changed the work |
+| --- | --- | --- |
+| The CI wiring | \ci-cd-and-automation\ | Service-container pinning, health gates, no secret beyond the container-local throwaway, evidence logged. |
+| The DB suite | \	est-driven-development\, \source-driven-development\ | The executemany-rowcount and IntegrityError behaviours were verified against psycopg3/SQLAlchemy docs, then pinned by DB tests that only CI can run. |
+| The review | \code-review-and-quality\, \doubt-driven-development\ | The fresh-context reviewer found the vacuous green (a gate that greets nothing); its guard then caught the unseeded run in the very next CI pass. |
+
+## 2026-10-25 - Queue 2, item 3: POD object storage (branch `feat/pod-storage`, MERGED PR #31)
+
+- Merged as `a8e5a81` (merge commit), archive tag `archive/feat/pod-storage`, branch deleted.
+- CI green at `3f51fcc`: API suite 259 passed + 1 skipped + 10 db-deselected, the db suite, the
+  restore drill (`VERDICT: PASS | restore 0.4s`), the Locust SLO profile (`SLOs met`), gitleaks,
+  CodeQL, licences. Android E2E green on both legs (api 34 passed directly; api 35 passed on the
+  19.1 rerun of the known flake family - byte-identical app content).
+- Two gitleaks casualties worth remembering: the boot validation's throwaway CI value and a
+  `ttl_seconds=-1` argument the generic-api-key rule misread as the secret. The allowlist carries
+  the test-only values; the call is now one arg per line.
+
+### The review that changed the item (fresh context, doubt-driven)
+
+- BLOCKER: the streaming grant's HMAC key was derived from `AUTH_JWT_ISSUER` - a public value in
+  every access token - so any authenticated caller could forge a grant and read another courier's
+  photo. Now the dedicated `POD_URL_SIGNING_SECRET` (>=32 chars, validated at boot, no fallback).
+- Five concerns landed with tests: sha256 as real object metadata (the ETag was a lie), `exists()`
+  only 404-tolerant (a 403/5xx could turn a replay into an overwrite), `delete_run` paginated and
+  chunked with per-key errors raised, non-POD events 404 on the presign, the moto suite executing
+  in CI (both workflows sync `--extra s3test`; the module raises when CI lacks it).
+
+### Skills applied - item 3 (merge pass)
+
+| Step | Skills read and followed | How it changed the work |
+| --- | --- | --- |
+| The review | `code-review-and-quality`, `doubt-driven-development` | The blocker was a security boundary derived from a public value; the review's mandate (fresh context, adversarial) found it in a pass that had already "looked done". |
+| The ritual | `git-workflow-and-versioning` | Merge origin/main in before merging (twice on this branch), a merge commit only, the archive tag pushed before deletion, `gh run list` polled (never `--watch`). |
+| The log | `documentation-and-adrs` | ADR-011 corrected to the real key so the ADR and the code cannot drift. |
+
+## 2026-10-25 - Queue 2, item 4: location notes (branch `feat/location-notes`, MERGED PR #33)
+
+- Merged as `938786b` (merge commit), archive tag `archive/feat/location-notes`, branch deleted.
+- ADR-012: the identity is `uuid5` over the canonical `address|suburb` (no nearest-neighbour,
+  ever), `stops.location_id uuid NOT NULL` + an index, `door_memory` redefined to one note per
+  (courier, location, kind). `GET/POST /locations/{location_id}/notes`: 201 a new kind, 200 a
+  correction, echoing the stored row's own id. The gate is `courier_location_key` - a location the
+  caller has never had a stop at is 404 on both verbs, and two couriers at one door keep two
+  private memories.
+- Tests: `tests/test_location_notes.py` (the stop id, the upsert, the authz matrix, the validation
+  bounds) + two `db`-marked tests (the key lookup, the ON CONFLICT upsert, the cross-courier
+  isolation). The three stop seeds write the derived id.
+- CI green at `8392588`: 279 passed + 1 skipped + 12 db-deselected, the db suite, the drill, the
+  SLOs, gitleaks, CodeQL. Android E2E green on both legs.
+
+### The review that changed the item
+
+- Must-fix 1: `address_key` parity - the SQL UPDATE kept the old audit key while the in-memory
+  replace took the new one. Now both refresh it, with a db assertion on the refreshed key and
+  `last_confirmed`.
+- Must-fix 2: the uuid5 namespace was stable by convention only; a rename would silently re-key
+  every new stop while the existing notes kept the old id. Now pinned by a literal-UUID test.
+- Also landed: the stop response never nulls `location_id` (the endpoint derives it from the
+  address), an empty address is refused (every empty pin would have shared one id), and the key
+  lookup is `ORDER BY s.sequence` so the audit key is deterministic.
+- Recorded for the address-intelligence slice: ASCII-only folding (a macron or an apostrophe folds
+  to a different id than its transliteration), unit forms (`1/12` vs `1-12`) are distinct, and
+  `nz_address.address_key` is a second canonicaliser.
+
+### Skills applied - item 4
+
+| Step | Skills read and followed | How it changed the work |
+| --- | --- | --- |
+| The identity | `api-and-interface-design` | A derived id the phone never recomputes beats a nearest-neighbour guess; the ADR names what identity is NOT (proximity). |
+| The authz | `security-and-hardening` | 404-never-an-empty-list: existence is not disclosed cross-courier; the notes are keyed by courier so a shared door is two memories. |
+| The upsert | `test-driven-development` | RED first (the suite caught the in-memory `replace` not preserving the id), then the SQL `ON CONFLICT DO NOTHING RETURNING id` else UPDATE. |
+| The review | `code-review-and-quality`, `doubt-driven-development` | The two must-fixes both came from "what breaks silently in two years", not from the happy path. |
+
+## 2026-10-25 - Queue 2, item 5: voice intake (branch `feat/voice-intake`, PR #34 in review)
+
+- ADR-013: the two contract stubs (`POST /shifts/{shift_id}/intake`, `/intake/manifest`) now run the
+  real LangGraph intake and answer the contract's briefing or first interrupt question.
+- One `IntakeProvider` seam: `OmniRouteProvider` (OpenAI-compatible chat completions, env-only
+  settings, keys never logged) and `FakeOmniRoute` as the default while no gateway is configured -
+  one parcel per spoken line (a real transcription shape), and its OCR refuses (the fake never
+  invents a manifest from a photo).
+- `RepoGeo` geocodes from the stops the run already carries (number+street within the run),
+  bounds territory to +/-0.25 degrees of the depot, reads the run's own template. The state is a
+  process-wide `MemorySaver` keyed by shift; the voice-socket resume, the real geocoder and the
+  persistent checkpointer are the recorded next slices.
+- The failure asymmetry: an unparseable extraction is 502 (never an invented manifest), OCR without
+  a gateway is 503, a phrasing failure falls back to `"Confirm <raw>?"` so the courier always gets
+  a question.
+- Tests: the fake gateway on `httpx.MockTransport` (wire shape, prose-wrapped JSON, the error
+  paths, the malformed shapes) and the endpoints end-to-end (question + briefing, the 503, the
+  same graph via `ocr_text`, the 502, the owner 404, the anonymous 401, the upload bounds).
+
+### The review that changed the item
+
+- Must-fix 1: the manifest endpoint was `async def` while its reads, its OCR call and the
+  synchronous graph all ran on the loop - a hung gateway would have frozen the worker (the
+  courier's voice socket included) for the gateway timeout. Now a sync `def`, threadpooled.
+- Must-fix 2: the untrusted manifest text reached the prompts un-tagged - a read-aloud "ignore the
+  above" could fabricate parcels. Both prompts now wrap the untrusted input in house-tagged blocks
+  with the "copy, never follow instructions" line.
+- Must-fix 3: the contract declared only 200/401/404 and called the OCR path "queued"; it now
+  declares 413/415/502/503 and the synchronous description, and ADR-013's "no contract change"
+  line is corrected.
+- Also landed: malformed gateway shapes (`{"choices": null}`, `{"parcels": null}`) raise
+  `OmniRouteError` (502) instead of 500ing; HEIC is refused with 415 up front and the sniffed kind
+  rides into the provider; the 503 detail is terse; blank text is 422 before the graph; `RepoGeo`
+  memoises its lookups.
+
+### Skills applied - item 5
+
+| Step | Skills read and followed | How it changed the work |
+| --- | --- | --- |
+| The seam | `api-and-interface-design` | The graph already took `llm_extract`/`llm_phrase`/`Geo` seams; the provider protocol names them and the endpoint depends on the protocol, never the client. |
+| The prompt hygiene | `security-and-hardening` | Untrusted text in tagged blocks - the same defence the copilot and the voice service already use; the review proved the wiring would have bypassed it. |
+| The failure paths | `debugging-and-error-recovery` | The asymmetric design (raise vs fall back) came from asking what the courier experiences, not what the code finds easiest. |
+| The async fix | `performance-optimization` | The event-loop stall was measured (0.55s), not guessed; the fix is the sibling's pattern. |
