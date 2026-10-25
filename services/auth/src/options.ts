@@ -15,6 +15,7 @@
  */
 import type { BetterAuthOptions } from "better-auth";
 import { jwt, organization, twoFactor } from "better-auth/plugins";
+import { haveIBeenPwned } from "better-auth/plugins/haveibeenpwned";
 import { expo } from "@better-auth/expo";
 import { passkey } from "@better-auth/passkey";
 
@@ -33,6 +34,7 @@ export function buildAuthOptions(config: AuthConfig): BetterAuthOptions {
     emailAndPassword: {
       enabled: config.emailAndPassword.enabled,
       minPasswordLength: config.emailAndPassword.minPasswordLength,
+      maxPasswordLength: config.emailAndPassword.maxPasswordLength,
       autoSignIn: true,
       requireEmailVerification: config.emailAndPassword.requireEmailVerification,
     },
@@ -125,6 +127,9 @@ export function buildAuthOptions(config: AuthConfig): BetterAuthOptions {
           ]
         : []),
       expo(),
+      haveIBeenPwned({
+        enabled: config.emailAndPassword.breachedPasswordCheck,
+      }),
       jwt({
         jwks: {
           jwksPath: config.jwks.path,
