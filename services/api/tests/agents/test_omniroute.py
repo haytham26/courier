@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import base64
 import json
+from collections.abc import Callable
 
 import httpx
 import pytest
@@ -31,8 +32,8 @@ SETTINGS = OmniRouteSettings(
 )
 
 
-def a_gateway(handler: object) -> httpx.Client:
-    return httpx.Client(transport=httpx.MockTransport(handler))  # type: ignore[arg-type]
+def a_gateway(handler: Callable[[httpx.Request], httpx.Response]) -> httpx.Client:
+    return httpx.Client(transport=httpx.MockTransport(handler))
 
 
 def a_completion(content: str) -> httpx.Response:
