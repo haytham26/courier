@@ -80,3 +80,32 @@ After every fix:
 - Before every commit, `git status` must show no `tmp-*`, `probe` or scratch file. Cleaning up means deleting only UNTRACKED files you created (`??` in git status). A tracked file is removed only with `git rm` in a commit that says why.
 - A harness is code too: check its spelling and imports first. A probe that fails for its own reason proves nothing.
 - Every experiment counts against the 45-minute time box of §19.1.
+
+## 11. Known noise in the emulator log (never chase these)
+These lines appear in GREEN runs too. They are not a cause unless a flow fails on the same step AND the evidence ties them to it.
+- `ERROR | Unable to connect to adb daemon on port: 5037` at emulator start: adb has simply not started yet. A few seconds later the log says `daemon started successfully`.
+- `Failed to find ColorBuffer`, `Failed to bind to texture: invalid color buffer`, `DisplaySurfaceGlContextHelper context was preempted`, `Failed to restore previous context`: software GL chatter (swiftshader). Flows pass right after them.
+- `stop: Not implemented`, `Emulator client has not yet been configured`, and the netsim and snapshot lines at shutdown.
+
+How to read a red E2E run, in this order:
+1. List the flows that FAILED (`##[error]the flow failed:`) and the exact failed step of each.
+2. Compare with the same flow in other legs and runs. Does the same step fail, and does an identical step pass elsewhere in the same run?
+3. Only then look at the app evidence of that flow (screen.png, window.xml, logcat-crash.txt).
+
+## 12. Known app pattern: an action that works most of the time is an app bug
+If the same gesture or tap passes in one flow and fails in another of the same run, the app is not robust under load. A courier on a slow phone hits the same thing. Make the app robust, never the flow:
+- Reproduce it in jest with late, missing or reordered events.
+- Fix the decision so it never depends on timing.
+- Never slow the flow down, add waits, or retry the gesture to hide it.
+
+Example (BUG-061 family, 2026-10-25): the first Slide to Deliver after a cold launch did not deliver, while the identical swipe in the next flow did.
+
+## 13. Branch safety: handoffs, local commits and merges of main
+
+1. **A handoff claim is verified on origin before it is used.** "The fix is on #N" means: `git ls-remote origin refs/heads/<branch>` shows a SHA, and `git branch -r --contains <sha>` lists `origin/<branch>`. If not, the claim is false; the fix is local only and is pushed first.
+2. **A local commit that is not on origin is never "stale".** Before abandoning or recreating a branch, run `git log --oneline origin/<branch>..<branch>`. Every commit listed is pushed (fast-forward, never force) or written down in the handoff with the reason it is dropped. Never create a second branch (`-green`, `-v2`) for the same PR.
+3. **After every merge of main into a branch, before the commit is pushed, prove nothing on main was lost:**
+   - `git diff --name-status --diff-filter=D origin/main HEAD -- services packages docs infra scripts db .github` must print nothing that the PR did not intend to delete.
+   - If a path is listed, `git checkout origin/main -- <path>` and amend the merge before pushing (the merge is not yet pushed, so this is allowed).
+   - If the merge shows unexpected deletions while still in progress: `git merge --abort` and start again from the right branch.
+4. **The PR diff is read before merging:** `git diff --stat origin/main...origin/<branch>` lists only files the PR owns. A backend path in a mobile PR (or the reverse) blocks the merge.

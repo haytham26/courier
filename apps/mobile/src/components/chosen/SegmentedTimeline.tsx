@@ -79,6 +79,10 @@ export interface TimelineItem {
   time?: string;
   state?: 'done' | 'later' | 'next';
   icon?: React.ComponentProps<typeof Ionicons>['name'];
+  /** Opens the stop, when the screen gives the row a control. */
+  onPress?: () => void;
+  /** The row's own testID, when a flow names it exactly. */
+  testID?: string;
 }
 
 export interface TimelineProps {
@@ -90,47 +94,73 @@ export const Timeline = ({ items, testID }: TimelineProps) => {
   const { t } = useChosen();
   return (
     <View testID={testID}>
-      {items.map((item, index) => (
-        <View
-          key={item.id}
-          accessible
-          accessibilityLabel={`${item.street}${item.time ? `, ${item.time}` : ''}${item.state ? `, ${item.state}` : ''}`}
-          testID={testID ? `${testID}-${item.id}` : undefined}
-          style={[styles.row, index > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.colors.separator } : null]}
-        >
-          <Ionicons
-            name={item.state === 'done' ? 'checkmark-circle' : item.icon ?? 'stop-circle'}
-            size={22}
-            color={item.state === 'done' ? t.colors.successText : item.state === 'next' ? t.colors.accent : t.colors.secondaryLabel}
-          />
-          <View style={styles.texts}>
-            <Text
-              style={{
-                fontSize: t.typography.chipLabel.size,
-                lineHeight: t.typography.chipLabel.lineHeight,
-                fontWeight: t.typography.chipLabel.weight,
-                color: t.colors.label,
-              }}
-              maxFontSizeMultiplier={1.5}
-            >
-              {item.street}
-            </Text>
-            {item.time ? (
+      {items.map((item, index) => {
+        const rowTestID = item.testID ?? (testID ? `${testID}-${item.id}` : undefined);
+        const rowStyle = [
+          styles.row,
+          index > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.colors.separator } : null,
+        ];
+        const body = (
+          <>
+            <Ionicons
+              name={item.state === 'done' ? 'checkmark-circle' : item.icon ?? 'stop-circle'}
+              size={22}
+              color={item.state === 'done' ? t.colors.successText : item.state === 'next' ? t.colors.accent : t.colors.secondaryLabel}
+            />
+            <View style={styles.texts}>
               <Text
                 style={{
-                  fontSize: t.typography.secondary.size,
-                  lineHeight: t.typography.secondary.lineHeight,
-                  fontWeight: t.typography.secondary.weight,
-                  color: t.colors.secondaryLabel,
-                  fontVariant: ['tabular-nums'],
+                  fontSize: t.typography.chipLabel.size,
+                  lineHeight: t.typography.chipLabel.lineHeight,
+                  fontWeight: t.typography.chipLabel.weight,
+                  color: t.colors.label,
                 }}
+                maxFontSizeMultiplier={1.5}
               >
-                {item.time}
+                {item.street}
               </Text>
-            ) : null}
+              {item.time ? (
+                <Text
+                  style={{
+                    fontSize: t.typography.secondary.size,
+                    lineHeight: t.typography.secondary.lineHeight,
+                    fontWeight: t.typography.secondary.weight,
+                    color: t.colors.secondaryLabel,
+                    fontVariant: ['tabular-nums'],
+                  }}
+                >
+                  {item.time}
+                </Text>
+              ) : null}
+            </View>
+          </>
+        );
+
+        return item.onPress === undefined ? (
+          <View
+            key={item.id}
+            accessible
+            accessibilityLabel={`${item.street}${item.time ? `, ${item.time}` : ''}${item.state ? `, ${item.state}` : ''}`}
+            testID={rowTestID}
+            style={rowStyle}
+          >
+            {body}
           </View>
-        </View>
-      ))}
+        ) : (
+          <Pressable
+            key={item.id}
+            accessible
+            role="button"
+            accessibilityLabel={`${item.street}${item.time ? `, ${item.time}` : ''}${item.state ? `, ${item.state}` : ''}`}
+            accessibilityHint="Opens the stop"
+            onPress={item.onPress}
+            testID={rowTestID}
+            style={rowStyle}
+          >
+            {body}
+          </Pressable>
+        );
+      })}
     </View>
   );
 };

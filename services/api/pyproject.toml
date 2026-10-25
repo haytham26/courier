@@ -45,6 +45,16 @@ dev = [
 load = [
     "locust>=2.20",
 ]
+# The S3-compatible POD store (ADR-011): boto3 (Apache-2.0) at runtime when
+# POD_STORAGE_BACKEND=s3; moto (Apache-2.0) emulates S3 in the tests. MinIO
+# is banned (AGPL-3.0).
+s3 = [
+    "boto3>=1.35",
+]
+s3test = [
+    "boto3>=1.35",
+    "moto[s3]>=5",
+]
 
 [tool.uv]
 # The security patches for transitive dependencies (the audits must stay
@@ -64,6 +74,10 @@ include = ["app*"]
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+addopts = "-m 'not db'"
+markers = [
+    "db: touches the real Postgres (needs DATABASE_URL; run with `-m db`)",
+]
 
 [tool.ruff]
 line-length = 100

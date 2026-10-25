@@ -5,8 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
 from fastapi import (
@@ -21,21 +20,30 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.responses import JSONResponse
+from langgraph.checkpoint.memory import MemorySaver
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .agents import copilot
+from .agents.intake_geo import RepoGeo
+from .agents.intake_graph import build_graph
+from .agents.omniroute import (
+    IntakeProvider,
+    OmniRouteError,
+    ProviderUnavailableError,
+    get_intake_provider,
+)
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
+from .locations import location_id_for
 from .pod import (
     POD_MAX_BYTES,
-    pod_path,
     pod_settings,
-    save_pod,
     sniff_image_kind,
-    stored_pod_fingerprint,
+    validate_pod_settings,
 )
-from .repo import DeliveryEventRow, Repo, RouteStopRow, RunRecord, get_repo
+from .pod_store import LocalPodStore, pod_store
+from .repo import DeliveryEventRow, LocationNoteRow, Repo, RouteStopRow, RunRecord, get_repo
 from .routing import (
     RoutePlan,
     RouteRequest,
@@ -51,6 +59,9 @@ from .sequencing import Segment
 
 # Fail fast when the API cannot verify tokens (no default secrets).
 get_auth_settings()
+# And when the POD store is misconfigured: a missing signing key or bucket
+# must stop the boot, not the first photo of the day.
+validate_pod_settings()
 
 app = FastAPI(title="Courier Copilot", version="0.1.0")
 
@@ -90,8 +101,19 @@ Direction = Literal["asc", "desc", "odd_first", "even_first", "zigzag"]
 
 
 class IntakeText(BaseModel):
-    source: str = "voice"
-    text: str
+    """The spoken or typed manifest: bounded, tagged with its source."""
+
+    source: Literal["voice", "ocr", "scan", "manual"] = "voice"
+    text: str = Field(min_length=1, max_length=50_000)
+
+    @field_validator("text")
+    @classmethod
+    def _non_blank(cls, value: str) -> str:
+        """A blank dictation teaches nothing; the graph would brief 0 stops."""
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("text must not be blank")
+        return cleaned
 
 
 class DepotPoint(BaseModel):
@@ -154,6 +176,15 @@ class DeliveryEvent(BaseModel):
         when it happened) - the phone always knows its zone."""
         if value.tzinfo is None:
             raise ValueError("occurred_at must carry its timezone")
+        now = datetime.now(UTC)
+        if value > now + timedelta(hours=1):
+            raise ValueError(
+                "occurred_at is more than an hour in the future: the phone's clock is wrong"
+            )
+        if value < now - timedelta(days=7):
+            raise ValueError(
+                "occurred_at is more than 7 days old: the log is stale or the clock is wrong"
+            )
         return value
 
     @field_validator("kind")
@@ -164,6 +195,23 @@ class DeliveryEvent(BaseModel):
         if value not in allowed:
             raise ValueError(f"unknown event kind: {value}")
         return value
+
+
+class CreateLocationNote(BaseModel):
+    """One learned note for a door (ADR-012 §2)."""
+
+    kind: Literal["entry", "gate_code", "hazard", "safe_place", "access"]
+    body: str = Field(min_length=1, max_length=500)
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+
+    @field_validator("body")
+    @classmethod
+    def _non_blank(cls, value: str) -> str:
+        """A note of spaces teaches nothing; the body is the memory."""
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("body must not be blank")
+        return cleaned
 
 
 class TemplateSegment(BaseModel):
@@ -426,7 +474,7 @@ def upload_pod(
     if sniff_image_kind(content) is None:
         raise HTTPException(status_code=415, detail="the upload is not a JPEG, PNG or HEIC image")
 
-    directory = Path(pod_settings().pod_storage_dir)
+    store = pod_store(pod_settings())
     resolved_id = form.event_id if form.event_id is not None else uuid.uuid4()
     existing = repo.get_event(resolved_id)
     if existing is not None:
@@ -441,17 +489,16 @@ def upload_pod(
 
     replayed = existing is not None
 
-    path = pod_path(directory, run.id, resolved_id)
-    if replayed and path.exists():
-        stored_bytes, digest = stored_pod_fingerprint(path)
+    if replayed and store.exists(run.id, resolved_id):
+        stored_bytes, digest = store.fingerprint(run.id, resolved_id)
     else:
-        # Not a replay: the upload is the record, and a file that sits
-        # there without its own event row (a crash orphan, or a planted
-        # file) is overwritten by the genuine bytes.
-        _, digest = save_pod(directory, run.id, resolved_id, content)
+        # Not a replay: the upload is the record, and bytes that sit there
+        # without their own event row (a crash orphan, or a planted file)
+        # are overwritten by the genuine upload.
+        digest = store.save(run.id, resolved_id, content)
         stored_bytes = len(content)
 
-    stored = repo.append_events(
+    outcome = repo.append_events(
         shift_id=run.shift_id,
         events=[
             DeliveryEventRow(
@@ -476,9 +523,88 @@ def upload_pod(
             "sha256": digest,
             "bytes": stored_bytes,
             "stored_at": datetime.now(UTC).isoformat(),
-            "already_stored": replayed or stored == 0,
+            "already_stored": replayed or outcome.stored == 0,
         },
     )
+
+
+@app.get("/runs/{run_id}/pod/{event_id}/bytes")
+def pod_bytes(
+    run_id: uuid.UUID,
+    event_id: uuid.UUID,
+    expires: int,
+    signature: str,
+    repo: Repo = Depends(get_repo),
+):
+    """The local store's streaming grant (ADR-011 §2).
+
+    The phone's image loader cannot send a bearer header, so the URL itself
+    carries the authority: an HMAC over (run, event, expiry), minted only for
+    the run's owner by the presign endpoint and dead after 15 minutes. The
+    signature is checked in constant time, and the rows are still checked -
+    a deleted run or a foreign event serves nothing even with a valid grant.
+    """
+    store = pod_store(pod_settings())
+    if not isinstance(store, LocalPodStore) or not store.verify_stream_grant(
+        run_id, event_id, expires, signature
+    ):
+        raise HTTPException(status_code=404, detail="no photo at this URL")
+
+    run = repo.get_run(run_id)
+    event = repo.get_event(event_id)
+    if (
+        run is None
+        or event is None
+        or event.shift_id != run.shift_id
+        or event.kind != "pod_captured"
+    ):
+        raise HTTPException(status_code=404, detail="no photo at this URL")
+
+    try:
+        content = store.read_bytes(run_id, event_id)
+    except FileNotFoundError:
+        # A valid grant for an event whose bytes are gone (a deleted run, a
+        # failed upload) is still a 404, never a 500.
+        raise HTTPException(status_code=404, detail="no photo at this URL") from None
+    kind = sniff_image_kind(content)
+    media = {"jpeg": "image/jpeg", "png": "image/png", "heic": "image/heic"}.get(
+        kind or "", "application/octet-stream"
+    )
+    return Response(
+        content=content, media_type=media, headers={"Cache-Control": "private, max-age=900"}
+    )
+
+
+@app.get("/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url")
+def pod_url(
+    paths: Annotated[StopPaths, Depends()],
+    event_id: uuid.UUID,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """A short-lived URL the phone fetches the photo from (ADR-011 §2).
+
+    The same 404 discipline as every route: the run is the caller's, the
+    stop is in the run, the event belongs to the stop - a foreign anything
+    is 404, never a URL. The URL dies (15 minutes on the local store; the
+    S3 store's presigned GET carries its own expiry).
+    """
+    run = repo.get_run(paths.run_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run with this id")
+    if paths.stop_id not in {row.id for row in repo.get_run_stops(run.id)}:
+        raise HTTPException(status_code=404, detail="no stop with this id in this run")
+    event = repo.get_event(event_id)
+    if (
+        event is None
+        or event.shift_id != run.shift_id
+        or event.stop_id != paths.stop_id
+        or event.kind != "pod_captured"
+    ):
+        raise HTTPException(status_code=404, detail="no event with this id for this stop")
+
+    url, expires_at = pod_store(pod_settings()).presign_url(paths.run_id, event_id)
+    return {"url": url, "expires_at": expires_at.isoformat(), "event_id": str(event_id)}
 
 
 @app.post("/runs/{run_id}/route:reopt")
@@ -589,23 +715,122 @@ def shift_route(
     return _route_body(shift_id, run, plan, template, unroutable)
 
 
+_INTAKE_CHECKPOINTER = MemorySaver()
+"""The intake's interrupt state, per shift, for this process's lifetime.
+
+A restart loses a pending question (the courier simply repeats it); the
+persistent checkpointer rides with the staging deployment (ADR-013).
+"""
+
+
+def _intake_answer(result: Any) -> dict[str, object]:
+    """The graph's last state as the contract's Briefing or Question shape."""
+    interrupts = result.get("__interrupt__")
+    if interrupts:
+        value = interrupts[0].value
+        return {"speak": value["speak"], "index": value["index"]}
+    return {
+        "briefing": result.get("briefing", ""),
+        "stops_count": len(result.get("ordered", ())),
+        "set_aside_count": sum(
+            1 for parcel in result.get("parcels", ()) if parcel.get("anomaly") == "set_aside"
+        ),
+    }
+
+
+def _run_intake(
+    *,
+    repo: Repo,
+    run: RunRecord,
+    provider: IntakeProvider,
+    source: str,
+    text: str,
+    shift_id: uuid.UUID,
+) -> dict[str, object]:
+    """One graph turn: start it, or answer the pending question, per shift."""
+    graph = build_graph(provider.extract, provider.phrase, RepoGeo(repo, run), _INTAKE_CHECKPOINTER)
+    try:
+        result = graph.invoke(
+            {"run_id": str(run.id), "source": source, "text": text},
+            {"configurable": {"thread_id": str(shift_id)}},
+        )
+    except OmniRouteError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    return _intake_answer(result)
+
+
 @app.post("/shifts/{shift_id}/intake")
 def intake_text(
-    shift_id: uuid.UUID, body: IntakeText, principal: AuthPrincipal = Depends(get_current_principal)
+    shift_id: uuid.UUID,
+    body: IntakeText,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+    provider: IntakeProvider = Depends(get_intake_provider),
 ):
-    """Starts the intake graph (thread_id = shift_id). Returns either the briefing or the
-    first interrupt question; answers flow back over the voice socket."""
-    ...
+    """Starts the intake graph (thread_id = shift_id).
+
+    Returns either the briefing or the first interrupt question; the question
+    is answered over the voice socket (the resume wiring is ADR-013's next
+    slice). The run must be the caller's own (404 discipline), and the model
+    calls run through the gateway when configured, the deterministic fake
+    otherwise. A provider that cannot answer is a 502, never a silent empty
+    manifest.
+    """
+    run = repo.get_run_for_shift(shift_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run for this shift")
+    return _run_intake(
+        repo=repo,
+        run=run,
+        provider=provider,
+        source=body.source,
+        text=body.text,
+        shift_id=shift_id,
+    )
 
 
 @app.post("/shifts/{shift_id}/intake/manifest")
-async def intake_manifest(
+def intake_manifest(
     shift_id: uuid.UUID,
     image: UploadFile,
     principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+    provider: IntakeProvider = Depends(get_intake_provider),
 ):
-    """Photo of paper manifest -> vision extraction -> same intake graph with source='ocr'."""
-    ...
+    """Photo of paper manifest -> OCR -> the same intake graph, source='ocr'.
+
+    The same cap and magic sniff as the POD upload: the declared name and
+    type are never trusted. Without a configured gateway the OCR provider is
+    unavailable and the endpoint says so (503) - it never invents a manifest.
+    """
+    run = repo.get_run_for_shift(shift_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run for this shift")
+    content = image.file.read(POD_MAX_BYTES + 1)
+    if len(content) > POD_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="the image is over the 10 MiB cap")
+    kind = sniff_image_kind(content)
+    if kind is None:
+        raise HTTPException(status_code=415, detail="the upload is not a JPEG, PNG or HEIC image")
+    if kind == "heic":
+        raise HTTPException(
+            status_code=415,
+            detail="the OCR provider does not read HEIC yet: share the manifest as JPEG or PNG",
+        )
+    try:
+        text = provider.ocr(content, media_type=f"image/{kind}")
+    except ProviderUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except OmniRouteError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    return _run_intake(
+        repo=repo,
+        run=run,
+        provider=provider,
+        source="ocr",
+        text=text,
+        shift_id=shift_id,
+    )
 
 
 @app.get("/shifts/{shift_id}/stops")
@@ -619,7 +844,9 @@ def list_stops(
 
     The status vocabulary is the contract's (`pending`/`delivered`/`skipped`/
     `deferred`/`failed`); an unknown filter value is refused by the type
-    itself, never silently treated as "all".
+    itself, never silently treated as "all". Each stop carries its
+    `location_id` (ADR-012 §1), so the phone calls the notes endpoints with
+    the id the server honours.
     """
     run = repo.get_run_for_shift(shift_id)
     if run is None or run.courier_id != principal.user_id:
@@ -629,6 +856,7 @@ def list_stops(
         {
             "id": str(row.id),
             "address": row.address,
+            "location_id": str(row.location_id or location_id_for(row.address or "", row.suburb)),
             "seq": seq,
             "status": row.status,
             "lat": row.lat,
@@ -642,6 +870,75 @@ def list_stops(
         for seq, row in enumerate(rows, start=1)
         if status is None or row.status == status
     ]
+
+
+def _location_note_body(note: LocationNoteRow) -> dict[str, object]:
+    """The note as the contract's LocationNote (ADR-012 §2)."""
+    return {
+        "id": str(note.id),
+        "kind": note.kind,
+        "body": note.body,
+        "confidence": note.confidence,
+        "last_confirmed": note.last_confirmed.isoformat(),
+    }
+
+
+@app.get("/locations/{location_id}/notes")
+def get_location_notes(
+    location_id: uuid.UUID,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The caller's door memory for the location (ADR-012).
+
+    The gate sits on `courier_location_key`: a location the caller has never
+    had a stop at is 404, never an empty list - existence is not disclosed
+    cross-courier, and the notes themselves are keyed by (courier, location,
+    kind), so two couriers at one door keep two private memories.
+    """
+    if repo.courier_location_key(principal.user_id, location_id) is None:
+        raise HTTPException(status_code=404, detail="no location with this id")
+    return [
+        _location_note_body(note)
+        for note in repo.get_location_notes(principal.user_id, location_id)
+    ]
+
+
+@app.post("/locations/{location_id}/notes")
+def add_location_note(
+    location_id: uuid.UUID,
+    body: CreateLocationNote,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Upsert one note by kind: 201 when new, 200 when corrected (ADR-012 §2).
+
+    One gate code per door, not five: the unique key is (courier, location,
+    kind) and the repository's ON CONFLICT DO NOTHING makes the race
+    impossible. The response carries the stored row, so a correction returns
+    the row's original id.
+    """
+    address_key = repo.courier_location_key(principal.user_id, location_id)
+    if address_key is None:
+        raise HTTPException(status_code=404, detail="no location with this id")
+    created = repo.put_location_note(
+        LocationNoteRow(
+            id=uuid.uuid4(),
+            courier_id=principal.user_id,
+            location_id=location_id,
+            address_key=address_key,
+            kind=body.kind,
+            body=body.body,
+            confidence=body.confidence,
+            last_confirmed=datetime.now(UTC),
+        )
+    )
+    stored = next(
+        note
+        for note in repo.get_location_notes(principal.user_id, location_id)
+        if note.kind == body.kind
+    )
+    return JSONResponse(status_code=201 if created else 200, content=_location_note_body(stored))
 
 
 @app.post("/shifts/{shift_id}/events:batch")
@@ -683,8 +980,12 @@ def sync_events(
         )
         for event in events
     ]
-    stored = repo.append_events(shift_id, rows)
-    return {"accepted": stored, "cursor": repo.cursor(shift_id)}
+    outcome = repo.append_events(shift_id, rows)
+    return {
+        "accepted": outcome.stored,
+        "cursor": repo.cursor(shift_id),
+        "conflicts": [str(event_id) for event_id in outcome.conflicts],
+    }
 
 
 @app.websocket("/shifts/{shift_id}/voice")

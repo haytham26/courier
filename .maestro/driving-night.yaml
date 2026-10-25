@@ -1,0 +1,43 @@
+appId: com.courier.copilot
+name: "The drive turns to night on its own button (§13.3)"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The same way in as the day drive: the Go sits inside the run sheet, and the
+# sheet opens at peek where the Go is below the fold, so the sheet is raised
+# first (the design's own grabber gesture, the same one today-list rides).
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- tapOn:
+    id: "today-go"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 30000
+# The glance surface of the reference (04-driving.html) is asserted first, so a
+# regression in the day drive cannot hide behind this flow.
+- assertVisible:
+    id: "driving-turn"
+- assertVisible:
+    id: "driving-panel"
+- assertVisible:
+    id: "driving-slide"
+- assertVisible: "STOP 2 OF 5"
+# §13.3: the map starts on the system's mode and the map-style button turns it
+# by hand. The button's accessibility label flips with it ("Day map" once the
+# map is night), which is the a11y tree's own answer that the flip happened, so
+# the flow asserts the LABEL rather than a colour it cannot see. The screenshot
+# at the end is the design gate's evidence for the night theme.
+- tapOn:
+    id: "driving-map-style"
+- assertVisible:
+    id: "driving-map-style"
+    label: "Day map"
+- takeScreenshot:
+    path: "driving-night"

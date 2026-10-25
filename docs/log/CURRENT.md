@@ -1,72 +1,64 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W43. **Local `main` == `origin/main` == `8b098e0`** (PR #21, the
-backend runs/stops API, merged by the BACKEND session).
+**Week:** 2026-W43. **Local `main` == `origin/main` == `1dbddf5`.**
 
-## The two PRs of this session, in queue order
+## Merged this session (each: merge commit → archive tag → remote branch deleted, verified with `git ls-remote`)
 
-| PR | What | Branch | State |
-|---|---|---|---|
-| **#24** | 09 Map style on the chosen tokens | `feat/t6-09-map-style` @ `f90b93d` | E2E running |
-| **#22** | BUG-053: the emulator boots with software GL | `fix/bug-052-emulator-swiftshader-gpu` @ `9012fd4` | all checks green, merge after the review fixes are pushed |
+| PR | What | Tag |
+|---|---|---|
+| **#22** | the emulator boots with software GL (BUG-060) + the gate `scripts/ci/check-emulator-gpu.mjs` | `archive/fix/bug-052-emulator-swiftshader-gpu` |
+| **#29** | the lead's five audit findings (BUG-053..BUG-057) | `archive/fix/audit-lead-findings` |
+| **#24** | 09 Map style on the chosen tokens | `archive/feat/t6-09-map-style` |
+| **#20** | 08 Route on the chosen tokens | `archive/feat/t6-route` |
+| **#28** | 11 Settings on the chosen tokens | `archive/feat/t6-11-settings` |
+| **#15** | 06 Scan + the status precedence fix | `archive/feat/t6-scan` |
+| **#32** | 12 Driving at night | `archive/feat/t6-12-driving-night` |
+| **#41** | the slide's decision = the gesture's final translation (PLAYBOOK §12) | `archive/fix/slide-decision-final-translation` |
 
-## Open PRs of the previous sessions, in queue order
+**The merge ritual now ends at `git ls-remote --heads origin <branch>` printing nothing** — `git branch -d` only removed the local copy, and seven branches were still on GitHub after I reported them deleted.
 
-| PR | Screen | Branch | State |
-|---|---|---|---|
-| **#20** | 08 Route | `feat/t6-route` @ `b9a62d6` | waiting for #22 to merge in |
-| **#18** | 07 Copilot | `feat/t6-copilot` @ `d8141e7` | waiting for #22 to merge in |
-| **#15** | 06 Scan | `feat/t6-scan` @ `d408ce5` | waiting for #22 to merge in |
-| **#12** | recordings | `feat/t6-recordings` | next |
+## Open, with their state
 
-## BUG-053 is FIXED (the emulator's GL mode), and the evidence is honest
+| PR | What | State |
+|---|---|---|
+| **#40** | 13 Lock screen | both legs red on the OLD sphere (cut from main before the sphere fix) |
+| **#42** | 01 Welcome | gates running |
+| **#12** | the recordings | api-34 red on the OLD sphere (same cause as #40) |
+| **#36** | the failure-dump runner | api-34 red on the OLD sphere |
+| **#37** | the emulator gets 6 GB + 4 cores | main merged in (carries the slide fix), gates running |
+| **#18** | 07 Copilot + the sphere lifecycle fix | green on the quality gates; its last E2E died on the adb daemon (§11 noise) |
+| **#30** | 10 Summary (BUG-062) | **api-35 GREEN** (the provider fix proven), api-34 red on the OLD sphere |
 
-The reds were never fleet contention: the nightly on `main` and PR #19's E2E were
-green on the same workflow while PR #18 was failing. The workflow booted the
-emulator with no `-gpu` flag, the emulator picked its own host GL mode, and the
-headless runner lost it (`no first screen appeared in 90s` on the api-35 leg of
-run 40077114264, `today-screen` asserting false on api-34). PR #22 adds
-`-gpu swiftshader_indirect` (what `design-videos.yml` already used) plus the gate
-`scripts/ci/check-emulator-gpu.mjs` in the floor job, and its run 40083028631 is
-green on both legs with all 8 flows. **The GL chatter lines survive (10 in a
-green run) and no flow dies**, so the brief's proof line is amended with the
-evidence in `docs/status/BUGS.md` and recorded in
-`docs/evidence/bug-053-emulator-gl/`. The solo experiment stays on the shelf for
-the next red; no fleet-wide concurrency group, ever (the founder's instruction).
+**The one dependency that matters: everything red on the OLD sphere goes green with `feat/t6-copilot` merged.** The root-cause fix (the animations cancelled on unmount, the Skia tree built once) is proven by the scratch experiment `exp/bug-061-live-sphere`: 28 minutes with the live sphere FORCED on the emulator and no SIGSEGV, where the with-sphere runs produced it. The remaining reds are the emulator's adb-daemon instability (§11 names the noise; PR #37 gives the emulator the RAM and cores).
+
+## The bugs and their state
+
+- **BUG-060** closed and merged: the emulator boots with software GL, and the gate keeps it that way. Renumbered past the backend audit's BUG-053; both rows are kept and the collision is recorded.
+- **BUG-061** (the sphere's memory bug) — the founder's correction: it is a gwp_asan `GuardedPoolAllocator::deallocate` (a double/invalid free in how the sphere uses Skia), not only a GL problem, and it can hit real devices. The cause is fixed; the emulator fallback stays a **TEMPORARY guard**, recorded as such. Real-device testing of the sphere is a **FOUNDER_TODO** item.
+- **BUG-062** SOLVED: the summary screen died at mount with "useChosen needs a ChosenProvider above it" (a root-stack route outside the tabs' provider). The fix is on `feat/t6-10-summary` and its api-35 leg is green.
+- **BUG-053..057** (the audit's lead-owned findings) all closed and merged.
+
+## The two playbook sections now in force
+
+- **§11**: the adb-daemon, ColorBuffer and context-preempted lines are KNOWN NOISE - they appear in green runs too and are not chased.
+- **§12**: an action that works most of the time is an app bug, fixed in the app and never in the flow. The slide now decides on the gesture's own final translation against 0.75 of the travel, with twelve tests driving late, partial and reordered events.
+
+## The scratch branches (never merged, to be tagged and deleted)
+
+`exp/bug-061-no-sphere`, `exp/bug-061-live-sphere`, `exp/bug-062-failure-dump` — each proved something; each needs `git tag archive/<branch> origin/<branch>`, `git push origin refs/tags/<tag>`, then `git push origin --delete <branch>`.
 
 ## Next items, in order
 
-1. Push the review fixes on #22, then the merge ritual: `main` merged in first,
-   then merge → `archive/<branch>` tag at the merge tip → delete the branch → ff
-   main. #24 then follows the same ritual.
-2. `main` merged into #15, #18 and #20 (so they carry the BUG-053 fix), each one
-   at a time; the merge ritual as each goes green. Then PR #12.
-3. The screens, each on its own branch from `main`, using
-   `.maestro/common/reveal-and-tap.yaml` in every flow that taps inside the
-   sheet: 10 Summary · 11 Settings · 12 Driving at night · 13 Lock screen (the
-   iOS parts stay PARTIAL) · 01 Welcome · 02 Sign in.
-4. The legacy token deletion, with proof.
-5. Then the whole of `docs/plan/MASTER_EXECUTION.md` in its §4 order (§13.8 3D
-   and motion, D34's sphere, §17.3's first run, §17.7, §17.7's automation,
-   §18's company gaps, Part C on the app side). The BACKEND session owns
-   `services/` only (the founder's brief, D37); the app and the docs are ours.
+1. Merge PR #18 (the sphere fix) as soon as a clean E2E lands; then merge main into #37, #36, #12, #40 and #30 and merge each as it goes green with the full ritual.
+2. PR #42 (Welcome) and 02 Sign in.
+3. The legacy token deletion, with proof.
+4. Then the rest of `docs/plan/MASTER_EXECUTION.md` to the §6 Definition of Done.
 
-## The traps
+## The traps that cost me time this session
 
-- **Never use PowerShell `Add-Content`/`Set-Content`/`Out-File` on a tracked
-  file** — it writes BEL/FF control bytes. Write with node or the edit tool, and
-  run `node scripts/ci/check-control-chars.mjs` **before every commit**.
-- **A jest test path with `(tabs)` in it is a regex group**: run jest with a
-  pattern that avoids the parentheses (`jest map.test`, or
-  `-c apps/mobile/jest.config.js`), or it finds no tests.
-- The locale's PowerShell wraps `gh.ps1`'s output in error records: a push that
-  ends with `Exited with code 1` has still succeeded — read the output, then
-  confirm with `gh run list`.
-- **Never push to a branch while its own E2E is queued;** one E2E at a time.
-- A Maestro flow that was never run on the emulator is not proven.
-- A `text` selector is a full-match regex — copy the app's exact string.
-- Merge commits only; archive tag at the merge tip before deleting the branch;
-  no force-push, no rebase of pushed branches, never delete tags.
+- **`git branch --show-current` before EVERY commit** — three commits landed on the wrong branch; none was lost, but each cost a recovery step.
+- **`git commit -m` with backticks breaks in PowerShell** (the backtick is an escape) — write the message to a file and use `git commit -F`.
+- **`gen</>` doesn't work; `requireActual` breaks the shared module** — replace the whole module with the smallest surface the component uses.
+- **No `Start-Sleep` waits** — three 700-second sleeps cost 30 minutes. Check a run with `gh run view` once, then work on the next item.
 
-**FOUNDER_TODO (unchanged):** an Apple Developer account for the iOS build lane;
-a real-device BUG-051 launch test.
+**FOUNDER_TODO:** an Apple Developer account for the iOS build lane; a real-device BUG-051 launch test; the sphere's real-device check.

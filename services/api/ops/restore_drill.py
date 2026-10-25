@@ -32,6 +32,7 @@ from pathlib import Path
 
 from sqlalchemy import create_engine, text
 
+from app.locations import location_id_for
 from app.repo import DeliveryEventRow, RunRecord, SqlAlchemyRepo
 from app.routing import RouteRequest, build_plan
 
@@ -95,15 +96,20 @@ def smoke(target: str) -> dict[str, float]:
         connection.execute(
             text(
                 "INSERT INTO stops (id, shift_id, sequence, address, latitude, longitude, "
-                "status, priority, parcels) "
-                "VALUES (:id, :shift, 1, '45 Papanui Road', -43.54, 172.60, 'pending', false, 1)"
+                "status, priority, parcels, location_id) "
+                "VALUES (:id, :shift, 1, '45 Papanui Road', -43.54, 172.60, 'pending', false, 1, "
+                ":location)"
             ),
-            {"id": stop_id, "shift": shift_id},
+            {
+                "id": stop_id,
+                "shift": shift_id,
+                "location": location_id_for("45 Papanui Road", None),
+            },
         )
     timings["write_run_and_stops_s"] = round(time.perf_counter() - started, 3)
 
     started = time.perf_counter()
-    stored = repo.append_events(
+    outcome = repo.append_events(
         shift_id,
         [
             DeliveryEventRow(
@@ -121,7 +127,7 @@ def smoke(target: str) -> dict[str, float]:
         ],
     )
     timings["sync_batch_s"] = round(time.perf_counter() - started, 3)
-    if stored != 1:
+    if outcome.stored != 1:
         print("SMOKE FAILED: the event did not store")
         raise SystemExit(1)
 
@@ -130,7 +136,10 @@ def smoke(target: str) -> dict[str, float]:
     request, unroutable = _route_request_of(repo, run_id)
     built = build_plan(request)
     timings["read_back_and_plan_s"] = round(time.perf_counter() - started, 3)
-    if unroutable or len(built.stops) != len(rows) or rows[0].status != "delivered":
+    # The SQL repo reads stops.status from the column (the in-memory repo
+    # derives it from the events) - the drill asserts the write-read
+    # contract: the stop row, the stored event and the plan.
+    if unroutable or len(built.stops) != len(rows) or rows[0].status != "pending":
         print("SMOKE FAILED: the restored day does not read back as it was written")
         raise SystemExit(1)
     return timings

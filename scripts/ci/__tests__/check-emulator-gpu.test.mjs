@@ -268,19 +268,12 @@ test('the gate over the repo\'s own tree is not vacuous', () => {
   // This is what CI runs: it must find the emulator boots, and it must be clean
   // on the tree that carries the fix. A regression that scanned zero files, or
   // the wrong directory, would fail here instead of in production.
+  // The floor is one boot: design-videos.yml (the second boot) was deleted when
+  // its replacement landed (BUG-057), so android-e2e.yml is the only emulator
+  // workflow left.
   const { findings, emulators, files } = checkWorkflowDir();
   assert.ok(files.length >= 6, `the workflow files were read (${files.length})`);
-  assert.ok(emulators >= 2, `the emulator boots were found (${emulators})`);
-  assert.deepEqual(findings, []);
-});
-
-test('the gate over the repo\'s own tree is not vacuous', () => {
-  // This is what CI runs: it must find the emulator boots, and it must be clean
-  // on the tree that carries the fix. A regression that scanned zero files, or
-  // the wrong directory, would fail here instead of in production.
-  const { findings, emulators, files } = checkWorkflowDir();
-  assert.ok(files.length >= 6, `the workflow files were read (${files.length})`);
-  assert.ok(emulators >= 2, `the emulator boots were found (${emulators})`);
+  assert.ok(emulators >= 1, `the emulator boots were found (${emulators})`);
   assert.deepEqual(findings, []);
 });
 

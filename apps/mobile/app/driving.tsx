@@ -129,7 +129,12 @@ const styles = StyleSheet.create({
   },
 });
 
-function DrivingScreen() {
+/**
+ * The drive itself, exported so the night route (12-driving-night.html) renders
+ * the SAME screen with the mode pinned to dark: one implementation, one place
+ * to fix, and the design gate compares light against dark side by side.
+ */
+export function DrivingScreen() {
   const { t } = useChosen();
   const voice = useVoice();
   const scheme = useColorScheme();

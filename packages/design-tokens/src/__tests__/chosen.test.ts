@@ -219,6 +219,8 @@ describe('the type scale', () => {
     ['button', 18, 22, '700'],
     ['stat', 26, 31, '700'],
     ['confirmTitle', 24, 29, '700'],
+    ['matchTitle', 20, 24, '700'],
+    ['matchSubtitle', 15, 19, '400'],
   ] as const)('%s has the reference size, line height and weight', (name, size, lineHeight, weight) => {
     expect(typography[name]).toEqual({ size, lineHeight, weight });
   });
