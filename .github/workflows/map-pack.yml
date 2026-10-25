@@ -1,0 +1,123 @@
+name: Map pack (the Canterbury offline pack, D26)
+
+# The data pipeline of MASTER_EXECUTION P3 and D26: build the pack the app
+# ships, twice a week, and keep the evidence.
+#
+# Nothing here gates a pull request. It is a long build with a big download,
+# and it writes an artifact the app bakes into a release — running it on every
+# PR would burn the runner and say nothing about the PR. The pipeline runs:
+#
+#   - on the schedule below (twice a week, D26),
+#   - on dispatch (the founder builds by hand),
+#   - when the scripts or the workflow file change, so a change to the
+#     pipeline itself is exercised (the only trigger that can break main's CI).
+#
+# The licence gates live in the scripts: `build-pmtiles.mjs` refuses a source
+# whose terms forbid the offline use, whatever the workflow asks for.
+
+on:
+  schedule:
+    # D26: twice a week (00:30 UTC Sunday and Wednesday).
+    - cron: '30 0 * * 0,3'
+  workflow_dispatch:
+    inputs:
+      extract_url:
+        description: 'The .osm.pbf to build from (blank = the Geofabrik NZ extract)'
+        required: false
+        type: string
+      source_id:
+        description: 'A registered source id (blank = geofabrik-nz)'
+        required: false
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/data/build-pmtiles.mjs'
+      - 'scripts/data/build-3d-buildings.mjs'
+      - '.github/workflows/map-pack.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The pinned tools
+        run: |
+          set -euo pipefail
+          mkdir -p .tools
+          # The two tools are pinned by the release asset the scripts name.
+          # planetiler ships a jar; the pmtiles CLI is one static binary.
+          curl -fsSL -o .tools/planetiler.jar \
+            https://github.com/onthegomap/planetiler/releases/latest/download/planetiler.jar
+          curl -fsSL -o .tools/pmtiles \
+            https://github.com/protomaps/go-pmtiles/releases/latest/download/pmtiles_linux_amd64
+          chmod +x .tools/pmtiles
+          # The scripts call `planetiler` by name: the shim is the jar with a
+          # Java 17 runtime the runner already has.
+          printf '#!/usr/bin/env bash\nexec java -Xmx4g -jar "%s/planetiler.jar" "$@"\n' "$PWD/.tools" \
+            > .tools/planetiler
+          chmod +x .tools/planetiler
+          echo "$PWD/.tools" >> "$GITHUB_PATH"
+          # The version each build ran with, for the manifest and the evidence.
+          .tools/planetiler --version | tee .tools/planetiler.version
+          .tools/pmtiles version | tee .tools/pmtiles.version
+
+      - name: The extract
+        run: |
+          set -euo pipefail
+          mkdir -p data/maps
+          url="${{ inputs.extract_url }}"
+          if [ -z "$url" ]; then
+            # Geofabrik's New Zealand extract (ODbL; an OSM extract carries the
+            # data, so the OSMF tile servers and their policy are not involved).
+            url="https://download.geofabrik.de/australia-oceania/new-zealand-latest.osm.pbf"
+          fi
+          echo "extract: $url"
+          curl -fsSL -o data/maps/newzealand-latest.osm.pbf "$url"
+          ls -lh data/maps/newzealand-latest.osm.pbf
+
+      - name: The plan (and the licence gates)
+        run: node scripts/data/build-pmtiles.mjs --source "${{ inputs.source_id || 'geofabrik-nz' }}" --input data/maps/newzealand-latest.osm.pbf
+
+      - name: Build the pack
+        run: |
+          set -euo pipefail
+          node scripts/data/build-pmtiles.mjs \
+            --source "${{ inputs.source_id || 'geofabrik-nz' }}" \
+            --input data/maps/newzealand-latest.osm.pbf \
+            --execute
+
+      - name: The pack and its evidence
+        run: |
+          set -euo pipefail
+          mkdir -p docs/evidence/maps/pack
+          cp apps/mobile/assets/maps/canterbury.pmtiles* docs/evidence/maps/pack/
+          {
+            echo "# The Canterbury pack build"
+            echo
+            echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo
+            echo '```json'
+            cat apps/mobile/assets/maps/canterbury.manifest.json
+            echo '```'
+            echo
+            echo "Tools:"
+            cat .tools/planetiler.version .tools/pmtiles.version
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: canterbury-pack
+          path: |
+            apps/mobile/assets/maps/canterbury.pmtiles
+            apps/mobile/assets/maps/canterbury.manifest.json
+            docs/evidence/maps/pack/
+          retention-days: 30
+        if-no-files-found: error

@@ -25,7 +25,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /** The pack the app reads (apps/mobile/src/maps/offlinePack.ts). */
 const PACK_DIRECTORY = join('apps', 'mobile', 'assets', 'maps');
@@ -35,6 +35,33 @@ const PACK_FORMAT_VERSION = 1;
 const PACK_REGION = 'canterbury';
 
 /** The pack has to stay under this ceiling (V4 11.1). */
+
+/**
+ * The heap planetiler gets, in gigabytes.
+ *
+ * planetiler's README: give the JVM about 0.5x the input `.osm.pbf`, leaving the rest of the
+ * machine's RAM for the memory-mapped files. The New Zealand extract is around 400 MB, the
+ * OpenMapTiles profile is the heaviest one, and the runner is shared: 4 GB is the margin the
+ * build was verified with. The value travels in `JAVA_TOOL_OPTIONS`, which the launcher, the
+ * jar and Homebrew all read (the launcher's `--memory` flag is launcher-only).
+ */
+const PLANETILER_HEAP_GB = Number(process.env.MAP_PACK_PLANETILER_HEAP_GB || 4);
+
+/** The tools the build runs, and how each was pinned. */
+const PINNED_TOOLS = {
+  planetiler: {
+    /** The release the workflow downloads by this exact asset name. */
+    asset: 'planetiler.jar',
+    download: 'https://github.com/onthegomap/planetiler/releases/latest/download/planetiler.jar',
+    licence: 'Apache-2.0',
+  },
+  pmtiles: {
+    asset: 'pmtiles_linux_amd64',
+    download:
+      'https://github.com/protomaps/go-pmtiles/releases/latest/download/pmtiles_linux_amd64',
+    licence: 'BSD-3-Clause',
+  },
+};
 const PACK_SIZE_CEILING_BYTES = 50 * 1024 * 1024;
 
 /** The working envelope of the region, from packages/shared/src/constants.ts. */
@@ -343,6 +370,10 @@ function buildPlan(source, args) {
   const output = args.output
     ? resolve(REPO_ROOT, args.output)
     : resolve(REPO_ROOT, PACK_DIRECTORY, PACK_FILE);
+  const tileset = args.output
+    ? `${resolve(REPO_ROOT, args.output).replace(/\.pmtiles$/, '')}.tileset.pmtiles`
+    : `${resolve(REPO_ROOT, PACK_DIRECTORY, PACK_FILE).replace(/\.pmtiles$/, '')}.tileset.pmtiles`;
+
   const bbox = [
     CANTERBURY_BOUNDS.west,
     CANTERBURY_BOUNDS.south,
@@ -353,6 +384,7 @@ function buildPlan(source, args) {
   return {
     source,
     output,
+    tileset,
     manifest: join(dirname(output), PACK_MANIFEST),
     bbox,
     minZoom: args.minZoom,
@@ -374,18 +406,26 @@ function printPlan(plan) {
   console.log(`  bbox             ${plan.bbox}`);
   console.log(`  zooms            ${plan.minZoom} to ${plan.maxZoom}`);
   console.log(`  pack             ${plan.output}`);
+  console.log(`  tileset          ${plan.tileset} (the whole-country build, removed with the pack)`);
   console.log(`  manifest         ${plan.manifest}`);
   console.log(`  size ceiling     ${PACK_SIZE_CEILING_BYTES} bytes`);
   console.log('');
   console.log('  The build runs these steps:');
   console.log(
-    `    1. planetiler --area=christchurch --output=<tiles>   (the tileset from the extract)`,
+    `    1. planetiler --osm-path=<extract> --output=<tileset> --force   (the OpenMapTiles tileset)`,
   );
   console.log(`    2. pmtiles extract <tiles> <pack> --bbox=${plan.bbox} --maxzoom=${plan.maxZoom} --minzoom=${plan.minZoom}`);
-  console.log(`    3. versatiles reduce --style courier.json <pack>    (the style-driven size cut)`);
-  console.log(`    4. sha256 of the pack, written into ${PACK_MANIFEST}`);
+  console.log(`    3. pmtiles verify <pack>    (the archive is ordered, its header is right)`);
+  console.log(`    4. pmtiles show --header-json <pack>    (the real header, in the manifest)`);
+  console.log(`    5. sha256 and the tool versions, written into ${PACK_MANIFEST}`);
   console.log('');
-  console.log('  The tools are pinned by SHA-256; record the versions in the manifest.');
+  console.log(
+    `  Heap: JAVA_TOOL_OPTIONS=-Xmx${PLANETILER_HEAP_GB}g (planetiler README: ~0.5x the .osm.pbf)`,
+  );
+  console.log(
+    '  The tools are pinned by the workflow that runs this script (MAP_PACK workflow, map-pack.yml);',
+  );
+  console.log('  their versions are recorded in the manifest with the pack.');
   console.log('  Nothing is downloaded by this script: the extract has to be on the machine.');
 }
 
@@ -399,6 +439,16 @@ function requireTool(tool) {
     process.exit(1);
   }
 }
+
+/**
+ * The credit the OpenMapTiles schema and profile require.
+ *
+ * planetiler's README: "Any map generated with the profile based on OpenMapTiles or a derivative
+ * must visibly credit OpenMapTiles." The app shows the pack manifest's attribution offline, and
+ * this is where it comes from.
+ */
+const OPENMAPTILES_ATTRIBUTION =
+  'Vector tiles and schema derived from OpenMapTiles, licensed under CC BY 4.0, (c) OpenMapTiles contributors';
 
 function sha256Of(file) {
   return createHash('sha256').update(readFileSync(file)).digest('hex');
@@ -426,23 +476,50 @@ function executePlan(plan) {
 
   mkdirSync(dirname(plan.output), { recursive: true });
 
-  console.log(`build-pmtiles: building with planetiler ${planetilerVersion} and pmtiles ${pmtilesVersion}`);
+  console.log(
+    `build-pmtiles: building with planetiler ${planetilerVersion} and pmtiles ${pmtilesVersion}, heap ${PLANETILER_HEAP_GB}g`,
+  );
+
+  // planetiler's built-in profile is OpenMapTiles, which is the schema
+  // apps/mobile/src/maps/styles.ts reads (its `roads`, `water`, `buildings`
+  // source layers, with `render_height` on the buildings). The input is the
+  // extract on disk: `--osm-path` is the documented flag for that, and
+  // `--force` keeps a previous build from stopping this one.
   execFileSync(
     'planetiler',
-    ['--area=christchurch', `--download=${plan.input}`, `--output=${plan.output}.tiles`],
-    { stdio: 'inherit' },
+    ['--osm-path=' + plan.input, '--output=' + plan.tileset, '--force'],
+    {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        JAVA_TOOL_OPTIONS: '-Xmx' + PLANETILER_HEAP_GB + 'g',
+      },
+    },
   );
+
+  // The tileset covers the whole country; the pack is Canterbury at the
+  // zooms the courier drives at. The bbox order is the CLI's:
+  // MIN_LON,MIN_LAT,MAX_LON,MAX_LAT.
   execFileSync(
     'pmtiles',
     [
       'extract',
-      `${plan.output}.tiles`,
+      plan.tileset,
       plan.output,
-      `--bbox=${plan.bbox}`,
-      `--maxzoom=${plan.maxZoom}`,
-      `--minzoom=${plan.minZoom}`,
+      '--bbox=' + plan.bbox,
+      '--maxzoom=' + plan.maxZoom,
+      '--minzoom=' + plan.minZoom,
     ],
     { stdio: 'inherit' },
+  );
+
+  // The check the extract cannot do for itself: the archive is ordered and
+  // its header says what the extract step produced.
+  execFileSync('pmtiles', ['verify', plan.output], { stdio: 'inherit' });
+  const header = JSON.parse(
+    execFileSync('pmtiles', ['show', plan.output, '--header-json'], {
+      encoding: 'utf8',
+    }),
   );
 
   const bytes = statSync(plan.output).size;
@@ -461,11 +538,25 @@ function executePlan(plan) {
     source: plan.source.title,
     sourceLicence: plan.source.licence,
     sourceLicenceUrl: plan.source.licenceUrl,
-    attribution: plan.source.attribution,
+    // Every party that must be credited: the data, the tool schema and the
+    // profile the tiles are baked with. planetiler's README is explicit
+    // that an OpenMapTiles-derived pack carries the OpenMapTiles credit.
+    attribution: [plan.source.attribution, OPENMAPTILES_ATTRIBUTION].join(' '),
     minZoom: plan.minZoom,
     maxZoom: plan.maxZoom,
     bytes,
     sha256: sha256Of(plan.output),
+    archive: {
+      minZoom: header.minZoom,
+      maxZoom: header.maxZoom,
+      tileType: header.tileType,
+      tileCompression: header.tileCompression,
+      bounds: header.bounds,
+    },
+    tools: {
+      planetiler: { ...PINNED_TOOLS.planetiler, version: planetilerVersion },
+      pmtiles: { ...PINNED_TOOLS.pmtiles, version: pmtilesVersion },
+    },
   };
 
   writeFileSync(plan.manifest, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
