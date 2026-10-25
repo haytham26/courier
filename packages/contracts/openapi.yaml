@@ -146,6 +146,26 @@ paths:
         '503':
           description: No OCR provider is configured yet (the OmniRoute gateway is a founder item)
 
+  /account/entitlements:
+    get:
+      tags: [account]
+      summary: The caller's entitlement, and what it opens
+      description: |
+        The app gates on "is this subscription active" and never on how it was
+        paid (D44). A courier whose card is failing still answers `active`: the
+        grace window is the rule (ADR-017 §1). A courier with no subscription gets
+        a named free answer (`plan: null`), never an error.
+      operationId: get_entitlements
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: The caller's entitlement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entitlement'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /shifts/{shift_id}/stops:
     get:
       tags: [shifts]
@@ -590,6 +610,24 @@ components:
           type: string
         message:
           type: string
+
+    Entitlement:
+      type: object
+      required: [active, features]
+      properties:
+        active:
+          type: boolean
+          description: Whether the subscription covers today
+        plan:
+          type: string
+          nullable: true
+          enum: [trial, solo, team, null]
+          description: The plan on the subscription, when there is one
+        features:
+          type: array
+          description: What the plan opens, sorted
+          items:
+            type: string
 
     IntakeText:
       type: object

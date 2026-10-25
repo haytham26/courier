@@ -23,6 +23,7 @@ from sqlalchemy import bindparam, create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
+from .entitlements import Plan, SubscriptionState, SubscriptionView
 from .locations import canonical_address, location_id_for
 from .routing import PlannedStop, RoutePlan, RunTemplate
 from .sequencing import Segment
@@ -46,6 +47,20 @@ def _parse_segments(document: object) -> tuple[Segment, ...]:
             )
         )
     return tuple(segments)
+
+
+def _subscription_row(row: Any) -> SubscriptionRow:
+    """A stored subscription row as the API reads it (ADR-017)."""
+    return SubscriptionRow(
+        courier_id=row["courier_id"],
+        plan=Plan(row["plan"]),
+        state=SubscriptionState(row["state"]),
+        source=row["source"],
+        source_id=row["source_id"],
+        started_at=row["started_at"],
+        renews_at=row["renews_at"],
+        ends_at=row["ends_at"],
+    )
 
 
 def _parse_stop_order(document: object) -> tuple[UUID, ...]:
@@ -119,6 +134,20 @@ class RunRecord:
     capacity_parcels: int | None
     speed_kmh: float
     start_at: datetime
+
+
+@dataclass(frozen=True)
+class SubscriptionRow(SubscriptionView):
+    """One courier's subscription as the database stores it (ADR-017).
+
+    The source is recorded, never decided on: `play`, `appstore`, `stripe` and
+    `team` are data on the row, so the founder's launch choice is a config
+    switch rather than a code path (D44). The view's fields are the ones the
+    decision reads; these are the ones the row keeps."""
+
+    source: str = ""
+    source_id: str | None = None
+    renews_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -203,6 +232,16 @@ class Repo(Protocol):
         """Upsert by (courier, location, kind); True when the kind was new."""
         ...
 
+    def get_subscription(self, courier_id: str) -> SubscriptionRow | None:
+        """The courier's subscription, when they have one (ADR-017)."""
+
+    def put_subscription(self, row: SubscriptionRow) -> bool:
+        """Store the fact; `True` when the row is new, `False` when it corrected one.
+
+        Idempotent on the courier the way the sync path is on the event: a
+        provider retries and the gateway duplicates, and neither may move a
+        courier's access by accident."""
+
     def put_run_template(self, run_id: UUID, template: RunTemplate) -> None:
         """Stores the locked template and replaces the run's street order.
 
@@ -228,9 +267,10 @@ STATUS_KINDS = frozenset({"delivered", "skipped", "deferred", "failed"})
 class InMemoryRepo:
     """The repository the tests use: the same contract, no database."""
 
+    runs: dict[UUID, RunRecord] = field(default_factory=dict)
+    subscriptions: dict[str, SubscriptionRow] = field(default_factory=dict)
     events: dict[UUID, DeliveryEventRow] = field(default_factory=dict)
     by_shift: dict[UUID, list[UUID]] = field(default_factory=dict)
-    runs: dict[UUID, RunRecord] = field(default_factory=dict)
     run_stops: dict[UUID, list[RouteStopRow]] = field(default_factory=dict)
     templates: dict[UUID, RunTemplate] = field(default_factory=dict)
     routes: dict[UUID, RoutePlan] = field(default_factory=dict)
@@ -252,6 +292,14 @@ class InMemoryRepo:
 
     def cursor(self, shift_id: UUID) -> int:
         return len(self.by_shift.get(shift_id, []))
+
+    def get_subscription(self, courier_id: str) -> SubscriptionRow | None:
+        return self.subscriptions.get(courier_id)
+
+    def put_subscription(self, row: SubscriptionRow) -> bool:
+        existing = self.subscriptions.get(row.courier_id)
+        self.subscriptions[row.courier_id] = row
+        return existing is None
 
     def put_run(self, run: RunRecord) -> None:
         if run.id in self.runs:
@@ -365,6 +413,46 @@ class SqlAlchemyRepo:
 
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
+
+    def get_subscription(self, courier_id: str) -> SubscriptionRow | None:
+        statement = text(
+            """
+            SELECT courier_id, plan, state, source, source_id, started_at, renews_at, ends_at
+            FROM subscriptions
+            WHERE courier_id = :courier_id
+            """
+        )
+        with self._engine.connect() as connection:
+            row = connection.execute(statement, {"courier_id": courier_id}).mappings().first()
+        return _subscription_row(row) if row else None
+
+    def put_subscription(self, row: SubscriptionRow) -> bool:
+        statement = text(
+            """
+            INSERT INTO subscriptions
+                (courier_id, plan, state, source, source_id, started_at, renews_at, ends_at)
+            VALUES (:courier_id, :plan, :state, :source, :source_id, :started_at,
+                    :renews_at, :ends_at)
+            ON CONFLICT (courier_id) DO UPDATE SET
+                plan = :plan, state = :state, source = :source, source_id = :source_id,
+                renews_at = :renews_at, ends_at = :ends_at, updated_at = now()
+            """
+        )
+        with self._engine.begin() as connection:
+            connection.execute(
+                statement,
+                {
+                    "courier_id": row.courier_id,
+                    "plan": row.plan.value,
+                    "state": row.state.value,
+                    "source": row.source,
+                    "source_id": row.source_id,
+                    "started_at": row.started_at,
+                    "renews_at": row.renews_at,
+                    "ends_at": row.ends_at,
+                },
+            )
+        return True
 
     def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
         if not events:
