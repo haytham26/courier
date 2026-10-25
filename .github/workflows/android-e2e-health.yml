@@ -79,7 +79,7 @@ jobs:
           cd apps/mobile/android
           ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
       - name: Upload the APK
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b43607fa02 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: courier-health-apk
           path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
@@ -180,7 +180,7 @@ jobs:
           } | tee .maestro/evidence/e2e-pins.txt
       - name: Upload the run's own evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b43607fa02 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: health-api${{ matrix.api }}-run${{ matrix.iteration }}
           path: |
