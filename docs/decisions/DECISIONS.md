@@ -164,3 +164,19 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
 - ADR-014. The event log is append-only: an identical replay is an ack, a divergent same-id replay is a conflict whose id returns in `SyncResponse.conflicts` (the stored row wins; silent divergence is forbidden). A correction is a new event.
 - The stop status is the latest event by `occurred_at`, ties by arrival; no kind outranks another (the sync squad's C3, "first accepted wins", is superseded). `occurred_at` beyond 1 hour in the future or 7 days in the past is a 422 for the batch.
 - `append_events` answers `AppendResult(stored, conflicts)` in both repositories, so the rules are pinned by the same tests on the in-memory and SQL paths.
+
+## D43 — Android first, then iOS; one cross-platform code base (2026-10-25, founder decision)
+
+- Android reaches full quality first (MASTER_EXECUTION §6 Definition of Done, all 13 screens, E2E green 3 runs in a row, the founder's "Android OK" on a real phone). iOS starts only after that gate.
+- From now on: no Android-only solution when a cross-platform one exists, and every new native dependency must document iOS support (IOS_PLAN §0).
+- The full iOS plan (the founder's accounts, the simulator build, iOS E2E in CI, the Apple-specific items, TestFlight, the App Store) is `docs/plan/IOS_PLAN.md`.
+
+## D44 — Billing: build for every option, the founder picks the mix before launch (2026-10-25, founder decision)
+
+- The launch customer is the individual contractor driver, who pays for themself.
+- Build the entitlement layer so the app gates on "is this subscription active", never on how it was paid, and the server accepts more than one source. The sources to support:
+  1. Store in-app purchase: Google Play Billing and Apple StoreKit, through the RevenueCat-shaped layer in `docs/research/2026/payments-subscriptions.md`. This one is built first, because any subscription sold inside the app must use it.
+  2. Web checkout with Stripe (cards, NZD, GST-inclusive), sold outside the app.
+  3. The Team plan's org billing (one payer for several drivers), on top of 2.
+- Sources 2 and 3 are built behind a config switch, off by default, with stripe-mock tests, after source 1 and before launch. The founder chooses which sources are switched on at launch; that choice is a FOUNDER_TODO decision, not something to decide now.
+- The store rules are permanent, not a launch-only condition: a digital subscription sold inside the app always uses the store's billing. In New Zealand the app may not link to or promote a web price (no Play alternative billing in NZ; Apple's external-link entitlement does not cover NZ, research §4). A web sale is allowed outside the app, and those users may then sign in and use the app (Apple 3.1.3(b)).
