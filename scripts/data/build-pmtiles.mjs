@@ -450,6 +450,26 @@ function requireTool(tool) {
 const OPENMAPTILES_ATTRIBUTION =
   'Vector tiles and schema derived from OpenMapTiles, licensed under CC BY 4.0, (c) OpenMapTiles contributors';
 
+/**
+ * The archive header as the CLI prints it.
+ *
+ * The build refuses to continue without it: the manifest's job is to be the
+ * evidence of what shipped, and a manifest with a guessed header is not
+ * evidence.
+ */
+function archiveHeader(file) {
+  const printed = execFileSync('pmtiles', ['show', file, '--header-json'], {
+    encoding: 'utf8',
+  });
+  try {
+    return JSON.parse(printed);
+  } catch (error) {
+    console.error('build-pmtiles: the archive header did not parse as JSON.');
+    console.error(error);
+    process.exit(1);
+  }
+}
+
 function sha256Of(file) {
   return createHash('sha256').update(readFileSync(file)).digest('hex');
 }
@@ -516,11 +536,7 @@ function executePlan(plan) {
   // The check the extract cannot do for itself: the archive is ordered and
   // its header says what the extract step produced.
   execFileSync('pmtiles', ['verify', plan.output], { stdio: 'inherit' });
-  const header = JSON.parse(
-    execFileSync('pmtiles', ['show', plan.output, '--header-json'], {
-      encoding: 'utf8',
-    }),
-  );
+  const header = archiveHeader(plan.output);
 
   const bytes = statSync(plan.output).size;
   if (bytes > PACK_SIZE_CEILING_BYTES) {
@@ -546,13 +562,10 @@ function executePlan(plan) {
     maxZoom: plan.maxZoom,
     bytes,
     sha256: sha256Of(plan.output),
-    archive: {
-      minZoom: header.minZoom,
-      maxZoom: header.maxZoom,
-      tileType: header.tileType,
-      tileCompression: header.tileCompression,
-      bounds: header.bounds,
-    },
+    // The tool's own header, verbatim: its keys are the tool's business
+    // (`tile_type`, `tile_compression`, ... - snake_case in this version), and
+    // guessing them is how a manifest records undefined.
+    archive: { header },
     tools: {
       planetiler: { ...PINNED_TOOLS.planetiler, version: planetilerVersion },
       pmtiles: { ...PINNED_TOOLS.pmtiles, version: pmtilesVersion },

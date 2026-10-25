@@ -41,9 +41,13 @@ official documentation on 2026-10-25:
    --minzoom=6` — the whole-country tileset clipped to the courier's envelope, in the CLI's own
    bbox order.
 3. `pmtiles verify <pack>` — the archive is ordered and its header is right.
-4. `pmtiles show --header-json <pack>` — the real header recorded, not the requested one.
-5. The sha256, the tool versions and the OpenMapTiles credit written into
-   `canterbury.manifest.json`.
+4. `pmtiles show --header-json <pack>` — the tool's own header JSON, recorded in the manifest
+   **verbatim**. The tool prints snake_case keys (`tile_type`, `tile_compression` — its own test
+   asserts those), and the first version of this step read camelCase guesses that would have
+   recorded `undefined`; recording the tool's own output is the version that cannot lie.
+5. The sha256, the tool versions, the archive header and the OpenMapTiles credit written into
+   `canterbury.manifest.json`. A header that does not parse fails the build: the manifest's job is
+   to be the evidence of what shipped.
 
 The licence gates are unchanged and stay ahead of every step: a source whose terms forbid the
 offline use is refused whatever the workflow asks for, and an unregistered source needs the
