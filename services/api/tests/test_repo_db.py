@@ -238,9 +238,63 @@ class TestTheEvents:
         # THE rowcount question the in-memory repo cannot answer: the
         # executemany with ON CONFLICT DO NOTHING must count only the
         # inserted rows, or the sync's `accepted` lies to the phone.
-        assert first == 2
-        assert replay == 0
+        assert first.stored == 2
+        assert first.conflicts == ()
+        assert replay.stored == 0
+        assert replay.conflicts == ()
         assert repo.cursor(shift_id) == 2
+
+        divergent = DeliveryEventRow(
+            id=rows[0].id,
+            shift_id=shift_id,
+            stop_id=stop_id,
+            kind="failed",
+            utterance=None,
+            safe_place=None,
+            lat=None,
+            lon=None,
+            accuracy_m=None,
+            occurred_at=rows[0].occurred_at,
+        )
+        conflict = repo.append_events(shift_id, [divergent])
+
+        assert conflict.stored == 0
+        assert conflict.conflicts == (rows[0].id,)
+        assert repo.get_event(rows[0].id) == rows[0]  # the stored row wins
+
+        # The same id twice in ONE batch: the first copy wins and the
+        # divergence is reported, exactly like the in-memory repo.
+        clash_id = uuid.uuid4()
+        at = datetime(2026, 10, 25, 8, 0, tzinfo=UTC)
+        original = DeliveryEventRow(
+            id=clash_id,
+            shift_id=shift_id,
+            stop_id=stop_id,
+            kind="delivered",
+            utterance=None,
+            safe_place=None,
+            lat=None,
+            lon=None,
+            accuracy_m=None,
+            occurred_at=at,
+        )
+        changed = DeliveryEventRow(
+            id=clash_id,
+            shift_id=shift_id,
+            stop_id=stop_id,
+            kind="failed",
+            utterance=None,
+            safe_place=None,
+            lat=None,
+            lon=None,
+            accuracy_m=None,
+            occurred_at=at,
+        )
+        batch = repo.append_events(shift_id, [original, changed])
+
+        assert batch.stored == 1
+        assert batch.conflicts == (clash_id,)
+        assert repo.get_event(clash_id) == original
 
     def test_an_event_is_readable_by_id(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
         shift_id = a_shift(engine)

@@ -19,7 +19,7 @@ from functools import lru_cache
 from typing import Any, Protocol
 from uuid import UUID
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import bindparam, create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
@@ -77,6 +77,33 @@ class DeliveryEventRow:
     lon: float | None
     accuracy_m: float | None
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class AppendResult:
+    """What an append did: the new rows, and the diverging replays (ADR-014).
+
+    A conflict is a same-id replay whose content differs: the stored row
+    wins, the incoming copy is discarded, and the id travels back to the
+    phone so it can surface the divergence instead of living it."""
+
+    stored: int
+    conflicts: tuple[UUID, ...] = ()
+
+
+def _same_event(stored: DeliveryEventRow, incoming: DeliveryEventRow) -> bool:
+    """Whether a replay carries exactly what is already stored."""
+    return (
+        stored.shift_id == incoming.shift_id
+        and stored.stop_id == incoming.stop_id
+        and stored.kind == incoming.kind
+        and stored.utterance == incoming.utterance
+        and stored.safe_place == incoming.safe_place
+        and stored.lat == incoming.lat
+        and stored.lon == incoming.lon
+        and stored.accuracy_m == incoming.accuracy_m
+        and stored.occurred_at == incoming.occurred_at
+    )
 
 
 @dataclass(frozen=True)
@@ -147,12 +174,9 @@ class Repo(Protocol):
         """The courier's own runs, newest first, bounded."""
         ...
 
-    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> int:
-        """Stores the events, ignoring the ones already stored.
-
-        Returns:
-            The number of events that were new.
-        """
+    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
+        """Stores the events; an identical replay is an ack, a divergent one a
+        conflict the caller reports (ADR-014: the stored row wins)."""
 
     def cursor(self, shift_id: UUID) -> int:
         """The number of events stored for the shift (the sync cursor)."""
@@ -212,15 +236,19 @@ class InMemoryRepo:
     routes: dict[UUID, RoutePlan] = field(default_factory=dict)
     location_notes: dict[tuple[str, UUID, str], LocationNoteRow] = field(default_factory=dict)
 
-    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> int:
+    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
         stored = 0
+        conflicts: list[UUID] = []
         for event in events:
-            if event.id in self.events:
+            existing = self.events.get(event.id)
+            if existing is not None:
+                if not _same_event(existing, event):
+                    conflicts.append(event.id)
                 continue
             self.events[event.id] = event
             self.by_shift.setdefault(shift_id, []).append(event.id)
             stored += 1
-        return stored
+        return AppendResult(stored=stored, conflicts=tuple(conflicts))
 
     def cursor(self, shift_id: UUID) -> int:
         return len(self.by_shift.get(shift_id, []))
@@ -338,9 +366,24 @@ class SqlAlchemyRepo:
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
 
-    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> int:
+    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
         if not events:
-            return 0
+            return AppendResult(stored=0)
+        existing = self._existing_events([event.id for event in events])
+        conflicts = [
+            event.id
+            for event in events
+            if event.id in existing and not _same_event(existing[event.id], event)
+        ]
+        # A batch carrying the same id twice with different content is a
+        # divergence too: the insert keeps the first copy, and the phone is
+        # told - the in-memory repo answers the same way.
+        first_copy: dict[UUID, DeliveryEventRow] = {}
+        for event in events:
+            first = first_copy.setdefault(event.id, event)
+            if first is not event and not _same_event(first, event):
+                conflicts.append(event.id)
+        deduped = tuple(dict.fromkeys(conflicts))
         statement = text(
             """
             INSERT INTO delivery_events
@@ -368,7 +411,35 @@ class SqlAlchemyRepo:
         ]
         with self._engine.begin() as connection:
             result = connection.execute(statement, parameters)
-            return int(result.rowcount or 0)
+        return AppendResult(stored=int(result.rowcount or 0), conflicts=deduped)
+
+    def _existing_events(self, ids: list[UUID]) -> dict[UUID, DeliveryEventRow]:
+        """The stored rows for the batch's ids, for the conflict comparison."""
+        statement = text(
+            """
+            SELECT id, shift_id, stop_id, kind, utterance, safe_place, lat, lon,
+                   accuracy_m, occurred_at
+            FROM delivery_events
+            WHERE id IN :ids
+            """
+        ).bindparams(bindparam("ids", expanding=True))
+        with self._engine.connect() as connection:
+            rows = connection.execute(statement, {"ids": ids}).mappings().all()
+        return {
+            row["id"]: DeliveryEventRow(
+                id=row["id"],
+                shift_id=row["shift_id"],
+                stop_id=row["stop_id"],
+                kind=row["kind"],
+                utterance=row["utterance"],
+                safe_place=row["safe_place"],
+                lat=row["lat"],
+                lon=row["lon"],
+                accuracy_m=row["accuracy_m"],
+                occurred_at=row["occurred_at"],
+            )
+            for row in rows
+        }
 
     def get_event(self, event_id: UUID) -> DeliveryEventRow | None:
         statement = text(
