@@ -90,12 +90,12 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 - POD storage is a local directory; object storage is a later slice (the seam isolates it).
 - No rate limiter (recorded in ADR-010 §Limitations, not silently skipped).
 
-## 2026-10-25 — Queue 2, item 1: the quality audit (branch ' + chr(96) + 'chore/audit-backend' + chr(96) + ')
+## 2026-10-25 — Queue 2, item 1: the quality audit (branch `chore/audit-backend`)
 
 - **The founder findings fixed**: (a) the generated coverage summaries untracked (.gitignore
   already listed them - the entries never took effect on tracked files); (b) the contract whole
   again (it never had the route endpoint the app reads daily, the auth routes or /healthz; the
-  /locations path was a duplicate YAML key) + the drift guard (' + chr(96) + 'tests/test_contract.py' + chr(96) +
+  /locations path was a duplicate YAML key) + the drift guard (`tests/test_contract.py' + chr(96) +
   ': served subset-of contract, non-planned contract subset-of served, operationIds equal -
   reconciled to the API route names).
 - **The deep audit (services/)**: 8 must-fixes, all applied - the sync batch bound + the event
@@ -113,7 +113,47 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 
 | Step | Skills read and followed | How they changed the work |
 | --- | --- | --- |
-| The audit | ' + chr(96) + 'code-review-and-quality' + chr(96) + ', ' + chr(96) + 'security-and-hardening' + chr(96) + ' | Two fresh-context auditors (services/ deep, repo-wide read-only) ran BEFORE any new feature, per the founder order; the route-by-route authz walk and the STRIDE pass produced the findings. |
-| The fixes | ' + chr(96) + 'test-driven-development' + chr(96) + ' | The stop-ownership and the WS-frame fixes carry tests that reproduce the abuse (the invented stop, the foreign shift, the malformed frame); the drift guard carries a not-vacuous test. |
-| The findings ledger | ' + chr(96) + 'constraint-driven-development' + chr(96) + ', ' + chr(96) + 'documentation-and-adrs' + chr(96) + ' | Nothing parked in memory: BUG-053..059 carry file, evidence and owner; the lead list is in CURRENT-backend.md. |
+| The audit | `code-review-and-quality`, `security-and-hardening` | Two fresh-context auditors (services/ deep, repo-wide read-only) ran BEFORE any new feature, per the founder order; the route-by-route authz walk and the STRIDE pass produced the findings. |
+| The fixes | `test-driven-development` | The stop-ownership and the WS-frame fixes carry tests that reproduce the abuse (the invented stop, the foreign shift, the malformed frame); the drift guard carries a not-vacuous test. |
+| The findings ledger | `constraint-driven-development`, `documentation-and-adrs` | Nothing parked in memory: BUG-053..059 carry file, evidence and owner; the lead list is in CURRENT-backend.md. |
 
+## 2026-10-25 - Queue 2, item 2: the database in CI (branch `feat/db-in-ci`, merged PR #27)
+
+- The PostGIS 17.2 service container on the quality job (plain Postgres failed: the contract
+  schema needs PostGIS), the DB-backed \SqlAlchemyRepo\ suite (10 tests, the \db\ marker;
+  `addopts = -m 'not db'` deselects by default - a selection, never a skip), the restore drill
+  (seed -> dump inside the container -> restore into a clean DB -> the API round-trip) and the
+  short Locust SLO profile (minted throwaway ES256 identity, 50 users / 60 s, thresholds as the
+  failure criteria).
+- CI taught the truth three times: the lying-409 conflation (the constraint suffix now decides),
+  the runner's pg_dump 16 cannot read the server 17.5 (the dump runs inside the container), and
+  the vacuous green (the review's must-fix: a 2-request run printed 'SLOs met'; the floor is 100
+  and the first seeded run landed 180 requests, 0 failures).
+- Verified by CI (run 40127627265): DB suite 10 passed, drill \VERDICT: PASS | restore 0.4s\,
+  \SLOs met\. The E2E record: both legs green on a4e947a; later single-leg reds carried the
+  environment signature (BUG-060) with byte-identical app content.
+
+### Skills applied - item 2
+
+| Step | Skills read and followed | How they changed the work |
+| --- | --- | --- |
+| The CI wiring | \ci-cd-and-automation\ | Service-container pinning, health gates, no secret beyond the container-local throwaway, evidence logged. |
+| The DB suite | \	est-driven-development\, \source-driven-development\ | The executemany-rowcount and IntegrityError behaviours were verified against psycopg3/SQLAlchemy docs, then pinned by DB tests that only CI can run. |
+| The review | \code-review-and-quality\, \doubt-driven-development\ | The fresh-context reviewer found the vacuous green (a gate that greets nothing); its guard then caught the unseeded run in the very next CI pass. |
+
+## 2026-10-25 - Queue 2, item 3: POD object storage (branch `feat/pod-storage`)
+
+- ADR-011: one \PodStore\ interface, \LocalPodStore\ (default) + \S3PodStore\ (boto3, any
+  S3-compatible store; MinIO banned - AGPL-3.0; moto in tests - Apache-2.0).
+- The contract gained the presign URL (owner-only; foreign run/stop/event 404) and the local
+  streaming grant (HMAC over run+event+expiry, constant-time, 15 min). The upload writes through
+  the store, so the backend choice moves the bytes and the URL together.
+- Retention is a store primitive (\delete_run\), the seam the run/account deletion slices call.
+
+### Skills applied - item 3
+
+| Step | Skills read and followed | How it changed the work |
+| --- | --- | --- |
+| The design | `api-and-interface-design`, \documentation-and-adrs\ | The ADR first (the founder's rule), then the interface; two implementations behind one protocol. |
+| The storage | \security-and-hardening\, \source-driven-development\ | Signed URLs (short TTL), server-side key names, constant-time HMAC compare, magic-byte sniff kept ahead of storage; boto3 presign semantics checked against the docs. |
+| The tests | \	est-driven-development\ | The authz matrix (foreign run/stop/event), the tampered and expired grants, the moto-backed S3 lifecycle; the suite caught the duplicated settings class immediately. |

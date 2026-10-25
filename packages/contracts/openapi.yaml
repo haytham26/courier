@@ -440,6 +440,77 @@ paths:
         '413': { description: "The image exceeds 10 MiB" }
         '415': { description: "Not a JPEG/PNG/HEIC image (checked by magic bytes, not by name)" }
 
+  /runs/{run_id}/stops/{stop_id}/pod/{event_id}/url:
+    get:
+      tags: [stops]
+      summary: A short-lived URL for the stored proof-of-delivery photo
+      description: |
+        The owner of the run only; the stop must belong to the run and the
+        event to the stop (a foreign anything is 404, never a URL). On the
+        S3-compatible backend the URL is a presigned GET; on the local store
+        it is a self-verifying streaming grant. Both expire (15 minutes by
+        default) — the photo never streams through the API on S3.
+      operationId: pod_url
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: stop_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: event_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The dying URL and its expiry
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PodUrlResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /runs/{run_id}/pod/{event_id}/bytes:
+    get:
+      tags: [stops]
+      summary: Stream a stored POD photo with a short-lived grant (the local backend)
+      description: |
+        The local backend's answer to the presign endpoint: the URL itself
+        carries an HMAC grant over (run, event, expiry), because an image
+        loader cannot send a bearer header. A tampered, expired or foreign
+        grant is 404. The S3 backend never serves this route — its URLs point
+        at the object store.
+      operationId: pod_bytes
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: event_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: expires
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: signature
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: The image bytes
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/heic: { schema: { type: string, format: binary } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /runs/{run_id}/route:reopt:
     post:
       tags: [runs]
@@ -675,6 +746,16 @@ components:
         bytes: { type: integer }
         stored_at: { type: string, format: date-time }
         already_stored: { type: boolean }
+
+    PodUrlResponse:
+      type: object
+      required: [event_id, url, expires_at]
+      properties:
+        event_id: { type: string, format: uuid }
+        url:
+          type: string
+          description: Absolute or API-relative; fetch it before it expires
+        expires_at: { type: string, format: date-time }
 
     ReoptResponse:
       type: object

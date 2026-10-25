@@ -6,7 +6,6 @@ import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastapi import (
@@ -38,12 +37,11 @@ from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
 from .pod import (
     POD_MAX_BYTES,
-    pod_path,
     pod_settings,
-    save_pod,
     sniff_image_kind,
-    stored_pod_fingerprint,
+    validate_pod_settings,
 )
+from .pod_store import LocalPodStore, pod_store
 from .repo import DeliveryEventRow, Repo, RouteStopRow, RunRecord, get_repo
 from .routing import (
     RoutePlan,
@@ -60,6 +58,9 @@ from .sequencing import Segment
 
 # Fail fast when the API cannot verify tokens (no default secrets).
 get_auth_settings()
+# And when the POD store is misconfigured: a missing signing key or bucket
+# must stop the boot, not the first photo of the day.
+validate_pod_settings()
 
 app = FastAPI(title="Courier Copilot", version="0.1.0")
 
@@ -446,7 +447,7 @@ def upload_pod(
     if sniff_image_kind(content) is None:
         raise HTTPException(status_code=415, detail="the upload is not a JPEG, PNG or HEIC image")
 
-    directory = Path(pod_settings().pod_storage_dir)
+    store = pod_store(pod_settings())
     resolved_id = form.event_id if form.event_id is not None else uuid.uuid4()
     existing = repo.get_event(resolved_id)
     if existing is not None:
@@ -461,14 +462,13 @@ def upload_pod(
 
     replayed = existing is not None
 
-    path = pod_path(directory, run.id, resolved_id)
-    if replayed and path.exists():
-        stored_bytes, digest = stored_pod_fingerprint(path)
+    if replayed and store.exists(run.id, resolved_id):
+        stored_bytes, digest = store.fingerprint(run.id, resolved_id)
     else:
-        # Not a replay: the upload is the record, and a file that sits
-        # there without its own event row (a crash orphan, or a planted
-        # file) is overwritten by the genuine bytes.
-        _, digest = save_pod(directory, run.id, resolved_id, content)
+        # Not a replay: the upload is the record, and bytes that sit there
+        # without their own event row (a crash orphan, or a planted file)
+        # are overwritten by the genuine upload.
+        digest = store.save(run.id, resolved_id, content)
         stored_bytes = len(content)
 
     stored = repo.append_events(
@@ -499,6 +499,85 @@ def upload_pod(
             "already_stored": replayed or stored == 0,
         },
     )
+
+
+@app.get("/runs/{run_id}/pod/{event_id}/bytes")
+def pod_bytes(
+    run_id: uuid.UUID,
+    event_id: uuid.UUID,
+    expires: int,
+    signature: str,
+    repo: Repo = Depends(get_repo),
+):
+    """The local store's streaming grant (ADR-011 §2).
+
+    The phone's image loader cannot send a bearer header, so the URL itself
+    carries the authority: an HMAC over (run, event, expiry), minted only for
+    the run's owner by the presign endpoint and dead after 15 minutes. The
+    signature is checked in constant time, and the rows are still checked -
+    a deleted run or a foreign event serves nothing even with a valid grant.
+    """
+    store = pod_store(pod_settings())
+    if not isinstance(store, LocalPodStore) or not store.verify_stream_grant(
+        run_id, event_id, expires, signature
+    ):
+        raise HTTPException(status_code=404, detail="no photo at this URL")
+
+    run = repo.get_run(run_id)
+    event = repo.get_event(event_id)
+    if (
+        run is None
+        or event is None
+        or event.shift_id != run.shift_id
+        or event.kind != "pod_captured"
+    ):
+        raise HTTPException(status_code=404, detail="no photo at this URL")
+
+    try:
+        content = store.read_bytes(run_id, event_id)
+    except FileNotFoundError:
+        # A valid grant for an event whose bytes are gone (a deleted run, a
+        # failed upload) is still a 404, never a 500.
+        raise HTTPException(status_code=404, detail="no photo at this URL") from None
+    kind = sniff_image_kind(content)
+    media = {"jpeg": "image/jpeg", "png": "image/png", "heic": "image/heic"}.get(
+        kind or "", "application/octet-stream"
+    )
+    return Response(
+        content=content, media_type=media, headers={"Cache-Control": "private, max-age=900"}
+    )
+
+
+@app.get("/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url")
+def pod_url(
+    paths: Annotated[StopPaths, Depends()],
+    event_id: uuid.UUID,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """A short-lived URL the phone fetches the photo from (ADR-011 §2).
+
+    The same 404 discipline as every route: the run is the caller's, the
+    stop is in the run, the event belongs to the stop - a foreign anything
+    is 404, never a URL. The URL dies (15 minutes on the local store; the
+    S3 store's presigned GET carries its own expiry).
+    """
+    run = repo.get_run(paths.run_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run with this id")
+    if paths.stop_id not in {row.id for row in repo.get_run_stops(run.id)}:
+        raise HTTPException(status_code=404, detail="no stop with this id in this run")
+    event = repo.get_event(event_id)
+    if (
+        event is None
+        or event.shift_id != run.shift_id
+        or event.stop_id != paths.stop_id
+        or event.kind != "pod_captured"
+    ):
+        raise HTTPException(status_code=404, detail="no event with this id for this stop")
+
+    url, expires_at = pod_store(pod_settings()).presign_url(paths.run_id, event_id)
+    return {"url": url, "expires_at": expires_at.isoformat(), "event_id": str(event_id)}
 
 
 @app.post("/runs/{run_id}/route:reopt")
