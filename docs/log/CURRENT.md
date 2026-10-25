@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W43. **Local `main` == `origin/main` == `76cdc02`.**
+**Week:** 2026-W43. **Local `main` == `origin/main` == `5964340`.**
 
 ## Merged this session (each: merge commit → archive tag at the merge tip → branch deleted)
 
@@ -12,12 +12,13 @@
 | **#20** | 08 Route on the chosen tokens (the run as a timeline) | `archive/feat/t6-route` |
 | **#28** | 11 Settings on the chosen tokens | `archive/feat/t6-11-settings` |
 | **#15** | 06 Scan on the chosen tokens + the status precedence fix | `archive/feat/t6-scan` |
+| **#32** | 12 Driving at night (the same drive with the mode pinned) | `archive/feat/t6-12-driving-night` |
 
 ## Open, with their blockers
 
 | PR | What | Branch | Blocker |
 |---|---|---|---|
-| **#30** | 10 Summary | `feat/t6-10-summary` @ `afc703b` | **BUG-062** |
+| **#30** | 10 Summary | `feat/t6-10-summary` @ `af95c5c` | **BUG-062** |
 | **#18** | 07 Copilot | `feat/t6-copilot` @ `6aaaf8a` | **BUG-061** |
 | **#12** | the screen recordings | `feat/t6-recordings` | queued |
 
@@ -57,11 +58,12 @@ believed were `main`. Check `git branch --show-current` before every commit.
 
 ## Next items, in order
 
-1. PR #30: follow BUG-062's first experiment; the flow's evidence is in the run
-   logs, and the code side is proven.
+1. PR #30: follow BUG-062's first experiment (the deep link); the flow's evidence
+   is in the run logs, and the code side is proven. The branch now carries main,
+   so it merges cleanly once the gate is green.
 2. PR #12 (the recordings), then PR #18 per BUG-061.
-3. The remaining screens: 12 Driving at night, 13 Lock screen (the iOS parts
-   stay PARTIAL), 01 Welcome, 02 Sign in.
+3. The remaining screens: 13 Lock screen (the iOS parts stay PARTIAL),
+   01 Welcome, 02 Sign in.
 4. Then the whole of `docs/plan/MASTER_EXECUTION.md` in its §4 order.
 
 ## The traps
