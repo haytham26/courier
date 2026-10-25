@@ -13,11 +13,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Final
 
 
-class Plan(str, Enum):
+class Plan(StrEnum):
     """What the courier bought. The names are the ones the app prices (D44)."""
 
     TRIAL = "trial"
@@ -64,7 +64,7 @@ FEATURES: Final[dict[Plan, frozenset[str]]] = {
 }
 
 
-class SubscriptionState(str, Enum):
+class SubscriptionState(StrEnum):
     """Where the subscription stands. Only the live ones open the app."""
 
     TRIALING = "trialing"
