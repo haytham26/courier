@@ -38,7 +38,7 @@
  * URLs are the pages it was read from.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -78,7 +78,8 @@ const SOURCES = {
     licenceUrl:
       'https://www.linz.govt.nz/products-services/data/licensing-and-using-data/attributing-linz-data',
     licenceReadOn: '2026-10-22',
-    attribution: 'Sourced from the LINZ Data Service and licensed for reuse under the CC BY 4.0 licence',
+    attribution:
+      'Sourced from the LINZ Data Service and licensed for reuse under the CC BY 4.0 licence',
     required: true,
   },
   'osm-building-heights': {
@@ -219,7 +220,9 @@ function printUsage() {
 function resolveSource(id) {
   const known = SOURCES[id];
   if (!known) {
-    console.error(`build-3d-buildings: the source "${id}" is not registered, so its terms are unknown.`);
+    console.error(
+      `build-3d-buildings: the source "${id}" is not registered, so its terms are unknown.`,
+    );
     console.error(
       'build-3d-buildings: an unknown source is refused. Register it in this script with its licence, or use one of: ' +
         Object.keys(SOURCES).join(', '),
@@ -238,7 +241,9 @@ function resolveSource(id) {
 function checkTerms(sources) {
   for (const source of sources) {
     if (source.offlineUse === 'forbidden') {
-      console.error(`build-3d-buildings: refused. The terms of "${source.title}" forbid the offline use.`);
+      console.error(
+        `build-3d-buildings: refused. The terms of "${source.title}" forbid the offline use.`,
+      );
       console.error(`  "${source.offlineUseQuote}"`);
       console.error(`  Read on ${source.offlineUseReadOn} at ${source.offlineUseUrl}`);
       console.error(
@@ -310,19 +315,31 @@ function printPlan(plan) {
   );
   console.log('       schema (the profile is the argument; no flag can add a second source)');
   console.log(`    2. the height of a building: levels x ${LEVEL_HEIGHT_METRES} m,`);
-  console.log(`       or the height on the building, or ${DEFAULT_BUILDING_HEIGHT_METRES} m when there is neither`);
+  console.log(
+    `       or the height on the building, or ${DEFAULT_BUILDING_HEIGHT_METRES} m when there is neither`,
+  );
   console.log('    3. the buildings section of the manifest, with the licence of every input');
   console.log('');
-  console.log(
-    '  The tools are pinned by the workflow that runs this script (map-pack.yml);',
-  );
+  console.log('  The tools are pinned by the workflow that runs this script (map-pack.yml);');
   console.log('  their versions are recorded in the manifest with the pack.');
   console.log('  Nothing is downloaded by this script: the inputs have to be on the machine.');
 }
 
+/**
+ * The arguments that ask a tool for its version.
+ *
+ * planetiler takes `--version`; the pmtiles CLI is subcommand-based and only
+ * knows `version` (verified 2026-10-25).
+ */
+const VERSION_ARGS = {
+  planetiler: ['--version'],
+  pmtiles: ['version'],
+};
+
 function requireTool(tool) {
   try {
-    return execFileSync(tool, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    const args = VERSION_ARGS[tool] || ['--version'];
+    return execFileSync(tool, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   } catch {
     console.error(
       `build-3d-buildings: ${tool} is not on the PATH, so the build cannot run. Install the pinned version and try again.`,
@@ -344,7 +361,10 @@ const source = resolveSource(args.source);
 
 // Every source that goes into the build is checked, not only the one that
 // was named on the command line.
-const sources = [source, ...REQUIRED_SOURCES.filter((id) => id !== args.source).map((id) => SOURCES[id])];
+const sources = [
+  source,
+  ...REQUIRED_SOURCES.filter((id) => id !== args.source).map((id) => SOURCES[id]),
+];
 checkTerms(sources);
 
 const plan = {
@@ -354,6 +374,10 @@ const plan = {
   outlines: args.outlines ? resolve(REPO_ROOT, args.outlines) : null,
   extract: args.extract ? resolve(REPO_ROOT, args.extract) : null,
   manifest: resolve(REPO_ROOT, args.manifest),
+  // The overlay profile the operator passes: a second data source rides a
+  // profile, so the bake needs it as an argument and the gate reads it.
+  profile: args.profile ? resolve(REPO_ROOT, args.profile) : null,
+  tileset: `${resolve(REPO_ROOT, args.manifest)}.buildings.pmtiles`,
 };
 
 // The manifest can be printed on its own, so the licences can be checked
@@ -384,15 +408,11 @@ if (!args.execute) {
 // and no `--profile=courier`. Without a profile of our own the build says so
 // instead of failing inside a tool with a flag it does not know.
 if (!plan.profile) {
-  console.error(
-    'build-3d-buildings: the bake needs the overlay profile as an argument.',
-  );
+  console.error('build-3d-buildings: the bake needs the overlay profile as an argument.');
   console.error(
     '  A second data source rides a planetiler profile, not a flag: write the profile that adds the',
   );
-  console.error(
-    '  LINZ outlines to the OpenMapTiles schema (the app reads that schema) and pass',
-  );
+  console.error('  LINZ outlines to the OpenMapTiles schema (the app reads that schema) and pass');
   console.error('  --profile=<path-to-the-profile>.java (the single-file form).');
   console.error(
     '  The pack build (build-pmtiles.mjs) already bakes the OSM buildings with render_height, so the',
@@ -405,8 +425,6 @@ if (!plan.profile) {
 }
 
 const planetilerVersion = requireTool('planetiler');
-
-const tileset = `${plan.manifest}.buildings.pmtiles`;
 
 if (!plan.outlines || !plan.extract) {
   console.error(

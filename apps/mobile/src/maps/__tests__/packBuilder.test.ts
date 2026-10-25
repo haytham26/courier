@@ -14,6 +14,8 @@
  * lives in `docs/evidence/maps/pack/`.
  */
 import { execFileSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const REPO_ROOT = resolve(__dirname, '../../../../..');
@@ -157,16 +159,32 @@ describe('the 3D buildings script', () => {
   });
 
   it('still prints the plan and writes the manifest, because those are real', () => {
-    const result = runScript(BUILDINGS_SCRIPT, [
-      '--source',
-      'linz-nz-building-outlines',
-      '--write-manifest',
-      'docs/evidence/maps/buildings.manifest.json',
-    ]);
+    // A test writes its manifest to a temp path, never to the evidence
+    // directory the workflow fills with a real build's numbers.
+    const scratch = mkdtempSync(join(tmpdir(), 'pack-builder-'));
+    try {
+      const manifestPath = join(scratch, 'buildings.manifest.json');
+      const result = runScript(BUILDINGS_SCRIPT, [
+        '--source',
+        'linz-nz-building-outlines',
+        '--write-manifest',
+        manifestPath,
+      ]);
 
-    expect(result.code).toBe(0);
-    expect(result.out).toContain('wrote');
-    expect(result.out).toContain('Creative Commons');
-    expect(result.out).toContain('linz-nz-building-outlines');
+      expect(result.code).toBe(0);
+      expect(result.out).toContain('wrote');
+      expect(result.out).toContain('Creative Commons');
+      expect(existsSync(manifestPath)).toBe(true);
+
+      // The written manifest carries the licence of every input, which is
+      // the reason the 3D script exists.
+      const written = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
+        inputs?: unknown[];
+      };
+      expect(Array.isArray(written.inputs)).toBe(true);
+      expect(written.inputs?.length).toBeGreaterThan(0);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
   });
 });

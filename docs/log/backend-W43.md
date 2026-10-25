@@ -17,13 +17,13 @@
 
 ### Queue item 2 — the runs/stops API (this branch, ADR-010/D36)
 
-| Slice | What | Tests (RED first) |
-|---|---|---|
-| 1 | `POST /runs`, `GET /runs`, `GET /runs/{id}`; owner from the token; foreign run 404; `extra="forbid"` | the authz matrix, the round-trip, the list scoping, the validation bounds (7 tests) |
-| 2 | `GET /shifts/{shift_id}/stops` for real; `RouteStopRow` + status/address; in-memory derives status from events, SQL reads the table | the listing, the event flip, the status filter, the unknown filter 422, the foreign shift 404 (5 tests) |
-| 3 | `POST /runs/{run_id}/stops/{stop_id}/pod`; `app/pod.py` (cap, sniff, server-side names); replay-idempotent | the round-trip (sha256/bytes/row/file), the replay, the foreign 404, the stray stop 404, the oversize 413 with nothing stored, the non-image 415 (6 tests) |
-| 4 | `POST /runs/{run_id}/route:reopt`; the stored plan anchors the delta; the stored route refreshed | places-and-delta, kept order, determinism + zero reapplication delta, unknown 422, foreign 404, the phone serves the reopted day (6 tests) |
-| 5 | the ASVS V14 hardening headers on every response (async middleware — the first sync draft failed its own suite in seconds) | headers on a success and on a 401 (2 tests) |
+| Slice | What                                                                                                                                | Tests (RED first)                                                                                                                                          |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `POST /runs`, `GET /runs`, `GET /runs/{id}`; owner from the token; foreign run 404; `extra="forbid"`                                | the authz matrix, the round-trip, the list scoping, the validation bounds (7 tests)                                                                        |
+| 2     | `GET /shifts/{shift_id}/stops` for real; `RouteStopRow` + status/address; in-memory derives status from events, SQL reads the table | the listing, the event flip, the status filter, the unknown filter 422, the foreign shift 404 (5 tests)                                                    |
+| 3     | `POST /runs/{run_id}/stops/{stop_id}/pod`; `app/pod.py` (cap, sniff, server-side names); replay-idempotent                          | the round-trip (sha256/bytes/row/file), the replay, the foreign 404, the stray stop 404, the oversize 413 with nothing stored, the non-image 415 (6 tests) |
+| 4     | `POST /runs/{run_id}/route:reopt`; the stored plan anchors the delta; the stored route refreshed                                    | places-and-delta, kept order, determinism + zero reapplication delta, unknown 422, foreign 404, the phone serves the reopted day (6 tests)                 |
+| 5     | the ASVS V14 hardening headers on every response (async middleware — the first sync draft failed its own suite in seconds)          | headers on a success and on a 401 (2 tests)                                                                                                                |
 
 - Suite: **217 passed + 1 skipped**; ruff/mypy clean; the format scoped to the four files this
   branch authored (the pre-existing dirt on main stays untouched).
@@ -51,13 +51,13 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 
 ### Skills applied (AGENTS.md map)
 
-| Step | Skills read and followed | How they changed the work |
-| --- | --- | --- |
-| Designing the API | `api-and-interface-design` | Contract-first with the recorded deviations (the narrowed createRun; `territory` refused, not dropped); consistent 401/404 discipline; the error shape kept single. |
-| Hardening | `security-and-hardening` | The STRIDE pass per endpoint became the ASVS L2 table in ADR-010; the POD upload treats the client's name/type as hostile (magic sniff, server-side name, cap-before-store); the abuse cases (oversize, replay, foreign ids) are the tests. |
-| Building the slices | `test-driven-development`, `incremental-implementation` | Five RED→GREEN slices, each committed atomically; the suite ran between slices. |
-| Planning | `planning-and-task-breakdown` | The recon (contract, schema, repo protocol, auth) preceded the code; the plan named the slices, the ADR named the decisions. |
-| Verifying "already built" honestly (item 3) | `doubt-driven-development` | The claim "it exists" was tested, not trusted: the suite ran (166), the wiring was read, and the FOUNDER_TODO gap was found by looking for the deliverable the queue actually names (real keys). |
+| Step                                        | Skills read and followed                                | How they changed the work                                                                                                                                                                                                                   |
+| ------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Designing the API                           | `api-and-interface-design`                              | Contract-first with the recorded deviations (the narrowed createRun; `territory` refused, not dropped); consistent 401/404 discipline; the error shape kept single.                                                                         |
+| Hardening                                   | `security-and-hardening`                                | The STRIDE pass per endpoint became the ASVS L2 table in ADR-010; the POD upload treats the client's name/type as hostile (magic sniff, server-side name, cap-before-store); the abuse cases (oversize, replay, foreign ids) are the tests. |
+| Building the slices                         | `test-driven-development`, `incremental-implementation` | Five RED→GREEN slices, each committed atomically; the suite ran between slices.                                                                                                                                                             |
+| Planning                                    | `planning-and-task-breakdown`                           | The recon (contract, schema, repo protocol, auth) preceded the code; the plan named the slices, the ADR named the decisions.                                                                                                                |
+| Verifying "already built" honestly (item 3) | `doubt-driven-development`                              | The claim "it exists" was tested, not trusted: the suite ran (166), the wiring was read, and the FOUNDER_TODO gap was found by looking for the deliverable the queue actually names (real keys).                                            |
 
 ### Queue item 4 — section 18.4 reliability: the SLOs, the load test, the restore drill (branch `feat/backend-ops`)
 
@@ -78,11 +78,11 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 
 ### Skills applied (AGENTS.md map) — item 4
 
-| Step | Skills read and followed | How they changed the work |
-| --- | --- | --- |
-| The SLOs and the budget | `constraint-driven-development` | The thresholds in the load test ARE the written numbers (the 5 s budget, the 700 ms voice budget) — the same values, never a relaxed copy; a breach fails the run. |
-| The ops tools | `observability-and-instrumentation` | The healthz endpoint is data-free by construction (asserted), the drill prints verdicts + timings shaped for the evidence file, and the alert payload contract keeps PII out. |
-| Honest not-run | `doubt-driven-development` | The scripts REFUSE honestly when their venue is missing (no DB, non-empty target) instead of simulating success; the evidence README records what has and has not run. |
+| Step                    | Skills read and followed            | How they changed the work                                                                                                                                                     |
+| ----------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The SLOs and the budget | `constraint-driven-development`     | The thresholds in the load test ARE the written numbers (the 5 s budget, the 700 ms voice budget) — the same values, never a relaxed copy; a breach fails the run.            |
+| The ops tools           | `observability-and-instrumentation` | The healthz endpoint is data-free by construction (asserted), the drill prints verdicts + timings shaped for the evidence file, and the alert payload contract keeps PII out. |
+| Honest not-run          | `doubt-driven-development`          | The scripts REFUSE honestly when their venue is missing (no DB, non-empty target) instead of simulating success; the evidence README records what has and has not run.        |
 
 ### Not verified / honest gaps
 
@@ -111,11 +111,11 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 
 ### Skills applied (AGENTS.md map) - item 1
 
-| Step | Skills read and followed | How they changed the work |
-| --- | --- | --- |
-| The audit | `code-review-and-quality`, `security-and-hardening` | Two fresh-context auditors (services/ deep, repo-wide read-only) ran BEFORE any new feature, per the founder order; the route-by-route authz walk and the STRIDE pass produced the findings. |
-| The fixes | `test-driven-development` | The stop-ownership and the WS-frame fixes carry tests that reproduce the abuse (the invented stop, the foreign shift, the malformed frame); the drift guard carries a not-vacuous test. |
-| The findings ledger | `constraint-driven-development`, `documentation-and-adrs` | Nothing parked in memory: BUG-053..059 carry file, evidence and owner; the lead list is in CURRENT-backend.md. |
+| Step                | Skills read and followed                                  | How they changed the work                                                                                                                                                                    |
+| ------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The audit           | `code-review-and-quality`, `security-and-hardening`       | Two fresh-context auditors (services/ deep, repo-wide read-only) ran BEFORE any new feature, per the founder order; the route-by-route authz walk and the STRIDE pass produced the findings. |
+| The fixes           | `test-driven-development`                                 | The stop-ownership and the WS-frame fixes carry tests that reproduce the abuse (the invented stop, the foreign shift, the malformed frame); the drift guard carries a not-vacuous test.      |
+| The findings ledger | `constraint-driven-development`, `documentation-and-adrs` | Nothing parked in memory: BUG-053..059 carry file, evidence and owner; the lead list is in CURRENT-backend.md.                                                                               |
 
 ## 2026-10-25 - Queue 2, item 2: the database in CI (branch `feat/db-in-ci`, merged PR #27)
 
@@ -135,11 +135,11 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 
 ### Skills applied - item 2
 
-| Step | Skills read and followed | How they changed the work |
-| --- | --- | --- |
-| The CI wiring | \ci-cd-and-automation\ | Service-container pinning, health gates, no secret beyond the container-local throwaway, evidence logged. |
-| The DB suite | \	est-driven-development\, \source-driven-development\ | The executemany-rowcount and IntegrityError behaviours were verified against psycopg3/SQLAlchemy docs, then pinned by DB tests that only CI can run. |
-| The review | \code-review-and-quality\, \doubt-driven-development\ | The fresh-context reviewer found the vacuous green (a gate that greets nothing); its guard then caught the unseeded run in the very next CI pass. |
+| Step          | Skills read and followed                               | How they changed the work                                                                                                                            |
+| ------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The CI wiring | \ci-cd-and-automation\                                 | Service-container pinning, health gates, no secret beyond the container-local throwaway, evidence logged.                                            |
+| The DB suite  | \ est-driven-development\, \source-driven-development\ | The executemany-rowcount and IntegrityError behaviours were verified against psycopg3/SQLAlchemy docs, then pinned by DB tests that only CI can run. |
+| The review    | \code-review-and-quality\, \doubt-driven-development\  | The fresh-context reviewer found the vacuous green (a gate that greets nothing); its guard then caught the unseeded run in the very next CI pass.    |
 
 ## 2026-10-25 - Queue 2, item 3: POD object storage (branch `feat/pod-storage`, MERGED PR #31)
 
@@ -164,11 +164,11 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 
 ### Skills applied - item 3 (merge pass)
 
-| Step | Skills read and followed | How it changed the work |
-| --- | --- | --- |
+| Step       | Skills read and followed                              | How it changed the work                                                                                                                                               |
+| ---------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The review | `code-review-and-quality`, `doubt-driven-development` | The blocker was a security boundary derived from a public value; the review's mandate (fresh context, adversarial) found it in a pass that had already "looked done". |
-| The ritual | `git-workflow-and-versioning` | Merge origin/main in before merging (twice on this branch), a merge commit only, the archive tag pushed before deletion, `gh run list` polled (never `--watch`). |
-| The log | `documentation-and-adrs` | ADR-011 corrected to the real key so the ADR and the code cannot drift. |
+| The ritual | `git-workflow-and-versioning`                         | Merge origin/main in before merging (twice on this branch), a merge commit only, the archive tag pushed before deletion, `gh run list` polled (never `--watch`).      |
+| The log    | `documentation-and-adrs`                              | ADR-011 corrected to the real key so the ADR and the code cannot drift.                                                                                               |
 
 ## 2026-10-25 - Queue 2, item 4: location notes (branch `feat/location-notes`, MERGED PR #33)
 
@@ -201,12 +201,12 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 
 ### Skills applied - item 4
 
-| Step | Skills read and followed | How it changed the work |
-| --- | --- | --- |
-| The identity | `api-and-interface-design` | A derived id the phone never recomputes beats a nearest-neighbour guess; the ADR names what identity is NOT (proximity). |
-| The authz | `security-and-hardening` | 404-never-an-empty-list: existence is not disclosed cross-courier; the notes are keyed by courier so a shared door is two memories. |
-| The upsert | `test-driven-development` | RED first (the suite caught the in-memory `replace` not preserving the id), then the SQL `ON CONFLICT DO NOTHING RETURNING id` else UPDATE. |
-| The review | `code-review-and-quality`, `doubt-driven-development` | The two must-fixes both came from "what breaks silently in two years", not from the happy path. |
+| Step         | Skills read and followed                              | How it changed the work                                                                                                                     |
+| ------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| The identity | `api-and-interface-design`                            | A derived id the phone never recomputes beats a nearest-neighbour guess; the ADR names what identity is NOT (proximity).                    |
+| The authz    | `security-and-hardening`                              | 404-never-an-empty-list: existence is not disclosed cross-courier; the notes are keyed by courier so a shared door is two memories.         |
+| The upsert   | `test-driven-development`                             | RED first (the suite caught the in-memory `replace` not preserving the id), then the SQL `ON CONFLICT DO NOTHING RETURNING id` else UPDATE. |
+| The review   | `code-review-and-quality`, `doubt-driven-development` | The two must-fixes both came from "what breaks silently in two years", not from the happy path.                                             |
 
 ## 2026-10-25 - Queue 2, item 5: voice intake (branch `feat/voice-intake`, MERGED PR #34)
 
@@ -250,12 +250,13 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 
 ### Skills applied - item 5
 
-| Step | Skills read and followed | How it changed the work |
-| --- | --- | --- |
-| The seam | `api-and-interface-design` | The graph already took `llm_extract`/`llm_phrase`/`Geo` seams; the provider protocol names them and the endpoint depends on the protocol, never the client. |
-| The prompt hygiene | `security-and-hardening` | Untrusted text in tagged blocks - the same defence the copilot and the voice service already use; the review proved the wiring would have bypassed it. |
-| The failure paths | `debugging-and-error-recovery` | The asymmetric design (raise vs fall back) came from asking what the courier experiences, not what the code finds easiest. |
-| The async fix | `performance-optimization` | The event-loop stall was measured (0.55s), not guessed; the fix is the sibling's pattern. |
+| Step               | Skills read and followed       | How it changed the work                                                                                                                                     |
+| ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The seam           | `api-and-interface-design`     | The graph already took `llm_extract`/`llm_phrase`/`Geo` seams; the provider protocol names them and the endpoint depends on the protocol, never the client. |
+| The prompt hygiene | `security-and-hardening`       | Untrusted text in tagged blocks - the same defence the copilot and the voice service already use; the review proved the wiring would have bypassed it.      |
+| The failure paths  | `debugging-and-error-recovery` | The asymmetric design (raise vs fall back) came from asking what the courier experiences, not what the code finds easiest.                                  |
+| The async fix      | `performance-optimization`     | The event-loop stall was measured (0.55s), not guessed; the fix is the sibling's pattern.                                                                   |
+
 ### The review that changed the item 6 - the sync conflict rules
 
 - Must-fix 1: **the test rot.** `test_runs_api.py` posted a pinned `START_AT` as the batch's
@@ -272,11 +273,12 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 
 ### Skills applied - item 6
 
-| Step | Skills read and followed | How it changed the work |
-| --- | --- | --- |
-| The rules | `spec-driven-development`, `api-and-interface-design` | The ADR first (the queue demanded it), then the shape: one `AppendResult` both repositories answer, so the rules are the same code in both. |
-| The clock | `security-and-hardening` | A wrong phone clock must not pin a stop's status for hours: the bound is the control, and the exemption (the POD's event) is named rather than implied. |
-| The review | `code-review-and-quality`, `doubt-driven-development` | The must-fix list was three ways the change would rot: a timestamp, an untested edge, and a doc claim that outran the code. |
+| Step       | Skills read and followed                              | How it changed the work                                                                                                                                 |
+| ---------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The rules  | `spec-driven-development`, `api-and-interface-design` | The ADR first (the queue demanded it), then the shape: one `AppendResult` both repositories answer, so the rules are the same code in both.             |
+| The clock  | `security-and-hardening`                              | A wrong phone clock must not pin a stop's status for hours: the bound is the control, and the exemption (the POD's event) is named rather than implied. |
+| The review | `code-review-and-quality`, `doubt-driven-development` | The must-fix list was three ways the change would rot: a timestamp, an untested edge, and a doc claim that outran the code.                             |
+
 ## 2026-10-25 - Queue 2, item 7: the map pack pipeline (branch `feat/map-pack-pipeline`)
 
 - ADR-016. The pack had never been built, and reading the two build scripts against the tools' own
@@ -295,9 +297,9 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
   - neither recorded the tool versions, the archive's real header, or the credit the OpenMapTiles
     schema and profile require.
 - The build runs the documented steps: `planetiler --osm-path=<extract> --output=<tileset>
-  --force` (the heap in `JAVA_TOOL_OPTIONS`, per the README's ~0.5x-the-input rule), then
+--force` (the heap in `JAVA_TOOL_OPTIONS`, per the README's ~0.5x-the-input rule), then
   `pmtiles extract` clipped to the Canterbury bbox and zooms in the CLI's own order, `pmtiles
-  verify`, and `pmtiles show --header-json` recorded in the manifest **verbatim** - the tool prints
+verify`, and `pmtiles show --header-json` recorded in the manifest **verbatim** - the tool prints
   snake_case keys (its own test asserts `tile_type`/`tile_compression`), so the first version of
   this step read camelCase guesses that would have recorded `undefined`.
 - `.github/workflows/map-pack.yml` runs the pipeline twice a week (D26), on dispatch (extract URL
@@ -312,9 +314,8 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 
 ### Skills applied - item 7
 
-| Step | Skills read and followed | How it changed the work |
-| --- | --- | --- |
-| The tools | `source-driven-development` | Every flag was verified against the official docs before it shipped; the four defects exist precisely where the previous author did not check. |
-| The workflow | `ci-cd-and-automation` | The schedule, the dispatch inputs, the artifact retention and the two supply-chain gates (pinned SHAs, no inline expressions) - plus the honest rule that a 90-minute data build never gates a PR. |
-| The honesty | `constraint-driven-development` | The unverified rows stay unverified in the maps status; the item claims the pipeline, not the numbers. |
-
+| Step         | Skills read and followed        | How it changed the work                                                                                                                                                                            |
+| ------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The tools    | `source-driven-development`     | Every flag was verified against the official docs before it shipped; the four defects exist precisely where the previous author did not check.                                                     |
+| The workflow | `ci-cd-and-automation`          | The schedule, the dispatch inputs, the artifact retention and the two supply-chain gates (pinned SHAs, no inline expressions) - plus the honest rule that a 90-minute data build never gates a PR. |
+| The honesty  | `constraint-driven-development` | The unverified rows stay unverified in the maps status; the item claims the pipeline, not the numbers.                                                                                             |

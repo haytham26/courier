@@ -19,7 +19,7 @@ official documentation on 2026-10-25:
    `new-zealand`, not Christchurch), wrote an intermediate tiles file the tool does not need, and
    printed a `versatiles reduce` step that does not exist in the build at all.
 2. `build-3d-buildings.mjs` ran `planetiler --area=christchurch --download=<file> --overlay=<...>
-   --profile=courier`. planetiler has no `--overlay` and no `--profile` flags: a second data source
+--profile=courier`. planetiler has no `--overlay` and no `--profile` flags: a second data source
    rides a profile the operator supplies (a single-file Java profile, or a YAML config that declares
    its own sources).
 3. Both scripts resolved the repo root one directory short, so the pack would have been written into
@@ -38,7 +38,7 @@ official documentation on 2026-10-25:
    `JAVA_TOOL_OPTIONS=-Xmx4g` (planetiler's README: about 0.5x the input `.osm.pbf`, leaving the
    rest of the RAM for the memory-mapped files; the runner is 16 GB and shared).
 2. `pmtiles extract <tileset> <pack> --bbox=MIN_LON,MIN_LAT,MAX_LON,MAX_LAT --maxzoom=17
-   --minzoom=6` — the whole-country tileset clipped to the courier's envelope, in the CLI's own
+--minzoom=6` — the whole-country tileset clipped to the courier's envelope, in the CLI's own
    bbox order.
 3. `pmtiles verify <pack>` — the archive is ordered and its header is right.
 4. `pmtiles show --header-json <pack>` — the tool's own header JSON, recorded in the manifest
