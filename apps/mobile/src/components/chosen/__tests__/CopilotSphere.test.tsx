@@ -11,7 +11,19 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 
+import { cancelAnimation } from 'react-native-reanimated';
 import { ChosenProvider, CopilotSphere } from '../index';
+
+// The mock replaces cancelAnimation with a spy so the lifecycle's contract (the
+// animation is cancelled) is assertable. The type below is the spy's view.
+const cancelAnimationMock = cancelAnimation as unknown as jest.Mock;
+
+jest.mock('react-native-reanimated', () => {
+  const actual = jest.requireActual<typeof import('react-native-reanimated')>('react-native-reanimated');
+  // `Animated` is the default export, and a plain spread loses it: it is put
+  // back explicitly so the component still renders.
+  return { __esModule: true, ...actual, default: actual.default, cancelAnimation: jest.fn() };
+});
 
 /** What the environment reports: `isDevice` false on an emulator, true on a phone. */
 const mockConstants = { isDevice: true as boolean | undefined };
@@ -27,7 +39,7 @@ jest.mock('expo-constants', () => ({
 const press = () => {};
 
 const renderSphere = (
-  state: 'idle' | 'muted' | 'listening' = 'idle',
+  state: 'idle' | 'muted' | 'listening' | 'thinking' = 'idle',
   mode: 'light' | 'dark' = 'light',
 ) =>
   render(
@@ -114,6 +126,40 @@ describe('the Copilot sphere', () => {
       renderSphere();
       expect(screen.queryByTestId('copilot-sphere-fallback')).toBeNull();
       expect(screen.getByTestId('copilot-sphere')).toBeTruthy();
+    });
+  });
+
+  describe('the Skia lifecycle (the BUG-061 root cause)', () => {
+    it('cancels the running animations when the sphere unmounts', () => {
+      // The thinking swirl is `withRepeat(..., -1)`: it never stops by itself.
+      // Setting the value back to 0 does not stop it either - the animation
+      // keeps writing to the shared value on the UI thread, after the effect
+      // cleaned up and after the Skia canvas is gone. That is the native heap
+      // error (gwp_asan GuardedPoolAllocator::deallocate) PR #18 kept producing:
+      // a shared value outliving the surface it drives. `cancelAnimation` is the
+      // only thing that stops it.
+      mockConstants.isDevice = true;
+      renderSphere('thinking');
+      cancelAnimationMock.mockClear();
+
+      screen.unmount();
+
+      expect(cancelAnimation).toHaveBeenCalled();
+    });
+
+    it('survives a mount, a state change and an unmount, over and over', () => {
+      // The tab bar mounts and unmounts the sphere every time a screen is left
+      // and every time the dock changes state, so the lifecycle is exercised
+      // many times per shift. Fifty cycles here is the regression guard for the
+      // heap error, which only ever showed up after the stack had mounted and
+      // unmounted a few times.
+      mockConstants.isDevice = true;
+      for (let cycle = 0; cycle < 50; cycle += 1) {
+        const view = renderSphere(cycle % 2 === 0 ? 'thinking' : 'listening');
+        screen.unmount();
+        view.unmount();
+      }
+      expect(cancelAnimation).toHaveBeenCalled();
     });
   });
 });
