@@ -171,9 +171,12 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
 - From now on: no Android-only solution when a cross-platform one exists, and every new native dependency must document iOS support (IOS_PLAN §0).
 - The full iOS plan (the founder's accounts, the simulator build, iOS E2E in CI, the Apple-specific items, TestFlight, the App Store) is `docs/plan/IOS_PLAN.md`.
 
-## D44 — Launch billing: store in-app purchase only, for the individual driver (2026-10-25, founder decision)
+## D44 — Billing: build for every option, the founder picks the mix before launch (2026-10-25, founder decision)
 
-- The customer at launch is the individual contractor driver, who pays for themself. The only billing path at launch is the store's in-app purchase: Google Play Billing and Apple StoreKit, through the RevenueCat-shaped entitlement layer in `docs/research/2026/payments-subscriptions.md`.
-- The app gates on the entitlement ("is this subscription active"), never on how it was paid, so another path can be added later without changing the app.
-- Deferred, not built now: Stripe, the web checkout and the Team plan's org billing. Keep the server-side entitlement model ready for a second source; write no Stripe code until a new decision.
-- The store rules are permanent, not a launch-only condition: a digital subscription sold inside the app always uses the store's billing. In New Zealand the app may not link to or promote a cheaper web price (no Play alternative billing in NZ; Apple's external-link entitlement does not cover NZ, research §4). A later web sale (Stripe) is allowed outside the app, and those users may then sign in and use the app (Apple 3.1.3(b)).
+- The launch customer is the individual contractor driver, who pays for themself.
+- Build the entitlement layer so the app gates on "is this subscription active", never on how it was paid, and the server accepts more than one source. The sources to support:
+  1. Store in-app purchase: Google Play Billing and Apple StoreKit, through the RevenueCat-shaped layer in `docs/research/2026/payments-subscriptions.md`. This one is built first, because any subscription sold inside the app must use it.
+  2. Web checkout with Stripe (cards, NZD, GST-inclusive), sold outside the app.
+  3. The Team plan's org billing (one payer for several drivers), on top of 2.
+- Sources 2 and 3 are built behind a config switch, off by default, with stripe-mock tests, after source 1 and before launch. The founder chooses which sources are switched on at launch; that choice is a FOUNDER_TODO decision, not something to decide now.
+- The store rules are permanent, not a launch-only condition: a digital subscription sold inside the app always uses the store's billing. In New Zealand the app may not link to or promote a web price (no Play alternative billing in NZ; Apple's external-link entitlement does not cover NZ, research §4). A web sale is allowed outside the app, and those users may then sign in and use the app (Apple 3.1.3(b)).
