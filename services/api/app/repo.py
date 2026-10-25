@@ -240,7 +240,12 @@ class Repo(Protocol):
 
         Idempotent on the courier the way the sync path is on the event: a
         provider retries and the gateway duplicates, and neither may move a
-        courier's access by accident."""
+        courier's access by accident.
+
+        The correction is monotonic in the source's own time (`renews_at`): a
+        replay of an *older* fact is stored as a no-op, because a stale webhook
+        must not rewind a courier's access (ADR-017 §3). A cancellation carries
+        no `renews_at` and always applies."""
 
     def put_run_template(self, run_id: UUID, template: RunTemplate) -> None:
         """Stores the locked template and replaces the run's street order.
@@ -427,6 +432,10 @@ class SqlAlchemyRepo:
         return _subscription_row(row) if row else None
 
     def put_subscription(self, row: SubscriptionRow) -> bool:
+        # The correction is monotonic in the source's own time: an older fact
+        # must not rewind a courier's access (ADR-017 §3). A cancellation
+        # carries no `renews_at`, so it always applies - which is why the guard
+        # is `IS NULL OR :renews_at >= renews_at` and not a bare `>=`.
         statement = text(
             """
             INSERT INTO subscriptions
@@ -436,10 +445,14 @@ class SqlAlchemyRepo:
             ON CONFLICT (courier_id) DO UPDATE SET
                 plan = :plan, state = :state, source = :source, source_id = :source_id,
                 renews_at = :renews_at, ends_at = :ends_at, updated_at = now()
+            WHERE subscriptions.renews_at IS NULL
+               OR :renews_at IS NULL
+               OR :renews_at >= subscriptions.renews_at
+            RETURNING (xmax = 0) AS inserted
             """
         )
         with self._engine.begin() as connection:
-            connection.execute(
+            inserted = connection.execute(
                 statement,
                 {
                     "courier_id": row.courier_id,
@@ -451,8 +464,11 @@ class SqlAlchemyRepo:
                     "renews_at": row.renews_at,
                     "ends_at": row.ends_at,
                 },
-            )
-        return True
+            ).scalar()
+        # `xmax = 0` is true when the row was INSERTed (nothing had touched it),
+        # false when the DO UPDATE ran - the same question the in-memory repo
+        # answers, so the two implementations agree on the contract.
+        return bool(inserted)
 
     def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
         if not events:

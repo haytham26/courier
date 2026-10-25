@@ -39,9 +39,13 @@ inclusive, and **history is never recomputed** — the rate used is stored per i
   payment provider. `past_due` **never** removes access on its own: a store renewal that failed keeps
   the courier working through the grace window, because a courier mid-route with a dead phone is the
   product's worst failure mode.
-- **The decision** — `entitlement_of(courier_id) → Entitlement` answers `active` and the feature set,
-  and the API exposes it as `GET /account/entitlements`. The phone never decides locally and never
-  caches past the token: the entitlement is the server's word.
+- **The decision** — `entitlement_of(subscription) → Entitlement` answers `active` and the feature
+  set, and the API exposes it as `GET /account/entitlements`. The phone never decides locally and
+  never caches past the token: the entitlement is the server's word.
+- **A cancellation covers the days it paid for.** `canceled` is not simply "off": the row's `ends_at`
+  decides, so "cancel, I'll finish the week" keeps the courier working through the paid period, and a
+  cancellation with no `ends_at` is the provider's immediate end. The review found this as the
+  sharpest product bug in the first pass — a courier with 30 paid days left was locked out.
 
 ### 2. The source is recorded, never decided on
 
@@ -50,17 +54,24 @@ One subscription row per courier with the source's own identifiers beside the sh
 
 ```sql
 CREATE TABLE IF NOT EXISTS subscriptions (
-    courier_id   uuid PRIMARY KEY REFERENCES couriers (id) ON DELETE CASCADE,
-    plan         text        NOT NULL,
-    state        text        NOT NULL,
-    source       text        NOT NULL,          -- 'play' | 'appstore' | 'stripe' | 'team'
-    source_id    text,                          -- the source's own purchase/subscription id
+    courier_id   text        PRIMARY KEY,
+    plan         text        NOT NULL CHECK (plan IN ('trial', 'solo', 'team')),
+    state        text        NOT NULL CHECK (state IN ('trialing', 'active', 'past_due', 'grace', 'canceled', 'expired')),
+    source       text        NOT NULL CHECK (source IN ('play', 'appstore', 'stripe', 'team')),
+    source_id    text,
     started_at   timestamptz NOT NULL,
     renews_at    timestamptz,
     ends_at      timestamptz,                   -- when access actually stops
     updated_at   timestamptz NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS subscriptions_source ON subscriptions (source, source_id);
 ```
+
+As shipped: `courier_id` is `text`, like every other courier reference in this schema (there is no
+`couriers` table yet — the auth service owns the accounts), so the foreign key is the accounts
+slice's work, not this one's. The index on `(source, source_id)` is deliberately **not** `UNIQUE`:
+two couriers can share a source's purchase id in the Team case, and the idempotence that matters
+is per courier (the row's primary key).
 
 The source is **data, not logic**: `source` says where the truth came from and never changes what
 "active" means. Sources 2 and 3 (Stripe, Team) are added behind `BILLING_SOURCES` (off by default)
@@ -72,10 +83,25 @@ The provider layer (not written here) posts **facts** — "the store says subscr
 through 2026-11-01" — and the repo stores them. Two rules the repo enforces so the ingest can be
 written later without re-litigating them:
 
-- **Idempotent by (source, source_id)** with the sync path's ON CONFLICT semantics (ADR-014), because
-  a provider retries and the gateway duplicates.
-- **The source's own timestamps win**, and a fact whose `renews_at` is far in the past cannot silently
-  end a subscription (a clock bug is not a cancellation).
+- **Idempotent by courier** (the row's primary key), because a provider retries and the gateway
+  duplicates; `(source, source_id)` is indexed, not unique, because a Team purchase legitimately
+  backs several couriers.
+- **A correction is monotonic in the source's own time.** The upsert's `DO UPDATE` carries
+  `WHERE renews_at IS NULL OR :renews_at IS NULL OR :renews_at >= renews_at`, so a replay of an
+  _older_ fact is a no-op and a stale webhook cannot rewind a courier's access. A cancellation
+  carries no `renews_at` and always applies — which is exactly why the guard is NULL-safe rather
+  than a bare comparison. `RETURNING (xmax = 0)` is how the SQL repo answers the protocol's
+  "was this new or a correction", the same question the in-memory repo answers in memory.
+
+### 3b. What this layer does not watch (named, not hidden)
+
+`past_due` keeps the courier working until the provider sends `grace_started`: nothing in this layer
+ends access on the clock, because only the provider knows whether the card was retried. `revoked` is
+modelled (the money went back, so the days are gone); `reactivated`, `transferred` and plan changes
+are **unmodelled** and fall through the no-op path — a known hole the provider slice closes when the
+real event vocabulary lands. The app's `PRICING` list in `packages/shared/src/constants.ts` carries
+the same Team set and a slightly different Solo set (it lacks `basic_routing`); the two lists have no
+cross-check yet, and the provider slice adds one rather than letting them drift.
 
 ### 4. What is deliberately NOT in this slice
 

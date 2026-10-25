@@ -12,7 +12,7 @@ the founder's launch choice is a config switch rather than a code change (D44).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Final
 
@@ -104,6 +104,13 @@ _TRANSITIONS: Final[dict[tuple[SubscriptionState, str], SubscriptionState]] = {
     (SubscriptionState.GRACE, "renewed"): SubscriptionState.ACTIVE,
     (SubscriptionState.GRACE, "grace_ended"): SubscriptionState.EXPIRED,
     (SubscriptionState.GRACE, "cancelled"): SubscriptionState.CANCELED,
+    # A refund or a revocation removes access: the money went back, so the days
+    # are gone. The provider sets ends_at to now with the event, so the paid
+    # period the cancellation path honours is gone with it.
+    (SubscriptionState.TRIALING, "revoked"): SubscriptionState.CANCELED,
+    (SubscriptionState.ACTIVE, "revoked"): SubscriptionState.CANCELED,
+    (SubscriptionState.PAST_DUE, "revoked"): SubscriptionState.CANCELED,
+    (SubscriptionState.GRACE, "revoked"): SubscriptionState.CANCELED,
 }
 
 
@@ -139,7 +146,21 @@ class Entitlement:
     features: frozenset[str]
 
 
-def entitlement_of(subscription: SubscriptionView | None) -> Entitlement:
+def _covers_today(subscription: SubscriptionView, now: datetime) -> bool:
+    """Whether the subscription covers today.
+
+    A cancellation takes effect at the period end, not at the tap: the courier
+    bought the days, and the app must not strand them mid-route. A cancelled
+    subscription with no `ends_at` is over now - that is an immediate
+    cancellation the provider made, not a missing field."""
+    if subscription.state is not SubscriptionState.CANCELED:
+        return subscription.state in LIVE_STATES
+    return subscription.ends_at is not None and subscription.ends_at > now
+
+
+def entitlement_of(
+    subscription: SubscriptionView | None, now: datetime | None = None
+) -> Entitlement:
     """The decision for one courier, or the free answer when they have none.
 
     A courier with no subscription gets `active=False` with a named plan of
@@ -149,9 +170,11 @@ def entitlement_of(subscription: SubscriptionView | None) -> Entitlement:
     """
     if subscription is None:
         return Entitlement(courier_id="", active=False, plan=None, features=frozenset())
+    now = now or datetime.now(UTC)
+    active = _covers_today(subscription, now)
     return Entitlement(
         courier_id=subscription.courier_id,
-        active=subscription.state in LIVE_STATES,
+        active=active,
         plan=subscription.plan,
-        features=FEATURES[subscription.plan] if subscription.state in LIVE_STATES else frozenset(),
+        features=FEATURES[subscription.plan] if active else frozenset(),
     )

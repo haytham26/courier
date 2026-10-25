@@ -474,8 +474,8 @@ paths:
               schema: { $ref: '#/components/schemas/PodResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '413': { description: "The image exceeds 10 MiB" }
-        '415': { description: "Not a JPEG/PNG/HEIC image (checked by magic bytes, not by name)" }
+        '413': { description: 'The image exceeds 10 MiB' }
+        '415': { description: 'Not a JPEG/PNG/HEIC image (checked by magic bytes, not by name)' }
 
   /runs/{run_id}/stops/{stop_id}/pod/{event_id}/url:
     get:
@@ -619,10 +619,11 @@ components:
           type: boolean
           description: Whether the subscription covers today
         plan:
-          type: string
-          nullable: true
-          enum: [trial, solo, team, null]
           description: The plan on the subscription, when there is one
+          oneOf:
+            - type: string
+              enum: [trial, solo, team]
+            - type: 'null'
         features:
           type: array
           description: What the plan opens, sorted
@@ -698,7 +699,7 @@ components:
         kind:
           type: string
           enum: [delivered, left_at, skipped, failed]
-          description: "D4: Voice delivery proof default"
+          description: 'D4: Voice delivery proof default'
         utterance:
           type: string
           description: Exact driver words
@@ -742,7 +743,21 @@ components:
 
     RouteResponse:
       type: object
-      required: [shift_id, run_id, engine, locked, total_distance_m, total_duration_s, parcels, capacity_parcels, over_capacity, window_violations, unroutable_stop_ids, stops]
+      required:
+        [
+          shift_id,
+          run_id,
+          engine,
+          locked,
+          total_distance_m,
+          total_duration_s,
+          parcels,
+          capacity_parcels,
+          over_capacity,
+          window_violations,
+          unroutable_stop_ids,
+          stops,
+        ]
       properties:
         shift_id: { type: string, format: uuid }
         run_id: { type: string, format: uuid }
@@ -762,7 +777,18 @@ components:
           type: array
           items:
             type: object
-            required: [stop_id, sequence, lat, lon, arrival_at, departure_at, distance_m, cumulative_distance_m, late]
+            required:
+              [
+                stop_id,
+                sequence,
+                lat,
+                lon,
+                arrival_at,
+                departure_at,
+                distance_m,
+                cumulative_distance_m,
+                late,
+              ]
             properties:
               stop_id: { type: string, format: uuid }
               sequence: { type: integer }

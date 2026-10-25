@@ -70,7 +70,7 @@ class TestTheStateMachine:
     def test_grace_ending_is_the_only_path_to_expired(self) -> None:
         assert transition(SubscriptionState.GRACE, "grace_ended") == SubscriptionState.EXPIRED
 
-    def test_a_cancellation_takes_effect_at_the_period_end(self) -> None:
+    def test_a_cancellation_moves_to_the_canceled_state(self) -> None:
         assert transition(SubscriptionState.ACTIVE, "cancelled") == SubscriptionState.CANCELED
 
     def test_an_unknown_event_changes_nothing(self) -> None:
@@ -84,6 +84,7 @@ class TestTheStateMachine:
 
 
 class TestTheDecision:
+    @pytest.mark.parametrize("plan", [Plan.TRIAL, Plan.SOLO, Plan.TEAM])
     @pytest.mark.parametrize(
         ("state", "active"),
         [
@@ -96,20 +97,44 @@ class TestTheDecision:
         ],
     )
     def test_only_the_live_states_open_the_app(
-        self, state: SubscriptionState, active: bool
+        self, state: SubscriptionState, active: bool, plan: Plan
     ) -> None:
-        assert (
-            entitlement_of(
-                SubscriptionView(
-                    courier_id=COURIER,
-                    plan=Plan.SOLO,
-                    state=state,
-                    started_at=STARTED,
-                    ends_at=None,
-                )
-            ).active
-            is active
+        """Every plan, not only Solo: a mutation gating `active` on the Solo
+        plan survived the whole suite, so the matrix says so outright."""
+        answer = entitlement_of(
+            SubscriptionView(
+                courier_id=COURIER,
+                plan=plan,
+                state=state,
+                started_at=STARTED,
+                ends_at=None,
+            )
         )
+
+        assert answer.active is active
+        assert answer.plan is plan
+        if active:
+            assert answer.features == frozenset(FEATURES[plan])
+        else:
+            assert answer.features == frozenset()
+
+    def test_a_revocation_ends_access(self) -> None:
+        """A refund removes the days that were paid for: the money went back."""
+        assert transition(SubscriptionState.ACTIVE, "revoked") is SubscriptionState.CANCELED
+        assert transition(SubscriptionState.GRACE, "revoked") is SubscriptionState.CANCELED
+        # The provider sets ends_at to now with the revocation, so the paid days
+        # are gone with it - unlike a plain cancellation that leaves them.
+        revoked = entitlement_of(
+            SubscriptionView(
+                courier_id=COURIER,
+                plan=Plan.SOLO,
+                state=SubscriptionState.CANCELED,
+                started_at=STARTED,
+                ends_at=STARTED,
+            ),
+            now=STARTED,
+        )
+        assert revoked.active is False
 
     def test_the_decision_carries_the_plan_and_its_features(self) -> None:
         decision = entitlement_of(
@@ -140,6 +165,52 @@ class TestTheDecision:
 
         assert decision.active is False
         assert decision.plan is Plan.TRIAL
+
+    def test_a_cancellation_covers_the_days_it_paid_for(self) -> None:
+        """ "Cancel, I'll finish the week" must not strand a courier mid-route."""
+        decision = entitlement_of(
+            SubscriptionView(
+                courier_id=COURIER,
+                plan=Plan.SOLO,
+                state=SubscriptionState.CANCELED,
+                started_at=STARTED,
+                ends_at=STARTED + timedelta(days=3),
+            ),
+            now=STARTED,
+        )
+
+        assert decision.active is True
+        assert "routing" in decision.features
+
+    def test_a_cancelled_period_that_has_ended_is_over(self) -> None:
+        decision = entitlement_of(
+            SubscriptionView(
+                courier_id=COURIER,
+                plan=Plan.SOLO,
+                state=SubscriptionState.CANCELED,
+                started_at=STARTED,
+                ends_at=STARTED - timedelta(days=1),
+            ),
+            now=STARTED,
+        )
+
+        assert decision.active is False
+        assert decision.features == frozenset()
+
+    def test_an_immediate_cancellation_is_over_now(self) -> None:
+        """No `ends_at` is the provider's immediate end, not a missing field."""
+        decision = entitlement_of(
+            SubscriptionView(
+                courier_id=COURIER,
+                plan=Plan.SOLO,
+                state=SubscriptionState.CANCELED,
+                started_at=STARTED,
+                ends_at=None,
+            ),
+            now=STARTED,
+        )
+
+        assert decision.active is False
 
     def test_no_subscription_is_the_free_answer_not_a_crash(self) -> None:
         decision = entitlement_of(None)

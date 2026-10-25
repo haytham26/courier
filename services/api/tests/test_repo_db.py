@@ -377,6 +377,48 @@ class TestTheEvents:
         # Another courier's subscription is theirs alone.
         assert repo.get_subscription("driver-8") is None
 
+        # The correction is monotonic: a replay of an OLDER fact must not
+        # rewind a courier's access (a stale webhook is a fact, not a state).
+        stale = SubscriptionRow(
+            courier_id=COURIER,
+            plan=Plan.SOLO,
+            state=SubscriptionState.ACTIVE,
+            source="play",
+            source_id="play-purchase-1",
+            started_at=started,
+            renews_at=started - timedelta(days=30),
+            ends_at=None,
+        )
+        assert repo.put_subscription(stale) is False
+        kept = repo.get_subscription(COURIER)
+        assert kept is not None
+        assert kept.state is SubscriptionState.PAST_DUE  # unaffected by the older fact
+
+    def test_the_correction_is_what_the_protocol_says(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """The SQL repo answers the protocol's True/False like the memory one.
+
+        (The review's blocker: `put_subscription` returned a hardcoded True, so
+        the two implementations disagreed on the same method and the SQL side
+        was never tested.)"""
+        from app.repo import SubscriptionRow
+
+        started = datetime(2026, 10, 26, 7, 0, tzinfo=UTC)
+        row = SubscriptionRow(
+            courier_id=COURIER,
+            plan=Plan.SOLO,
+            state=SubscriptionState.ACTIVE,
+            source="play",
+            source_id="play-purchase-1",
+            started_at=started,
+            renews_at=started + timedelta(days=30),
+            ends_at=None,
+        )
+
+        assert repo.put_subscription(row) is True
+        assert repo.put_subscription(row) is False
+
     def test_an_event_is_readable_by_id(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
         shift_id = a_shift(engine)
         run = a_run(shift_id)

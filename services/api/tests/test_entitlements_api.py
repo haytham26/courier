@@ -62,11 +62,13 @@ def anonymous_client(verifier_key: object) -> Iterator[TestClient]:
 
 
 def a_subscription(
-    courier_id: str = COURIER, state: SubscriptionState = SubscriptionState.ACTIVE
+    courier_id: str = COURIER,
+    state: SubscriptionState = SubscriptionState.ACTIVE,
+    plan: Plan = Plan.SOLO,
 ) -> SubscriptionRow:
     return SubscriptionRow(
         courier_id=courier_id,
-        plan=Plan.SOLO,
+        plan=plan,
         state=state,
         source="play",
         source_id="play-purchase-1",
@@ -123,6 +125,15 @@ class TestTheEntitlementEndpoint:
         self, anonymous_client: TestClient, repo: InMemoryRepo
     ) -> None:
         assert anonymous_client.get("/account/entitlements").status_code == 401
+
+    def test_the_features_come_back_sorted(self, client: TestClient, repo: InMemoryRepo) -> None:
+        """The contract says sorted, and the phone diffs the list."""
+        repo.put_subscription(a_subscription(plan=Plan.TEAM))
+
+        features = client.get("/account/entitlements").json()["features"]
+
+        assert features == sorted(features)
+        assert len(features) > 1  # a Team plan: the sort is not a no-op
 
     def test_two_couriers_two_subscriptions(
         self, client: TestClient, other_client: TestClient, repo: InMemoryRepo
