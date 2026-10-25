@@ -1,0 +1,106 @@
+appId: com.courier.copilot
+name: Sign in - the front door, the four ways in and the email form
+---
+# The sign-in screen (02-sign-in.html) on the chosen tokens: the title and the
+# subtitle of the reference, the four ways in in the reference's order and
+# wording (Apple, Google, Passkey, then the "or" and Email), the plain reason
+# under a method the service does not offer, the email form with its one
+# primary action, and the remembered session when the phone has one.
+#
+# The screen is the app's front door: it opens when the phone has no session.
+# The E2E mock in `apps/mobile/src/lib/auth-client.ts` answers every session
+# read with a driver, so the app opens on Today there and this flow needs a
+# build that opens signed out (a real device, or a mock without a session).
+# That is the Android E2E workflow's call and it is recorded here rather than
+# worked around: no skipped block, no weakened assert, no longer timeout
+# (PLAYBOOK §17.6). The one conditional below is the remembered session, which
+# the emulator run has no way to leave behind, and inside it nothing is
+# weakened either.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-screen"
+    timeout: 60000
+
+# The reference's own copy. Maestro matches text exactly, so these are the
+# whole lines.
+- assertVisible: "Sign in"
+- assertVisible: "Use the account you drive with."
+
+# The four ways in, in the reference's order. The screen is taller than the
+# phone, so the ways in are revealed by their own testIDs: the copy moves with
+# the design, the testIDs are the contract.
+- scrollUntilVisible:
+    element:
+      id: "sign-in-apple"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    id: "sign-in-apple"
+- assertVisible:
+    id: "sign-in-google"
+- assertVisible:
+    id: "sign-in-passkey"
+- assertVisible:
+    id: "sign-in-email"
+
+# A method the service does not offer keeps its place and says why. The
+# emulator mock refuses the social and the passkey sign-ins, so all three
+# reasons are on the screen, and the buttons are disabled.
+- assertVisible:
+    id: "sign-in-apple-reason"
+- assertVisible:
+    id: "sign-in-google-reason"
+- assertVisible:
+    id: "sign-in-passkey-reason"
+
+# The email way in opens the form: the two fields with a label each and the
+# one primary action.
+- tapOn:
+    id: "sign-in-email"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-form"
+    timeout: 20000
+- assertVisible:
+    id: "sign-in-email-field"
+- assertVisible:
+    id: "sign-in-password-field"
+- assertVisible:
+    id: "sign-in-submit"
+- inputText:
+    id: "sign-in-email-field"
+    text: "driver@example.co.nz"
+- inputText:
+    id: "sign-in-password-field"
+    text: "correct-horse-battery"
+
+# The submit calls through: the email and the password reach the provider,
+# the mock signs the driver in, and the app lands on Today, the same screen
+# every other flow opens on.
+- tapOn:
+    id: "sign-in-submit"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+
+# The remembered session, offered only when the phone has one. The emulator
+# run starts from a cleared device, so there is nothing to resume and the
+# block does not run; where a receipt exists it resumes it and the screen
+# says what is true - the session is the one the phone kept and the server
+# has not confirmed it.
+- runFlow:
+    when:
+      visible: "Continue on this session"
+    commands:
+      - assertVisible:
+          id: "sign-in-offer-offline"
+      - tapOn:
+          id: "sign-in-offer-offline"
+      - assertVisible:
+          id: "sign-in-offline-result"
+      - assertVisible: "You are on the session from this shift"
+
+- takeScreenshot: "sign-in"
