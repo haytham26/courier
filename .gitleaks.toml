@@ -11,11 +11,15 @@
 useDefault = true
 
 [allowlist]
-description = "The fixed test strings of the auth service (they are not credentials)"
+description = "The fixed test strings of the auth and API services (they are not credentials)"
 regexTarget = "secret"
 regexes = [
   '''a-secret-that-is-definitely-long-enough-32''',
   '''test-only-value-not-a-real-credential-0000''',
   '''test-secret-value-with-at-least-32-characters''',
   '''server-test-secret-value-long-enough-32''',
+  '''test-only-pod-url-signing-secret-0123456789''',
+  '''a-different-pod-signing-secret-0123456789''',
+  '''not-the-server-key-0123456789abcdef''',
+  '''ci-only-pod-signing-secret-0123456789''',
 ]
