@@ -208,7 +208,12 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 | The upsert | `test-driven-development` | RED first (the suite caught the in-memory `replace` not preserving the id), then the SQL `ON CONFLICT DO NOTHING RETURNING id` else UPDATE. |
 | The review | `code-review-and-quality`, `doubt-driven-development` | The two must-fixes both came from "what breaks silently in two years", not from the happy path. |
 
-## 2026-10-25 - Queue 2, item 5: voice intake (branch `feat/voice-intake`, PR #34 in review)
+## 2026-10-25 - Queue 2, item 5: voice intake (branch `feat/voice-intake`, MERGED PR #34)
+
+- Merged as `2cc0aec` (merge commit), archive tag `archive/feat/voice-intake`, branch deleted.
+- CI green at `0069b20`: the API suite 319 passed + 1 skipped + 12 db-deselected, the db suite,
+  the drill, the SLOs, gitleaks, CodeQL. Android E2E green on both legs (the api-35 leg passed on
+  attempt 2 after the emulator's GL/adb environment signature - the app content was byte-identical).
 
 - ADR-013: the two contract stubs (`POST /shifts/{shift_id}/intake`, `/intake/manifest`) now run the
   real LangGraph intake and answer the contract's briefing or first interrupt question.
@@ -251,3 +256,65 @@ allowed", the cost guard, no transcript/address/name in any log line) and is tes
 | The prompt hygiene | `security-and-hardening` | Untrusted text in tagged blocks - the same defence the copilot and the voice service already use; the review proved the wiring would have bypassed it. |
 | The failure paths | `debugging-and-error-recovery` | The asymmetric design (raise vs fall back) came from asking what the courier experiences, not what the code finds easiest. |
 | The async fix | `performance-optimization` | The event-loop stall was measured (0.55s), not guessed; the fix is the sibling's pattern. |
+### The review that changed the item 6 - the sync conflict rules
+
+- Must-fix 1: **the test rot.** `test_runs_api.py` posted a pinned `START_AT` as the batch's
+  `occurred_at`, and the new 7-day bound would have turned those tests into 422s from 2026-10-31.
+  The sync and POD posts now use a now-relative timestamp, with the reason written next to it.
+- Must-fix 2: **the within-batch divergent duplicate.** A batch carrying the same id twice with
+  different content was a conflict in the in-memory repo and silent in SQL (the insert kept the
+  first copy and nobody was told). The SQL path now compares the batch against itself, and both
+  suites pin it.
+- Must-fix 3: **the ADR's overstatements.** The tie-break is scoped to the in-memory derivation (the
+  SQL `stops.status` writer must order `occurred_at, received_at` when it lands), the POD
+  `occurred_at` exemption is recorded, the >7-day queue-wedge risk against the zero-data-loss gate
+  is recorded, and C3 of the sync research is marked superseded instead of contradicted in silence.
+
+### Skills applied - item 6
+
+| Step | Skills read and followed | How it changed the work |
+| --- | --- | --- |
+| The rules | `spec-driven-development`, `api-and-interface-design` | The ADR first (the queue demanded it), then the shape: one `AppendResult` both repositories answer, so the rules are the same code in both. |
+| The clock | `security-and-hardening` | A wrong phone clock must not pin a stop's status for hours: the bound is the control, and the exemption (the POD's event) is named rather than implied. |
+| The review | `code-review-and-quality`, `doubt-driven-development` | The must-fix list was three ways the change would rot: a timestamp, an untested edge, and a doc claim that outran the code. |
+## 2026-10-25 - Queue 2, item 7: the map pack pipeline (branch `feat/map-pack-pipeline`)
+
+- ADR-016. The pack had never been built, and reading the two build scripts against the tools' own
+  documentation (planetiler's README, the pmtiles CLI reference - both read 2026-10-25) found the
+  reason in four places:
+  - the CLI was invented: `--area=christchurch` (Geofabrik publishes `new-zealand`, not
+    Christchurch), `--download` pointed at a local extract (a file on disk is `--osm-path`), and
+    the plan printed a `versatiles reduce` step that does not exist in the build at all;
+  - the 3D bake ran `--overlay=<outlines> --profile=courier`, and planetiler has no such flags: a
+    second data source rides a profile. The bake now refuses and names what it needs, while the
+    pack build already bakes OSM buildings with `render_height`, so the app draws buildings without
+    the LINZ footprints;
+  - both scripts resolved the repo root one directory short, so the pack would have been written
+    into `scripts/apps/mobile/assets/maps` - a plan's printed path was the only thing that betrayed
+    it;
+  - neither recorded the tool versions, the archive's real header, or the credit the OpenMapTiles
+    schema and profile require.
+- The build runs the documented steps: `planetiler --osm-path=<extract> --output=<tileset>
+  --force` (the heap in `JAVA_TOOL_OPTIONS`, per the README's ~0.5x-the-input rule), then
+  `pmtiles extract` clipped to the Canterbury bbox and zooms in the CLI's own order, `pmtiles
+  verify`, and `pmtiles show --header-json` recorded in the manifest **verbatim** - the tool prints
+  snake_case keys (its own test asserts `tile_type`/`tile_compression`), so the first version of
+  this step read camelCase guesses that would have recorded `undefined`.
+- `.github/workflows/map-pack.yml` runs the pipeline twice a week (D26), on dispatch (extract URL
+  and source id as inputs), and on a push that touches the pipeline or the scripts; it publishes
+  the pack, the manifest and the evidence as artifacts and never gates a PR. Both Semgrep findings
+  it raised were fixed structurally: every `uses:` pinned to the full SHA the repo's other
+  workflows use, and the dispatch inputs passed through `env:` rather than interpolated into a
+  `run:` block.
+- Not claimed as done: the 50 MB ceiling is checked but has never been observed, the LINZ overlay
+  profile is not written, and the frame/battery/latency numbers are still the maps squad's to
+  measure.
+
+### Skills applied - item 7
+
+| Step | Skills read and followed | How it changed the work |
+| --- | --- | --- |
+| The tools | `source-driven-development` | Every flag was verified against the official docs before it shipped; the four defects exist precisely where the previous author did not check. |
+| The workflow | `ci-cd-and-automation` | The schedule, the dispatch inputs, the artifact retention and the two supply-chain gates (pinned SHAs, no inline expressions) - plus the honest rule that a 90-minute data build never gates a PR. |
+| The honesty | `constraint-driven-development` | The unverified rows stay unverified in the maps status; the item claims the pipeline, not the numbers. |
+
