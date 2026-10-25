@@ -22,6 +22,20 @@ on:
       - '.github/workflows/android-e2e.yml'
       - 'package.json'
       - 'pnpm-lock.yaml'
+  push:
+    branches:
+      - main
+    # PLAYBOOK 17.2: main is tested after every merge, so a red main is never
+    # silent. The same path filter as the PR trigger applies: the flows and the
+    # pipeline themselves are included, a docs-only merge is not.
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'services/**'
+      - '.maestro/**'
+      - '.github/workflows/android-e2e.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
   schedule:
     # Nightly. A red nightly is the first task of the next session.
     - cron: '17 3 * * *'
@@ -33,6 +47,25 @@ concurrency:
 
 permissions:
   contents: read
+
+# PLAYBOOK 17.1 (BUG-064): everything the E2E uses is pinned, and a change to a
+# pin is a commit, never a runner's whim. Before this, Maestro was installed at
+# `releases/latest`, the emulator binary and the system image were whatever the
+# runner carried that day, and the AVD cache key ignored all of them and the
+# emulator options - which is why the same APK was green on api-35 one hour and
+# red on four PRs the next, with the app, the flows and the workflow unchanged.
+#
+# The values, with where each came from:
+#  - MAESTRO_VERSION cli-2.11.0 - the release tag; MAESTRO_SHA256 is that
+#    release's own published checksum for maestro.zip (the release ships a
+#    checksums_sha256.txt; this line is that file's value).
+#  - EMULATOR_BUILD 16632760 - the stable emulator 37.3.5 from Google's
+#    repository2-3.xml (the Linux archive emulator-linux_x64-16632760.zip).
+# A tool upgrade is its own PR with a green run on both legs.
+env:
+  MAESTRO_VERSION: cli-2.11.0
+  MAESTRO_SHA256: 5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a
+  EMULATOR_BUILD: '16632760'
 
 jobs:
   build:
@@ -143,21 +176,51 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: The pins' fingerprint
+        id: pins
+        run: |
+          # BUG-064: the AVD cache key was avd-<os>-<api>-google-apis-x86_64, so
+          # it stayed the same when the Maestro version, the emulator build or
+          # the emulator options changed, and a cached AVD built by a different
+          # toolset was reused as if it were this one. The key now carries every
+          # pin plus a hash of the emulator options, so a pin change is a cache
+          # miss by construction rather than by luck.
+          set -euo pipefail
+          opts="-no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 6144 -cores 4"
+          fingerprint="$MAESTRO_VERSION/$MAESTRO_SHA256/$EMULATOR_BUILD/android-${{ matrix.api }}/google_apis/x86_64/$opts"
+          hash=$(printf '%s' "$fingerprint" | sha256sum | cut -d' ' -f1 | cut -c1-16)
+          echo "hash=$hash" >> "$GITHUB_OUTPUT"
+          echo "pin fingerprint: $fingerprint -> $hash"
+
       - name: Cache the AVD snapshot
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ~/.android/avd
-          key: avd-${{ runner.os }}-${{ matrix.api }}-google-apis-x86_64
+          key: avd-${{ runner.os }}-${{ matrix.api }}-google-apis-x86_64-${{ steps.pins.outputs.hash }}
 
       - name: Install Maestro
+        env:
+          MAESTRO_VERSION: ${{ env.MAESTRO_VERSION }}
+          MAESTRO_SHA256: ${{ env.MAESTRO_SHA256 }}
         run: |
-          # The installer is downloaded, shown and then executed - never piped
-          # straight into a shell (V4 section 7).
-          curl -fsSL "https://get.maestro.mobile.dev" -o "$RUNNER_TEMP/maestro-install.sh"
-          head -n 20 "$RUNNER_TEMP/maestro-install.sh"
-          chmod +x "$RUNNER_TEMP/maestro-install.sh"
-          bash "$RUNNER_TEMP/maestro-install.sh"
+          # BUG-064: the installer takes its version from `releases/latest` when
+          # MAESTRO_VERSION is empty, so the runner's Maestro changed without a
+          # commit. The pinned release is downloaded directly and its archive's
+          # checksum - the release's own published value, recorded in the
+          # workflow env - is verified before anything runs. That is the same
+          # guarantee a lockfile gives a package, and it is why no byte runs
+          # unverified (V4 section 7: never pipe a script into a shell either).
+          set -euo pipefail
+          url="https://github.com/mobile-dev-inc/Maestro/releases/download/${MAESTRO_VERSION}/maestro.zip"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/maestro.zip" "$url"
+          echo "${MAESTRO_SHA256}  $RUNNER_TEMP/maestro.zip" | sha256sum -c -
+          rm -rf "$HOME/.maestro" "$HOME/.maestro/tmp"
+          mkdir -p "$HOME/.maestro/tmp"
+          unzip -qo "$RUNNER_TEMP/maestro.zip" -d "$HOME/.maestro/tmp"
+          cp -rf "$HOME/.maestro/tmp/maestro/." "$HOME/.maestro/"
+          rm -rf "$HOME/.maestro/tmp" "$RUNNER_TEMP/maestro.zip"
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          "$HOME/.maestro/bin/maestro" --version
 
       - name: Run the Maestro flows on the emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
@@ -181,8 +244,38 @@ jobs:
           # slowed from 26-30 s to 36-39 s. The runner has 4 cores and 16 GB, so
           # the emulator gets 6 GB and 4 cores.
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 6144 -cores 4
+          # BUG-064: the emulator binary is pinned to EMULATOR_BUILD (the stable
+          # 37.3.5 from Google's repository2-3.xml). The action installs the
+          # system image from the stable channel by api-level, so that revision
+          # is not a pin: it is read from the installed image after the run and
+          # recorded in the evidence and in the nightly health file.
+          emulator-build: ${{ env.EMULATOR_BUILD }}
           script: bash .maestro/run-all.sh
           working-directory: .
+
+      - name: Record the pins this run actually used
+        if: always()
+        run: |
+          # PLAYBOOK 17.1: "the system image, through its revision where the
+          # action allows it, recorded otherwise". The image is installed by the
+          # action from the stable channel, so its revision is read from the
+          # installed package and written into the evidence - the number the
+          # nightly health report then reads.
+          set -uo pipefail
+          mkdir -p .maestro/evidence
+          sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          image="$sdk/system-images/android-${{ matrix.api }}/google_apis/x86_64"
+          rev=""
+          if [ -f "$image/source.properties" ]; then
+            rev="$(grep -h 'Pkg.Revision' "$image/source.properties" | cut -d= -f2)"
+          fi
+          {
+            echo "maestro_version=$MAESTRO_VERSION"
+            echo "maestro_sha256=$MAESTRO_SHA256"
+            echo "emulator_build=$EMULATOR_BUILD"
+            echo "system_image_revision=${rev:-unknown}"
+            echo "avd_cache_key=avd-${{ runner.os }}-${{ matrix.api }}-google-apis-x86_64-${{ steps.pins.outputs.hash }}"
+          } | tee .maestro/evidence/e2e-pins.txt
 
       - name: Upload the evidence
         if: always()

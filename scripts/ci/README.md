@@ -19,7 +19,8 @@ Every script here fails the build when its check fails. They are the mechanical 
 | `check-store-readiness.mjs` | The local copy of the StoreReady check (the release manager's copy of the CI gate). `node scripts/ci/check-store-readiness.mjs [--repo .] [--app apps/mobile] [--apk <file>] [--json <file>]`. |
 | `store-ready-summary.mjs` | Renders the StoreReady report as a job summary. `node scripts/ci/store-ready-summary.mjs <report.json>`. |
 | `check-doc-links.mjs` | The link gate: every relative link in the live documentation resolves (`docs/archive`, `docs/evidence` and `docs/log` are history and skipped). `node scripts/ci/check-doc-links.mjs`. |
-| `check-emulator-gpu.mjs` | The emulator-GL gate (BUG-053): every workflow step that boots an Android emulator sets `-gpu swiftshader_indirect`, a second `-gpu` fails, and an anchor the gate cannot read fails loudly. `node scripts/ci/check-emulator-gpu.mjs [workflow-directory]` (the default is this repository's own `.github/workflows`, resolved from the module so the cwd does not matter). |
+| `check-emulator-gpu.mjs` | The emulator-GL gate (BUG-060): every workflow step that boots an Android emulator sets `-gpu swiftshader_indirect`, a second `-gpu` fails, and an anchor the gate cannot read fails loudly. `node scripts/ci/check-emulator-gpu.mjs [workflow-directory]` (the default is this repository's own `.github/workflows`, resolved from the module so the cwd does not matter). |
+| `check-e2e-pins.mjs` | The E2E pins gate (BUG-064): every workflow that boots an Android emulator declares the same `MAESTRO_VERSION`, `MAESTRO_SHA256` and `EMULATOR_BUILD`, passes `emulator-build` to the action, and keeps the pins' shape (a `cli-X.Y.Z` tag, a 64-char sha256, digits). A workflow that boots no emulator at all also fails: the gate cannot go vacuous. `node scripts/ci/check-e2e-pins.mjs [workflow-directory]`. |
 
 ## The tests
 
@@ -29,5 +30,6 @@ Every script here fails the build when its check fails. They are the mechanical 
 | `__tests__/check-store-readiness.test.mjs` | A good app passes the check and a missing privacy policy is a blocking problem. |
 | `__tests__/store-ready-summary.test.mjs` | A blocking finding stays a blocking finding in the summary. |
 | `__tests__/check-emulator-gpu.test.mjs` | A boot without the flag, a boot with no options, a second `-gpu`, an anchor, a comment naming the action, an inverted step and a wrong directory all fail; the fixed forms pass; the real tree is scanned so the gate cannot go vacuous; and the CLI's exit codes (0, 1, 2) are the contract CI runs. |
+| `__tests__/check-e2e-pins.test.mjs` | A boot with no pins, a boot without `emulator-build`, two workflows with different Maestro versions, a pin with the wrong shape and a directory with no emulator boot at all all fail; the fully pinned boot passes; the reader ignores a step's `${{ env.X }}` placeholder; and the real tree is scanned so the gate cannot go vacuous. |
 
 `node --test "scripts/*/__tests__/*.test.mjs"`

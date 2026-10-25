@@ -42,6 +42,15 @@ jobs:
       # own test runs with the rest of scripts/*/__tests__ (test:store-readiness).
       - name: Every emulator boot asks for software rendering
         run: node scripts/ci/check-emulator-gpu.mjs
+      # BUG-064: the E2E used to take Maestro from `releases/latest`, the
+      # emulator binary and the system image from whatever the runner carried
+      # that day, and the AVD cache key ignored all of them plus the emulator
+      # options. The same APK was green on api-35 one hour and red on four PRs
+      # the next. This gate keeps the pins present, well-shaped and identical
+      # across every workflow that boots an emulator. Its own test runs with
+      # `node --test scripts/*/__tests__/*.test.mjs`.
+      - name: Every emulator boot carries the same pins
+        run: node scripts/ci/check-e2e-pins.mjs
       - name: Check the voice evaluation set
         run: node scripts/eval/check-voice-eval.mjs
       - name: Check the scanner evaluation set
