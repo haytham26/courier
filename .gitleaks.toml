@@ -22,4 +22,7 @@ regexes = [
   '''a-different-pod-signing-secret-0123456789''',
   '''not-the-server-key-0123456789abcdef''',
   '''ci-only-pod-signing-secret-0123456789''',
+  # The generic-api-key rule reads the argument after a `*_SECRET` constant as
+  # the secret itself; this one is a TTL (and the call is one arg per line now).
+  '''ttl_seconds=-1''',
 ]

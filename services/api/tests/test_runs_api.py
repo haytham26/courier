@@ -225,7 +225,9 @@ class TestThePodUrl:
         run_id, _, event_id, _ = self._upload(client, repo, tmp_path, monkeypatch)
         monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
         expired_url, _ = LocalPodStore(
-            Path(str(tmp_path)), POD_TEST_SECRET, ttl_seconds=-1
+            Path(str(tmp_path)),
+            POD_TEST_SECRET,
+            ttl_seconds=-1,
         ).presign_url(run_id, event_id)
 
         assert anonymous_client.get(expired_url).status_code == 404
