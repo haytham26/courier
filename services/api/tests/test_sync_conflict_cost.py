@@ -18,7 +18,9 @@ import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
+
+from sqlalchemy.engine import Engine
 
 from app.repo import AppendResult, DeliveryEventRow, SqlAlchemyRepo
 
@@ -121,8 +123,10 @@ def repo_with(
     rowcount: int, stored_rows: list[tuple[uuid.UUID, str]] | None = None
 ) -> tuple[SqlAlchemyRepo, RecordingEngine]:
     engine = RecordingEngine(rowcount, stored_rows)
-    # The engine is structural: the repo only uses the two context managers above.
-    repo = SqlAlchemyRepo(engine)  # type: ignore[arg-type]
+    # The engine is structural: the repo only uses the two context managers
+    # above, so the recording engine stands in for SQLAlchemy's own type. A
+    # cast rather than a suppression: the shape is checked, not silenced.
+    repo = SqlAlchemyRepo(cast(Engine, engine))
     return repo, engine
 
 
