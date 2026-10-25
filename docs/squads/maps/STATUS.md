@@ -70,6 +70,19 @@ Updated: 2026-10-22 (MASTER_EXECUTION §11: the view modes, the toggles, the fre
   of the tile source, refuses the sources whose terms forbid our offline use,
   prints the plan and stops, and writes the licence and the attribution into
   the pack manifest.
+- **The pipeline** (ADR-016): the build runs the tools' documented CLI
+  (`planetiler --osm-path=... --force` from planetiler's README, then
+  `pmtiles extract --bbox=... --maxzoom --minzoom`, `pmtiles verify` and
+  `pmtiles show --header-json` from the CLI reference, both read 2026-10-25), and
+  `.github/workflows/map-pack.yml` runs it twice a week (D26), on dispatch, and on
+  a push that touches the pipeline. The manifest now carries the OpenMapTiles
+  credit, the tool versions and the archive's real header.
+- **What changed when the scripts were read against the docs**: the CLI they ran
+  was invented in three places (`--area=christchurch`, which Geofabrik does not
+  publish; `--download` pointed at a file on disk; a `versatiles reduce` step
+  that does not exist), the repo root was one directory short, and the 3D bake
+  used flags planetiler does not have. All four are fixed and pinned by
+  `apps/mobile/src/maps/__tests__/packBuilder.test.ts`.
 - **The squad documentation** (`docs/squads/maps/README.md`): the decision, the
   view modes, the pack layout, how to build the pack, the licence of the data
   and the performance budget.
@@ -85,8 +98,8 @@ Updated: 2026-10-22 (MASTER_EXECUTION §11: the view modes, the toggles, the fre
 | Four driver-selectable map modes       | tap and voice, remembered per driver                 | done                                                                        | `apps/mobile/src/maps/viewModes.ts`, `apps/mobile/src/voice/commands.ts` |
 | The satellite mode                     | online only, behind a licensed provider              | done - the seam is in place, no provider is licensed                        | `apps/mobile/src/maps/config.ts`                                         |
 | The toggles in a sheet under the map   | buildings, traffic, closures, weather, labels, theme | done                                                                        | `apps/mobile/src/maps/MapSettingsSheet.tsx`                              |
-| The 3D buildings                       | free, offline, drawn from the pack                   | the style and the build script are done, **the pack is not built**          | `apps/mobile/src/maps/styles.ts`, `scripts/data/build-3d-buildings.mjs`       |
-| The licence of every input of the bake | checked by the script, recorded in the manifest      | done                                                                        | `scripts/data/build-3d-buildings.mjs`                                         |
+| The 3D buildings                       | free, offline, drawn from the pack                   | the style and the build script are done, **the pack is not built**          | `apps/mobile/src/maps/styles.ts`, `scripts/data/build-3d-buildings.mjs`  |
+| The licence of every input of the bake | checked by the script, recorded in the manifest      | done                                                                        | `scripts/data/build-3d-buildings.mjs`                                    |
 | Full Canterbury offline                | the pack on the device                               | **not built** - the pack is about 50 MB and has to be built from an extract | the build script, `docs/squads/maps/README.md`                           |
 | Pack size                              | 50 MB or under                                       | **UNVERIFIED**                                                              | no pack has been built                                                   |
 | Pan and zoom                           | 60 fps                                               | **UNVERIFIED**                                                              | no perfetto trace exists                                                 |
@@ -95,6 +108,10 @@ Updated: 2026-10-22 (MASTER_EXECUTION §11: the view modes, the toggles, the fre
 
 ## Next
 
+0. **Run the pipeline** (`.github/workflows/map-pack.yml`): the twice-a-week
+   build or a dispatch produces the pack, the manifest, the size, the sha256 and
+   the tool versions in `docs/evidence/maps/pack/`. The workflow is the item's
+   deliverable; the first run's numbers are the evidence this row waits for.
 1. Build the pack from an extract and record its size and its SHA-256 in
    `docs/squads/maps/eval/pack-matrix.md`.
 2. Bake the 3D buildings into that pack and record the size of the pack with
@@ -120,6 +137,10 @@ Updated: 2026-10-22 (MASTER_EXECUTION §11: the view modes, the toggles, the fre
 
 ## Risks
 
+- **The pack build script ran an invocation planetiler does not have.** The
+  pipeline item found and fixed it by reading the tools' own documentation: the
+  build steps are now the documented ones, and the plan no longer prints steps
+  that do not run. The first scheduled run is the proof it works end to end.
 - **Whether an on-device cached OSM tile set is an ODbL "Produced Work"** is a
   legal question, not an engineering one, and it is still unanswered. The
   attribution is visible in every case; the founder and counsel decide the rest.
