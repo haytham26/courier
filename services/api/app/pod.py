@@ -26,12 +26,24 @@ POD_MAX_BYTES = 10 * 1024 * 1024
 HEIC_MAJOR_BRANDS = (b"heic", b"heix", b"heim", b"hevc", b"mif1", b"msf1")
 
 
+POD_URL_TTL_SECONDS = 900
+"""The signed URL lives 15 minutes - long enough to render, short enough to
+die before it is worth stealing (ASVS V8)."""
+
+
 class PodSettings(BaseSettings):
-    """Where the POD bytes land (the directory comes from the env, ASVS V14)."""
+    """Where the POD bytes land and who keeps them (ASVS V14: env-only)."""
 
     model_config = SettingsConfigDict(env_file=".env.local", extra="ignore")
 
+    pod_storage_backend: str = "local"
     pod_storage_dir: Path = Path(__file__).resolve().parent.parent / "pod-store"
+    pod_s3_bucket: str = ""
+    pod_s3_endpoint_url: str = ""
+    pod_s3_region: str = ""
+    pod_s3_access_key_id: str = ""
+    pod_s3_secret_access_key: str = ""
+    pod_url_ttl_seconds: int = POD_URL_TTL_SECONDS
 
 
 def pod_settings() -> PodSettings:
