@@ -1,6 +1,6 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-25 · main at `6eec1da` · **Queue 2: item 1 MERGED (PR #26), item 2 in review (PR #27).**
+Updated: 2026-10-25 · main at `5e463a6` · **Queue 2: items 1–2 MERGED (PR #26, #27), item 3 in review.**
 
 ## A rule violation, recorded (2026-10-25)
 
@@ -10,7 +10,48 @@ Updated: 2026-10-25 · main at `6eec1da` · **Queue 2: item 1 MERGED (PR #26), i
   content of `47a44b4` is preserved inside `07a6799`'s history — but the rule is the rule. The
   corrective habit from now on: a pushed mistake gets a follow-up commit, never an amend.
 
-## In flight — item 2 (the database in CI, this branch)
+## In flight — item 3 (POD object storage, `feat/pod-storage`)
+
+- **ADR-011** (accepted): one `PodStore` interface, two homes — `LocalPodStore` (the ADR-010
+  directory, the default) and `S3PodStore` (boto3 against any S3-compatible store: S3, R2, Wasabi;
+  **MinIO stays banned — AGPL-3.0**; the tests emulate S3 with `moto`, Apache-2.0).
+- **The contract gained two paths** (served, not planned): `GET
+  /runs/{run_id}/stops/{stop_id}/pod/{event_id}/url` (the owner-only presign; foreign run / stop /
+  event each 404) and `GET /runs/{run_id}/pod/{event_id}/bytes` (the local backend's streaming
+  grant: HMAC over run+event+expiry, constant-time check, dead after 15 min — an image loader
+  cannot send a bearer header). The upload now writes **through the store**, so
+  `POD_STORAGE_BACKEND=s3` writes where the URL points.
+- **Retention:** `delete_run(run_id)` on the store (local: the run's directory; S3: the run's
+  prefix, paginated and deleted in 1,000-key batches with per-key errors raised) — the primitive
+  the run-deletion and account-deletion slices will call (DATA-SAFETY: the photos die with the run;
+  accounts within 30 days). The scheduler stays the infra lane.
+- **The fresh-context review found a blocker, fixed before merge:** the streaming grant's HMAC key
+  was derived from `AUTH_JWT_ISSUER` — a public value in every access token — so any authenticated
+  caller could forge a grant and read another courier's photo. The key is now the dedicated
+  `POD_URL_SIGNING_SECRET` (≥32 chars, validated at boot; the local backend refuses to start
+  without it). The same pass fixed the ETag-vs-sha256 lie on S3 (the sha256 is object metadata),
+  `exists()` swallowing 403/5xx (a replay could overwrite), the unpaginated `delete_run` (a long
+  run's tail survived), a non-POD event id minting a 200 URL, a non-hex signature returning 500,
+  and the moto suite skipping in CI (both workflows now sync `--extra s3test`; the module raises
+  when CI lacks it). Each has a test.
+- **For the lead:** the new env names are in `.env.example` (`POD_STORAGE_BACKEND`,
+  `POD_URL_SIGNING_SECRET`, `POD_S3_*`, `POD_S3_SERVER_SIDE_ENCRYPTION`, `POD_URL_TTL_SECONDS`);
+  real buckets, keys and a signing secret are FOUNDER_TODO items. The `s3` runtime extra and the
+  `s3test` (moto) extra are in `services/api/pyproject.toml`.
+
+## Queue 2 item 2 — MERGED (PR #27, `archive/feat/db-in-ci`)
+
+- The pinned PostGIS 17.2 service container (the schema needs PostGIS), the DB-backed
+  `SqlAlchemyRepo` suite (10 tests, the `db` marker — the executemany-rowcount and
+  IntegrityError questions close with evidence in CI; the first run showed the lying-409
+  conflation live and the constraint-name translation landed in the same pass), the restore
+  drill as a CI step (dump → clean DB → the API round-trip; the CI evidence: `VERDICT: PASS |
+  restore 0.4s`), and the short Locust SLO profile with a minted JWKS identity (`SLOs met`, 180
+  requests, 0 failures — and a **vacuous-green guard**: under 100 requests fails the gate, which
+  caught the unseeded-day run live). The full 1,000-driver run stays documented for staging
+  (RUNBOOK §12). No script points at anything but the runner's own service container.
+- **The honest floor for the lead:** the CI profile is a smoke gate under load with the SLO
+  thresholds armed; the staging run is the capacity proof.
 
 - The pinned PostGIS 17.2 service container (the schema needs PostGIS), the DB-backed
   `SqlAlchemyRepo` suite (10 tests, the `db` marker — the executemany-rowcount and
