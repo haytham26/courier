@@ -109,3 +109,13 @@ Example (BUG-061 family, 2026-10-25): the first Slide to Deliver after a cold la
    - If a path is listed, `git checkout origin/main -- <path>` and amend the merge before pushing (the merge is not yet pushed, so this is allowed).
    - If the merge shows unexpected deletions while still in progress: `git merge --abort` and start again from the right branch.
 4. **The PR diff is read before merging:** `git diff --stat origin/main...origin/<branch>` lists only files the PR owns. A backend path in a mobile PR (or the reverse) blocks the merge.
+
+## 14. A test must prove what its name says (founder directive 2026-10-25)
+
+A test that passes without proving anything is worse than no test: it hides the gap. Every PR that adds or changes a test:
+
+1. **Red first.** Run the new test against the code before the fix (or with the fix reverted) and paste the failing output in the PR. A test that was never red proves nothing. The only exception is a test that pins behaviour that already works, and the PR says so.
+2. **The name is the claim.** The assertions must prove exactly what the test's name says. If the setup cannot produce the case (for example a fake that returns no stored rows for a "divergent replay" test), fix the setup or rename the test.
+3. **Fakes are not proof of real behaviour.** When a fix depends on what the real system returns (a database rowcount, a platform API), add one test against the real thing too (the `db`-marked Postgres suite, the emulator).
+4. **The reviewer pass checks 1 to 3** for every new test, as part of the 5-pass check.
+5. **Mutation testing covers the core.** CONSTRAINTS runs Stryker on the address engine and the auth service. The backend squad extends it to the Python services that hold money, sync and routing (`services/api`: sync, runs, auth; `services/courier-voice`: the turn machine) with mutmut, scoped to the changed files on each PR, with the same ≥ 70 % floor. Until that lands, the reviewer flips one comparison in the changed code by hand and confirms a test goes red.
