@@ -1,5 +1,6 @@
 """Master Template Lock: order today's stops by the driver's fixed street flow,
 not by a TSP solver. Unknown streets are slotted next to their nearest templated neighbour."""
+
 from __future__ import annotations
 
 import math
@@ -9,7 +10,7 @@ from dataclasses import dataclass, field
 @dataclass
 class Segment:
     street_key: str
-    direction: str = "asc"   # asc | desc | odd_first | even_first | zigzag
+    direction: str = "asc"  # asc | desc | odd_first | even_first | zigzag
 
 
 @dataclass
@@ -39,8 +40,8 @@ def _order_on_street(stops: list[Stop], direction: str) -> list[Stop]:
         first = 1 if direction == "odd_first" else 0
         a = [s for s in asc if s.number % 2 == first]
         b = [s for s in asc if s.number % 2 != first]
-        return a + b[::-1]   # up one side, back down the other
-    return asc               # asc and zigzag (zigzag = walk both sides in number order)
+        return a + b[::-1]  # up one side, back down the other
+    return asc  # asc and zigzag (zigzag = walk both sides in number order)
 
 
 def sequence(stops: list[Stop], template: list[Segment]) -> list[Stop]:
@@ -80,5 +81,7 @@ def assign_van_zones(ordered: list[Stop], sizes: dict[str, str | None]) -> dict[
         if sizes.get(s.location_id) in ("heavy", "large"):
             zones[s.location_id] = "HEAVY_BASE"
         else:
-            zones[s.location_id] = VAN_ZONES[min(i * len(VAN_ZONES) // max(n, 1), len(VAN_ZONES) - 1)]
+            zones[s.location_id] = VAN_ZONES[
+                min(i * len(VAN_ZONES) // max(n, 1), len(VAN_ZONES) - 1)
+            ]
     return zones

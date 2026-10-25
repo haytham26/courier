@@ -22,6 +22,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import {
   Camera,
@@ -55,6 +56,7 @@ import {
 } from '@/maps/drive';
 import { getCourierStyle } from '@/maps/styles';
 import { mockStops } from '@/maps/stops';
+import { useRun } from '@/maps/runState';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { useVoice } from '@/voice/useVoice';
 
@@ -127,7 +129,12 @@ const styles = StyleSheet.create({
   },
 });
 
-function DrivingScreen() {
+/**
+ * The drive itself, exported so the night route (12-driving-night.html) renders
+ * the SAME screen with the mode pinned to dark: one implementation, one place
+ * to fix, and the design gate compares light against dark side by side.
+ */
+export function DrivingScreen() {
   const { t } = useChosen();
   const voice = useVoice();
   const scheme = useColorScheme();
@@ -139,10 +146,17 @@ function DrivingScreen() {
   const [night, setNight] = useState(scheme === 'dark');
   const [locationAllowed, setLocationAllowed] = useState(false);
 
-  // The run the drive moves on: the screen's own copy of the day's stops
-  // (the same boundary Today recorded - the shared write path lands with
-  // the Route screen).
-  const [deliveredIds, setDeliveredIds] = useState<string[]>([]);
+  // The run the drive moves on: the delivered marks live in the run state
+  // above the routes (src/maps/runState.tsx - the boundary shift the
+  // confirm panel recorded: a separate route cannot read this screen's own
+  // state), so the slide here, the confirm panel (05) and the Route's
+  // planner (08, later) read the same marks.
+  const run = useRun();
+  const router = useRouter();
+  const deliveredIds = useMemo(
+    () => run.delivered.map((event) => event.stopId),
+    [run.delivered],
+  );
 
   const active = activeOf(mockStops, deliveredIds);
   const after = active ? nextOf(mockStops, active.sequence, deliveredIds) : null;
@@ -187,11 +201,15 @@ function DrivingScreen() {
   }, []);
 
   const handleDeliver = useCallback(() => {
-    // The slide carries the success haptic: here the run moves on.
-    setDeliveredIds((current) =>
-      active ? [...current, active.id] : current,
-    );
-  }, [active]);
+    // The slide carries the success haptic; here the mark moves the run and
+    // the confirm panel (05) takes over: the courier undoes it, or takes
+    // the drive's next stop.
+    if (!active) {
+      return;
+    }
+    run.markDelivered(active);
+    router.push(`/delivered?stop=${active.id}`);
+  }, [active, run, router]);
 
   const handleNight = useCallback(() => {
     setNight((current) => !current);

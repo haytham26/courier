@@ -1,5 +1,6 @@
 """Deterministic NZ address normaliser. Runs before (and after) the LLM so the
 LLM never has to be trusted for spelling of streets/suburbs it can't see."""
+
 from __future__ import annotations
 
 import difflib
@@ -8,31 +9,129 @@ from dataclasses import dataclass
 
 # Extend per run from LINZ address data; these seed common Christchurch speech errors.
 CHCH_SUBURBS = [
-    "Northwood", "Redwood", "Riccarton", "Upper Riccarton", "Papanui", "Bishopdale",
-    "Burnside", "Casebrook", "Belfast", "Styx Mill", "Harewood", "Avonhead", "Ilam",
-    "Fendalton", "Merivale", "St Albans", "Strowan", "Bryndwr", "Halswell", "Hornby",
-    "Sockburn", "Wigram", "Addington", "Sydenham", "Linwood", "Woolston", "Shirley",
-    "Mairehau", "Marshland", "Parklands", "Burwood", "Aranui", "Opawa", "Cashmere",
-    "Sumner", "Redcliffs", "Halswell", "Yaldhurst", "Russley", "Waimairi Beach",
+    "Northwood",
+    "Redwood",
+    "Riccarton",
+    "Upper Riccarton",
+    "Papanui",
+    "Bishopdale",
+    "Burnside",
+    "Casebrook",
+    "Belfast",
+    "Styx Mill",
+    "Harewood",
+    "Avonhead",
+    "Ilam",
+    "Fendalton",
+    "Merivale",
+    "St Albans",
+    "Strowan",
+    "Bryndwr",
+    "Halswell",
+    "Hornby",
+    "Sockburn",
+    "Wigram",
+    "Addington",
+    "Sydenham",
+    "Linwood",
+    "Woolston",
+    "Shirley",
+    "Mairehau",
+    "Marshland",
+    "Parklands",
+    "Burwood",
+    "Aranui",
+    "Opawa",
+    "Cashmere",
+    "Sumner",
+    "Redcliffs",
+    "Halswell",
+    "Yaldhurst",
+    "Russley",
+    "Waimairi Beach",
 ]
 # Misheard-by-ASR -> canonical. Te reo names are the usual victims.
 SPOKEN_FIXES = {
-    "rick a ton": "Riccarton", "rickerton": "Riccarton", "ricardton": "Riccarton",
-    "pap a new e": "Papanui", "papa newey": "Papanui", "why my ree": "Waimairi",
-    "my ree howe": "Mairehau", "my rehau": "Mairehau", "far ken ham": "Fendalton",
-    "pair a parker": "Paparoa", "a ran ui": "Aranui", "whaka": "Whaka",
+    "rick a ton": "Riccarton",
+    "rickerton": "Riccarton",
+    "ricardton": "Riccarton",
+    "pap a new e": "Papanui",
+    "papa newey": "Papanui",
+    "why my ree": "Waimairi",
+    "my ree howe": "Mairehau",
+    "my rehau": "Mairehau",
+    "far ken ham": "Fendalton",
+    "pair a parker": "Paparoa",
+    "a ran ui": "Aranui",
+    "whaka": "Whaka",
 }
 STREET_TYPES = {
-    "street": "St", "st": "St", "road": "Rd", "rd": "Rd", "avenue": "Ave", "ave": "Ave",
-    "drive": "Dr", "dr": "Dr", "place": "Pl", "pl": "Pl", "crescent": "Cres", "cres": "Cres",
-    "terrace": "Tce", "tce": "Tce", "lane": "Ln", "close": "Cl", "court": "Ct", "way": "Way",
-    "grove": "Gr", "mews": "Mews", "quay": "Quay", "parade": "Pde", "highway": "Hwy",
+    "street": "St",
+    "st": "St",
+    "road": "Rd",
+    "rd": "Rd",
+    "avenue": "Ave",
+    "ave": "Ave",
+    "drive": "Dr",
+    "dr": "Dr",
+    "place": "Pl",
+    "pl": "Pl",
+    "crescent": "Cres",
+    "cres": "Cres",
+    "terrace": "Tce",
+    "tce": "Tce",
+    "lane": "Ln",
+    "close": "Cl",
+    "court": "Ct",
+    "way": "Way",
+    "grove": "Gr",
+    "mews": "Mews",
+    "quay": "Quay",
+    "parade": "Pde",
+    "highway": "Hwy",
 }
-NUM_WORDS = {w: str(i) for i, w in enumerate(
-    ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"])}
-NUM_WORDS.update({"thirty": "30", "forty": "40", "fifty": "50", "sixty": "60",
-                  "seventy": "70", "eighty": "80", "ninety": "90", "oh": "0",
-                  "hundred": "100", "thousand": "1000"})
+NUM_WORDS = {
+    w: str(i)
+    for i, w in enumerate(
+        [
+            "zero",
+            "one",
+            "two",
+            "three",
+            "four",
+            "five",
+            "six",
+            "seven",
+            "eight",
+            "nine",
+            "ten",
+            "eleven",
+            "twelve",
+            "thirteen",
+            "fourteen",
+            "fifteen",
+            "sixteen",
+            "seventeen",
+            "eighteen",
+            "nineteen",
+            "twenty",
+        ]
+    )
+}
+NUM_WORDS.update(
+    {
+        "thirty": "30",
+        "forty": "40",
+        "fifty": "50",
+        "sixty": "60",
+        "seventy": "70",
+        "eighty": "80",
+        "ninety": "90",
+        "oh": "0",
+        "hundred": "100",
+        "thousand": "1000",
+    }
+)
 
 
 @dataclass
@@ -122,12 +221,12 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
     text = re.sub(r"\b(unit|flat|apartment|apt)\s+", "unit ", text)
     text = _words_to_digits(text)
     text = re.sub(r"\s+", " ", text).strip()
-    text = re.sub(r"^(\d+) ([a-z])\b", r"\1\2", text)   # spoken "forty two B" -> 42b
+    text = re.sub(r"^(\d+) ([a-z])\b", r"\1\2", text)  # spoken "forty two B" -> 42b
 
     unit = None
     suffix = None
     m = re.match(r"^(?:unit (\w+)\s+)?(\d+[a-z]?)(?:\s*/\s*(\d+[a-z]?))?\s+(.*)$", text)
-    if m and m.group(3):          # "2/14 smith st" -> unit 2, number 14
+    if m and m.group(3):  # "2/14 smith st" -> unit 2, number 14
         unit, number, rest = m.group(2), m.group(3), m.group(4)
     elif m:
         unit, number, rest = m.group(1), m.group(2), m.group(4)
@@ -156,7 +255,7 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
     for i, tok in enumerate(tokens):
         if tok in STREET_TYPES:
             street = " ".join(t.title() for t in tokens[:i]) + " " + STREET_TYPES[tok]
-            tail = " ".join(tokens[i + 1:])
+            tail = " ".join(tokens[i + 1 :])
             if tail:
                 suburb, conf = match_suburb(tail, suburbs)
                 hint = tail

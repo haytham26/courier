@@ -15,6 +15,7 @@ import {
   activeOf,
   formatDistance,
   haversineMeters,
+  hourMinuteOf,
   nextOf,
   positionOf,
   streetLine,
@@ -54,6 +55,21 @@ describe('the distance in words', () => {
   it('refuses to invent a number', () => {
     expect(formatDistance(Number.NaN)).toBe('—');
     expect(formatDistance(-5)).toBe('—');
+  });
+});
+
+describe('the minute of a delivery', () => {
+  it('reads the local clock at the mark, zero-padded, 24 hours', () => {
+    // The local Date constructor pins the wall time whatever the machine's
+    // zone is, so the read is deterministic everywhere.
+    expect(hourMinuteOf(new Date(2026, 9, 23, 10, 43).getTime())).toBe('10:43');
+    expect(hourMinuteOf(new Date(2026, 9, 23, 6, 5).getTime())).toBe('06:05');
+    expect(hourMinuteOf(new Date(2026, 9, 23, 23, 59).getTime())).toBe('23:59');
+  });
+
+  it('refuses to invent a minute', () => {
+    expect(hourMinuteOf(Number.NaN)).toBe('—');
+    expect(hourMinuteOf(-1)).toBe('—');
   });
 });
 

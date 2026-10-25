@@ -1,0 +1,71 @@
+appId: com.courier.copilot
+name: "The delivered confirm - the badge row, the address and the minute, Undo and Next Stop"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The sheet opens at peek (BUG-050): the courier raises it before the Go.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- tapOn:
+    id: "today-go"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 30000
+# The deliver: a slide is required (a tap never marks the run); the point
+# starts the drag on the thumb (the docs' swipe-to-unlock example).
+- swipe:
+    from:
+      id: "driving-slide"
+      point: "10%, 50%"
+    direction: RIGHT
+- waitForAnimationToEnd:
+    timeout: 2500
+# The confirm (05-delivered.html): the badge says the stop landed, the line
+# carries the delivery's address with its minute, and the courier's two
+# choices ride the sheet.
+- extendedWaitUntil:
+    visible:
+      id: "delivered-screen"
+    timeout: 15000
+- assertVisible: "Delivered"
+# The confirm's line carries the street WITH the minute of the delivery (the
+# reference's line, 05): the assert pins both the element and the minute's
+# shape, so a line that lost its clock still fails.
+- assertVisible:
+    id: "delivered-address"
+    text: '45 Papanui Road, \d{2}:\d{2}'
+- assertVisible:
+    id: "delivered-badge"
+- assertVisible: "Undo"
+- assertVisible: "Next Stop"
+# The undo: the stop is back on the run, and the drive heads for it again.
+- tapOn:
+    id: "delivered-undo"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 15000
+- assertVisible: "STOP 2 OF 5"
+# Deliver again; this time the courier takes the next stop, and the drive
+# reads the run's next stop off the shared marks.
+- swipe:
+    from:
+      id: "driving-slide"
+      point: "10%, 50%"
+    direction: RIGHT
+- waitForAnimationToEnd:
+    timeout: 2500
+- tapOn:
+    id: "delivered-next"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 15000
+- assertVisible: "STOP 3 OF 5"

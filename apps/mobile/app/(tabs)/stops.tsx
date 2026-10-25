@@ -1,419 +1,318 @@
 /**
- * The stops list.
+ * Route - the run as a timeline, on the chosen tokens (T6 slice 3, screen 08).
  *
- * The list of the stops of the run, with a filter for the status. The stop
- * detail opens in the sheet, which springs on the UI thread and can be
- * dragged away (`docs/design/SYSTEM.md` §5).
+ * The reference (08-route.html): the map is the scene, and the glass sheet
+ * from the top carries the route - its title, Optimise, the three states of
+ * a stop (To go / Later / Done) as one segmented control, and the timeline
+ * that reads the run in order. A row is the stop: its number, the address,
+ * and the minute the run recorded for it.
  *
- * Every row is a control with a label and a role, the status is never
- * colour-only, and there is no emoji anywhere.
+ * This route was the last one still speaking the LEGACY theme (its own copy
+ * of the stops, `@/providers/ThemeProvider`, the old Sheet and Button). It now
+ * reads the ONE token file like every other screen, and it reads the SHARED
+ * run (`@/maps/stops` + `@/maps/runState`) instead of a private copy of it,
+ * so a stop delivered on the drive is the same stop here (the same-stop
+ * contract the confirm and Today read).
+ *
+ * The Maestro testIDs are the contract and they stay: `stops-screen`,
+ * `stop-<id>` for a row, `stop-detail-sheet` for the sheet a row opens. The
+ * words moved with the design; the testIDs did not.
+ *
+ * Optimise: the control is real and it answers honestly. There is no solver
+ * on the phone (the router is the backend session's, and Part C wires it), so
+ * pressing Optimise says so in one line rather than reordering a route it
+ * cannot. The record is in the evidence sheet; the button is never faked.
  */
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, FlatList } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '@/providers/ThemeProvider';
-import { Button } from '@/components/Button';
-import { Badge } from '@/components/Badge';
-import { Sheet } from '@/components/Sheet';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Camera, Map as MapView, Marker } from '@maplibre/maplibre-react-native';
+
+import { ChosenProvider, GlassSurface, Segmented, StopPin, Timeline, useChosen } from '@/components/chosen';
+import type { TimelineItem } from '@/components/chosen';
+import { radii, spacing, typography } from '@courier/design-tokens/chosen';
+import { DRIVE_ORIGIN_LNGLAT } from '@/maps/drive';
+import { mockStops, type Stop } from '@/maps/stops';
+import { useRun } from '@/maps/runState';
+import { useMapBoot } from '@/maps/useMapBoot';
+import { getCourierStyle } from '@/maps/styles';
+import { hourMinuteOf } from '@/maps/drive';
 import { hapticFor } from '@/motion/haptics';
 
-interface Stop {
-  id: string;
-  address: string;
-  suburb: string;
-  status: 'pending' | 'active' | 'delivered' | 'failed' | 'skipped';
-  sequence: number;
-  coordinates: { lat: number; lng: number };
-  deliveredAt?: string;
-  failedReason?: string;
-}
+/** The three states of a stop, as the reference's segmented control names them. */
+const SEGMENTS = [
+  { key: 'to-go', label: 'To go' },
+  { key: 'later', label: 'Later' },
+  { key: 'done', label: 'Done' },
+] as const;
 
-const mockStops: Stop[] = [
-  {
-    id: '1',
-    address: '2/14 Riccarton Road',
-    suburb: 'Riccarton',
-    status: 'delivered',
-    sequence: 1,
-    coordinates: { lat: -43.535, lng: 172.605 },
-    deliveredAt: '08:32',
-  },
-  {
-    id: '2',
-    address: '45 Papanui Road',
-    suburb: 'Merivale',
-    status: 'active',
-    sequence: 2,
-    coordinates: { lat: -43.518, lng: 172.625 },
-  },
-  {
-    id: '3',
-    address: '120 Blenheim Road',
-    suburb: 'Upper Riccarton',
-    status: 'pending',
-    sequence: 3,
-    coordinates: { lat: -43.545, lng: 172.595 },
-  },
-  {
-    id: '4',
-    address: '78 Main South Road',
-    suburb: 'Sockburn',
-    status: 'pending',
-    sequence: 4,
-    coordinates: { lat: -43.565, lng: 172.575 },
-  },
-  {
-    id: '5',
-    address: '234 Colombo Street',
-    suburb: 'Sydenham',
-    status: 'pending',
-    sequence: 5,
-    coordinates: { lat: -43.548, lng: 172.638 },
-  },
-  {
-    id: '6',
-    address: '56 Ferry Road',
-    suburb: 'Woolston',
-    status: 'failed',
-    sequence: 6,
-    coordinates: { lat: -43.558, lng: 172.688 },
-    failedReason: 'No safe access',
-  },
-  {
-    id: '7',
-    address: '89 Hills Road',
-    suburb: 'Cashmere',
-    status: 'skipped',
-    sequence: 7,
-    coordinates: { lat: -43.578, lng: 172.608 },
-  },
-];
+type SegmentKey = (typeof SEGMENTS)[number]['key'];
 
-const statusColorMap: Record<Stop['status'], string> = {
-  delivered: 'statusDelivered',
-  pending: 'statusPending',
-  active: 'statusActive',
-  failed: 'statusFailed',
-  skipped: 'statusSkipped',
-};
+/** Which segment a stop's status sits in. */
+const segmentOf = (stop: Stop): SegmentKey =>
+  stop.status === 'delivered' ? 'done' : stop.status === 'skipped' || stop.status === 'failed' ? 'later' : 'to-go';
 
-const statusLabels: Record<Stop['status'], string> = {
-  delivered: 'Delivered',
-  pending: 'Pending',
-  active: 'Active',
-  failed: 'Failed',
-  skipped: 'Skipped',
-};
+function RouteScreen() {
+  const { t } = useChosen();
+  const router = useRouter();
+  const run = useRun();
+  const { tileSource, glyphsUrl } = useMapBoot();
 
-const FILTERS = ['all', 'pending', 'active', 'delivered', 'failed', 'skipped'] as const;
+  const [segment, setSegment] = useState<SegmentKey>('to-go');
+  const [selected, setSelected] = useState<Stop | null>(null);
+  const [optimiseNote, setOptimiseNote] = useState<string | null>(null);
 
-type Filter = (typeof FILTERS)[number];
-
-export default function StopsScreen() {
-  const { theme } = useTheme();
-  const [filter, setFilter] = useState<Filter>('all');
-  const [selectedStop, setSelectedStop] = useState<Stop | null>(null);
-
-  const filteredStops = filter === 'all' ? mockStops : mockStops.filter((s) => s.status === filter);
-
-  const getStatusColor = (status: Stop['status']) => {
-    return theme.colors[statusColorMap[status]] || theme.colors.textTertiary;
-  };
-
-  const getBadgeVariant = (status: Stop['status']) => {
-    switch (status) {
-      case 'delivered':
-        return 'success';
-      case 'active':
-        return 'active';
-      case 'failed':
-        return 'error';
-      case 'skipped':
-        return 'warning';
-      default:
-        return 'default';
-    }
-  };
-
-  const renderItem = ({ item }: { item: Stop }) => (
-    <TouchableOpacity
-      style={styles.stopItem}
-      testID={`stop-${item.id}`}
-      onPress={() => setSelectedStop(item)}
-      accessibilityRole="button"
-      accessibilityLabel={`Stop ${item.sequence}, ${item.address}, ${item.suburb}, ${statusLabels[item.status]}`}
-    >
-      <View
-        style={[styles.stopStatusDot, { backgroundColor: getStatusColor(item.status) }]}
-        importantForAccessibility="no-hide-descendants"
-        accessibilityElementsHidden
-      />
-      <View style={styles.stopNumberContainer}>
-        <Text
-          style={[
-            styles.stopNumber,
-            {
-              color: theme.colors.textInverse,
-              backgroundColor: getStatusColor(item.status),
-            },
-          ]}
-        >
-          #{item.sequence}
-        </Text>
-      </View>
-      <View style={styles.stopInfo}>
-        <Text style={[styles.stopAddress, { color: theme.colors.textPrimary }]}>
-          {item.address}
-        </Text>
-        <Text style={[styles.stopSuburb, { color: theme.colors.textSecondary }]}>
-          {item.suburb}
-        </Text>
-      </View>
-      <View style={styles.stopRight}>
-        <Badge variant={getBadgeVariant(item.status)}>{statusLabels[item.status]}</Badge>
-        {item.deliveredAt ? (
-          <Text style={[styles.deliveredTime, { color: theme.colors.textTertiary }]}>
-            {item.deliveredAt}
-          </Text>
-        ) : null}
-      </View>
-    </TouchableOpacity>
+  // The minute a delivered stop landed: the run's own event, never a copy.
+  const minuteOf = useCallback(
+    (stopId: string) => {
+      const event = run.delivered.find((entry) => entry.stopId === stopId);
+      return event ? hourMinuteOf(event.at) : undefined;
+    },
+    [run.delivered],
   );
 
-  return (
-    <SafeAreaView
-      testID="stops-screen"
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-    >
-      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <Text style={[styles.title, { color: theme.colors.textPrimary }]}>All Stops</Text>
-        <Text style={[styles.count, { color: theme.colors.textSecondary }]}>
-          {filteredStops.length} stops
-        </Text>
-      </View>
+  const counts = useMemo(() => {
+    const tally: Record<SegmentKey, number> = { 'to-go': 0, later: 0, done: 0 };
+    for (const stop of mockStops) tally[segmentOf(stop)] += 1;
+    return tally;
+  }, [run.delivered.length]);
 
-      {/* Filter Tabs */}
-      <View style={styles.filterTabs}>
-        {FILTERS.map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[
-              styles.filterTab,
-              filter === f && {
-                backgroundColor: theme.colors.brandPrimary,
-                borderColor: theme.colors.brandPrimary,
-              },
-              { borderColor: theme.colors.border },
-            ]}
-            onPress={() => setFilter(f)}
-            accessibilityRole="tab"
-            accessibilityLabel={`${f.charAt(0).toUpperCase()}${f.slice(1)} stops`}
-            accessibilityState={{ selected: filter === f }}
-            testID={`stops-filter-${f}`}
+  const shown = useMemo(
+    () => mockStops.filter((stop) => segmentOf(stop) === segment),
+    [segment, run.delivered.length],
+  );
+
+  const mapStyle = useMemo(
+    () =>
+      getCourierStyle('day', tileSource.kind === 'none' ? null : tileSource.url, glyphsUrl, {
+        labelSize: 'normal',
+        buildings: true,
+        buildings3d: false,
+        satellite: null,
+      }),
+    [tileSource, glyphsUrl],
+  );
+
+  const handleOptimise = useCallback(() => {
+    hapticFor('confirm');
+    setOptimiseNote(
+      'Optimising the route needs the solver, which runs on the server and is wired with the API (Part C). Nothing is reordered on the phone.',
+    );
+  }, []);
+
+  return (
+    <View testID="stops-screen" style={styles.screen}>
+      <MapView testID="stops-map" mapStyle={mapStyle} style={styles.map}>
+        <Camera initialViewState={{ center: DRIVE_ORIGIN_LNGLAT, zoom: 12 }} minZoom={4} maxZoom={19} />
+        {mockStops.map((stop) => (
+          <Marker
+            key={stop.id}
+            testID={`stops-marker-${stop.sequence}`}
+            lngLat={[stop.coordinates.lng, stop.coordinates.lat]}
+            anchor="bottom"
           >
-            <Text
-              style={[
-                styles.filterTabText,
-                {
-                  color: filter === f ? theme.colors.textInverse : theme.colors.textSecondary,
-                },
+            <View testID={`stops-pin-${stop.sequence}`}>
+              <StopPin number={String(stop.sequence)} />
+            </View>
+          </Marker>
+        ))}
+      </MapView>
+
+      <GlassSurface kind="sheet" testID="stops-panel" style={styles.panel}>
+        <View style={styles.headerRow}>
+          <Text testID="stops-title" style={[styles.title, { color: t.colors.label }]} accessibilityRole="header">
+            Route
+          </Text>
+          <Pressable
+            accessible
+            role="button"
+            accessibilityLabel="Optimise the route"
+            accessibilityHint="Resequences the run with the solver"
+            onPress={handleOptimise}
+            testID="stops-optimise"
+            style={({ pressed }) => [
+              styles.optimise,
+              { backgroundColor: t.colors.accent, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <Text style={[styles.optimiseLabel, { color: t.colors.onAccent }]}>Optimise</Text>
+          </Pressable>
+        </View>
+
+        <Segmented
+          options={SEGMENTS.map((entry) => ({ ...entry, count: counts[entry.key] }))}
+          value={segment}
+          onChange={(key) => setSegment(key as SegmentKey)}
+          testID="stops-segment"
+        />
+
+        {optimiseNote === null ? null : (
+          <Text testID="stops-optimise-note" style={[styles.note, { color: t.colors.secondaryLabel }]}>
+            {optimiseNote}
+          </Text>
+        )}
+
+        <ScrollView contentContainerStyle={styles.list} testID="stops-list">
+          {shown.length === 0 ? (
+            <Text testID="stops-empty" style={[styles.empty, { color: t.colors.secondaryLabel }]}>
+              Nothing here for {segment === 'done' ? 'Done' : segment === 'later' ? 'Later' : 'To go'}.
+            </Text>
+          ) : (
+            <Timeline
+              items={shown.map((stop): TimelineItem => {
+                const state: TimelineItem['state'] =
+                  segmentOf(stop) === 'done' ? 'done' : stop.status === 'active' ? 'next' : 'later';
+                return {
+                  id: stop.id,
+                  street: stop.address,
+                  time: segmentOf(stop) === 'done' ? minuteOf(stop.id) : undefined,
+                  state,
+                  icon: segmentOf(stop) === 'done' ? 'checkmark-circle' : 'ellipse-outline',
+                  onPress: () => setSelected(stop),
+                  // The Maestro contract: a row is `stop-<id>`.
+                  testID: `stop-${stop.id}`,
+                };
+              })}
+              testID="stops-timeline"
+            />          )}
+        </ScrollView>
+      </GlassSurface>
+
+      {/* The stop a row opens: the run's own stop, with the suburb the flow
+          asserts. It is the same sheet gesture the drive uses. */}
+      {selected === null ? null : (
+        <>
+          <Pressable
+            style={styles.scrim}
+            accessibilityLabel="Close the stop"
+            onPress={() => setSelected(null)}
+            testID="stops-scrim"
+          />
+          <GlassSurface kind="sheet" testID="stop-detail-sheet" style={styles.detail}>
+            <View style={styles.detailHeader}>
+              <Text style={[styles.detailTitle, { color: t.colors.label }]}>{selected.address}</Text>
+              <Text style={[styles.detailSuburb, { color: t.colors.secondaryLabel }]}>{selected.suburb}</Text>
+            </View>
+            <Pressable
+              accessible
+              role="button"
+              accessibilityLabel="Drive to this stop"
+              accessibilityHint="Opens the drive for this stop"
+              onPress={() => {
+                setSelected(null);
+                router.push('/driving');
+              }}
+              testID="stop-detail-drive"
+              style={({ pressed }) => [
+                styles.detailAction,
+                { backgroundColor: t.colors.accent, opacity: pressed ? 0.85 : 1 },
               ]}
             >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+              <Text style={[styles.detailActionLabel, { color: t.colors.onAccent }]}>Drive</Text>
+            </Pressable>
+          </GlassSurface>
+        </>
+      )}
+    </View>
+  );
+}
 
-      <FlatList
-        data={filteredStops}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <MaterialCommunityIcons
-              name="clipboard-text-outline"
-              size={48}
-              color={theme.colors.textTertiary}
-            />
-            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-              No stops here yet
-            </Text>
-            <Text style={[styles.emptyHint, { color: theme.colors.textTertiary }]}>
-              Change the filter to see the other stops.
-            </Text>
-          </View>
-        }
-      />
-
-      {/* Stop Detail Sheet */}
-      <Sheet
-        isOpen={selectedStop !== null}
-        onClose={() => setSelectedStop(null)}
-        title={selectedStop ? `Stop ${selectedStop.sequence}` : undefined}
-        subtitle={selectedStop ? statusLabels[selectedStop.status] : undefined}
-        size="medium"
-        testID="stop-detail-sheet"
-      >
-        {selectedStop ? (
-          <>
-            <View style={styles.modalBody}>
-              <Text style={[styles.modalAddress, { color: theme.colors.textPrimary }]}>
-                {selectedStop.address}
-              </Text>
-              <Text style={[styles.modalSuburb, { color: theme.colors.textSecondary }]}>
-                {selectedStop.suburb}
-              </Text>
-              <View style={[styles.modalCoordinates, { borderTopColor: theme.colors.border }]}>
-                <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary }]}>
-                  Coordinates
-                </Text>
-                <Text style={[styles.modalCoordValue, { color: theme.colors.textSecondary }]}>
-                  {selectedStop.coordinates.lat.toFixed(6)},{' '}
-                  {selectedStop.coordinates.lng.toFixed(6)}
-                </Text>
-              </View>
-              {selectedStop.deliveredAt ? (
-                <View style={[styles.modalCoordinates, { borderTopColor: theme.colors.border }]}>
-                  <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary }]}>
-                    Delivered at
-                  </Text>
-                  <Text style={[styles.modalCoordValue, { color: theme.colors.success }]}>
-                    {selectedStop.deliveredAt}
-                  </Text>
-                </View>
-              ) : null}
-              {selectedStop.failedReason ? (
-                <View style={[styles.modalCoordinates, { borderTopColor: theme.colors.border }]}>
-                  <Text style={[styles.modalCoordLabel, { color: theme.colors.textTertiary }]}>
-                    Failed reason
-                  </Text>
-                  <Text style={[styles.modalCoordValue, { color: theme.colors.error }]}>
-                    {selectedStop.failedReason}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-            <View style={styles.modalActions}>
-              <Button
-                variant={selectedStop.status === 'delivered' ? 'outline' : 'primary'}
-                onPress={() => {
-                  hapticFor('deliver');
-                  console.log('Mark delivered', selectedStop.id);
-                  setSelectedStop(null);
-                }}
-                disabled={selectedStop.status === 'delivered'}
-                style={styles.modalActionButton}
-                testID="stop-mark-delivered"
-              >
-                {selectedStop.status === 'delivered' ? 'Delivered' : 'Mark Delivered'}
-              </Button>
-              <Button
-                variant="secondary"
-                onPress={() => {
-                  hapticFor('confirm');
-                  console.log('Skip', selectedStop.id);
-                  setSelectedStop(null);
-                }}
-                style={styles.modalActionButton}
-                testID="stop-skip"
-              >
-                Skip
-              </Button>
-              <Button
-                variant="outline"
-                onPress={() => {
-                  hapticFor('error');
-                  console.log('Navigate', selectedStop.id);
-                  setSelectedStop(null);
-                }}
-                style={styles.modalActionButton}
-                testID="stop-navigate"
-              >
-                Navigate
-              </Button>
-            </View>
-          </>
-        ) : null}
-      </Sheet>
-    </SafeAreaView>
+export default function RouteTab() {
+  const scheme = useColorScheme();
+  return (
+    <ChosenProvider mode={scheme === 'dark' ? 'dark' : 'light'}>
+      <RouteScreen />
+    </ChosenProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
+  screen: { flex: 1 },
+  map: { flex: 1 },
+  panel: {
+    position: 'absolute',
+    left: spacing.space12,
+    right: spacing.space12,
+    top: spacing.space32,
+    paddingTop: spacing.space12,
+    paddingHorizontal: spacing.space20,
+    paddingBottom: spacing.space24,
+    gap: spacing.space12,
+  },
+  headerRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.space12,
+  },
+  title: {
+    // The design's own type scale names a screen's large title 34 (README
+    // "Large title 34/41 bold"); the reference HTML's 28 has no token row and
+    // the editable-by-design rule is that the token file wins.
+    fontSize: typography.largeTitle.size,
+    lineHeight: typography.largeTitle.lineHeight,
+    fontWeight: typography.largeTitle.weight,
+  },
+  optimise: {
+    height: spacing.space48,
+    paddingHorizontal: spacing.space20,
+    borderRadius: radii.button,
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-  },
-  title: { fontSize: 28, fontWeight: '800' },
-  count: { fontSize: 19, fontWeight: '500' },
-  filterTabs: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    overflow: 'hidden',
-  },
-  filterTab: {
-    minHeight: 56,
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    borderRadius: 28,
-    borderWidth: 1,
   },
-  filterTabText: { fontSize: 19, fontWeight: '600' },
-  listContent: { padding: 16, paddingBottom: 100, gap: 8 },
-  stopItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: 56,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+  optimiseLabel: {
+    fontSize: typography.button.size,
+    lineHeight: typography.button.lineHeight,
+    fontWeight: typography.button.weight,
   },
-  stopStatusDot: { width: 12, height: 12, borderRadius: 6, flexShrink: 0 },
-  stopNumberContainer: { flexShrink: 0 },
-  stopNumber: {
-    fontSize: 19,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    minWidth: 40,
+  note: {
+    fontSize: typography.body.size,
+    lineHeight: typography.body.lineHeight,
+  },
+  list: {
+    paddingBottom: spacing.space64,
+    gap: spacing.space8,
+  },
+  empty: {
+    fontSize: typography.body.size,
+    lineHeight: typography.body.lineHeight,
+    paddingVertical: spacing.space24,
     textAlign: 'center',
   },
-  stopInfo: { flex: 1, minWidth: 0 },
-  stopAddress: { fontSize: 20, fontWeight: '600' },
-  stopSuburb: { fontSize: 19 },
-  stopRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  deliveredTime: { fontSize: 17, fontWeight: '500' },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
+  scrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  detail: {
+    position: 'absolute',
+    left: spacing.space8,
+    right: spacing.space8,
+    bottom: spacing.space64,
+    padding: spacing.space20,
+    gap: spacing.space12,
+  },
+  detailHeader: { gap: spacing.space4 },
+  detailTitle: {
+    fontSize: typography.largeTitle.size,
+    lineHeight: typography.largeTitle.lineHeight,
+    fontWeight: typography.largeTitle.weight,
+  },
+  detailSuburb: {
+    fontSize: typography.body.size,
+    lineHeight: typography.body.lineHeight,
+  },
+  detailAction: {
+    height: spacing.space48,
+    borderRadius: radii.button,
     alignItems: 'center',
-    padding: 32,
-    gap: 8,
+    justifyContent: 'center',
   },
-  emptyText: { fontSize: 20, fontWeight: '600' },
-  emptyHint: { fontSize: 19 },
-  modalBody: { paddingHorizontal: 8, marginBottom: 24 },
-  modalAddress: { fontSize: 28, fontWeight: '600', marginBottom: 4 },
-  modalSuburb: { fontSize: 20, marginBottom: 12 },
-  modalCoordinates: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-    paddingVertical: 12,
-    borderTopWidth: 1,
+  detailActionLabel: {
+    fontSize: typography.button.size,
+    lineHeight: typography.button.lineHeight,
+    fontWeight: typography.button.weight,
   },
-  modalCoordLabel: { fontSize: 17, fontWeight: '500' },
-  modalCoordValue: { fontSize: 17 },
-  modalActions: { flexDirection: 'row', gap: 8 },
-  modalActionButton: { flex: 1 },
 });

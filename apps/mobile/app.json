@@ -16,7 +16,8 @@
         "NSLocationWhenInUseUsageDescription": "Needed for door memory and geofence whispers during deliveries",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Needed for background location tracking during shifts",
         "NSMicrophoneUsageDescription": "Needed for voice commands and live voice agent",
-        "NSSpeechRecognitionUsageDescription": "Needed for on-device speech recognition"
+        "NSSpeechRecognitionUsageDescription": "Needed for on-device speech recognition",
+        "NSCameraUsageDescription": "Needed to scan a parcel label when a delivery is confirmed"
       }
     },
     "android": {
@@ -33,6 +34,7 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
         "RECORD_AUDIO",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION",

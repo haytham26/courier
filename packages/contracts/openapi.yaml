@@ -37,7 +37,7 @@ paths:
     put:
       tags: [templates]
       summary: Master Template Lock - replace run's street order
-      operationId: putTemplate
+      operationId: put_template
       security: [{ bearerAuth: [] }]
       parameters:
         - name: run_id
@@ -68,7 +68,7 @@ paths:
     post:
       tags: [intake]
       summary: Start morning intake from voice text
-      operationId: intakeText
+      operationId: intake_text
       security: [{ bearerAuth: [] }]
       parameters:
         - name: shift_id
@@ -99,7 +99,7 @@ paths:
     post:
       tags: [intake]
       summary: Upload paper manifest photo for OCR extraction
-      operationId: intakeManifest
+      operationId: intake_manifest
       security: [{ bearerAuth: [] }]
       parameters:
         - name: shift_id
@@ -136,7 +136,7 @@ paths:
     get:
       tags: [shifts]
       summary: List stops for a shift
-      operationId: listStops
+      operationId: list_stops
       security: [{ bearerAuth: [] }]
       parameters:
         - name: shift_id
@@ -166,7 +166,7 @@ paths:
     post:
       tags: [shifts]
       summary: Offline-first batch sync of delivery events
-      operationId: syncEvents
+      operationId: sync_events
       security: [{ bearerAuth: [] }]
       parameters:
         - name: shift_id
@@ -197,7 +197,7 @@ paths:
     get:
       tags: [voice]
       summary: Bidirectional voice channel (WebSocket upgrade)
-      operationId: voiceChannel
+      operationId: voice
       security: [{ bearerAuth: [] }]
       parameters:
         - name: shift_id
@@ -216,7 +216,7 @@ paths:
     post:
       tags: [runs]
       summary: Create a new territory run
-      operationId: createRun
+      operationId: create_run
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -236,7 +236,7 @@ paths:
     get:
       tags: [runs]
       summary: List runs for current driver
-      operationId: listRuns
+      operationId: list_runs
       security: [{ bearerAuth: [] }]
       responses:
         '200':
@@ -252,7 +252,7 @@ paths:
     get:
       tags: [runs]
       summary: Get run details
-      operationId: getRun
+      operationId: get_run
       security: [{ bearerAuth: [] }]
       parameters:
         - name: run_id
@@ -271,6 +271,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
 
   /locations/{location_id}/notes:
+    x-status: planned
     get:
       tags: [locations]
       summary: Get learned notes for a location (entry codes, hazards, etc.)
@@ -280,9 +281,7 @@ paths:
         - name: location_id
           in: path
           required: true
-          schema:
-            type: string
-            format: uuid
+          schema: { type: string, format: uuid }
       responses:
         '200':
           description: Location notes
@@ -292,8 +291,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/LocationNote'
-
-  /locations/{location_id}/notes:
     post:
       tags: [locations]
       summary: Add a learned note for a location
@@ -303,9 +300,7 @@ paths:
         - name: location_id
           in: path
           required: true
-          schema:
-            type: string
-            format: uuid
+          schema: { type: string, format: uuid }
       requestBody:
         required: true
         content:
@@ -314,11 +309,226 @@ paths:
               $ref: '#/components/schemas/CreateLocationNoteRequest'
       responses:
         '201':
-          description: Note created
+          description: Note stored
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LocationNote'
+
+  /healthz:
+    get:
+      tags: [runs]
+      summary: The uptime probe's target (data-free by construction)
+      operationId: healthz
+      responses:
+        '200':
+          description: The service is up; the body carries only status, version and engine names
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+
+  /auth/me:
+    get:
+      tags: [authentication]
+      summary: The identity behind the presented access token
+      operationId: get_me
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: The verified identity
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthMe' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/verify:
+    get:
+      tags: [authentication]
+      summary: Reports whether the presented token is currently valid
+      operationId: verify_session
+      responses:
+        '200':
+          description: The validity verdict (never an error for an invalid token)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthVerify' }
+
+  /shifts/{shift_id}/route:
+    get:
+      tags: [runs]
+      summary: The day's route — the ordered stops with the arrival times
+      operationId: shift_route
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: shift_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The stored plan when it still covers the run, else a fresh plan
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RouteResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /runs/{run_id}/stops/{stop_id}/pod:
+    post:
+      tags: [stops]
+      summary: Upload the proof-of-delivery photo for a stop
+      operationId: upload_pod
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: stop_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image, occurred_at]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: JPEG/PNG/HEIC, at most 10 MiB (checked by magic bytes, not by name)
+                occurred_at:
+                  type: string
+                  format: date-time
+                safe_place:
+                  type: string
+                  maxLength: 200
+                event_id:
+                  type: string
+                  format: uuid
+                  description: Client-generated; a replay returns the first upload's answer
+      responses:
+        '201':
+          description: POD stored
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PodResponse' }
+        '200':
+          description: A replay of an already-stored client event id
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PodResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413': { description: "The image exceeds 10 MiB" }
+        '415': { description: "Not a JPEG/PNG/HEIC image (checked by magic bytes, not by name)" }
+
+  /runs/{run_id}/stops/{stop_id}/pod/{event_id}/url:
+    get:
+      tags: [stops]
+      summary: A short-lived URL for the stored proof-of-delivery photo
+      description: |
+        The owner of the run only; the stop must belong to the run and the
+        event to the stop (a foreign anything is 404, never a URL). On the
+        S3-compatible backend the URL is a presigned GET; on the local store
+        it is a self-verifying streaming grant. Both expire (15 minutes by
+        default) — the photo never streams through the API on S3.
+      operationId: pod_url
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: stop_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: event_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The dying URL and its expiry
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PodUrlResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /runs/{run_id}/pod/{event_id}/bytes:
+    get:
+      tags: [stops]
+      summary: Stream a stored POD photo with a short-lived grant (the local backend)
+      description: |
+        The local backend's answer to the presign endpoint: the URL itself
+        carries an HMAC grant over (run, event, expiry), because an image
+        loader cannot send a bearer header. A tampered, expired or foreign
+        grant is 404. The S3 backend never serves this route — its URLs point
+        at the object store.
+      operationId: pod_bytes
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: event_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: expires
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: signature
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: The image bytes
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/heic: { schema: { type: string, format: binary } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /runs/{run_id}/route:reopt:
+    post:
+      tags: [runs]
+      summary: Re-place only the affected stops; the rest of the order stays
+      operationId: reopt_route
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [affected_stop_ids]
+              properties:
+                affected_stop_ids:
+                  type: array
+                  maxItems: 500
+                  items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The reopt'd day with the finish-time delta (may be negative)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReoptResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { description: An affected stop is not part of this run }
 
 components:
   securitySchemes:
@@ -452,56 +662,203 @@ components:
           type: integer
           description: Number of events accepted
 
+    RouteResponse:
+      type: object
+      required: [shift_id, run_id, engine, locked, total_distance_m, total_duration_s, parcels, capacity_parcels, over_capacity, window_violations, unroutable_stop_ids, stops]
+      properties:
+        shift_id: { type: string, format: uuid }
+        run_id: { type: string, format: uuid }
+        engine: { type: string }
+        locked: { type: boolean }
+        template_id: { type: string, nullable: true }
+        total_distance_m: { type: number }
+        total_duration_s: { type: number }
+        parcels: { type: integer }
+        capacity_parcels: { type: integer, nullable: true }
+        over_capacity: { type: boolean }
+        window_violations: { type: integer }
+        unroutable_stop_ids:
+          type: array
+          items: { type: string, format: uuid }
+        stops:
+          type: array
+          items:
+            type: object
+            required: [stop_id, sequence, lat, lon, arrival_at, departure_at, distance_m, cumulative_distance_m, late]
+            properties:
+              stop_id: { type: string, format: uuid }
+              sequence: { type: integer }
+              lat: { type: number }
+              lon: { type: number }
+              arrival_at: { type: string, format: date-time }
+              departure_at: { type: string, format: date-time }
+              distance_m: { type: number }
+              cumulative_distance_m: { type: number }
+              late: { type: boolean }
+
+    HealthResponse:
+      type: object
+      required: [status, version, engines]
+      properties:
+        status: { type: string, enum: [ok] }
+        version: { type: string }
+        engines:
+          type: array
+          items: { type: string }
+
+    AuthMe:
+      type: object
+      required: [user_id]
+      properties:
+        user_id: { type: string }
+        session_id: { type: string, nullable: true }
+        organization_id: { type: string, nullable: true }
+        team_id: { type: string, nullable: true }
+
+    AuthVerify:
+      type: object
+      required: [valid]
+      properties:
+        valid: { type: boolean }
+        user_id: { type: string }
+
+    PodResponse:
+      type: object
+      required: [event_id, stop_id, sha256, bytes, stored_at, already_stored]
+      properties:
+        event_id: { type: string, format: uuid }
+        stop_id: { type: string, format: uuid }
+        sha256: { type: string }
+        bytes: { type: integer }
+        stored_at: { type: string, format: date-time }
+        already_stored: { type: boolean }
+
+    PodUrlResponse:
+      type: object
+      required: [event_id, url, expires_at]
+      properties:
+        event_id: { type: string, format: uuid }
+        url:
+          type: string
+          description: Absolute or API-relative; fetch it before it expires
+        expires_at: { type: string, format: date-time }
+
+    ReoptResponse:
+      type: object
+      required: [run_id, engine, finish_delta_s, stops]
+      properties:
+        run_id: { type: string, format: uuid }
+        engine: { type: string }
+        finish_delta_s: { type: number }
+        stops:
+          type: array
+          items: { type: object }
+
     StopResponse:
       type: object
+      description: >-
+        The stop as listStops returns it (ADR-010 §2): the routing
+        coordinates and the live status ride beside the contract's original
+        shape. `van_zone` and `tip` return when the van-loading and the door
+        memory land.
+      required: [id, seq, status]
       properties:
         id:
           type: string
           format: uuid
         address:
           type: string
+          nullable: true
         seq:
           type: integer
         status:
           type: string
           enum: [pending, delivered, skipped, deferred, failed]
-        van_zone:
+        lat:
+          type: number
+          nullable: true
+        lon:
+          type: number
+          nullable: true
+        priority:
+          type: boolean
+        parcels:
+          type: integer
+        service_time_s:
+          type: integer
+          nullable: true
+        window_start:
           type: string
-          enum: [FL, FR, MID_RACK, REAR, HEAVY_BASE]
-        tip:
+          format: date-time
+          nullable: true
+        window_end:
           type: string
-          description: Learned access tip for this stop
+          format: date-time
+          nullable: true
 
     CreateRunRequest:
       type: object
-      required: [name, territory, depot]
+      description: >-
+        The narrowed request of ADR-010 §3: unknown fields are refused, never
+        dropped silently. `territory` comes back 422 until the schema gains a
+        home for it; the finish point and the break window stay out until the
+        runs table gains columns for them.
+      required: [name, shift_id, depot, start_at]
+      additionalProperties: false
       properties:
         name:
           type: string
-        territory:
-          type: object
-          description: GeoJSON MultiPolygon
+          minLength: 1
+          maxLength: 120
+        shift_id:
+          type: string
+          format: uuid
         depot:
           type: object
-          description: GeoJSON Point
+          required: [lat, lon]
+          additionalProperties: false
+          properties:
+            lat: { type: number, minimum: -90, maximum: 90 }
+            lon: { type: number, minimum: -180, maximum: 180 }
+        start_at:
+          type: string
+          format: date-time
+        capacity_parcels:
+          type: integer
+          minimum: 0
+          maximum: 9999
+        speed_kmh:
+          type: number
+          minimum: 1
+          maximum: 120
+          default: 30
 
     RunResponse:
       type: object
+      required: [id, shift_id, name, depot, speed_kmh, start_at]
       properties:
         id:
           type: string
           format: uuid
-        driver_id:
+        shift_id:
           type: string
           format: uuid
         name:
           type: string
-        territory:
-          type: object
-          description: GeoJSON MultiPolygon
         depot:
           type: object
-          description: GeoJSON Point
+          required: [lat, lon]
+          properties:
+            lat: { type: number }
+            lon: { type: number }
+        capacity_parcels:
+          type: integer
+          nullable: true
+        speed_kmh:
+          type: number
+        start_at:
+          type: string
+          format: date-time
 
     LocationNote:
       type: object

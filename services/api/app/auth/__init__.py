@@ -1,4 +1,5 @@
 """Token verification for Courier Copilot API (Better Auth is the issuer)."""
+
 from .jwks import (
     AuthPrincipal,
     AuthSettings,

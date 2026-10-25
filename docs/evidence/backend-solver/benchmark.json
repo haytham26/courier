@@ -1,0 +1,276 @@
+{
+  "measured_at": "2026-10-24T05:49:28+00:00",
+  "machine": {
+    "platform": "Windows-10-10.0.26300-SP0",
+    "python": "3.11.9",
+    "numpy": "2.4.6"
+  },
+  "solver": {
+    "package": "pyvrp",
+    "version": "0.14.1",
+    "license": "MIT",
+    "seed": 0,
+    "production_iterations": 250,
+    "reference_iterations": 1000
+  },
+  "dataset": {
+    "kind": "reconstructed-from-a-seed (not captured telemetry)",
+    "stops": 174,
+    "seed": 20261022,
+    "feasibility": "first seed from --seed upward that PyVRP plans on-engine",
+    "depot": [
+      -43.532,
+      172.6362
+    ],
+    "suburb_anchors": [
+      "Christchurch CBD",
+      "Riccarton",
+      "Fendalton",
+      "St Albans",
+      "Bishopdale",
+      "Redwood",
+      "Linwood",
+      "Woolston",
+      "Sydenham",
+      "Beckenham",
+      "Addington",
+      "Halswell"
+    ],
+    "anchor_jitter_deg": 0.004,
+    "service_lengths_s": [
+      60,
+      120,
+      180,
+      240
+    ],
+    "service_mix": [
+      0.3,
+      0.4,
+      0.2,
+      0.1
+    ],
+    "windowed_share": 0.25,
+    "window_open_from_minutes": [
+      90,
+      330
+    ],
+    "window_end_hours": 3,
+    "priority_share": 0.07,
+    "parcels_per_stop": [
+      1,
+      2
+    ],
+    "total_parcels": 247,
+    "capacity_parcels": 257,
+    "speed_kmh": 30.0,
+    "break": {
+      "from_minutes": 270,
+      "to_minutes": 540,
+      "minutes": 30
+    },
+    "departure": "2026-10-22T07:30:00+13:00"
+  },
+  "runs": [
+    {
+      "config": "heuristic-nn-2opt",
+      "seconds": 49.575,
+      "day_minutes": 817.3,
+      "day_km": 135.4,
+      "window_violations": 17,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "heuristic-nn-2opt",
+      "ordered_stops": 174,
+      "order": "b0849e,388310,171700,5a2272,760d3f,c1bae2,6dfa9b,4a93aa,1ec041,0cdee4,5d96d3,d4f351,32f3a6,85103c,8be6d5,088f80,f496bb,3d5b17,5a7fa1,3e7842,29a17b,dcb58e,402aef,4b0bb5,ec3671,1a53fb,dbf9c8,d39c0e,74399b,4c9eae,439417,07330f,d9d43a,20be67,f30502,e12c1a,a70d40,19b902,e66f77,6f5aeb,78a882,8b7205,0ac599,811659,00ce94,bb475f,3dbba2,2b4647,bec1f6,bd6c33,90f4b1,9f1e35,7c99f6,c4f2a2,c21d83,d25092,eb81ca,95e5c9,6b5527,3544f8,c9e3ff,e42a4a,f8c02a,1aa5c0,1e6ddf,855c62,26134b,e3a9f0,6fe475,764a08,058e51,45b1e5,011a8b,f15da3,c5fcf3,d441e7,c11413,f8d20a,570501,20fb08,c4b334,edd93c,744e69,6f5a24,26839e,d7fa63,8f7be3,5a10af,18814f,68ab26,848bb6,f5bf7e,54cc3e,3636e1,94db3b,67bb3a,4eda4c,d4baf9,7c446a,ce2d99,26dfe4,eaf757,44ac7f,5db926,b2a4c3,cea883,a36933,3968a5,0bba0c,c64982,1a08a0,a686c3,33de65,0a4551,1d7911,988d31,db557a,bcb1dd,8e9272,bd1527,bb723a,3ddf81,d09e6c,c79bf9,65fb3f,4149ef,5f1fd8,6e58ee,e56b64,982655,4e88ae,6101c7,57df18,adf1c0,e096e8,60dafe,b15a22,6e5e66,b17085,41f12f,677c2e,63f4f3,20bcd0,5ddaae,ba7f4e,3f0167,4a17aa,ba8b90,e956f0,c1753f,c06600,e67772,365c9d,2bc866,cba4a5,bbbde9,abb49e,7b3f8a,1d7ac5,7c0d58,9e66a6,e1e7f5,e53934,138912,1fb346,068690,592936,dd8ad6,ab50eb,8a9c11,36b331,495e27,d6ce1b,361b15"
+    },
+    {
+      "config": "pyvrp-250",
+      "seconds": 4.799,
+      "day_minutes": 814.8,
+      "day_km": 174.05,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "ordered_stops": 174,
+      "order": "388310,171700,0cdee4,5d96d3,4a93aa,b0849e,5a2272,760d3f,6dfa9b,1ec041,c1bae2,eb81ca,6b5527,3544f8,6fe475,20fb08,45b1e5,570501,f8d20a,c11413,011a8b,f15da3,c5fcf3,d441e7,07330f,439417,dbf9c8,74399b,8b7205,78a882,6e5e66,ba8b90,c1753f,94db3b,b2a4c3,9e66a6,5db926,ab50eb,ce2d99,7c446a,361b15,f5bf7e,848bb6,68ab26,8f7be3,b15a22,f8c02a,c9e3ff,d25092,2b4647,3dbba2,bb475f,90f4b1,9f1e35,7c99f6,811659,c4f2a2,4e88ae,982655,6101c7,57df18,677c2e,b17085,5ddaae,a36933,3968a5,0bba0c,c64982,c79bf9,3ddf81,bb723a,db557a,0a4551,33de65,068690,1fb346,138912,e53934,e1e7f5,592936,dd8ad6,8a9c11,4eda4c,26dfe4,eaf757,44ac7f,d4baf9,36b331,495e27,d6ce1b,c4b334,edd93c,058e51,764a08,744e69,6f5a24,26839e,d7fa63,18814f,5a10af,e42a4a,1aa5c0,1e6ddf,855c62,26134b,e3a9f0,95e5c9,4c9eae,d39c0e,1a53fb,ec3671,4b0bb5,402aef,dcb58e,29a17b,3e7842,5a7fa1,d4f351,32f3a6,3d5b17,f496bb,088f80,f30502,20be67,8be6d5,85103c,d9d43a,a70d40,e12c1a,19b902,e66f77,6f5aeb,0ac599,00ce94,bd6c33,c21d83,bec1f6,adf1c0,e096e8,60dafe,41f12f,63f4f3,20bcd0,e56b64,6e58ee,cea883,5f1fd8,4149ef,65fb3f,d09e6c,bcb1dd,1d7911,8e9272,bd1527,988d31,1a08a0,a686c3,7b3f8a,1d7ac5,7c0d58,cba4a5,bbbde9,2bc866,3636e1,67bb3a,54cc3e,e956f0,c06600,e67772,365c9d,abb49e,4a17aa,3f0167,ba7f4e"
+    },
+    {
+      "config": "pyvrp-1000",
+      "seconds": 13.054,
+      "day_minutes": 807.0,
+      "day_km": 170.14,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "ordered_stops": 174,
+      "order": "388310,171700,0cdee4,5d96d3,4a93aa,b0849e,5a2272,760d3f,6dfa9b,1ec041,c1bae2,eb81ca,07330f,439417,dbf9c8,d39c0e,78a882,d25092,adf1c0,e096e8,60dafe,6e5e66,3f0167,4a17aa,c1753f,67bb3a,94db3b,b2a4c3,9e66a6,e1e7f5,dd8ad6,ce2d99,7c446a,4eda4c,495e27,d6ce1b,848bb6,c4b334,edd93c,20fb08,45b1e5,c11413,f15da3,011a8b,6fe475,6f5a24,26839e,d7fa63,8f7be3,b15a22,f8c02a,e42a4a,c9e3ff,2b4647,3dbba2,bb475f,9f1e35,90f4b1,bd6c33,c21d83,bec1f6,6101c7,982655,57df18,677c2e,41f12f,b17085,63f4f3,20bcd0,5ddaae,ba7f4e,0bba0c,c64982,c79bf9,988d31,1a08a0,a686c3,33de65,068690,e53934,138912,1fb346,592936,ab50eb,8a9c11,d4baf9,44ac7f,eaf757,26dfe4,361b15,36b331,5db926,7c0d58,1d7ac5,7b3f8a,abb49e,bbbde9,cba4a5,2bc866,3636e1,365c9d,e67772,c06600,e956f0,ba8b90,54cc3e,f5bf7e,68ab26,18814f,5a10af,744e69,764a08,058e51,570501,f8d20a,d441e7,c5fcf3,e3a9f0,26134b,855c62,1e6ddf,1aa5c0,3544f8,6b5527,95e5c9,8b7205,4c9eae,74399b,1a53fb,ec3671,4b0bb5,402aef,dcb58e,29a17b,3e7842,5a7fa1,d4f351,32f3a6,3d5b17,f496bb,088f80,8be6d5,85103c,20be67,f30502,e12c1a,a70d40,d9d43a,19b902,e66f77,6f5aeb,0ac599,00ce94,811659,7c99f6,c4f2a2,4e88ae,5f1fd8,4149ef,65fb3f,d09e6c,3ddf81,bb723a,db557a,0a4551,bcb1dd,1d7911,8e9272,bd1527,3968a5,a36933,cea883,6e58ee,e56b64"
+    },
+    {
+      "config": "heuristic-nn-2opt",
+      "seconds": 53.869,
+      "day_minutes": 817.3,
+      "day_km": 135.4,
+      "window_violations": 17,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "heuristic-nn-2opt",
+      "ordered_stops": 174,
+      "order": "b0849e,388310,171700,5a2272,760d3f,c1bae2,6dfa9b,4a93aa,1ec041,0cdee4,5d96d3,d4f351,32f3a6,85103c,8be6d5,088f80,f496bb,3d5b17,5a7fa1,3e7842,29a17b,dcb58e,402aef,4b0bb5,ec3671,1a53fb,dbf9c8,d39c0e,74399b,4c9eae,439417,07330f,d9d43a,20be67,f30502,e12c1a,a70d40,19b902,e66f77,6f5aeb,78a882,8b7205,0ac599,811659,00ce94,bb475f,3dbba2,2b4647,bec1f6,bd6c33,90f4b1,9f1e35,7c99f6,c4f2a2,c21d83,d25092,eb81ca,95e5c9,6b5527,3544f8,c9e3ff,e42a4a,f8c02a,1aa5c0,1e6ddf,855c62,26134b,e3a9f0,6fe475,764a08,058e51,45b1e5,011a8b,f15da3,c5fcf3,d441e7,c11413,f8d20a,570501,20fb08,c4b334,edd93c,744e69,6f5a24,26839e,d7fa63,8f7be3,5a10af,18814f,68ab26,848bb6,f5bf7e,54cc3e,3636e1,94db3b,67bb3a,4eda4c,d4baf9,7c446a,ce2d99,26dfe4,eaf757,44ac7f,5db926,b2a4c3,cea883,a36933,3968a5,0bba0c,c64982,1a08a0,a686c3,33de65,0a4551,1d7911,988d31,db557a,bcb1dd,8e9272,bd1527,bb723a,3ddf81,d09e6c,c79bf9,65fb3f,4149ef,5f1fd8,6e58ee,e56b64,982655,4e88ae,6101c7,57df18,adf1c0,e096e8,60dafe,b15a22,6e5e66,b17085,41f12f,677c2e,63f4f3,20bcd0,5ddaae,ba7f4e,3f0167,4a17aa,ba8b90,e956f0,c1753f,c06600,e67772,365c9d,2bc866,cba4a5,bbbde9,abb49e,7b3f8a,1d7ac5,7c0d58,9e66a6,e1e7f5,e53934,138912,1fb346,068690,592936,dd8ad6,ab50eb,8a9c11,36b331,495e27,d6ce1b,361b15"
+    },
+    {
+      "config": "pyvrp-250",
+      "seconds": 4.697,
+      "day_minutes": 814.8,
+      "day_km": 174.05,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "ordered_stops": 174,
+      "order": "388310,171700,0cdee4,5d96d3,4a93aa,b0849e,5a2272,760d3f,6dfa9b,1ec041,c1bae2,eb81ca,6b5527,3544f8,6fe475,20fb08,45b1e5,570501,f8d20a,c11413,011a8b,f15da3,c5fcf3,d441e7,07330f,439417,dbf9c8,74399b,8b7205,78a882,6e5e66,ba8b90,c1753f,94db3b,b2a4c3,9e66a6,5db926,ab50eb,ce2d99,7c446a,361b15,f5bf7e,848bb6,68ab26,8f7be3,b15a22,f8c02a,c9e3ff,d25092,2b4647,3dbba2,bb475f,90f4b1,9f1e35,7c99f6,811659,c4f2a2,4e88ae,982655,6101c7,57df18,677c2e,b17085,5ddaae,a36933,3968a5,0bba0c,c64982,c79bf9,3ddf81,bb723a,db557a,0a4551,33de65,068690,1fb346,138912,e53934,e1e7f5,592936,dd8ad6,8a9c11,4eda4c,26dfe4,eaf757,44ac7f,d4baf9,36b331,495e27,d6ce1b,c4b334,edd93c,058e51,764a08,744e69,6f5a24,26839e,d7fa63,18814f,5a10af,e42a4a,1aa5c0,1e6ddf,855c62,26134b,e3a9f0,95e5c9,4c9eae,d39c0e,1a53fb,ec3671,4b0bb5,402aef,dcb58e,29a17b,3e7842,5a7fa1,d4f351,32f3a6,3d5b17,f496bb,088f80,f30502,20be67,8be6d5,85103c,d9d43a,a70d40,e12c1a,19b902,e66f77,6f5aeb,0ac599,00ce94,bd6c33,c21d83,bec1f6,adf1c0,e096e8,60dafe,41f12f,63f4f3,20bcd0,e56b64,6e58ee,cea883,5f1fd8,4149ef,65fb3f,d09e6c,bcb1dd,1d7911,8e9272,bd1527,988d31,1a08a0,a686c3,7b3f8a,1d7ac5,7c0d58,cba4a5,bbbde9,2bc866,3636e1,67bb3a,54cc3e,e956f0,c06600,e67772,365c9d,abb49e,4a17aa,3f0167,ba7f4e"
+    },
+    {
+      "config": "pyvrp-1000",
+      "seconds": 13.05,
+      "day_minutes": 807.0,
+      "day_km": 170.14,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "ordered_stops": 174,
+      "order": "388310,171700,0cdee4,5d96d3,4a93aa,b0849e,5a2272,760d3f,6dfa9b,1ec041,c1bae2,eb81ca,07330f,439417,dbf9c8,d39c0e,78a882,d25092,adf1c0,e096e8,60dafe,6e5e66,3f0167,4a17aa,c1753f,67bb3a,94db3b,b2a4c3,9e66a6,e1e7f5,dd8ad6,ce2d99,7c446a,4eda4c,495e27,d6ce1b,848bb6,c4b334,edd93c,20fb08,45b1e5,c11413,f15da3,011a8b,6fe475,6f5a24,26839e,d7fa63,8f7be3,b15a22,f8c02a,e42a4a,c9e3ff,2b4647,3dbba2,bb475f,9f1e35,90f4b1,bd6c33,c21d83,bec1f6,6101c7,982655,57df18,677c2e,41f12f,b17085,63f4f3,20bcd0,5ddaae,ba7f4e,0bba0c,c64982,c79bf9,988d31,1a08a0,a686c3,33de65,068690,e53934,138912,1fb346,592936,ab50eb,8a9c11,d4baf9,44ac7f,eaf757,26dfe4,361b15,36b331,5db926,7c0d58,1d7ac5,7b3f8a,abb49e,bbbde9,cba4a5,2bc866,3636e1,365c9d,e67772,c06600,e956f0,ba8b90,54cc3e,f5bf7e,68ab26,18814f,5a10af,744e69,764a08,058e51,570501,f8d20a,d441e7,c5fcf3,e3a9f0,26134b,855c62,1e6ddf,1aa5c0,3544f8,6b5527,95e5c9,8b7205,4c9eae,74399b,1a53fb,ec3671,4b0bb5,402aef,dcb58e,29a17b,3e7842,5a7fa1,d4f351,32f3a6,3d5b17,f496bb,088f80,8be6d5,85103c,20be67,f30502,e12c1a,a70d40,d9d43a,19b902,e66f77,6f5aeb,0ac599,00ce94,811659,7c99f6,c4f2a2,4e88ae,5f1fd8,4149ef,65fb3f,d09e6c,3ddf81,bb723a,db557a,0a4551,bcb1dd,1d7911,8e9272,bd1527,3968a5,a36933,cea883,6e58ee,e56b64"
+    },
+    {
+      "config": "heuristic-nn-2opt",
+      "seconds": 54.018,
+      "day_minutes": 817.3,
+      "day_km": 135.4,
+      "window_violations": 17,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "heuristic-nn-2opt",
+      "ordered_stops": 174,
+      "order": "b0849e,388310,171700,5a2272,760d3f,c1bae2,6dfa9b,4a93aa,1ec041,0cdee4,5d96d3,d4f351,32f3a6,85103c,8be6d5,088f80,f496bb,3d5b17,5a7fa1,3e7842,29a17b,dcb58e,402aef,4b0bb5,ec3671,1a53fb,dbf9c8,d39c0e,74399b,4c9eae,439417,07330f,d9d43a,20be67,f30502,e12c1a,a70d40,19b902,e66f77,6f5aeb,78a882,8b7205,0ac599,811659,00ce94,bb475f,3dbba2,2b4647,bec1f6,bd6c33,90f4b1,9f1e35,7c99f6,c4f2a2,c21d83,d25092,eb81ca,95e5c9,6b5527,3544f8,c9e3ff,e42a4a,f8c02a,1aa5c0,1e6ddf,855c62,26134b,e3a9f0,6fe475,764a08,058e51,45b1e5,011a8b,f15da3,c5fcf3,d441e7,c11413,f8d20a,570501,20fb08,c4b334,edd93c,744e69,6f5a24,26839e,d7fa63,8f7be3,5a10af,18814f,68ab26,848bb6,f5bf7e,54cc3e,3636e1,94db3b,67bb3a,4eda4c,d4baf9,7c446a,ce2d99,26dfe4,eaf757,44ac7f,5db926,b2a4c3,cea883,a36933,3968a5,0bba0c,c64982,1a08a0,a686c3,33de65,0a4551,1d7911,988d31,db557a,bcb1dd,8e9272,bd1527,bb723a,3ddf81,d09e6c,c79bf9,65fb3f,4149ef,5f1fd8,6e58ee,e56b64,982655,4e88ae,6101c7,57df18,adf1c0,e096e8,60dafe,b15a22,6e5e66,b17085,41f12f,677c2e,63f4f3,20bcd0,5ddaae,ba7f4e,3f0167,4a17aa,ba8b90,e956f0,c1753f,c06600,e67772,365c9d,2bc866,cba4a5,bbbde9,abb49e,7b3f8a,1d7ac5,7c0d58,9e66a6,e1e7f5,e53934,138912,1fb346,068690,592936,dd8ad6,ab50eb,8a9c11,36b331,495e27,d6ce1b,361b15"
+    },
+    {
+      "config": "pyvrp-250",
+      "seconds": 4.669,
+      "day_minutes": 814.8,
+      "day_km": 174.05,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "ordered_stops": 174,
+      "order": "388310,171700,0cdee4,5d96d3,4a93aa,b0849e,5a2272,760d3f,6dfa9b,1ec041,c1bae2,eb81ca,6b5527,3544f8,6fe475,20fb08,45b1e5,570501,f8d20a,c11413,011a8b,f15da3,c5fcf3,d441e7,07330f,439417,dbf9c8,74399b,8b7205,78a882,6e5e66,ba8b90,c1753f,94db3b,b2a4c3,9e66a6,5db926,ab50eb,ce2d99,7c446a,361b15,f5bf7e,848bb6,68ab26,8f7be3,b15a22,f8c02a,c9e3ff,d25092,2b4647,3dbba2,bb475f,90f4b1,9f1e35,7c99f6,811659,c4f2a2,4e88ae,982655,6101c7,57df18,677c2e,b17085,5ddaae,a36933,3968a5,0bba0c,c64982,c79bf9,3ddf81,bb723a,db557a,0a4551,33de65,068690,1fb346,138912,e53934,e1e7f5,592936,dd8ad6,8a9c11,4eda4c,26dfe4,eaf757,44ac7f,d4baf9,36b331,495e27,d6ce1b,c4b334,edd93c,058e51,764a08,744e69,6f5a24,26839e,d7fa63,18814f,5a10af,e42a4a,1aa5c0,1e6ddf,855c62,26134b,e3a9f0,95e5c9,4c9eae,d39c0e,1a53fb,ec3671,4b0bb5,402aef,dcb58e,29a17b,3e7842,5a7fa1,d4f351,32f3a6,3d5b17,f496bb,088f80,f30502,20be67,8be6d5,85103c,d9d43a,a70d40,e12c1a,19b902,e66f77,6f5aeb,0ac599,00ce94,bd6c33,c21d83,bec1f6,adf1c0,e096e8,60dafe,41f12f,63f4f3,20bcd0,e56b64,6e58ee,cea883,5f1fd8,4149ef,65fb3f,d09e6c,bcb1dd,1d7911,8e9272,bd1527,988d31,1a08a0,a686c3,7b3f8a,1d7ac5,7c0d58,cba4a5,bbbde9,2bc866,3636e1,67bb3a,54cc3e,e956f0,c06600,e67772,365c9d,abb49e,4a17aa,3f0167,ba7f4e"
+    },
+    {
+      "config": "pyvrp-1000",
+      "seconds": 13.182,
+      "day_minutes": 807.0,
+      "day_km": 170.14,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "ordered_stops": 174,
+      "order": "388310,171700,0cdee4,5d96d3,4a93aa,b0849e,5a2272,760d3f,6dfa9b,1ec041,c1bae2,eb81ca,07330f,439417,dbf9c8,d39c0e,78a882,d25092,adf1c0,e096e8,60dafe,6e5e66,3f0167,4a17aa,c1753f,67bb3a,94db3b,b2a4c3,9e66a6,e1e7f5,dd8ad6,ce2d99,7c446a,4eda4c,495e27,d6ce1b,848bb6,c4b334,edd93c,20fb08,45b1e5,c11413,f15da3,011a8b,6fe475,6f5a24,26839e,d7fa63,8f7be3,b15a22,f8c02a,e42a4a,c9e3ff,2b4647,3dbba2,bb475f,9f1e35,90f4b1,bd6c33,c21d83,bec1f6,6101c7,982655,57df18,677c2e,41f12f,b17085,63f4f3,20bcd0,5ddaae,ba7f4e,0bba0c,c64982,c79bf9,988d31,1a08a0,a686c3,33de65,068690,e53934,138912,1fb346,592936,ab50eb,8a9c11,d4baf9,44ac7f,eaf757,26dfe4,361b15,36b331,5db926,7c0d58,1d7ac5,7b3f8a,abb49e,bbbde9,cba4a5,2bc866,3636e1,365c9d,e67772,c06600,e956f0,ba8b90,54cc3e,f5bf7e,68ab26,18814f,5a10af,744e69,764a08,058e51,570501,f8d20a,d441e7,c5fcf3,e3a9f0,26134b,855c62,1e6ddf,1aa5c0,3544f8,6b5527,95e5c9,8b7205,4c9eae,74399b,1a53fb,ec3671,4b0bb5,402aef,dcb58e,29a17b,3e7842,5a7fa1,d4f351,32f3a6,3d5b17,f496bb,088f80,8be6d5,85103c,20be67,f30502,e12c1a,a70d40,d9d43a,19b902,e66f77,6f5aeb,0ac599,00ce94,811659,7c99f6,c4f2a2,4e88ae,5f1fd8,4149ef,65fb3f,d09e6c,3ddf81,bb723a,db557a,0a4551,bcb1dd,1d7911,8e9272,bd1527,3968a5,a36933,cea883,6e58ee,e56b64"
+    },
+    {
+      "config": "pyvrp-250-budget-200",
+      "seconds": 3.214,
+      "day_minutes": 1187.9,
+      "day_km": 93.96,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "ordered_stops": 200,
+      "order": "5c33df,a42e85,a07157,4a2181,fd2e10,809528,eb3637,64f4e9,e68816,d93b37,1acb96,b251e1,cc9d31,f81d27,682c9b,9c18ad,291ad5,9f81ec,a4427a,98540f,8e3907,51b55e,c654bc,5fea35,7eba71,4557b1,e5b930,a12cbc,850945,b5d879,e008b7,2ef4e9,103d11,77e28d,b04607,77ff3d,6f415f,4f8d14,c94666,d503a2,4486bd,d4c2ab,30f913,c9c75d,309528,a8aa12,7219e2,9dd944,10ff7d,a0b592,731225,e55580,47e665,ac735d,d6c69f,323725,7f9fda,dcd0a7,fe607d,4f05ee,ac7b37,e3e719,ead15f,8f95f2,93ef8d,614e40,1dd020,811503,c33425,7796c3,714b9b,d6736d,7fa11e,b3adf7,ea7be5,0559fe,b71568,5630bb,68b879,9fe15e,ffeed1,422057,3f885d,b7acf4,707398,e5d9c7,80253c,369a06,7eb7ac,2fe407,e2e9e1,8c7545,421c5b,16e4dc,b746b3,c90951,1a102a,11c951,bcc2dd,824cb7,4a7f61,32a7a3,98bc92,fb9da8,cd0073,da2bda,589c3c,996d5a,22dbe8,eb2886,432ecf,9e92dc,0d5256,625f1e,9c9e29,e5e513,b1dbd0,40301e,efcfaa,bd6d94,5cc724,de2b7a,341dce,29b0f4,afb8eb,b2f26d,0bd771,61d59c,4d6aa7,5d1680,0f2195,7982d3,29c356,36a0f3,97e763,0d68b4,d75177,a9a922,4a2695,8acc97,0ac685,984d3e,95e763,34a344,f9ece2,a99f6d,c5167a,507ba7,148759,1ceee0,d942e5,21fd4c,5a2c15,09fc8d,030b71,29465a,f0c24e,1eb433,cae7fe,2070a9,2cc291,803fb7,a82196,76701b,cbe961,a89c5e,855950,c3e033,bc203c,fee15e,f52527,ab17e0,13efed,e9f168,70dd07,d89cd7,d8970f,d03511,bdb2d0,7395a8,e8fa97,6d987e,c1739d,326c60,67c628,a44dea,5dc163,622467,ef4755,34144b,11af2f,dcfc9f,082d76,0d2c74,0a7150,e03b00,752069,16e71b,0e02ce,5735bb"
+    },
+    {
+      "config": "pyvrp-250-budget-200",
+      "seconds": 3.323,
+      "day_minutes": 1187.9,
+      "day_km": 93.96,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "ordered_stops": 200,
+      "order": "5c33df,a42e85,a07157,4a2181,fd2e10,809528,eb3637,64f4e9,e68816,d93b37,1acb96,b251e1,cc9d31,f81d27,682c9b,9c18ad,291ad5,9f81ec,a4427a,98540f,8e3907,51b55e,c654bc,5fea35,7eba71,4557b1,e5b930,a12cbc,850945,b5d879,e008b7,2ef4e9,103d11,77e28d,b04607,77ff3d,6f415f,4f8d14,c94666,d503a2,4486bd,d4c2ab,30f913,c9c75d,309528,a8aa12,7219e2,9dd944,10ff7d,a0b592,731225,e55580,47e665,ac735d,d6c69f,323725,7f9fda,dcd0a7,fe607d,4f05ee,ac7b37,e3e719,ead15f,8f95f2,93ef8d,614e40,1dd020,811503,c33425,7796c3,714b9b,d6736d,7fa11e,b3adf7,ea7be5,0559fe,b71568,5630bb,68b879,9fe15e,ffeed1,422057,3f885d,b7acf4,707398,e5d9c7,80253c,369a06,7eb7ac,2fe407,e2e9e1,8c7545,421c5b,16e4dc,b746b3,c90951,1a102a,11c951,bcc2dd,824cb7,4a7f61,32a7a3,98bc92,fb9da8,cd0073,da2bda,589c3c,996d5a,22dbe8,eb2886,432ecf,9e92dc,0d5256,625f1e,9c9e29,e5e513,b1dbd0,40301e,efcfaa,bd6d94,5cc724,de2b7a,341dce,29b0f4,afb8eb,b2f26d,0bd771,61d59c,4d6aa7,5d1680,0f2195,7982d3,29c356,36a0f3,97e763,0d68b4,d75177,a9a922,4a2695,8acc97,0ac685,984d3e,95e763,34a344,f9ece2,a99f6d,c5167a,507ba7,148759,1ceee0,d942e5,21fd4c,5a2c15,09fc8d,030b71,29465a,f0c24e,1eb433,cae7fe,2070a9,2cc291,803fb7,a82196,76701b,cbe961,a89c5e,855950,c3e033,bc203c,fee15e,f52527,ab17e0,13efed,e9f168,70dd07,d89cd7,d8970f,d03511,bdb2d0,7395a8,e8fa97,6d987e,c1739d,326c60,67c628,a44dea,5dc163,622467,ef4755,34144b,11af2f,dcfc9f,082d76,0d2c74,0a7150,e03b00,752069,16e71b,0e02ce,5735bb"
+    },
+    {
+      "config": "pyvrp-250-budget-200",
+      "seconds": 3.358,
+      "day_minutes": 1187.9,
+      "day_km": 93.96,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "ordered_stops": 200,
+      "order": "5c33df,a42e85,a07157,4a2181,fd2e10,809528,eb3637,64f4e9,e68816,d93b37,1acb96,b251e1,cc9d31,f81d27,682c9b,9c18ad,291ad5,9f81ec,a4427a,98540f,8e3907,51b55e,c654bc,5fea35,7eba71,4557b1,e5b930,a12cbc,850945,b5d879,e008b7,2ef4e9,103d11,77e28d,b04607,77ff3d,6f415f,4f8d14,c94666,d503a2,4486bd,d4c2ab,30f913,c9c75d,309528,a8aa12,7219e2,9dd944,10ff7d,a0b592,731225,e55580,47e665,ac735d,d6c69f,323725,7f9fda,dcd0a7,fe607d,4f05ee,ac7b37,e3e719,ead15f,8f95f2,93ef8d,614e40,1dd020,811503,c33425,7796c3,714b9b,d6736d,7fa11e,b3adf7,ea7be5,0559fe,b71568,5630bb,68b879,9fe15e,ffeed1,422057,3f885d,b7acf4,707398,e5d9c7,80253c,369a06,7eb7ac,2fe407,e2e9e1,8c7545,421c5b,16e4dc,b746b3,c90951,1a102a,11c951,bcc2dd,824cb7,4a7f61,32a7a3,98bc92,fb9da8,cd0073,da2bda,589c3c,996d5a,22dbe8,eb2886,432ecf,9e92dc,0d5256,625f1e,9c9e29,e5e513,b1dbd0,40301e,efcfaa,bd6d94,5cc724,de2b7a,341dce,29b0f4,afb8eb,b2f26d,0bd771,61d59c,4d6aa7,5d1680,0f2195,7982d3,29c356,36a0f3,97e763,0d68b4,d75177,a9a922,4a2695,8acc97,0ac685,984d3e,95e763,34a344,f9ece2,a99f6d,c5167a,507ba7,148759,1ceee0,d942e5,21fd4c,5a2c15,09fc8d,030b71,29465a,f0c24e,1eb433,cae7fe,2070a9,2cc291,803fb7,a82196,76701b,cbe961,a89c5e,855950,c3e033,bc203c,fee15e,f52527,ab17e0,13efed,e9f168,70dd07,d89cd7,d8970f,d03511,bdb2d0,7395a8,e8fa97,6d987e,c1739d,326c60,67c628,a44dea,5dc163,622467,ef4755,34144b,11af2f,dcfc9f,082d76,0d2c74,0a7150,e03b00,752069,16e71b,0e02ce,5735bb"
+    }
+  ],
+  "summary": {
+    "heuristic-nn-2opt": {
+      "seconds_min": 49.575,
+      "seconds_median": 53.869,
+      "day_minutes": 817.3,
+      "day_km": 135.4,
+      "window_violations": 17,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "heuristic-nn-2opt",
+      "deterministic": true
+    },
+    "pyvrp-250": {
+      "seconds_min": 4.669,
+      "seconds_median": 4.697,
+      "day_minutes": 814.8,
+      "day_km": 174.05,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "deterministic": true
+    },
+    "pyvrp-1000": {
+      "seconds_min": 13.05,
+      "seconds_median": 13.054,
+      "day_minutes": 807.0,
+      "day_km": 170.14,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "deterministic": true
+    },
+    "pyvrp-250-budget-200": {
+      "seconds_min": 3.214,
+      "seconds_median": 3.323,
+      "day_minutes": 1187.9,
+      "day_km": 93.96,
+      "window_violations": 0,
+      "over_capacity": false,
+      "break_violation": false,
+      "engine": "pyvrp",
+      "deterministic": true
+    },
+    "quality_trade": {
+      "production_vs_reference_day_minutes": 7.8,
+      "production_vs_heuristic_day_minutes": -2.5
+    }
+  },
+  "budget": {
+    "construction": "the suite's 200-stop grid day (no windows, no break)",
+    "stops": 200,
+    "limit_s": 5.0,
+    "median_s": 3.323,
+    "within_budget": true
+  }
+}

@@ -159,7 +159,11 @@ class OmniRouteEngine:
             if response.status_code >= 400:
                 raise EngineUnavailableError(f"the gateway refused the call ({response.status_code})")
 
-            document = response.json()
+            try:
+                document = response.json()
+            except ValueError as exc:
+                last_error = exc
+                continue
             provider = self._provider_of(response, document)
             if provider is not None and provider not in self._config.omniroute_providers:
                 raise EngineUnavailableError(f"the provider '{provider}' is not allowed (D25)")

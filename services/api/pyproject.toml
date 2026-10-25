@@ -18,12 +18,13 @@ dependencies = [
     "anthropic>=0.40",
     "psycopg[binary]>=3.2",
     "sqlalchemy>=2.0",
-    "alembic>=1.12",
-    "litellm>=1.83.0",
     "pyjwt[crypto]>=2.15.1",
     "httpx>=0.28.1",
     "python-multipart>=0.0.6",
     "python-dotenv>=1.0",
+    # The production VRP solver (ADR-009): MIT, prebuilt wheels, seeded-deterministic.
+    # PyVRP 0.14.1 supports >=3.11; 0.15+ moves to 3.12 (PyVRP #1206), so pin below it.
+    "pyvrp>=0.14.1,<0.15",
 ]
 
 [project.optional-dependencies]
@@ -35,13 +36,34 @@ dev = [
     "pytest-randomly>=3.15",
     "ruff>=0.5",
     "mypy>=1.10",
+    # The contract drift guard (tests/test_contract.py) parses
+    # packages/contracts/openapi.yaml.
+    "pyyaml>=6.0",
+]
+# The load test of §18.4 (docs/operations/RUNBOOK.md section 12) runs from
+# this extra; the API itself never imports locust.
+load = [
+    "locust>=2.20",
+]
+# The S3-compatible POD store (ADR-011): boto3 (Apache-2.0) at runtime when
+# POD_STORAGE_BACKEND=s3; moto (Apache-2.0) emulates S3 in the tests. MinIO
+# is banned (AGPL-3.0).
+s3 = [
+    "boto3>=1.35",
+]
+s3test = [
+    "boto3>=1.35",
+    "moto[s3]>=5",
 ]
 
 [tool.uv]
-# The security patch for a transitive dependency (the audits must stay clean):
-# PYSEC-2026-4320 in certifi.
+# The security patches for transitive dependencies (the audits must stay
+# clean): PYSEC-2026-4320 in certifi, and CVE-2026-112940 in filelock, which
+# (litellm carried huggingface-hub and rode in until the audit dropped it; the audit gates failed on it:
+# filelock 3.32.7 -> the patched 4.2.1).
 constraint-dependencies = [
     "certifi>=2026.10.19",
+    "filelock>=4.2.1",
 ]
 
 [tool.setuptools.packages.find]
@@ -52,6 +74,10 @@ include = ["app*"]
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+addopts = "-m 'not db'"
+markers = [
+    "db: touches the real Postgres (needs DATABASE_URL; run with `-m db`)",
+]
 
 [tool.ruff]
 line-length = 100
@@ -63,6 +89,12 @@ ignore = ["E501", "B008", "PLR0913", "PLR0915", "PLR0912", "PLR2004", "ARG001", 
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["ARG005", "PLC0415"]
+# A benchmark tool reports its runs on the console.
+"benchmarks/**" = ["T20", "PLC0415"]
+# The ops tools (the restore drill) and the load test report on the console,
+# and both import the app lazily so the API process is never loaded twice.
+"ops/**" = ["T20", "PLC0415"]
+"loadtests/**" = ["T20"]
 
 [tool.mypy]
 python_version = "3.11"

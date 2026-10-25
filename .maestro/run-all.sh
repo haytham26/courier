@@ -36,7 +36,7 @@ write_summary() {
     echo "run-summary: status=$1"
     echo "run-summary: relaunches=$relaunches"
     [ -n "${relaunch_note:-}" ] && echo "run-summary: ${relaunch_note}"
-    [ -n "$2" ] && echo "run-summary: fail=$2"
+    [ -n "${2:-}" ] && echo "run-summary: fail=$2"
   } | tee "$EVIDENCE/summary.txt"
   if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
     cat "$EVIDENCE/summary.txt" >> "$GITHUB_STEP_SUMMARY" || true
@@ -92,6 +92,10 @@ adb install -r "$APK" || fail "the APK could not be installed"
 
 # The permissions the compatibility screen exercises are granted up front: the
 # system dialog would sit on top of the screen the flow has to read.
+# The scanner's camera is granted too (the app declares it from 06 on): the
+# system dialog would sit over the scanner the way it sits over the voice
+# prompt, and the grant is what the flow's feed asserts against.
+adb shell pm grant "$PKG" android.permission.CAMERA >/dev/null 2>&1 || true
 adb shell pm grant "$PKG" android.permission.RECORD_AUDIO >/dev/null 2>&1 || true
 adb shell pm grant "$PKG" android.permission.ACCESS_FINE_LOCATION >/dev/null 2>&1 || true
 adb shell pm grant "$PKG" android.permission.ACCESS_COARSE_LOCATION >/dev/null 2>&1 || true
