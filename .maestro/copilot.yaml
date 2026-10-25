@@ -47,7 +47,13 @@ name: "Copilot over the map: the surface, the session, and the honest empty stat
 - takeScreenshot: copilot-surface
 - tapOn:
     id: "copilot-stop"
+# Stop ends the turn and leaves the surface. The surface was pushed over the
+# drive (driving-copilot pushes /copilot on the root stack), so leaving it
+# returns to the drive the driver was on - the same convention the Delivered
+# confirm follows (delivered.yaml: Undo and Next Stop both land back on
+# driving-screen). The assert named today-screen before run 40174396929 (red
+# on both legs); the destination is recorded here, the assert is not dropped.
 - extendedWaitUntil:
     visible:
-      id: "today-screen"
+      id: "driving-screen"
     timeout: 30000
