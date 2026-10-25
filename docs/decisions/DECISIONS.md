@@ -141,3 +141,42 @@ Each: license check (fine to self-host unmodified as separate tools; if we modif
 - **The naming collision, recorded:** the founder's brief and the old `CURRENT.md` call this bug "BUG-052", but the tracker's BUG-052 had already landed with PR #19 for the solver's break-scan cost. The bug was written up as **BUG-053** and renumbered **BUG-060** when the queue-2 audit (PR #26) landed its own BUG-053 to BUG-058 on main: both rows are kept and every reference to the GL bug was updated. It was written up as D36 here, and D36 had landed with the backend squad in the same hours, so the renumber is D37 and the collision is exactly the class of error this repo records rather than hides.
 - **No fleet-wide concurrency group for the E2E workflow:** GitHub keeps one pending run per group and cancels the rest, so PR runs would be silently dropped (the founder's explicit instruction, BUG-060).
 - **The parallel BACKEND session owns `services/` only** (the founder's brief): the lead does not edit `services/`; the app, the flows, the design and the app-side docs are the lead's, and the backend's work reaches the app through its ADRs. It is recorded here because it is a decision, not a task.
+## D38 — The POD object storage: one store interface, a real signing key, the honest fingerprint and retention (2026-10-25, backend squad decision, queue 2 item 3)
+
+- ADR-011. The `PodStore` protocol with `LocalPodStore` (the default directory) and `S3PodStore` (boto3 against any S3-compatible store; MinIO stays banned, AGPL-3.0; moto, Apache-2.0, in the tests). The contract serves `GET /runs/{run_id}/stops/{stop_id}/pod/{event_id}/url` (owner-only, 15-minute TTL) and the local streaming grant `GET /runs/{run_id}/pod/{event_id}/bytes`.
+- The fresh-context review proved the first grant key forgeable (it was derived from the public JWT issuer): the key is now the dedicated `POD_URL_SIGNING_SECRET` (>=32 chars, validated at boot). The same pass made `sha256` true on S3 (object metadata at save, not the ETag), `exists()` only 404-tolerant (a 403/5xx can no longer turn a replay into an overwrite), `delete_run` paginated in 1,000-key batches with per-key errors raised, and the moto suite actually executing in CI.
+- Real buckets, keys and the signing secret are FOUNDER_TODO items; `delete_run` is the primitive the run/account-deletion slices call. The scheduler stays the infra lane.
+
+## D39 — The location notes: a derived door identity, the (courier, location, kind) upsert, the 404 cross-courier gate (2026-10-25, backend squad decision, queue 2 item 4)
+
+- ADR-012. `location_id` is `uuid5` over the canonical `address|suburb` (no nearest-neighbour, ever), stored on every stop and returned by the stop list; `door_memory` is redefined to one note per (courier, location, kind); `GET/POST /locations/{location_id}/notes` serve it (201 new / 200 corrected).
+- The gate is `courier_location_key`: a location the caller never had a stop at is 404 on both verbs, and two couriers at one door keep two private memories (tested explicitly).
+- The review's must-fixes landed: the SQL UPDATE refreshes `address_key` (parity with memory), the uuid5 namespace is pinned by a literal-uuid test, an empty address is refused, and the stop response never nulls `location_id`.
+
+## D40 — The intake provider seam: OmniRoute when configured, the deterministic fake otherwise (2026-10-25, backend squad decision, queue 2 item 5)
+
+- ADR-013. The two intake stubs now run the LangGraph graph: `POST /shifts/{shift_id}/intake` and `/intake/manifest` answer the contract's briefing or first question through the `IntakeProvider` seam — `OmniRouteProvider` (OpenAI-compatible, env-only) or `FakeOmniRoute` when no gateway is configured (one parcel per spoken line; its OCR refuses, it never invents a manifest).
+- `RepoGeo` geocodes from the run's own stops and bounds territory around the depot; the process-wide `MemorySaver` keys the interrupts by shift. The voice-socket resume, the real geocoder and the persistent checkpointer are the recorded next slices.
+- The review's must-fixes landed: the manifest endpoint is threadpooled (a sync gateway call on the loop would have hung the courier's voice socket), the untrusted text travels in tagged prompt blocks, the contract declares the 413/415/502/503, malformed gateway shapes are 502 not 500, HEIC is refused up front, and blank text is 422.
+
+## D41 — The sync conflict rules: first write wins, divergence reported, the clock bounded (2026-10-25, backend squad decision, queue 2 item 6)
+
+- ADR-014. The event log is append-only: an identical replay is an ack, a divergent same-id replay is a conflict whose id returns in `SyncResponse.conflicts` (the stored row wins; silent divergence is forbidden). A correction is a new event.
+- The stop status is the latest event by `occurred_at`, ties by arrival; no kind outranks another (the sync squad's C3, "first accepted wins", is superseded). `occurred_at` beyond 1 hour in the future or 7 days in the past is a 422 for the batch.
+- `append_events` answers `AppendResult(stored, conflicts)` in both repositories, so the rules are pinned by the same tests on the in-memory and SQL paths.
+
+## D43 — Android first, then iOS; one cross-platform code base (2026-10-25, founder decision)
+
+- Android reaches full quality first (MASTER_EXECUTION §6 Definition of Done, all 13 screens, E2E green 3 runs in a row, the founder's "Android OK" on a real phone). iOS starts only after that gate.
+- From now on: no Android-only solution when a cross-platform one exists, and every new native dependency must document iOS support (IOS_PLAN §0).
+- The full iOS plan (the founder's accounts, the simulator build, iOS E2E in CI, the Apple-specific items, TestFlight, the App Store) is `docs/plan/IOS_PLAN.md`.
+
+## D44 — Billing: build for every option, the founder picks the mix before launch (2026-10-25, founder decision)
+
+- The launch customer is the individual contractor driver, who pays for themself.
+- Build the entitlement layer so the app gates on "is this subscription active", never on how it was paid, and the server accepts more than one source. The sources to support:
+  1. Store in-app purchase: Google Play Billing and Apple StoreKit, through the RevenueCat-shaped layer in `docs/research/2026/payments-subscriptions.md`. This one is built first, because any subscription sold inside the app must use it.
+  2. Web checkout with Stripe (cards, NZD, GST-inclusive), sold outside the app.
+  3. The Team plan's org billing (one payer for several drivers), on top of 2.
+- Sources 2 and 3 are built behind a config switch, off by default, with stripe-mock tests, after source 1 and before launch. The founder chooses which sources are switched on at launch; that choice is a FOUNDER_TODO decision, not something to decide now.
+- The store rules are permanent, not a launch-only condition: a digital subscription sold inside the app always uses the store's billing. In New Zealand the app may not link to or promote a web price (no Play alternative billing in NZ; Apple's external-link entitlement does not cover NZ, research §4). A web sale is allowed outside the app, and those users may then sign in and use the app (Apple 3.1.3(b)).
