@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol
 
+from .billing import webhook_secret
 from .entitlements import Plan, SubscriptionState
 from .repo import SubscriptionRow
 
@@ -142,8 +143,6 @@ def webhook_secret_for(source: str) -> str:
 
     A provider configured without its secret is refused by the verifier's own
     rule (ADR-018 §2), so an empty string here is a stated refusal, not a hole."""
-    from .billing import webhook_secret
-
     return webhook_secret(source)
 
 

@@ -45,6 +45,7 @@ from .pod import (
     validate_pod_settings,
 )
 from .pod_store import LocalPodStore, pod_store
+from .providers import VERIFIERS, apply_facts, webhook_secret_for
 from .repo import DeliveryEventRow, LocationNoteRow, Repo, RouteStopRow, RunRecord, get_repo
 from .routing import (
     RoutePlan,
@@ -848,8 +849,6 @@ async def billing_webhook(
     each fail closed with a stated reason. Nothing here decides what the fact
     means - that is ADR-017's job, and this endpoint only feeds it.
     """
-    from .providers import VERIFIERS, apply_facts, webhook_secret_for
-
     accepted = billing_sources()
     if source not in accepted or source not in VERIFIERS:
         # An unaccepted source is 404, not 403: it is not this API's endpoint.
@@ -858,7 +857,7 @@ async def billing_webhook(
     try:
         facts = VERIFIERS[source].verify(
             body,
-            {key: value for key, value in request.headers.items()},
+            dict(request.headers),
             webhook_secret_for(source),
         )
     except ValueError as error:
