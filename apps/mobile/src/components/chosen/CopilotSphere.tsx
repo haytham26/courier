@@ -25,10 +25,33 @@ import React, { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Canvas, Circle, RadialGradient, BlurMask } from '@shopify/react-native-skia';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming, withRepeat } from 'react-native-reanimated';
+import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 
 import { useChosen, resolveOverCard } from './context';
 import type { CopilotState } from './types';
+
+/**
+ * BUG-061: whether the live Skia sphere is safe to draw here.
+ *
+ * The tombstone is a native heap error (SIGSEGV / gwp_asan
+ * `GuardedPoolAllocator::deallocate`) in Skia's GPU path, 4 s into a cold start,
+ * and the emulator now runs on software GL (swiftshader, BUG-060). An emulator
+ * has no physical GPU, so Expo's `Constants.isDevice` is the signal: false on
+ * an emulator, true on a phone or a tablet. The live 3D sphere is the feature
+ * and it stays on every real device; on an emulator the same button is drawn
+ * with the safe renderer, so the gate can run without a native crash.
+ *
+ * It is read at render, not at module load: the sphere is mounted on every main
+ * screen and the two paths must both be reachable by a test (a constant read
+ * once at import could never prove the fallback works).
+ *
+ * The evidence for this branch of the decision is in BUG-061: the scratch
+ * experiment `exp/bug-061-no-sphere` (a plain View in place of the Skia
+ * surface) ran ~35 minutes on the emulator with no SIGSEGV at all, where the
+ * with-sphere runs had produced it.
+ */
+const liveSphereIsSafe = (): boolean => Constants.isDevice !== false;
 
 export interface CopilotSphereProps {
   state: CopilotState;
@@ -107,6 +130,46 @@ export const CopilotSphere = ({
   // The muted and the offline states strike through; the label says it too.
   const struck = state === 'muted' || state === 'offline';
 
+  // BUG-061: on an emulator (no physical GPU, software GL) the live sphere is
+  // replaced by the safe renderer, so the native heap stays intact. Everything
+  // the a11y tree, the layout and the flows see is identical: the same
+  // Pressable, the same label, the same size, the same testID.
+  if (!liveSphereIsSafe()) {
+    return (
+      <Pressable
+        accessible
+        role="button"
+        accessibilityLabel={`Copilot, ${state}`}
+        accessibilityHint={struck ? 'Copilot is muted' : 'Taps to talk, or holds to keep listening'}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        testID="copilot-sphere"
+        style={[styles.button, { width: size, height: size }]}
+      >
+        <Animated.View style={[StyleSheet.absoluteFill, morphStyle]}>
+          {/* The safe renderer's own marker: the test asserts the live path
+              carries no Skia surface by asserting this view is absent, and the
+              safe path by asserting it is present. One testID, not a guess
+              about what a mocked Canvas renders as. */}
+          <View
+            testID="copilot-sphere-fallback"
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { backgroundColor: core, borderRadius: size / 2 }]}
+          />
+          {/* the one specular highlight, riding the light from the top left */}
+          <View
+            pointerEvents="none"
+            style={[
+              styles.safeHighlight,
+              { width: size * 0.26, height: size * 0.26, borderRadius: size * 0.13 },
+            ]}
+          />
+          {struck && <View style={styles.strike} pointerEvents="none" />}
+        </Animated.View>
+      </Pressable>
+    );
+  }
+
   return (
     <Pressable
       accessible
@@ -169,6 +232,12 @@ const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  safeHighlight: {
+    position: 'absolute',
+    left: '26%',
+    top: '20%',
+    backgroundColor: 'rgba(255,255,255,0.7)',
   },
   arcSpin: {
     alignItems: 'center',
