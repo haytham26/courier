@@ -52,6 +52,18 @@ correction is monotonic in the source's own `renews_at` (a stale replay is a no-
 removes access, because the money went back. In-memory first, the SQL repo unchanged — the rules are
 the ones the db tests already pin.
 
+### 3b. The trust boundary, named
+
+A verified webhook is **trusted to name the courier**: the signature proves the
+provider sent the request, and the payload's `courier_id` then decides which
+subscription the fact writes. That is the standard provider boundary (Stripe and
+the stores both work this way), but it is a boundary, not a detail: a compromised
+webhook secret can move any courier's entitlement, and the payload cannot choose
+its own `source` (the verifier pins it) or its own ordering (the ingest is
+monotonic). What narrows the boundary further — a purchase-id-to-courier
+directory the fact is reconciled against — is the provider slice's work, and it is
+named here rather than left implicit.
+
 ### 4. What is still the founder's
 
 - **The live endpoints and the secrets.** `StripeVerifier` speaks the wire shape and is exercised

@@ -35,7 +35,7 @@ from .agents.omniroute import (
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
-from .billing import billing_sources
+from .billing import WEBHOOK_MAX_BYTES, billing_sources
 from .entitlements import entitlement_of
 from .locations import location_id_for
 from .pod import (
@@ -844,25 +844,23 @@ async def billing_webhook(
 ):
     """A provider's webhook: verify it, then ingest the fact (ADR-018).
 
-    The signature rules run before the body is ever parsed, so a misconfigured
-    deployment (no secret), a replay, a truncated body and an unaccepted source
-    each fail closed with a stated reason. Nothing here decides what the fact
-    means - that is ADR-017's job, and this endpoint only feeds it.
+    The signature rules run before the body is parsed, and every refusal after
+    that is a 400 with its reason - never a 500 the provider has to retry. The
+    body is capped like every other upload: this endpoint is unauthenticated
+    (the signature is the auth), so an unbounded read is a free amplifier.
     """
     accepted = billing_sources()
     if source not in accepted or source not in VERIFIERS:
         # An unaccepted source is 404, not 403: it is not this API's endpoint.
         raise HTTPException(status_code=404, detail="this deployment does not accept that source")
     body = await request.body()
+    if len(body) > WEBHOOK_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="the webhook body is over the cap")
     try:
-        facts = VERIFIERS[source].verify(
-            body,
-            dict(request.headers),
-            webhook_secret_for(source),
-        )
+        facts = VERIFIERS[source].verify(body, dict(request.headers), webhook_secret_for(source))
+        apply_facts(repo, facts, accepted=accepted)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
-    apply_facts(repo, facts, accepted=accepted)
     return {"accepted": True}
 
 

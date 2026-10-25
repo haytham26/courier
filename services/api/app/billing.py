@@ -10,6 +10,11 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
+#: The webhook body's cap. The endpoint is unauthenticated (the signature is the
+#: auth), so an unbounded read is a free memory amplifier - the same reasoning as
+#: the POD upload's cap.
+WEBHOOK_MAX_BYTES = 64 * 1024
+
 
 @lru_cache
 def billing_sources() -> frozenset[str]:

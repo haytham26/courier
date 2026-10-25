@@ -140,11 +140,63 @@ class TestTheSignatureRules:
         with pytest.raises(ValueError, match="signature"):
             self.verifier.verify(tampered, sign(body), SECRET)
 
+    def test_a_lowercase_header_case_verifies_too(self) -> None:
+        """HTTP delivers whatever case it chooses; the verifier must not care."""
+        body = json.dumps(an_event(a_fact()), separators=(",", ":")).encode("utf-8")
+        original = sign(body)
+
+        facts = self.verifier.verify(
+            body,
+            {
+                "x-signature-timestamp": original["X-Signature-Timestamp"],
+                "x-signature": original["X-Signature"],
+            },
+            SECRET,
+        )
+
+        assert len(facts) == 1
+
+    def test_a_future_dated_signature_is_refused(self) -> None:
+        """The tolerance is symmetric: a timestamp ahead of now is also a replay."""
+        body = json.dumps(an_event(a_fact()), separators=(",", ":")).encode("utf-8")
+        headers = sign(body, at=datetime.now(UTC) + timedelta(seconds=SIGNATURE_TOLERANCE + 5))
+
+        with pytest.raises(ValueError, match="outside the tolerance"):
+            self.verifier.verify(body, headers, SECRET)
+
+    def test_an_out_of_range_timestamp_is_refused_not_raised(self) -> None:
+        """An absurd timestamp must be a 400, not a 500 on an unauthenticated endpoint."""
+        body = json.dumps(an_event(a_fact()), separators=(",", ":")).encode("utf-8")
+
+        with pytest.raises(ValueError, match="out of range"):
+            self.verifier.verify(
+                body,
+                {"X-Signature-Timestamp": "99999999999999999999", "X-Signature": "sha256=x"},
+                SECRET,
+            )
+
     def test_a_missing_signature_header_is_refused(self) -> None:
         body = json.dumps(an_event(a_fact()), separators=(",", ":")).encode("utf-8")
 
         with pytest.raises(ValueError):
             self.verifier.verify(body, {}, SECRET)
+
+    def test_a_naive_timestamp_is_refused(self) -> None:
+        """A naive datetime would poison the monotonic guard and the entitlement read."""
+        event = an_event(a_fact())
+        event["purchase"]["started_at"] = "2026-10-26T07:00:00"
+
+        with pytest.raises(ValueError, match="no timezone"):
+            fact_from_stripe_event(event)
+
+    def test_the_payload_cannot_name_its_own_source(self) -> None:
+        """A Stripe-signed webhook cannot store itself as the app store's fact."""
+        event = an_event(a_fact())
+        event["source"] = "appstore"
+
+        fact = fact_from_stripe_event(event, "stripe")
+
+        assert fact.source == "stripe"
 
     def test_a_provider_payload_becomes_a_fact(self) -> None:
         """The wire shape both providers share is coerced in one place."""
@@ -164,7 +216,7 @@ class TestTheIngest:
     def test_a_fact_is_stored_and_answers_active(self) -> None:
         repo = InMemoryRepo()
 
-        created = apply_facts(repo, [a_fact()])
+        created = apply_facts(repo, [a_fact()], accepted={"stripe"})
 
         assert created is True
         stored = repo.get_subscription(COURIER)
@@ -174,19 +226,21 @@ class TestTheIngest:
 
     def test_a_replay_is_a_no_op(self) -> None:
         repo = InMemoryRepo()
-        apply_facts(repo, [a_fact()])
+        apply_facts(repo, [a_fact()], accepted={"stripe"})
 
-        again = apply_facts(repo, [a_fact()])
+        again = apply_facts(repo, [a_fact()], accepted={"stripe"})
 
         assert again is False
 
     def test_a_stale_fact_does_not_move_the_subscription(self) -> None:
         """A stale webhook is a fact, not a state (ADR-017 §3)."""
         repo = InMemoryRepo()
-        apply_facts(repo, [a_fact(renews_at=STARTED + timedelta(days=1))])
+        apply_facts(repo, [a_fact(renews_at=STARTED + timedelta(days=1))], accepted={"stripe"})
 
         apply_facts(
-            repo, [a_fact(renews_at=STARTED - timedelta(days=1), state=SubscriptionState.EXPIRED)]
+            repo,
+            [a_fact(renews_at=STARTED - timedelta(days=1), state=SubscriptionState.EXPIRED)],
+            accepted={"stripe"},
         )
 
         stored = repo.get_subscription(COURIER)
@@ -196,7 +250,7 @@ class TestTheIngest:
 
     def test_a_revoked_fact_removes_access(self) -> None:
         repo = InMemoryRepo()
-        apply_facts(repo, [a_fact()])
+        apply_facts(repo, [a_fact()], accepted={"stripe"})
 
         # The revocation ends the paid period now: the money went back.
         apply_facts(
@@ -206,11 +260,20 @@ class TestTheIngest:
                     state=SubscriptionState.CANCELED, ends_at=datetime.now(UTC) - timedelta(days=1)
                 )
             ],
+            accepted={"stripe"},
         )
 
         stored = repo.get_subscription(COURIER)
         assert stored is not None
         assert entitlement_of(stored).active is False
+
+    def test_a_webhook_with_two_facts_is_refused_not_truncated(self) -> None:
+        """One webhook is one fact; the tail must not be silently dropped."""
+        repo = InMemoryRepo()
+
+        with pytest.raises(ValueError, match="one fact"):
+            apply_facts(repo, [a_fact(), a_fact(courier_id="driver-8")], accepted={"stripe"})
+        assert repo.get_subscription("driver-8") is None
 
     def test_an_unaccepted_source_is_refused_at_the_boundary(self) -> None:
         repo = InMemoryRepo()
@@ -237,7 +300,7 @@ class TestTheIngest:
     def test_another_couriers_fact_is_theirs(self) -> None:
         repo = InMemoryRepo()
 
-        apply_facts(repo, [a_fact(courier_id="driver-8")])
+        apply_facts(repo, [a_fact(courier_id="driver-8")], accepted={"stripe"})
 
         assert repo.get_subscription(COURIER) is None
         assert repo.get_subscription("driver-8") is not None
@@ -303,3 +366,6 @@ class TestTheWebhookEndpoint:
 
         assert accepted.status_code == 200, accepted.text
         assert accepted.json() == {"accepted": True}
+        stored = app.dependency_overrides[get_repo]().get_subscription(COURIER)
+        assert stored is not None
+        assert stored.source == "stripe"
