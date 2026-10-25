@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -27,6 +27,12 @@ from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 COURIER = "driver-7"
 OTHER = "driver-8"
 START_AT = datetime(2026, 10, 24, 7, 30, tzinfo=UTC)
+
+
+def recent_iso(minutes: int = 5) -> str:
+    """A phone event from a few minutes ago: the sync endpoint bounds the
+    clock (ADR-014), so a pinned timestamp would rot into a 422."""
+    return (datetime.now(UTC) - timedelta(minutes=minutes)).isoformat()
 
 
 def run_body(**overrides: object) -> dict[str, object]:
@@ -204,7 +210,7 @@ class TestListingTheStops:
                     "id": str(uuid.uuid4()),
                     "stop_id": str(stop_id),
                     "kind": "delivered",
-                    "occurred_at": START_AT.isoformat(),
+                    "occurred_at": recent_iso(),
                 }
             ],
         )
@@ -225,7 +231,7 @@ class TestListingTheStops:
                     "id": str(uuid.uuid4()),
                     "stop_id": str(repo.run_stops[run_id][0].id),
                     "kind": "delivered",
-                    "occurred_at": START_AT.isoformat(),
+                    "occurred_at": recent_iso(),
                 }
             ],
         )
@@ -275,7 +281,7 @@ class TestUploadingTheProofOfDelivery:
         stored = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", payload, "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "safe_place": "by the meter box"},
+            data={"occurred_at": recent_iso(), "safe_place": "by the meter box"},
         )
 
         assert stored.status_code == 201, stored.text
@@ -309,14 +315,14 @@ class TestUploadingTheProofOfDelivery:
         first = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", payload, "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(event_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(event_id)},
         )
         (Path(str(tmp_path)) / str(run_id) / f"{event_id}.bin").write_bytes(b"tampered-marker")
 
         replay = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", payload, "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(event_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(event_id)},
         )
 
         assert first.status_code == 201
@@ -340,7 +346,7 @@ class TestUploadingTheProofOfDelivery:
         foreign = other_client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", png_bytes(), "image/png")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
 
         assert foreign.status_code == 404
@@ -358,7 +364,7 @@ class TestUploadingTheProofOfDelivery:
         stray = client.post(
             f"/runs/{run_id}/stops/{uuid.uuid4()}/pod",
             files={"image": ("door.jpg", png_bytes(), "image/png")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
 
         assert stray.status_code == 404
@@ -378,7 +384,7 @@ class TestUploadingTheProofOfDelivery:
         refused = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", oversized, "image/png")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
 
         assert refused.status_code == 413
@@ -399,7 +405,7 @@ class TestUploadingTheProofOfDelivery:
         refused = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("photo.jpg", b"<html>not an image</html>", "image/jpeg")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
 
         assert refused.status_code == 415
@@ -545,13 +551,13 @@ class TestTheEventIdOwnership:
         client.post(
             f"/runs/{a_run_id}/stops/{a_stop_id}/pod",
             files={"image": ("door.jpg", a_payload, "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(stolen_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(stolen_id)},
         )
 
         replayed = other_client.post(
             f"/runs/{b_run_id}/stops/{b_stop_id}/pod",
             files={"image": ("door.jpg", png_bytes(48), "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(stolen_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(stolen_id)},
         )
 
         assert replayed.status_code == 404, replayed.text
@@ -560,7 +566,7 @@ class TestTheEventIdOwnership:
         own = client.post(
             f"/runs/{a_run_id}/stops/{a_stop_id}/pod",
             files={"image": ("door.jpg", a_payload, "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(stolen_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(stolen_id)},
         )
         assert own.status_code == 200
         assert own.json()["sha256"] == hashlib.sha256(a_payload).hexdigest()
@@ -582,7 +588,7 @@ class TestTheEventIdOwnership:
         genuine = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", png_bytes(64), "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "event_id": str(planted_id)},
+            data={"occurred_at": recent_iso(), "event_id": str(planted_id)},
         )
 
         assert genuine.status_code == 201, genuine.text
@@ -699,7 +705,7 @@ class TestTheHardenedEdges:
                     "id": str(uuid.uuid4()),
                     "stop_id": str(stop_id),
                     "kind": "teleported",
-                    "occurred_at": START_AT.isoformat(),
+                    "occurred_at": recent_iso(),
                 }
             ],
         )
@@ -718,7 +724,7 @@ class TestTheHardenedEdges:
                     "id": str(uuid.uuid4()),
                     "stop_id": str(uuid.uuid4()),
                     "kind": "delivered",
-                    "occurred_at": START_AT.isoformat(),
+                    "occurred_at": recent_iso(),
                 }
             ],
         )
@@ -758,7 +764,7 @@ class TestTheHardenedEdges:
         stored = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.heic", heic, "image/heic")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
 
         assert stored.status_code == 201, stored.text
@@ -777,7 +783,7 @@ class TestTheHardenedEdges:
         refused = client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", png_bytes(), "image/png")},
-            data={"occurred_at": START_AT.isoformat(), "safe_place": "x" * 201},
+            data={"occurred_at": recent_iso(), "safe_place": "x" * 201},
         )
 
         assert refused.status_code == 422
@@ -796,7 +802,7 @@ class TestTheHardenedEdges:
         pod = anonymous_client.post(
             f"/runs/{run_id}/stops/{stop_id}/pod",
             files={"image": ("door.jpg", png_bytes(), "image/png")},
-            data={"occurred_at": START_AT.isoformat()},
+            data={"occurred_at": recent_iso()},
         )
         reopt = anonymous_client.post(
             f"/runs/{run_id}/route:reopt", json={"affected_stop_ids": [str(stop_id)]}

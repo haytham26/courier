@@ -198,10 +198,10 @@ class TestTheConflictRules:
         self, client: TestClient, seeded_run: InMemoryRepo
     ) -> None:
         event_id = uuid.uuid4()
-        first = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[event(event_id)])
-        second = client.post(
-            f"/shifts/{SHIFT_ID}/events:batch", json=[event(event_id, kind="failed")]
-        )
+        payload = event(event_id)
+        first = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+        changed = dict(payload, kind="failed")
+        second = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[changed])
 
         assert first.json()["accepted"] == 1
         assert second.json()["accepted"] == 0
@@ -213,14 +213,42 @@ class TestTheConflictRules:
         self, client: TestClient, seeded_run: InMemoryRepo
     ) -> None:
         event_id = uuid.uuid4()
-        client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[event(event_id)])
-        changed = event(event_id)
-        changed["safe_place"] = "somewhere else"
+        payload = event(event_id)
+        client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+        changed = dict(payload, safe_place="somewhere else")
 
         second = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[changed])
 
         assert second.json()["conflicts"] == [str(event_id)]
         assert seeded_run.events[event_id].safe_place == "behind the planter"
+
+    def test_the_first_write_wins_in_the_other_direction_too(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        event_id = uuid.uuid4()
+        payload = event(event_id, kind="failed")
+        client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+        changed = dict(payload, kind="delivered")
+
+        second = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[changed])
+
+        assert second.json()["conflicts"] == [str(event_id)]
+        assert seeded_run.events[event_id].kind == "failed"
+
+    def test_a_divergent_duplicate_within_one_batch_is_a_conflict(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        """The batch itself can carry the id twice; the first copy wins and
+        the phone is told (the SQL repo answers the same way)."""
+        event_id = uuid.uuid4()
+        first = event(event_id)
+        changed = dict(first, kind="failed")
+
+        response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[first, changed])
+
+        assert response.json()["accepted"] == 1
+        assert response.json()["conflicts"] == [str(event_id)]
+        assert seeded_run.events[event_id].kind == "delivered"
 
     def test_the_latest_event_decides_the_stop_status(
         self, client: TestClient, seeded_run: InMemoryRepo

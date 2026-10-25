@@ -307,11 +307,20 @@ class SqlAlchemyRepo:
         if not events:
             return AppendResult(stored=0)
         existing = self._existing_events([event.id for event in events])
-        conflicts = tuple(
+        conflicts = [
             event.id
             for event in events
             if event.id in existing and not _same_event(existing[event.id], event)
-        )
+        ]
+        # A batch carrying the same id twice with different content is a
+        # divergence too: the insert keeps the first copy, and the phone is
+        # told - the in-memory repo answers the same way.
+        first_copy: dict[UUID, DeliveryEventRow] = {}
+        for event in events:
+            first = first_copy.setdefault(event.id, event)
+            if first is not event and not _same_event(first, event):
+                conflicts.append(event.id)
+        deduped = tuple(dict.fromkeys(conflicts))
         statement = text(
             """
             INSERT INTO delivery_events
@@ -339,7 +348,7 @@ class SqlAlchemyRepo:
         ]
         with self._engine.begin() as connection:
             result = connection.execute(statement, parameters)
-        return AppendResult(stored=int(result.rowcount or 0), conflicts=conflicts)
+        return AppendResult(stored=int(result.rowcount or 0), conflicts=deduped)
 
     def _existing_events(self, ids: list[UUID]) -> dict[UUID, DeliveryEventRow]:
         """The stored rows for the batch's ids, for the conflict comparison."""
