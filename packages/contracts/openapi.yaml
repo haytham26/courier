@@ -94,11 +94,19 @@ paths:
                   - $ref: '#/components/schemas/InterruptQuestion'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '502':
+          description: The extraction provider could not answer (never a silent empty manifest)
 
   /shifts/{shift_id}/intake/manifest:
     post:
       tags: [intake]
       summary: Upload paper manifest photo for OCR extraction
+      description: |
+        The photo is capped and magic-sniffed like the POD upload, then OCR'd
+        through the gateway and run through the same intake graph with
+        source='ocr'. HEIC is refused (the vision endpoints do not read it);
+        503 means no gateway is configured yet - the endpoint never invents a
+        manifest.
       operationId: intake_manifest
       security: [{ bearerAuth: [] }]
       parameters:
@@ -131,6 +139,12 @@ paths:
                   - $ref: '#/components/schemas/InterruptQuestion'
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '413': { description: The photo is over the 10 MiB cap }
+        '415': { description: Not a JPEG/PNG/HEIC image, or HEIC (the OCR provider cannot read it) }
+        '502':
+          description: The OCR or extraction provider could not answer
+        '503':
+          description: No OCR provider is configured yet (the OmniRoute gateway is a founder item)
 
   /shifts/{shift_id}/stops:
     get:
