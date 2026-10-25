@@ -162,6 +162,20 @@ for flow in .maestro/*.yaml; do
   if ! timeout "$FLOW_TIMEOUT" maestro test "${flow}"; then
     echo "::error::the flow failed: ${flow}"
     status=1
+    # BUG-062 EXPERIMENT (scratch branch exp/bug-062-failure-dump, never
+    # merged): Maestro writes the a11y tree and the screenshot of the moment
+    # the flow failed into its own test dir, and the run's evidence dump at
+    # the END of the run loses it (logcat keeps the last 3000 lines and the
+    # screen has moved on). The newest Maestro test dir is copied here, so the
+    # failure's own hierarchy is in the evidence artifact.
+    newest="$(ls -1dt "$HOME"/.maestro/tests/*/ 2>/dev/null | head -1)"
+    if [ -n "$newest" ]; then
+      dest="$EVIDENCE/maestro-failure-$(basename "$(dirname "$newest")")"
+      mkdir -p "$dest"
+      cp -r "$newest". "$dest/" 2>/dev/null || true
+      echo "the failure's own dump is in $dest"
+      ls -la "$dest"
+    fi
   fi
   echo "::endgroup::"
 done
