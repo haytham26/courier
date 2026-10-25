@@ -58,7 +58,7 @@ class ProviderVerifier(Protocol):
 
 def _headers_of(headers: dict[str, str]) -> dict[str, str]:
     """The headers, keyed lowercase: HTTP delivers whatever case it chooses."""
-    return dict((key.lower(), value) for key, value in headers.items())
+    return {key.lower(): value for key, value in headers.items()}
 
 
 def _timestamp_of(headers: dict[str, str]) -> int:
