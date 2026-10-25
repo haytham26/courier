@@ -61,6 +61,18 @@ describe('the summary screen', () => {
     expect(screen.getByTestId('summary-screen')).toBeTruthy();
   });
 
+  it('owns its provider: a root-stack route renders with nothing above it', () => {
+    // BUG-062: the summary is a root-stack route, so it sits outside the tabs'
+    // provider. Rendered bare it used to die at mount with "useChosen needs a
+    // ChosenProvider above it", which on the emulator looks like the app going
+    // back to Today and the flow's `summary-screen` assert timing out. The
+    // screen now carries its own provider, so this render has none above it.
+    render(<SummaryScreen />);
+
+    expect(screen.getByTestId('summary-screen')).toBeTruthy();
+    expect(screen.getByText('Summary')).toBeTruthy();
+  });
+
   it('shows what the day earned', () => {
     renderScreen();
 

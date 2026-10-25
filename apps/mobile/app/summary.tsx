@@ -16,17 +16,24 @@
  * out is the dock itself (no slot is active here, because none of them is this
  * screen). The Copilot centre is here too (D34: on every main screen).
  *
+ * A root-stack route sits OUTSIDE the tabs' provider, so it cannot read the
+ * tabs' one: the screen carries its own `ChosenProvider`, exactly as the drive
+ * and the Copilot screen do. Without it the screen dies at mount with
+ * "useChosen needs a ChosenProvider above it" - which is precisely what PR #30's
+ * first emulator run showed (the app stayed on Today and the flow's
+ * `summary-screen` assert timed out).
+ *
  * The copy is plain New Zealand English, there is no emoji anywhere, and every
  * control has an accessibility label and a role.
  */
 import React, { useCallback } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { copilotStateOf } from '@/voice/copilotState';
 import { useVoice } from '@/voice/useVoice';
-import { TabBar, useChosen, type TabSlot } from '@/components/chosen';
+import { ChosenProvider, TabBar, useChosen, type TabSlot } from '@/components/chosen';
 import { hapticFor } from '@/motion/haptics';
 import {
   REFERENCE_DAY,
@@ -46,6 +53,19 @@ const BAR_QUIET_OPACITY = 0.22;
 const TALLEST = barHeightFraction(REFERENCE_DAY.bars);
 
 export default function SummaryScreen() {
+  // The route: the light and the dark resolve here, because a root-stack route
+  // sits outside the tabs' provider (BUG-062's root cause).
+  const scheme = useColorScheme();
+
+  return (
+    <ChosenProvider mode={scheme === 'dark' ? 'dark' : 'light'}>
+      <SummaryScreenBody />
+    </ChosenProvider>
+  );
+}
+
+/** The screen itself: everything inside the provider's mode. */
+function SummaryScreenBody() {
   const { t } = useChosen();
   const router = useRouter();
   const voice = useVoice();
