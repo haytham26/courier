@@ -125,6 +125,21 @@ class TestTheStopLocationId:
             "12 riccarton road|harewood"
         )
 
+    def test_the_namespace_is_pinned(self) -> None:
+        """The review's finding: a renamed namespace would silently re-key
+        every new stop while the existing door memory keeps the old id. This
+        literal is the promised stability."""
+        assert location_id_for("12 Riccarton Road", None) == uuid.UUID(
+            "57a6d54b-11f7-5b91-9b07-43ea733e3ef2"
+        )
+
+    def test_an_empty_address_is_refused(self) -> None:
+        """The review's collision: every empty pin would share one id."""
+        with pytest.raises(ValueError):
+            location_id_for("", None)
+        with pytest.raises(ValueError):
+            location_id_for("   ", "Harewood")
+
 
 class TestStoringANote:
     def test_a_new_kind_is_201_and_reads_back(self, client: TestClient, repo: InMemoryRepo) -> None:

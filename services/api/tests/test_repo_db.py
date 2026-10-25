@@ -341,7 +341,7 @@ class TestTheLocationNotes:
             id=uuid.uuid4(),
             courier_id=COURIER,
             location_id=location,
-            address_key="45 papanui road",
+            address_key="45 papanui road (corrected)",
             kind="gate_code",
             body="9944",
             confidence=0.9,
@@ -354,6 +354,10 @@ class TestTheLocationNotes:
         assert notes[0].id == first.id  # the row's own id survived the correction
         assert notes[0].body == "9944"
         assert notes[0].confidence == 0.9
+        # The correction refreshes the audit key too (the review's parity fix:
+        # the in-memory replace always took the new key).
+        assert notes[0].address_key == "45 papanui road (corrected)"
+        assert notes[0].last_confirmed == datetime(2026, 10, 25, 9, 0, tzinfo=UTC)
 
         # Another courier at the same door keeps an empty, private memory.
         assert repo.get_location_notes("driver-8", location) == []

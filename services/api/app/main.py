@@ -27,6 +27,7 @@ from .agents import copilot
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
+from .locations import location_id_for
 from .pod import (
     POD_MAX_BYTES,
     pod_path,
@@ -648,7 +649,7 @@ def list_stops(
         {
             "id": str(row.id),
             "address": row.address,
-            "location_id": str(row.location_id) if row.location_id else None,
+            "location_id": str(row.location_id or location_id_for(row.address or "", row.suburb)),
             "seq": seq,
             "status": row.status,
             "lat": row.lat,

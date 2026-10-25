@@ -563,6 +563,7 @@ class SqlAlchemyRepo:
             FROM stops s
             JOIN shifts sh ON sh.id = s.shift_id
             WHERE sh.courier_id = :courier_id AND s.location_id = :location_id
+            ORDER BY s.sequence
             LIMIT 1
             """
         )
@@ -625,7 +626,8 @@ class SqlAlchemyRepo:
         update = text(
             """
             UPDATE door_memory
-            SET body = :body, confidence = :confidence, last_confirmed = :last_confirmed
+            SET address_key = :address_key, body = :body, confidence = :confidence,
+                last_confirmed = :last_confirmed
             WHERE courier_id = :courier_id AND location_id = :location_id AND kind = :kind
             """
         )

@@ -30,6 +30,10 @@ def canonical_address(address: str, suburb: str | None) -> str:
         return " ".join(_PUNCTUATION.sub(" ", text.lower()).split())
 
     street = clean(address)
+    if not street:
+        # Every empty pin would otherwise share one derived id (the review):
+        # a location cannot be derived from nothing.
+        raise ValueError("the address text is empty: a location id cannot be derived")
     area = clean(suburb or "")
     return f"{street}|{area}" if area else street
 

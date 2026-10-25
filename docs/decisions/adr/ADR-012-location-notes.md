@@ -54,9 +54,9 @@ recompute the hash — it reads the id the server will honour.
 ### 3. The authorization: the caller must have delivered to the location
 
 A note is readable/writable only when the caller has at least one stop (in any of their runs) whose
-`location_id` matches — `repo.courier_has_location(courier_id, location_id)`. A location the
-caller has never had is **404**, not 403 and not an empty list: existence is never disclosed
-cross-courier (the same discipline as every run/stop route).
+`location_id` matches — `repo.courier_location_key(courier_id, location_id)` returns the stop's
+canonical key, or None. A location the caller has never had is **404**, not 403 and not an empty
+list: existence is never disclosed cross-courier (the same discipline as every run/stop route).
 
 Cross-courier semantics, tested explicitly:
 
@@ -105,3 +105,21 @@ is the upsert target, so the repository needs no read-modify-write race.
   cross-courier isolation, the stop response's `location_id` matching the endpoint's id.
 - `tests/test_repo_db.py` (the `db` marker): the SQL upsert and `courier_has_location`.
 - The contract drift guard: both paths served, operationIds reconciled.
+
+## The review's findings, landed before merge (2026-10-25)
+
+- **Parity pinned:** the SQL UPDATE refreshes `address_key` with the correction, the way the
+  in-memory `replace` always did; a db test asserts the refreshed key and `last_confirmed`.
+- **The namespace is pinned by a literal-uuid test.** A future rename of the namespace string
+  could otherwise re-key every new stop while the existing notes keep the old id.
+- **An empty address is refused** (`canonical_address` raises): every empty pin would otherwise
+  share one derived id — two doors, one memory.
+- **The stop response never nulls `location_id`:** the endpoint derives from the address when a
+  row somehow lacks the stored id, so the contract's `required` is true by construction.
+- **The key lookup is ordered** (`ORDER BY s.sequence`) so two stops at one location cannot make
+  the audit key nondeterministic.
+- **Known limits, owned by the address-intelligence slice:** the folding is ASCII-only (a macron
+  or an apostrophe folds to a different id than its transliteration), unit forms (`1/12` vs
+  `1-12` vs `1 12`) are distinct, and `nz_address.ParsedAddress.address_key` is a second
+  canonicaliser for the intake graph (the intake matches number+street within one run today).
+  When LINZ ids land, the derived id stays the fallback for manual pins and these limits close.
