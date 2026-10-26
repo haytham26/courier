@@ -29,11 +29,15 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
+from app.entitlements import Plan, SubscriptionState
+from app.locations import location_id_for
 from app.repo import (
     DeliveryEventRow,
+    LocationNoteRow,
     RunRecord,
     RunTemplate,
     SqlAlchemyRepo,
+    SubscriptionRow,
 )
 from app.routing import PlannedStop, RoutePlan
 
@@ -41,6 +45,7 @@ pytestmark = pytest.mark.db
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 COURIER = "driver-7"
+
 
 @pytest.fixture()
 def engine() -> Iterator[Engine]:
@@ -95,10 +100,15 @@ def seed_stop(engine: Engine, shift_id: uuid.UUID, stop_id: uuid.UUID, address: 
         connection.execute(
             text(
                 "INSERT INTO stops (id, shift_id, sequence, address, latitude, longitude, "
-                "status, priority, parcels) VALUES (:id, :shift, 1, :address, "
-                "-43.54, 172.60, 'pending', false, 1)"
+                "status, priority, parcels, location_id) VALUES (:id, :shift, 1, :address, "
+                "-43.54, 172.60, 'pending', false, 1, :location)"
             ),
-            {"id": stop_id, "shift": shift_id, "address": address},
+            {
+                "id": stop_id,
+                "shift": shift_id,
+                "address": address,
+                "location": location_id_for(address, None),
+            },
         )
 
 
@@ -230,9 +240,211 @@ class TestTheEvents:
         # THE rowcount question the in-memory repo cannot answer: the
         # executemany with ON CONFLICT DO NOTHING must count only the
         # inserted rows, or the sync's `accepted` lies to the phone.
-        assert first == 2
-        assert replay == 0
+        assert first.stored == 2
+        assert first.conflicts == ()
+        assert replay.stored == 0
+        assert replay.conflicts == ()
         assert repo.cursor(shift_id) == 2
+
+        divergent = DeliveryEventRow(
+            id=rows[0].id,
+            shift_id=shift_id,
+            stop_id=stop_id,
+            kind="failed",
+            utterance=None,
+            safe_place=None,
+            lat=None,
+            lon=None,
+            accuracy_m=None,
+            occurred_at=rows[0].occurred_at,
+        )
+        conflict = repo.append_events(shift_id, [divergent])
+
+        assert conflict.stored == 0
+        assert conflict.conflicts == (rows[0].id,)
+        assert repo.get_event(rows[0].id) == rows[0]  # the stored row wins
+
+        # The same id twice in ONE batch: the first copy wins and the
+        # divergence is reported, exactly like the in-memory repo.
+        clash_id = uuid.uuid4()
+        at = datetime(2026, 10, 25, 8, 0, tzinfo=UTC)
+        original = DeliveryEventRow(
+            id=clash_id,
+            shift_id=shift_id,
+            stop_id=stop_id,
+            kind="delivered",
+            utterance=None,
+            safe_place=None,
+            lat=None,
+            lon=None,
+            accuracy_m=None,
+            occurred_at=at,
+        )
+        changed = DeliveryEventRow(
+            id=clash_id,
+            shift_id=shift_id,
+            stop_id=stop_id,
+            kind="failed",
+            utterance=None,
+            safe_place=None,
+            lat=None,
+            lon=None,
+            accuracy_m=None,
+            occurred_at=at,
+        )
+        batch = repo.append_events(shift_id, [original, changed])
+
+        assert batch.stored == 1
+        assert batch.conflicts == (clash_id,)
+        assert repo.get_event(clash_id) == original
+
+    def test_the_rowcount_of_a_partly_stored_batch_is_the_stored_rows(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """BUG-063: the rowcount the fast path trusts is the real one.
+
+        CI's run 40185490916 breached the sync SLO at 370 ms p95 because ADR-014
+        selected the batch's rows before every insert. The comparison now runs
+        only when the rowcount says some rows were refused - which means the
+        rowcount itself has to be exactly the number of rows the INSERT stored.
+        A batch of three with one row already there must store two.
+        """
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        stop_id = uuid.uuid4()
+        seed_stop(engine, shift_id, stop_id, "45 Papanui Road")
+        earlier = an_event(shift_id, stop_id, "delivered")
+        assert repo.append_events(shift_id, [earlier]).stored == 1
+
+        fresh = [
+            an_event(shift_id, stop_id, "delivered"),
+            an_event(shift_id, stop_id, "skipped"),
+        ]
+        later = repo.append_events(shift_id, [earlier, *fresh])
+
+        assert later.stored == 2  # the one already there is not counted
+        assert later.conflicts == ()
+        assert repo.cursor(shift_id) == 3
+
+    def test_the_subscription_round_trip_through_sql(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """ADR-017: the stored row reads back as the same decision.
+
+        The entitlement is the app's only gate, so what the SQL repo returns must
+        be exactly what the in-memory repo returns: the plan, the state and the
+        source's own id. Idempotence on the courier is proven too - a provider
+        retry and a duplicated gateway call must not fork the truth.
+        """
+        started = datetime(2026, 10, 26, 7, 0, tzinfo=UTC)
+        row = SubscriptionRow(
+            courier_id=COURIER,
+            plan=Plan.SOLO,
+            state=SubscriptionState.ACTIVE,
+            source="play",
+            source_id="play-purchase-1",
+            started_at=started,
+            renews_at=started + timedelta(days=30),
+            ends_at=None,
+        )
+
+        assert repo.put_subscription(row) is True
+        stored = repo.get_subscription(COURIER)
+        assert stored is not None
+        assert stored.plan is Plan.SOLO
+        assert stored.state is SubscriptionState.ACTIVE
+        assert stored.source == "play"
+        assert stored.source_id == "play-purchase-1"
+
+        # A correction is not a new row: the courier keeps one subscription.
+        corrected = SubscriptionRow(
+            courier_id=COURIER,
+            plan=Plan.SOLO,
+            state=SubscriptionState.PAST_DUE,
+            source="play",
+            source_id="play-purchase-1",
+            started_at=started,
+            renews_at=started + timedelta(days=30),
+            ends_at=None,
+        )
+        repo.put_subscription(corrected)
+        corrected_back = repo.get_subscription(COURIER)
+        assert corrected_back is not None
+        assert corrected_back.state is SubscriptionState.PAST_DUE
+        assert corrected_back.source_id == "play-purchase-1"
+
+        # Another courier's subscription is theirs alone.
+        assert repo.get_subscription("driver-8") is None
+
+        # The correction is monotonic: a replay of an OLDER fact must not
+        # rewind a courier's access (a stale webhook is a fact, not a state).
+        stale = SubscriptionRow(
+            courier_id=COURIER,
+            plan=Plan.SOLO,
+            state=SubscriptionState.ACTIVE,
+            source="play",
+            source_id="play-purchase-1",
+            started_at=started,
+            renews_at=started - timedelta(days=30),
+            ends_at=None,
+        )
+        assert repo.put_subscription(stale) is False
+        kept = repo.get_subscription(COURIER)
+        assert kept is not None
+        assert kept.state is SubscriptionState.PAST_DUE  # unaffected by the older fact
+
+    def test_the_correction_is_what_the_protocol_says(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """The SQL repo answers the protocol's True/False like the memory one.
+
+        (The review's blocker: `put_subscription` returned a hardcoded True, so
+        the two implementations disagreed on the same method and the SQL side
+        was never tested.)"""
+        from app.repo import SubscriptionRow
+
+        started = datetime(2026, 10, 26, 7, 0, tzinfo=UTC)
+        row = SubscriptionRow(
+            courier_id=COURIER,
+            plan=Plan.SOLO,
+            state=SubscriptionState.ACTIVE,
+            source="play",
+            source_id="play-purchase-1",
+            started_at=started,
+            renews_at=started + timedelta(days=30),
+            ends_at=None,
+        )
+
+        assert repo.put_subscription(row) is True
+        assert repo.put_subscription(row) is False
+
+    def test_a_fact_with_a_naive_timestamp_is_refused_before_the_repo(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """ADR-018: the fact layer requires an offset.
+
+        The SQL driver would coerce a naive parameter through the session's
+        timezone (a silent reinterpretation), while the in-memory guard compares
+        aware datetimes and would raise - so the disagreement is refused at the
+        boundary where both paths meet.
+        """
+        from app.providers import fact_from_stripe_event
+
+        event = {
+            "courier_id": COURIER,
+            "purchase": {
+                "id": "sub_naive",
+                "plan": "solo",
+                "state": "active",
+                "started_at": "2026-10-26 07:00:00",  # no offset
+                "renews_at": "2026-11-25 07:00:00",
+                "ends_at": None,
+            },
+        }
+
+        with pytest.raises(ValueError, match="no timezone"):
+            fact_from_stripe_event(event)
 
     def test_an_event_is_readable_by_id(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
         shift_id = a_shift(engine)
@@ -299,3 +511,69 @@ class TestTheTemplateAndTheRoute:
         assert read.stops[0].sequence == 1
         assert read.stops[0].arrival_at == start
         assert read.stops[0].late is False
+
+
+class TestTheLocationNotes:
+    def test_the_authz_key_the_upsert_and_the_cross_courier_isolation(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """The SQL half of ADR-012: the key lookup, the ON CONFLICT upsert."""
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        stop_id = uuid.uuid4()
+        seed_stop(engine, shift_id, stop_id, "45 Papanui Road")
+        location = location_id_for("45 Papanui Road", None)
+
+        assert repo.courier_location_key(COURIER, location) == "45 papanui road"
+        assert repo.courier_location_key("driver-8", location) is None
+
+        first = LocationNoteRow(
+            id=uuid.uuid4(),
+            courier_id=COURIER,
+            location_id=location,
+            address_key="45 papanui road",
+            kind="gate_code",
+            body="1234",
+            confidence=0.8,
+            last_confirmed=datetime(2026, 10, 25, 8, 0, tzinfo=UTC),
+        )
+        assert repo.put_location_note(first) is True
+        assert [note.body for note in repo.get_location_notes(COURIER, location)] == ["1234"]
+
+        corrected = LocationNoteRow(
+            id=uuid.uuid4(),
+            courier_id=COURIER,
+            location_id=location,
+            address_key="45 papanui road (corrected)",
+            kind="gate_code",
+            body="9944",
+            confidence=0.9,
+            last_confirmed=datetime(2026, 10, 25, 9, 0, tzinfo=UTC),
+        )
+        assert repo.put_location_note(corrected) is False
+
+        notes = repo.get_location_notes(COURIER, location)
+        assert len(notes) == 1
+        assert notes[0].id == first.id  # the row's own id survived the correction
+        assert notes[0].body == "9944"
+        assert notes[0].confidence == 0.9
+        # The correction refreshes the audit key too (the review's parity fix:
+        # the in-memory replace always took the new key).
+        assert notes[0].address_key == "45 papanui road (corrected)"
+        assert notes[0].last_confirmed == datetime(2026, 10, 25, 9, 0, tzinfo=UTC)
+
+        # Another courier at the same door keeps an empty, private memory.
+        assert repo.get_location_notes("driver-8", location) == []
+
+    def test_the_stops_carry_their_location_id(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        stop_id = uuid.uuid4()
+        seed_stop(engine, shift_id, stop_id, "45 Papanui Road")
+
+        rows = repo.get_run_stops(run.id)
+
+        assert rows[0].location_id == location_id_for("45 Papanui Road", None)
+        assert rows[0].suburb is None

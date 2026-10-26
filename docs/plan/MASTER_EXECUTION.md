@@ -43,7 +43,7 @@ Done on `feat/v4-company-bootstrap` (PR #1): real Better Auth + JWKS, Unistyles 
 **P4 Design (T6)**: every screen to `docs/design/mockups/` + V4 §5 (all states, motion, night/day, a11y, RTL), visual-regression baselines, screenshots day/night/small/large/200% text.
 **P5 Product (T7)**, each with online + offline behaviour:
 1 Sync (Courier Sync: op-sqlite event log ↔ Postgres) · 2 Routing + saved templates (Courier Route: PyVRP + VROOM, Valhalla/GraphHopper) · 3 Door memory · 4 Dictation mode · 5 Live voice agent (Courier Voice + sherpa-onnx on device + Pipecat server, all languages, earbud, 24/7 battery-safe) · 6 Full voice tool catalog · 7 Driving mode + turn-by-turn (Courier Nav from Ferrostar, fix left-hand driving) · 8 Label scanner (Courier Scan, address-only) · 9 POD (photo/signature/voice) + failed-delivery reasons · 10 Customer SMS/ETAs (optional) · 11 IRD logbook PDF (map-matched km) · 12 Web dashboard + admin · 13 Stripe NZD Trial/Solo/Team · 14 Teams/dispatch · 15 **Import from Spoke & other planners** (CSV/Excel, routes, addresses) · 16 **Onboarding** + in-app tips (≤2 min, voice-guided) · 17 **Beta programme** (closed testing 5–10 drivers, in-app feedback, crash reports → BUGS.md).
-**P6 Launch readiness**: Oracle Cloud (Sydney) deployment as code (compose, TLS, backups + restore test, zero-downtime updates, monitoring/alerts, runbook); **cost guard** (alerts before free tiers run out / before paid fallback, monthly cost report); Google Play readiness (Data Safety answers, privacy policy, terms, internal + closed testing tracks, store assets); NZ Privacy Act PIA; iOS-ready code (iOS build post-v1); all keys needed listed once in FOUNDER_TODO.md; `docs/HANDOVER.md`.
+**P6 Launch readiness**: Oracle Cloud (Sydney) deployment as code (compose, TLS, backups + restore test, zero-downtime updates, monitoring/alerts, runbook); **cost guard** (alerts before free tiers run out / before paid fallback, monthly cost report); Google Play readiness (Data Safety answers, privacy policy, terms, internal + closed testing tracks, store assets); NZ Privacy Act PIA; iOS-ready code (the iOS build follows `docs/plan/IOS_PLAN.md`, D43); all keys needed listed once in FOUNDER_TODO.md; `docs/HANDOVER.md`.
 **P7 Release**: acceptance on CI emulator (2 screen sizes, online/offline/transition), every module ≥ 8/10 on the scorecard, zero known defects, `v1.0.0` GitHub Release with signed APK + SBOM.
 
 ## 5. Autopilot rules
@@ -600,3 +600,11 @@ The plan is the approval. When an item of the queue is finished, start the next 
 - The 5-pass check is posted.
 - STATUS.md and the week log are updated.
 - The branch is deleted after the merge.
+
+## 20. iOS (founder decision 2026-10-25, binding; see D43)
+
+Android first, then iOS. The rules in `docs/plan/IOS_PLAN.md` §0 apply now; phases I1 to I5 start only after the gate in its §1. Read that file; it is the iOS plan.
+
+## 21. The 2026-10-25 audit (founder directive, binding; sections A, B and C)
+
+`docs/plan/AUDIT_2026-10-25.md` is the priority queue after the open PRs. Its P0 items (the app connected to the server, on-device voice wired, the voice eval set, no mocks in release builds, a staging server, the real-device acceptance script) come before any new feature, in the order its last section gives. Each item closes only by its done-when.

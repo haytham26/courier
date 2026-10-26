@@ -13,16 +13,18 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from functools import lru_cache
 from typing import Any, Protocol
 from uuid import UUID
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import bindparam, create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
+from .entitlements import Plan, SubscriptionState, SubscriptionView
+from .locations import canonical_address, location_id_for
 from .routing import PlannedStop, RoutePlan, RunTemplate
 from .sequencing import Segment
 
@@ -45,6 +47,32 @@ def _parse_segments(document: object) -> tuple[Segment, ...]:
             )
         )
     return tuple(segments)
+
+
+def _is_a_newer_fact(stored: SubscriptionRow, incoming: SubscriptionRow) -> bool:
+    """Whether the incoming fact is the one to keep.
+
+    A fact with no `renews_at` (a cancellation or a revocation) always applies;
+    otherwise the source's own later time wins, so a stale replay cannot rewind a
+    courier's access. The SQL repo expresses the same rule in its DO UPDATE's
+    WHERE clause."""
+    if incoming.renews_at is None or stored.renews_at is None:
+        return True
+    return incoming.renews_at >= stored.renews_at
+
+
+def _subscription_row(row: Any) -> SubscriptionRow:
+    """A stored subscription row as the API reads it (ADR-017)."""
+    return SubscriptionRow(
+        courier_id=row["courier_id"],
+        plan=Plan(row["plan"]),
+        state=SubscriptionState(row["state"]),
+        source=row["source"],
+        source_id=row["source_id"],
+        started_at=row["started_at"],
+        renews_at=row["renews_at"],
+        ends_at=row["ends_at"],
+    )
 
 
 def _parse_stop_order(document: object) -> tuple[UUID, ...]:
@@ -79,6 +107,33 @@ class DeliveryEventRow:
 
 
 @dataclass(frozen=True)
+class AppendResult:
+    """What an append did: the new rows, and the diverging replays (ADR-014).
+
+    A conflict is a same-id replay whose content differs: the stored row
+    wins, the incoming copy is discarded, and the id travels back to the
+    phone so it can surface the divergence instead of living it."""
+
+    stored: int
+    conflicts: tuple[UUID, ...] = ()
+
+
+def _same_event(stored: DeliveryEventRow, incoming: DeliveryEventRow) -> bool:
+    """Whether a replay carries exactly what is already stored."""
+    return (
+        stored.shift_id == incoming.shift_id
+        and stored.stop_id == incoming.stop_id
+        and stored.kind == incoming.kind
+        and stored.utterance == incoming.utterance
+        and stored.safe_place == incoming.safe_place
+        and stored.lat == incoming.lat
+        and stored.lon == incoming.lon
+        and stored.accuracy_m == incoming.accuracy_m
+        and stored.occurred_at == incoming.occurred_at
+    )
+
+
+@dataclass(frozen=True)
 class RunRecord:
     """The run: one courier's day, one van, one shift."""
 
@@ -91,6 +146,20 @@ class RunRecord:
     capacity_parcels: int | None
     speed_kmh: float
     start_at: datetime
+
+
+@dataclass(frozen=True)
+class SubscriptionRow(SubscriptionView):
+    """One courier's subscription as the database stores it (ADR-017).
+
+    The source is recorded, never decided on: `play`, `appstore`, `stripe` and
+    `team` are data on the row, so the founder's launch choice is a config
+    switch rather than a code path (D44). The view's fields are the ones the
+    decision reads; these are the ones the row keeps."""
+
+    source: str = ""
+    source_id: str | None = None
+    renews_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -107,6 +176,22 @@ class RouteStopRow:
     window_end: datetime | None
     address: str | None = None
     status: str = "pending"
+    suburb: str | None = None
+    location_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class LocationNoteRow:
+    """One learned note for a door (ADR-012): the gate code, the hazard."""
+
+    id: UUID
+    courier_id: str
+    location_id: UUID
+    address_key: str
+    kind: str
+    body: str
+    confidence: float
+    last_confirmed: datetime
 
 
 class Repo(Protocol):
@@ -130,12 +215,9 @@ class Repo(Protocol):
         """The courier's own runs, newest first, bounded."""
         ...
 
-    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> int:
-        """Stores the events, ignoring the ones already stored.
-
-        Returns:
-            The number of events that were new.
-        """
+    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
+        """Stores the events; an identical replay is an ack, a divergent one a
+        conflict the caller reports (ADR-014: the stored row wins)."""
 
     def cursor(self, shift_id: UUID) -> int:
         """The number of events stored for the shift (the sync cursor)."""
@@ -148,6 +230,34 @@ class Repo(Protocol):
 
     def get_run_stops(self, run_id: UUID) -> list[RouteStopRow]:
         """The stops of the run, in the order the manifest gave them."""
+
+    def courier_location_key(self, courier_id: str, location_id: UUID) -> str | None:
+        """The canonical address key when the courier has a stop there, else
+        None (ADR-012 §3: the one authz + audit lookup)."""
+        ...
+
+    def get_location_notes(self, courier_id: str, location_id: UUID) -> list[LocationNoteRow]:
+        """The courier's notes for the location, ordered by kind."""
+        ...
+
+    def put_location_note(self, note: LocationNoteRow) -> bool:
+        """Upsert by (courier, location, kind); True when the kind was new."""
+        ...
+
+    def get_subscription(self, courier_id: str) -> SubscriptionRow | None:
+        """The courier's subscription, when they have one (ADR-017)."""
+
+    def put_subscription(self, row: SubscriptionRow) -> bool:
+        """Store the fact; `True` when the row is new, `False` when it corrected one.
+
+        Idempotent on the courier the way the sync path is on the event: a
+        provider retries and the gateway duplicates, and neither may move a
+        courier's access by accident.
+
+        The correction is monotonic in the source's own time (`renews_at`): a
+        replay of an *older* fact is stored as a no-op, because a stale webhook
+        must not rewind a courier's access (ADR-017 §3). A cancellation carries
+        no `renews_at` and always applies."""
 
     def put_run_template(self, run_id: UUID, template: RunTemplate) -> None:
         """Stores the locked template and replaces the run's street order.
@@ -174,25 +284,44 @@ STATUS_KINDS = frozenset({"delivered", "skipped", "deferred", "failed"})
 class InMemoryRepo:
     """The repository the tests use: the same contract, no database."""
 
+    runs: dict[UUID, RunRecord] = field(default_factory=dict)
+    subscriptions: dict[str, SubscriptionRow] = field(default_factory=dict)
     events: dict[UUID, DeliveryEventRow] = field(default_factory=dict)
     by_shift: dict[UUID, list[UUID]] = field(default_factory=dict)
-    runs: dict[UUID, RunRecord] = field(default_factory=dict)
     run_stops: dict[UUID, list[RouteStopRow]] = field(default_factory=dict)
     templates: dict[UUID, RunTemplate] = field(default_factory=dict)
     routes: dict[UUID, RoutePlan] = field(default_factory=dict)
+    location_notes: dict[tuple[str, UUID, str], LocationNoteRow] = field(default_factory=dict)
 
-    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> int:
+    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
         stored = 0
+        conflicts: list[UUID] = []
         for event in events:
-            if event.id in self.events:
+            existing = self.events.get(event.id)
+            if existing is not None:
+                if not _same_event(existing, event):
+                    conflicts.append(event.id)
                 continue
             self.events[event.id] = event
             self.by_shift.setdefault(shift_id, []).append(event.id)
             stored += 1
-        return stored
+        return AppendResult(stored=stored, conflicts=tuple(conflicts))
 
     def cursor(self, shift_id: UUID) -> int:
         return len(self.by_shift.get(shift_id, []))
+
+    def get_subscription(self, courier_id: str) -> SubscriptionRow | None:
+        return self.subscriptions.get(courier_id)
+
+    def put_subscription(self, row: SubscriptionRow) -> bool:
+        existing = self.subscriptions.get(row.courier_id)
+        # The same monotonic rule the SQL repo's DO UPDATE carries (ADR-017 §3):
+        # a replay of an older fact is a no-op, a cancellation (which carries no
+        # renews_at) always applies. The two implementations must agree.
+        if existing is not None and not _is_a_newer_fact(existing, row):
+            return False
+        self.subscriptions[row.courier_id] = row
+        return existing is None
 
     def put_run(self, run: RunRecord) -> None:
         if run.id in self.runs:
@@ -251,9 +380,41 @@ class InMemoryRepo:
                 window_end=row.window_end,
                 address=row.address,
                 status=latest.get(row.id, ("", 0, "pending"))[2],
+                suburb=row.suburb,
+                location_id=row.location_id,
             )
             for row in self.run_stops.get(run_id, [])
         ]
+
+    def courier_location_key(self, courier_id: str, location_id: UUID) -> str | None:
+        for run_id, stops in self.run_stops.items():
+            run = self.runs.get(run_id)
+            if run is None or run.courier_id != courier_id:
+                continue
+            for stop in stops:
+                derived = stop.location_id or location_id_for(stop.address or "", stop.suburb)
+                if derived == location_id:
+                    return canonical_address(stop.address or "", stop.suburb)
+        return None
+
+    def get_location_notes(self, courier_id: str, location_id: UUID) -> list[LocationNoteRow]:
+        notes = [
+            note
+            for (owner, location, _kind), note in self.location_notes.items()
+            if owner == courier_id and location == location_id
+        ]
+        return sorted(notes, key=lambda note: note.kind)
+
+    def put_location_note(self, note: LocationNoteRow) -> bool:
+        key = (note.courier_id, note.location_id, note.kind)
+        existing = self.location_notes.get(key)
+        if existing is None:
+            self.location_notes[key] = note
+            return True
+        # The SQL upsert keeps the row's own id on a correction; the memory
+        # must answer the same way (the response echoes it).
+        self.location_notes[key] = replace(note, id=existing.id)
+        return False
 
     def put_run_template(self, run_id: UUID, template: RunTemplate) -> None:
         self.templates[run_id] = template
@@ -275,9 +436,69 @@ class SqlAlchemyRepo:
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
 
-    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> int:
+    def get_subscription(self, courier_id: str) -> SubscriptionRow | None:
+        statement = text(
+            """
+            SELECT courier_id, plan, state, source, source_id, started_at, renews_at, ends_at
+            FROM subscriptions
+            WHERE courier_id = :courier_id
+            """
+        )
+        with self._engine.connect() as connection:
+            row = connection.execute(statement, {"courier_id": courier_id}).mappings().first()
+        return _subscription_row(row) if row else None
+
+    def put_subscription(self, row: SubscriptionRow) -> bool:
+        # The correction is monotonic in the source's own time: an older fact
+        # must not rewind a courier's access (ADR-017 §3). A cancellation
+        # carries no `renews_at`, so it always applies - which is why the guard
+        # is `IS NULL OR :renews_at >= renews_at` and not a bare `>=`.
+        statement = text(
+            """
+            INSERT INTO subscriptions
+                (courier_id, plan, state, source, source_id, started_at, renews_at, ends_at)
+            VALUES (:courier_id, :plan, :state, :source, :source_id, :started_at,
+                    :renews_at, :ends_at)
+            ON CONFLICT (courier_id) DO UPDATE SET
+                plan = :plan, state = :state, source = :source, source_id = :source_id,
+                renews_at = :renews_at, ends_at = :ends_at, updated_at = now()
+            WHERE subscriptions.renews_at IS NULL
+               OR :renews_at IS NULL
+               OR :renews_at >= subscriptions.renews_at
+            RETURNING (xmax = 0) AS inserted
+            """
+        )
+        with self._engine.begin() as connection:
+            inserted = connection.execute(
+                statement,
+                {
+                    "courier_id": row.courier_id,
+                    "plan": row.plan.value,
+                    "state": row.state.value,
+                    "source": row.source,
+                    "source_id": row.source_id,
+                    "started_at": row.started_at,
+                    "renews_at": row.renews_at,
+                    "ends_at": row.ends_at,
+                },
+            ).scalar()
+        # `xmax = 0` is true when the row was INSERTed (nothing had touched it),
+        # false when the DO UPDATE ran - the same question the in-memory repo
+        # answers, so the two implementations agree on the contract.
+        return bool(inserted)
+
+    def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
         if not events:
-            return 0
+            return AppendResult(stored=0)
+        # A batch carrying the same id twice with different content is a
+        # divergence too: the insert keeps the first copy, and the phone is
+        # told - the in-memory repo answers the same way.
+        first_copy: dict[UUID, DeliveryEventRow] = {}
+        intra_batch: set[UUID] = set()
+        for event in events:
+            first = first_copy.setdefault(event.id, event)
+            if first is not event and not _same_event(first, event):
+                intra_batch.add(event.id)
         statement = text(
             """
             INSERT INTO delivery_events
@@ -305,7 +526,55 @@ class SqlAlchemyRepo:
         ]
         with self._engine.begin() as connection:
             result = connection.execute(statement, parameters)
-            return int(result.rowcount or 0)
+        stored = int(result.rowcount or 0)
+
+        # BUG-063: the comparison is only needed when the INSERT refused rows.
+        # The rowcount already says how many of the batch it stored, and when
+        # it is the whole batch there is nothing to compare against - so the
+        # courier's most frequent call stays the one statement it was before
+        # ADR-014, instead of paying for a rare case on every sync. (The
+        # pre-SELECT breached the 300 ms sync SLO in CI at run 40185490916:
+        # p95 370 ms.)
+        existing: dict[UUID, DeliveryEventRow] = {}
+        if stored < len(parameters):
+            existing = self._existing_events([event.id for event in events])
+
+        conflicts = [
+            event.id
+            for event in events
+            if (event.id in existing and not _same_event(existing[event.id], event))
+            or event.id in intra_batch
+        ]
+        deduped = tuple(dict.fromkeys(conflicts))
+        return AppendResult(stored=stored, conflicts=deduped)
+
+    def _existing_events(self, ids: list[UUID]) -> dict[UUID, DeliveryEventRow]:
+        """The stored rows for the batch's ids, for the conflict comparison."""
+        statement = text(
+            """
+            SELECT id, shift_id, stop_id, kind, utterance, safe_place, lat, lon,
+                   accuracy_m, occurred_at
+            FROM delivery_events
+            WHERE id IN :ids
+            """
+        ).bindparams(bindparam("ids", expanding=True))
+        with self._engine.connect() as connection:
+            rows = connection.execute(statement, {"ids": ids}).mappings().all()
+        return {
+            row["id"]: DeliveryEventRow(
+                id=row["id"],
+                shift_id=row["shift_id"],
+                stop_id=row["stop_id"],
+                kind=row["kind"],
+                utterance=row["utterance"],
+                safe_place=row["safe_place"],
+                lat=row["lat"],
+                lon=row["lon"],
+                accuracy_m=row["accuracy_m"],
+                occurred_at=row["occurred_at"],
+            )
+            for row in rows
+        }
 
     def get_event(self, event_id: UUID) -> DeliveryEventRow | None:
         statement = text(
@@ -466,7 +735,7 @@ class SqlAlchemyRepo:
             """
             SELECT s.id, s.latitude, s.longitude, s.priority, s.parcels,
                    s.service_time_s, s.time_window_start, s.time_window_end,
-                   s.address, s.status
+                   s.address, s.suburb, s.status, s.location_id
             FROM stops s
             JOIN runs r ON r.shift_id = s.shift_id
             WHERE r.id = :run_id
@@ -487,9 +756,102 @@ class SqlAlchemyRepo:
                 window_end=row["time_window_end"],
                 address=row["address"],
                 status=row["status"],
+                suburb=row["suburb"],
+                location_id=row["location_id"],
             )
             for row in rows
         ]
+
+    def courier_location_key(self, courier_id: str, location_id: UUID) -> str | None:
+        statement = text(
+            """
+            SELECT s.address, s.suburb
+            FROM stops s
+            JOIN shifts sh ON sh.id = s.shift_id
+            WHERE sh.courier_id = :courier_id AND s.location_id = :location_id
+            ORDER BY s.sequence
+            LIMIT 1
+            """
+        )
+        with self._engine.connect() as connection:
+            row = (
+                connection.execute(
+                    statement, {"courier_id": courier_id, "location_id": location_id}
+                )
+                .mappings()
+                .first()
+            )
+        if row is None:
+            return None
+        return canonical_address(row["address"], row["suburb"])
+
+    def get_location_notes(self, courier_id: str, location_id: UUID) -> list[LocationNoteRow]:
+        statement = text(
+            """
+            SELECT id, courier_id, location_id, address_key, kind, body, confidence,
+                   last_confirmed
+            FROM door_memory
+            WHERE courier_id = :courier_id AND location_id = :location_id
+            ORDER BY kind
+            """
+        )
+        with self._engine.connect() as connection:
+            rows = (
+                connection.execute(
+                    statement, {"courier_id": courier_id, "location_id": location_id}
+                )
+                .mappings()
+                .all()
+            )
+        return [
+            LocationNoteRow(
+                id=row["id"],
+                courier_id=row["courier_id"],
+                location_id=row["location_id"],
+                address_key=row["address_key"],
+                kind=row["kind"],
+                body=row["body"],
+                confidence=row["confidence"],
+                last_confirmed=row["last_confirmed"],
+            )
+            for row in rows
+        ]
+
+    def put_location_note(self, note: LocationNoteRow) -> bool:
+        insert = text(
+            """
+            INSERT INTO door_memory
+                (id, courier_id, location_id, address_key, kind, body, confidence, last_confirmed)
+            VALUES
+                (:id, :courier_id, :location_id, :address_key, :kind, :body, :confidence,
+                 :last_confirmed)
+            ON CONFLICT (courier_id, location_id, kind) DO NOTHING
+            RETURNING id
+            """
+        )
+        update = text(
+            """
+            UPDATE door_memory
+            SET address_key = :address_key, body = :body, confidence = :confidence,
+                last_confirmed = :last_confirmed
+            WHERE courier_id = :courier_id AND location_id = :location_id AND kind = :kind
+            """
+        )
+        params = {
+            "id": note.id,
+            "courier_id": note.courier_id,
+            "location_id": note.location_id,
+            "address_key": note.address_key,
+            "kind": note.kind,
+            "body": note.body,
+            "confidence": note.confidence,
+            "last_confirmed": note.last_confirmed,
+        }
+        with self._engine.begin() as connection:
+            created = connection.execute(insert, params).scalar_one_or_none() is not None
+            if not created:
+                connection.execute(update, params)
+        return created
 
     def put_run_template(self, run_id: UUID, template: RunTemplate) -> None:
         statement = text(

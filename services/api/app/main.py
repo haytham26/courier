@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
 from fastapi import (
@@ -20,12 +20,24 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.responses import JSONResponse
+from langgraph.checkpoint.memory import MemorySaver
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .agents import copilot
+from .agents.intake_geo import RepoGeo
+from .agents.intake_graph import build_graph
+from .agents.omniroute import (
+    IntakeProvider,
+    OmniRouteError,
+    ProviderUnavailableError,
+    get_intake_provider,
+)
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
+from .billing import WEBHOOK_MAX_BYTES, billing_sources
+from .entitlements import entitlement_of
+from .locations import location_id_for
 from .pod import (
     POD_MAX_BYTES,
     pod_settings,
@@ -33,7 +45,8 @@ from .pod import (
     validate_pod_settings,
 )
 from .pod_store import LocalPodStore, pod_store
-from .repo import DeliveryEventRow, Repo, RouteStopRow, RunRecord, get_repo
+from .providers import VERIFIERS, apply_facts, webhook_secret_for
+from .repo import DeliveryEventRow, LocationNoteRow, Repo, RouteStopRow, RunRecord, get_repo
 from .routing import (
     RoutePlan,
     RouteRequest,
@@ -91,8 +104,19 @@ Direction = Literal["asc", "desc", "odd_first", "even_first", "zigzag"]
 
 
 class IntakeText(BaseModel):
-    source: str = "voice"
-    text: str
+    """The spoken or typed manifest: bounded, tagged with its source."""
+
+    source: Literal["voice", "ocr", "scan", "manual"] = "voice"
+    text: str = Field(min_length=1, max_length=50_000)
+
+    @field_validator("text")
+    @classmethod
+    def _non_blank(cls, value: str) -> str:
+        """A blank dictation teaches nothing; the graph would brief 0 stops."""
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("text must not be blank")
+        return cleaned
 
 
 class DepotPoint(BaseModel):
@@ -155,6 +179,15 @@ class DeliveryEvent(BaseModel):
         when it happened) - the phone always knows its zone."""
         if value.tzinfo is None:
             raise ValueError("occurred_at must carry its timezone")
+        now = datetime.now(UTC)
+        if value > now + timedelta(hours=1):
+            raise ValueError(
+                "occurred_at is more than an hour in the future: the phone's clock is wrong"
+            )
+        if value < now - timedelta(days=7):
+            raise ValueError(
+                "occurred_at is more than 7 days old: the log is stale or the clock is wrong"
+            )
         return value
 
     @field_validator("kind")
@@ -165,6 +198,23 @@ class DeliveryEvent(BaseModel):
         if value not in allowed:
             raise ValueError(f"unknown event kind: {value}")
         return value
+
+
+class CreateLocationNote(BaseModel):
+    """One learned note for a door (ADR-012 §2)."""
+
+    kind: Literal["entry", "gate_code", "hazard", "safe_place", "access"]
+    body: str = Field(min_length=1, max_length=500)
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
+
+    @field_validator("body")
+    @classmethod
+    def _non_blank(cls, value: str) -> str:
+        """A note of spaces teaches nothing; the body is the memory."""
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("body must not be blank")
+        return cleaned
 
 
 class TemplateSegment(BaseModel):
@@ -451,7 +501,7 @@ def upload_pod(
         digest = store.save(run.id, resolved_id, content)
         stored_bytes = len(content)
 
-    stored = repo.append_events(
+    outcome = repo.append_events(
         shift_id=run.shift_id,
         events=[
             DeliveryEventRow(
@@ -476,7 +526,7 @@ def upload_pod(
             "sha256": digest,
             "bytes": stored_bytes,
             "stored_at": datetime.now(UTC).isoformat(),
-            "already_stored": replayed or stored == 0,
+            "already_stored": replayed or outcome.stored == 0,
         },
     )
 
@@ -668,23 +718,169 @@ def shift_route(
     return _route_body(shift_id, run, plan, template, unroutable)
 
 
+_INTAKE_CHECKPOINTER = MemorySaver()
+"""The intake's interrupt state, per shift, for this process's lifetime.
+
+A restart loses a pending question (the courier simply repeats it); the
+persistent checkpointer rides with the staging deployment (ADR-013).
+"""
+
+
+def _intake_answer(result: Any) -> dict[str, object]:
+    """The graph's last state as the contract's Briefing or Question shape."""
+    interrupts = result.get("__interrupt__")
+    if interrupts:
+        value = interrupts[0].value
+        return {"speak": value["speak"], "index": value["index"]}
+    return {
+        "briefing": result.get("briefing", ""),
+        "stops_count": len(result.get("ordered", ())),
+        "set_aside_count": sum(
+            1 for parcel in result.get("parcels", ()) if parcel.get("anomaly") == "set_aside"
+        ),
+    }
+
+
+def _run_intake(
+    *,
+    repo: Repo,
+    run: RunRecord,
+    provider: IntakeProvider,
+    source: str,
+    text: str,
+    shift_id: uuid.UUID,
+) -> dict[str, object]:
+    """One graph turn: start it, or answer the pending question, per shift."""
+    graph = build_graph(provider.extract, provider.phrase, RepoGeo(repo, run), _INTAKE_CHECKPOINTER)
+    try:
+        result = graph.invoke(
+            {"run_id": str(run.id), "source": source, "text": text},
+            {"configurable": {"thread_id": str(shift_id)}},
+        )
+    except OmniRouteError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    return _intake_answer(result)
+
+
 @app.post("/shifts/{shift_id}/intake")
 def intake_text(
-    shift_id: uuid.UUID, body: IntakeText, principal: AuthPrincipal = Depends(get_current_principal)
+    shift_id: uuid.UUID,
+    body: IntakeText,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+    provider: IntakeProvider = Depends(get_intake_provider),
 ):
-    """Starts the intake graph (thread_id = shift_id). Returns either the briefing or the
-    first interrupt question; answers flow back over the voice socket."""
-    ...
+    """Starts the intake graph (thread_id = shift_id).
+
+    Returns either the briefing or the first interrupt question; the question
+    is answered over the voice socket (the resume wiring is ADR-013's next
+    slice). The run must be the caller's own (404 discipline), and the model
+    calls run through the gateway when configured, the deterministic fake
+    otherwise. A provider that cannot answer is a 502, never a silent empty
+    manifest.
+    """
+    run = repo.get_run_for_shift(shift_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run for this shift")
+    return _run_intake(
+        repo=repo,
+        run=run,
+        provider=provider,
+        source=body.source,
+        text=body.text,
+        shift_id=shift_id,
+    )
 
 
 @app.post("/shifts/{shift_id}/intake/manifest")
-async def intake_manifest(
+def intake_manifest(
     shift_id: uuid.UUID,
     image: UploadFile,
     principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+    provider: IntakeProvider = Depends(get_intake_provider),
 ):
-    """Photo of paper manifest -> vision extraction -> same intake graph with source='ocr'."""
-    ...
+    """Photo of paper manifest -> OCR -> the same intake graph, source='ocr'.
+
+    The same cap and magic sniff as the POD upload: the declared name and
+    type are never trusted. Without a configured gateway the OCR provider is
+    unavailable and the endpoint says so (503) - it never invents a manifest.
+    """
+    run = repo.get_run_for_shift(shift_id)
+    if run is None or run.courier_id != principal.user_id:
+        raise HTTPException(status_code=404, detail="no run for this shift")
+    content = image.file.read(POD_MAX_BYTES + 1)
+    if len(content) > POD_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="the image is over the 10 MiB cap")
+    kind = sniff_image_kind(content)
+    if kind is None:
+        raise HTTPException(status_code=415, detail="the upload is not a JPEG, PNG or HEIC image")
+    if kind == "heic":
+        raise HTTPException(
+            status_code=415,
+            detail="the OCR provider does not read HEIC yet: share the manifest as JPEG or PNG",
+        )
+    try:
+        text = provider.ocr(content, media_type=f"image/{kind}")
+    except ProviderUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except OmniRouteError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    return _run_intake(
+        repo=repo,
+        run=run,
+        provider=provider,
+        source="ocr",
+        text=text,
+        shift_id=shift_id,
+    )
+
+
+@app.post("/billing/webhooks/{source}")
+async def billing_webhook(
+    source: str,
+    request: Request,
+    repo: Repo = Depends(get_repo),
+):
+    """A provider's webhook: verify it, then ingest the fact (ADR-018).
+
+    The signature rules run before the body is parsed, and every refusal after
+    that is a 400 with its reason - never a 500 the provider has to retry. The
+    body is capped like every other upload: this endpoint is unauthenticated
+    (the signature is the auth), so an unbounded read is a free amplifier.
+    """
+    accepted = billing_sources()
+    if source not in accepted or source not in VERIFIERS:
+        # An unaccepted source is 404, not 403: it is not this API's endpoint.
+        raise HTTPException(status_code=404, detail="this deployment does not accept that source")
+    body = await request.body()
+    if len(body) > WEBHOOK_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="the webhook body is over the cap")
+    try:
+        facts = VERIFIERS[source].verify(body, dict(request.headers), webhook_secret_for(source))
+        apply_facts(repo, facts, accepted=accepted)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"accepted": True}
+
+
+@app.get("/account/entitlements")
+def get_entitlements(
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The caller's entitlement: is this subscription active, and what does it open.
+
+    The app gates on "is this subscription active" and never on how it was paid
+    (D44), so this is the only place the answer is decided. A courier whose card
+    is failing still answers `active` - the grace window is the rule (ADR-017 §1).
+    """
+    decision = entitlement_of(repo.get_subscription(principal.user_id))
+    return {
+        "active": decision.active,
+        "plan": decision.plan.value if decision.plan else None,
+        "features": sorted(decision.features),
+    }
 
 
 @app.get("/shifts/{shift_id}/stops")
@@ -698,7 +894,9 @@ def list_stops(
 
     The status vocabulary is the contract's (`pending`/`delivered`/`skipped`/
     `deferred`/`failed`); an unknown filter value is refused by the type
-    itself, never silently treated as "all".
+    itself, never silently treated as "all". Each stop carries its
+    `location_id` (ADR-012 §1), so the phone calls the notes endpoints with
+    the id the server honours.
     """
     run = repo.get_run_for_shift(shift_id)
     if run is None or run.courier_id != principal.user_id:
@@ -708,6 +906,7 @@ def list_stops(
         {
             "id": str(row.id),
             "address": row.address,
+            "location_id": str(row.location_id or location_id_for(row.address or "", row.suburb)),
             "seq": seq,
             "status": row.status,
             "lat": row.lat,
@@ -721,6 +920,75 @@ def list_stops(
         for seq, row in enumerate(rows, start=1)
         if status is None or row.status == status
     ]
+
+
+def _location_note_body(note: LocationNoteRow) -> dict[str, object]:
+    """The note as the contract's LocationNote (ADR-012 §2)."""
+    return {
+        "id": str(note.id),
+        "kind": note.kind,
+        "body": note.body,
+        "confidence": note.confidence,
+        "last_confirmed": note.last_confirmed.isoformat(),
+    }
+
+
+@app.get("/locations/{location_id}/notes")
+def get_location_notes(
+    location_id: uuid.UUID,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The caller's door memory for the location (ADR-012).
+
+    The gate sits on `courier_location_key`: a location the caller has never
+    had a stop at is 404, never an empty list - existence is not disclosed
+    cross-courier, and the notes themselves are keyed by (courier, location,
+    kind), so two couriers at one door keep two private memories.
+    """
+    if repo.courier_location_key(principal.user_id, location_id) is None:
+        raise HTTPException(status_code=404, detail="no location with this id")
+    return [
+        _location_note_body(note)
+        for note in repo.get_location_notes(principal.user_id, location_id)
+    ]
+
+
+@app.post("/locations/{location_id}/notes")
+def add_location_note(
+    location_id: uuid.UUID,
+    body: CreateLocationNote,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Upsert one note by kind: 201 when new, 200 when corrected (ADR-012 §2).
+
+    One gate code per door, not five: the unique key is (courier, location,
+    kind) and the repository's ON CONFLICT DO NOTHING makes the race
+    impossible. The response carries the stored row, so a correction returns
+    the row's original id.
+    """
+    address_key = repo.courier_location_key(principal.user_id, location_id)
+    if address_key is None:
+        raise HTTPException(status_code=404, detail="no location with this id")
+    created = repo.put_location_note(
+        LocationNoteRow(
+            id=uuid.uuid4(),
+            courier_id=principal.user_id,
+            location_id=location_id,
+            address_key=address_key,
+            kind=body.kind,
+            body=body.body,
+            confidence=body.confidence,
+            last_confirmed=datetime.now(UTC),
+        )
+    )
+    stored = next(
+        note
+        for note in repo.get_location_notes(principal.user_id, location_id)
+        if note.kind == body.kind
+    )
+    return JSONResponse(status_code=201 if created else 200, content=_location_note_body(stored))
 
 
 @app.post("/shifts/{shift_id}/events:batch")
@@ -762,8 +1030,12 @@ def sync_events(
         )
         for event in events
     ]
-    stored = repo.append_events(shift_id, rows)
-    return {"accepted": stored, "cursor": repo.cursor(shift_id)}
+    outcome = repo.append_events(shift_id, rows)
+    return {
+        "accepted": outcome.stored,
+        "cursor": repo.cursor(shift_id),
+        "conflicts": [str(event_id) for event_id in outcome.conflicts],
+    }
 
 
 @app.websocket("/shifts/{shift_id}/voice")

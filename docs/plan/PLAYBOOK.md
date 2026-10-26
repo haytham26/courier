@@ -80,3 +80,84 @@ After every fix:
 - Before every commit, `git status` must show no `tmp-*`, `probe` or scratch file. Cleaning up means deleting only UNTRACKED files you created (`??` in git status). A tracked file is removed only with `git rm` in a commit that says why.
 - A harness is code too: check its spelling and imports first. A probe that fails for its own reason proves nothing.
 - Every experiment counts against the 45-minute time box of §19.1.
+
+## 11. Known noise in the emulator log (never chase these)
+These lines appear in GREEN runs too. They are not a cause unless a flow fails on the same step AND the evidence ties them to it.
+- `ERROR | Unable to connect to adb daemon on port: 5037` at emulator start: adb has simply not started yet. A few seconds later the log says `daemon started successfully`.
+- `Failed to find ColorBuffer`, `Failed to bind to texture: invalid color buffer`, `DisplaySurfaceGlContextHelper context was preempted`, `Failed to restore previous context`: software GL chatter (swiftshader). Flows pass right after them.
+- `stop: Not implemented`, `Emulator client has not yet been configured`, and the netsim and snapshot lines at shutdown.
+
+How to read a red E2E run, in this order:
+1. List the flows that FAILED (`##[error]the flow failed:`) and the exact failed step of each.
+2. Compare with the same flow in other legs and runs. Does the same step fail, and does an identical step pass elsewhere in the same run?
+3. Only then look at the app evidence of that flow (screen.png, window.xml, logcat-crash.txt).
+
+## 12. Known app pattern: an action that works most of the time is an app bug
+If the same gesture or tap passes in one flow and fails in another of the same run, the app is not robust under load. A courier on a slow phone hits the same thing. Make the app robust, never the flow:
+- Reproduce it in jest with late, missing or reordered events.
+- Fix the decision so it never depends on timing.
+- Never slow the flow down, add waits, or retry the gesture to hide it.
+
+Example (BUG-061 family, 2026-10-25): the first Slide to Deliver after a cold launch did not deliver, while the identical swipe in the next flow did.
+
+## 13. Branch safety: handoffs, local commits and merges of main
+
+1. **A handoff claim is verified on origin before it is used.** "The fix is on #N" means: `git ls-remote origin refs/heads/<branch>` shows a SHA, and `git branch -r --contains <sha>` lists `origin/<branch>`. If not, the claim is false; the fix is local only and is pushed first.
+2. **A local commit that is not on origin is never "stale".** Before abandoning or recreating a branch, run `git log --oneline origin/<branch>..<branch>`. Every commit listed is pushed (fast-forward, never force) or written down in the handoff with the reason it is dropped. Never create a second branch (`-green`, `-v2`) for the same PR.
+3. **After every merge of main into a branch, before the commit is pushed, prove nothing on main was lost:**
+   - `git diff --name-status --diff-filter=D origin/main HEAD -- services packages docs infra scripts db .github` must print nothing that the PR did not intend to delete.
+   - If a path is listed, `git checkout origin/main -- <path>` and amend the merge before pushing (the merge is not yet pushed, so this is allowed).
+   - If the merge shows unexpected deletions while still in progress: `git merge --abort` and start again from the right branch.
+4. **The PR diff is read before merging:** `git diff --stat origin/main...origin/<branch>` lists only files the PR owns. A backend path in a mobile PR (or the reverse) blocks the merge.
+
+## 14. A test must prove what its name says (founder directive 2026-10-25)
+
+A test that passes without proving anything is worse than no test: it hides the gap. Every PR that adds or changes a test:
+
+1. **Red first.** Run the new test against the code before the fix (or with the fix reverted) and paste the failing output in the PR. A test that was never red proves nothing. The only exception is a test that pins behaviour that already works, and the PR says so.
+2. **The name is the claim.** The assertions must prove exactly what the test's name says. If the setup cannot produce the case (for example a fake that returns no stored rows for a "divergent replay" test), fix the setup or rename the test.
+3. **Fakes are not proof of real behaviour.** When a fix depends on what the real system returns (a database rowcount, a platform API), add one test against the real thing too (the `db`-marked Postgres suite, the emulator).
+4. **The reviewer pass checks 1 to 3** for every new test, as part of the 5-pass check.
+5. **Mutation testing covers the core.** CONSTRAINTS runs Stryker on the address engine and the auth service. The backend squad extends it to the Python services that hold money, sync and routing (`services/api`: sync, runs, auth; `services/courier-voice`: the turn machine) with mutmut, scoped to the changed files on each PR, with the same ≥ 70 % floor. Until that lands, the reviewer flips one comparison in the changed code by hand and confirms a test goes red.
+
+## 15. No silent waits (founder directive 2026-10-25)
+
+1. **15 minutes without output is a stop.** Any wait (a subagent, a CI poll, a build) that produces no new output for 15 minutes is stopped, and the session writes what hung and what it does instead. A wait is never left open-ended.
+2. **Size the review to the change.** A docs-only or config-only PR gets pass 5 done inline by the session in under 10 minutes. A fresh-context review subagent is for code changes, with a 20-minute budget and an explicit output (the findings list), never "review until satisfied".
+3. **The founder sees progress.** A session that has worked 30 minutes without a commit, a push or a PR comment writes a one-line status in its own output: what it is doing and what it waits on.
+
+## 16. Two sessions, one repo: never chase the other session's failure (founder directive 2026-10-25)
+
+**Who owns what:**
+- The lead owns `apps/mobile`, `.maestro`, `packages/design-tokens` and the Android E2E workflow.
+- The backend owns `services/`, `infra/`, `db/`, the API and voice contracts, and the CI steps that test them: the Postgres suite, the restore drill and the Locust SLO profile.
+- The docs and registers are shared; take numbers per §13.
+
+**Before investigating any red check:**
+1. Read the failing step's name. If it tests the other session's paths, it is theirs.
+2. Read the other session's `docs/log/CURRENT*.md` and its open PRs (`gh pr list`). If an open PR or a `doing` BUG row already covers it, it is theirs.
+3. If it is theirs, do not investigate and do not touch their paths. Write one line in your own log, "red step X is <owner>'s, covered by PR #N / BUG-N", and treat your PR as green on its own changes, provided its own PR run passed that step on the same code. Continue your queue.
+4. If nobody covers it, write it as a new BUG row assigned to the owner, and continue.
+
+**Each session keeps its CURRENT file true** at every push: what it is on, its open PRs, and the red steps it is fixing. That file is how the other session knows.
+
+## 17. The E2E is deterministic, and main is never silently red (founder directive 2026-10-25)
+
+**Why this section exists.** On 2026-10-25, api-35 went red on four PRs (#18, #30, #36, #40) right after they took main, while one of them (#36) does not touch the app. Nobody saw it on main itself, because the Android E2E runs only on PRs and nightly. The workflow also takes inputs that change without a commit:
+- Maestro is installed from `get.maestro.mobile.dev` at its latest version;
+- the emulator binary and the system image are whatever the runner downloads that day;
+- the AVD cache key (`avd-<os>-<api>-google-apis-x86_64`) does not change when those change, or when the emulator options change (#37 changed `-memory` and `-cores`).
+
+**The rules:**
+1. **Everything the E2E uses is pinned, and a change to it is a commit.** This covers:
+   - the Maestro version, through `MAESTRO_VERSION` in the installer's environment, with its checksum recorded;
+   - the emulator build, through `emulator-build`;
+   - the system image, through its revision where the action allows it, recorded otherwise;
+   - the Java version.
+
+   The AVD cache key includes all of them and a hash of `emulator-options`. A tool upgrade is its own PR with a green run on both legs.
+2. **Main is tested after every merge.** The Android E2E also runs on push to main for app, `.maestro` and workflow paths. A red main stops the line: no other mobile PR merges until main is green again, and the fix comes first.
+3. **One shared failure is fixed once.** When the same leg is red on several PRs after they took main, it is main's failure (§16 applies within one session too): root-cause it once, on main, in one PR, then re-run the others. Never patch each PR.
+4. **Flake is measured, not argued.** Nightly runs the full suite 5 times per leg on main and records the pass rate in `docs/evidence/e2e-health.md`. Any flow under 100 % is a bug with a number. A merge needs both legs green on the final head. At most one re-run is allowed, only for a runner death before any flow ran, and the PR says so with the run link.
+5. **Every red run explains itself.** The failure dump (#36) is kept for every failing flow: the screenshot, the a11y tree, logcat filtered to the app and the emulator's own log. The root cause is written in BUGS with that evidence before the fix.
+6. **No weakening, ever.** No retries inside flows, no longer timeouts to hide slowness, no skipped flows and no dropped legs (§12, CONSTRAINTS).

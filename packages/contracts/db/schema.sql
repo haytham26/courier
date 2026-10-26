@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS stops (
     sequence    integer     NOT NULL,
     address     text        NOT NULL,
     suburb      text,
+    location_id uuid        NOT NULL,
     latitude    double precision,
     longitude   double precision,
     status      text        NOT NULL DEFAULT 'pending',
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS stops (
 );
 
 CREATE INDEX IF NOT EXISTS stops_shift_sequence ON stops (shift_id, sequence);
+CREATE INDEX IF NOT EXISTS stops_location ON stops (location_id);
 
 -- The run: one courier's day, one van, one shift. The constraints the
 -- routing engine needs (the depot, the capacity, the speed) live here.
@@ -116,14 +118,41 @@ CREATE TABLE IF NOT EXISTS stop_addresses (
     created_at  timestamptz NOT NULL DEFAULT now()
 );
 
+-- What the courier pays for, and whether it covers today (ADR-017).
+--
+-- The source is recorded, never decided on: `play`, `appstore`, `stripe` and
+-- `team` are data on the row, so the founder's launch choice is a config switch
+-- rather than a code path (D44). One row per courier - the entitlement is a
+-- fact about them, not a receipt - and the source's own id is kept so the
+-- provider's webhook is idempotent.
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+    courier_id   text        PRIMARY KEY,
+    plan         text        NOT NULL CHECK (plan IN ('trial', 'solo', 'team')),
+    state        text        NOT NULL CHECK (state IN ('trialing', 'active', 'past_due', 'grace', 'canceled', 'expired')),
+    source       text        NOT NULL CHECK (source IN ('play', 'appstore', 'stripe', 'team')),
+    source_id    text,
+    started_at   timestamptz NOT NULL,
+    renews_at    timestamptz,
+    ends_at      timestamptz,
+    updated_at   timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS subscriptions_source ON subscriptions (source, source_id);
+
+-- The door memory (ADR-012): one note per (courier, location, kind). The
+-- location id is derived from the canonical address until the LINZ ids
+-- land; address_key keeps the text for audit and the migration.
 CREATE TABLE IF NOT EXISTS door_memory (
-    id          uuid PRIMARY KEY,
-    courier_id  text        NOT NULL,
-    address_key text        NOT NULL,
-    note        text,
-    safe_place  text,
-    updated_at  timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (courier_id, address_key)
+    id             uuid PRIMARY KEY,
+    courier_id     text        NOT NULL,
+    location_id    uuid        NOT NULL,
+    address_key    text        NOT NULL,
+    kind           text        NOT NULL,
+    body           text        NOT NULL,
+    confidence     real        NOT NULL DEFAULT 0.5,
+    last_confirmed timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (courier_id, location_id, kind)
 );
 
 -- The geography: the point of every stop, so the route can be built with

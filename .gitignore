@@ -1,4 +1,4 @@
-# secrets
+﻿# secrets
 .env
 .env.*
 !.env.example
@@ -66,4 +66,7 @@ research-private/
 # The squad worktrees live inside the repo for tooling convenience; they are
 # working copies, never source (an accidental gitlink was committed once).
 /.worktrees/
-
+# Scratch helper scripts (GitHub-listing, merges): never source, and they must
+not reach gitleaks' view of the repo.
+/.opencode-tmp/
+graphify-out/
