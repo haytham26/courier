@@ -146,6 +146,60 @@ paths:
         '503':
           description: No OCR provider is configured yet (the OmniRoute gateway is a founder item)
 
+  /billing/webhooks/{source}:
+    post:
+      tags: [account]
+      summary: A billing provider's webhook (the facts the entitlement layer ingests)
+      description: |
+        The signature rules run before the body is parsed (ADR-018 section 2): an
+        empty signing secret, a replayed timestamp, a truncated body and a source
+        this deployment does not accept each fail closed. The response says only
+        whether the fact was accepted - what it means is the entitlement layer's
+        decision, never the provider's.
+      operationId: billing_webhook
+      parameters:
+        - name: source
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The source this deployment accepts (BILLING_SOURCES)
+      responses:
+        '200':
+          description: The fact was accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted]
+                properties:
+                  accepted:
+                    type: boolean
+        '400':
+          description: The webhook failed a signature rule (no secret, a replay, a truncated body)
+        '404':
+          description: This deployment does not accept that source
+
+  /account/entitlements:
+    get:
+      tags: [account]
+      summary: The caller's entitlement, and what it opens
+      description: |
+        The app gates on "is this subscription active" and never on how it was
+        paid (D44). A courier whose card is failing still answers `active`: the
+        grace window is the rule (ADR-017 §1). A courier with no subscription gets
+        a named free answer (`plan: null`), never an error.
+      operationId: get_entitlements
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: The caller's entitlement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entitlement'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /shifts/{shift_id}/stops:
     get:
       tags: [shifts]
@@ -454,8 +508,8 @@ paths:
               schema: { $ref: '#/components/schemas/PodResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '413': { description: "The image exceeds 10 MiB" }
-        '415': { description: "Not a JPEG/PNG/HEIC image (checked by magic bytes, not by name)" }
+        '413': { description: 'The image exceeds 10 MiB' }
+        '415': { description: 'Not a JPEG/PNG/HEIC image (checked by magic bytes, not by name)' }
 
   /runs/{run_id}/stops/{stop_id}/pod/{event_id}/url:
     get:
@@ -591,6 +645,25 @@ components:
         message:
           type: string
 
+    Entitlement:
+      type: object
+      required: [active, features]
+      properties:
+        active:
+          type: boolean
+          description: Whether the subscription covers today
+        plan:
+          description: The plan on the subscription, when there is one
+          oneOf:
+            - type: string
+              enum: [trial, solo, team]
+            - type: 'null'
+        features:
+          type: array
+          description: What the plan opens, sorted
+          items:
+            type: string
+
     IntakeText:
       type: object
       required: [text]
@@ -660,7 +733,7 @@ components:
         kind:
           type: string
           enum: [delivered, left_at, skipped, failed]
-          description: "D4: Voice delivery proof default"
+          description: 'D4: Voice delivery proof default'
         utterance:
           type: string
           description: Exact driver words
@@ -704,7 +777,21 @@ components:
 
     RouteResponse:
       type: object
-      required: [shift_id, run_id, engine, locked, total_distance_m, total_duration_s, parcels, capacity_parcels, over_capacity, window_violations, unroutable_stop_ids, stops]
+      required:
+        [
+          shift_id,
+          run_id,
+          engine,
+          locked,
+          total_distance_m,
+          total_duration_s,
+          parcels,
+          capacity_parcels,
+          over_capacity,
+          window_violations,
+          unroutable_stop_ids,
+          stops,
+        ]
       properties:
         shift_id: { type: string, format: uuid }
         run_id: { type: string, format: uuid }
@@ -724,7 +811,18 @@ components:
           type: array
           items:
             type: object
-            required: [stop_id, sequence, lat, lon, arrival_at, departure_at, distance_m, cumulative_distance_m, late]
+            required:
+              [
+                stop_id,
+                sequence,
+                lat,
+                lon,
+                arrival_at,
+                departure_at,
+                distance_m,
+                cumulative_distance_m,
+                late,
+              ]
             properties:
               stop_id: { type: string, format: uuid }
               sequence: { type: integer }
