@@ -93,7 +93,10 @@ jobs:
         run: pnpm test
 
       - name: The typed API client is fresh (ADR-019)
-        run: uv run --directory services/api python services/api/scripts/generate_api_client.py check
+        # The argument is relative to services/api, because `uv run
+        # --directory` makes that the cwd (the same convention the restore
+        # drill and the load-test steps below use).
+        run: uv run --directory services/api python scripts/generate_api_client.py check
 
       - name: Test the API against Postgres
         env:

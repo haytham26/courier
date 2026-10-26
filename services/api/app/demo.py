@@ -89,6 +89,16 @@ def seed_enabled() -> bool:
     return os.environ.get("DEMO_SEED_ENABLED") == "true"
 
 
+class DemoDayConflictError(Exception):
+    """The caller already has this day, in a way the repo refused.
+
+    Raised where `put_run` refuses (the run's primary key, or the shift already
+    has a run), and turned into the API's 409 by the endpoint - the same rule
+    and the same answer as `POST /runs`, so a caller who races themself on the
+    same reason is answered with a conflict rather than a 500.
+    """
+
+
 @dataclass(frozen=True)
 class DemoDay:
     """The caller's demo run, ready to write."""
@@ -174,12 +184,18 @@ def write_demo_day(repo: Any, courier_id: str, reason: str) -> DemoDay:
                     "start": day.run.start_at,
                 },
             )
-    else:
-        shifts = getattr(repo, "shifts", None)
-        if isinstance(shifts, dict):
-            shifts.setdefault(day.run.shift_id, day.run.shift_id)
+    # The in-memory repo keeps no shift table (it has runs, events and stops),
+    # so its day is the run and the stops; the SQL repo writes all three. Both
+    # answer the same questions about the run and its stops, which is what the
+    # seed exists for.
     if repo.get_run(day.run.id) is None:
-        repo.put_run(day.run)
+        # The same 409 rule as every other run write: a caller who races
+        # themself on the same reason gets the API's conflict answer, not a
+        # 500 from an uncaught ValueError.
+        try:
+            repo.put_run(day.run)
+        except ValueError as error:
+            raise DemoDayConflictError(str(error)) from error
     _write_stops(repo, day, engine)
     return day
 
@@ -191,6 +207,7 @@ def _write_stops(repo: Any, day: DemoDay, engine: Engine | None) -> None:
     if not missing:
         return
     if engine is not None:
+        missing_ids = {stop.id for stop in missing}
         parameters = [
             {
                 "id": stop.id,
@@ -203,7 +220,11 @@ def _write_stops(repo: Any, day: DemoDay, engine: Engine | None) -> None:
                 "parcels": stop.parcels,
                 "location": location_id_for(stop.address or "", None),
             }
-            for index, stop in enumerate(missing)
+            # The sequence is the stop's place in the seeded day, not its
+            # place among the missing rows: a caller who lost one stop and
+            # re-seeds must not renumber the survivors.
+            for index, stop in enumerate(day.stops)
+            if stop.id in missing_ids
         ]
         with engine.begin() as connection:
             connection.execute(text(_STOP_SQL), parameters)

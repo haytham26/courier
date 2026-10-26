@@ -1,9 +1,10 @@
 /**
  * The typed API client, generated from packages/contracts/openapi.yaml.
  *
- * DO NOT EDIT: change the contract and regenerate (`services/api/scripts/
- * generate_api_client.py`). CI fails on a stale file (check_api_client.py), so
- * the server, the contract and this client cannot drift apart.
+ * DO NOT EDIT: change the contract and regenerate
+ * (`uv run --directory services/api python scripts/generate_api_client.py`).
+ * CI fails on a stale file (the same script's `check` mode), so the server, the
+ * contract and this client cannot drift apart.
  */
 
 export interface AuthMe {

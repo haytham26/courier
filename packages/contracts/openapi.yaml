@@ -295,6 +295,9 @@ paths:
         The gate is the environment: without DEMO_SEED_ENABLED=true this route
         answers 404, because seeding demo rows into a real database is not
         something an unguarded endpoint should ever do.
+
+        A caller racing themself on the same reason is answered with 409, the
+        same conflict `POST /runs` answers.
       operationId: seed_demo_run
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -311,6 +314,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/DemoRun'
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: The caller already has this day, written by a racing seed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404': { $ref: '#/components/responses/NotFound' }
 
   /runs:

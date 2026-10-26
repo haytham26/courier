@@ -6,14 +6,16 @@ pins. This script reads `packages/contracts/openapi.yaml` and writes
 signature per operation - so the phone consumes the same file the server is
 checked against.
 
-Usage:
+Usage (the argument is relative to services/api, because `uv run --directory`
+makes it the cwd - the convention the restore drill and the load test use):
 
-    uv run --directory services/api python services/api/scripts/generate_api_client.py
-    uv run --directory services/api python services/api/scripts/check_api_client.py
+    uv run --directory services/api python scripts/generate_api_client.py
+    uv run --directory services/api python scripts/generate_api_client.py check
 
-The second is the CI gate: it regenerates into a temporary file and diffs. A
-contract change that leaves a stale client is red, the same way a contract change
-that leaves a stale server is - the third direction of the drift guard.
+The second is the CI gate: it regenerates into a temporary file beside the
+committed one and diffs. A contract change that leaves a stale client is red, the
+same way a contract change that leaves a stale server is - the third direction of
+the drift guard.
 """
 
 from __future__ import annotations
@@ -33,9 +35,10 @@ OUTPUT = REPO_ROOT / "packages" / "shared" / "src" / "generated" / "api.ts"
 HEADER = """/**
  * The typed API client, generated from packages/contracts/openapi.yaml.
  *
- * DO NOT EDIT: change the contract and regenerate (`services/api/scripts/
- * generate_api_client.py`). CI fails on a stale file (check_api_client.py), so
- * the server, the contract and this client cannot drift apart.
+ * DO NOT EDIT: change the contract and regenerate
+ * (`uv run --directory services/api python scripts/generate_api_client.py`).
+ * CI fails on a stale file (the same script's `check` mode), so the server, the
+ * contract and this client cannot drift apart.
  */
 """
 

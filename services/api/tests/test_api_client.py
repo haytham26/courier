@@ -41,15 +41,34 @@ class TestTheGeneratedClient:
             fresh.unlink(missing_ok=True)
 
     def test_a_deliberately_stale_client_fails_the_check(self, tmp_path: Path) -> None:
-        """The gate's proof: a stale file is red, not merely untidy."""
+        """The gate's proof: the check itself, run against a stale file.
+
+        The committed client is fresh (the test above); this test makes the
+        gate fail on purpose. It writes a stale file, points the generator's
+        OUTPUT at it, and calls the check the CI step calls - so it exercises
+        the comparison, the diff and the exit code, and it fails the moment
+        that gate stops saying what it says.
+        """
         generator = _load_generator()
-        expected = generator.generate()
+        assert hasattr(generator, "check"), "the generator has no check mode"
 
         stale = tmp_path / "api.ts"
-        stale.write_text(expected.replace("export interface", "export type"), encoding="utf-8")
+        stale.write_text("// deliberately stale\n", encoding="utf-8", newline="")
 
-        assert stale.read_text(encoding="utf-8") != expected
-        assert "export interface" not in stale.read_text(encoding="utf-8")
+        real_output = generator.OUTPUT
+        generator.OUTPUT = stale
+        try:
+            assert generator.check() == 1, "a stale client must be red"
+            # And the same check, against a file that is exactly what the
+            # contract generates, is green: the gate distinguishes fresh from
+            # stale rather than failing everything.
+            fresh = tmp_path / "fresh.ts"
+            fresh.write_text(generator.generate(), encoding="utf-8", newline="")
+            generator.prettier(fresh)
+            generator.OUTPUT = fresh
+            assert generator.check() == 0, "a fresh client must be green"
+        finally:
+            generator.OUTPUT = real_output
 
     def test_every_served_path_is_in_the_client(self) -> None:
         """The app's client covers the surface the drift guard checks."""

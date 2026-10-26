@@ -36,7 +36,7 @@ from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
-from .demo import demo_day_body, seed_enabled, write_demo_day
+from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
 from .locations import location_id_for
 from .pod import (
@@ -394,10 +394,16 @@ def seed_demo_run(
     The gate is the environment, not a hope: without DEMO_SEED_ENABLED=true this
     route is 404, because seeding demo rows into a real database is not something
     an unguarded endpoint should ever do.
+
+    A caller racing themself on the same reason is answered with the same 409
+    `POST /runs` answers, not a 500: the seed writes a run like any other.
     """
     if not seed_enabled():
         raise HTTPException(status_code=404, detail="this deployment does not seed demo data")
-    day = write_demo_day(repo, principal.user_id, body.reason)
+    try:
+        day = write_demo_day(repo, principal.user_id, body.reason)
+    except DemoDayConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     return demo_day_body(day)
 
 
