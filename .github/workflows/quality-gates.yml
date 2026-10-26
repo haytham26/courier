@@ -40,8 +40,8 @@ jobs:
       # swiftshader_indirect makes the headless runner pick its own GL mode and
       # the E2E gate dies at launchApp, which reads like an app bug. The gate's
       # own test runs with the rest of scripts/*/__tests__ (test:store-readiness).
-      - name: Every workflow reads its dispatch inputs through the github context (BUG-067)
-        run: node scripts/ci/check-workflow-inputs.mjs
+      - name: Every workflow file parses (the keys, and the dispatch inputs) (BUG-067)
+        run: node scripts/ci/check-workflows.mjs
       - name: Every emulator boot asks for software rendering
         run: node scripts/ci/check-emulator-gpu.mjs
       - name: Check the voice evaluation set
