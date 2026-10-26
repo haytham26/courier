@@ -10,7 +10,9 @@ which is binding.**
 1. **BUG-063** — **merged** (PR #46).
 2. **A1's backend half — MERGED** (PR #57, `b0cfd6b`, ADR-019/D47): the typed client generated from
    the OpenAPI the drift guard pins (committed, with a freshness gate in CI) and `POST /demo/runs`,
-   the env-gated demo-run seed with deterministic uuid5 ids. Then A2, A4 and B2 are the lead's.
+   the env-gated demo-run seed with deterministic uuid5 ids. **`docs/plan/A1-handover.md` is the
+   handover to the lead's app side** (sign in, attach the JWT, load the run, the outbox, one run
+   store, the no-mock E2E job); A2, A4 and B2 are theirs.
 3. **A5** — the staging deploy workflow (compose, Caddy TLS, the migrations, a smoke test, a
    rollback), built and tested against a **local VM** until the OCI host and key exist (FOUNDER_TODO).
 4. **B3** — BUG-059's security backlog: the WebSocket token out of the query string, `/v1/engines` and
