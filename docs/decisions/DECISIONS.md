@@ -267,8 +267,18 @@ expired`) and the decision (`entitlement_of`). `past_due` never removes access o
   outbox, one run store) and the E2E job that drives the seeded day end to end. **Still the
   founder's:** the OCI host and key for A5's staging deploy.
 
-## D48 — A5's first slice: the staging stack, the two service images, and the deploy with its smoke test (2026-10-27, backend squad decision)
+## D48 — Andee's ideas, built our own way: clean-room only, store-safe (2026-10-27, founder decision)
 
+- **The founder's goal:** Courier Voice learns the techniques of the Andee device agent (https://github.com/kuafuai/andee), so the copilot is smarter and cheaper.
+- **The law decides how.** Reverse-engineering or modifying Andee's code does not make it ours: a modified copy is a derivative work and stays under Andee's licence. That licence, in A.1(d), forbids shipping it in a product without KUAFUAI's written authorisation. So:
+  - **Clean room (D24):** one agent reads Andee and writes a behaviour spec in our own words, with no code, in `docs/research/2026/andee-cleanroom-spec.md`. A different session that never opened Andee's source builds from that spec. The PR records both steps.
+  - **No Andee code, file, asset, prompt text or name** enters the repository. The licence check runs on the PR.
+- **What we build (MASTER §22):**
+  1. a cheap tool-less pre-classifier call before a full Courier Voice turn, measured in tokens and latency through OmniRoute;
+  2. "stop and ask instead of retrying" when the model's confidence is low, which matters to a driver;
+  3. a memory of the courier that the courier can see and clear, under the PIA's rules.
+- **What we do not build without a separate decision:** controlling other apps through Android's `AccessibilityService`. Google Play allows it only for apps whose core purpose is accessibility, with a declaration and review. That one is a research spike with a Play-policy check first (MASTER §22), and it is out of the trial scope.
+## D48 — A5's first slice: the staging stack, the two service images, and the deploy with its smoke test (2026-10-27, backend squad decision)
 - ADR-020. `infra/compose.staging.yml` is the staging stack as its own file: one replica of each
   service (the zero-downtime swap is a production guarantee), a 172.29 network so both stacks can run
   on one host, and Caddy's own root CA for a domain a local VM cannot be challenged for

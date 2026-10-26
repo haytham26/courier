@@ -608,3 +608,20 @@ Android first, then iOS. The rules in `docs/plan/IOS_PLAN.md` §0 apply now; pha
 ## 21. The 2026-10-25 audit (founder directive, binding; sections A, B and C)
 
 `docs/plan/AUDIT_2026-10-25.md` is the priority queue after the open PRs. Its P0 items (the app connected to the server, on-device voice wired, the voice eval set, no mocks in release builds, a staging server, the real-device acceptance script) come before any new feature, in the order its last section gives. Each item closes only by its done-when.
+
+## 22. Device-agent techniques for Courier Voice (founder decision 2026-10-27, binding; see D48)
+
+**When:** after the audit's P0 items (§21), alongside A2 (on-device voice). The owner is the backend squad (the voice service), with the lead for the app side.
+
+1. **The clean-room spec:** a fresh-context subagent reads https://github.com/kuafuai/andee and writes `docs/research/2026/andee-cleanroom-spec.md`. It describes behaviours only, in our words, with no code, no prompts and no file names. It lists the three techniques in D48 with the problem each one solves.
+2. **The build:** a session that never opened Andee's source implements from the spec, in `services/courier-voice` and `apps/mobile/src/voice`:
+   - the pre-classifier;
+   - the ask-on-low-confidence rule;
+   - the visible and clearable memory.
+
+   Each change is a PR with red-first tests (PLAYBOOK §14), and with the token and latency numbers before and after, measured through OmniRoute.
+3. **The accessibility spike:** this is research only, and it ships nothing.
+   - Read Google Play's current Accessibility API policy and the Permissions declaration.
+   - Write whether any courier use case can qualify, and what the review would require.
+   - The founder decides from that document.
+- **Done when:** the spec, the three techniques merged with their numbers, and the spike document are on main.
