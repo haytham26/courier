@@ -133,24 +133,39 @@ def prettier(path: Path) -> None:
     The freshness check is an exact diff, so the generator's output must be the
     file the repo's own formatter would leave: a file that drifts only because
     of formatting is a red gate with nothing behind it.
+
+    When prettier cannot be found the check still runs, compares unformatted
+    output against the formatted file and fails: a missing formatter makes the
+    gate red, never silently green.
     """
     import shutil
+    import sys
 
-    candidates = [
-        shutil.which("prettier"),
-        str(REPO_ROOT / "node_modules" / ".bin" / "prettier"),
-        str(REPO_ROOT / "node_modules" / ".bin" / "prettier.cmd"),
-    ]
-    executable = next((item for item in candidates if item and Path(item).exists()), None)
-    if executable is None:
+    if sys.platform == "win32":
+        # Windows runs the .cmd launcher through the shell, as a command
+        # string; the extension-less `prettier` in node_modules/.bin is a shell
+        # script and cannot be executed directly.
+        candidates = [
+            shutil.which("prettier.cmd"),
+            str(REPO_ROOT / "node_modules" / ".bin" / "prettier.cmd"),
+        ]
+        executable = next((item for item in candidates if item and Path(item).exists()), None)
+        if executable is None:
+            print("check-api-client: prettier not found, the client will not be formatted")
+            return
+        subprocess.run(
+            f'"{executable}" --write "{path}"',
+            check=False,
+            capture_output=True,
+            shell=True,
+        )
         return
-    # On Windows the launcher is a shell script, so it needs the shell.
-    subprocess.run(
-        f'"{executable}" --write "{path}"',
-        check=False,
-        capture_output=True,
-        shell=sys.platform == "win32",
-    )
+
+    executable = shutil.which("prettier") or str(REPO_ROOT / "node_modules" / ".bin" / "prettier")
+    if not Path(executable).exists():
+        print("check-api-client: prettier not found, the client will not be formatted")
+        return
+    subprocess.run([executable, "--write", str(path)], check=False, capture_output=True)
 
 
 def generate() -> str:
