@@ -278,8 +278,8 @@ expired`) and the decision (`entitlement_of`). `past_due` never removes access o
   2. "stop and ask instead of retrying" when the model's confidence is low, which matters to a driver;
   3. a memory of the courier that the courier can see and clear, under the PIA's rules.
 - **What we do not build without a separate decision:** controlling other apps through Android's `AccessibilityService`. Google Play allows it only for apps whose core purpose is accessibility, with a declaration and review. That one is a research spike with a Play-policy check first (MASTER §22), and it is out of the trial scope.
-## D48 — A5's first slice: the staging stack, the two service images, and the deploy with its smoke test (2026-10-27, backend squad decision)
-- ADR-020. `infra/compose.staging.yml` is the staging stack as its own file: one replica of each
+## D49 — A5's first slice: the staging stack, the two service images, and the deploy with its smoke test (2026-10-27, backend squad decision)
+  (The register's D48 went to the founder's Andee-ideas decision of the same day, so this slice takes the next free number.)- ADR-020. `infra/compose.staging.yml` is the staging stack as its own file: one replica of each
   service (the zero-downtime swap is a production guarantee), a 172.29 network so both stacks can run
   on one host, and Caddy's own root CA for a domain a local VM cannot be challenged for
   (`infra/Caddyfile.staging`).
