@@ -46,6 +46,65 @@ write_summary() {
 relaunches=0
 relaunch_note=""
 
+# BUG-066: the cold-start sweep (exp branch only, SWEEP_COUNT>0).
+#
+# The api-34 legs die 1 to 2 seconds into a cold start with a native memory
+# error (SIGSEGV, gwp_asan::GuardedPoolAllocator::deallocate, libhermesvm.so;
+# runs 40274121944 and 40334465490). GWP-ASan samples a random fraction of the
+# allocations, so a single launch says nothing and a green run clears nothing:
+# the sweep launches the app SWEEP_COUNT times and MEASURES the rate, and it
+# keeps the first crash's tombstone (with the GWP-ASan report in it, when the
+# report completes). The rate is evidence only - the sweep never fails the run;
+# the flows below are the gate. It runs on both legs so the api-35 comparison
+# is a number, not a story.
+sweep_cold_start() {
+  local total death i up sig
+  total="${SWEEP_COUNT:-0}"
+  echo "::notice::BUG-066 sweep: SWEEP_COUNT=$total (the emulator-runner's script sees the step env)"
+  [ "$total" -gt 0 ] || return 0
+  echo "::group::the cold-start sweep (BUG-066)"
+  death=0
+  for i in $(seq 1 "$total"); do
+    adb shell am force-stop "$PKG" 2>/dev/null || true
+    adb shell am start -W -n "$PKG/.MainActivity" > /dev/null 2>&1
+    up=""
+    for _ in $(seq 1 30); do
+      if adb shell pidof "$PKG" > /dev/null 2>&1 &&
+         adb shell uiautomator dump /sdcard/window.xml > /dev/null 2>&1 &&
+         adb exec-out cat /sdcard/window.xml 2>/dev/null | grep -q 'today-screen\|login-screen\|compat-screen'; then
+        up="ok"
+        break
+      fi
+      adb shell pidof "$PKG" > /dev/null 2>&1 || { up="dead"; break; }
+      sleep 1
+    done
+    [ -n "$up" ] || up="timeout"
+    if [ "$up" != "ok" ]; then
+      death=$((death + 1))
+      if [ "$death" -eq 1 ]; then
+        # The first death is kept whole: the crash buffer carries the tombstone
+        # (the GWP-ASan report with its Cause line and both traces is in it
+        # when the report path completes), and the main buffer is grepped for
+        # the report so a report without a tombstone is kept too.
+        adb logcat -b crash -d > "$EVIDENCE/sweep-crash-1.txt" 2>/dev/null || true
+        adb logcat -d -t 5000 > "$EVIDENCE/sweep-logcat-1.txt" 2>/dev/null || true
+        sig="$(grep -m1 'Fatal signal' "$EVIDENCE/sweep-crash-1.txt" 2>/dev/null || echo "$up")"
+        echo "sweep $i: $up - kept as evidence - $sig"
+      else
+        echo "sweep $i: $up"
+      fi
+    else
+      echo "sweep $i: ok"
+    fi
+  done
+  {
+    echo "run-summary: sweep=total=$total deaths=$death"
+    echo "run-summary: sweep_note=BUG-066: $death of $total cold starts failed on this leg"
+  } | tee -a "$EVIDENCE/sweep-summary.txt"
+  echo "::endgroup::"
+}
+
+
 # The tombstone of the newest fatal, from its "Fatal signal" line to the end
 # of the crash buffer, into crash-last.txt. The verdict: the KNOWN image crash
 # of BUG-051 is a SIGTRAP at the Chromium WebView factory init - the tombstone
@@ -155,6 +214,8 @@ done
 [ -n "$screen" ] || fail "no first screen appeared in ${SCREEN_TIMEOUT}s"
 echo "the first screen is on the device"
 echo "::endgroup::"
+
+sweep_cold_start
 
 status=0
 for flow in .maestro/*.yaml; do
