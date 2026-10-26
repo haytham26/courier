@@ -5,6 +5,7 @@
 # the production environment of the deployment (never committed)
 infra/prod.env
 infra/*.env
+!infra/ci-staging.env
 *.pem
 *.key
 *.jks
