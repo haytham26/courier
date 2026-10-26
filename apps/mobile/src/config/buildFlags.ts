@@ -1,7 +1,7 @@
 /**
  * The build flags of the mobile app.
  *
- * The design lab (`app/design`, `app/design2`) and the compatibility screen
+ * The design lab (`app/design`) and the compatibility screen
  * (`app/compat.tsx`) are diagnostics, not the product (MASTER_EXECUTION
  * §16.1.7). They are in the dev build and in the E2E build only.
  *
