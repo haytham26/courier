@@ -58,6 +58,16 @@ WORKDIR /workspace/services/auth
 # tsc compiles the service into dist/ (services/auth/tsconfig.build.json).
 RUN pnpm --filter @courier/auth build
 
+# The service does not need root, and a container that runs as root is a
+# container an escaped process lands in with root (ASVS V14, and Semgrep's
+# dockerfile.security.missing-user). The workspace is world-readable so the
+# build's output can be read without owning the tree.
+RUN groupadd --gid 10002 app \
+    && useradd --uid 10002 --gid app --create-home app \
+    && chmod -R a+rX /workspace
+USER app
+WORKDIR /workspace/services/auth
+
 # The compose file's healthcheck calls /health/ready inside the container.
 EXPOSE 3001
 CMD ["node", "dist/index.js"]

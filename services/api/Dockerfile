@@ -62,6 +62,15 @@ ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
     VIRTUAL_ENV=/opt/venv
 
+# The service does not need root, and a container that runs as root is a
+# container an escaped process lands in with root (ASVS V14, and Semgrep's
+# dockerfile.security.missing-user). The venv is world-readable so the user can
+# run it without owning it; the working directory is the user's own, because the
+# POD store writes into it (POD_STORAGE_BACKEND=local).
+RUN useradd --create-home --uid 10001 app \
+    && chmod -R a+rX /opt/venv
+USER app
+
 WORKDIR /app
 # The application code. The tests, the ops tools and the load tests are not
 # copied: a production image carries what serves requests.
@@ -72,7 +81,9 @@ WORKDIR /app
 # means a change to another package does not invalidate it.
 COPY app ./app
 
-# The compose file's healthcheck calls /health/ready inside the container.
+# The compose file's healthcheck calls /healthz inside the container (the
+# API's contract carries /healthz; the Caddyfile answers 404 for /health* in
+# front of it, deliberately).
 EXPOSE 8000
 
 # One process, one worker per replica: the replicas are the scaling unit, and
