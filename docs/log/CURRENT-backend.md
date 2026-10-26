@@ -51,11 +51,18 @@ no mobile or E2E surface and its own backend steps were green on the same head.
   workflow's trigger) were mine to find and fix; both are merged.
 - **The Android E2E workflow and `apps/mobile` are the lead's.** A red leg on their paths is reported
   per §16, never investigated and never re-run twice.
-- **`map-pack.yml` is red for a cause outside my diff, reported here.** Every push since
-  40253853578 (2026-10-26 01:21 UTC) — on `main` and on every feature branch, including the lead's —
-  fails in 0s with "This run likely failed because of a workflow file issue". PR #57's diff does not
-  touch that workflow. It is a pre-existing workflow-file defect of the same day, recorded, and it is
-  the next thing to check before it is anyone's feature.
+- **`map-pack.yml` is not a §16 case: it is mine (BUG-067), and the note is corrected.**
+  This log recorded its failure as "a cause outside my diff, reported per §16" - that was wrong
+  twice over. `map-pack.yml` is a workflow I wrote in #43 and guarded in #51 (BUG-064), and §16
+  puts `infra/` and the CI steps that test it in the backend's hands. The failure itself was
+  `${{ inputs.<name> }}` in three steps: a dispatch-only context, so every push - and the schedule
+  - failed at the workflow level, before any job existed, in 0 seconds, on every run the workflow
+    ever had (65 of them). BUG-064's guard took the blame and was never reached.
+    `.github/workflows/store-ready.yml` carried the same defect in its release lane; it has never
+    run, so that failure was latent. Both are fixed in `fix/bug-067-map-pack-inputs`, with
+    `scripts/ci/check-workflow-inputs.mjs` as the gate that keeps the form from coming back, and
+    the register carries BUG-067 beside BUG-064. The lesson is written where the next one will be
+    read: a workflow that cannot start does not report a job's failure, so it reads as noise.
 
 ## Machine limits (the founder's, 2026-10-26, binding)
 
