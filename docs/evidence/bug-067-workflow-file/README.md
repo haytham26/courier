@@ -10,7 +10,7 @@ was never reached: **no job was ever created**.
 ## The line
 
 `if-no-files-found: error` sat at a **step's own level**, a sibling of `uses:` and `with:`. It is an
-*input* of `actions/upload-artifact`, so it belongs **inside `with:`**. An unknown key at a step is
+_input_ of `actions/upload-artifact`, so it belongs **inside `with:`**. An unknown key at a step is
 a workflow-file error: GitHub refuses the whole file, for every event, before any job exists.
 
 GitHub says it plainly when asked to dispatch:
@@ -21,13 +21,13 @@ could not create workflow dispatch event: HTTP 422: Invalid Argument - failed to
 (Line: 172, Col: 9): Unexpected value 'if-no-files-found'
 ```
 
-| # | Command | Result |
-|---|---|---|
-| 1 | `node scripts/ci/check-workflows.mjs` | `gate.log` — the repository's eight workflows pass: no unknown key at a job or a step, and no bare `inputs` context |
-| 2 | `node --test scripts/ci/__tests__/check-workflows.test.mjs` | `gate-test.log` — 13 tests: the misplaced key, the same name inside `with:`, a `run:` block scalar's non-YAML, the two `inputs` forms, the comment form, the no-space form, a missing directory, the real tree, the CLI's exit codes |
-| 3 | `node --test "scripts/*/__tests__/*.test.mjs"` | `all-tests.log` — 53 tests, the whole `scripts/*/__tests__` set |
-| 4 | The workflow's own dispatch | `dispatch.md` — the dispatch run that completes, and the push run that starts and is correctly skipped |
-| 5 | The step/job key audit of every workflow | `keys-audit.log` — all eight workflows clean |
+| #   | Command                                                     | Result                                                                                                                                                                                                                               |
+| --- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `node scripts/ci/check-workflows.mjs`                       | `gate.log` — the repository's eight workflows pass: no unknown key at a job or a step, and no bare `inputs` context                                                                                                                  |
+| 2   | `node --test scripts/ci/__tests__/check-workflows.test.mjs` | `gate-test.log` — 13 tests: the misplaced key, the same name inside `with:`, a `run:` block scalar's non-YAML, the two `inputs` forms, the comment form, the no-space form, a missing directory, the real tree, the CLI's exit codes |
+| 3   | `node --test "scripts/*/__tests__/*.test.mjs"`              | `all-tests.log` — 53 tests, the whole `scripts/*/__tests__` set                                                                                                                                                                      |
+| 4   | The workflow's own dispatch                                 | `dispatch.md` — the dispatch run that completes, and the push run that starts and is correctly skipped                                                                                                                               |
+| 5   | The step/job key audit of every workflow                    | `keys-audit.log` — all eight workflows clean                                                                                                                                                                                         |
 
 ## Why it took two days
 
