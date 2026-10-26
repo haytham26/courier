@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W43. **Local `main` == `origin/main` == `c7e6894`. Lead session 5, 2026-10-25 into 2026-10-26.**
+**Week:** 2026-W43. **Local `main` == `origin/main` == `6cc6537` (PR #36 merged). Lead session 5, 2026-10-26.**
 
 ## Merged this session (each: merge commit → archive tag → remote branch deleted, verified with `git ls-remote`)
 
@@ -104,17 +104,20 @@ libraries only, no iOS work until its gate.
 - **BUG-065** (the E2E determinism): the api-35 leg went red on four PRs that took main while the api-34 leg stayed green, with the APK bytes identical. The harness was the moving part, so the harness is pinned now: Maestro cli-2.11.0 with its release checksum verified before any byte runs, emulator build 16632760 (the stable 37.3.5), the system-image revision recorded per run, and an AVD cache key that carries all of it plus a hash of the emulator options. The number collided with the backend squad's BUG-064 (the map-pack workflow firing on a feature push) and the collision is recorded, as the BUG-053 one was.
 - The map-pack workflow itself is red on every push: **the backend's**, per PLAYBOOK 16.3 (CURRENT-backend.md, ADR-016/D42, PR #43). One line, no chasing.
 
-## Open, with their state
+## Open, with their state (2026-10-26)
 
 | PR | What | State |
 |---|---|---|
-| **#18** | 07 Copilot + the sphere lifecycle fix (1940500) | needs main merged in again (it now carries the pins) and its E2E re-run: its last run red on api-34 at `smoke.yaml` and `stops.yaml`, before #37 and #49 |
-| **#36** | the runner keeps the failure dump (what solved BUG-062) | idem |
-| **#30** | 10 Summary (BUG-062 solved) | idem |
-| **#40** | 13 Lock screen | idem; its api-34 leg red is root-caused after the api-35 fix |
+| **#18** | 07 Copilot + the sphere lifecycle fix (1940500) | pushed at ef7f3e5 with the **compat screen's state line moved above the rows** (the api-35 flake that lost `compat.yaml` at `compat-running`); its E2E is running. When it merges, main gets the sphere lifecycle fix, which is the app fix for BUG-066 |
+| **#49** | the E2E is deterministic (BUG-065) | head **42b1519**; the PR run (40249554879) was green on both legs, the workflow_dispatch (40253244520) green on api-35 and **red on api-34 at `driving.yaml`'s first-screen assert** - that is BUG-066, written below |
+| **#30** | 10 Summary (BUG-062 solved) | needs main merged in and its E2E re-run |
+| **#40** | 13 Lock screen | idem |
 | **#42** | 01 Welcome | idem |
 | **#12** | the screen recordings | idem |
-| **#52** | 02 Sign in on the chosen tokens - the last of the 13 screens | built and green locally (44 suites, 500 tests); its E2E is running. It gained the **Sign out** row the flows need (the E2E mock now holds a session a sign-out clears, so the front door is reachable) |
+| **#52** | 02 Sign in (the last of the 13) + the Sign out row | its E2E is running; the sign-out row moved above the fold (it was below it, run 40248014577 lost `settings-sign-out`) |
+| **#58** | the registers tell the truth (audit B1) | open, deliberately NOT merged until #49 lands: the gate now requires `PR #N` or a run link as evidence |
+
+**BUG-066 is the api-34 flake that stops the line:** `driving.yaml` - always the flow right after `driving-night.yaml`, because `-` sorts before `.` in the glob - loses its first-screen assert after `launchApp clearState` while the other nine flows in the same run pass, including the ones that cold-start the app. It is **not a crash** (an empty crash buffer, relaunches=0, the process alive, `am start` COLD in 1131 ms) and **not a slow runner** (the other flows' first screens land 1.8 to 2.3 s after their launches). Seen on 40253244520 (#49's dispatch), 40207842201 (#40) and #37's first attempt; #36's run 40269839637 was green on both legs, so the rate is about a third of api-34 legs and is what the nightly health run will pin down. The app-side cause to fix first: main still carries the pre-#18 D34 sphere lifecycle (the `withRepeat(..., -1)` swirl BUG-061's root cause fixed), and driving-night leaves the app on a live map with that sphere behind it.
 
 ## Then the queue continues (MASTER_EXECUTION and the audit's order)
 
