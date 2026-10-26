@@ -17,6 +17,14 @@ name: Map pack (the Canterbury offline pack, D26)
 # The guard below states the intent where it cannot be read as an edge case: this
 # build runs for a push to `main` only, never for a PR's head branch.
 #
+# BUG-067: the runs the guard produced still failed, in 0 seconds, on every push
+# since the workflow existed - and the guard was blamed for it. The cause was
+# `inputs` in the dispatch steps: that context is only defined for a dispatch or
+# a call, so a push (or the schedule) failed at the workflow level, before any
+# job was created. The guard was never reached. The inputs now read through
+# `github.event.inputs`, which exists for every event, so this comment records
+# both: the trigger's guard and the context's form.
+#
 # The licence gates live in the scripts: `build-pmtiles.mjs` refuses a source
 # whose terms forbid the offline use, whatever the workflow asks for.
 
@@ -47,7 +55,9 @@ permissions:
 jobs:
   build:
     # A push builds the pack on main; the schedule and the founder's dispatch
-    # build it anywhere. A feature branch's push never does (BUG-064).
+    # build it anywhere. A feature branch's push never does (BUG-064). The
+    # workflow itself now starts on every event it names (BUG-067): a guard that
+    # skips a job is visible as a skip, and a workflow that cannot start is not.
     if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -90,7 +100,13 @@ jobs:
 
       - name: The extract
         env:
-          EXTRACT_URL: ${{ inputs.extract_url }}
+          # BUG-067: `inputs` alone is only valid for a `workflow_dispatch` /
+          # `workflow_call` event. On a push (and on the schedule) GitHub refuses
+          # the whole workflow before a single job is created - which is why
+          # every run of this workflow since PR #43 failed in 0s. The `github`
+          # context exists for every event, so this form answers the same
+          # question everywhere: the dispatch's input, or nothing.
+          EXTRACT_URL: ${{ github.event.inputs.extract_url || '' }}
         run: |
           set -euo pipefail
           mkdir -p data/maps
@@ -106,7 +122,9 @@ jobs:
 
       - name: The plan (and the licence gates)
         env:
-          SOURCE_ID: ${{ inputs.source_id }}
+          # BUG-067: the `github` context, not the bare `inputs` (see the
+          # extract step above).
+          SOURCE_ID: ${{ github.event.inputs.source_id || '' }}
         run: |
           set -euo pipefail
           # A dispatch that names a source uses it; otherwise the registered
@@ -118,7 +136,8 @@ jobs:
 
       - name: Build the pack
         env:
-          SOURCE_ID: ${{ inputs.source_id }}
+          # BUG-067: the `github` context, not the bare `inputs`.
+          SOURCE_ID: ${{ github.event.inputs.source_id || '' }}
         run: |
           set -euo pipefail
           source="$SOURCE_ID"
