@@ -202,10 +202,12 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 6144 -cores 4
           script: bash .maestro/run-all.sh
           working-directory: .
-          # BUG-066 (exp/bug-066-gwpasan): the cold-start sweep. Only this
-          # experiment sets it; the branch never merges, and the sweep's rate
-          # is what the BUG-066 row records before the fix.
-          env: SWEEP_COUNT='30'
+        env:
+          # BUG-066 (the crash-rate sweep): a step-level env reaches the
+          # bash the runner action launches - inside `with:` it is an unknown
+          # input and the action never sees it, which is how the first
+          # dispatch silently ran the sweep with a count of zero.
+          SWEEP_COUNT: '30'
 
       - name: Upload the evidence
         if: always()
