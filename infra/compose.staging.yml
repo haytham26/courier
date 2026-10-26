@@ -118,6 +118,12 @@ services:
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
       VALKEY_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
+      # The POD store's signing grant (ADR-011): the API refuses to boot without
+      # it, because the grant is the only authorization on a photo URL. Staging
+      # writes the photos to the container's own directory; the S3-compatible
+      # back end is a deployment setting, not a staging one.
+      POD_STORAGE_BACKEND: ${POD_STORAGE_BACKEND:-local}
+      POD_URL_SIGNING_SECRET: ${POD_URL_SIGNING_SECRET:?POD_URL_SIGNING_SECRET is required}
       # The demo seed (ADR-019) is on in staging: the smoke test and the
       # founder's own phone use it, and staging data is disposable.
       DEMO_SEED_ENABLED: 'true'
@@ -132,7 +138,7 @@ services:
           'CMD',
           'python',
           '-c',
-          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3).status == 200 else 1)",
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).status == 200 else 1)",
         ]
       interval: 15s
       timeout: 5s
