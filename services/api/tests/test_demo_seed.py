@@ -1,0 +1,375 @@
+"""The demo-run seed (ADR-019): a deterministic day, owner-only, gated by the environment.
+
+The app's core flow - load the run, deliver 3 stops, go offline, deliver 1, sync -
+needs a run with stops that really exist in the database. This endpoint gives the
+caller one, with ids that do not move between calls, so the E2E job and the
+founder's demo phone can both drive the same flow repeatedly.
+"""
+
+from __future__ import annotations
+
+import os
+import uuid
+from collections.abc import Iterator
+from datetime import UTC, datetime
+from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import Engine, create_engine, text
+
+from app.auth.jwks import get_verifier
+from app.demo import (
+    DEMO_REASONS,
+    DEMO_STOPS,
+    DemoDayConflictError,
+    demo_day_for,
+    demo_run_id,
+    demo_shift_id,
+    demo_stop_id,
+    write_demo_day,
+)
+from app.main import app
+from app.repo import InMemoryRepo, RunRecord, SqlAlchemyRepo, get_repo
+from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
+COURIER = "driver-7"
+OTHER = "driver-8"
+STOPS = 5
+PATH = "/demo/runs"
+
+
+@pytest.fixture()
+def repo() -> InMemoryRepo:
+    return InMemoryRepo()
+
+
+@pytest.fixture()
+def verifier_key(repo: InMemoryRepo) -> Iterator[object]:
+    key_pair = make_key_pair()
+    _, jwk = key_pair
+    app.dependency_overrides[get_repo] = lambda: repo
+    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
+    yield key_pair[0]
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def client(verifier_key: object) -> Iterator[TestClient]:
+    with TestClient(app) as test_client:
+        test_client.headers.update(
+            {"Authorization": f"Bearer {sign(verifier_key, subject=COURIER)}"}
+        )
+        yield test_client
+
+
+@pytest.fixture()
+def other_client(verifier_key: object) -> Iterator[TestClient]:
+    with TestClient(app) as test_client:
+        test_client.headers.update({"Authorization": f"Bearer {sign(verifier_key, subject=OTHER)}"})
+        yield test_client
+
+
+@pytest.fixture()
+def anonymous_client(verifier_key: object) -> Iterator[TestClient]:
+    with TestClient(app) as test_client:
+        yield test_client
+
+
+@pytest.fixture()
+def seeded(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """The gate is on, as the E2E job sets it."""
+    monkeypatch.setenv("DEMO_SEED_ENABLED", "true")
+    yield
+
+
+def a_seed(reason: str = "e2e") -> dict[str, str]:
+    return {"reason": reason}
+
+
+class TestTheSeedEndpoint:
+    def test_a_run_with_stops_comes_back(
+        self, client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        answer = client.post(PATH, json=a_seed())
+
+        assert answer.status_code == 200, answer.text
+        body = answer.json()
+        run_id = uuid.UUID(body["run_id"])
+        assert len(body["stops"]) == STOPS
+        stops = repo.get_run_stops(run_id)
+        assert [stop.id for stop in stops] == [uuid.UUID(stop["id"]) for stop in body["stops"]]
+        assert stops[0].address
+        assert stops[0].lat is not None and stops[0].lon is not None
+        run = repo.get_run(run_id)
+        assert run is not None
+        assert run.courier_id == COURIER
+
+    def test_seeding_again_returns_the_same_day(
+        self, client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        first = client.post(PATH, json=a_seed()).json()
+
+        second = client.post(PATH, json=a_seed()).json()
+
+        assert second == first
+        assert repo.cursor(uuid.UUID(first["shift_id"])) == 0
+
+    def test_a_different_reason_is_a_different_day(
+        self, client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        e2e = client.post(PATH, json=a_seed("e2e")).json()
+
+        demo = client.post(PATH, json=a_seed("demo")).json()
+
+        assert demo["run_id"] != e2e["run_id"]
+
+    def test_one_reason_is_enough(
+        self, client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        client.post(PATH, json=a_seed("demo"))
+
+        again = client.post(PATH, json=a_seed("demo"))
+
+        assert again.status_code == 200
+        assert again.json()["stops"][0]["id"] == str(demo_stop_id(COURIER, "demo", 0))
+
+    def test_another_courier_gets_their_own_day(
+        self, client: TestClient, other_client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        mine = client.post(PATH, json=a_seed("demo")).json()
+
+        theirs = other_client.post(PATH, json=a_seed("demo")).json()
+
+        assert theirs["run_id"] != mine["run_id"]
+        their_run = repo.get_run(uuid.UUID(theirs["run_id"]))
+        assert their_run is not None
+        assert their_run.courier_id == OTHER
+        assert other_client.get(PATH).status_code == 405
+
+    def test_the_ids_are_recognisable_as_demo_data(self, seeded: None) -> None:
+        """The evidence and the database can tell a demo day from a real one."""
+        assert demo_shift_id(COURIER, "e2e").version == 5
+        assert demo_stop_id(COURIER, "e2e", 0) != demo_stop_id(COURIER, "demo", 0)
+
+
+class TestTheGate:
+    def test_without_the_env_the_endpoint_is_404(
+        self, client: TestClient, repo: InMemoryRepo, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("DEMO_SEED_ENABLED", raising=False)
+
+        refused = client.post(PATH, json=a_seed())
+
+        assert refused.status_code == 404
+        assert repo.runs == {}
+
+    def test_the_gate_is_not_truthy(
+        self, client: TestClient, repo: InMemoryRepo, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """'false' is a string, and a gate that reads truthiness is not a gate."""
+        monkeypatch.setenv("DEMO_SEED_ENABLED", "false")
+
+        refused = client.post(PATH, json=a_seed())
+
+        assert refused.status_code == 404
+
+    @pytest.mark.parametrize(
+        "value", ["1", "True", "TRUE", "yes", "on", "true ", " true", "false", ""]
+    )
+    def test_only_the_exact_string_true_opens_the_gate(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        monkeypatch: pytest.MonkeyPatch,
+        value: str,
+    ) -> None:
+        """A near-miss is off, not on: this gate refuses everything else.
+
+        The values that would open it under truthiness ('1', 'True', 'on') are
+        the ones that would let a deployment seed demo rows without saying so.
+        """
+        monkeypatch.setenv("DEMO_SEED_ENABLED", value)
+
+        refused = client.post(PATH, json=a_seed())
+
+        assert refused.status_code == 404
+        assert repo.runs == {}
+
+    def test_an_anonymous_call_is_401(
+        self, anonymous_client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        assert anonymous_client.post(PATH, json=a_seed()).status_code == 401
+
+    def test_an_unknown_reason_is_422(
+        self, client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        refused = client.post(PATH, json={"reason": "production"})
+
+        assert refused.status_code == 422
+
+
+class TestTheVocabulary:
+    def test_the_reasons_are_a_small_fixed_set(self, seeded: None) -> None:
+        assert DEMO_REASONS == ("e2e", "demo", "dev")
+
+
+class TestTheRaceWithOneself:
+    """A caller racing themself on one reason is answered 409, not 500.
+
+    The ids are derived, so a second seed writes the same run - and `put_run`
+    refuses a duplicate, exactly as it does for `POST /runs`. The reachable
+    shape is a different run already on the same shift: the seed's run id is
+    absent (so it is written), and the repo refuses with the shift's 1:1 rule.
+    """
+
+    def test_a_seed_onto_a_shift_that_already_has_a_run_is_409(
+        self, client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        day = demo_day_for(COURIER, "e2e")
+        repo.put_run(_other_run_on(day.run.shift_id, COURIER))
+
+        answer = client.post(PATH, json=a_seed())
+
+        assert answer.status_code == 409, answer.text
+        assert answer.json()["detail"]
+
+    def test_the_conflict_is_an_error_the_endpoint_translates(
+        self, client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        """The DemoDayConflictError the write raises is the API's 409."""
+        day = demo_day_for(COURIER, "e2e")
+        refusing = InMemoryRepo()
+        refusing.put_run(_other_run_on(day.run.shift_id, COURIER))
+
+        with pytest.raises(DemoDayConflictError) as raised:
+            write_demo_day(refusing, COURIER, "e2e")
+
+        assert "run" in str(raised.value)
+
+
+def _other_run_on(shift_id: uuid.UUID, courier_id: str) -> RunRecord:
+    """A different run already on the shift: the state a race leaves."""
+    return RunRecord(
+        id=demo_run_id(courier_id, "dev"),
+        shift_id=shift_id,
+        courier_id=courier_id,
+        name="Another run on this shift",
+        depot_lat=-43.5330,
+        depot_lon=172.6300,
+        capacity_parcels=None,
+        speed_kmh=30.0,
+        start_at=datetime.now(UTC),
+    )
+
+
+class TestTheSeededDayReadsBack:
+    """The round trip the app will actually drive (A1's core flow).
+
+    A seeded day is only useful if the endpoints that read a run return it:
+    the app loads the run, then its stops, then delivers against them. Both
+    reads are the authz-checked ones, so this also proves the seeded day is
+    the caller's day through the real read path and invisible to anyone else.
+    """
+
+    def test_the_run_and_its_stops_read_back_through_the_api(
+        self, client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        seeded_day = client.post(PATH, json=a_seed()).json()
+        run_id = seeded_day["run_id"]
+        shift_id = seeded_day["shift_id"]
+
+        run = client.get(f"/runs/{run_id}")
+        stops = client.get(f"/shifts/{shift_id}/stops")
+
+        assert run.status_code == 200, run.text
+        assert run.json()["id"] == run_id
+        assert stops.status_code == 200, stops.text
+        body = stops.json()
+        assert len(body) == STOPS
+        assert [stop["id"] for stop in body] == [stop["id"] for stop in seeded_day["stops"]]
+        # The stop reads back the shape the contract promises, in the order it
+        # was seeded, including the derived location ADR-012 is about.
+        first = body[0]
+        assert first["address"]
+        assert first["location_id"]
+        assert first["status"] == "pending"
+        assert [stop["seq"] for stop in body] == [1, 2, 3, 4, 5]
+
+    def test_the_seeded_day_is_the_callers_alone(
+        self, client: TestClient, other_client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        mine = client.post(PATH, json=a_seed("demo")).json()
+
+        theirs = other_client.post(PATH, json=a_seed("demo")).json()
+
+        assert other_client.get(f"/runs/{mine['run_id']}").status_code == 404
+        assert client.get(f"/runs/{theirs['run_id']}").status_code == 404
+
+
+@pytest.mark.db
+class TestTheDemoSeedOnPostgres:
+    """The same guarantee through the production repository (CI's db job).
+
+    The in-memory repo answers the endpoint's contract; the SQL repo is the one
+    a deployment runs, and the seed writes a real shift, a real run and real
+    stops through it - so the ids the app received are the rows Postgres holds.
+    The schema is applied from the contract (the same file production builds
+    from), and the rows this test writes are removed in its teardown.
+    """
+
+    @pytest.fixture()
+    def engine(self) -> Iterator[Engine]:
+        """The Postgres engine, with the contract's schema applied.
+
+        A missing DATABASE_URL fails loudly, with the instruction test_repo_db
+        gives: the db marker is for the suite that has a database.
+        """
+        if not DATABASE_URL:
+            pytest.fail(
+                "DATABASE_URL is not set: the DB-backed suite needs the Postgres service "
+                "(run -m 'not db' for the suite without a database)"
+            )
+        engine = create_engine(DATABASE_URL)
+        script = (
+            Path(__file__).resolve().parents[3] / "packages" / "contracts" / "db" / "schema.sql"
+        ).read_text(encoding="utf-8")
+        with engine.begin() as connection:
+            connection.execute(text(script))
+        yield engine
+        engine.dispose()
+
+    def test_the_seed_writes_real_rows_and_a_repeat_changes_nothing(self, engine: Engine) -> None:
+        repo = SqlAlchemyRepo(engine)
+        # The ids are derived, so the teardown can name them even if the write
+        # fails part-way through.
+        expected = demo_day_for(COURIER, "e2e")
+        try:
+            first = write_demo_day(repo, COURIER, "e2e")
+            second = write_demo_day(repo, COURIER, "e2e")
+
+            assert second.run.id == first.run.id
+            stops = repo.get_run_stops(first.run.id)
+            assert len(stops) == DEMO_STOPS
+            seeded_run = repo.get_run_for_shift(first.run.shift_id)
+            assert seeded_run is not None
+            assert seeded_run.courier_id == COURIER
+            # The seeded stop reads back with the status a seeded stop starts at.
+            assert stops[0].status == "pending"
+            assert stops[0].address
+        finally:
+            with engine.begin() as connection:
+                connection.execute(
+                    text("DELETE FROM stops WHERE shift_id = :shift"),
+                    {"shift": expected.run.shift_id},
+                )
+                connection.execute(
+                    text("DELETE FROM runs WHERE id = :run"),
+                    {"run": expected.run.id},
+                )
+                connection.execute(
+                    text("DELETE FROM shifts WHERE id = :shift"),
+                    {"shift": expected.run.shift_id},
+                )

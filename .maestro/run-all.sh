@@ -169,6 +169,19 @@ for flow in .maestro/*.yaml; do
     echo "::error::the flow failed: ${flow}"
     echo "flow=${name} status=fail" >> "$FLOWS_RESULT"
     status=1
+    # The failure's own evidence: Maestro writes the hierarchy and the
+    # screenshot of the moment the flow failed into its own test dir, and the
+    # run's dump at the END loses it (logcat keeps the last 3000 lines and the
+    # last flow has launched the app fresh by then). BUG-062's root cause - the
+    # summary screen dying at mount for want of a ChosenProvider - came out of
+    # exactly this dump, which is why the runner keeps it.
+    newest="$(ls -1dt "$HOME"/.maestro/tests/*/ 2>/dev/null | head -1)"
+    if [ -n "$newest" ]; then
+      dest="$EVIDENCE/maestro-failure-$(basename "$(dirname "$newest")")"
+      mkdir -p "$dest"
+      cp -r "$newest". "$dest/" 2>/dev/null || true
+      echo "the failure's own dump is in $dest"
+    fi
   else
     echo "flow=${name} status=pass" >> "$FLOWS_RESULT"
   fi

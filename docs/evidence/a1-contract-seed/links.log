@@ -1,0 +1,6 @@
+﻿check-doc-links: every relative link resolves
+check-doc-links: 38 relative link(s) checked over the live documentation
+check-doc-links: 40 file(s) skipped as history (docs/archive, docs/evidence, docs/log)
+check-doc-links: every relative link resolves
+check-control-chars: clean over 1172 tracked text files
+No conflict markers in 1172 tracked files.

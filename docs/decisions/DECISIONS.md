@@ -223,3 +223,46 @@ expired`) and the decision (`entitlement_of`). `past_due` never removes access o
 - **Not in this slice:** no provider client (Play needs a test track, Stripe needs keys), no paywall
   UI, no Team org billing or seats, no NZ GST calculation. Provider slices are FOUNDER_TODO switches
   with `stripe-mock` tests when they land; the ingest path is designed here, not exercised.
+
+## D46 — The billing providers: one fact shape, three signature rules, an idempotent ingest (2026-10-26, backend squad decision, the provider side of D44)
+
+- ADR-018. `services/api/app/providers.py` defines the fact a provider sends (`ProviderFact`), the
+  verifier protocol (`ProviderVerifier.verify`) and `StripeVerifier`, the first implementation, plus
+  `apply_facts` — which writes through ADR-017's `put_subscription`, so the ingest is idempotent per
+  courier and monotonic in the source's own `renews_at`.
+- The three signature rules the payments squad took from the Stripe client are enforced once, before
+  the body is parsed: **no secret, no comparison** (a misconfiguration, not a permissive default);
+  **a constant tolerance** (300 s, a module constant with a test that it is one, not a per-call
+  window); and **a truncated body is not an event** (the signature is over the exact bytes, so a body
+  that fails it never becomes a partial fact).
+- `POST /billing/webhooks/{{source}}` is the boundary: an unaccepted source is 404 (it is not this
+  API's endpoint), a failed signature rule is 400 with the reason, and an accepted fact is stored.
+  `BILLING_SOURCES` names what this deployment accepts; `BILLING_WEBHOOK_SECRET_<SOURCE>` is read
+  from the environment with no default.
+- The in-memory repo now answers the same monotonic rule the SQL repo's `DO UPDATE` carries — the
+  review of ADR-017 found the two disagreeing, and the rule lives in one place each.
+- **Still the founder's:** the live endpoints, the webhook secrets, and the store verifiers (Play
+  first per D44, through the RevenueCat-shaped layer). The verifiers are exercised against fixtures
+  with locally-computed signatures — no network, no keys.
+
+## D47 - A1's backend half: the demo-run seed and the typed client generated from the contract (2026-10-26, backend squad decision, the first slice of A1)
+
+- ADR-019. `POST /demo/runs` (`services/api/app/demo.py`) seeds the authenticated caller one day - a
+  shift, a run and five stops - with **uuid5 ids derived from the caller and one reason**
+  (`e2e` / `demo` / `dev`), so the ids do not move between calls and are recognisable as demo data
+  in the database and the evidence. The app's core flow (load the run, deliver 3 stops, go offline,
+  deliver 1, sync) now has a real, repeatable day to run against.
+- The gate is the environment, **not** truthiness: `DEMO_SEED_ENABLED` must be exactly `true`, and
+  every other value - `false`, `1`, `True`, `on`, a string with a stray space - answers 404, because
+  the seed writes into the same tables as real data. Anything else is a deployment that seeds demo
+  rows by accident.
+- The seed writes a run, so **a caller racing themself on the same reason is answered with the API's
+  409**, the same conflict `POST /runs` answers - not a 500 from an uncaught `ValueError`.
+- `services/api/scripts/generate_api_client.py` generates `packages/shared/src/generated/api.ts`
+  from `packages/contracts/openapi.yaml` - one interface per schema, one typed signature per
+  operation. The file is **committed**, and the same script's `check` mode is a CI gate: a contract
+  change that leaves a stale client is red. The drift guard now pins three directions -
+  server, contract and client.
+- **Still the lead's:** the app consuming `@courier/shared` (the sign-in, the JWT, the run load, the
+  outbox, one run store) and the E2E job that drives the seeded day end to end. **Still the
+  founder's:** the OCI host and key for A5's staging deploy.

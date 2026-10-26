@@ -35,6 +35,8 @@ from .agents.omniroute import (
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
+from .billing import WEBHOOK_MAX_BYTES, billing_sources
+from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
 from .locations import location_id_for
 from .pod import (
@@ -44,6 +46,7 @@ from .pod import (
     validate_pod_settings,
 )
 from .pod_store import LocalPodStore, pod_store
+from .providers import VERIFIERS, apply_facts, webhook_secret_for
 from .repo import DeliveryEventRow, LocationNoteRow, Repo, RouteStopRow, RunRecord, get_repo
 from .routing import (
     RoutePlan,
@@ -367,6 +370,41 @@ def healthz():
         "version": app.version,
         "engines": ["pyvrp", "heuristic-nn-2opt"],
     }
+
+
+class DemoSeedRequest(BaseModel):
+    """The one reason this caller wants a demo day for."""
+
+    reason: Literal["e2e", "demo", "dev"] = "e2e"
+
+
+@app.post("/demo/runs")
+def seed_demo_run(
+    body: DemoSeedRequest,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Seed the caller's demo day: a run and its stops, in the real tables.
+
+    The app's core flow needs a run with stops that exist, and it needs the ids
+    to stay still between calls, so an E2E job can reset the phone and run the
+    flow again. This is the seam for that (ADR-019): the ids are derived from the
+    caller, so a caller always gets their own day back.
+
+    The gate is the environment, not a hope: without DEMO_SEED_ENABLED=true this
+    route is 404, because seeding demo rows into a real database is not something
+    an unguarded endpoint should ever do.
+
+    A caller racing themself on the same reason is answered with the same 409
+    `POST /runs` answers, not a 500: the seed writes a run like any other.
+    """
+    if not seed_enabled():
+        raise HTTPException(status_code=404, detail="this deployment does not seed demo data")
+    try:
+        day = write_demo_day(repo, principal.user_id, body.reason)
+    except DemoDayConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return demo_day_body(day)
 
 
 @app.post("/runs", status_code=201)
@@ -832,6 +870,34 @@ def intake_manifest(
         text=text,
         shift_id=shift_id,
     )
+
+
+@app.post("/billing/webhooks/{source}")
+async def billing_webhook(
+    source: str,
+    request: Request,
+    repo: Repo = Depends(get_repo),
+):
+    """A provider's webhook: verify it, then ingest the fact (ADR-018).
+
+    The signature rules run before the body is parsed, and every refusal after
+    that is a 400 with its reason - never a 500 the provider has to retry. The
+    body is capped like every other upload: this endpoint is unauthenticated
+    (the signature is the auth), so an unbounded read is a free amplifier.
+    """
+    accepted = billing_sources()
+    if source not in accepted or source not in VERIFIERS:
+        # An unaccepted source is 404, not 403: it is not this API's endpoint.
+        raise HTTPException(status_code=404, detail="this deployment does not accept that source")
+    body = await request.body()
+    if len(body) > WEBHOOK_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="the webhook body is over the cap")
+    try:
+        facts = VERIFIERS[source].verify(body, dict(request.headers), webhook_secret_for(source))
+        apply_facts(repo, facts, accepted=accepted)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"accepted": True}
 
 
 @app.get("/account/entitlements")
