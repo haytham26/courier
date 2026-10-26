@@ -25,29 +25,9 @@
       "types": "./dist/directions.d.ts",
       "default": "./dist/directions.js"
     },
-    "./directions2": {
-      "types": "./dist/directions2.d.ts",
-      "default": "./dist/directions2.js"
-    },
-    "./themes2": {
-      "types": "./dist/themes2.d.ts",
-      "default": "./dist/themes2.js"
-    },
     "./mapPalettes": {
       "types": "./dist/mapPalettes.d.ts",
       "default": "./dist/mapPalettes.js"
-    },
-    "./lab-directions": {
-      "types": "./dist/directionsLab.d.ts",
-      "default": "./dist/directionsLab.js"
-    },
-    "./directions2a": {
-      "types": "./dist/directions2a.d.ts",
-      "default": "./dist/directions2a.js"
-    },
-    "./themes2a": {
-      "types": "./dist/themes2a.d.ts",
-      "default": "./dist/themes2a.js"
     },
     "./contrast": {
       "types": "./dist/contrast.d.ts",
