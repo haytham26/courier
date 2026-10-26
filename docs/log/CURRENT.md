@@ -97,7 +97,6 @@ libraries only, no iOS work until its gate.
 | **#45** | the three exp/ experiments recorded in BUGS.md, their archive tags pushed and their branches deleted | `archive/chore/exp-branch-archive` |
 | **#47** | the session-5 handoff in CURRENT.md | `archive/chore/current-handoff` |
 | **#37** | the emulator gets 6 GB and 4 cores - its E2E was green on both legs before and after | `archive/fix/e2e-emulator-memory` |
-| **#49** | the E2E is deterministic (BUG-065): the pins, the push trigger, the nightly health run; both the PR run and a workflow_dispatch run on the final head were green on both legs | `archive/fix/e2e-determinism` |
 
 ## The bugs filed in session 5, both with their evidence
 
