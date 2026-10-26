@@ -1,14 +1,16 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-26 · main at `2013e76` · **Queue 2 is closed (items 1–7), BUG-063 and BUG-064 are
-closed, the entitlement layer (ADR-017/D45) and the provider ingest (ADR-018/D46) are merged.
-The next work follows `docs/plan/AUDIT_2026-10-25.md` §"The order", which is binding.**
+Updated: 2026-10-26 · main at `b0cfd6b` · **Queue 2 is closed (items 1–7), BUG-063 and BUG-064 are
+closed, the entitlement layer (ADR-017/D45), the provider ingest (ADR-018/D46) and A1's backend
+half (ADR-019/D47) are merged. The next work follows `docs/plan/AUDIT_2026-10-25.md` §"The order",
+which is binding.**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
 1. **BUG-063** — **merged** (PR #46).
-2. **A1's backend half** — the API contract the app needs (the typed client generated from the
-   OpenAPI the drift guard pins) and **a demo-run seed endpoint**. Then A2, A4 and B2 are the lead's.
+2. **A1's backend half — MERGED** (PR #57, `b0cfd6b`, ADR-019/D47): the typed client generated from
+   the OpenAPI the drift guard pins (committed, with a freshness gate in CI) and `POST /demo/runs`,
+   the env-gated demo-run seed with deterministic uuid5 ids. Then A2, A4 and B2 are the lead's.
 3. **A5** — the staging deploy workflow (compose, Caddy TLS, the migrations, a smoke test, a
    rollback), built and tested against a **local VM** until the OCI host and key exist (FOUNDER_TODO).
 4. **B3** — BUG-059's security backlog: the WebSocket token out of the query string, `/v1/engines` and
@@ -32,6 +34,7 @@ The next work follows `docs/plan/AUDIT_2026-10-25.md` §"The order", which is bi
 | **BUG-064** — the map-pack build ran on a feature-branch push     | #51           | BUG-064        |
 | The entitlement layer (D44's backend half)                        | #50           | ADR-017 / D45  |
 | **The billing providers** (one fact shape, three signature rules) | #54           | ADR-018 / D46  |
+| **A1's backend half** — the typed client, its gate, the demo seed | #57           | ADR-019 / D47  |
 
 ## A §17.4 violation, recorded (2026-10-26)
 
@@ -48,6 +51,11 @@ no mobile or E2E surface and its own backend steps were green on the same head.
   workflow's trigger) were mine to find and fix; both are merged.
 - **The Android E2E workflow and `apps/mobile` are the lead's.** A red leg on their paths is reported
   per §16, never investigated and never re-run twice.
+- **`map-pack.yml` is red for a cause outside my diff, reported here.** Every push since
+  40253853578 (2026-10-26 01:21 UTC) — on `main` and on every feature branch, including the lead's —
+  fails in 0s with "This run likely failed because of a workflow file issue". PR #57's diff does not
+  touch that workflow. It is a pre-existing workflow-file defect of the same day, recorded, and it is
+  the next thing to check before it is anyone's feature.
 
 ## Machine limits (the founder's, 2026-10-26, binding)
 
