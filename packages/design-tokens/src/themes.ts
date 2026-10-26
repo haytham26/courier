@@ -17,8 +17,6 @@
  */
 
 import { spacing, typography, borderRadius, shadows, motion, components } from './tokens';
-import { themes2 } from './themes2';
-import { themes2a } from './themes2a';
 
 /**
  * The theme names.
@@ -46,21 +44,7 @@ export type ThemeName =
   | 'xrayParcel'
   | 'xrayParcelNight'
   | 'scanline'
-  | 'scanlineNight'
-  | 'weatherLight'
-  | 'weatherLightNight'
-  | 'hapticCity'
-  | 'hapticCityNight'
-  | 'nightShift'
-  | 'nightShiftNight'
-  | 'gantryRun'
-  | 'gantryRunNight'
-  | 'controlRoom'
-  | 'controlRoomNight'
-  | 'topo'
-  | 'topoNight'
-  | 'addressFirst'
-  | 'addressFirstNight';
+  | 'scanlineNight';
 
 export interface ThemeColors {
   background: string;
@@ -929,8 +913,6 @@ export const themes: Record<ThemeName, Theme> = {
   xrayParcelNight: xrayParcelNightTheme,
   scanline: scanlineTheme,
   scanlineNight: scanlineNightTheme,
-  ...themes2,
-  ...themes2a,
 };
 
 // Default theme
@@ -955,20 +937,6 @@ export function getThemeNames(): ThemeName[] {
     'xrayParcelNight',
     'scanline',
     'scanlineNight',
-    'weatherLight',
-    'weatherLightNight',
-    'hapticCity',
-    'hapticCityNight',
-    'nightShift',
-    'nightShiftNight',
-    'gantryRun',
-    'gantryRunNight',
-    'controlRoom',
-    'controlRoomNight',
-    'topo',
-    'topoNight',
-    'addressFirst',
-    'addressFirstNight',
   ];
 }
 
