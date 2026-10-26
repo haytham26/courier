@@ -14,8 +14,13 @@
 | **#15** | 06 Scan + the status precedence fix | `archive/feat/t6-scan` |
 | **#32** | 12 Driving at night | `archive/feat/t6-12-driving-night` |
 | **#41** | the slide's decision = the gesture's final translation (PLAYBOOK §12) | `archive/fix/slide-decision-final-translation` |
+| **#45** | the three exp/ experiments recorded in BUGS.md, their archive tags pushed and their branches deleted | `archive/chore/exp-branch-archive` |
+| **#47** | the session-5 handoff in CURRENT.md | `archive/chore/current-handoff` |
+| **#37** | the emulator gets 6 GB and 4 cores (its E2E was green on both legs twice) | `archive/fix/e2e-emulator-memory` |
 
 **The merge ritual now ends at `git ls-remote --heads origin <branch>` printing nothing** — `git branch -d` only removed the local copy, and seven branches were still on GitHub after I reported them deleted.
+
+**#49 is NOT merged.** Its state is true here: `origin/fix/e2e-determinism` is at **42b1519**, it is still OPEN, `archive/fix/e2e-determinism` does not exist, and its E2E is green on the PR head (40226628482, both legs) and on a workflow_dispatch on that same head (40238632194) — but the head moved twice afterwards (main merged in, then the BUG-064 to BUG-065 collision renumber), so **the second proof must be re-run on 42b1519 before it merges**. The renumber: the backend squad filed BUG-064 for the map-pack workflow firing on a feature push, so the E2E determinism bug is **BUG-065** and every reference to it moved with it, the collision recorded like the BUG-053 one.
 
 ## Open, with their state
 
