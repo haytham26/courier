@@ -1,0 +1,72 @@
+﻿== the deploy (apply) from /c/Users/DCL/projects/courier-backend/infra/ci-staging.env on MINGW64_NT-10.0-26300 with infra/compose.staging.yml ==
+== the migrations (packages/contracts/db/schema.sql) ==
+bash.exe :  Container courier-staging-postgres-1 Running 
+At line:1 char:410
++ ... wn log =="; & 'C:\Program Files\Git\bin\bash.exe' infra/deploy.sh app ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Container cour...gres-1 Running :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Container courier-staging-postgres-1 Waiting 
+ Container courier-staging-postgres-1 Healthy 
+psql:<stdin>:12: NOTICE:  relation "shifts" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+psql:<stdin>:31: NOTICE:  relation "stops" already exists, skipping
+CREATE INDEX
+psql:<stdin>:33: NOTICE:  relation "stops_shift_sequence" already exists, skipping
+psql:<stdin>:34: NOTICE:  relation "stops_location" already exists, skipping
+CREATE INDEX
+psql:<stdin>:50: NOTICE:  relation "runs" already exists, skipping
+CREATE TABLE
+psql:<stdin>:63: NOTICE:  relation "run_templates" already exists, skipping
+CREATE TABLE
+psql:<stdin>:76: NOTICE:  relation "run_routes" already exists, skipping
+psql:<stdin>:90: NOTICE:  relation "run_route_stops" already exists, skipping
+CREATE TABLE
+CREATE TABLE
+psql:<stdin>:104: NOTICE:  relation "delivery_events" already exists, skipping
+psql:<stdin>:106: NOTICE:  relation "delivery_events_shift" already exists, skipping
+psql:<stdin>:119: NOTICE:  relation "stop_addresses" already exists, skipping
+psql:<stdin>:139: NOTICE:  relation "subscriptions" already exists, skipping
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+CREATE TABLE
+CREATE INDEX
+CREATE TABLE
+psql:<stdin>:141: NOTICE:  relation "subscriptions_source" already exists, skipping
+psql:<stdin>:156: NOTICE:  relation "door_memory" already exists, skipping
+CREATE EXTENSION
+psql:<stdin>:160: NOTICE:  extension "postgis" already exists, skipping
+psql:<stdin>:163: NOTICE:  column "entry_point" of relation "stops" already exists, skipping
+ALTER TABLE
+psql:<stdin>:168: NOTICE:  column "priority" of relation "stops" already exists, skipping
+ALTER TABLE
+psql:<stdin>:170: NOTICE:  column "parcels" of relation "stops" already exists, skipping
+ALTER TABLE
+psql:<stdin>:172: NOTICE:  column "service_time_s" of relation "stops" already exists, skipping
+ALTER TABLE
+psql:<stdin>:174: NOTICE:  column "time_window_start" of relation "stops" already exists, skipping
+ALTER TABLE
+psql:<stdin>:176: NOTICE:  column "time_window_end" of relation "stops" already exists, skipping
+ALTER TABLE
+== recording the images that are running (the rollback's truth) ==
+== the state is in /c/Users/DCL/projects/courier-backend/.deploy-state ==
+== starting the stack (the images: courier-api:local, courier-auth:local) ==
+ Container courier-staging-postgres-1 Running 
+ Container courier-staging-valkey-1 Running 
+ Container courier-staging-api_a-1 Running 
+ Container courier-staging-postgres-1 Waiting 
+ Container courier-staging-valkey-1 Waiting 
+ Container courier-staging-postgres-1 Waiting 
+ Container courier-staging-valkey-1 Healthy 
+ Container courier-staging-postgres-1 Healthy 
+ Container courier-staging-postgres-1 Healthy 
+ Container courier-staging-auth_a-1 Starting 
+ Container courier-staging-auth_a-1 Started 
+ Container courier-staging-auth_a-1 Waiting 
+ Container courier-staging-api_a-1 Waiting 
+ Container courier-staging-auth_a-1 Error dependency auth_a failed to start
+ Container courier-staging-api_a-1 Healthy 
+dependency failed to start: container courier-staging-auth_a-1 is unhealthy

@@ -1,0 +1,7 @@
+﻿
+courier-postgres:16-3.6-pgvector
+courier-api:local
+courier-auth:local
+courier-caddy:2.10.2
+
+

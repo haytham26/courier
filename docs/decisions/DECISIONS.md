@@ -278,3 +278,27 @@ expired`) and the decision (`entitlement_of`). `past_due` never removes access o
   2. "stop and ask instead of retrying" when the model's confidence is low, which matters to a driver;
   3. a memory of the courier that the courier can see and clear, under the PIA's rules.
 - **What we do not build without a separate decision:** controlling other apps through Android's `AccessibilityService`. Google Play allows it only for apps whose core purpose is accessibility, with a declaration and review. That one is a research spike with a Play-policy check first (MASTER §22), and it is out of the trial scope.
+## D49 — A5's first slice: the staging stack, the two service images, and the deploy with its smoke test (2026-10-27, backend squad decision)
+  (The register's D48 went to the founder's Andee-ideas decision of the same day, so this slice takes the next free number.)- ADR-020. `infra/compose.staging.yml` is the staging stack as its own file: one replica of each
+  service (the zero-downtime swap is a production guarantee), a 172.29 network so both stacks can run
+  on one host, and Caddy's own root CA for a domain a local VM cannot be challenged for
+  (`infra/Caddyfile.staging`).
+- `services/api/Dockerfile` and `services/auth/Dockerfile` exist now, so the deployment runs the two
+  services it exists to run. The API's dependencies come from the lock (`uv sync --frozen`) and the
+  image carries no test, ops or load-test package; the auth service builds the workspace and runs
+  `dist/index.js`. `infra/compose.prod.yml`'s two stale paths (`apps/api`, `../db/schema.sql`) are
+  corrected to the repository's layout.
+- `infra/deploy.sh` is one procedure with three steps — the migrations (applied with
+  `ON_ERROR_STOP=1`, after waiting for the server), the state file the rollback reads, and the swap —
+  and `infra/deploy.sh rollback` re-applies the recorded images. `infra/smoke.sh` drives a real round
+  trip through the edge with the demo seed A1 added, and says which checks it skipped rather than
+  faking a token.
+- `.github/workflows/deploy.yml` runs the same scripts: a **verify** leg on every push that builds
+  both images and brings the whole stack up on the runner (the local VM the audit names), and a
+  **deploy** leg over SSH that rolls back when the smoke test fails. Without the OCI host and key the
+  deploy leg names the secrets it is waiting for instead of doing nothing.
+- **Still the founder's:** the OCI host, the key and the staging domain (FOUNDER_TODO), and the
+  map-pack licence confirmation (`--confirm-offline-use`) that BUG-067's proof runs stop at.
+- **Still open:** the auth service's own schema — Better Auth creates its tables with its own
+  migration, which the deploy does not yet run (`missing-table "jwks"` in the container's logs) — and
+  `infra/monitoring`, which needs the same domain and mailbox.
