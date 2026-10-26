@@ -20,6 +20,7 @@ Every script here fails the build when its check fails. They are the mechanical 
 | `store-ready-summary.mjs` | Renders the StoreReady report as a job summary. `node scripts/ci/store-ready-summary.mjs <report.json>`. |
 | `check-doc-links.mjs` | The link gate: every relative link in the live documentation resolves (`docs/archive`, `docs/evidence` and `docs/log` are history and skipped). `node scripts/ci/check-doc-links.mjs`. |
 | `check-emulator-gpu.mjs` | The emulator-GL gate (BUG-053): every workflow step that boots an Android emulator sets `-gpu swiftshader_indirect`, a second `-gpu` fails, and an anchor the gate cannot read fails loudly. `node scripts/ci/check-emulator-gpu.mjs [workflow-directory]` (the default is this repository's own `.github/workflows`, resolved from the module so the cwd does not matter). |
+| `check-parity.mjs` | The register gate (audit item B1): counts PARITY.md's four status words and BUGS.md's status words, prints the count that goes into `docs/status/PROGRESS.md`, and fails on a status word that is not one of them, on a `Have` row with no merged PR or CI run link in the row, or on a table that holds register rows with no `Status` column. `node scripts/ci/check-parity.mjs [parity.md] [bugs.md]` (the defaults are this repository's own registers, resolved from the module so the cwd does not matter). |
 
 ## The tests
 
@@ -29,5 +30,6 @@ Every script here fails the build when its check fails. They are the mechanical 
 | `__tests__/check-store-readiness.test.mjs` | A good app passes the check and a missing privacy policy is a blocking problem. |
 | `__tests__/store-ready-summary.test.mjs` | A blocking finding stays a blocking finding in the summary. |
 | `__tests__/check-emulator-gpu.test.mjs` | A boot without the flag, a boot with no options, a second `-gpu`, an anchor, a comment naming the action, an inverted step and a wrong directory all fail; the fixed forms pass; the real tree is scanned so the gate cannot go vacuous; and the CLI's exit codes (0, 1, 2) are the contract CI runs. |
+| `__tests__/check-parity.test.mjs` | A `Have` row with no PR or run link fails, an unknown status word (`Parity`, a bare `Planned`) fails, an empty status cell fails, a BUGS row with prose or `todo` in its status column fails, a pipe inside inline code does not split a row and lose its status, a table with no `Status` column fails, every table's rows are counted, the real tree is scanned so the gate cannot go vacuous, and the CLI's exit codes (0, 1, 2) are the contract CI runs. |
 
 `node --test "scripts/*/__tests__/*.test.mjs"`
