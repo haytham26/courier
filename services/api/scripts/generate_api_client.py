@@ -140,14 +140,18 @@ def prettier(path: Path) -> None:
     When prettier cannot be found the check still runs, compares unformatted
     output against the formatted file and fails: a missing formatter makes the
     gate red, never silently green.
+
+    No shell is involved: on Windows the `.cmd` launcher is run by `cmd /c`, and
+    everywhere else the executable is run directly. The command carries nothing
+    but the paths this script derived itself.
     """
     import shutil
     import sys
 
     if sys.platform == "win32":
-        # Windows runs the .cmd launcher through the shell, as a command
-        # string; the extension-less `prettier` in node_modules/.bin is a shell
-        # script and cannot be executed directly.
+        # The extension-less `prettier` in node_modules/.bin is a shell script,
+        # which Windows cannot execute directly; the `.cmd` launcher can, if the
+        # shell is asked for it rather than spawned around it.
         candidates = [
             shutil.which("prettier.cmd"),
             str(REPO_ROOT / "node_modules" / ".bin" / "prettier.cmd"),
@@ -156,19 +160,17 @@ def prettier(path: Path) -> None:
         if executable is None:
             print("check-api-client: prettier not found, the client will not be formatted")
             return
-        subprocess.run(
-            f'"{executable}" --write "{path}"',
-            check=False,
-            capture_output=True,
-            shell=True,
+        command = ["cmd", "/c", executable, "--write", str(path)]
+    else:
+        executable = shutil.which("prettier") or str(
+            REPO_ROOT / "node_modules" / ".bin" / "prettier"
         )
-        return
+        if not Path(executable).exists():
+            print("check-api-client: prettier not found, the client will not be formatted")
+            return
+        command = [executable, "--write", str(path)]
 
-    executable = shutil.which("prettier") or str(REPO_ROOT / "node_modules" / ".bin" / "prettier")
-    if not Path(executable).exists():
-        print("check-api-client: prettier not found, the client will not be formatted")
-        return
-    subprocess.run([executable, "--write", str(path)], check=False, capture_output=True)
+    subprocess.run(command, check=False, capture_output=True)
 
 
 def generate() -> str:
