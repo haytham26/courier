@@ -8,9 +8,21 @@ Updated: 2026-10-20 (squad created, V4 bootstrap)
 
 ## Metrics vs targets
 
-| Metric | Target | Today | Evidence |
-|--------|--------|-------|----------|
-| _(not measured yet)_ | see README | - | - |
+| Metric               | Target     | Today | Evidence |
+| -------------------- | ---------- | ----- | -------- |
+| _(not measured yet)_ | see README | -     | -        |
+
+- **ADR-017 / D45 (2026-10-26, backend squad).** The entitlement layer exists: the plan vocabulary,
+  the state machine (with the grace window that keeps a courier whose card is failing working) and
+  `GET /account/entitlements`, with `subscriptions` in the schema and the source recorded rather
+  than decided on. 356 passed + 14 db tests. The provider clients, the paywall UI, Team org billing
+  and GST are the next slices, behind the founder's switches.
+
+- **ADR-018 / D46 (2026-10-26, backend squad).** The provider ingest exists: one fact
+  shape, one verifier protocol, `StripeVerifier` with the three signature rules (no secret, a constant
+  tolerance, a truncated body), `apply_facts` through the entitlement layer's monotonic put, and the
+  webhook endpoint. 385 passed. The live endpoints, the secrets and the store verifiers remain the
+  founder's switches.
 
 ## Next
 
