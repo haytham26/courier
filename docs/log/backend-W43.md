@@ -392,6 +392,26 @@ POST /shifts/{id}/events:batch p95 370 ms > 300 ms` - with every request returni
   D43/D44, and both logs' additive sections) were each resolved as both-sides-kept and re-checked
   prettier-clean.
 
+## 2026-10-26 — The billing providers (PR #54, ADR-018/D46), and queue 2 fully closed
+
+- **ADR-018/D46.** The provider ingest ADR-017 promised: `ProviderFact`, the `ProviderVerifier`
+  protocol, `StripeVerifier` (HMAC over `timestamp.body`) with the payments squad's three signature
+  rules — no secret means no comparison, a constant 300-second tolerance, and a truncated body is not
+  an event — plus `apply_facts` and `POST /billing/webhooks/{source}`. 391 + 16 db tests.
+- **The review changed it in one pass.** Four must-fixes, each with the test that was missing: two
+  500 paths on an unauthenticated endpoint (an out-of-range timestamp raising `OverflowError`, a
+  non-ASCII signature header raising `TypeError`), `apply_facts` raising _outside_ the endpoint's
+  `except` (a signed event naming an unaccepted source was a 500), and a naive `renews_at` that would
+  poison the in-memory guard while the SQL driver silently coerced it — so the naive timestamp is
+  refused at the fact boundary where both paths meet. The revocation's `renews_at is None` branch, the
+  lowercase header case and the future-dated signature are pinned too.
+- The payload can no longer name its own source (the verifier pins it), a webhook carries one fact
+  (a batch is refused, not truncated), the default accepted-list reads the deployment's settings
+  rather than a hardcoded `stripe`, and the body is capped at 64 KiB like every other upload on an
+  unauthenticated endpoint. ADR-018 §3b names the trust boundary: a verified webhook is trusted to
+  name the courier, and the purchase-id directory is the next slice.
+- Queue 2 is fully closed (items 1–7, BUG-063, BUG-064).
+
 ## 2026-10-26 — A1's backend half: the demo-run seed and the typed client from the contract (branch `feat/a1-contract-seed`, PR #57, ADR-019/D47)
 
 - **The order, from the audit.** The founder's brief is binding (AUDIT_2026-10-25 "The order", MASTER
