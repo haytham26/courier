@@ -1,0 +1,104 @@
+diff --git a/cpp/core/HybridFunction.hpp b/cpp/core/HybridFunction.hpp
+index c6c88aa21bf802a119d84fb1c61924b346e709e0..bc4f9bade861a572fa136642dc3c652e09af4b20 100644
+--- a/cpp/core/HybridFunction.hpp
++++ b/cpp/core/HybridFunction.hpp
+@@ -67,8 +67,13 @@ public:
+ 
+ public:
+   // functions
++  // BUG-066: build the PropNameID directly instead of via PropNameIDCache -
++  // the cache's miss path re-enters JS (JSICache -> defineGlobal ->
++  // Object.defineProperty) while a borrowing reference is held, and the
++  // cold-start Hermes free then faults (runs 40274121944 and 40334465490;
++  // margelo/nitro#1150's confirmed working patch, first suggestion).
+   inline jsi::Function toJSFunction(jsi::Runtime& runtime) const {
+-    return jsi::Function::createFromHostFunction(runtime, PropNameIDCache::get(runtime, _name), static_cast<unsigned int>(_paramCount),
++    return jsi::Function::createFromHostFunction(runtime, jsi::PropNameID::forUtf8(runtime, _name), static_cast<unsigned int>(_paramCount),
+                                                  _function);
+   }
+ 
+diff --git a/cpp/utils/CommonGlobals.cpp b/cpp/utils/CommonGlobals.cpp
+index 126fe49becd059e4e3986ffbbed01c00dd8c40a0..22091e381ed0bf2b93af3725df339bced60c9793 100644
+--- a/cpp/utils/CommonGlobals.cpp
++++ b/cpp/utils/CommonGlobals.cpp
+@@ -37,52 +37,60 @@ jsi::Object CommonGlobals::Object::create(jsi::Runtime& runtime, const jsi::Valu
+ #endif
+ }
+ 
++// BUG-066 (bug-066-nitro-prop-name-cache):
++// The cached-prop-name and cached-global-function paths in here are the
++// cold-start memory crash on Android: at cold start Nitro installs (MMKV via
++// unistyles, sherpa-onnx) and PropNameIDCache::get -> JSICache::getOrCreateCache
++// -> defineGlobal -> this function re-enters while a BorrowingReference to a
++// Hermes-managed jsi::PropNameID is still held. Hermes later frees that memory
++// and the process dies inside libhermesvm (SIGSEGV in
++// gwp_asan::GuardedPoolAllocator::deallocate, runs 40274121944, 40334465490
++// and the forced-sampling run 40384380620 on exp/bug-066-gwpasan).
++// This is the patch the Nitro maintainer posted on margelo/nitro#1150
++// ("SIGSEGV crash in HybridFunction::toJSFunction on Android during cold
++// start"), confirmed working by a second app in that thread: no per-runtime
++// caches on this path - build each name fresh and fetch the builtin each time.
++// PropNameIDCache remains for the read paths that do not re-enter JS.
+ void CommonGlobals::Object::defineProperty(jsi::Runtime& runtime, const jsi::Object& object, const char* propertyName,
+                                            PlainPropertyDescriptor&& descriptor) {
+-  const jsi::Function& definePropertyFn = getGlobalFunction(runtime, "Object.defineProperty", [](jsi::Runtime& runtime) {
+-    return runtime.global().getPropertyAsObject(runtime, "Object").getPropertyAsFunction(runtime, "defineProperty");
+-  });
++  auto definePropertyFn = runtime.global().getPropertyAsObject(runtime, "Object").getPropertyAsFunction(runtime, "defineProperty");
+ 
+   jsi::String nameJs = jsi::String::createFromAscii(runtime, propertyName);
+ 
+   jsi::Object descriptorJs(runtime);
+-  descriptorJs.setProperty(runtime, PropNameIDCache::get(runtime, "configurable"), jsi::Value(descriptor.configurable));
+-  descriptorJs.setProperty(runtime, PropNameIDCache::get(runtime, "enumerable"), jsi::Value(descriptor.enumerable));
+-  descriptorJs.setProperty(runtime, PropNameIDCache::get(runtime, "value"), std::move(descriptor.value));
+-  descriptorJs.setProperty(runtime, PropNameIDCache::get(runtime, "writable"), jsi::Value(descriptor.writable));
++  descriptorJs.setProperty(runtime, "configurable", jsi::Value(descriptor.configurable));
++  descriptorJs.setProperty(runtime, "enumerable", jsi::Value(descriptor.enumerable));
++  descriptorJs.setProperty(runtime, "value", std::move(descriptor.value));
++  descriptorJs.setProperty(runtime, "writable", jsi::Value(descriptor.writable));
+ 
+   definePropertyFn.call(runtime, object, std::move(nameJs), std::move(descriptorJs));
+ }
+ 
+ void CommonGlobals::Object::defineProperty(jsi::Runtime& runtime, const jsi::Object& object, const char* propertyName,
+                                            ComputedReadonlyPropertyDescriptor&& descriptor) {
+-  const jsi::Function& definePropertyFn = getGlobalFunction(runtime, "Object.defineProperty", [](jsi::Runtime& runtime) {
+-    return runtime.global().getPropertyAsObject(runtime, "Object").getPropertyAsFunction(runtime, "defineProperty");
+-  });
++  auto definePropertyFn = runtime.global().getPropertyAsObject(runtime, "Object").getPropertyAsFunction(runtime, "defineProperty");
+ 
+   jsi::String nameJs = jsi::String::createFromAscii(runtime, propertyName);
+ 
+   jsi::Object descriptorJs(runtime);
+-  descriptorJs.setProperty(runtime, PropNameIDCache::get(runtime, "configurable"), jsi::Value(descriptor.configurable));
+-  descriptorJs.setProperty(runtime, PropNameIDCache::get(runtime, "enumerable"), jsi::Value(descriptor.enumerable));
+-  descriptorJs.setProperty(runtime, PropNameIDCache::get(runtime, "get"), std::move(descriptor.get));
++  descriptorJs.setProperty(runtime, "configurable", jsi::Value(descriptor.configurable));
++  descriptorJs.setProperty(runtime, "enumerable", jsi::Value(descriptor.enumerable));
++  descriptorJs.setProperty(runtime, "get", std::move(descriptor.get));
+ 
+   definePropertyFn.call(runtime, object, std::move(nameJs), std::move(descriptorJs));
+ }
+ 
+ void CommonGlobals::Object::defineProperty(jsi::Runtime& runtime, const jsi::Object& object, const char* propertyName,
+                                            ComputedPropertyDescriptor&& descriptor) {
+-  const jsi::Function& definePropertyFn = getGlobalFunction(runtime, "Object.defineProperty", [](jsi::Runtime& runtime) {
+-    return runtime.global().getPropertyAsObject(runtime, "Object").getPropertyAsFunction(runtime, "defineProperty");
+-  });
++  auto definePropertyFn = runtime.global().getPropertyAsObject(runtime, "Object").getPropertyAsFunction(runtime, "defineProperty");
+ 
+   jsi::String nameJs = jsi::String::createFromAscii(runtime, propertyName);
+ 
+   jsi::Object descriptorJs(runtime);
+-  descriptorJs.setProperty(runtime, PropNameIDCache::get(runtime, "configurable"), jsi::Value(descriptor.configurable));
+-  descriptorJs.setProperty(runtime, PropNameIDCache::get(runtime, "enumerable"), jsi::Value(descriptor.enumerable));
+-  descriptorJs.setProperty(runtime, PropNameIDCache::get(runtime, "get"), std::move(descriptor.get));
+-  descriptorJs.setProperty(runtime, PropNameIDCache::get(runtime, "set"), std::move(descriptor.set));
++  descriptorJs.setProperty(runtime, "configurable", jsi::Value(descriptor.configurable));
++  descriptorJs.setProperty(runtime, "enumerable", jsi::Value(descriptor.enumerable));
++  descriptorJs.setProperty(runtime, "get", std::move(descriptor.get));
++  descriptorJs.setProperty(runtime, "set", std::move(descriptor.set));
+ 
+   definePropertyFn.call(runtime, object, std::move(nameJs), std::move(descriptorJs));
+ }

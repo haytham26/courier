@@ -28,4 +28,7 @@ overrides:
 # Linux and macOS, 60 on Windows). Changing it together with a resolver
 # guard is the fix for the platform split of the jest resolution, see
 # apps/mobile/jest/resolver.js.
+patchedDependencies:
+  react-native-nitro-modules@0.37.1: patches/react-native-nitro-modules@0.37.1.patch
+
 virtualStoreDirMaxLength: 60
