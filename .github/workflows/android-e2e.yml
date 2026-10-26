@@ -1,4 +1,4 @@
-name: Android E2E (emulator + Maestro)
+﻿name: Android E2E (emulator + Maestro)
 
 # MASTER_EXECUTION P1: the pipeline is built at the root, not patched.
 #  - triggers: PRs to main, nightly and manual only (no push: every push used
@@ -48,7 +48,7 @@ concurrency:
 permissions:
   contents: read
 
-# PLAYBOOK 17.1 (BUG-064): everything the E2E uses is pinned, and a change to a
+# PLAYBOOK 17.1 (BUG-065): everything the E2E uses is pinned, and a change to a
 # pin is a commit, never a runner's whim. Before this, Maestro was installed at
 # `releases/latest`, the emulator binary and the system image were whatever the
 # runner carried that day, and the AVD cache key ignored all of them and the
@@ -179,7 +179,7 @@ jobs:
       - name: The pins' fingerprint
         id: pins
         run: |
-          # BUG-064: the AVD cache key was avd-<os>-<api>-google-apis-x86_64, so
+          # BUG-065: the AVD cache key was avd-<os>-<api>-google-apis-x86_64, so
           # it stayed the same when the Maestro version, the emulator build or
           # the emulator options changed, and a cached AVD built by a different
           # toolset was reused as if it were this one. The key now carries every
@@ -203,7 +203,7 @@ jobs:
           MAESTRO_VERSION: ${{ env.MAESTRO_VERSION }}
           MAESTRO_SHA256: ${{ env.MAESTRO_SHA256 }}
         run: |
-          # BUG-064: the installer takes its version from `releases/latest` when
+          # BUG-065: the installer takes its version from `releases/latest` when
           # MAESTRO_VERSION is empty, so the runner's Maestro changed without a
           # commit. The pinned release is downloaded directly and its archive's
           # checksum - the release's own published value, recorded in the
@@ -244,7 +244,7 @@ jobs:
           # slowed from 26-30 s to 36-39 s. The runner has 4 cores and 16 GB, so
           # the emulator gets 6 GB and 4 cores.
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 6144 -cores 4
-          # BUG-064: the emulator binary is pinned to EMULATOR_BUILD (the stable
+          # BUG-065: the emulator binary is pinned to EMULATOR_BUILD (the stable
           # 37.3.5 from Google's repository2-3.xml). The action installs the
           # system image from the stable channel by api-level, so that revision
           # is not a pin: it is read from the installed image after the run and

@@ -1,4 +1,4 @@
-# The gates
+﻿# The gates
 
 Every script here fails the build when its check fails. They are the mechanical half of
 `docs/plan/CONSTRAINTS.md`.
@@ -20,7 +20,7 @@ Every script here fails the build when its check fails. They are the mechanical 
 | `store-ready-summary.mjs` | Renders the StoreReady report as a job summary. `node scripts/ci/store-ready-summary.mjs <report.json>`. |
 | `check-doc-links.mjs` | The link gate: every relative link in the live documentation resolves (`docs/archive`, `docs/evidence` and `docs/log` are history and skipped). `node scripts/ci/check-doc-links.mjs`. |
 | `check-emulator-gpu.mjs` | The emulator-GL gate (BUG-060): every workflow step that boots an Android emulator sets `-gpu swiftshader_indirect`, a second `-gpu` fails, and an anchor the gate cannot read fails loudly. `node scripts/ci/check-emulator-gpu.mjs [workflow-directory]` (the default is this repository's own `.github/workflows`, resolved from the module so the cwd does not matter). |
-| `check-e2e-pins.mjs` | The E2E pins gate (BUG-064): every workflow that boots an Android emulator declares the same `MAESTRO_VERSION`, `MAESTRO_SHA256` and `EMULATOR_BUILD`, passes `emulator-build` to the action, and keeps the pins' shape (a `cli-X.Y.Z` tag, a 64-char sha256, digits). A workflow that boots no emulator at all also fails: the gate cannot go vacuous. `node scripts/ci/check-e2e-pins.mjs [workflow-directory]`. |
+| `check-e2e-pins.mjs` | The E2E pins gate (BUG-065): every workflow that boots an Android emulator declares the same `MAESTRO_VERSION`, `MAESTRO_SHA256` and `EMULATOR_BUILD`, passes `emulator-build` to the action, and keeps the pins' shape (a `cli-X.Y.Z` tag, a 64-char sha256, digits). A workflow that boots no emulator at all also fails: the gate cannot go vacuous. `node scripts/ci/check-e2e-pins.mjs [workflow-directory]`. |
 
 ## The tests
 

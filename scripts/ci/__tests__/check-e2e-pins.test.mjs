@@ -1,4 +1,4 @@
-// The tests of the E2E pins gate (BUG-064). Each one proves the gate catches a
+﻿// The tests of the E2E pins gate (BUG-065). Each one proves the gate catches a
 // way the E2E can go non-deterministic again, and the last one proves it cannot
 // go vacuous over this repository's own tree.
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';

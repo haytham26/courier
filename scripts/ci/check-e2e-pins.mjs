@@ -1,4 +1,4 @@
-// The E2E pins gate (BUG-064): every workflow that boots an Android emulator
+﻿// The E2E pins gate (BUG-065): every workflow that boots an Android emulator
 // must declare the SAME pins, and a workflow that boots one must pin the
 // emulator build.
 //
@@ -9,7 +9,7 @@
 // system image from whatever the runner carried that day - and the AVD cache
 // key ignored all of them and the emulator options. The same APK was green on
 // api-35 one hour and red on four PRs the next, with the app, the flows and the
-// workflow byte-identical (BUG-064 in docs/status/BUGS.md).
+// workflow byte-identical (BUG-065 in docs/status/BUGS.md).
 //
 // The rule, enforced here so a new emulator workflow cannot float:
 //  1. every workflow that runs android-emulator-runner declares the three pins
@@ -26,7 +26,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const BUG_ID = 'BUG-064';
+export const BUG_ID = 'BUG-065';
 export const PINS = ['MAESTRO_VERSION', 'MAESTRO_SHA256', 'EMULATOR_BUILD'];
 export const SHAPES = {
   MAESTRO_VERSION: /^cli-\d+\.\d+\.\d+$/,

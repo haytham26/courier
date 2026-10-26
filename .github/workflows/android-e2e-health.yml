@@ -1,6 +1,6 @@
-name: Android E2E health (5 runs per leg)
+﻿name: Android E2E health (5 runs per leg)
 
-# PLAYBOOK 17.4 (BUG-064): flake is measured, not argued. The nightly suite runs
+# PLAYBOOK 17.4 (BUG-065): flake is measured, not argued. The nightly suite runs
 # the FULL flow set five times per leg on main, then writes the per-flow pass
 # rate into docs/evidence/e2e-health.md. Any flow under 100 % is a bug with a
 # number, and the number is what a merge decision is made against.
@@ -134,7 +134,7 @@ jobs:
       - name: Install Maestro
         run: |
           # The pinned release, checksum-verified before anything runs, exactly
-          # as android-e2e.yml does (BUG-064).
+          # as android-e2e.yml does (BUG-065).
           set -euo pipefail
           url="https://github.com/mobile-dev-inc/Maestro/releases/download/${MAESTRO_VERSION}/maestro.zip"
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/maestro.zip" "$url"
