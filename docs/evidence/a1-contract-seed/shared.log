@@ -1,0 +1,11 @@
+﻿pnpm --filter @courier/shared typecheck exit=0
+
+pnpm --filter @courier/shared lint exit=0
+corepack.cmd : $ eslint .
+At line:1 char:818
++ ... tring; $r = & corepack pnpm --filter @courier/shared run lint 2>&1 |  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ($ eslint .:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+

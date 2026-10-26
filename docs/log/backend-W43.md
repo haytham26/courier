@@ -411,3 +411,49 @@ POST /shifts/{id}/events:batch p95 370 ms > 300 ms` - with every request returni
   unauthenticated endpoint. ADR-018 §3b names the trust boundary: a verified webhook is trusted to
   name the courier, and the purchase-id directory is the next slice.
 - Queue 2 is fully closed (items 1–7, BUG-063, BUG-064).
+
+## 2026-10-26 — A1's backend half: the demo-run seed and the typed client from the contract (branch `feat/a1-contract-seed`, PR #57, ADR-019/D47)
+
+- **The order, from the audit.** The founder's brief is binding (AUDIT_2026-10-25 "The order", MASTER
+  §21): A1's backend half first, then A5, then B3 and B4, with billing after those (D44). PR #55's
+  correction to this squad's `Next` list was merged as `c2c852a` before this slice started.
+- **`POST /demo/runs` (`app/demo.py`).** A deterministic day for the authenticated caller: a shift, a
+  run and five stops with uuid5 ids derived from the caller and one reason (`e2e`/`demo`/`dev`), so a
+  repeat seed returns the same ids and the E2E job can reset the phone and run the flow again. The
+  gate is exact-match `DEMO_SEED_ENABLED == "true"` — `false`, `1`, `True`, `on` and a string with a
+  stray space all answer 404, pinned by a parametrized test — because the seed writes into the same
+  tables as real data. A caller racing themself on one reason gets the API's 409, not a 500.
+- **The typed client (`services/api/scripts/generate_api_client.py`).** One interface per schema and
+  one typed signature per operation, generated from `packages/contracts/openapi.yaml`, committed to
+  `packages/shared/src/generated/api.ts`. The same script's `check` mode is a CI gate, so the drift
+  guard's third direction is real: server, contract and client cannot drift apart. It formats its
+  regenerated copy with the repo's own prettier — resolving its config from the temp file's
+  directory — and a missing prettier makes it red, never silently green.
+- **The fresh-context review, twice.** The first round caught the CI step's path (`uv run
+--directory` changes the cwd, so a repo-root-relative argument resolves to
+  `services/api/services/api/...` and the gate failed on every run), two `type: ignore` comments in
+  the test, and the generated `plan` union collapsing the 3.1 `null` type into `unknown`. The second
+  round, after those landed, caught a stale-client test that proved nothing (it compared two strings
+  and never called the check), an untracked ADR naming files that do not exist, a dead in-memory
+  shift branch, sequences that renumbered the surviving stops on a partial re-seed, and the uncaught
+  `ValueError` behind the 409 gap. Every finding was verified by re-running the mutation locally
+  (a broken `check()` and a changed 409 each made the right test fail, and were restored).
+- **The machine limits held.** Docker was started for the db-marked suite only (17 tests against the
+  PostGIS 17.2 container), and the container was stopped and removed afterwards (`postgres:16-alpine`
+  was tried first and refused for lack of the PostGIS extension — the pinned image is the one the
+  suite needs).
+
+### Skills applied — A1
+
+| Step                          | Skills read and followed     | How it changed the work                                                                |
+| ----------------------------- | ---------------------------- | -------------------------------------------------------------------------------------- |
+| The contract and the endpoint | `api-and-interface-design`   | The demo path joined the contract with the same 404/409 discipline as every other run  |
+| The seed before the code      | `test-driven-development`    | RED first, then the ids, the gate and the stop writer; the two vacuous tests were      |
+| The half, not the whole       | `incremental-implementation` | The demo seed and the client are one slice, with the app side left to the lead         |
+| The security questions        | `security-and-hardening`     | The gate is exact-match, owner-only by the token, and 404 rather than a hopeful route  |
+| The generator's windows       | `source-driven-development`  | `uv run --directory` changes the cwd; `subprocess` on a `.cmd` needs the shell, and    |
+|                               |                              | prettier resolves its config from the file's own directory, so the temp sits beside it |
+| The review                    | `doubt-driven-development`   | Two fresh-context adversarial rounds; every finding verified by mutation, not accepted |
+| Before the push               | `code-review-and-quality`,   | The floor guard, the drift guard and the freshness gate all run locally first; no      |
+|                               | `code-simplification`        | suppressions, no skipped tests, and the retry/nested reads were folded into one place  |
+| The decision                  | `documentation-and-adrs`     | ADR-019 committed with the slice, D47 in the register from the next free number        |

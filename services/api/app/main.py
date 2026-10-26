@@ -36,6 +36,7 @@ from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
+from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
 from .locations import location_id_for
 from .pod import (
@@ -369,6 +370,41 @@ def healthz():
         "version": app.version,
         "engines": ["pyvrp", "heuristic-nn-2opt"],
     }
+
+
+class DemoSeedRequest(BaseModel):
+    """The one reason this caller wants a demo day for."""
+
+    reason: Literal["e2e", "demo", "dev"] = "e2e"
+
+
+@app.post("/demo/runs")
+def seed_demo_run(
+    body: DemoSeedRequest,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Seed the caller's demo day: a run and its stops, in the real tables.
+
+    The app's core flow needs a run with stops that exist, and it needs the ids
+    to stay still between calls, so an E2E job can reset the phone and run the
+    flow again. This is the seam for that (ADR-019): the ids are derived from the
+    caller, so a caller always gets their own day back.
+
+    The gate is the environment, not a hope: without DEMO_SEED_ENABLED=true this
+    route is 404, because seeding demo rows into a real database is not something
+    an unguarded endpoint should ever do.
+
+    A caller racing themself on the same reason is answered with the same 409
+    `POST /runs` answers, not a 500: the seed writes a run like any other.
+    """
+    if not seed_enabled():
+        raise HTTPException(status_code=404, detail="this deployment does not seed demo data")
+    try:
+        day = write_demo_day(repo, principal.user_id, body.reason)
+    except DemoDayConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return demo_day_body(day)
 
 
 @app.post("/runs", status_code=201)
