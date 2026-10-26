@@ -181,14 +181,26 @@ jobs:
           # and not supplied: script`). The recording lives inside the boot:
           # the tool install, the APK and its grants, then the keeper.
           script: |
-            # The Maestro CLI: the installer is downloaded, printed and
-            # executed - it is never piped into a shell (the V4 §7 rule).
-            curl -Ls "https://get.maestro.mobile.dev" -o "$RUNNER_TEMP/maestro-install.sh"
-            cat "$RUNNER_TEMP/maestro-install.sh"
-            bash "$RUNNER_TEMP/maestro-install.sh"
+            # The Maestro CLI: the pinned release, downloaded directly and its
+            # archive's checksum verified before any byte runs - exactly the way
+            # android-e2e.yml installs it (BUG-065). The installer would be the
+            # other path, and it prefixes `cli-` onto MAESTRO_VERSION, which
+            # turns this pin into a 404 and leaves no CLI on the box (run
+            # 40319441601: `maestro: not found`, exit 127). One install, one
+            # pin semantic, in both workflows.
+            set -euo pipefail
+            url="https://github.com/mobile-dev-inc/Maestro/releases/download/${MAESTRO_VERSION}/maestro.zip"
+            curl -fsSL --retry 3 -o "$RUNNER_TEMP/maestro.zip" "$url"
+            echo "${MAESTRO_SHA256}  $RUNNER_TEMP/maestro.zip" | sha256sum -c -
+            rm -rf "$HOME/.maestro" "$HOME/.maestro/tmp"
+            mkdir -p "$HOME/.maestro/tmp"
+            unzip -qo "$RUNNER_TEMP/maestro.zip" -d "$HOME/.maestro/tmp"
+            cp -rf "$HOME/.maestro/tmp/maestro/." "$HOME/.maestro/"
+            rm -rf "$HOME/.maestro/tmp" "$RUNNER_TEMP/maestro.zip"
             # $GITHUB_PATH lands between steps, so the binary is on PATH here,
             # before the keeper calls maestro.
             export PATH="$HOME/.maestro/bin:$PATH"
+            "$HOME/.maestro/bin/maestro" --version
 
             # The app and its permissions: granted up front so the system
             # dialog never sits on the screen the recording has to show.

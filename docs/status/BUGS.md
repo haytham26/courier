@@ -186,6 +186,11 @@ test, and the feature is never removed to get a green run.
 
 ## BUG-066: the two shapes of the lost first screen (2026-10-26)
 
+**Shape B, confirmed twice more, now with its own dump.** The workflow_dispatch proof run 40324045418 (PR #49, head 5c2e4b5, api-35) failed on .maestro/stops.yaml - the eighth flow - and the failure dump the PR #36 runner now keeps ends Maestro log at Clearing app state com.courier.copilot again: it hangs inside clearAppState, on the adb path, before any flow step runs. The run's lows.txt proves the other nine flows passed on the same leg, and e2e-pins.txt records the exact toolset (Maestro cli-2.11.0, emulator build 16632760, system image revision 9 on this leg).
+
+The rule for this shape is PLAYBOOK 19.2.4 as the founder set it: at most one re-run, only for a runner death before any flow ran, with the run link recorded in the PR. The re-run of that leg only is running, and the PR says so with the links. Shape A (the app started, alive, fast, and not reaching the first screen) is unchanged and still open on eat/t6-copilot.
+
+
 The founder asked for the cause to be fixed by root cause, and the evidence now
 separates the two shapes that look identical from the outside.
 
