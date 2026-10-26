@@ -55,7 +55,7 @@ services:
       -c maintenance_work_mem=256MB
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../packages/contracts/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test:
         [
@@ -107,7 +107,9 @@ services:
   api_a: &api
     image: ${COURIER_API_IMAGE:-courier-api:local}
     build:
-      context: ../apps/api
+      # The API lives in services/api (the compose file once said apps/api, a
+      # path that has not existed since the repo's first restructure).
+      context: ../services/api
       dockerfile: Dockerfile
     <<: *service-common
     environment:

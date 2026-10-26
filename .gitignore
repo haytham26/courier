@@ -70,3 +70,4 @@ research-private/
 not reach gitleaks' view of the repo.
 /.opencode-tmp/
 graphify-out/
+.deploy-state

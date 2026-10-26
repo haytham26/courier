@@ -1,0 +1,259 @@
+# The staging stack of Courier Copilot (A5).
+#
+# Run it from the repository root with the environment file that holds the
+# staging secrets (never in this file):
+#
+#   docker compose --env-file infra/staging.env -f infra/compose.staging.yml up -d
+#
+# It is the production stack (infra/compose.prod.yml) with the two things
+# staging does not need, and it is a complete file rather than an override: the
+# audit's founder input - the OCI host and key - is what makes the domain real,
+# and until it exists this file is what a local VM runs.
+#
+#   - **One replica of each service.** The zero-downtime swap
+#     (infra/zero-downtime.md) is a production guarantee: two replicas so the
+#     edge's retry has somewhere to go. Staging proves the images, the
+#     migrations and the wiring, and one replica does that. The compose
+#     `depends_on` merge cannot drop a service from an override, so staging
+#     states its own stack instead of subtracting from production's.
+#   - **A fraction of the budget.** The founder's local VM is capped at 3 GB by
+#     `.wslconfig`, and this whole stack has to fit inside it.
+#   - **A local certificate.** The edge mounts Caddyfile.staging, which asks
+#     Caddy's own root CA for the domain's certificate instead of ACME: a local
+#     VM has no public name to be challenged for. The smoke test calls the edge
+#     with `-k`, which is exactly what that certificate means.
+#
+# Everything else - the database, the cache, the edge's headers and its rate
+# limits - is the production behaviour, because a difference between staging and
+# production that staging never exercised is a difference that ships untested.
+
+name: courier-staging
+
+x-service-common: &service-common
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: '10m'
+      max-file: '5'
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  postgres:
+    image: ${COURIER_POSTGRES_IMAGE:-courier-postgres:16-3.6-pgvector}
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
+    <<: *service-common
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-courier}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-courier}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements,pg_trgm
+      -c max_connections=200
+      -c work_mem=16MB
+      -c maintenance_work_mem=256MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # The contract's own schema, the same file production and CI apply.
+      - ../packages/contracts/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-courier} -d ${POSTGRES_DB:-courier}']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512m
+    networks:
+      courier:
+        ipv4_address: ${COURIER_IPV4_PREFIX:-172.29.0}.10
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    <<: *service-common
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD:?VALKEY_PASSWORD is required}
+    command: >
+      valkey-server
+      --appendonly yes
+      --requirepass ${VALKEY_PASSWORD}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'valkey-cli -a "$$VALKEY_PASSWORD" ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256m
+    networks:
+      courier:
+        ipv4_address: ${COURIER_IPV4_PREFIX:-172.29.0}.11
+
+  api_a: &api
+    image: ${COURIER_API_IMAGE:-courier-api:local}
+    build:
+      context: ../services/api
+      dockerfile: Dockerfile
+    <<: *service-common
+    environment:
+      APP_ENV: staging
+      APP_VERSION: ${APP_VERSION:?APP_VERSION is required}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-courier}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-courier}
+      AUTH_JWKS_URL: http://auth:3001/api/auth${AUTH_JWKS_PATH:-/jwks}
+      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
+      VALKEY_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
+      # The demo seed (ADR-019) is on in staging: the smoke test and the
+      # founder's own phone use it, and staging data is disposable.
+      DEMO_SEED_ENABLED: 'true'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3).status == 200 else 1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384m
+    networks:
+      courier:
+        ipv4_address: ${COURIER_IPV4_PREFIX:-172.29.0}.20
+        aliases:
+          - api
+
+  auth_a: &auth
+    image: ${COURIER_AUTH_IMAGE:-courier-auth:local}
+    build:
+      context: ..
+      dockerfile: services/auth/Dockerfile
+    <<: *service-common
+    environment:
+      NODE_ENV: production
+      APP_VERSION: ${APP_VERSION:?APP_VERSION is required}
+      PORT: '3001'
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+      BETTER_AUTH_URL: https://${COURIER_DOMAIN:?COURIER_DOMAIN is required}
+      AUTH_DATABASE_URL: postgresql://${POSTGRES_USER:-courier}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-courier}
+      AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:?AUTH_TRUSTED_ORIGINS is required}
+      AUTH_TRUSTED_IP_HEADERS: x-forwarded-for
+      AUTH_JWKS_PATH: ${AUTH_JWKS_PATH:-/jwks}
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
+      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
+      AUTH_JWT_EXPIRATION: ${AUTH_JWT_EXPIRATION:-15m}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-100}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 320m
+    networks:
+      courier:
+        ipv4_address: ${COURIER_IPV4_PREFIX:-172.29.0}.30
+        aliases:
+          - auth
+
+  caddy:
+    image: ${COURIER_CADDY_IMAGE:-courier-caddy:2.10.2}
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile
+    <<: *service-common
+    environment:
+      COURIER_DOMAIN: ${COURIER_DOMAIN:-staging.courier.local}
+      ACME_EMAIL: ${ACME_EMAIL:-staging@courier.local}
+    ports:
+      - '80:80'
+      - '8443:443'
+    volumes:
+      # The staging edge: Caddy's own root CA, everything else production's
+      # (infra/Caddyfile.staging).
+      - ./Caddyfile.staging:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    depends_on:
+      api_a:
+        condition: service_healthy
+      auth_a:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:2019/config/']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 192m
+    networks:
+      courier:
+        ipv4_address: ${COURIER_IPV4_PREFIX:-172.29.0}.40
+
+volumes:
+  postgres_data:
+    name: courier-staging-postgres-data
+  valkey_data:
+    name: courier-staging-valkey-data
+  caddy_data:
+    name: courier-staging-caddy-data
+  caddy_config:
+    name: courier-staging-caddy-config
+  caddy_logs:
+    name: courier-staging-caddy-logs
+
+networks:
+  courier:
+    name: ${COURIER_NETWORK:-courier-staging-net}
+    ipam:
+      driver: default
+      config:
+        # 172.29, not production's 172.28: both stacks can run on one host -
+        # a developer's local VM, or a production host that also carries the
+        # staging stack for a canary - and Docker refuses a subnet that
+        # overlaps an existing network.
+        - subnet: ${COURIER_SUBNET:-172.29.0.0/24}
