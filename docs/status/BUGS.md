@@ -194,3 +194,29 @@ is BUG-065 here, and every reference to it (the gate
 `scripts/ci/check-e2e-pins.mjs`, the two workflow headers and the quality-gates
 step) prints BUG-065. Both rows are kept: the class of error a renumber
 collision is recorded, not hidden.
+
+## BUG-066: the two shapes of the lost first screen (2026-10-26)
+
+The founder asked for the cause to be fixed by root cause, and the evidence now
+separates the two shapes that look identical from the outside.
+
+**Shape A - the flow's own first-screen assert** (BUG-066, the api-34 leg of run
+40253244520 and run 40207842201): the app is started, alive and fast. `am start`
+reports COLD / ok / TotalTime 1076 ms, the crash buffer is empty, the process is
+alive at the end of the run, and the other nine flows' first screens land 1.8 to
+2.3 s after their launches. The app simply does not reach `today-screen` for the
+full 60 s, in the one position of the suite right after `driving-night.yaml`.
+That is an app bug and it is still open: the D34 sphere lifecycle fix on
+`feat/t6-copilot` is the fix, and PR #36's runner keeps the dump for it.
+
+**Shape B - the readiness gate** (PR #42's api-35 leg, run 40308884347, and
+PR #12's first attempt): Maestro's own log ends at "Clearing app state
+com.courier.copilot" - it hangs INSIDE `clearAppState`, on the adb path, before
+any flow step runs. The logcat shows the force-stop completing (11:03:37.49) and
+then nothing app-related for the whole 3-minute window, with no ANR, no watch-
+dog kill and no crash; `pid.txt` says "the app process is not running". That is
+infrastructure (PLAYBOOK 1 row 3, the same adb-daemon family BUG-061 recorded),
+and it took exactly one re-run of the failed leg, which is what the rule allows.
+
+Both shapes recorded because they need different owners: A is the app, B is the
+runner, and neither is chased as the other.
