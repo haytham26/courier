@@ -39,12 +39,15 @@ HEADER = """/**
  */
 """
 
-#: The JSON Schema types this contract uses, as TypeScript.
+#: The JSON Schema types this contract uses, as TypeScript. `null` belongs here
+#: too: the contract is OpenAPI 3.1, where `type: 'null'` is a first-class type
+#: and a union member that means "absent".
 _SCALARS = {
     "string": "string",
     "integer": "number",
     "number": "number",
     "boolean": "boolean",
+    "null": "null",
 }
 
 

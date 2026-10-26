@@ -75,7 +75,7 @@ export interface DemoStop {
 
 export interface Entitlement {
   active: boolean;
-  plan?: 'trial' | 'solo' | 'team' | unknown;
+  plan?: 'trial' | 'solo' | 'team' | null;
   features: string[];
 }
 
