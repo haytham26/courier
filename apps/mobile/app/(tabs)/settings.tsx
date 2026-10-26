@@ -300,10 +300,16 @@ export default function SettingsScreen() {
           })}
         </View>
 
+        {/* The sign-out sits directly under the identity, not at the end of a
+            long scroll list: a row a courier has to hunt for is a row that is
+            never found, and the flow that taps it reads "Element not found" the
+            moment the list is taller than the window (the same class of
+            failure as BUG-050's clipped actions row). */}
+        <SettingsGroup title="Session" rows={signOutRows} />
+
         <SettingsGroup title="Map" rows={mapRows} />
         <SettingsGroup title="Device" rows={deviceRows} />
         <SettingsGroup title="Team" rows={teamRows} />
-        <SettingsGroup title="Session" rows={signOutRows} />
 
         <View style={[styles.group, { backgroundColor: t.colors.card }]}>
           <View style={styles.row}>
