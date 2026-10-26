@@ -47,14 +47,15 @@ export const PARITY_STATUSES = ['Have', 'Better', 'Planned (task)', 'Skip (reaso
 export const BUGS_STATUSES = ['open', 'doing', 'testing', 'fixed', 'closed', 'moved to PARITY'];
 
 /**
- * A merged PR number (`#31`, `PR #31`) or a CI run link, in a row's text.
+ * A merged PR citation (`PR #31`) or a CI run link, in a row's text.
  *
- * The PR number is bounded at five digits on purpose: a six-digit hex colour
- * (`#121212`, the night-theme background PARITY row 60 records) ends a sentence as
- * often as a PR citation does, and a gate that reads a colour as evidence would
- * wave through the very row it exists to catch.
+ * The PR number must be attached to the word PR: a bare `#31` is as likely to be
+ * a hex colour (`#121212`, the night-theme background a PARITY row records), an
+ * issue number or a design token as it is a merged PR, and a gate that reads
+ * those as evidence would wave through the very rows it exists to catch. The
+ * founder's rule for this gate: a hex colour like #121212 is not a PR number.
  */
-const EVIDENCE = /#\d{1,5}\b|actions\/runs\/\d+|\brun \d{6,}\b/i;
+const EVIDENCE = /\bPR\s*#\d+\b|actions\/runs\/\d+|\bruns\/\d+|\brun \d{6,}\b/i;
 
 /**
  * Splits one markdown table row into its cells.

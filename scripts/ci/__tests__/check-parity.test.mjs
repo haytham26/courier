@@ -96,6 +96,30 @@ test('a clean register is counted and has no findings', () => {
   assert.equal(bugs.counts.testing, 1);
 });
 
+test('a Have row whose only citation is a hex colour fails: a colour is not a PR number', () => {
+  const withColour =
+    PARITY_HEADER +
+      "| 1 | Driving at night | the night theme | Have | beat - no night mood | #121212 on #1C1C1E | T7.9 | #121212 |" +
+      '\n';
+  const { findings } = checkParity(withColour);
+  assert.ok(
+    findings.some((finding) => finding.problem.includes("no merged PR number")),
+    findings.join("|"),
+  );
+});
+
+test('a Have row whose only citation is a bare number fails: the PR must be named', () => {
+  const withBare =
+    PARITY_HEADER +
+      "| 1 | Driving at night | the night theme | Have | beat - no night mood | #121212 | T7.9 | #31 |" +
+      '\n';
+  const { findings } = checkParity(withBare);
+  assert.ok(
+    findings.some((finding) => finding.problem.includes("no merged PR number")),
+    findings.join("|"),
+  );
+});
+
 test('a Have row with a PR number passes, and a CI run link counts as evidence too', () => {
   const withRun = PARITY_HEADER + '| 1 | POD | Photo POD | Have | match | edge | T7.9 | CI run 40185490916 |\n';
   assert.deepEqual(checkParity(withRun).findings, []);
