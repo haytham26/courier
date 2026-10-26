@@ -54,11 +54,6 @@ permissions:
 
 jobs:
   build:
-    # A push builds the pack on main; the schedule and the founder's dispatch
-    # build it anywhere. A feature branch's push never does (BUG-064). The
-    # workflow itself now starts on every event it names (BUG-067): a guard that
-    # skips a job is visible as a skip, and a workflow that cannot start is not.
-    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
