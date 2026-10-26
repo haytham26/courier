@@ -129,6 +129,16 @@ test('a table with no evidence column still demands a link in the row', () => {
   assert.match(findings[0].problem, /no merged PR number or CI run link/i);
 });
 
+test('a hex colour is not read as a PR citation', () => {
+  // PARITY row 60 records `#121212` in a sentence that ends with it: six hex digits
+  // must never satisfy the evidence rule, or the gate waves through a `Have` that
+  // quotes nothing.
+  const hexOnly = PARITY_HEADER + '| 60 | Design system | the night background is #121212, never pure black | Have |  | low-blue night palette | T6 |  |\n';
+  const { findings } = checkParity(hexOnly);
+  assert.equal(findings.length, 1);
+  assert.match(findings[0].problem, /no merged PR number or CI run link/i);
+});
+
 test('an unknown status word fails the gate', () => {
   // `Parity` was really in PARITY.md on 2026-10-25; a bare `Planned` sits beside
   // `Planned (task)` in the same file.

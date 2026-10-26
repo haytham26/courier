@@ -46,8 +46,15 @@ export const PARITY_STATUSES = ['Have', 'Better', 'Planned (task)', 'Skip (reaso
 /** The words the bug tracker's status column may hold (docs/status/BUGS.md). */
 export const BUGS_STATUSES = ['open', 'doing', 'testing', 'fixed', 'closed', 'moved to PARITY'];
 
-/** A merged PR number (`#31`, `PR #31`) or a CI run link, in a row's text. */
-const EVIDENCE = /#\d+\b|actions\/runs\/\d+|\brun \d{6,}\b/i;
+/**
+ * A merged PR number (`#31`, `PR #31`) or a CI run link, in a row's text.
+ *
+ * The PR number is bounded at five digits on purpose: a six-digit hex colour
+ * (`#121212`, the night-theme background PARITY row 60 records) ends a sentence as
+ * often as a PR citation does, and a gate that reads a colour as evidence would
+ * wave through the very row it exists to catch.
+ */
+const EVIDENCE = /#\d{1,5}\b|actions\/runs\/\d+|\brun \d{6,}\b/i;
 
 /**
  * Splits one markdown table row into its cells.
