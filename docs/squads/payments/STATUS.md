@@ -18,6 +18,12 @@ Updated: 2026-10-20 (squad created, V4 bootstrap)
   than decided on. 356 passed + 14 db tests. The provider clients, the paywall UI, Team org billing
   and GST are the next slices, behind the founder's switches.
 
+- **ADR-018 / D46 (2026-10-26, backend squad).** The provider ingest exists: one fact
+  shape, one verifier protocol, `StripeVerifier` with the three signature rules (no secret, a constant
+  tolerance, a truncated body), `apply_facts` through the entitlement layer's monotonic put, and the
+  webhook endpoint. 385 passed. The live endpoints, the secrets and the store verifiers remain the
+  founder's switches.
+
 ## Next
 
 1. Build the evaluation dataset and the benchmark.

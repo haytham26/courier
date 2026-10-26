@@ -419,6 +419,33 @@ class TestTheEvents:
         assert repo.put_subscription(row) is True
         assert repo.put_subscription(row) is False
 
+    def test_a_fact_with_a_naive_timestamp_is_refused_before_the_repo(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """ADR-018: the fact layer requires an offset.
+
+        The SQL driver would coerce a naive parameter through the session's
+        timezone (a silent reinterpretation), while the in-memory guard compares
+        aware datetimes and would raise - so the disagreement is refused at the
+        boundary where both paths meet.
+        """
+        from app.providers import fact_from_stripe_event
+
+        event = {
+            "courier_id": COURIER,
+            "purchase": {
+                "id": "sub_naive",
+                "plan": "solo",
+                "state": "active",
+                "started_at": "2026-10-26 07:00:00",  # no offset
+                "renews_at": "2026-11-25 07:00:00",
+                "ends_at": None,
+            },
+        }
+
+        with pytest.raises(ValueError, match="no timezone"):
+            fact_from_stripe_event(event)
+
     def test_an_event_is_readable_by_id(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
         shift_id = a_shift(engine)
         run = a_run(shift_id)
