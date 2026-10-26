@@ -38,6 +38,15 @@ concurrency:
 permissions:
   contents: read
 
+# BUG-065: every workflow that boots the emulator carries the same pins, and a
+# change to a pin is a commit (PLAYBOOK 17.1). The values and where each came
+# from are in android-e2e.yml; the recordings must not float on a different
+# Maestro or emulator than the gate does, or its evidence is not comparable.
+env:
+  MAESTRO_VERSION: cli-2.11.0
+  MAESTRO_SHA256: 5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a
+  EMULATOR_BUILD: '16632760'
+
 jobs:
   build:
     name: Build the release APK
@@ -165,6 +174,8 @@ jobs:
           # motion (the flows gate runs under the same rules it asserts).
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          # BUG-065: the pinned emulator binary, the same one the gate records.
+          emulator-build: ${{ env.EMULATOR_BUILD }}
           # The runner's `script` is REQUIRED: it is the body that runs on the
           # booted emulator (run 39905489120 died without it: `Input required
           # and not supplied: script`). The recording lives inside the boot:
