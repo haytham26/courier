@@ -94,10 +94,29 @@ jobs:
         env:
           # The E2E mode: the app runs on local mocks (no Metro, no auth, no API).
           EXPO_PUBLIC_E2E: '1'
+          # BUG-066 (exp/bug-066-gwpasan, never merged): the documented per-app
+          # GWP-ASan opt-in, so every cold start of every flow runs with
+          # GWP-ASan on instead of Android 14's ~1%-of-launches sampling. The
+          # plugin (apps/mobile/plugins/withGwpAsanMode.js) is inert without it.
+          GWP_ASAN: '1'
         run: |
           pnpm --filter mobile exec expo prebuild --platform android --no-install
           cd apps/mobile/android
           ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
+
+      # BUG-066: the APK ships the STRIPPED libhermesvm.so (.symtab removed, only
+      # the exported dynamic symbols left), so the tombstone's PCs cannot name
+      # Hermes' own frames from it. The unstripped libraries live in the merge
+      # intermediates before the strip step; they are uploaded so the native
+      # crash report can be symbolicated (the build-id in the evidence is
+      # 693b3d3679eb945fc61d133ed4f9d498bdc58ef4).
+      - name: Upload the unstripped native libraries
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-libs-unstripped
+          path: apps/mobile/android/app/build/intermediates/merged_native_libs
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Upload the APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -177,6 +196,10 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 2048
           script: bash .maestro/run-all.sh
           working-directory: .
+          # BUG-066 (exp/bug-066-gwpasan): the cold-start sweep. Only this
+          # experiment sets it; the branch never merges, and the sweep's rate
+          # is what the BUG-066 row records before the fix.
+          env: SWEEP_COUNT='30'
 
       - name: Upload the evidence
         if: always()
