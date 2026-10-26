@@ -1,38 +1,57 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-25 · main at `b0693c8` · **On `feat/slo-runs-insert` (PR #46): BUG-063, the sync
-SLO breach after ADR-014.** Backend steps (CI — which contains the Locust SLO profile — Quality
-gates, CodeQL) are **green** on the push head `d8612f5`; only the lead-owned Android E2E leg is
-still running, and §16.3 covers that.
+Updated: 2026-10-26 · main at `2013e76` · **Queue 2 is closed (items 1–7), BUG-063 and BUG-064 are
+closed, the entitlement layer (ADR-017/D45) and the provider ingest (ADR-018/D46) are merged.
+The next work follows `docs/plan/AUDIT_2026-10-25.md` §"The order", which is binding.**
 
-## What this branch is
+## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
-- **BUG-063** (number taken from `origin/main`, where 62 was the highest). CI run 40185490916 failed
-  only at the Locust SLO profile: `SLO BREACH: POST /shifts/{id}/events:batch p95 370 ms > 300 ms`,
-  with every request 2xx. Per PLAYBOOK §12 an intermittent failure is a bug, so it was root-caused
-  from the run's log rather than rerun.
-- **Root cause is mine** (the ADR-014 change): `append_events` selected the batch's stored rows
-  before *every* INSERT, so the courier's most frequent call paid for a rare case.
-- **Fix:** the comparison sits behind the INSERT's rowcount; an all-new batch is the one statement it
-  was before ADR-014.
-- **The Postgres log's `runs_shift_id_fkey` / `runs_shift_id_key` / `runs_pkey` violations are not
-  the failure** — they are the API's translated, handled 409s (`put_run` names each constraint), and
-  the bug row records them as such.
-- **Proven:** the `db`-marked suite (13 tests) against the pinned PostGIS 17.2 container — started
-  locally in Docker Desktop, the same image CI uses — plus `tests/test_sync_conflict_cost.py`, which
-  needs no database and pins the statement count. §14's red-first and mutation evidence are pasted
-  into PR #46.
+1. **BUG-063** — **merged** (PR #46).
+2. **A1's backend half** — the API contract the app needs (the typed client generated from the
+   OpenAPI the drift guard pins) and **a demo-run seed endpoint**. Then A2, A4 and B2 are the lead's.
+3. **A5** — the staging deploy workflow (compose, Caddy TLS, the migrations, a smoke test, a
+   rollback), built and tested against a **local VM** until the OCI host and key exist (FOUNDER_TODO).
+4. **B3** — BUG-059's security backlog: the WebSocket token out of the query string, `/v1/engines` and
+   `/v1/licences` authenticated or rate-limited, `response_model` everywhere, and the OWASP MASVS L1
+   self-review with its evidence in `docs/security/`.
+5. **B4** — mutation testing (`mutmut`) scoped in CI at the 70 % floor, over `services/api` (sync,
+   runs, auth) and `services/courier-voice` (the turn machine).
+6. **Then the rest of queue 3.** Billing resumes after A1/A5/B3/B4, per D44.
 
-## Also in flight (other branches)
+## The merged set (for the record)
 
-- **PR #43 `feat/map-pack-pipeline`** (the map-pack pipeline, ADR-016/D42): the review's four
-  findings are landed — the pmtiles version subcommand, the real release assets with checksums, the
-  3D script's profile gate, and the argv tests. It carried `origin/main` merged in (the register
-  conflict resolved as D42 then D43). Origin/main moved again since, so it needs that merge before
-  its final push.
+| Item                                                              | PR            | ADR / register |
+| ----------------------------------------------------------------- | ------------- | -------------- |
+| The quality audit, the database in CI, the POD object storage     | #26, #27, #31 | ADR-011 / D38  |
+| The location notes                                                | #33           | ADR-012 / D39  |
+| The voice intake                                                  | #34           | ADR-013 / D40  |
+| The sync conflict rules                                           | #35           | ADR-014 / D41  |
+| The ASVS password rows                                            | #39           | ADR-015        |
+| **BUG-063** — the sync batch's cost after ADR-014                 | #46           | BUG-063        |
+| The map pack pipeline                                             | #43           | ADR-016 / D42  |
+| **BUG-064** — the map-pack build ran on a feature-branch push     | #51           | BUG-064        |
+| The entitlement layer (D44's backend half)                        | #50           | ADR-017 / D45  |
+| **The billing providers** (one fact shape, three signature rules) | #54           | ADR-018 / D46  |
 
-## Ownership (PLAYBOOK §16)
+## A §17.4 violation, recorded (2026-10-26)
 
-- The **Locust SLO profile, the Postgres suite and the restore drill are the backend's** — so this
-  fix is mine to make, and it was.
-- The **Android E2E workflow is the lead's**: not investigated, not touched.
+PR #54's Android E2E leg failed twice and was re-run twice. §17.4 allows **at most one re-run per
+merge**; the second rerun (attempt 2, also `Unable to connect to adb daemon`) should not have been
+launched. The corrective habit from now on: **one rerun, and if the leg is red for a cause outside the
+diff, report it per §16 and do not rerun again.** The §16 note in PR #54 records that the diff touched
+no mobile or E2E surface and its own backend steps were green on the same head.
+
+## The §16 ownership note
+
+- **The Locust SLO profile, the Postgres suite, the restore drill, the deploy workflow and the CI
+  steps that test them are the backend's.** BUG-063 (my own ADR-014 regression) and BUG-064 (my own
+  workflow's trigger) were mine to find and fix; both are merged.
+- **The Android E2E workflow and `apps/mobile` are the lead's.** A red leg on their paths is reported
+  per §16, never investigated and never re-run twice.
+
+## Machine limits (the founder's, 2026-10-26, binding)
+
+- Docker is capped at **3 GB** by `.wslconfig`. Start Postgres **only** for the `db`-marked suite and
+  stop it after (`docker compose down`).
+- **15 minutes without output is a stop** (§15): write what hung and what is done instead.
+- One rerun per merge; a leg red for a cause outside the diff is reported, not re-run (§17.4/§16).

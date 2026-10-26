@@ -29,6 +29,7 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
+from app.entitlements import Plan, SubscriptionState
 from app.locations import location_id_for
 from app.repo import (
     DeliveryEventRow,
@@ -36,6 +37,7 @@ from app.repo import (
     RunRecord,
     RunTemplate,
     SqlAlchemyRepo,
+    SubscriptionRow,
 )
 from app.routing import PlannedStop, RoutePlan
 
@@ -324,6 +326,125 @@ class TestTheEvents:
         assert later.stored == 2  # the one already there is not counted
         assert later.conflicts == ()
         assert repo.cursor(shift_id) == 3
+
+    def test_the_subscription_round_trip_through_sql(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """ADR-017: the stored row reads back as the same decision.
+
+        The entitlement is the app's only gate, so what the SQL repo returns must
+        be exactly what the in-memory repo returns: the plan, the state and the
+        source's own id. Idempotence on the courier is proven too - a provider
+        retry and a duplicated gateway call must not fork the truth.
+        """
+        started = datetime(2026, 10, 26, 7, 0, tzinfo=UTC)
+        row = SubscriptionRow(
+            courier_id=COURIER,
+            plan=Plan.SOLO,
+            state=SubscriptionState.ACTIVE,
+            source="play",
+            source_id="play-purchase-1",
+            started_at=started,
+            renews_at=started + timedelta(days=30),
+            ends_at=None,
+        )
+
+        assert repo.put_subscription(row) is True
+        stored = repo.get_subscription(COURIER)
+        assert stored is not None
+        assert stored.plan is Plan.SOLO
+        assert stored.state is SubscriptionState.ACTIVE
+        assert stored.source == "play"
+        assert stored.source_id == "play-purchase-1"
+
+        # A correction is not a new row: the courier keeps one subscription.
+        corrected = SubscriptionRow(
+            courier_id=COURIER,
+            plan=Plan.SOLO,
+            state=SubscriptionState.PAST_DUE,
+            source="play",
+            source_id="play-purchase-1",
+            started_at=started,
+            renews_at=started + timedelta(days=30),
+            ends_at=None,
+        )
+        repo.put_subscription(corrected)
+        corrected_back = repo.get_subscription(COURIER)
+        assert corrected_back is not None
+        assert corrected_back.state is SubscriptionState.PAST_DUE
+        assert corrected_back.source_id == "play-purchase-1"
+
+        # Another courier's subscription is theirs alone.
+        assert repo.get_subscription("driver-8") is None
+
+        # The correction is monotonic: a replay of an OLDER fact must not
+        # rewind a courier's access (a stale webhook is a fact, not a state).
+        stale = SubscriptionRow(
+            courier_id=COURIER,
+            plan=Plan.SOLO,
+            state=SubscriptionState.ACTIVE,
+            source="play",
+            source_id="play-purchase-1",
+            started_at=started,
+            renews_at=started - timedelta(days=30),
+            ends_at=None,
+        )
+        assert repo.put_subscription(stale) is False
+        kept = repo.get_subscription(COURIER)
+        assert kept is not None
+        assert kept.state is SubscriptionState.PAST_DUE  # unaffected by the older fact
+
+    def test_the_correction_is_what_the_protocol_says(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """The SQL repo answers the protocol's True/False like the memory one.
+
+        (The review's blocker: `put_subscription` returned a hardcoded True, so
+        the two implementations disagreed on the same method and the SQL side
+        was never tested.)"""
+        from app.repo import SubscriptionRow
+
+        started = datetime(2026, 10, 26, 7, 0, tzinfo=UTC)
+        row = SubscriptionRow(
+            courier_id=COURIER,
+            plan=Plan.SOLO,
+            state=SubscriptionState.ACTIVE,
+            source="play",
+            source_id="play-purchase-1",
+            started_at=started,
+            renews_at=started + timedelta(days=30),
+            ends_at=None,
+        )
+
+        assert repo.put_subscription(row) is True
+        assert repo.put_subscription(row) is False
+
+    def test_a_fact_with_a_naive_timestamp_is_refused_before_the_repo(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """ADR-018: the fact layer requires an offset.
+
+        The SQL driver would coerce a naive parameter through the session's
+        timezone (a silent reinterpretation), while the in-memory guard compares
+        aware datetimes and would raise - so the disagreement is refused at the
+        boundary where both paths meet.
+        """
+        from app.providers import fact_from_stripe_event
+
+        event = {
+            "courier_id": COURIER,
+            "purchase": {
+                "id": "sub_naive",
+                "plan": "solo",
+                "state": "active",
+                "started_at": "2026-10-26 07:00:00",  # no offset
+                "renews_at": "2026-11-25 07:00:00",
+                "ends_at": None,
+            },
+        }
+
+        with pytest.raises(ValueError, match="no timezone"):
+            fact_from_stripe_event(event)
 
     def test_an_event_is_readable_by_id(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
         shift_id = a_shift(engine)

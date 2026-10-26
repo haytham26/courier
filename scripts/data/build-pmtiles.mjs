@@ -25,7 +25,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /** The pack the app reads (apps/mobile/src/maps/offlinePack.ts). */
 const PACK_DIRECTORY = join('apps', 'mobile', 'assets', 'maps');
@@ -35,6 +35,33 @@ const PACK_FORMAT_VERSION = 1;
 const PACK_REGION = 'canterbury';
 
 /** The pack has to stay under this ceiling (V4 11.1). */
+
+/**
+ * The heap planetiler gets, in gigabytes.
+ *
+ * planetiler's README: give the JVM about 0.5x the input `.osm.pbf`, leaving the rest of the
+ * machine's RAM for the memory-mapped files. The New Zealand extract is around 400 MB, the
+ * OpenMapTiles profile is the heaviest one, and the runner is shared: 4 GB is the margin the
+ * build was verified with. The value travels in `JAVA_TOOL_OPTIONS`, which the launcher, the
+ * jar and Homebrew all read (the launcher's `--memory` flag is launcher-only).
+ */
+const PLANETILER_HEAP_GB = Number(process.env.MAP_PACK_PLANETILER_HEAP_GB || 4);
+
+/** The tools the build runs, and how each was pinned. */
+const PINNED_TOOLS = {
+  planetiler: {
+    /** The release the workflow downloads by this exact asset name. */
+    asset: 'planetiler.jar',
+    download: 'https://github.com/onthegomap/planetiler/releases/latest/download/planetiler.jar',
+    licence: 'Apache-2.0',
+  },
+  pmtiles: {
+    asset: 'pmtiles_linux_amd64',
+    download:
+      'https://github.com/protomaps/go-pmtiles/releases/latest/download/pmtiles_linux_amd64',
+    licence: 'BSD-3-Clause',
+  },
+};
 const PACK_SIZE_CEILING_BYTES = 50 * 1024 * 1024;
 
 /** The working envelope of the region, from packages/shared/src/constants.ts. */
@@ -316,9 +343,7 @@ function checkTerms(source, args) {
   }
 
   if (source.offlineUse === 'conditional') {
-    console.warn(
-      `build-pmtiles: "${source.title}" only allows an offline use under conditions.`,
-    );
+    console.warn(`build-pmtiles: "${source.title}" only allows an offline use under conditions.`);
     console.warn(`  "${source.condition}"`);
     console.warn(`  Read on ${source.offlineUseReadOn} at ${source.offlineUseUrl}`);
     if (args.acceptConditions !== source.condition) {
@@ -343,6 +368,10 @@ function buildPlan(source, args) {
   const output = args.output
     ? resolve(REPO_ROOT, args.output)
     : resolve(REPO_ROOT, PACK_DIRECTORY, PACK_FILE);
+  const tileset = args.output
+    ? `${resolve(REPO_ROOT, args.output).replace(/\.pmtiles$/, '')}.tileset.pmtiles`
+    : `${resolve(REPO_ROOT, PACK_DIRECTORY, PACK_FILE).replace(/\.pmtiles$/, '')}.tileset.pmtiles`;
+
   const bbox = [
     CANTERBURY_BOUNDS.west,
     CANTERBURY_BOUNDS.south,
@@ -353,6 +382,7 @@ function buildPlan(source, args) {
   return {
     source,
     output,
+    tileset,
     manifest: join(dirname(output), PACK_MANIFEST),
     bbox,
     minZoom: args.minZoom,
@@ -374,24 +404,49 @@ function printPlan(plan) {
   console.log(`  bbox             ${plan.bbox}`);
   console.log(`  zooms            ${plan.minZoom} to ${plan.maxZoom}`);
   console.log(`  pack             ${plan.output}`);
+  console.log(
+    `  tileset          ${plan.tileset} (the whole-country build, removed with the pack)`,
+  );
   console.log(`  manifest         ${plan.manifest}`);
   console.log(`  size ceiling     ${PACK_SIZE_CEILING_BYTES} bytes`);
   console.log('');
   console.log('  The build runs these steps:');
   console.log(
-    `    1. planetiler --area=christchurch --output=<tiles>   (the tileset from the extract)`,
+    `    1. planetiler --osm-path=<extract> --output=<tileset> --force   (the OpenMapTiles tileset)`,
   );
-  console.log(`    2. pmtiles extract <tiles> <pack> --bbox=${plan.bbox} --maxzoom=${plan.maxZoom} --minzoom=${plan.minZoom}`);
-  console.log(`    3. versatiles reduce --style courier.json <pack>    (the style-driven size cut)`);
-  console.log(`    4. sha256 of the pack, written into ${PACK_MANIFEST}`);
+  console.log(
+    `    2. pmtiles extract <tiles> <pack> --bbox=${plan.bbox} --maxzoom=${plan.maxZoom} --minzoom=${plan.minZoom}`,
+  );
+  console.log(`    3. pmtiles verify <pack>    (the archive is ordered, its header is right)`);
+  console.log(`    4. pmtiles show --header-json <pack>    (the real header, in the manifest)`);
+  console.log(`    5. sha256 and the tool versions, written into ${PACK_MANIFEST}`);
   console.log('');
-  console.log('  The tools are pinned by SHA-256; record the versions in the manifest.');
+  console.log(
+    `  Heap: JAVA_TOOL_OPTIONS=-Xmx${PLANETILER_HEAP_GB}g (planetiler README: ~0.5x the .osm.pbf)`,
+  );
+  console.log(
+    '  The tools are pinned by the workflow that runs this script (MAP_PACK workflow, map-pack.yml);',
+  );
+  console.log('  their versions are recorded in the manifest with the pack.');
   console.log('  Nothing is downloaded by this script: the extract has to be on the machine.');
 }
 
+/**
+ * The arguments that ask a tool for its version.
+ *
+ * planetiler takes `--version`; the pmtiles CLI is subcommand-based and only
+ * knows `version` (verified 2026-10-25: `pmtiles --version` is an unknown
+ * flag, and the CLI reference lists `version` as a command).
+ */
+export const VERSION_ARGS = {
+  planetiler: ['--version'],
+  pmtiles: ['version'],
+};
+
 function requireTool(tool) {
   try {
-    return execFileSync(tool, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    const args = VERSION_ARGS[tool] || ['--version'];
+    return execFileSync(tool, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   } catch (error) {
     console.error(
       `build-pmtiles: ${tool} is not on the PATH, so the build cannot run. Install the pinned version and try again.`,
@@ -400,8 +455,70 @@ function requireTool(tool) {
   }
 }
 
+/**
+ * The credit the OpenMapTiles schema and profile require.
+ *
+ * planetiler's README: "Any map generated with the profile based on OpenMapTiles or a derivative
+ * must visibly credit OpenMapTiles." The app shows the pack manifest's attribution offline, and
+ * this is where it comes from.
+ */
+const OPENMAPTILES_ATTRIBUTION =
+  'Vector tiles and schema derived from OpenMapTiles, licensed under CC BY 4.0, (c) OpenMapTiles contributors';
+
+/**
+ * The archive header as the CLI prints it.
+ *
+ * The build refuses to continue without it: the manifest's job is to be the
+ * evidence of what shipped, and a manifest with a guessed header is not
+ * evidence.
+ */
+function archiveHeader(file) {
+  const printed = execFileSync('pmtiles', ['show', file, '--header-json'], {
+    encoding: 'utf8',
+  });
+  try {
+    return JSON.parse(printed);
+  } catch (error) {
+    console.error('build-pmtiles: the archive header did not parse as JSON.');
+    console.error(error);
+    process.exit(1);
+  }
+}
+
 function sha256Of(file) {
   return createHash('sha256').update(readFileSync(file)).digest('hex');
+}
+
+/**
+ * The argv the build hands each tool.
+ *
+ * One function, exported, so the invocation is a unit-testable decision rather
+ * than a string inside a printed plan: the review's point was that a plan can
+ * say `--osm-path` while the execute step runs `--download`.
+ *
+ * Every flag is one the tools' own documentation publishes (verified
+ * 2026-10-25 against planetiler's README and the pmtiles CLI reference):
+ *  - planetiler: `--osm-path` is the extract on disk, `--force` lets a previous
+ *    build be overwritten, and the OpenMapTiles profile is the default - the
+ *    schema `apps/mobile/src/maps/styles.ts` reads. planetiler has no
+ *    `--overlay` and no `--profile`.
+ *  - pmtiles: `extract` clips the whole-country tileset to the envum in the
+ *    CLI's own bbox order (MIN_LON,MIN_LAT,MAX_LON,MAX_LAT).
+ */
+export function buildCommands(plan) {
+  return {
+    planetiler: ['--osm-path=' + plan.input, '--output=' + plan.tileset, '--force'],
+    pmtiles: [
+      'extract',
+      plan.tileset,
+      plan.output,
+      '--bbox=' + plan.bbox,
+      '--maxzoom=' + plan.maxZoom,
+      '--minzoom=' + plan.minZoom,
+    ],
+    verify: ['verify', plan.output],
+    headerJson: ['show', plan.output, '--header-json'],
+  };
 }
 
 function executePlan(plan) {
@@ -409,7 +526,9 @@ function executePlan(plan) {
   const pmtilesVersion = requireTool('pmtiles');
 
   if (!plan.input) {
-    console.error('build-pmtiles: --input is required to build: the extract has to be on the machine.');
+    console.error(
+      'build-pmtiles: --input is required to build: the extract has to be on the machine.',
+    );
     if (plan.source.downloadUrl) {
       console.error(`build-pmtiles: the extract comes from ${plan.source.downloadUrl}`);
     }
@@ -426,24 +545,34 @@ function executePlan(plan) {
 
   mkdirSync(dirname(plan.output), { recursive: true });
 
-  console.log(`build-pmtiles: building with planetiler ${planetilerVersion} and pmtiles ${pmtilesVersion}`);
-  execFileSync(
-    'planetiler',
-    ['--area=christchurch', `--download=${plan.input}`, `--output=${plan.output}.tiles`],
-    { stdio: 'inherit' },
+  console.log(
+    `build-pmtiles: building with planetiler ${planetilerVersion} and pmtiles ${pmtilesVersion}, heap ${PLANETILER_HEAP_GB}g`,
   );
-  execFileSync(
-    'pmtiles',
-    [
-      'extract',
-      `${plan.output}.tiles`,
-      plan.output,
-      `--bbox=${plan.bbox}`,
-      `--maxzoom=${plan.maxZoom}`,
-      `--minzoom=${plan.minZoom}`,
-    ],
-    { stdio: 'inherit' },
-  );
+
+  // planetiler's built-in profile is OpenMapTiles, which is the schema
+  // apps/mobile/src/maps/styles.ts reads (its `roads`, `water`, `buildings`
+  // source layers, with `render_height` on the buildings). The input is the
+  // extract on disk: `--osm-path` is the documented flag for that, and
+  // `--force` keeps a previous build from stopping this one.
+  const commands = buildCommands(plan);
+
+  execFileSync('planetiler', commands.planetiler, {
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      JAVA_TOOL_OPTIONS: '-Xmx' + PLANETILER_HEAP_GB + 'g',
+    },
+  });
+
+  // The tileset covers the whole country; the pack is Canterbury at the
+  // zooms the courier drives at. The bbox order is the CLI's:
+  // MIN_LON,MIN_LAT,MAX_LON,MAX_LAT.
+  execFileSync('pmtiles', commands.pmtiles, { stdio: 'inherit' });
+
+  // The check the extract cannot do for itself: the archive is ordered and
+  // its header says what the extract step produced.
+  execFileSync('pmtiles', commands.verify, { stdio: 'inherit' });
+  const header = archiveHeader(plan.output);
 
   const bytes = statSync(plan.output).size;
   if (bytes > PACK_SIZE_CEILING_BYTES) {
@@ -461,27 +590,46 @@ function executePlan(plan) {
     source: plan.source.title,
     sourceLicence: plan.source.licence,
     sourceLicenceUrl: plan.source.licenceUrl,
-    attribution: plan.source.attribution,
+    // Every party that must be credited: the data, the tool schema and the
+    // profile the tiles are baked with. planetiler's README is explicit
+    // that an OpenMapTiles-derived pack carries the OpenMapTiles credit.
+    attribution: [plan.source.attribution, OPENMAPTILES_ATTRIBUTION].join(' '),
     minZoom: plan.minZoom,
     maxZoom: plan.maxZoom,
     bytes,
     sha256: sha256Of(plan.output),
+    // The tool's own header, verbatim: its keys are the tool's business
+    // (`tile_type`, `tile_compression`, ... - snake_case in this version), and
+    // guessing them is how a manifest records undefined.
+    archive: { header },
+    tools: {
+      planetiler: { ...PINNED_TOOLS.planetiler, version: planetilerVersion },
+      pmtiles: { ...PINNED_TOOLS.pmtiles, version: pmtilesVersion },
+    },
   };
 
   writeFileSync(plan.manifest, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   console.log(`build-pmtiles: wrote ${plan.output} (${bytes} bytes) and ${plan.manifest}`);
 }
 
-const args = parseArgs(process.argv.slice(2));
-const source = resolveSource(args);
-checkTerms(source, args);
-const plan = buildPlan(source, args);
-printPlan(plan);
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  const source = resolveSource(args);
+  checkTerms(source, args);
+  const plan = buildPlan(source, args);
+  printPlan(plan);
 
-if (!args.execute) {
-  console.log('');
-  console.log('build-pmtiles: this is the plan. Pass --execute to build it.');
-  process.exit(0);
+  if (!args.execute) {
+    console.log('');
+    console.log('build-pmtiles: this is the plan. Pass --execute to build it.');
+    process.exit(0);
+  }
+
+  executePlan(plan);
 }
 
-executePlan(plan);
+// Run as a program, importable as a module by the tests: the run guard keeps
+// an import side-effect free.
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  main();
+}
