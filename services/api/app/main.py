@@ -35,6 +35,7 @@ from .agents.omniroute import (
 from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
 from .auth.routes import router as auth_router
 from .auth.websocket import get_websocket_principal
+from .entitlements import entitlement_of
 from .locations import location_id_for
 from .pod import (
     POD_MAX_BYTES,
@@ -831,6 +832,25 @@ def intake_manifest(
         text=text,
         shift_id=shift_id,
     )
+
+
+@app.get("/account/entitlements")
+def get_entitlements(
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The caller's entitlement: is this subscription active, and what does it open.
+
+    The app gates on "is this subscription active" and never on how it was paid
+    (D44), so this is the only place the answer is decided. A courier whose card
+    is failing still answers `active` - the grace window is the rule (ADR-017 §1).
+    """
+    decision = entitlement_of(repo.get_subscription(principal.user_id))
+    return {
+        "active": decision.active,
+        "plan": decision.plan.value if decision.plan else None,
+        "features": sorted(decision.features),
+    }
 
 
 @app.get("/shifts/{shift_id}/stops")
