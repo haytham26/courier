@@ -137,24 +137,37 @@ libraries only, no iOS work until its gate.
 
 **FOUNDER_TODO:** an Apple Developer account for the iOS build lane; a real-device BUG-051 launch test; the sphere's real-device check; the Play account for the internal test track.
 
-## The state at the end of session 5 (2026-10-27)
+## The state at the end of session 5 (2026-10-27) - corrected by session 6 (2026-10-27), the founder's two directives
 
 **Merged with the ritual, each with its archive tag and the ls-remote proof:** #36 (the failure-dump runner), #59 (the handoff correction + BUG-066 in the register), #30 (10 Summary), #12 (the recordings), #42 (01 Welcome).
 
-**BUG-066 is SOLVED at the root, by the dump PR #36 taught the runner to keep.** The app is not slow at cold start - it CRASHES: Fatal signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), gwp_asan::GuardedPoolAllocator::deallocate+380, the caller libhermesvm.so, 1 to 2 seconds into a cold start, on the app own main thread. That is BUG-061 signature (the founder was right that it is not only the emulator GL and it can hit real devices), and the dump names the frame the earlier tombstones never carried. It is NOT the image Chromium crash of BUG-051, so the relaunch guard must not ride it - libhermesvm is not libmonochrome.
+**BUG-066 is DIAGNOSED, not solved. No fix is merged.** The cause is a native memory error at cold start: SIGSEGV, code 2 (SEGV_ACCERR), in `gwp_asan::GuardedPoolAllocator::deallocate` (+380, bionic), the caller **libhermesvm.so**, 1 to 2 seconds into a cold start, on the app's own main thread. Two tombstones carry it, from two different builds that share the identical libhermesvm (BuildId `693b3d3679eb945fc61d133ed4f9d498bdc58ef4`, verified against the APKs in the runs' evidence artifacts):
 
-**The one contradiction the next session must resolve first:** the same tombstone appears on PR #18 (run 40274121944), which already carries the sphere lifecycle fix built for BUG-061 - so that fix is not the (only) cause. main own scheduled run 40296944488 (b0cfd6b) was green on the same app code hours earlier. So the differentiator is not yet the app code alone. Next experiment, per PLAYBOOK 3: bisect the app diff by half, and check whether the Hermes bundle differs between the green run and the red ones - a stale or mismatched bytecode bundle is the classic cause of exactly this signature.
+| Run | Branch | When | Uptime | Flow that caught it |
+|---|---|---|---|---|
+| [40274121944](https://github.com/haytham26/courier/actions/runs/40274121944) | #18 (feat/t6-copilot - WITH BUG-061's sphere lifecycle fix) | 05:48 | 1 s | compat.yaml's cold start |
+| [40334465490](https://github.com/haytham26/courier/actions/runs/40334465490) | #49 (fix/e2e-determinism e68a8d8) | 14:16 | 2 s | smoke.yaml's cold start |
+
+Both backtraces end on the same Hermes frames (0x148aee, 0x293ba1, 0x1bf197, hoost_make_fcontext) - one bug, not two. #18's head carries the sphere fix and still dies the same death, so the swirl is NOT the cause. The shipped `.so` is stripped (no `.symtab`; 213 dynamic symbols, none covering the static Hermes frames), so the frames stay unnamed until the unstripped `merged_native_libs` build is symbolicated. **It is NOT the image Chromium crash of BUG-051** - libhermesvm is not libmonochrome, so the relaunch guard must not ride it.
+
+**The "contradiction" named above is not a contradiction, and the file that named it is corrected here.** GWP-ASan samples a random fraction of allocations; Android 14 (api-34) runs Recoverable GWP-ASan by default on about 1% of app launches, one report per launch (the NDK GWP-ASan guide, checked 2026-10-27). The same bug kills some cold starts and not others: a green run on main (40296944488) clears nothing about main, and neither does #49's dispatch 40324045418 going green at 12:38 before its own PR run went red at 13:52. **The fix is once, at the root, with the rate proven on both legs.**
+
+**Running while this file is true:** `exp/bug-066-gwpasan` (never merges): `android:gwpAsanMode="always"` per the NDK guide, env-gated on `GWP_ASAN=1`, 30 cold starts per leg, the first death kept whole (the crash buffer plus the last 5,000 main-buffer lines - the report's `Cause: [GWP-ASan]` line and both its traces live there when the report path completes), and the unstripped `merged_native_libs` uploaded so the tombstone's Hermes frames can be named. The rate and the report go into the BUG-066 row; the fix goes where the frames point.
 
 **The queue as it stands:**
 
 | PR | What | State |
 |---|---|---|
-| **#18** | 07 Copilot + the sphere lifecycle fix + the compat status-line fix | api-34 red at compat.yaml first-screen assert = the crash above; needs the crash root cause |
+| **#18** | 07 Copilot + the sphere lifecycle fix + the compat status-line fix | api-34 red at compat.yaml's cold start = BUG-066 above; needs the crash root cause |
 | **#40** | 13 Lock screen | api-34 red on the same class; needs the same |
-| **#49** | the E2E is deterministic (BUG-065) | head e68a8d8, gates green; both legs red on the app crash, so it waits for #18 |
+| **#49** | the E2E is deterministic (BUG-065) | head e68a8d8, gates green; both legs red on the BUG-066 crash, so it waits for the fix |
 | **#52** | 02 Sign in + the Sign out row | the sign-out landing failure reproduces only on the emulator; the jest guard passes and does not reproduce it (14.1); needs the failure dump |
 | **#58** | the registers tell the truth (B1) | open on purpose until #49 lands |
 
-**The audit order for the app side is in docs/plan/A1-handover.md** (the backend shipped POST /demo/runs and the typed client; @courier/shared is not yet a dependency of apps/mobile, and pps/mobile/app/(tabs)/index.tsx still imports mockStops). A5 (staging) and the rest of docs/plan/AUDIT_2026-10-25.md follow in its own order.
+**The numbering, per the founder:** main ends at BUG-067. BUG-065 is #49's and is still unmerged. The next free number is **BUG-068**, taken from origin/main at the moment each new row is filed.
+
+**The audit order for the app side is in docs/plan/A1-handover.md** (the backend shipped POST /demo/runs and the typed client; @courier/shared is not yet a dependency of apps/mobile, and apps/mobile/app/(tabs)/index.tsx still imports mockStops). A5 (staging) and the rest of docs/plan/AUDIT_2026-10-25.md follow in its own order.
 
 **The rules that bit this session, all now in the traps list:** a merge whose conflict you resolve in the worktree does not stage the rest of it (my BUGS.md and workflow changes were nearly left out of the merge commit); PowerShell Set-Content eats backticks as escapes (BEL and FF land in the file); a gate that is not wired into the floor job passes silently; and the installers prefix cli- onto MAESTRO_VERSION, so a pinned release downloaded through the installer 404s.
+
+**The traps of session 6 (2026-10-27), added while the file is this true:** every shell starts clean - `$env:GH_TOKEN` must be loaded from `.env.local` again in each command, and the token is never printed. The shell tool marks a command failed when a child writes to stderr: `git push` said "failed" and had pushed (check `git ls-remote`, not the exit code). Editing `app.json` with a JSON rewrite reformats untouched arrays - use the edit tool. `$ProgressPreference` takes `SilentlyContinue`, not the name the autocomplete suggests. The pinned emulator-runner has no `env` input, but the step-level `env:` still reaches the bash it runs (the sweep's notice line proves it in the log).
