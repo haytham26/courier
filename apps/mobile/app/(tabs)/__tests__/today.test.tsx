@@ -62,8 +62,12 @@ jest.mock('@/voice/useVoice', () => ({
   }),
 }));
 
+// The router is a shared mock so a test can assert where an action navigates:
+// the End of day row is the way into the summary screen, and the flow that
+// rides it needs the navigation to be a fact, not a hope.
+const mockRouter = { navigate: jest.fn(), push: jest.fn() };
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ navigate: jest.fn(), push: jest.fn() }),
+  useRouter: () => mockRouter,
 }));
 
 /** The brief of the tabs, in memory: the ask is recorded, the line stays unset. */
@@ -105,10 +109,21 @@ describe('Today', () => {
     expect(screen.getByTestId('today-go')).toBeTruthy();
     expect(screen.getByTestId('today-scan')).toBeTruthy();
     expect(screen.getByTestId('today-add-by-voice')).toBeTruthy();
+    expect(screen.getByTestId('today-end-of-day')).toBeTruthy();
     expect(screen.getByTestId('today-mark-delivered')).toBeTruthy();
     expect(screen.getByTestId('today-skip')).toBeTruthy();
     expect(screen.getByTestId('today-fail')).toBeTruthy();
     expect(screen.getByTestId('stop-pin-2')).toBeTruthy();
+  });
+
+  it("opens the summary of the day from Today's End of day action", () => {
+    renderScreen();
+
+    // The way in is a root-stack route, and the flow rides it: the dock carries
+    // no summary tab, so Today opens it.
+    fireEvent.press(screen.getByTestId('today-end-of-day'));
+
+    expect(mockRouter.navigate).toHaveBeenCalledWith('/summary');
   });
 
   it('the brief line falls back to the plain sentence when the service is quiet', () => {

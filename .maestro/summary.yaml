@@ -1,0 +1,47 @@
+appId: com.courier.copilot
+name: The end-of-day summary
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The way in is Today's End of day action: the dock carries no summary tab, so
+# Today opens it (the run's own end of day).
+# The action lives inside the run sheet, and the sheet opens at peek - the
+# morning glance - where the screen's centre, where a tap's coordinate is
+# judged, sits above the sheet's top edge. The courier raises the sheet with
+# its grabber first (the design's own gesture, the same one today-list rides).
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- scrollUntilVisible:
+    element:
+      id: "today-end-of-day"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "today-end-of-day"
+- extendedWaitUntil:
+    visible:
+      id: "summary-screen"
+    timeout: 30000
+# What the day says: the earned amount, the three counts and the split per
+# carrier. The testIDs are the contract, the copy moves with the design.
+- assertVisible:
+    id: "summary-earned"
+- assertVisible:
+    id: "summary-delivered"
+- assertVisible:
+    id: "summary-not-home"
+- assertVisible:
+    id: "summary-driven"
+- assertVisible:
+    id: "summary-carriers"
+# The dock stays on a root-stack route: the summary is not a tab, and the way
+# out is the dock itself.
+- assertVisible:
+    id: "tab-bar"
+- takeScreenshot: "summary"
