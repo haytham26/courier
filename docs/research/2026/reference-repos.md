@@ -29,3 +29,34 @@ Repositories the founder sent for review. Each entry gives the URL, the date it 
   - OpenStreetMap, under its ODbL attribution;
   - the driver's own corrections;
   - the official Google Places API, used only under its terms (a Google map surface or no map, and the 30-day coordinate cache).
+
+## Andee
+
+- **URL:** https://github.com/kuafuai/andee
+- **Read:** 2026-10-27, shallow clone of the default branch.
+- **Licence:** "Andee Open Source License", which is Apache-2.0 with additional conditions (Part A). It is not plain Apache-2.0:
+  - **A.1(a):** no white-labelling;
+  - **A.1(b):** no multi-tenant hosting that drives other people's devices;
+  - **A.1(d):** shipping it, or a derivative, as a component of a product offered to others needs prior written authorisation from KUAFUAI;
+  - **A.4:** future versions may change licence.
+- **What it is:** an Android and macOS agent that operates the device itself. An `AccessibilityService` reads the accessibility tree and a screenshot, then taps and types through a labelled grid, with an OpenAI-compatible model of the user's choice, a memory, a character and voice.
+- **Verdict: reference only, clean-room. No code enters the product without KUAFUAI's written authorisation.** Courier Copilot is a product offered to couriers, so A.1(d) applies to any code taken.
+- **Store risk:** Google Play restricts `AccessibilityService` to apps whose core purpose is accessibility, with a declaration and review. An app that automates other apps for a driver would face rejection, and driving safety rules apply.
+- **Ideas worth studying (clean-room, D24):**
+  - "aim on a labelled grid instead of coordinate maths";
+  - a cheap tool-less classifier call (~500 tokens) before a full turn;
+  - the "stop and ask instead of hammering" rule when the model is unsure;
+  - the per-device memory the user can inspect.
+
+  These ideas fit the Courier Voice turn machine and its token budget (D25, OmniRoute).
+
+## Documenso
+
+- **URL:** https://github.com/documenso/documenso
+- **Read:** 2026-10-27, shallow clone of the default branch.
+- **Licence:** AGPL-3.0, with an `ee/` package and an enterprise plan.
+- **What it is:** an open-source document e-signing platform, an alternative to DocuSign.
+- **Verdict: not in the product.**
+  - AGPL code is clean-room only in Courier Copilot (D24).
+  - The app's proof of delivery is not a legal e-signature workflow, and needs none of this.
+- **Possible later use, as a separate company tool:** self-hosted unmodified, or the hosted plan, for business paperwork such as contractor or partner agreements. That is a founder decision, and only after a review of the AGPL network-use duties.
