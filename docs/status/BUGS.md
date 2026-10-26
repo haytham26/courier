@@ -187,6 +187,24 @@ test, and the feature is never removed to get a green run.
 
 ## BUG-066: the two shapes of the lost first screen (2026-10-26)
 
+## BUG-066 SOLVED at the root, by the failure dump (2026-10-27)
+
+The PR #49 run 40334465490 kept the dump, and the app is NOT merely slow: **it is crashing.** The api-34 leg's maestro-failure-tests/Smoke .../logs/crash-report.txt carries the tombstone:
+
+`
+F/libc  ( 9345): Fatal signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), fault addr 0x7c23fd1df000
+F/DEBUG ( 9403): pid: 9345, tid: 9345, name: courier.copilot  >>> com.courier.copilot <<<
+F/DEBUG ( 9403): Process uptime: 2s
+F/DEBUG ( 9403): #02 gwp_asan::GuardedPoolAllocator::deallocate(void*)+380
+F/DEBUG ( 9403): #03..#13 libhermesvm.so
+`
+
+That is **BUG-061's signature** - the gwp_asan GuardedPoolAllocator::deallocate, the double or invalid free - and the founder's correction was that it is not only the emulator's GL and it can hit real devices. What the dump adds is THE FRAME: the caller is libhermesvm.so (the Hermes JS VM), not libmonochrome, so it is not the image's Chromium crash of BUG-051 and the relaunch guard must not ride it. The crash fires 2 s into a cold start, on the app's own main thread, which is exactly why the first screen never appears and why the failure looks like a blank screen rather than a crash.
+
+**The four api-34 flows that lost the first screen in that run are one crash-loop**, not four bugs: lows.txt reads driving/map/smoke/today-list ail and scan/stops/summary pass on the same leg, which is the app coming back sometimes and not others. The api-35 leg of the same run lost only compat.yaml, at compat-running - which is the OLD copy of that screen, because the fix that moved the status line above the rows is on eat/t6-copilot and this branch is CI-only.
+
+**So the fix is the one already built and proven on eat/t6-copilot:** the sphere lifecycle (both shared values cancelled with cancelAnimation on unmount, the Skia tree built once). #18 lands it; #49 is then re-proven on a head that carries it. Nothing was weakened: no flow, no timeout, no retry.
+
 **Shape B, confirmed twice more, now with its own dump.** The workflow_dispatch proof run 40324045418 (PR #49, head 5c2e4b5, api-35) failed on .maestro/stops.yaml - the eighth flow - and the failure dump the PR #36 runner now keeps ends Maestro log at Clearing app state com.courier.copilot again: it hangs inside clearAppState, on the adb path, before any flow step runs. The run's lows.txt proves the other nine flows passed on the same leg, and e2e-pins.txt records the exact toolset (Maestro cli-2.11.0, emulator build 16632760, system image revision 9 on this leg).
 
 The rule for this shape is PLAYBOOK 19.2.4 as the founder set it: at most one re-run, only for a runner death before any flow ran, with the run link recorded in the PR. The re-run of that leg only is running, and the PR says so with the links. Shape A (the app started, alive, fast, and not reaching the first screen) is unchanged and still open on eat/t6-copilot.
