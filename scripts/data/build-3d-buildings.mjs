@@ -6,7 +6,8 @@
  *   node scripts/data/build-3d-buildings.mjs --source linz-nz-building-outlines \
  *     --write-manifest docs/evidence/maps/buildings.manifest.json
  *   node scripts/data/build-3d-buildings.mjs --source linz-nz-building-outlines \
- *     --execute --outlines data/linz/building-outlines.geojson \
+ *     --execute --profile scripts/data/courier-overlay.java \
+ *     --outlines data/linz/building-outlines.geojson \
  *     --extract data/linz/newzealand-latest.osm.pbf
  *
  * The script does three things:
@@ -37,11 +38,11 @@
  * URLs are the pages it was read from.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /** The manifest the pack build writes (apps/mobile/src/maps/offlinePack.ts). */
 const PACK_MANIFEST = join('apps', 'mobile', 'assets', 'maps', 'canterbury.manifest.json');
@@ -77,7 +78,8 @@ const SOURCES = {
     licenceUrl:
       'https://www.linz.govt.nz/products-services/data/licensing-and-using-data/attributing-linz-data',
     licenceReadOn: '2026-10-22',
-    attribution: 'Sourced from the LINZ Data Service and licensed for reuse under the CC BY 4.0 licence',
+    attribution:
+      'Sourced from the LINZ Data Service and licensed for reuse under the CC BY 4.0 licence',
     required: true,
   },
   'osm-building-heights': {
@@ -135,6 +137,7 @@ function parseArgs(argv) {
   const args = {
     source: 'linz-nz-building-outlines',
     execute: false,
+    profile: null,
     outlines: null,
     extract: null,
     manifest: PACK_MANIFEST,
@@ -160,6 +163,9 @@ function parseArgs(argv) {
         break;
       case '--outlines':
         args.outlines = next();
+        break;
+      case '--profile':
+        args.profile = next();
         break;
       case '--extract':
         args.extract = next();
@@ -214,7 +220,9 @@ function printUsage() {
 function resolveSource(id) {
   const known = SOURCES[id];
   if (!known) {
-    console.error(`build-3d-buildings: the source "${id}" is not registered, so its terms are unknown.`);
+    console.error(
+      `build-3d-buildings: the source "${id}" is not registered, so its terms are unknown.`,
+    );
     console.error(
       'build-3d-buildings: an unknown source is refused. Register it in this script with its licence, or use one of: ' +
         Object.keys(SOURCES).join(', '),
@@ -233,7 +241,9 @@ function resolveSource(id) {
 function checkTerms(sources) {
   for (const source of sources) {
     if (source.offlineUse === 'forbidden') {
-      console.error(`build-3d-buildings: refused. The terms of "${source.title}" forbid the offline use.`);
+      console.error(
+        `build-3d-buildings: refused. The terms of "${source.title}" forbid the offline use.`,
+      );
       console.error(`  "${source.offlineUseQuote}"`);
       console.error(`  Read on ${source.offlineUseReadOn} at ${source.offlineUseUrl}`);
       console.error(
@@ -300,18 +310,36 @@ function printPlan(plan) {
   }
   console.log('');
   console.log('  The build runs these steps:');
-  console.log('    1. planetiler with the courier profile and the outlines overlay');
+  console.log(
+    '    1. planetiler with the overlay profile that adds the LINZ outlines to the OpenMapTiles',
+  );
+  console.log('       schema (the profile is the argument; no flag can add a second source)');
   console.log(`    2. the height of a building: levels x ${LEVEL_HEIGHT_METRES} m,`);
-  console.log(`       or the height on the building, or ${DEFAULT_BUILDING_HEIGHT_METRES} m when there is neither`);
+  console.log(
+    `       or the height on the building, or ${DEFAULT_BUILDING_HEIGHT_METRES} m when there is neither`,
+  );
   console.log('    3. the buildings section of the manifest, with the licence of every input');
   console.log('');
-  console.log('  The tools are pinned by SHA-256; record the versions in the manifest.');
+  console.log('  The tools are pinned by the workflow that runs this script (map-pack.yml);');
+  console.log('  their versions are recorded in the manifest with the pack.');
   console.log('  Nothing is downloaded by this script: the inputs have to be on the machine.');
 }
 
+/**
+ * The arguments that ask a tool for its version.
+ *
+ * planetiler takes `--version`; the pmtiles CLI is subcommand-based and only
+ * knows `version` (verified 2026-10-25).
+ */
+const VERSION_ARGS = {
+  planetiler: ['--version'],
+  pmtiles: ['version'],
+};
+
 function requireTool(tool) {
   try {
-    return execFileSync(tool, ['--version'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    const args = VERSION_ARGS[tool] || ['--version'];
+    return execFileSync(tool, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   } catch {
     console.error(
       `build-3d-buildings: ${tool} is not on the PATH, so the build cannot run. Install the pinned version and try again.`,
@@ -333,7 +361,10 @@ const source = resolveSource(args.source);
 
 // Every source that goes into the build is checked, not only the one that
 // was named on the command line.
-const sources = [source, ...REQUIRED_SOURCES.filter((id) => id !== args.source).map((id) => SOURCES[id])];
+const sources = [
+  source,
+  ...REQUIRED_SOURCES.filter((id) => id !== args.source).map((id) => SOURCES[id]),
+];
 checkTerms(sources);
 
 const plan = {
@@ -343,6 +374,10 @@ const plan = {
   outlines: args.outlines ? resolve(REPO_ROOT, args.outlines) : null,
   extract: args.extract ? resolve(REPO_ROOT, args.extract) : null,
   manifest: resolve(REPO_ROOT, args.manifest),
+  // The overlay profile the operator passes: a second data source rides a
+  // profile, so the bake needs it as an argument and the gate reads it.
+  profile: args.profile ? resolve(REPO_ROOT, args.profile) : null,
+  tileset: `${resolve(REPO_ROOT, args.manifest)}.buildings.pmtiles`,
 };
 
 // The manifest can be printed on its own, so the licences can be checked
@@ -367,6 +402,28 @@ if (!args.execute) {
   process.exit(0);
 }
 
+// The bake is a profile run, not a flag run. planetiler's README documents
+// the single-file profile form (`planetiler MyProfile.java --osm-path=<extract>
+// --output=<tiles> --force`) and the YAML config route; there is no `--overlay`
+// and no `--profile=courier`. Without a profile of our own the build says so
+// instead of failing inside a tool with a flag it does not know.
+if (!plan.profile) {
+  console.error('build-3d-buildings: the bake needs the overlay profile as an argument.');
+  console.error(
+    '  A second data source rides a planetiler profile, not a flag: write the profile that adds the',
+  );
+  console.error('  LINZ outlines to the OpenMapTiles schema (the app reads that schema) and pass');
+  console.error('  --profile=<path-to-the-profile>.java (the single-file form).');
+  console.error(
+    '  The pack build (build-pmtiles.mjs) already bakes the OSM buildings with render_height, so the',
+  );
+  console.error(
+    '  app draws the buildings without the LINZ footprints. This script keeps the licence gate and',
+  );
+  console.error('  writes the manifest of that bake. See ADR-016.');
+  process.exit(1);
+}
+
 const planetilerVersion = requireTool('planetiler');
 
 if (!plan.outlines || !plan.extract) {
@@ -384,15 +441,21 @@ if (!existsSync(plan.outlines) || !existsSync(plan.extract)) {
   process.exit(1);
 }
 
-console.log(`build-3d-buildings: baking with planetiler ${planetilerVersion}`);
+console.log(
+  `build-3d-buildings: baking with planetiler ${planetilerVersion} and the profile ${plan.profile}`,
+);
+// The profile is the single-file form planetiler documents. `--osm-path` and
+// `--force` are planetiler's own flags; the outlines path is the profile's
+// argument, which the profile declares when it reads `outlines` from the
+// argument map.
 execFileSync(
   'planetiler',
   [
-    '--area=christchurch',
-    `--download=${plan.extract}`,
-    `--output=${plan.manifest}.tiles`,
-    `--overlay=${plan.outlines}`,
-    '--profile=courier',
+    plan.profile,
+    '--osm-path=' + plan.extract,
+    '--output=' + plan.tileset,
+    '--force',
+    '--outlines=' + plan.outlines,
   ],
   { stdio: 'inherit' },
 );
