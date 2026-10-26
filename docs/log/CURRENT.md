@@ -1,6 +1,21 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W43. **Local `main` == `origin/main` == `a82ebe1`. Lead session 5, 2026-10-26 into 2026-10-27.**
+**Week:** 2026-W43. **Local `main` == `origin/main` == `79dbafe` (PR #70 merged). Lead session 6, 2026-10-27.**
+
+## Lead session 6 (2026-10-27): BUG-066's root cause, the fix, and the queue's unblock
+
+**The state of BUG-066, top to bottom.** The founder's two corrections are on main (PR #70): the bug is **DIAGNOSED — not solved** by anything on main, and the green-vs-crash "contradiction" is GWP-ASan sampling (Android 14's Recoverable GWP-ASan, ~1% of launches, one report per launch). The evidence chain, in order:
+
+1. **The two tombstones** (runs [40274121944](https://github.com/haytham26/courier/actions/runs/40274121944) on #18 and [40334465490](https://github.com/haytham26/courier/actions/runs/40334465490) on #49): SIGSEGV in `gwp_asan::GuardedPoolAllocator::deallocate`, the caller **libhermesvm.so** (BuildId `693b3d3679eb945fc61d133ed4f9d498bdc58ef4`, identical in both builds, verified against each run's APK), the same tail frames on both. The GWP-ASan report's own text (error type + both traces) is in neither: the crash sits inside gwp-asan's report machinery. The shipped `.so` is stripped (0 symtab, 213 dynamic symbols, none covering the static Hermes frames) and RN 0.88's hermes has no unstripped twin on Maven Central (the artifact stops at 0.82.1), so the frames stay named offsets — **that limit is recorded, not hidden**.
+2. **The reproduction** (`exp/bug-066-gwpasan`, archived at tag `archive/exp/bug-066-gwpasan`, 811548b): the documented per-app `android:gwpAsanMode="always"` (NDK guide, checked first) made the bug deterministic — the very first cold start of [run 40384380620](https://github.com/haytham26/courier/actions/runs/40384380620) died 1/1 on api-34, tombstone kept. A harness note for honesty: that dispatch also placed `SWEEP_COUNT` inside the runner action's inputs (ignored), so the sweep itself ran with a count of zero; the 30-launch sweep's first true run is PR #72's, with the env at the step level where it reaches the script.
+3. **The owning code**: **react-native-nitro-modules' `PropNameIDCache` path** (introduced upstream by `c94263763d`, still present in our 0.37.1). Its miss path re-enters JS — `JSICache::getOrCreateCache -> defineGlobal -> Object.defineProperty` — while a `BorrowingReference` to a Hermes-managed `jsi::PropNameID` is held; Hermes frees it and the process dies in Hermes' own deallocate. This is **margelo/nitro#1150** ("SIGSEGV crash in HybridFunction::toJSFunction on Android during cold start", release-only, intermittent, MMKV-triggered — ours arrives through unistyles), and the fix is the maintainer's own patch, confirmed working by a second app in that thread.
+4. **The fix** (PR **#72**, `fix/bug-066-nitro-prop-name-cache`): `pnpm patchedDependencies` on react-native-nitro-modules 0.37.1 — the three `CommonGlobals::Object::defineProperty` overloads stop using the prop-name and global-function caches, `HybridFunction::toJSFunction` builds its name with `jsi::PropNameID::forUtf8`; the Nitro C++ is compiled per app build, so the patch lands in the APK. Red = run 40384380620; the fix is green only with zero sweep deaths on BOTH legs and every flow passing.
+
+**Also open:** PR **#73** (`chore/b2-design-lab-deletion`, stacked on #72): the audit's B2 — 121 files deleted (the `src/design2`, `src/design2a`, `app/design2` lab code, the `directions2/2a`, `directionsLab`, `themes2`, `themes2a` tokens and the five scripts whose only input they were), each group proven unreachable; the APK size change is recorded when its run lands.
+
+**The queue after those merge**, unchanged from the founder's brief: #49 (two green runs on its final head), then #18, #40, #52; #58; B4's mutations and the audit's C1 (squads 1, 3's app side and 6, each with a verifier); A1's app side per `docs/plan/A1-handover.md`; A4, A2, C2, A6; then the rest of the audit and MASTER to the §6 Definition of Done. **The numbering while I am here:** main ends at BUG-067, BUG-065 is #49's and unmerged, the next free number is BUG-068.
+
+## Session 5's log, and its corrections, below this line
 
 ## Merged this session (each: merge commit → archive tag → remote branch deleted, verified with `git ls-remote`)
 
@@ -152,7 +167,7 @@ Both backtraces end on the same Hermes frames (0x148aee, 0x293ba1, 0x1bf197, hoo
 
 **The "contradiction" named above is not a contradiction, and the file that named it is corrected here.** GWP-ASan samples a random fraction of allocations; Android 14 (api-34) runs Recoverable GWP-ASan by default on about 1% of app launches, one report per launch (the NDK GWP-ASan guide, checked 2026-10-27). The same bug kills some cold starts and not others: a green run on main (40296944488) clears nothing about main, and neither does #49's dispatch 40324045418 going green at 12:38 before its own PR run went red at 13:52. **The fix is once, at the root, with the rate proven on both legs.**
 
-**Running while this file is true:** `exp/bug-066-gwpasan` (never merges): `android:gwpAsanMode="always"` per the NDK guide, env-gated on `GWP_ASAN=1`, 30 cold starts per leg, the first death kept whole (the crash buffer plus the last 5,000 main-buffer lines - the report's `Cause: [GWP-ASan]` line and both its traces live there when the report path completes), and the unstripped `merged_native_libs` uploaded so the tombstone's Hermes frames can be named. The rate and the report go into the BUG-066 row; the fix goes where the frames point.
+**The experiment that diagnosed it (done):** `exp/bug-066-gwpasan` (archived as the tag `archive/exp/bug-066-gwpasan`, 811548b; never merged): `android:gwpAsanMode="always"` per the NDK guide, env-gated on `GWP_ASAN=1`, and the unstripped `merged_native_libs` uploaded with the run. It made the crash deterministic — the readiness cold start of run 40384380620 died 1/1 on api-34 — and it named the owner: react-native-nitro-modules' PropNameIDCache path (margelo/nitro#1150). The fix is PR #72; the sweep carries the rate once that run lands.
 
 **The queue as it stands:**
 
