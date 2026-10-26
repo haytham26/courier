@@ -184,6 +184,13 @@
 - The stop status is the latest event by `occurred_at`, ties by arrival; no kind outranks another (the sync squad's C3, "first accepted wins", is superseded). `occurred_at` beyond 1 hour in the future or 7 days in the past is a 422 for the batch.
 - `append_events` answers `AppendResult(stored, conflicts)` in both repositories, so the rules are pinned by the same tests on the in-memory and SQL paths.
 
+## D42 — The map pack pipeline: the documented build, the honest manifest, and the twice-a-week schedule (2026-10-25, backend squad decision, queue 2 item 7)
+
+- ADR-016. `scripts/data/build-pmtiles.mjs` runs the tools' documented CLI (verified against planetiler's README and the pmtiles CLI reference on 2026-10-25): `planetiler --osm-path=<extract> --output=<tileset> --force` with the heap in `JAVA_TOOL_OPTIONS`, then `pmtiles extract` clipped to the Canterbury bbox and zooms, `pmtiles verify`, and `pmtiles show --header-json` recording the archive's real header. The manifest carries the OpenMapTiles credit the licence requires, the tool versions and the sha256.
+- `.github/workflows/map-pack.yml` runs the pipeline twice a week (D26), on dispatch, and on a push that touches the pipeline or the scripts; it publishes the pack and the evidence in `docs/evidence/maps/pack/` as artifacts. It never gates a PR.
+- Four defects found by reading the scripts against the docs, all fixed and pinned by tests: the CLI was invented (`--area=christchurch`, `--download` on a local file, a `versatiles reduce` step that does not exist), the 3D bake used flags planetiler does not have (the bake now refuses and names the overlay profile it needs), and the repo root was one directory short (the pack would have landed in `scripts/apps/...`).
+- Not claimed as done: the 50 MB ceiling is checked but has never been observed, the LINZ overlay profile is not written, and the frame/battery/latency numbers are still the maps squad's to measure.
+
 ## D43 — Android first, then iOS; one cross-platform code base (2026-10-25, founder decision)
 
 - Android reaches full quality first (MASTER_EXECUTION §6 Definition of Done, all 13 screens, E2E green 3 runs in a row, the founder's "Android OK" on a real phone). iOS starts only after that gate.
@@ -199,6 +206,66 @@
   3. The Team plan's org billing (one payer for several drivers), on top of 2.
 - Sources 2 and 3 are built behind a config switch, off by default, with stripe-mock tests, after source 1 and before launch. The founder chooses which sources are switched on at launch; that choice is a FOUNDER_TODO decision, not something to decide now.
 - The store rules are permanent, not a launch-only condition: a digital subscription sold inside the app always uses the store's billing. In New Zealand the app may not link to or promote a web price (no Play alternative billing in NZ; Apple's external-link entitlement does not cover NZ, research §4). A web sale is allowed outside the app, and those users may then sign in and use the app (Apple 3.1.3(b)).
+
+## D45 — The entitlement layer: one truth per courier, gated on "is this subscription active" (2026-10-26, backend squad decision, the first half of D44)
+
+- ADR-017. `services/api/app/entitlements.py` holds the plan vocabulary (`trial` 14 days / `solo` /
+  `team`), the subscription state machine (`trialing → active → past_due → grace → canceled /
+expired`) and the decision (`entitlement_of`). `past_due` never removes access on its own: a
+  courier whose card is failing keeps working through the grace window, because a courier mid-route
+  with a dead phone is the product's worst failure mode.
+- `packages/contracts/db/schema.sql` gains `subscriptions` — one row per courier (the entitlement is
+  a fact about them, not a receipt), with the source's own id beside the shared fields. The source
+  (`play`, `appstore`, `stripe`, `team`) is data, never logic, so the founder's launch choice is a
+  config switch (D44).
+- `GET /account/entitlements` is the app's only gate: it answers `active`, the plan and the feature
+  set, and a courier with no subscription gets a named free answer rather than an error.
+- **Not in this slice:** no provider client (Play needs a test track, Stripe needs keys), no paywall
+  UI, no Team org billing or seats, no NZ GST calculation. Provider slices are FOUNDER_TODO switches
+  with `stripe-mock` tests when they land; the ingest path is designed here, not exercised.
+
+## D46 — The billing providers: one fact shape, three signature rules, an idempotent ingest (2026-10-26, backend squad decision, the provider side of D44)
+
+- ADR-018. `services/api/app/providers.py` defines the fact a provider sends (`ProviderFact`), the
+  verifier protocol (`ProviderVerifier.verify`) and `StripeVerifier`, the first implementation, plus
+  `apply_facts` — which writes through ADR-017's `put_subscription`, so the ingest is idempotent per
+  courier and monotonic in the source's own `renews_at`.
+- The three signature rules the payments squad took from the Stripe client are enforced once, before
+  the body is parsed: **no secret, no comparison** (a misconfiguration, not a permissive default);
+  **a constant tolerance** (300 s, a module constant with a test that it is one, not a per-call
+  window); and **a truncated body is not an event** (the signature is over the exact bytes, so a body
+  that fails it never becomes a partial fact).
+- `POST /billing/webhooks/{{source}}` is the boundary: an unaccepted source is 404 (it is not this
+  API's endpoint), a failed signature rule is 400 with the reason, and an accepted fact is stored.
+  `BILLING_SOURCES` names what this deployment accepts; `BILLING_WEBHOOK_SECRET_<SOURCE>` is read
+  from the environment with no default.
+- The in-memory repo now answers the same monotonic rule the SQL repo's `DO UPDATE` carries — the
+  review of ADR-017 found the two disagreeing, and the rule lives in one place each.
+- **Still the founder's:** the live endpoints, the webhook secrets, and the store verifiers (Play
+  first per D44, through the RevenueCat-shaped layer). The verifiers are exercised against fixtures
+  with locally-computed signatures — no network, no keys.
+
+## D47 - A1's backend half: the demo-run seed and the typed client generated from the contract (2026-10-26, backend squad decision, the first slice of A1)
+
+- ADR-019. `POST /demo/runs` (`services/api/app/demo.py`) seeds the authenticated caller one day - a
+  shift, a run and five stops - with **uuid5 ids derived from the caller and one reason**
+  (`e2e` / `demo` / `dev`), so the ids do not move between calls and are recognisable as demo data
+  in the database and the evidence. The app's core flow (load the run, deliver 3 stops, go offline,
+  deliver 1, sync) now has a real, repeatable day to run against.
+- The gate is the environment, **not** truthiness: `DEMO_SEED_ENABLED` must be exactly `true`, and
+  every other value - `false`, `1`, `True`, `on`, a string with a stray space - answers 404, because
+  the seed writes into the same tables as real data. Anything else is a deployment that seeds demo
+  rows by accident.
+- The seed writes a run, so **a caller racing themself on the same reason is answered with the API's
+  409**, the same conflict `POST /runs` answers - not a 500 from an uncaught `ValueError`.
+- `services/api/scripts/generate_api_client.py` generates `packages/shared/src/generated/api.ts`
+  from `packages/contracts/openapi.yaml` - one interface per schema, one typed signature per
+  operation. The file is **committed**, and the same script's `check` mode is a CI gate: a contract
+  change that leaves a stale client is red. The drift guard now pins three directions -
+  server, contract and client.
+- **Still the lead's:** the app consuming `@courier/shared` (the sign-in, the JWT, the run load, the
+  outbox, one run store) and the E2E job that drives the seeded day end to end. **Still the
+  founder's:** the OCI host and key for A5's staging deploy.
 
 ## D48 — A5's first slice: the staging stack, the two service images, and the deploy with its smoke test (2026-10-27, backend squad decision)
 

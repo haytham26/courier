@@ -32,6 +32,8 @@ tags:
     description: Master Template Lock
   - name: locations
     description: Learned door/park/entry points
+  - name: demo
+    description: The demo-run seed (ADR-019)
 paths:
   /runs/{run_id}/template:
     put:
@@ -146,6 +148,60 @@ paths:
         '503':
           description: No OCR provider is configured yet (the OmniRoute gateway is a founder item)
 
+  /billing/webhooks/{source}:
+    post:
+      tags: [account]
+      summary: A billing provider's webhook (the facts the entitlement layer ingests)
+      description: |
+        The signature rules run before the body is parsed (ADR-018 section 2): an
+        empty signing secret, a replayed timestamp, a truncated body and a source
+        this deployment does not accept each fail closed. The response says only
+        whether the fact was accepted - what it means is the entitlement layer's
+        decision, never the provider's.
+      operationId: billing_webhook
+      parameters:
+        - name: source
+          in: path
+          required: true
+          schema:
+            type: string
+            description: The source this deployment accepts (BILLING_SOURCES)
+      responses:
+        '200':
+          description: The fact was accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accepted]
+                properties:
+                  accepted:
+                    type: boolean
+        '400':
+          description: The webhook failed a signature rule (no secret, a replay, a truncated body)
+        '404':
+          description: This deployment does not accept that source
+
+  /account/entitlements:
+    get:
+      tags: [account]
+      summary: The caller's entitlement, and what it opens
+      description: |
+        The app gates on "is this subscription active" and never on how it was
+        paid (D44). A courier whose card is failing still answers `active`: the
+        grace window is the rule (ADR-017 §1). A courier with no subscription gets
+        a named free answer (`plan: null`), never an error.
+      operationId: get_entitlements
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: The caller's entitlement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entitlement'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /shifts/{shift_id}/stops:
     get:
       tags: [shifts]
@@ -224,6 +280,46 @@ paths:
         '101':
           description: Switching protocols to WebSocket
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /demo/runs:
+    post:
+      tags: [demo]
+      summary: Seed the caller's demo day (a run and its stops, in the real tables)
+      description: |
+        A1's seam (ADR-019): the app's core flow needs a run with stops that
+        exist, with ids that stay still between calls, so an E2E job can reset
+        the phone and run the flow again. The ids are derived from the caller, so
+        a caller always gets their own day back.
+
+        The gate is the environment: without DEMO_SEED_ENABLED=true this route
+        answers 404, because seeding demo rows into a real database is not
+        something an unguarded endpoint should ever do.
+
+        A caller racing themself on the same reason is answered with 409, the
+        same conflict `POST /runs` answers.
+      operationId: seed_demo_run
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoSeedRequest'
+      responses:
+        '200':
+          description: The caller's demo day
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoRun'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: The caller already has this day, written by a racing seed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404': { $ref: '#/components/responses/NotFound' }
 
   /runs:
@@ -454,8 +550,8 @@ paths:
               schema: { $ref: '#/components/schemas/PodResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '413': { description: "The image exceeds 10 MiB" }
-        '415': { description: "Not a JPEG/PNG/HEIC image (checked by magic bytes, not by name)" }
+        '413': { description: 'The image exceeds 10 MiB' }
+        '415': { description: 'Not a JPEG/PNG/HEIC image (checked by magic bytes, not by name)' }
 
   /runs/{run_id}/stops/{stop_id}/pod/{event_id}/url:
     get:
@@ -591,6 +687,70 @@ components:
         message:
           type: string
 
+    DemoSeedRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          enum: [e2e, demo, dev]
+          default: e2e
+          description: The one reason this caller wants a demo day for
+
+    DemoRun:
+      type: object
+      required: [run_id, shift_id, stops]
+      properties:
+        run_id:
+          type: string
+          format: uuid
+        shift_id:
+          type: string
+          format: uuid
+        stops:
+          type: array
+          description: The day's stops, in the seeded order
+          items:
+            $ref: '#/components/schemas/DemoStop'
+
+    DemoStop:
+      type: object
+      required: [id, address, lat, lon]
+      properties:
+        id:
+          type: string
+          format: uuid
+        address:
+          type: string
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        priority:
+          type: boolean
+        parcels:
+          type: integer
+
+    Entitlement:
+      type: object
+      required: [active, features]
+      properties:
+        active:
+          type: boolean
+          description: Whether the subscription covers today
+        plan:
+          description: The plan on the subscription, when there is one
+          oneOf:
+            - type: string
+              enum: [trial, solo, team]
+            - type: 'null'
+        features:
+          type: array
+          description: What the plan opens, sorted
+          items:
+            type: string
+
     IntakeText:
       type: object
       required: [text]
@@ -660,7 +820,7 @@ components:
         kind:
           type: string
           enum: [delivered, left_at, skipped, failed]
-          description: "D4: Voice delivery proof default"
+          description: 'D4: Voice delivery proof default'
         utterance:
           type: string
           description: Exact driver words
@@ -704,7 +864,21 @@ components:
 
     RouteResponse:
       type: object
-      required: [shift_id, run_id, engine, locked, total_distance_m, total_duration_s, parcels, capacity_parcels, over_capacity, window_violations, unroutable_stop_ids, stops]
+      required:
+        [
+          shift_id,
+          run_id,
+          engine,
+          locked,
+          total_distance_m,
+          total_duration_s,
+          parcels,
+          capacity_parcels,
+          over_capacity,
+          window_violations,
+          unroutable_stop_ids,
+          stops,
+        ]
       properties:
         shift_id: { type: string, format: uuid }
         run_id: { type: string, format: uuid }
@@ -724,7 +898,18 @@ components:
           type: array
           items:
             type: object
-            required: [stop_id, sequence, lat, lon, arrival_at, departure_at, distance_m, cumulative_distance_m, late]
+            required:
+              [
+                stop_id,
+                sequence,
+                lat,
+                lon,
+                arrival_at,
+                departure_at,
+                distance_m,
+                cumulative_distance_m,
+                late,
+              ]
             properties:
               stop_id: { type: string, format: uuid }
               sequence: { type: integer }

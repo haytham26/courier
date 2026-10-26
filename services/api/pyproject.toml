@@ -95,6 +95,9 @@ ignore = ["E501", "B008", "PLR0913", "PLR0915", "PLR0912", "PLR2004", "ARG001", 
 # and both import the app lazily so the API process is never loaded twice.
 "ops/**" = ["T20", "PLC0415"]
 "loadtests/**" = ["T20"]
+# The codegen tools (the typed API client) report on the console and import
+# PyYAML, exactly like the ops tools.
+"scripts/**" = ["T20", "PLC0415"]
 
 [tool.mypy]
 python_version = "3.11"

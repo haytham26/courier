@@ -174,7 +174,13 @@ jobs:
           # design-videos.yml already uses here (PR #12's screen-recordings.yml
           # carries it on its own branch). The gate that keeps it:
           # scripts/ci/check-emulator-gpu.mjs.
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 2048
+          # BUG-060/BUG-061: software GL (swiftshader) does the emulator's whole
+          # drawing on the CPU, and 2048 MB is not enough for the emulator plus
+          # the Skia surfaces the app draws - the runs that died did it losing
+          # the adb daemon (both legs at the same second) after boots that had
+          # slowed from 26-30 s to 36-39 s. The runner has 4 cores and 16 GB, so
+          # the emulator gets 6 GB and 4 cores.
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 6144 -cores 4
           script: bash .maestro/run-all.sh
           working-directory: .
 

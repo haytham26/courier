@@ -72,3 +72,7 @@ not reach gitleaks' view of the repo.
 /.opencode-tmp/
 graphify-out/
 .deploy-state
+# The typed API client (ADR-019) regenerates beside itself to check freshness;
+# the temp file is never source.
+packages/shared/src/generated/.api-check.ts
+packages/shared/src/generated/.api-test.ts
