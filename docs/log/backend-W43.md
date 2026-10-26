@@ -457,3 +457,45 @@ POST /shifts/{id}/events:batch p95 370 ms > 300 ms` - with every request returni
 | Before the push               | `code-review-and-quality`,   | The floor guard, the drift guard and the freshness gate all run locally first; no      |
 |                               | `code-simplification`        | suppressions, no skipped tests, and the retry/nested reads were folded into one place  |
 | The decision                  | `documentation-and-adrs`     | ADR-019 committed with the slice, D47 in the register from the next free number        |
+
+## 2026-10-26/27 — BUG-067: the map-pack workflow could not start, and BUG-064's guard took the blame (branch `fix/bug-067-map-pack-inputs`)
+
+- **The symptom, twice misread.** `.github/workflows/map-pack.yml` failed in **0 seconds** on every run
+  it ever had — 65 of them, from PR #43's first push (40176014202) onward — with GitHub's
+  `This run likely failed because of a workflow file issue`: no jobs, no steps, no log, no annotation
+  naming the line. BUG-064's job-level guard was the obvious suspect (it was added to stop a
+  feature-branch build), and I recorded the failure in `docs/a1-record` as a §16 case outside my
+  diff. **The founder corrected both readings**: the workflow is mine (`infra/` and its CI steps are
+  the backend's), and the guard was never reached — no job was ever created.
+- **The line.** `if-no-files-found: error` sat at a **step's own level**, a sibling of `uses:` and
+  `with:`. It is an **input of `actions/upload-artifact`**, so it belongs **inside `with:`**. An unknown
+  key at a step makes GitHub refuse the whole file, on every event, before any job exists. GitHub
+  states it precisely when asked to dispatch: `failed to parse workflow: (Line: 172, Col: 9):
+Unexpected value 'if-no-files-found'`. The same file also carried the dispatch-only `inputs` context
+  in three expressions, a second latent defect of the same class, fixed in the same change.
+- **The proof that it took a bisect, not a theory.** My first theory was the `inputs` context: it was
+  wrong (the run still failed with it fixed), and the bisect — a minimal file, then the full file
+  without the guard, then the dispatch — named the key. Both bisect commits are labelled in the
+  branch's history, and the dispatch that refuses to parse is in
+  `docs/evidence/bug-067-workflow-file/`.
+- **The gate.** `scripts/ci/check-workflows.mjs` (13 tests, wired into the Quality gates beside the
+  emulator gate) fails on both defects: an unknown key at a job or a step, and a bare `inputs`
+  context. A YAML anchor it cannot read fails rather than passes. `.github/workflows/store-ready.yml`
+  carried the same `inputs` defect in its release lane; it has never run, so its failure was latent.
+- **Two finds from the same proof runs.** The first dispatch after the fix died at
+  `UnsupportedClassVersionError: class file version 65.0` — planetiler 0.10.2 needs **Java 21**, the
+  runner image carries 17 — so the workflow now pins `actions/setup-java` (Temurin 21) beside the
+  tools that need it. The second dispatch passes every step until the licence gate, which refuses by
+  design: Geofabrik's terms page could not be read from the build machine on 2026-10-21, so the
+  operator has to confirm them with `--confirm-offline-use` (a founder decision, already open in
+  FOUNDER_TODO; this slice does not take it).
+
+### Skills applied — BUG-067
+
+| Step                               | Skills read and followed                              | How it changed the work                                                                                                                                                                                             |
+| ---------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The twice-misread symptom          | `debugging-and-error-recovery`                        | The playbook's evidence order (annotation, then bisect) over the plausible theory: the `inputs` fix was shipped and the run still failed, which is what forced the bisect that named the key                        |
+| The founder's ownership correction | `constraint-driven-development`                       | §16 was not weakened to fit my earlier note; the false §16 claim was corrected in the same slice and the register's Prevention column names the gate                                                                |
+| The gate's shape                   | `source-driven-development`                           | GitHub's dispatch endpoints and its workflow syntax were read for the error text and the key sets, and the action's input name was checked against the upload action's own documentation before `with:` was trusted |
+| The workflow changes               | `ci-cd-and-automation`                                | The push/dispatch/schedule triggers were exercised for real (two dispatches, one bisect push), and the pinned-Java step states its version where the tool that needs it can be read                                 |
+| Before the push                    | `code-review-and-quality`, `doubt-driven-development` | A fresh review of my own §16 note, the run-by-run bisect evidence, and the gate's own 13 tests; the register, the evidence folder and the week log all carry the same root cause                                    |
