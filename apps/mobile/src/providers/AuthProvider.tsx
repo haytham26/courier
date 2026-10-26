@@ -271,6 +271,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus('signed-out');
     setStep('none');
     setTeams([]);
+    // The remembered session goes with the sign-out: the phone must not offer
+    // a session it has just been told to forget.
+    setStoredSession(null);
     await forgetSession();
   }, []);
 

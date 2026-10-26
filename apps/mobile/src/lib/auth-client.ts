@@ -145,6 +145,47 @@ const mockSession = {
   expiresAt: new Date(Date.now() + 86_400_000),
 };
 
+/**
+ * The session the mock holds, and the one it hands back.
+ *
+ * The real client keeps the session in the device store: a sign-in writes it
+ * and a sign-out clears it, and the app reads back what is there. The emulator
+ * run has no service behind it, so the mock is the service - and it has to
+ * behave like one, or the flows drive a UI that cannot be left. Before this,
+ * the mock answered every session read with a driver no matter what the app
+ * did, so a sign-out was undone by the next read and the front door was never
+ * reachable: the sign-in flow could not run at all.
+ *
+ * The answer object is rebuilt only when the session actually moves. A fresh
+ * object on every read would wake the provider's session effect on every
+ * render, which is what signed the driver back in.
+ */
+let currentSession: { user: typeof mockUser; session: typeof mockSession } | null = {
+  user: mockUser,
+  session: mockSession,
+};
+
+/** The answer `useSession` hands back: a new object only when the session moves. */
+function buildMockSessionAnswer(): CourierSessionHook {
+  return {
+    data: currentSession,
+    error: null,
+    isPending: false,
+    isRefetching: false,
+    refetch: () => Promise.resolve(),
+  };
+}
+
+let mockSessionAnswer = buildMockSessionAnswer();
+
+/** Moves the mock session: a sign-in fills it, a sign-out clears it. */
+function moveMockSession(
+  next: { user: typeof mockUser; session: typeof mockSession } | null,
+): void {
+  currentSession = next;
+  mockSessionAnswer = buildMockSessionAnswer();
+}
+
 /** The refusal of a flow the emulator run does not drive. */
 function mockRefusal(): Promise<CourierAuthResult<unknown>> {
   const refusal: CourierAuthResult<unknown> = {
@@ -157,24 +198,29 @@ function mockRefusal(): Promise<CourierAuthResult<unknown>> {
 function createMockAuthClient(): CourierAuthClient {
   return {
     signIn: {
-      email: () => Promise.resolve({ data: { user: mockUser, token: 'e2e-token' }, error: null }),
+      email: () => {
+        // A sign-in fills the session, the way the real client writes it.
+        moveMockSession({ user: mockUser, session: mockSession });
+        return Promise.resolve({ data: { user: mockUser, token: 'e2e-token' }, error: null });
+      },
       social: () => mockRefusal(),
       passkey: () => mockRefusal(),
     },
     signUp: {
-      email: () => Promise.resolve({ data: { user: mockUser, token: 'e2e-token' }, error: null }),
+      email: () => {
+        // A registration signs the courier in too, so it fills the session.
+        moveMockSession({ user: mockUser, session: mockSession });
+        return Promise.resolve({ data: { user: mockUser, token: 'e2e-token' }, error: null });
+      },
     },
-    signOut: () => Promise.resolve({ data: { success: true }, error: null }),
+    // A sign-out clears the session: the front door has to be reachable.
+    signOut: () => {
+      moveMockSession(null);
+      return Promise.resolve({ data: { success: true }, error: null });
+    },
     $fetch: () => Promise.reject(new Error('the emulator run has no auth service to ask')),
-    getSession: () =>
-      Promise.resolve({ data: { user: mockUser, session: mockSession }, error: null }),
-    useSession: () => ({
-      data: { user: mockUser, session: mockSession },
-      error: null,
-      isPending: false,
-      isRefetching: false,
-      refetch: () => Promise.resolve(),
-    }),
+    getSession: () => Promise.resolve({ data: currentSession, error: null }),
+    useSession: () => mockSessionAnswer,
     twoFactor: {
       verifyTotp: () => mockRefusal(),
       verifyBackupCode: () => mockRefusal(),

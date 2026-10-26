@@ -5,19 +5,41 @@ name: Sign in - the front door, the four ways in and the email form
 # subtitle of the reference, the four ways in in the reference's order and
 # wording (Apple, Google, Passkey, then the "or" and Email), the plain reason
 # under a method the service does not offer, the email form with its one
-# primary action, and the remembered session when the phone has one.
+# primary action, and the two plain sentences the reference keeps at the
+# bottom.
 #
 # The screen is the app's front door: it opens when the phone has no session.
-# The E2E mock in `apps/mobile/src/lib/auth-client.ts` answers every session
-# read with a driver, so the app opens on Today there and this flow needs a
-# build that opens signed out (a real device, or a mock without a session).
-# That is the Android E2E workflow's call and it is recorded here rather than
-# worked around: no skipped block, no weakened assert, no longer timeout
-# (PLAYBOOK §17.6). The one conditional below is the remembered session, which
-# the emulator run has no way to leave behind, and inside it nothing is
-# weakened either.
+# The E2E mock in `apps/mobile/src/lib/auth-client.ts` boots the app signed in,
+# so the app opens on Today there - the front door is reached the way a courier
+# reaches it: sign out from the Account tab first, then sign back in. The flow
+# proves both halves (the sign-out is the app's own action, so the app must
+# actually carry it), and it ends signed in, on the day, so the flows that run
+# after it alphabetically (smoke, stops, today-list) still open on a signed-in
+# screen.
 - launchApp:
     clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The way out of a signed-in shift: the Account tab, then the sign-out row,
+# which asks first (a destructive-ish action is never one tap).
+- tapOn:
+    id: "tab-settings"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 30000
+- tapOn:
+    id: "settings-sign-out"
+# The first tap turns the row into the question: the app asks, and the flow
+# sees the ask rather than trusting that it happened.
+- assertVisible:
+    id: "settings-sign-out"
+    text: "Sign out?"
+# The second tap answers it. The app is signed out and on the front door.
+- tapOn:
+    id: "settings-sign-out"
 - extendedWaitUntil:
     visible:
       id: "sign-in-screen"
@@ -76,31 +98,23 @@ name: Sign in - the front door, the four ways in and the email form
     id: "sign-in-password-field"
     text: "correct-horse-battery"
 
+# The two sentences the reference keeps at the bottom: the phone keeps the
+# shift across a signal gap, and Face ID unlocks the app.
+- scrollUntilVisible:
+    element:
+      text: "You stay signed in for the whole shift, even without signal."
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "You stay signed in for the whole shift, even without signal."
+- assertVisible: "Face ID unlocks the app."
+
 # The submit calls through: the email and the password reach the provider,
 # the mock signs the driver in, and the app lands on Today, the same screen
-# every other flow opens on.
+# every other flow opens on - so the flow that runs next still finds it.
 - tapOn:
     id: "sign-in-submit"
 - extendedWaitUntil:
     visible:
       id: "today-screen"
     timeout: 60000
-
-# The remembered session, offered only when the phone has one. The emulator
-# run starts from a cleared device, so there is nothing to resume and the
-# block does not run; where a receipt exists it resumes it and the screen
-# says what is true - the session is the one the phone kept and the server
-# has not confirmed it.
-- runFlow:
-    when:
-      visible: "Continue on this session"
-    commands:
-      - assertVisible:
-          id: "sign-in-offer-offline"
-      - tapOn:
-          id: "sign-in-offer-offline"
-      - assertVisible:
-          id: "sign-in-offline-result"
-      - assertVisible: "You are on the session from this shift"
-
 - takeScreenshot: "sign-in"
