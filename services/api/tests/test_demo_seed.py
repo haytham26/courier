@@ -8,12 +8,14 @@ founder's demo phone can both drive the same flow repeatedly.
 
 from __future__ import annotations
 
+import os
 import uuid
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import Engine, create_engine, text
 
 from app.auth.jwks import get_verifier
 from app.demo import (
@@ -27,6 +29,8 @@ from app.demo import (
 from app.main import app
 from app.repo import InMemoryRepo, SqlAlchemyRepo, get_repo
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 COURIER = "driver-7"
 OTHER = "driver-8"
@@ -191,34 +195,40 @@ class TestTheVocabulary:
 class TestTheDemoSeedOnPostgres:
     """The same guarantee through the production repository (CI's db job).
 
-    The in-memory repo answers the endpoint's contract; the SQL repo is the one a
-    deployment runs, and the seed writes a real shift, a real run and real stops
-    through it - so the ids the app received are the rows Postgres holds. The
-    schema is applied from the contract (the same file production builds from)
-    and the rows this test writes are removed in its teardown.
+    The in-memory repo answers the endpoint's contract; the SQL repo is the one
+    a deployment runs, and the seed writes a real shift, a real run and real
+    stops through it - so the ids the app received are the rows Postgres holds.
+    The schema is applied from the contract (the same file production builds
+    from), and the rows this test writes are removed in its teardown.
     """
 
-    def test_the_seed_writes_real_rows_and_a_repeat_changes_nothing(self) -> None:
-        import os
-        from pathlib import Path as TestPath
+    @pytest.fixture()
+    def engine(self) -> Iterator[Engine]:
+        """The Postgres engine, with the contract's schema applied.
 
-        database_url = os.environ.get("DATABASE_URL", "")
-        if not database_url:
-            pytest.skip("the db suite needs the Postgres service container")
-
-        from sqlalchemy import create_engine
-
-        schema = (
-            TestPath(__file__).resolve().parents[3] / "packages" / "contracts" / "db" / "schema.sql"
+        A missing DATABASE_URL fails loudly, with the instruction test_repo_db
+        gives: the db marker is for the suite that has a database.
+        """
+        if not DATABASE_URL:
+            pytest.fail(
+                "DATABASE_URL is not set: the DB-backed suite needs the Postgres service "
+                "(run -m 'not db' for the suite without a database)"
+            )
+        engine = create_engine(DATABASE_URL)
+        script = (
+            Path(__file__).resolve().parents[3] / "packages" / "contracts" / "db" / "schema.sql"
         ).read_text(encoding="utf-8")
-        engine = create_engine(database_url)
+        with engine.begin() as connection:
+            connection.execute(text(script))
+        yield engine
+        engine.dispose()
+
+    def test_the_seed_writes_real_rows_and_a_repeat_changes_nothing(self, engine: Engine) -> None:
         repo = SqlAlchemyRepo(engine)
-        # The ids are derived, so the cleanup can name them even if the write
-        # itself fails part-way through.
+        # The ids are derived, so the teardown can name them even if the write
+        # fails part-way through.
         expected = demo_day_for(COURIER, "e2e")
         try:
-            with engine.begin() as connection:
-                connection.execute(text(schema))
             first = write_demo_day(repo, COURIER, "e2e")
             second = write_demo_day(repo, COURIER, "e2e")
 
@@ -245,4 +255,3 @@ class TestTheDemoSeedOnPostgres:
                     text("DELETE FROM shifts WHERE id = :shift"),
                     {"shift": expected.run.shift_id},
                 )
-            engine.dispose()
