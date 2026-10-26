@@ -350,3 +350,44 @@ POST /shifts/{id}/events:batch p95 370 ms > 300 ms` - with every request returni
 | The tools    | `source-driven-development`     | Every flag was verified against the official docs before it shipped; the four defects exist precisely where the previous author did not check.                                                     |
 | The workflow | `ci-cd-and-automation`          | The schedule, the dispatch inputs, the artifact retention and the two supply-chain gates (pinned SHAs, no inline expressions) - plus the honest rule that a 90-minute data build never gates a PR. |
 | The honesty  | `constraint-driven-development` | The unverified rows stay unverified in the maps status; the item claims the pipeline, not the numbers.                                                                                             |
+
+## 2026-10-25 - BUG-063 (branch `feat/slo-runs-insert`, MERGED PR #46) and the map-pack pipeline (PR #43, MERGED)
+
+- **BUG-063.** CI run 40185490916 failed only at the Locust SLO profile:
+  `SLO BREACH: POST /shifts/{id}/events:batch p95 370 ms > 300 ms`, every request 2xx. Root cause was
+  the ADR-014 change: the divergence comparison selected the batch's rows before _every_ INSERT. The
+  comparison is behind the rowcount now, so the courier's most frequent call is the one statement it
+  was before ADR-014. Proven with the pinned PostGIS 17.2 container started locally (13 db tests,
+  including the new partly-stored-batch rowcount test) and a statement-count suite that needs no
+  database. The runs-insert constraint violations in the Postgres log (`runs_shift_id_fkey`,
+  `runs_shift_id_key`, `runs_pkey`) are recorded in the bug row as what they were: the API's
+  translated, handled 409s.
+- **§14's red-first and mutation evidence** are pasted into the PR: reverting the fix turns the cost
+  test red (`assert 2 == 1`), and removing the divergence comparison turns the conflict test red.
+- **The map-pack pipeline** (ADR-016/D42, PR #43): the four defects found by reading the scripts
+  against the tools' own docs, the four the review found on top of them (the pmtiles `version`
+  subcommand, the real release assets with checksums, the 3D bake's profile gate, the argv tests),
+  and the twice-a-week workflow that never gates a PR. The 50 MB ceiling, the LINZ overlay profile and
+  the frame/battery numbers stay honestly unverified in the maps status.
+- Two merge conflicts carried this session's register (D42 against the lead's D43/D44) and both squad
+  logs; each was resolved as both-sides-kept and re-checked prettier-clean.
+
+## 2026-10-26 — The entitlement layer (PR #50, ADR-017/D45), BUG-064 (PR #51), queue 2 closed
+
+- **ADR-017/D45.** The app's only billing question is "is this subscription active", never how it was
+  paid, and now the server answers it: `GET /account/entitlements`, `entitlement_of` (the plan
+  vocabulary, the state machine with its grace window, the cancelled-but-paid rule) and
+  `subscriptions` in the schema. 373 passed + 15 db tests against the pinned PostGIS 17.2 container.
+- **The review changed it in one pass**: the upsert's monotonic guard (`WHERE renews_at IS NULL OR
+:renews_at IS NULL OR :renews_at >= renews_at`, so a stale webhook cannot rewind a courier's
+  access), `RETURNING (xmax = 0)` for the protocol's return, the 3.1-correct nullable (`oneOf`, not
+  `nullable` + `null` in the enum), the cancelled-period access rule (the sharpest product finding:
+  a courier with 30 paid days was locked out), the state×plan test matrix (a Solo-only mutation had
+  survived the whole suite), and the sorted-features pin.
+- **BUG-064/PR #51.** A feature-branch push started a map-pack.yml run against a trigger that says
+  `branches: [main]`, and failed — 90 minutes of runner per push and a red check the PR did not own.
+  The build now carries an explicit `if:` guard, its truth table verified locally.
+- **Queue 2 is closed**: items 1–7 and BUG-063 are merged. The week's skills tables sit above this
+  entry; the two merge conflicts carried in the register and the squad logs (D42 against the lead's
+  D43/D44, and both logs' additive sections) were each resolved as both-sides-kept and re-checked
+  prettier-clean.

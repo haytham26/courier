@@ -206,3 +206,20 @@
   3. The Team plan's org billing (one payer for several drivers), on top of 2.
 - Sources 2 and 3 are built behind a config switch, off by default, with stripe-mock tests, after source 1 and before launch. The founder chooses which sources are switched on at launch; that choice is a FOUNDER_TODO decision, not something to decide now.
 - The store rules are permanent, not a launch-only condition: a digital subscription sold inside the app always uses the store's billing. In New Zealand the app may not link to or promote a web price (no Play alternative billing in NZ; Apple's external-link entitlement does not cover NZ, research §4). A web sale is allowed outside the app, and those users may then sign in and use the app (Apple 3.1.3(b)).
+
+## D45 — The entitlement layer: one truth per courier, gated on "is this subscription active" (2026-10-26, backend squad decision, the first half of D44)
+
+- ADR-017. `services/api/app/entitlements.py` holds the plan vocabulary (`trial` 14 days / `solo` /
+  `team`), the subscription state machine (`trialing → active → past_due → grace → canceled /
+expired`) and the decision (`entitlement_of`). `past_due` never removes access on its own: a
+  courier whose card is failing keeps working through the grace window, because a courier mid-route
+  with a dead phone is the product's worst failure mode.
+- `packages/contracts/db/schema.sql` gains `subscriptions` — one row per courier (the entitlement is
+  a fact about them, not a receipt), with the source's own id beside the shared fields. The source
+  (`play`, `appstore`, `stripe`, `team`) is data, never logic, so the founder's launch choice is a
+  config switch (D44).
+- `GET /account/entitlements` is the app's only gate: it answers `active`, the plan and the feature
+  set, and a courier with no subscription gets a named free answer rather than an error.
+- **Not in this slice:** no provider client (Play needs a test track, Stripe needs keys), no paywall
+  UI, no Team org billing or seats, no NZ GST calculation. Provider slices are FOUNDER_TODO switches
+  with `stripe-mock` tests when they land; the ingest path is designed here, not exercised.
