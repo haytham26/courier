@@ -397,6 +397,19 @@ export default function TodayScreen() {
               <Ionicons name="mic" size={18} color={t.colors.accentText} />
               <Text style={[styles.ghostLabel, { color: t.colors.accentText }]}>Add by Voice</Text>
             </Pressable>
+            {/* The way to the end of the day: the summary of the run (screen
+                10). The dock carries no summary tab, so Today opens it. */}
+            <Pressable
+              role="button"
+              accessibilityLabel="End of day"
+              accessibilityHint="Opens the summary of the day"
+              onPress={() => router.navigate('/summary')}
+              testID="today-end-of-day"
+              style={[styles.ghostButton, ghost(t.colors)]}
+            >
+              <Ionicons name="sunny" size={18} color={t.colors.accentText} />
+              <Text style={[styles.ghostLabel, { color: t.colors.accentText }]}>End of day</Text>
+            </Pressable>
           </View>
 
           <Text style={[styles.sectionLabel, { color: t.colors.secondaryLabel }]}>RUN ACTIONS</Text>
