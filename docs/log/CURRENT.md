@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W43. **Local `main` == `origin/main` == `6cc6537` (PR #36 merged). Lead session 5, 2026-10-26.**
+**Week:** 2026-W43. **Local `main` == `origin/main` == `a82ebe1`. Lead session 5, 2026-10-26 into 2026-10-27.**
 
 ## Merged this session (each: merge commit → archive tag → remote branch deleted, verified with `git ls-remote`)
 
@@ -136,3 +136,25 @@ libraries only, no iOS work until its gate.
 - **No `Start-Sleep` waits** — check a run with `gh run view` once, then work on the next item.
 
 **FOUNDER_TODO:** an Apple Developer account for the iOS build lane; a real-device BUG-051 launch test; the sphere's real-device check; the Play account for the internal test track.
+
+## The state at the end of session 5 (2026-10-27)
+
+**Merged with the ritual, each with its archive tag and the ls-remote proof:** #36 (the failure-dump runner), #59 (the handoff correction + BUG-066 in the register), #30 (10 Summary), #12 (the recordings), #42 (01 Welcome).
+
+**BUG-066 is SOLVED at the root, by the dump PR #36 taught the runner to keep.** The app is not slow at cold start - it CRASHES: Fatal signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), gwp_asan::GuardedPoolAllocator::deallocate+380, the caller libhermesvm.so, 1 to 2 seconds into a cold start, on the app own main thread. That is BUG-061 signature (the founder was right that it is not only the emulator GL and it can hit real devices), and the dump names the frame the earlier tombstones never carried. It is NOT the image Chromium crash of BUG-051, so the relaunch guard must not ride it - libhermesvm is not libmonochrome.
+
+**The one contradiction the next session must resolve first:** the same tombstone appears on PR #18 (run 40274121944), which already carries the sphere lifecycle fix built for BUG-061 - so that fix is not the (only) cause. main own scheduled run 40296944488 (b0cfd6b) was green on the same app code hours earlier. So the differentiator is not yet the app code alone. Next experiment, per PLAYBOOK 3: bisect the app diff by half, and check whether the Hermes bundle differs between the green run and the red ones - a stale or mismatched bytecode bundle is the classic cause of exactly this signature.
+
+**The queue as it stands:**
+
+| PR | What | State |
+|---|---|---|
+| **#18** | 07 Copilot + the sphere lifecycle fix + the compat status-line fix | api-34 red at compat.yaml first-screen assert = the crash above; needs the crash root cause |
+| **#40** | 13 Lock screen | api-34 red on the same class; needs the same |
+| **#49** | the E2E is deterministic (BUG-065) | head e68a8d8, gates green; both legs red on the app crash, so it waits for #18 |
+| **#52** | 02 Sign in + the Sign out row | the sign-out landing failure reproduces only on the emulator; the jest guard passes and does not reproduce it (14.1); needs the failure dump |
+| **#58** | the registers tell the truth (B1) | open on purpose until #49 lands |
+
+**The audit order for the app side is in docs/plan/A1-handover.md** (the backend shipped POST /demo/runs and the typed client; @courier/shared is not yet a dependency of apps/mobile, and pps/mobile/app/(tabs)/index.tsx still imports mockStops). A5 (staging) and the rest of docs/plan/AUDIT_2026-10-25.md follow in its own order.
+
+**The rules that bit this session, all now in the traps list:** a merge whose conflict you resolve in the worktree does not stage the rest of it (my BUGS.md and workflow changes were nearly left out of the merge commit); PowerShell Set-Content eats backticks as escapes (BEL and FF land in the file); a gate that is not wired into the floor job passes silently; and the installers prefix cli- onto MAESTRO_VERSION, so a pinned release downloaded through the installer 404s.
