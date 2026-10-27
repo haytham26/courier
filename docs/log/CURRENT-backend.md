@@ -1,10 +1,12 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-27 · main at `4699736` · **Queue 2 is closed, BUG-063/BUG-064 are closed, the
-entitlement layer (ADR-017/D45), the provider ingest (ADR-018/D46), A1's backend half
-(ADR-019/D47) and A5's first slice (ADR-020/D49) are merged, and BUG-067 — the map-pack workflow
-could not start — is merged. The next work follows `docs/plan/AUDIT_2026-10-25.md` §"The order",
-which is binding.**
+Updated: 2026-10-28 · main at `cea6331` (written against `385fedd`, and main took PR #80 and #81
+— both the deploy workflow's CI fixes — while this branch was open) · **Step 0 (the founder
+directive): the `protect-main` ruleset could not be created — the token in `.env.local` was
+refused with `403 Resource not accessible by personal access token`, so it lacks Administration:
+write. The row is in FOUNDER_TODO and nothing here depends on it: every commit of this session
+goes through a branch and a PR, with green checks and a merge commit, and `gh pr merge --merge`
+is unaffected by the ruleset (0 required approvals). B3's route half is next.**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
@@ -68,11 +70,36 @@ merge**; the second rerun (attempt 2, also `Unable to connect to adb daemon`) sh
 launched. The corrective habit from now on: **one rerun, and if the leg is red for a cause outside
 the diff, report it per §16 and do not rerun again.**
 
+## A second session is working in this repo right now (2026-10-28, recorded)
+
+While this session started, **another backend session was still working in the main working tree**
+and moved branches underneath it: my first commit landed on its `backend` branch, and a later
+checkout of its own rewrote the two files I had edited. Nothing was lost (the commit was pushed to
+`docs/protect-main-ruleset-refused` within minutes, verified with `git ls-remote`), but the
+collision is real and the guard is now structural: **this session works in the worktree
+`.worktrees/b1028`**, takes a branch from `origin/main`, commits immediately after every edit batch,
+and pushes before starting the next one. **FOUNDER_TODO carries the ask: run one backend session
+at a time.** Where the other session's work is already in flight (PR #80 and #81, the deploy
+workflow's CI fixes, are merged — its `fix/deploy-verify-env` and `fix/deploy-scripts-bash` lanes),
+it is not redone here.
+
 ## The ritual deviations, recorded
 
-- **The A1 handover note went straight to main** (`045185b`), not through a branch and a PR. The
-  gates ran first and the change is documentation only, but the ritual exists for the second pair of
-  eyes, and no PR reviewed it. Recorded in PR #62; every commit from there goes through a branch.
+- **Three commits were pushed straight to main** — `045185b` (the A1 handover note), `dbc7004`
+  (the handover of 2026-10-28) and the handover's own recording of itself (`f9a7a91`, PR #77's
+  diff). Each ran the gates first and each is documentation only, but the ritual exists for the
+  second pair of eyes and none of the three had one.
+- **Step 0, the founder directive to protect main (2026-10-28), and its result.** The ruleset JSON
+  was written and posted exactly as given: `gh api repos/haytham26/courier/rulesets` listed **no
+  existing ruleset** (so nothing of that name was duplicated), and the POST answered
+  `403 {"message":"Resource not accessible by personal access token", ...}`. The fine-grained token
+  in `.env.local` therefore does not carry **Administration: write**, and per the directive no
+  retry was made. `gh api repos/.../rules/branches/main` prints nothing, which is the same fact
+  from the other side: the repository has no branch protection today, so a direct push to `main`
+  still succeeds. The row is in `docs/status/FOUNDER_TODO.md` ("enable the protect-main ruleset, or
+  give the token Administration: write"). **Until it is enabled the discipline is the only guard,
+  and it is absolute: branch, PR, green checks, merge commit.** `gh pr merge --merge` still works
+  under that ruleset (0 required approvals, no required review threads).
 - **A branch was rebased once** (on `fix/bug-067-map-pack-inputs`, before it was pushed, to sit on
   top of PR #60's merge). AGENTS.md bans rebase; nothing published was rewritten because the branch
   had not been pushed, but the habit is wrong and merges are the form from here on.
