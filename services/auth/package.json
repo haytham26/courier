@@ -23,14 +23,13 @@
   },
   "devDependencies": {
     "@courier/eslint-config": "workspace:*",
-
     "@types/node": "24.19.2",
     "@types/pg": "8.23.1",
-
     "@vitest/coverage-v8": "4.1.11",
     "eslint": "10.13.0",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "@better-auth/cli": "1.4.21"
   }
 }

@@ -130,9 +130,23 @@ migrate_auth() {
   # service creates its tables. `npx` runs from the service's own directory, so
   # the workspace's node_modules is what resolves better-auth, and no package
   # manager has to be on the PATH (the runner's deploy step had no `pnpm`).
+  # The service's own .bin comes first on the PATH, so the CLI runs from inside
+  # the service's tree and the config module's imports (zod, better-auth) resolve
+  # from its node_modules. The CLI is a devDependency of the service, so the
+  # workspace's install carries it.
+  # The service's config is validated when it loads, so the migration needs the
+  # same environment the service runs with: the secret and the public URL, which
+  # the compose file derives from COURIER_DOMAIN. Both are exported here, so a
+  # developer's run and the runner's run answer the same questions.
+  export BETTER_AUTH_SECRET="${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}"
+  export BETTER_AUTH_URL="https://${COURIER_DOMAIN:?COURIER_DOMAIN is required}"
+  # The same database URL the compose files give the auth service: the `postgres`
+  # service's hostname, on the internal network.
+  export AUTH_DATABASE_URL="postgresql://${POSTGRES_USER:-courier}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-courier}"
   (
     cd "$ROOT/services/auth" || exit 1
-    npx --yes auth migrate --yes --config src/migrate.config.ts
+    PATH="$PWD/node_modules/.bin:$PATH"
+    better-auth migrate --yes --config src/migrate.config.ts
   ) || fail "the auth migration failed: the deploy stops here, and no image is changed"
   log "the auth service's tables are in place"
 }
