@@ -1,11 +1,12 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-28 · main at `385fedd` · **Step 0 (the founder directive): the `protect-main`
-ruleset could not be created — the token in `.env.local` was refused with
-`403 Resource not accessible by personal access token`, so it lacks Administration: write. The
-row is in FOUNDER_TODO and nothing here depends on it: every commit of this session goes through a
-branch and a PR, with green checks and a merge commit, and `gh pr merge --merge` is unaffected by
-the ruleset (0 required approvals). B3's route half is next.**
+Updated: 2026-10-28 · main at `cea6331` (written against `385fedd`, and main took PR #80 and #81
+— both the deploy workflow's CI fixes — while this branch was open) · **Step 0 (the founder
+directive): the `protect-main` ruleset could not be created — the token in `.env.local` was
+refused with `403 Resource not accessible by personal access token`, so it lacks Administration:
+write. The row is in FOUNDER_TODO and nothing here depends on it: every commit of this session
+goes through a branch and a PR, with green checks and a merge commit, and `gh pr merge --merge`
+is unaffected by the ruleset (0 required approvals). B3's route half is next.**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
@@ -68,6 +69,19 @@ PR #54's Android E2E leg failed twice and was re-run twice. §17.4 allows **at m
 merge**; the second rerun (attempt 2, also `Unable to connect to adb daemon`) should not have been
 launched. The corrective habit from now on: **one rerun, and if the leg is red for a cause outside
 the diff, report it per §16 and do not rerun again.**
+
+## A second session is working in this repo right now (2026-10-28, recorded)
+
+While this session started, **another backend session was still working in the main working tree**
+and moved branches underneath it: my first commit landed on its `backend` branch, and a later
+checkout of its own rewrote the two files I had edited. Nothing was lost (the commit was pushed to
+`docs/protect-main-ruleset-refused` within minutes, verified with `git ls-remote`), but the
+collision is real and the guard is now structural: **this session works in the worktree
+`.worktrees/b1028`**, takes a branch from `origin/main`, commits immediately after every edit batch,
+and pushes before starting the next one. **FOUNDER_TODO carries the ask: run one backend session
+at a time.** Where the other session's work is already in flight (PR #80 and #81, the deploy
+workflow's CI fixes, are merged — its `fix/deploy-verify-env` and `fix/deploy-scripts-bash` lanes),
+it is not redone here.
 
 ## The ritual deviations, recorded
 
