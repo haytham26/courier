@@ -127,11 +127,12 @@ migrate_auth() {
   fi
   # The CLI reads a module that exports the options, and the module loads the
   # deployment's own configuration - so the same environment that runs the
-  # service creates its tables.
+  # service creates its tables. `npx` runs from the service's own directory, so
+  # the workspace's node_modules is what resolves better-auth, and no package
+  # manager has to be on the PATH (the runner's deploy step had no `pnpm`).
   (
-    cd "$ROOT" || exit 1
-    pnpm --filter @courier/auth exec -- npx --yes auth migrate --yes \
-      --config services/auth/src/migrate.config.ts
+    cd "$ROOT/services/auth" || exit 1
+    npx --yes auth migrate --yes --config src/migrate.config.ts
   ) || fail "the auth migration failed: the deploy stops here, and no image is changed"
   log "the auth service's tables are in place"
 }
