@@ -32,9 +32,14 @@ from .agents.omniroute import (
     ProviderUnavailableError,
     get_intake_provider,
 )
-from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
+from .auth.jwks import (
+    AuthPrincipal,
+    get_auth_settings,
+    get_current_principal,
+    get_websocket_verifier,
+)
 from .auth.routes import router as auth_router
-from .auth.websocket import get_websocket_principal
+from .auth.websocket import UnauthenticatedError, identify, refuse
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
@@ -1078,27 +1083,42 @@ def sync_events(
 async def voice(
     ws: WebSocket,
     shift_id: uuid.UUID,
-    principal: AuthPrincipal = Depends(get_websocket_principal),
     repo: Repo = Depends(get_repo),
 ):
     """Bidirectional voice channel.
+    The handshake carries no token: the route accepts the socket first (it owns
+    the channel, and only an accepted socket can be answered with a close code),
+    then `identify` reads the credential from the header or the first message and
+    a refusal is one `error` frame and a 4403 (BUG-059).
     client -> server: {"type":"transcript","text":..., "final":true, "gps":{lat,lon,acc,speed}}
                       (STT runs on-device or via Deepgram streaming; we only receive finals)
                       {"type":"gps", ...}  (1 Hz; drives 50 m approach whispers)
     server -> client: {"type":"say","text":..., "priority":"now|queue"}  (client TTS / Cartesia)
                       {"type":"state","stop":...}
     """
+    # The route owns the channel, so it accepts the handshake before anything
+    # else is read: an `identify` refusal needs an open socket to deliver an
+    # `error` frame to (a rejected handshake discards every word and code).
+    await ws.accept()
+    try:
+        # The verifier is resolved through `dependency_overrides` because the
+        # voice route cannot take it as a `Depends` parameter: the dependency
+        # would be solved before the socket is accepted, and a refusal would
+        # then be an HTTP 403 on the handshake instead of an `error` frame and a
+        # 4403 close on a socket the caller actually holds.
+        verifier = app.dependency_overrides.get(get_websocket_verifier) or get_websocket_verifier
+        principal = await identify(ws, verifier())
+    except UnauthenticatedError as exc:
+        await refuse(ws, exc.reason)
+        return
     run = repo.get_run_for_shift(shift_id)
     if run is None or run.courier_id != principal.user_id:
         # The token is valid but the shift is not the caller's: the voice
         # channel carries the day's addresses, so a foreign shift is closed
         # without a word (ASVS V4 - the same 404 discipline as the routes).
-        # Accepted first: uvicorn only delivers a close CODE to an accepted
-        # socket; rejecting the handshake discards the code.
-        await ws.accept()
+        # Already accepted above, so the close CODE reaches the caller.
         await ws.close(code=4404)
         return
-    await ws.accept()
     try:
         while True:
             try:
