@@ -17,13 +17,12 @@ authentication refusal, beside **4404**, which the voice route uses for "the
 token is valid but the shift is not yours" (ASVS V4). A caller can tell the two
 apart.
 
-This module is BUG-059's **first half**: `identify` answers the credential
-question and `refuse` delivers the answer to the caller, and both are covered by
-`tests/auth/test_websocket_auth.py`. The route's half — accepting the socket
-before `identify` reads a first message — is the next slice; it changed the
-handshake's shape and brought `tests/auth/test_voice_socket.py` down with it on
-this machine (§15), so the route stays as it was until that lands, and this
-module keeps the old dependency name as a thin adapter so nothing else breaks.
+Both halves of BUG-059 have landed. This module answers the credential question
+and delivers the answer; the voice route in `app/main.py` accepts the socket
+first and then calls it, which is what lets a refusal be a frame and a close
+code instead of an HTTP error on the handshake. The route's own suite is
+`tests/auth/test_voice_socket.py`; this module's own is
+`tests/auth/test_websocket_auth.py`.
 """
 
 from __future__ import annotations
@@ -80,7 +79,11 @@ async def _token_from_first_message(websocket: WebSocket) -> str | None:
 
 
 def _reason_for(websocket: WebSocket) -> str:
-    """Why this handshake has no token, in the words the caller needs."""
+    """Why this handshake has no token, in the words the caller needs.
+
+    `identify` raises it and the deprecated adapter puts it in its 401's detail,
+    so an old query-string caller learns what to change from either path.
+    """
     if websocket.query_params.get("token"):
         return (
             "a token in the query string is refused: it is a token in a log. "
@@ -123,13 +126,19 @@ async def get_websocket_principal(
     websocket: WebSocket,
     verifier: JwksVerifier = Depends(get_verifier),
 ) -> AuthPrincipal:
-    """The route's dependency today: the header or the query string, as before.
+    """The old route dependency, deleted with BUG-059's route half.
 
-    The BUG-059 half that changes this dependency (the first message, and the
-    query string refused) is `identify` above and its tests; the route's own
-    suite hung when the dependency was wired to it on this machine, so the
-    dependency keeps the route's current shape until that half lands. This
-    adapter exists so the route and its tests are unchanged in the meantime.
+    It took the token from the query string, which is exactly what the audit
+    named; the route now accepts the socket and calls `identify` itself, so a
+    refusal is an `error` frame and a 4403 instead of an HTTP 403 on the
+    handshake. It is kept for two commits because a caller that still sends the
+    token in the URL must get a 401 with a reason it can act on rather than a
+    silent drop - and the audit's BUG-059 closes when that caller has no reason
+    to exist.
+
+    DEPRECATED: do not use it in a new route. `identify` answers the same
+    question correctly, and the voice route in `app/main.py` is the shape every
+    WebSocket surface follows from here.
     """
     token = _token_from_header(websocket)
     if token is None:
@@ -137,12 +146,12 @@ async def get_websocket_principal(
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
+            detail=_reason_for(websocket),
         )
     try:
         return verifier.verify(token)
     except InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="the token is not valid",
+            detail=f"the token is not valid: {exc}",
         ) from exc
