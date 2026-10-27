@@ -1,6 +1,6 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-27 · main at `d12231c` · **Queue 2 is closed, BUG-063/BUG-064 are closed, the
+Updated: 2026-10-27 · main at `4699736` · **Queue 2 is closed, BUG-063/BUG-064 are closed, the
 entitlement layer (ADR-017/D45), the provider ingest (ADR-018/D46), A1's backend half
 (ADR-019/D47) and A5's first slice (ADR-020/D49) are merged, and BUG-067 — the map-pack workflow
 could not start — is merged. The next work follows `docs/plan/AUDIT_2026-10-25.md` §"The order",
