@@ -88,7 +88,7 @@ jobs:
           COURIER_DOMAIN: staging.courier.local
         run: |
           set -euo pipefail
-          infra/deploy.sh apply --from infra/ci-staging.env
+          bash infra/deploy.sh apply --from infra/ci-staging.env
           # The staging edge publishes 8443 on the runner (the staging stack's
           # own port, so it cannot fight a runner's own services). The domain
           # answers on the loopback, and the edge holds Caddy's local-CA
@@ -104,7 +104,7 @@ jobs:
         # the same test with the staging token, which is a secret.
         run: |
           set -euo pipefail
-          infra/smoke.sh --domain staging.courier.local --evidence .smoke
+          bash infra/smoke.sh --domain staging.courier.local --evidence .smoke
 
       - name: The stacks' evidence
         if: always()
@@ -169,9 +169,9 @@ jobs:
           rsync -az --delete -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" \
             infra/ services/ packages/ "${USER}@${HOST}:/opt/courier/"
           ssh -i ~/.ssh/id_ed25519 "${USER}@${HOST}" \
-            "cd /opt/courier/infra && ./deploy.sh apply --from staging.env"
+            "cd /opt/courier/infra && bash deploy.sh apply --from staging.env"
           ssh -i ~/.ssh/id_ed25519 "${USER}@${HOST}" \
-            "cd /opt/courier/infra && ./smoke.sh --domain \"${{ secrets.COURIER_STAGING_DOMAIN }}\" --token \"${{ secrets.COURIER_SMOKE_TOKEN }}\""
+            "cd /opt/courier/infra && bash smoke.sh --domain \"${{ secrets.COURIER_STAGING_DOMAIN }}\" --token \"${{ secrets.COURIER_SMOKE_TOKEN }}\""
 
       - name: Roll back on a failed smoke test
         if: failure() && steps.host.outputs.configured == 'true'
@@ -185,4 +185,4 @@ jobs:
           printf '%s\n' "$KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
           echo "::error::the smoke test failed: returning the images that were running"
           ssh -i ~/.ssh/id_ed25519 "${USER}@${HOST}" \
-            "cd /opt/courier/infra && ./deploy.sh rollback --from staging.env"
+            "cd /opt/courier/infra && bash deploy.sh rollback --from staging.env"
