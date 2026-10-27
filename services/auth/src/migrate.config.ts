@@ -18,8 +18,8 @@
  *
  * Run it (the deploy script does, from the repository root):
  *
- *   pnpm --filter @courier/auth exec npx --yes auth migrate --yes \
- *     --config services/auth/src/migrate.config.ts
+ *   npx --yes auth migrate --yes --config src/migrate.config.ts
+ * (from services/auth)
  */
 import { loadConfig } from "./config.js";
 import { createAuth } from "./server.js";
