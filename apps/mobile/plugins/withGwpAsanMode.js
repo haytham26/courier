@@ -22,8 +22,16 @@
 // inert without the variable.
 const { withAndroidManifest } = require('expo/config-plugins');
 
+// GWP_ASAN=1    -> android:gwpAsanMode="always"  (the hunt: every launch is guarded)
+// GWP_ASAN=never-> android:gwpAsanMode="never"   (the report hunt: gwp-asan must NOT
+//                  kill the process before bionic's malloc_debug - which unwinds with
+//                  _Unwind_Backtrace and so prints a full allocation + free backtrace
+//                  pair even on the corrupted frame-pointer chain that faulted inside
+//                  gwp-asan's own RecordBacktrace - gets to report the double free)
 module.exports = function withGwpAsanMode(config) {
-  if (process.env.GWP_ASAN !== '1') {
+  const mode = process.env.GWP_ASAN;
+  const manifestMode = mode === '1' ? 'always' : mode === 'never' ? 'never' : null;
+  if (!manifestMode) {
     return config;
   }
   return withAndroidManifest(config, (config) => {
@@ -32,7 +40,7 @@ module.exports = function withGwpAsanMode(config) {
       return config;
     }
     application.$ = application.$ || {};
-    application.$['android:gwpAsanMode'] = 'always';
+    application.$['android:gwpAsanMode'] = manifestMode;
     return config;
   });
 };

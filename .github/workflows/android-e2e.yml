@@ -94,11 +94,12 @@ jobs:
         env:
           # The E2E mode: the app runs on local mocks (no Metro, no auth, no API).
           EXPO_PUBLIC_E2E: '1'
-          # BUG-066 (exp/bug-066-gwpasan, never merged): the documented per-app
-          # GWP-ASan opt-in, so every cold start of every flow runs with
-          # GWP-ASan on instead of Android 14's ~1%-of-launches sampling. The
-          # plugin (apps/mobile/plugins/withGwpAsanMode.js) is inert without it.
-          GWP_ASAN: '1'
+          # BUG-066 (exp/bug-066-malloc-debug, never merged): GWP-ASan must NOT
+          # kill the process inside its own report path this time, so the build
+          # carries the documented opt-OUT; the report comes from bionic's
+          # malloc_debug, armed by the runner (MALLOC_DEBUG=1) with backtrace +
+          # free_track, so the double free is reported with BOTH backtraces.
+          GWP_ASAN: 'never'
         run: |
           pnpm --filter mobile exec expo prebuild --platform android --no-install
           cd apps/mobile/android
@@ -208,6 +209,10 @@ jobs:
           # input and the action never sees it, which is how the first
           # dispatch silently ran the sweep with a count of zero.
           SWEEP_COUNT: '30'
+          # BUG-066 (exp/bug-066-malloc-debug): bionic's malloc_debug with
+          # backtrace=16 free_track for this experiment - the report hunt.
+          # The sweep waits longer per launch (90s) while it is armed.
+          MALLOC_DEBUG: '1'
 
       - name: Upload the evidence
         if: always()

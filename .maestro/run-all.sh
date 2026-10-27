@@ -64,11 +64,26 @@ sweep_cold_start() {
   [ "$total" -gt 0 ] || return 0
   echo "::group::the cold-start sweep (BUG-066)"
   death=0
+  # BUG-066, the report hunt: bionic's malloc_debug. With GWP_ASAN=never the build
+  # keeps gwp-asan from killing the process inside its own RecordBacktrace, and
+  # LIBC_DEBUG_MALLOC_OPTIONS=backtrace free_track records the allocation and the
+  # deallocation of every block with bionic's own _Unwind_Backtrace - a real
+  # unwinder, immune to the corrupted frame-pointer chain - so the double free is
+  # reported with BOTH backtraces. The wrap property is the documented per-app
+  # carrier (LIBC_DEBUG_MALLOC_OPTIONS is an env var for the process), and the
+  # libc.debug.malloc.options system property covers the argv path.
+  local sweep_wait=30
+  if [ "${MALLOC_DEBUG:-0}" = "1" ]; then
+    sweep_wait=90
+    adb shell setprop "wrap.$PKG" '"LIBC_DEBUG_MALLOC_OPTIONS=backtrace=16 free_track"' 2>/dev/null || true
+    adb shell setprop libc.debug.malloc.options 'backtrace=16 free_track' 2>/dev/null || true
+    echo "::notice::BUG-066: malloc_debug backtrace=16 free_track armed for $PKG"
+  fi
   for i in $(seq 1 "$total"); do
     adb shell am force-stop "$PKG" 2>/dev/null || true
     adb shell am start -W -n "$PKG/.MainActivity" > /dev/null 2>&1
     up=""
-    for _ in $(seq 1 30); do
+    for _ in $(seq 1 "$sweep_wait"); do
       if adb shell pidof "$PKG" > /dev/null 2>&1 &&
          adb shell uiautomator dump /sdcard/window.xml > /dev/null 2>&1 &&
          adb exec-out cat /sdcard/window.xml 2>/dev/null | grep -q 'today-screen\|login-screen\|compat-screen'; then
@@ -82,12 +97,16 @@ sweep_cold_start() {
     if [ "$up" != "ok" ]; then
       death=$((death + 1))
       if [ "$death" -eq 1 ]; then
-        # The first death is kept whole: the crash buffer carries the tombstone
-        # (the GWP-ASan report with its Cause line and both traces is in it
-        # when the report path completes), and the main buffer is grepped for
-        # the report so a report without a tombstone is kept too.
+        # The first death is kept whole: the crash buffer carries the tombstone,
+        # the main buffer carries the detector's report (malloc_debug's
+        # allocation + deallocation backtraces, or gwp-asan's Cause line and
+        # both traces when the report path completes), and every tombstone file
+        # is pulled - debuggerd writes the fuller report there.
         adb logcat -b crash -d > "$EVIDENCE/sweep-crash-1.txt" 2>/dev/null || true
-        adb logcat -d -t 5000 > "$EVIDENCE/sweep-logcat-1.txt" 2>/dev/null || true
+        adb logcat -d -t 20000 > "$EVIDENCE/sweep-logcat-1.txt" 2>/dev/null || true
+        for t in $(adb shell ls /data/tombstones 2>/dev/null | tr -d '\r'); do
+          adb exec-out cat "/data/tombstones/$t" > "$EVIDENCE/tombstone-$i-$t.txt" 2>/dev/null || true
+        done
         sig="$(grep -m1 'Fatal signal' "$EVIDENCE/sweep-crash-1.txt" 2>/dev/null || echo "$up")"
         echo "sweep $i: $up - kept as evidence - $sig"
       else
@@ -101,6 +120,11 @@ sweep_cold_start() {
     echo "run-summary: sweep=total=$total deaths=$death"
     echo "run-summary: sweep_note=BUG-066: $death of $total cold starts failed on this leg"
   } | tee -a "$EVIDENCE/sweep-summary.txt"
+  if [ "${MALLOC_DEBUG:-0}" = "1" ]; then
+    adb shell setprop "wrap.$PKG" '""' 2>/dev/null || true
+    adb shell setprop libc.debug.malloc.options '' 2>/dev/null || true
+    echo "::notice::BUG-066: malloc_debug disarmed"
+  fi
   echo "::endgroup::"
 }
 
