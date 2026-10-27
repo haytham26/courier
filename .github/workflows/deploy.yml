@@ -65,8 +65,11 @@ jobs:
         # resolve, every required variable is named, and the network's addresses
         # are inside the subnet.
         run: |
-          docker compose -f infra/compose.staging.yml config --quiet
-          echo "the services: $(docker compose -f infra/compose.staging.yml config --services | tr '\n' ' ')"
+          # The CI env file names the throwaway values, the same way a
+          # developer's run does: a compose file that refuses to render without
+          # them is telling the truth, and the values are the runner's.
+          docker compose --env-file infra/ci-staging.env -f infra/compose.staging.yml config --quiet
+          echo "the services: $(docker compose --env-file infra/ci-staging.env -f infra/compose.staging.yml config --services | tr '\n' ' ')"
 
       - name: Bring the staging stack up
         # The migrations run here (the compose file applies the contract's own
@@ -106,8 +109,8 @@ jobs:
       - name: The stacks' evidence
         if: always()
         run: |
-          docker compose -f infra/compose.staging.yml ps > .smoke/compose-ps.txt || true
-          docker compose -f infra/compose.staging.yml logs --tail=200 caddy > .smoke/caddy.log || true
+          docker compose --env-file infra/ci-staging.env -f infra/compose.staging.yml ps > .smoke/compose-ps.txt || true
+          docker compose --env-file infra/ci-staging.env -f infra/compose.staging.yml logs --tail=200 caddy > .smoke/caddy.log || true
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
