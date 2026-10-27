@@ -23,7 +23,7 @@ from typing import Any
 import pytest
 from fastapi import WebSocketDisconnect
 
-from app.auth.jwks import AuthPrincipal, get_verifier
+from app.auth.jwks import AuthPrincipal, JwksVerifier, get_verifier
 from app.auth.websocket import UnauthenticatedError, identify, refuse
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 
@@ -68,7 +68,7 @@ class FakeWebSocket:
 
 
 @pytest.fixture()
-def verifier_pair() -> Iterator[tuple[object, object]]:
+def verifier_pair() -> Iterator[tuple[JwksVerifier, object]]:
     key_pair = make_key_pair()
     _, jwk = key_pair
     app_dependency = get_verifier
@@ -79,15 +79,15 @@ def verifier_pair() -> Iterator[tuple[object, object]]:
         app_dependency.cache_clear()
 
 
-async def _identify(websocket: FakeWebSocket, verifier: object) -> AuthPrincipal:
+async def _identify(websocket: FakeWebSocket, verifier: JwksVerifier) -> AuthPrincipal:
     """The route accepts the socket, then identifies the handshake; these tests
     drive the identification, which is the question BUG-059 asks."""
-    return await identify(websocket, verifier)  # type: ignore[arg-type]
+    return await identify(websocket, verifier)
 
 
 class TestWhereTheTokenMayComeFrom:
     async def test_the_authorization_header_still_works(
-        self, verifier_pair: tuple[object, object]
+        self, verifier_pair: tuple[JwksVerifier, object]
     ) -> None:
         """The native client sends the header; nothing about it changes."""
         verifier, key = verifier_pair
@@ -102,7 +102,7 @@ class TestWhereTheTokenMayComeFrom:
         assert websocket.closed_with is None
 
     async def test_the_first_message_may_carry_the_token(
-        self, verifier_pair: tuple[object, object]
+        self, verifier_pair: tuple[JwksVerifier, object]
     ) -> None:
         """The audit's first alternative: the token in the first message."""
         verifier, key = verifier_pair
@@ -114,7 +114,7 @@ class TestWhereTheTokenMayComeFrom:
         assert websocket.closed_with is None
 
     async def test_a_token_in_the_query_string_is_refused(
-        self, verifier_pair: tuple[object, object]
+        self, verifier_pair: tuple[JwksVerifier, object]
     ) -> None:
         """The query string is a log, and a token there is a token that leaks."""
         verifier, key = verifier_pair
@@ -129,7 +129,7 @@ class TestWhereTheTokenMayComeFrom:
         # that, and the route's own test asserts the 4403 it delivers.
         assert websocket.closed_with is None
 
-    async def test_no_token_at_all_is_refused(self, verifier_pair: tuple[object, object]) -> None:
+    async def test_no_token_at_all_is_refused(self, verifier_pair: tuple[JwksVerifier, object]) -> None:
         verifier, _ = verifier_pair
         websocket = FakeWebSocket()
 
@@ -141,7 +141,7 @@ class TestWhereTheTokenMayComeFrom:
         assert websocket.closed_with is None
 
     async def test_an_invalid_token_anywhere_is_refused(
-        self, verifier_pair: tuple[object, object]
+        self, verifier_pair: tuple[JwksVerifier, object]
     ) -> None:
         verifier, _ = verifier_pair
         websocket = FakeWebSocket(headers={"Authorization": "Bearer not-a-token"})
@@ -154,7 +154,7 @@ class TestWhereTheTokenMayComeFrom:
         assert websocket.closed_with is None
 
     async def test_refuse_closes_with_the_code_and_names_the_reason(
-        self, verifier_pair: tuple[object, object]
+        self, verifier_pair: tuple[JwksVerifier, object]
     ) -> None:
         """`refuse` is the module's half of the answer: the caller is told why
         the handshake was refused, in a frame and in the close code."""
@@ -166,7 +166,7 @@ class TestWhereTheTokenMayComeFrom:
         assert websocket.sent == [{"type": "error", "code": 4403, "detail": "no token"}]
 
     async def test_a_first_message_that_is_not_an_auth_frame_is_not_a_token(
-        self, verifier_pair: tuple[object, object]
+        self, verifier_pair: tuple[JwksVerifier, object]
     ) -> None:
         """A transcript arriving first is a transcript, not a credential."""
         verifier, _ = verifier_pair
