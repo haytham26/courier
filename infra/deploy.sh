@@ -131,7 +131,7 @@ migrate_auth() {
   (
     cd "$ROOT" || exit 1
     pnpm --filter @courier/auth exec -- npx --yes auth migrate --yes \
-      --config services/auth/migrate.config.ts
+      --config services/auth/src/migrate.config.ts
   ) || fail "the auth migration failed: the deploy stops here, and no image is changed"
   log "the auth service's tables are in place"
 }
