@@ -1,4 +1,4 @@
-﻿# The output of scripts/ci/run-coverage.mjs on 2026-10-22 (branch chore/repo-structure).
+# The output of scripts/ci/run-coverage.mjs on 2026-10-22 (branch chore/repo-structure).
 # Only the summary lines are kept here; the run itself is in the CI log of the PR.
 
 === coverage: @courier/shared ===
@@ -58,10 +58,10 @@ TOTAL                         1255    193    85%
 TOTAL                       1527    116    92%
 166 passed in 8.66s
 === check-coverage ===
-  packages/ and services/ (overall): 84.2% (floor 81%) ÔÇö 19 file(s)
-  the address engine: 81.3% (floor 81%) ÔÇö 1 file(s)
-  the auth service: 90.7% (floor 88%) ÔÇö 5 file(s)
-  the voice service: 92.4% (floor 85%) ÔÇö 22 file(s)
-  sync: not built yet (floor 90%) ÔÇö not built yet
-  billing: not built yet (floor 90%) ÔÇö not built yet
+  packages/ and services/ (overall): 84.2% (floor 81%) — 19 file(s)
+  the address engine: 81.3% (floor 81%) — 1 file(s)
+  the auth service: 90.7% (floor 88%) — 5 file(s)
+  the voice service: 92.4% (floor 85%) — 22 file(s)
+  sync: not built yet (floor 90%) — not built yet
+  billing: not built yet (floor 90%) — not built yet
 check-coverage: every threshold is met
