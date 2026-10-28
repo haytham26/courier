@@ -64,7 +64,7 @@ test('the line number names the line the sequence is on', () => {
 });
 
 test('two adjacent corrupted characters are two findings, each its own character', () => {
-  // `Â§Â§` was two section signs on one line in docs/log/2026-W43.md.
+  // A doubled U+00C2 U+00A7 was two section signs on one line in docs/log/2026-W43.md.
   const findings = findMojibake(`${cp1252([0x00c2, 0x00a7])}${cp1252([0x00c2, 0x00a7])}`);
   assert.equal(findings.length, 2);
   assert.deepEqual(findings.map((finding) => finding.means), ['U+00A7', 'U+00A7']);

@@ -115,9 +115,9 @@ const hex = (code) => `U+${code.toString(16).toUpperCase().padStart(4, '0')}`;
  * The mojibake findings in one file's text, as `{ line, run, means, rule }`.
  *
  * The corrupted characters of one maximal non-ASCII run are walked one sequence
- * at a time (longest first), because `Â§Â§` is two section signs and each hides
- * its own character. A character that does not start a valid reversal is
- * legitimate text and is stepped over.
+ * at a time (longest first), because a doubled U+00C2 U+00A7 is two section signs
+ * and each hides its own character. A character that does not start a valid
+ * reversal is legitimate text and is stepped over.
  *
  * Exported so the tests can drive the shapes without a git checkout.
  */
