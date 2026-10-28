@@ -125,15 +125,27 @@ migrate_auth() {
     log "no auth service in this tree: its migration is skipped"
     return
   fi
-  # The CLI reads a module that exports the options, and the module loads the
-  # deployment's own configuration - so the same environment that runs the
-  # service creates its tables. `npx` runs from the service's own directory, so
-  # the workspace's node_modules is what resolves better-auth, and no package
-  # manager has to be on the PATH (the runner's deploy step had no `pnpm`).
-  (
-    cd "$ROOT/services/auth" || exit 1
-    npx --yes auth migrate --yes --config src/migrate.config.ts
-  ) || fail "the auth migration failed: the deploy stops here, and no image is changed"
+  # The migration runs INSIDE the auth image, on the compose network - never on
+  # the host. Two runs taught us why, and both failures were red on main:
+  #
+  #   40603133483 / 40612562455 (the host run) -> `MODULE_NOT_FOUND`,
+  #     requireStack [services/auth/src/config.ts]: a runner checks out the tree
+  #     with no node_modules, and the config module imports `zod`.
+  #   40645435652 (the install added, still on the host) ->
+  #     `MissingEnvError: Missing required env: AUTH_DATABASE_URL, BETTER_AUTH_URL`
+  #     (`#better-auth: Couldn't read your auth config`): the CLI loads the
+  #     service's own validated configuration, and the compose file gives those
+  #     two variables to the CONTAINER, not to the shell that runs the CLI.
+  #
+  # One `docker compose run` fixes the whole class: the image carries the
+  # service's own source and its dependencies (services/auth/Dockerfile copies
+  # the tree and pnpm's node_modules), the service's compose environment is the
+  # container's environment, and `postgres:5432` resolves inside the network -
+  # so the migration and the service are created by the same configuration. The
+  # host needs nothing but Docker.
+  run_compose run --rm --no-deps -T auth_a \
+    npx --yes auth migrate --yes --config src/migrate.config.ts \
+    || fail "the auth migration failed: the deploy stops here, and no image is changed"
   log "the auth service's tables are in place"
 }
 

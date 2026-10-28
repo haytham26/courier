@@ -47,6 +47,14 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      # No workspace install on purpose: nothing here runs Node on the runner.
+      # The images build their own dependencies, and the auth service's
+      # migration runs INSIDE the auth image (`infra/deploy.sh`), where the
+      # service's own configuration and its node_modules live. Both host-side
+      # runs of that migration went red on main - once for a missing `zod`, once
+      # for a missing `AUTH_DATABASE_URL` - and one `docker compose run` in the
+      # image is the fix for the whole class (BUG-070).
+
       - name: Build the API image
         run: |
           docker build \
