@@ -1,11 +1,10 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-28 · main at `d68d780` · **Step 0 is merged (PR #83): the `protect-main` ruleset
-could not be created (the token in `.env.local` has no Administration: write) and the row is in
-FOUNDER_TODO. B3's route half is MERGED (PR #90, `d68d780`): the voice route accepts the socket, then
-`identify` (the header or the first `auth` message), and a refusal is one `error` frame and a close
-**4403**. The next item is B3's remaining three, each verified on the tree — the details are in
-`docs/log/HANDOVER-2026-10-28-B.md`.**
+Updated: 2026-10-28 · main at `811e7df` · **Step 0 is merged (PR #83). B3's route half is MERGED
+(PR #90). The `Deploy staging` red-on-main is BUG-070 and its fix is in review (the verify leg now
+installs the workspace before it runs the auth migration). The next item is B3's remaining two —
+`response_model` on the API's 19 handlers, and the fixture hoist with the bounded voice stores —
+each verified on the tree in `docs/log/HANDOVER-2026-10-28-B.md`.**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
@@ -22,6 +21,11 @@ FOUNDER_TODO. B3's route half is MERGED (PR #90, `d68d780`): the voice route acc
      **route's half MERGED (PR #90, `d68d780`)**: the voice route accepts the socket, then
      `identify` (the header or the first `auth` message), and a refusal is one `error` frame and a
      close **4403**. The evidence is `docs/evidence/b3-websocket-route/`.
+   - `/v1/engines` and `/v1/licences` — **MERGED (PR #93, `12daa00`)**: the two voice probes now
+     authenticate with the same `Depends(get_principal)` every other route of that service uses,
+     and the module docstring's "Every call is authenticated" stops lying.
+   - `response_model` — **verified missing on all 19 handlers of `services/api/app/main.py`**, with
+     the contract guard comparing paths only. **Next.**
    - `/v1/engines` and `/v1/licences` — **verified unauthenticated in
      `services/courier-voice/app/main.py:227,235`**, and their module docstring's "Every call is
      authenticated" is false for them;

@@ -130,6 +130,15 @@ migrate_auth() {
   # service creates its tables. `npx` runs from the service's own directory, so
   # the workspace's node_modules is what resolves better-auth, and no package
   # manager has to be on the PATH (the runner's deploy step had no `pnpm`).
+  #
+  # The check before it is the fix for the run that taught us this: the config
+  # module imports `zod` (services/auth/src/config.ts), and on a runner whose
+  # workspace was never installed that import dies with a raw `MODULE_NOT_FOUND`
+  # - main red, the reason unreadable. A named dependency that is missing is a
+  # missing `pnpm install`, and the message says so.
+  if [ ! -d "$ROOT/services/auth/node_modules/zod" ]; then
+    fail "the auth migration needs the workspace's dependencies: $ROOT/services/auth/node_modules/zod is missing. Run 'pnpm install --frozen-lockfile' at the repository root first (the deploy workflow's verify leg does it before it calls this script)."
+  fi
   (
     cd "$ROOT/services/auth" || exit 1
     npx --yes auth migrate --yes --config src/migrate.config.ts
