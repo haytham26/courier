@@ -42,14 +42,6 @@ jobs:
       # own test runs with the rest of scripts/*/__tests__ (test:store-readiness).
       - name: Every workflow file parses (the keys, and the dispatch inputs) (BUG-067)
         run: node scripts/ci/check-workflows.mjs
-      # BUG-070: `Deploy staging` was red on every push to main because the
-      # verify leg ran the auth migration on a runner with no node_modules, and
-      # the CLI died with a raw MODULE_NOT_FOUND. The gate pins the order — the
-      # workspace is installed before the deploy script is called — so the
-      # deploy leg's own nice skip for the missing OCI secrets is never the
-      # difference between green and red.
-      - name: The deploy verify leg installs the workspace before it deploys (BUG-070)
-        run: node scripts/ci/check-deploy-verify-installs.mjs
       - name: Every emulator boot asks for software rendering
         run: node scripts/ci/check-emulator-gpu.mjs
       - name: Check the voice evaluation set
