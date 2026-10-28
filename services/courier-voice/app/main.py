@@ -8,7 +8,8 @@ The app talks to this service over four kinds of call:
   - `GET`/`PUT /v1/settings`: the choices the courier made.
 
 Plus the two surfaces that make the engine swappable and the licences
-visible: `GET /v1/engines` and `GET /v1/licences`.
+visible, and only to a caller with the courier's own token: `GET /v1/engines` and
+`GET /v1/licences`.
 
 Every call is authenticated with the courier's own token (the same tokens the
 Courier API accepts), and the run data is fetched with that token, so a
@@ -225,16 +226,24 @@ def create_app(
         return SettingsResponse(settings=body.settings)
 
     @service.get("/v1/engines", response_model=EngineList)
-    def engines() -> EngineList:
-        """The engines of the swappable seam and what each of them can do."""
+    def engines(principal: Annotated[Principal, Depends(get_principal)]) -> EngineList:
+        """The engines of the swappable seam and what each of them can do.
+
+        The seam's surface is the service's own, not the internet's (BUG-059):
+        the caller is the courier the token names, the same as every other call.
+        """
         found = [brains.on_device.capabilities()]
         if brains.server is not None:
             found.append(brains.server.capabilities())
         return EngineList(engines=found)
 
     @service.get("/v1/licences", response_model=LicenceList)
-    def ledger() -> LicenceList:
-        """The licence ledger, as a shipped surface."""
+    def ledger(principal: Annotated[Principal, Depends(get_principal)]) -> LicenceList:
+        """The licence ledger, as a shipped surface - to a caller with a token.
+
+        A licence ledger is a shipping artefact, not a status page: it answers
+        the deployment's own callers and nobody else (BUG-059).
+        """
         return LicenceList(entries=list(licences.ledger()))
 
     return service
