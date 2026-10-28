@@ -46,6 +46,16 @@ const RunContext = createContext<RunState | undefined>(undefined);
 export const RunProvider = ({ children }: { children: React.ReactNode }) => {
   const [delivered, setDelivered] = useState<DeliveredEvent[]>([]);
 
+  // BUG-109 breadcrumb (scratch experiment branch, never merged): this
+  // provider is keyed to the auth state, so a remount of it resets the
+  // navigation stack to its initial route (today-screen).
+  React.useEffect(() => {
+    console.log('[b109] RunProvider MOUNTED (the whole Stack remounted, the route state resets)');
+    return () => {
+      console.log('[b109] RunProvider UNMOUNTED (the Stack is going away)');
+    };
+  }, []);
+
   const markDelivered = useCallback((stop: Stop) => {
     setDelivered((current) => {
       if (current.some((event) => event.stopId === stop.id)) {

@@ -43,6 +43,10 @@ export default function CompatScreen() {
   const [running, setRunning] = useState(false);
 
   const update = useCallback((id: string, state: CheckState, detail: string) => {
+    // BUG-109 breadcrumb (scratch experiment branch, never merged): the api-35
+    // leg loses compat-running with the screen gone from the tree, so every
+    // state move and the screen's own lifetime are timestamped here.
+    console.log(`[b109] compat probe ${id} -> ${state}`);
     setResults((current) => ({
       ...current,
       [id]: { ...current[id], state, detail },
@@ -64,7 +68,11 @@ export default function CompatScreen() {
   }, [update]);
 
   useEffect(() => {
+    console.log('[b109] compat screen MOUNTED');
     void runChecks();
+    return () => {
+      console.log('[b109] compat screen UNMOUNTED (it left the tree)');
+    };
   }, [runChecks]);
 
   return (

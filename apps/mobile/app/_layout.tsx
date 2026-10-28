@@ -19,9 +19,16 @@ export default function RootLayout() {
 }
 
 function AuthNavigator() {
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, status } = useAuth();
+
+  // BUG-109 breadcrumb (scratch experiment branch, never merged): the root
+  // Stack's whole subtree lives or dies on these two values, and the api-35
+  // leg is observed to return to today-screen (the initial route) seconds
+  // after /compat mounts. This proves which value moved.
+  console.log(`[b109] AuthNavigator render status=${status} isLoading=${isLoading} isAuthenticated=${isAuthenticated}`);
 
   if (isLoading) {
+    console.log('[b109] AuthNavigator returns null (the Stack unmounts)');
     return null; // Or show a loading screen
   }
 
