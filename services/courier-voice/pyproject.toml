@@ -46,10 +46,10 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.mutmut]
-# B4: the mutation floor over the turn machine (the audit's services/courier-voice
-# slice). pp/turns.py is where one turn of the conversation is decided, and
-# pp/conversation.py, pp/safety.py and pp/offline_brain.py are what a
-# turn depends on; all four are in scope.
+# B4: the mutation floor over the turn machine (the audit's courier-voice slice).
+# turns.py is where one turn of the conversation is decided, and conversation.py,
+# safety.py and offline_brain.py are what a turn depends on; all four are in
+# scope. The tests directory is never mutated.
 source_paths = [
     "app/turns.py",
     "app/conversation.py",

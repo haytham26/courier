@@ -85,7 +85,7 @@ markers = [
 ]
 
 [tool.mutmut]
-# B4: the mutation floor (docs/plan/AUDIT_2026-10-25.md §B4). The audit names
+# B4: the mutation floor (docs/plan/AUDIT_2026-10-25.md, section B4). The audit names
 # `services/api` sync, runs and auth: `app/main.py` is their HTTP surface,
 # `app/repo.py` is where the sync events are stored and replayed, `app/routing.py`
 # is where a run decides its day, and `app/auth/` is the token path of every
