@@ -1,7 +1,7 @@
 # `Deploy staging` red on every push to main (BUG-070 — **FIXED 2026-10-29**)
 
-Five runs, three causes. All three are fixed; main is green on this workflow since the merge of
-`fix/bug-070-auth-cli-sql`. This folder is the record of all of it, so nobody has to re-derive it.
+Five runs, three causes. All three are fixed. **The proof is the green run on main: [40847886617](https://github.com/haytham26/courier/actions/runs/40847886617) on `821df19`**, where the migration prints `migration was completed successfully!`, the whole stack comes up, and the smoke test passes 3 of 3.
+This folder is the record of all of it, so nobody has to re-derive it.
 
 | Run | Push | Failure | Cause |
 |---|---|---|---|
@@ -9,7 +9,7 @@ Five runs, three causes. All three are fixed; main is green on this workflow sin
 | [40612562455](https://github.com/haytham26/courier/actions/runs/40612562455) | `811e7df` | the same | 1 — **fixed** |
 | [40645435652](https://github.com/haytham26/courier/actions/runs/40645435652) | `4132768` | `MissingEnvError: Missing required env: AUTH_DATABASE_URL, BETTER_AUTH_URL` | 2 — **fixed** |
 | [40650186974](https://github.com/haytham26/courier/actions/runs/40650186974) | `da7dd98` | `Error running Better Auth CLI: error: syntax error at or near "WHERE"`, `routine: 'scanner_yyerror'` | 3 — **fixed** |
-| the run on this branch | the merge of `fix/bug-070-auth-cli-sql` | none: the deploy reaches the smoke test | 3 — **fixed** |
+| [40847886617](https://github.com/haytham26/courier/actions/runs/40847886617) on main | `821df19` | none: `migration was completed successfully!` and the smoke test passes 3/3 | 3 — **fixed** |
 
 All four in the `Build and smoke-test the staging stack (the local VM)` job at the
 `Bring the staging stack up` step. The `Deploy to the staging host` job was **skipped, correctly**,

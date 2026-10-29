@@ -110,6 +110,14 @@ jobs:
         # TLS, the version, the health endpoints' 404, and the anonymous 401 on
         # the seed - and reports which checks it skipped. The deploy leg runs
         # the same test with the staging token, which is a secret.
+        env:
+          # The version check compares /healthz against what this push deployed.
+          # The stack step sets APP_VERSION for the API container, but a step's
+          # environment is not inherited by the next one, so without this the
+          # smoke test printed "APP_VERSION is not set: skipping the version
+          # check" and the deployment's own version went unproven - a check
+          # that silently does not run is a check nobody reads.
+          APP_VERSION: ${{ github.sha }}
         run: |
           set -euo pipefail
           # --port 8443: the staging edge publishes 8443 on the runner (the

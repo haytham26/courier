@@ -1,0 +1,8 @@
+﻿=== the edge's /healthz (the answer the Caddyfile hides) ===
+status=404 bytes=0
+=== the version check, as infra/smoke.sh now runs it ===
+the answer's first 90 bytes:
+{"openapi":"3.1.0","info":{"title":"Courier Copilot","version":"local-verify"},"paths":{"/
+PASS  the deployed version local-verify
+=== and the old check, for the record ===
+FAIL  (old form): local-verify is not in 0 bytes - which is why the old check could never pass
