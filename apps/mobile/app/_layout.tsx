@@ -72,7 +72,6 @@ function AuthNavigator() {
             (MASTER_EXECUTION §16.1.7). A release build has no such route, so
             the screen names below must not be registered there. */}
         {DEV_SCREENS_IN_BUNDLE ? <Stack.Screen name="design" /> : null}
-        {DEV_SCREENS_IN_BUNDLE ? <Stack.Screen name="design2" /> : null}
         </Stack>
       </ScanLoadProvider>
     </RunProvider>
