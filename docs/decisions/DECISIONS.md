@@ -337,3 +337,30 @@ expired`) and the decision (`entitlement_of`). `past_due` never removes access o
 - **Still open:** it is an upstream problem - whether recent Android GWP-ASan should refuse to arm
   on a frame-pointerless process (or record safely) belongs in an AOSP bug report, filed with this
   evidence. The founder can send it.
+## D51 — The answers are models, so their date-times and their unions are decided (2026-10-29, backend squad decision, B3's response_model half)
+
+**Why this exists.** B3's `response_model` slice made every served answer a Pydantic
+model, which decided two things the hand-built dicts had left open:
+
+1. **Date-times are the canonical compact form** (`2026-10-24T07:30:00Z`). The helpers
+   built them with `.isoformat()`, which answers `+00:00` for an aware UTC datetime;
+   Pydantic answers `Z`. Both are RFC 3339 date-times and the contract's
+   `format: date-time` accepts both, and the compact form is what the phone's `Date`
+   parser emits natively, so the generated client and the server agree without a
+   conversion on either side. **The pin is explicit** (`test_a_run_is_created_and_read_back`
+   asserts the `Z` form and says why), so a third form cannot arrive unannounced.
+2. **`GET /auth/verify` answers a union of two shapes discriminated on `valid`**, not one
+   model with a nullable `user_id`. The old answer never sent `user_id` when the token
+   was invalid, and an invalid token should disclose nothing about who it might have
+   belonged to; a nullable field would answer `"user_id": null`, which is a key the old
+   answer never sent (`test_verify_reports_an_invalid_token` caught exactly this). The API's
+   other answer models keep their fields required for the same reason: an answer that
+   omits a key is not the same as an answer that fills it with null, and the phone
+   branches on it.
+
+**Also recorded, because it is a real constraint rather than a preference:**
+`upload_pod` builds its `PodResponse` into a `JSONResponse` instead of returning the model,
+because that route already carries six parameters and `PLR0917` forbids a seventh - and an
+`UploadFile` parameter cannot be keyword-only, which was the other way out (tested: it
+answers 422). A suppression comment was the third way out, and this repository does not add
+one without an issue link.
