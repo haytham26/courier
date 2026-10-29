@@ -225,7 +225,14 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
 
     unit = None
     suffix = None
-    m = re.match(r"^(?:unit (\w+)\s+)?(\d+[a-z]?)(?:\s*/\s*(\d+[a-z]?))?\s+(.*)$", text)
+    # C3: the left of the slash is the unit, and a unit may carry letters with or
+    # without digits - "255C/28", "4D/87" and "D/87" are all units. The pattern
+    # used to be `(\d+[a-z]?)` on both sides, which read "4D/87" as unit 4 with a
+    # suffix D and could not match "D/87" at all. `[a-z]*\d*[a-z]?` covers unit
+    # names like "4d", "255c", "d" and "12a" while still refusing a bare "27" on
+    # the left (that is a plain number, not a unit).
+    m = re.match(r"^(?:unit (\w+)\s+)?([a-z]*\d+[a-z]?|[a-z]+\d*[a-z]?)(?:\s*/\s*(\d+[a-z]?))?\s+(.*)$", text)
+    unit_is_a_slash_unit = bool(m and m.group(3) and m.group(2))
     if m and m.group(3):  # "2/14 smith st" -> unit 2, number 14
         unit, number, rest = m.group(2), m.group(3), m.group(4)
     elif m:
@@ -237,8 +244,11 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
         m2 = re.match(r"^(\d+)([a-z])$", number)
         if m2:
             suffix, number = m2.group(2).upper(), m2.group(1)
-    if unit and suffix is None and re.match(r"^\d+[a-z]$", unit):
+    if unit and suffix is None and re.match(r"^\d+[a-z]$", unit) and not unit_is_a_slash_unit:
         # "unit 255C" is unit 255 with suffix C.
+        # A unit that came from the left of a slash keeps its letter: "4D/87" is
+        # flat 4D at 87, and splitting it into unit 4 + suffix D answers "4/87",
+        # which is the failure the LINZ accuracy report names.
         m_unit = re.match(r"^(\d+)([a-z])$", unit)
         if m_unit:
             unit, suffix = m_unit.group(1), m_unit.group(2).upper()
