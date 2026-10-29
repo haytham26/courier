@@ -121,23 +121,33 @@ it is not redone here.
   filed for the healthcheck defect and is `fixed` in the register (PR #109 closed it with the green run on main).
 - **The mojibake repair and its gate** (PR #102): three files repaired byte-exact, and
   `scripts/ci/check-mojibake.mjs` runs in the floor job.
+- **B4 — mutmut at the 70 % floor** (PR #110, BUG-112): the dependency, both services'
+  `[tool.mutmut]` scope, `scripts/ci/check-mutation-floor.mjs`, and the nightly + manual
+  `mutation.yml` lane that enforces the floor for `services/api` (sync, runs, auth) and
+  `services/courier-voice` (the turn machine). See the honest gap named below.
 
 **Open, in the binding order:**
 
-1. **PR #107** — the smoke test's version check reads `/openapi.json` instead of the
-   404 the Caddyfile hides. Its merge is not yet on main.
-2. **B4 — mutmut at the 70 % floor** (not started). The worktree `.worktrees/b1028d` is
-   on `fix/b4-mutmut` for exactly this. The audit's done-when: mutmut runs scoped in CI
-   at the 70 % floor over `services/api` (sync, runs, auth) and `services/courier-voice`
-   (the turn machine).
-3. **The rest of A5**: `infra/monitoring`, the backups and the restore drill on the
-   staging host, and the OCI host/key/domain (FOUNDER_TODO carries all three already).
-4. **C3 — the LINZ squad toward 98 %** (the measure/fix/re-measure loop, ADR with the
-   before-and-after numbers and the trial target met on the eval set).
-5. **MASTER §22** — `docs/research/2026/andee-cleanroom-spec.md` is not written yet, and
+1. **The rest of A5** (the next item): `infra/monitoring`, the backups and the restore
+   drill on the staging host, and the OCI host/key/domain — FOUNDER_TODO carries all
+   three already. The deploy leg of `deploy.yml` names the secrets it waits for, so the
+   stack it deploys to is the only thing missing.
+2. **C3 — the LINZ squad toward 98 %** (the measure/fix/re-measure loop, each round with
+   the before-and-after numbers committed, the ADR carrying the measured accuracy and
+   the trial target met on the eval set).
+3. **MASTER §22** — `docs/research/2026/andee-cleanroom-spec.md` is not written yet, and
    its build (the pre-classifier, the ask-on-low-confidence rule, the visible memory)
    follows it.
-6. **Then billing (D44) and the rest of queue 3.**
+4. **Then billing (D44) and the rest of queue 3.**
 
-**The handover for this session is `docs/log/HANDOVER-2026-10-29-D.md`** — the seven
+**Closed since the last update:** PR #107, #110 and #111 (the smoke test's version check,
+then its accounting), and **B4** — mutmut at the 70 % floor is on main: the dependency,
+both services' `[tool.mutmut]` scope, `scripts/ci/check-mutation-floor.mjs`, and a
+nightly + manual lane (`mutation.yml`) that runs it for `services/api` and
+`services/courier-voice` and fails the job below 70 %. The one honest gap, named in the
+workflow's own header: the nightly lane has not run yet (it is scheduled 03:40 UTC), and
+wiring the PR-time `check` variant into the floor job is the follow-up once that first
+run has measured the runtime. **BUG-112 is the register row for this slice.**
+
+**The handover for this session is `docs/log/HANDOVER-2026-10-29-D.md`** — the eight
 causes, the two evidence folders, the eight traps that cost time, and the state of the tree.
