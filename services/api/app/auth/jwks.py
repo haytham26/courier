@@ -157,6 +157,36 @@ def get_auth_settings() -> AuthSettings:
 
 @lru_cache(maxsize=1)
 def get_verifier() -> JwksVerifier:
+    """The production verifier, shared by every route.
+
+    It is NOT what a WebSocket route may call directly: a direct call bypasses
+    `dependency_overrides`, so a test that overrides `get_verifier` would still
+    be verified against the configured JWKS URL. The voice route uses
+    `get_websocket_verifier`, which is a separate cached getter the WebSocket
+    surface owns.
+    """
+    return JwksVerifier(get_auth_settings())
+
+
+@lru_cache(maxsize=1)
+def get_websocket_verifier() -> JwksVerifier:
+    """The verifier the voice socket uses.
+
+    A separate getter from `get_verifier` on purpose: the voice route accepts
+    the socket first and then parses the credential itself, so it calls this
+    getter directly. `dependency_overrides` cannot reach a direct call, so the
+    route's suite overrides THIS getter and the object it builds is the one the
+    route verifies with. Calling `get_verifier` directly instead would verify
+    the route's tests against the configured JWKS URL - the first red run of
+    this slice proved it (`cannot reach the JWKS endpoint`).
+    """
+    return JwksVerifier(get_auth_settings())
+def get_verifier_override() -> JwksVerifier:
+    """The single point the tests override for the WebSocket surface.
+
+    Both getters route through here, so one `dependency_overrides` entry covers
+    the voice route's direct call and the HTTP routes' `Depends`.
+    """
     return JwksVerifier(get_auth_settings())
 
 

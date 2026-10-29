@@ -101,7 +101,7 @@ migrate() {
   log "the migrations (packages/contracts/db/schema.sql)"
   # The compose file starts postgres, but `up -d` returns when the container is
   # up, not when the server accepts connections: a migration that ran one second
-  # too early would fail with "no such file or directory" for the socket. Wait
+  # too early would fail with the socket's "no such file or directory". Wait
   # for the server, with a deadline.
   if ! run_compose up -d --wait postgres; then
     fail "the database did not become ready: the deploy stops here"
@@ -110,17 +110,45 @@ migrate() {
     psql -U "${POSTGRES_USER:-courier}" -d "${POSTGRES_DB:-courier}" \
     -v ON_ERROR_STOP=1 -f - \
     < "$ROOT/packages/contracts/db/schema.sql" \
-    || fail "the migrations failed: the deploy stops here, and no image is changed"
+    || fail "the API migrations failed: the deploy stops here, and no image is changed"
+  migrate_auth
 }
 
-# ---------------------------------------------------------------------------
-# The state file: the images that were running, recorded before the swap.
-# `docker compose ps --format` prints one line per service with its image, so
-# the rollback re-applies exactly what was running. Recorded by digest-less
-# tag, which is what the deploy itself sets - the two agree because the
-# deploy sets COURIER_API_IMAGE / COURIER_AUTH_IMAGE and the compose file
-# reads them.
-# ---------------------------------------------------------------------------
+# The auth service's own tables (A5): Better Auth creates them with its CLI, and
+# the contract's schema.sql does not carry them. Without this step the auth
+# container comes up and then goes unhealthy with
+# `Missing tables user, session, ...`, which is where the first staging deploy
+# stopped - after the API had reached Healthy.
+migrate_auth() {
+  log "the auth service's own tables (Better Auth's migration)"
+  if [ ! -d "$ROOT/services/auth" ]; then
+    log "no auth service in this tree: its migration is skipped"
+    return
+  fi
+  # The migration runs INSIDE the auth image, on the compose network - never on
+  # the host. Two runs taught us why, and both failures were red on main:
+  #
+  #   40603133483 / 40612562455 (the host run) -> `MODULE_NOT_FOUND`,
+  #     requireStack [services/auth/src/config.ts]: a runner checks out the tree
+  #     with no node_modules, and the config module imports `zod`.
+  #   40645435652 (the install added, still on the host) ->
+  #     `MissingEnvError: Missing required env: AUTH_DATABASE_URL, BETTER_AUTH_URL`
+  #     (`#better-auth: Couldn't read your auth config`): the CLI loads the
+  #     service's own validated configuration, and the compose file gives those
+  #     two variables to the CONTAINER, not to the shell that runs the CLI.
+  #
+  # One `docker compose run` fixes the whole class: the image carries the
+  # service's own source and its dependencies (services/auth/Dockerfile copies
+  # the tree and pnpm's node_modules), the service's compose environment is the
+  # container's environment, and `postgres:5432` resolves inside the network -
+  # so the migration and the service are created by the same configuration. The
+  # host needs nothing but Docker.
+  run_compose run --rm --no-deps -T auth_a \
+    npx --yes auth migrate --yes --config src/migrate.config.ts \
+    || fail "the auth migration failed: the deploy stops here, and no image is changed"
+  log "the auth service's tables are in place"
+}
+
 record_state() {
   log "recording the images that are running (the rollback's truth)"
   {
