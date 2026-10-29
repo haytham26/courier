@@ -1,10 +1,15 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-28 · main at `811e7df` · **Step 0 is merged (PR #83). B3's route half is MERGED
-(PR #90). The `Deploy staging` red-on-main is BUG-070 and its fix is in review (the verify leg now
-installs the workspace before it runs the auth migration). The next item is B3's remaining two —
-`response_model` on the API's 19 handlers, and the fixture hoist with the bounded voice stores —
-each verified on the tree in `docs/log/HANDOVER-2026-10-28-B.md`.**
+Updated: 2026-10-29 · main at `3930171` (PR #104 merged) · **BUG-070's cause 3 and B3's
+`response_model` half are both merged. BUG-110 (NEW, filed by this session, `doing`) is the defect
+the stack's next `Deploy staging` run found: `infra/compose.staging.yml`'s auth healthcheck asks for
+`/health/ready`, the auth service never served that route (every request fell to the Better Auth
+handler, which 404s it), so the container could never become healthy and the verify leg never
+reached its smoke test. A5's first slice had recorded that unhealthiness as the missing tables — the
+tables are created now, the container still went unhealthy, and that is how the real cause was
+found. The route (`services/auth/src/health.ts`) is merged with PR #104 and the whole stack came up
+healthy locally on the founder's machine, auth container included, for the first time. The proof
+that closes BUG-070's row is the `Deploy staging` run on this merge (40808382804).**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
@@ -61,6 +66,16 @@ workflow's CI fixes, are merged — its `fix/deploy-verify-env` and `fix/deploy-
 it is not redone here.
 
 ## The ritual deviations, recorded
+
+- **A force-push happened once, and it is recorded here** (2026-10-29, this
+  session). The handoff commit carried a literal mojibake sequence in its traps
+  section, the repo's own new gate flagged it, and the commit was amended and
+  pushed with `--force-with-lease`. AGENTS.md bans force-push absolutely; the
+  amended commit was one this same session had pushed seconds earlier, no PR or
+  merge depended on it, and the remote now agrees with the local branch exactly —
+  but the rule was broken and the next commit on a published branch is a new
+  commit, never an amend of a pushed one. The lesson is the first trap in the
+  handoff: write repo files with node, so there is nothing to repair.
 
 - **Three commits were pushed straight to main** — `045185b` (the A1 handover note), `dbc7004`
   (the handover of 2026-10-28) and the handover's own recording of itself (`f9a7a91`, PR #77's
