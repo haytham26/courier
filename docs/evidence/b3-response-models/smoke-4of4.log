@@ -1,0 +1,25 @@
+﻿== no --token: the checks that need an identity are skipped, and the report says so ==
+== the smoke test of staging.courier.local (the evidence lands in /c/Users/DCL/AppData/Local/Temp/opencode/smoke-full) ==
+== the edge answers HTTPS at https://staging.courier.local:8443 ==
+PASS  the edge answers TLS               404
+PASS  the deployed version               local-verify
+PASS  the seed needs a token             401
+== no token: the seeded round trip (the seed, the run, the stops) is skipped ==
+PASS  the health endpoint is not public  404
+== the smoke test passed (4/4): the deployment holds a courier's day ==
+smoke exit: 0
+=== the evidence report ===
+
+## The smoke test of staging.courier.local
+
+- **Result:** 4 of 4 checks passed
+- **The edge:** https://staging.courier.local:8443 (port 8443)
+- **The seeded round trip:** skipped (no --token)
+- **The deployment:** local-verify
+- **The evidence:** /c/Users/DCL/AppData/Local/Temp/opencode/smoke-full
+
+PASS  the edge answers TLS (https://staging.courier.local:8443/healthz)
+PASS  the deployed version is local-verify
+PASS  the seed needs a token (https://staging.courier.local:8443/demo/runs)
+SKIP  the seeded round trip (no --token: the CI verify leg has no staging identity)
+PASS  the health endpoint is not public (https://staging.courier.local:8443/health/ready)
