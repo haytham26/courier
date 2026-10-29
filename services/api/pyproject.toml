@@ -36,6 +36,11 @@ dev = [
     "pytest-randomly>=3.15",
     "ruff>=0.5",
     "mypy>=1.10",
+    # B4: the mutation testing floor (the audit's done-when: mutmut scoped in CI
+    # at the >= 70 % floor over the sync, runs and auth modules). The floor
+    # script and its CI lane are scripts/ci/check-mutation-floor.mjs and the
+    # `mutation` job of the Quality gates workflow.
+    "mutmut>=3.3,<4",
     # The contract drift guard (tests/test_contract.py) parses
     # packages/contracts/openapi.yaml.
     "pyyaml>=6.0",
@@ -77,6 +82,23 @@ asyncio_mode = "auto"
 addopts = "-m 'not db'"
 markers = [
     "db: touches the real Postgres (needs DATABASE_URL; run with `-m db`)",
+]
+
+[tool.mutmut]
+# B4: the mutation floor (docs/plan/AUDIT_2026-10-25.md §B4). The audit names
+# `services/api` sync, runs and auth: `app/main.py` is their HTTP surface,
+# `app/repo.py` is where the sync events are stored and replayed, `app/routing.py`
+# is where a run decides its day, and `app/auth/` is the token path of every
+# route. `source_paths` is mutmut 3's name for the scope (`paths_to_mutate` is
+# deprecated and warns); the tests directory is never mutated, because a mutated
+# test is a broken gate rather than a weak suite.
+source_paths = [
+    "app/main.py",
+    "app/repo.py",
+    "app/routing.py",
+    "app/auth/jwks.py",
+    "app/auth/routes.py",
+    "app/auth/websocket.py",
 ]
 
 [tool.ruff]

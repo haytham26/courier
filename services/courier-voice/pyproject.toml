@@ -24,6 +24,9 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.5",
     "mypy>=1.10",
+    # B4: the mutation testing floor over the turn machine, the same one the
+    # API's sync/runs/auth modules run at.
+    "mutmut>=3.3,<4",
 ]
 
 [tool.uv]
@@ -41,6 +44,18 @@ include = ["app*"]
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.mutmut]
+# B4: the mutation floor over the turn machine (the audit's services/courier-voice
+# slice). pp/turns.py is where one turn of the conversation is decided, and
+# pp/conversation.py, pp/safety.py and pp/offline_brain.py are what a
+# turn depends on; all four are in scope.
+source_paths = [
+    "app/turns.py",
+    "app/conversation.py",
+    "app/safety.py",
+    "app/offline_brain.py",
+]
 
 [tool.ruff]
 line-length = 100
