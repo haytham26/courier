@@ -5,10 +5,11 @@
 #
 # It proves four things, in the order a courier's first shift would:
 #
-#   1. the edge answers TLS and refuses a plain-HTTP request on 443 (the
-#      redirect on 80 is the one exception, and it is checked);
-#   2. the API is the version that was just deployed (the /healthz contract
-#      carries APP_VERSION, so a stale replica behind the edge is visible);
+#   1. the edge answers TLS and answers 404 for /health* (the Caddyfile keeps
+#      the deployment's internals off the public internet);
+#   2. the API is the version that was just deployed (the deployed version comes
+#      from the OpenAPI document the edge proxies, because the /health* 404 has
+#      no body to carry it - so a stale replica behind the edge is visible);
 #   3. the health endpoints the edge exposes publicly are 404, so the
 #      deployment's internals do not leak;
 #   4. with a token, an authenticated request works end to end (the demo seed
@@ -146,20 +147,29 @@ if ! check "the edge answers TLS" "$BASE/healthz" 404 -k; then
 fi
 
 # --- 2. the version that was just deployed --------------------------------
-# /healthz carries the version (the contract's HealthResponse). A replica that
-# is still running the previous image answers the old version, so this is the
-# check that proves the swap happened.
-VERSION_FILE="$EVIDENCE_DIR/version.txt"
-curl -sS --max-time 15 -k "$BASE/healthz" | tee "$VERSION_FILE" > /dev/null || true
+# The deployed version, proved through the edge. It is read from /openapi.json,
+# which the edge proxies and which carries the API's `info.version` - NOT from
+# /healthz, which the Caddyfile answers 404 for on purpose so the version never
+# leaks publicly. The earlier version of this check read /healthz through the
+# edge, where the 404 has no body at all: the check could never pass, and it was
+# skipped in CI (APP_VERSION was not passed to the step) rather than fixed. A
+# check that cannot pass is worse than a check that is not run, because it looks
+# like coverage.
+VERSION_FILE="$EVIDENCE_DIR/version.json"
+curl -sS --max-time 15 -k "$BASE/openapi.json" | tee "$VERSION_FILE" > /dev/null || true
 if [ -n "${APP_VERSION:-}" ]; then
-  if grep -q "$APP_VERSION" "$VERSION_FILE"; then
+  if grep -q "\"version\":\"$APP_VERSION\"\|\"version\": \"$APP_VERSION\"" "$VERSION_FILE"; then
+    # A passing check counts as a check as well as a pass: without this the
+    # pass count outruns the check count and the final `PASSED != CHECKS` test
+    # reports a failure for a smoke test that passed every one of its checks.
+    CHECKS=$((CHECKS + 1))
     PASSED=$((PASSED + 1))
     printf 'PASS  %-34s %s\n' "the deployed version" "$APP_VERSION"
     printf 'PASS  the deployed version is %s\n' "$APP_VERSION" >> "$REPORT"
   else
     CHECKS=$((CHECKS + 1))
-    printf 'FAIL  %-34s %s not in %s\n' "the deployed version" "$APP_VERSION" "$(cat "$VERSION_FILE")"
-    printf 'FAIL  the deployed version: %s not in the health answer\n' "$APP_VERSION" >> "$REPORT"
+    printf 'FAIL  %-34s %s not in %s\n' "the deployed version" "$APP_VERSION" "$(head -c 200 "$VERSION_FILE")"
+    printf 'FAIL  the deployed version: %s not in the openapi answer\n' "$APP_VERSION" >> "$REPORT"
     die "the stack answers a different version than the one deployed: rollback"
   fi
 else

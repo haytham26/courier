@@ -1,7 +1,7 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-29 · main at `3930171` (PR #104 merged) · **BUG-070's cause 3 and B3's
-`response_model` half are both merged. BUG-110 (NEW, filed by this session, `doing`) is the defect
+Updated: 2026-10-30 · main at `25f79b8` (PR #109 merged the register closure) · **BUG-070 is FIXED, and the proof is the green `Deploy staging` run on main [40847886617](https://github.com/haytham26/courier/actions/runs/40847886617) on `821df19` — the migration prints `migration was completed successfully!`, the whole stack comes up, and the smoke test passes 3/3. Seven causes were unwound one at a time, each at its cause; the table of runs is in `docs/evidence/deploy-verify-workspace-install/README.md`. B3's 
+Seven causes were unwound one at a time, each at its cause; the table of runs is in `docs/evidence/deploy-verify-workspace-install/README.md`. B3's `response_model` half is merged. BUG-110 (NEW, filed by this session) is the defect, and the register has it `fixed` - PR #109 closed it with the green run -
 the stack's next `Deploy staging` run found: `infra/compose.staging.yml`'s auth healthcheck asks for
 `/health/ready`, the auth service never served that route (every request fell to the Better Auth
 handler, which 404s it), so the container could never become healthy and the verify leg never
@@ -9,7 +9,6 @@ reached its smoke test. A5's first slice had recorded that unhealthiness as the 
 tables are created now, the container still went unhealthy, and that is how the real cause was
 found. The route (`services/auth/src/health.ts`) is merged with PR #104 and the whole stack came up
 healthy locally on the founder's machine, auth container included, for the first time. The proof
-that closes BUG-070's row is the `Deploy staging` run on this merge (40808382804).**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
@@ -106,3 +105,49 @@ it is not redone here.
   and stop it after (`docker compose down`).
 - **15 minutes without output is a stop** (§15).
 - One rerun per merge; a leg red for a cause outside the diff is reported, not re-run (§17.4/§16).
+
+
+**The closing proof, 2026-10-29: `Deploy staging` is green on main [40913771504](https://github.com/haytham26/courier/actions/runs/40913771504) on `fc9a625`, 4 of 4 checks**, the version check among them (`PASS the deployed version fc9a625e...`). Eight causes were fixed in all, each at its cause, and none by skipping a step or turning the job off.
+## Where the queue stands, 2026-10-30
+
+**Merged and proven on main:**
+
+- **BUG-070 — FIXED** (the proof is the green `Deploy staging` run on main, see above).
+  Eight causes were unwound one at a time, each at its own cause: PR #94 (1), #96 (2), #102 (3),
+  #105 (4-6), #106 (7 - the smoke test raced the edge), #107 (8a - the version check read a path
+  with no body) and #111 (8b - that check did not count as a check).
+- **B3 — the remaining item of the audit.** `response_model` on every handler merged
+  (PR #104/#105), and the auth readiness route it needed merged with it. `BUG-110` is
+  filed for the healthcheck defect and is `fixed` in the register (PR #109 closed it with the green run on main).
+- **The mojibake repair and its gate** (PR #102): three files repaired byte-exact, and
+  `scripts/ci/check-mojibake.mjs` runs in the floor job.
+- **B4 — mutmut at the 70 % floor** (PR #110, BUG-112): the dependency, both services'
+  `[tool.mutmut]` scope, `scripts/ci/check-mutation-floor.mjs`, and the nightly + manual
+  `mutation.yml` lane that enforces the floor for `services/api` (sync, runs, auth) and
+  `services/courier-voice` (the turn machine). See the honest gap named below.
+
+**Open, in the binding order:**
+
+1. **The rest of A5** (the next item): `infra/monitoring`, the backups and the restore
+   drill on the staging host, and the OCI host/key/domain — FOUNDER_TODO carries all
+   three already. The deploy leg of `deploy.yml` names the secrets it waits for, so the
+   stack it deploys to is the only thing missing.
+2. **C3 — the LINZ squad toward 98 %** (the measure/fix/re-measure loop, each round with
+   the before-and-after numbers committed, the ADR carrying the measured accuracy and
+   the trial target met on the eval set).
+3. **MASTER §22** — `docs/research/2026/andee-cleanroom-spec.md` is not written yet, and
+   its build (the pre-classifier, the ask-on-low-confidence rule, the visible memory)
+   follows it.
+4. **Then billing (D44) and the rest of queue 3.**
+
+**Closed since the last update:** PR #107, #110 and #111 (the smoke test's version check,
+then its accounting), and **B4** — mutmut at the 70 % floor is on main: the dependency,
+both services' `[tool.mutmut]` scope, `scripts/ci/check-mutation-floor.mjs`, and a
+nightly + manual lane (`mutation.yml`) that runs it for `services/api` and
+`services/courier-voice` and fails the job below 70 %. The one honest gap, named in the
+workflow's own header: the nightly lane has not run yet (it is scheduled 03:40 UTC), and
+wiring the PR-time `check` variant into the floor job is the follow-up once that first
+run has measured the runtime. **BUG-112 is the register row for this slice.**
+
+**The handover for this session is `docs/log/HANDOVER-2026-10-29-D.md`** — the eight
+causes, the two evidence folders, the eight traps that cost time, and the state of the tree.
