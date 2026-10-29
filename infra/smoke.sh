@@ -119,9 +119,12 @@ check() {
 log "the smoke test of $DOMAIN (the evidence lands in $EVIDENCE_DIR)"
 
 # --- 1. the edge speaks TLS ------------------------------------------------
-# The deployment is HTTPS only: a plain request on 443 is refused by TLS, and
-# the port-80 redirect is the one way in. Both are checked, because Caddy's
-# config answers 301 on 80 only when a certificate for the domain exists.
+# The deployment is HTTPS only, and the port-80 redirect is the one way in -
+# but the redirect itself is NOT checked here: this script only proves the edge
+# answers TLS with a certificate. An earlier version of this comment claimed the
+# redirect was checked, which was a documentation lie the code never made true,
+# and a comment that promises a check the script does not run is how a reader
+# comes to trust a smoke test it has not read.
 if ! check "the edge answers TLS" "$BASE/healthz" 404 -k; then
   die "the edge does not answer HTTPS: nothing after this can be trusted"
 fi
