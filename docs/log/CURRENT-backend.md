@@ -1,10 +1,16 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-28 · main at `811e7df` · **Step 0 is merged (PR #83). B3's route half is MERGED
-(PR #90). The `Deploy staging` red-on-main is BUG-070 and its fix is in review (the verify leg now
-installs the workspace before it runs the auth migration). The next item is B3's remaining two —
-`response_model` on the API's 19 handlers, and the fixture hoist with the bounded voice stores —
-each verified on the tree in `docs/log/HANDOVER-2026-10-28-B.md`.**
+Updated: 2026-10-29 · main at `97a707f` (PR #102 merged) · **BUG-070 is fixed at the cause and its
+proof is the `Deploy staging` run on that merge (40791069420). The root cause was never the
+Postgres: `services/auth/src/database.ts` handed Better Auth a bare `PostgresDialect`, the kysely
+adapter read no `database.type`, defaulted to **sqlite**, and ran SQLite SQL (`FROM sqlite_master AS
+tables INNER JOIN pragma_index_list(...) WHERE ...`) against PostgreSQL — whose parser stops at
+that `WHERE`, character 404, which is the position the server reported. The fix is
+`{ type: "postgres", dialect }`; on the real image the same command creates the eleven tables and
+is idempotent. The same PR repaired the mojibake the founder found on main (three tracked text
+files, 168 sequences) and added `scripts/ci/check-mojibake.mjs` beside the control-character gate.
+**Next in flight:** PR #104 — B3's `response_model` half (every served answer now declares its
+shape; 438 tests, ruff, mypy green; red first proven four of four against main).**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
