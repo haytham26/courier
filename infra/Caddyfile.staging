@@ -1,0 +1,105 @@
+# The edge of the staging stack (A5).
+#
+# It is the production Caddyfile (infra/Caddyfile) with one difference and one
+# comment about it: `pki { ca local }` makes Caddy issue its own certificate for
+# the domain instead of asking ACME for one. A staging host without a public
+# name - the founder's local VM, which the audit names as the place to build and
+# test the deploy until the OCI host exists - cannot answer ACME's challenge, so
+# the production Caddyfile would sit waiting for a certificate that never comes.
+#
+# Everything else is the production behaviour: the same security headers, the
+# same rate limits, the same 404 for /health*, the same retrying load balance
+# over the replicas. A staging edge that behaved differently would make the
+# smoke test prove something production never runs.
+
+{
+	# Caddy's own root CA: the certificate is issued locally, in seconds,
+	# with no port-80 challenge. The smoke test calls the edge with `-k`,
+	# which is exactly what a self-signed staging certificate means.
+	pki {
+		ca local
+	}
+
+	email {$ACME_EMAIL}
+
+	# The admin API stays on the loopback interface: nothing outside the
+	# container can reload the configuration.
+	admin localhost:2019
+}
+
+{$COURIER_DOMAIN} {
+	encode zstd gzip
+
+	# The same access log the heartbeat counts (infra/monitoring/heartbeat.sh),
+	# so a staging deployment is observed the same way production is.
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+
+	# The security headers on every answer: the production set, unchanged.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+		Permissions-Policy "geolocation=(self), camera=(), microphone=(self), payment=()"
+		Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+		-Server
+	}
+
+	rate_limit {
+		zone general {
+			key {remote_host}
+			events 120
+			window 1m
+			ipv6_prefix 64
+		}
+	}
+
+	# The health endpoints are for the edge and for the heartbeat, not for the
+	# public: the edge answers 404 so the version never leaks.
+	handle /health* {
+		respond 404
+	}
+
+	handle /api/auth/* {
+		rate_limit {
+			zone auth {
+				key {remote_host}
+				events 20
+				window 1m
+				ipv6_prefix 64
+			}
+		}
+		reverse_proxy auth_a:3001 {
+			lb_try_duration 5s
+			lb_try_interval 250ms
+			health_uri /health/ready
+			health_interval 10s
+			health_timeout 3s
+		}
+	}
+
+	handle {
+		reverse_proxy api_a:8000 {
+			lb_try_duration 5s
+			lb_try_interval 250ms
+			# The API's own route is /healthz (its contract carries it, and its
+			# compose healthcheck was corrected to it in A5's first slice) — but
+			# Caddy's upstream check still asked for /health/ready, which the API
+			# does not serve. The 404 that comes back marks the upstream unhealthy
+			# and the edge answers 503 for every request, which reads like a dead
+			# API and is really a dead health check. The auth service below
+			# answers /health/ready for real (services/auth/src/health.ts), so it
+			# keeps that path.
+			health_uri /healthz
+			health_interval 10s
+			health_timeout 3s
+		}
+	}
+}
