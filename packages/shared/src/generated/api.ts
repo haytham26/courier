@@ -26,7 +26,7 @@ export interface BriefingResponse {
 }
 
 export interface CreateLocationNoteRequest {
-  kind: "entry" | "gate_code" | "hazard" | "safe_place" | "access";
+  kind: 'entry' | 'gate_code' | 'hazard' | 'safe_place' | 'access';
   body: string;
   confidence?: number;
 }
@@ -46,7 +46,7 @@ export interface CreateRunRequest {
 export interface DeliveryEvent {
   id: string;
   stop_id: string;
-  kind: "delivered" | "left_at" | "skipped" | "failed";
+  kind: 'delivered' | 'left_at' | 'skipped' | 'failed';
   utterance?: string;
   safe_place?: string;
   lat?: number;
@@ -62,7 +62,7 @@ export interface DemoRun {
 }
 
 export interface DemoSeedRequest {
-  reason?: "e2e" | "demo" | "dev";
+  reason?: 'e2e' | 'demo' | 'dev';
 }
 
 export interface DemoStop {
@@ -76,7 +76,7 @@ export interface DemoStop {
 
 export interface Entitlement {
   active: boolean;
-  plan?: "trial" | "solo" | "team" | null;
+  plan?: 'trial' | 'solo' | 'team' | null;
   features: string[];
 }
 
@@ -86,13 +86,13 @@ export interface ErrorResponse {
 }
 
 export interface HealthResponse {
-  status: "ok";
+  status: 'ok';
   version: string;
   engines: string[];
 }
 
 export interface IntakeText {
-  source?: "voice" | "ocr" | "scan" | "manual";
+  source?: 'voice' | 'ocr' | 'scan' | 'manual';
   text: string;
 }
 
@@ -103,7 +103,7 @@ export interface InterruptQuestion {
 
 export interface LocationNote {
   id: string;
-  kind: "entry" | "gate_code" | "hazard" | "safe_place" | "access";
+  kind: 'entry' | 'gate_code' | 'hazard' | 'safe_place' | 'access';
   body: string;
   confidence: number;
   last_confirmed: string;
@@ -175,7 +175,7 @@ export interface StopResponse {
   location_id: string;
   address?: string;
   seq: number;
-  status: "pending" | "delivered" | "skipped" | "deferred" | "failed";
+  status: 'pending' | 'delivered' | 'skipped' | 'deferred' | 'failed';
   lat?: number;
   lon?: number;
   priority?: boolean;
@@ -198,184 +198,184 @@ export interface TemplateResponse {
 
 export interface TemplateSegment {
   street_key: string;
-  direction?: "odd_first" | "even_first" | "zigzag" | "asc" | "desc";
+  direction?: 'odd_first' | 'even_first' | 'zigzag' | 'asc' | 'desc';
 }
 
 /** Every served route, keyed by path, with its request and answers. */
 export interface ApiPaths {
-  "/runs/{run_id}/template": {
+  '/runs/{run_id}/template': {
     put: {
       body: TemplateSegment[];
-    responses: {
-      200: TemplateResponse;
-    };
+      responses: {
+        200: TemplateResponse;
+      };
     };
   };
-  "/shifts/{shift_id}/intake": {
+  '/shifts/{shift_id}/intake': {
     post: {
       body: IntakeText;
-    responses: {
-      200: BriefingResponse | InterruptQuestion;
-    };
+      responses: {
+        200: BriefingResponse | InterruptQuestion;
+      };
     };
   };
-  "/shifts/{shift_id}/intake/manifest": {
+  '/shifts/{shift_id}/intake/manifest': {
     post: {
       body: null;
-    responses: {
-      200: BriefingResponse | InterruptQuestion;
-    };
+      responses: {
+        200: BriefingResponse | InterruptQuestion;
+      };
     };
   };
-  "/billing/webhooks/{source}": {
+  '/billing/webhooks/{source}': {
     post: {
       body: null;
-    responses: {
-      200: {
-  accepted: boolean;
-};
-    };
+      responses: {
+        200: {
+          accepted: boolean;
+        };
+      };
     };
   };
-  "/account/entitlements": {
+  '/account/entitlements': {
     get: {
       body: null;
-    responses: {
-      200: Entitlement;
-    };
+      responses: {
+        200: Entitlement;
+      };
     };
   };
-  "/shifts/{shift_id}/stops": {
+  '/shifts/{shift_id}/stops': {
     get: {
       body: null;
-    responses: {
-      200: StopResponse[];
-    };
+      responses: {
+        200: StopResponse[];
+      };
     };
   };
-  "/shifts/{shift_id}/events:batch": {
+  '/shifts/{shift_id}/events:batch': {
     post: {
       body: DeliveryEvent[];
-    responses: {
-      200: SyncResponse;
-    };
+      responses: {
+        200: SyncResponse;
+      };
     };
   };
-  "/shifts/{shift_id}/voice": {
+  '/shifts/{shift_id}/voice': {
     get: {
       body: null;
     };
   };
-  "/demo/runs": {
+  '/demo/runs': {
     post: {
       body: DemoSeedRequest;
-    responses: {
-      200: DemoRun;
-    };
+      responses: {
+        200: DemoRun;
+      };
     };
   };
-  "/runs": {
+  '/runs': {
     post: {
       body: CreateRunRequest;
-    responses: {
-      201: RunResponse;
-    };
+      responses: {
+        201: RunResponse;
+      };
     };
     get: {
       body: null;
-    responses: {
-      200: RunResponse[];
-    };
+      responses: {
+        200: RunResponse[];
+      };
     };
   };
-  "/runs/{run_id}": {
+  '/runs/{run_id}': {
     get: {
       body: null;
-    responses: {
-      200: RunResponse;
-    };
+      responses: {
+        200: RunResponse;
+      };
     };
   };
-  "/locations/{location_id}/notes": {
+  '/locations/{location_id}/notes': {
     get: {
       body: null;
-    responses: {
-      200: LocationNote[];
-    };
+      responses: {
+        200: LocationNote[];
+      };
     };
     post: {
       body: CreateLocationNoteRequest;
-    responses: {
-      200: LocationNote;
-      201: LocationNote;
-    };
+      responses: {
+        200: LocationNote;
+        201: LocationNote;
+      };
     };
   };
-  "/healthz": {
+  '/healthz': {
     get: {
       body: null;
-    responses: {
-      200: HealthResponse;
-    };
+      responses: {
+        200: HealthResponse;
+      };
     };
   };
-  "/auth/me": {
+  '/auth/me': {
     get: {
       body: null;
-    responses: {
-      200: AuthMe;
-    };
+      responses: {
+        200: AuthMe;
+      };
     };
   };
-  "/auth/verify": {
+  '/auth/verify': {
     get: {
       body: null;
-    responses: {
-      200: AuthVerify;
-    };
+      responses: {
+        200: AuthVerify;
+      };
     };
   };
-  "/shifts/{shift_id}/route": {
+  '/shifts/{shift_id}/route': {
     get: {
       body: null;
-    responses: {
-      200: RouteResponse;
-    };
+      responses: {
+        200: RouteResponse;
+      };
     };
   };
-  "/runs/{run_id}/stops/{stop_id}/pod": {
+  '/runs/{run_id}/stops/{stop_id}/pod': {
     post: {
       body: null;
-    responses: {
-      200: PodResponse;
-      201: PodResponse;
-    };
+      responses: {
+        200: PodResponse;
+        201: PodResponse;
+      };
     };
   };
-  "/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url": {
+  '/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url': {
     get: {
       body: null;
-    responses: {
-      200: PodUrlResponse;
-    };
+      responses: {
+        200: PodUrlResponse;
+      };
     };
   };
-  "/runs/{run_id}/pod/{event_id}/bytes": {
+  '/runs/{run_id}/pod/{event_id}/bytes': {
     get: {
       body: null;
-    responses: {
-      200: unknown;
-    };
+      responses: {
+        200: unknown;
+      };
     };
   };
-  "/runs/{run_id}/route:reopt": {
+  '/runs/{run_id}/route:reopt': {
     post: {
       body: {
-  affected_stop_ids: string[];
-};
-    responses: {
-      200: ReoptResponse;
-    };
+        affected_stop_ids: string[];
+      };
+      responses: {
+        200: ReoptResponse;
+      };
     };
   };
 }
