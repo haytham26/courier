@@ -303,6 +303,40 @@ expired`) and the decision (`entitlement_of`). `past_due` never removes access o
   migration, which the deploy does not yet run (`missing-table "jwks"` in the container's logs) — and
   `infra/monitoring`, which needs the same domain and mailbox.
 
+## D50 - the app opts out of GWP-ASan, because the detector itself is the crash (2026-10-28, lead squad)
+  (D49 is the last number; this takes the next free one.)
+- **The decision:** the mobile app ships `android:gwpAsanMode="never"` on `<application>` (the
+  documented per-app opt-out of the NDK GWP-ASan guide), set unconditionally by
+  `apps/mobile/plugins/withGwpAsanMode.js`. `GWP_ASAN=1` in a build environment re-arms `"always"`
+  for an experiment branch and for nothing else.
+- **What it fixes:** BUG-066 - the api-34 E2E legs dying 1-2 s into a cold start with SIGSEGV inside
+  `gwp_asan::GuardedPoolAllocator::deallocate` over `AllocationMetadata::CallSiteInfo::RecordBacktrace`
+  over `android_unsafe_frame_pointer_chase`, the caller libhermesvm.so (runs 40274121944, 40334465490,
+  40384380620, 40411581041, 40415183126 - five tombstones, one signature).
+- **Why it is the detector and not the app:** three measurements. (1) `gwpAsanMode=always` on the
+  release build: the first cold start after install died, twice, on two branches. (2)
+  `gwpAsanMode=never`: 0 of 30 cold starts on BOTH legs with the flows green (run 40498792925).
+  (3) bionic own malloc_debug - which records its traces with `_Unwind_Backtrace`, a real unwinder a
+  corrupted frame-pointer chain cannot fool - armed for that same 60-launch run found NO heap defect
+  at all: no double free, no use-after-free, no overflow. The freed memory is fine; the recorder dies.
+- **The mechanism, from the NDK guide text:** GWP-ASan records its allocation and deallocation
+  backtraces by walking the frame-pointer chain, and a 64-bit app must be built without
+  `-fomit-frame-pointer` for that to work. Every native library in this APK is built frame-pointerless
+  (the control scan: libappmodules.so, compiled by our own toolchain, has 1 frame prologue in 1.9 MB),
+  so the first GWP-ASan-sampled deallocation kills the process inside the recorder. Under Android 14+,
+  an app without the attribute gets Recoverable GWP-ASan on ~1% of launches - exactly the
+  red-on-some, green-on-others lottery the register recorded, and a risk to real devices, not only
+  the emulator.
+- **What was rejected, with its reason:** building our own C++ with `-fno-omit-frame-pointer` does not
+  cover the third-party prebuilts (libhermesvm.so, librnskia.so, libmaplibre.so, libonnxruntime.so),
+  which are the frames in the tombstone; upgrading React Native to a Hermes built differently is an
+  unverified guess (the per-version build flags are not published), so it stays off the plan until a
+  Hermes AAR built with frame pointers can be shown. GWP-ASan protection is lost deliberately: a
+  detector that kills the process is worse than none. bionic malloc_debug stays available for hunts
+  (the `MALLOC_DEBUG` path in `.maestro/run-all.sh`).
+- **Still open:** it is an upstream problem - whether recent Android GWP-ASan should refuse to arm
+  on a frame-pointerless process (or record safely) belongs in an AOSP bug report, filed with this
+  evidence. The founder can send it.
 ## D51 — The answers are models, so their date-times and their unions are decided (2026-10-29, backend squad decision, B3's response_model half)
 
 **Why this exists.** B3's `response_model` slice made every served answer a Pydantic
