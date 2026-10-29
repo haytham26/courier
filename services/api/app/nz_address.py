@@ -65,6 +65,15 @@ SPOKEN_FIXES = {
     "a ran ui": "Aranui",
     "whaka": "Whaka",
 }
+# The directions a road carries after its type, as a driver says them
+# ("Durham Street South"). They are not suburbs, and treating one as the tail of
+# the suburb made `parse` answer with no suburb at all.
+#
+# "central" is deliberately absent: in NZ it is far more often a suburb's own name
+# ("Central City", "Christchurch Central") than a road's direction, and stripping
+# it there moved a suburb name onto the road.
+ROAD_DIRECTIONS = {"north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest"}
+
 STREET_TYPES = {
     "street": "St",
     "st": "St",
@@ -264,9 +273,36 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
     hint = None
     for i, tok in enumerate(tokens):
         if tok in STREET_TYPES:
+            # C3: the road's direction word comes after its type ("193 Durham
+            # Street South Christchurch Central"), and the driver then repeats the
+            # city's name. The whole tail was handed to the suburb matcher, so it
+            # saw "south christchurch central christchurch", matched nothing, and
+            # answered with no suburb at all. The direction is set aside for the
+            # suburb match and kept on the road, because that is what the driver
+            # said and what the register's road name carries.
+            #
+            # It is set aside only when a suburb matches after it: "South
+            # Christchurch" is a suburb in its own right, and stripping it there
+            # would answer with the direction moved onto the road and no suburb at
+            # all. The direction is only a direction when the words after it name
+            # somewhere.
+            direction_tokens: list[str] = []
+            tail_tokens = tokens[i + 1 :]
+            while tail_tokens and tail_tokens[0] in ROAD_DIRECTIONS:
+                direction_tokens.append(tail_tokens.pop(0))
             street = " ".join(t.title() for t in tokens[:i]) + " " + STREET_TYPES[tok]
-            tail = " ".join(tokens[i + 1 :])
-            if tail:
+            tail = " ".join(tail_tokens)
+            matched = match_suburb(tail, suburbs)[0] if tail else None
+            if direction_tokens and matched is None:
+                # The direction was not a direction: it belongs to the suburb.
+                tail_tokens = tokens[i + 1 :]
+                tail = " ".join(tail_tokens)
+                matched = match_suburb(tail, suburbs)[0] if tail else None
+                if matched is not None:
+                    direction_tokens.clear()
+            if direction_tokens:
+                street += " " + " ".join(token.title() for token in direction_tokens)
+            if tail and matched is not None:
                 suburb, conf = match_suburb(tail, suburbs)
                 hint = tail
             break
