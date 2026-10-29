@@ -223,3 +223,110 @@ expired`) and the decision (`entitlement_of`). `past_due` never removes access o
 - **Not in this slice:** no provider client (Play needs a test track, Stripe needs keys), no paywall
   UI, no Team org billing or seats, no NZ GST calculation. Provider slices are FOUNDER_TODO switches
   with `stripe-mock` tests when they land; the ingest path is designed here, not exercised.
+
+## D46 — The billing providers: one fact shape, three signature rules, an idempotent ingest (2026-10-26, backend squad decision, the provider side of D44)
+
+- ADR-018. `services/api/app/providers.py` defines the fact a provider sends (`ProviderFact`), the
+  verifier protocol (`ProviderVerifier.verify`) and `StripeVerifier`, the first implementation, plus
+  `apply_facts` — which writes through ADR-017's `put_subscription`, so the ingest is idempotent per
+  courier and monotonic in the source's own `renews_at`.
+- The three signature rules the payments squad took from the Stripe client are enforced once, before
+  the body is parsed: **no secret, no comparison** (a misconfiguration, not a permissive default);
+  **a constant tolerance** (300 s, a module constant with a test that it is one, not a per-call
+  window); and **a truncated body is not an event** (the signature is over the exact bytes, so a body
+  that fails it never becomes a partial fact).
+- `POST /billing/webhooks/{{source}}` is the boundary: an unaccepted source is 404 (it is not this
+  API's endpoint), a failed signature rule is 400 with the reason, and an accepted fact is stored.
+  `BILLING_SOURCES` names what this deployment accepts; `BILLING_WEBHOOK_SECRET_<SOURCE>` is read
+  from the environment with no default.
+- The in-memory repo now answers the same monotonic rule the SQL repo's `DO UPDATE` carries — the
+  review of ADR-017 found the two disagreeing, and the rule lives in one place each.
+- **Still the founder's:** the live endpoints, the webhook secrets, and the store verifiers (Play
+  first per D44, through the RevenueCat-shaped layer). The verifiers are exercised against fixtures
+  with locally-computed signatures — no network, no keys.
+
+## D47 - A1's backend half: the demo-run seed and the typed client generated from the contract (2026-10-26, backend squad decision, the first slice of A1)
+
+- ADR-019. `POST /demo/runs` (`services/api/app/demo.py`) seeds the authenticated caller one day - a
+  shift, a run and five stops - with **uuid5 ids derived from the caller and one reason**
+  (`e2e` / `demo` / `dev`), so the ids do not move between calls and are recognisable as demo data
+  in the database and the evidence. The app's core flow (load the run, deliver 3 stops, go offline,
+  deliver 1, sync) now has a real, repeatable day to run against.
+- The gate is the environment, **not** truthiness: `DEMO_SEED_ENABLED` must be exactly `true`, and
+  every other value - `false`, `1`, `True`, `on`, a string with a stray space - answers 404, because
+  the seed writes into the same tables as real data. Anything else is a deployment that seeds demo
+  rows by accident.
+- The seed writes a run, so **a caller racing themself on the same reason is answered with the API's
+  409**, the same conflict `POST /runs` answers - not a 500 from an uncaught `ValueError`.
+- `services/api/scripts/generate_api_client.py` generates `packages/shared/src/generated/api.ts`
+  from `packages/contracts/openapi.yaml` - one interface per schema, one typed signature per
+  operation. The file is **committed**, and the same script's `check` mode is a CI gate: a contract
+  change that leaves a stale client is red. The drift guard now pins three directions -
+  server, contract and client.
+- **Still the lead's:** the app consuming `@courier/shared` (the sign-in, the JWT, the run load, the
+  outbox, one run store) and the E2E job that drives the seeded day end to end. **Still the
+  founder's:** the OCI host and key for A5's staging deploy.
+
+## D48 — Andee's ideas, built our own way: clean-room only, store-safe (2026-10-27, founder decision)
+
+- **The founder's goal:** Courier Voice learns the techniques of the Andee device agent (https://github.com/kuafuai/andee), so the copilot is smarter and cheaper.
+- **The law decides how.** Reverse-engineering or modifying Andee's code does not make it ours: a modified copy is a derivative work and stays under Andee's licence. That licence, in A.1(d), forbids shipping it in a product without KUAFUAI's written authorisation. So:
+  - **Clean room (D24):** one agent reads Andee and writes a behaviour spec in our own words, with no code, in `docs/research/2026/andee-cleanroom-spec.md`. A different session that never opened Andee's source builds from that spec. The PR records both steps.
+  - **No Andee code, file, asset, prompt text or name** enters the repository. The licence check runs on the PR.
+- **What we build (MASTER §22):**
+  1. a cheap tool-less pre-classifier call before a full Courier Voice turn, measured in tokens and latency through OmniRoute;
+  2. "stop and ask instead of retrying" when the model's confidence is low, which matters to a driver;
+  3. a memory of the courier that the courier can see and clear, under the PIA's rules.
+- **What we do not build without a separate decision:** controlling other apps through Android's `AccessibilityService`. Google Play allows it only for apps whose core purpose is accessibility, with a declaration and review. That one is a research spike with a Play-policy check first (MASTER §22), and it is out of the trial scope.
+## D49 — A5's first slice: the staging stack, the two service images, and the deploy with its smoke test (2026-10-27, backend squad decision)
+  (The register's D48 went to the founder's Andee-ideas decision of the same day, so this slice takes the next free number.)- ADR-020. `infra/compose.staging.yml` is the staging stack as its own file: one replica of each
+  service (the zero-downtime swap is a production guarantee), a 172.29 network so both stacks can run
+  on one host, and Caddy's own root CA for a domain a local VM cannot be challenged for
+  (`infra/Caddyfile.staging`).
+- `services/api/Dockerfile` and `services/auth/Dockerfile` exist now, so the deployment runs the two
+  services it exists to run. The API's dependencies come from the lock (`uv sync --frozen`) and the
+  image carries no test, ops or load-test package; the auth service builds the workspace and runs
+  `dist/index.js`. `infra/compose.prod.yml`'s two stale paths (`apps/api`, `../db/schema.sql`) are
+  corrected to the repository's layout.
+- `infra/deploy.sh` is one procedure with three steps — the migrations (applied with
+  `ON_ERROR_STOP=1`, after waiting for the server), the state file the rollback reads, and the swap —
+  and `infra/deploy.sh rollback` re-applies the recorded images. `infra/smoke.sh` drives a real round
+  trip through the edge with the demo seed A1 added, and says which checks it skipped rather than
+  faking a token.
+- `.github/workflows/deploy.yml` runs the same scripts: a **verify** leg on every push that builds
+  both images and brings the whole stack up on the runner (the local VM the audit names), and a
+  **deploy** leg over SSH that rolls back when the smoke test fails. Without the OCI host and key the
+  deploy leg names the secrets it is waiting for instead of doing nothing.
+- **Still the founder's:** the OCI host, the key and the staging domain (FOUNDER_TODO), and the
+  map-pack licence confirmation (`--confirm-offline-use`) that BUG-067's proof runs stop at.
+- **Still open:** the auth service's own schema — Better Auth creates its tables with its own
+  migration, which the deploy does not yet run (`missing-table "jwks"` in the container's logs) — and
+  `infra/monitoring`, which needs the same domain and mailbox.
+
+## D51 — The answers are models, so their date-times and their unions are decided (2026-10-29, backend squad decision, B3's response_model half)
+
+**Why this exists.** B3's `response_model` slice made every served answer a Pydantic
+model, which decided two things the hand-built dicts had left open:
+
+1. **Date-times are the canonical compact form** (`2026-10-24T07:30:00Z`). The helpers
+   built them with `.isoformat()`, which answers `+00:00` for an aware UTC datetime;
+   Pydantic answers `Z`. Both are RFC 3339 date-times and the contract's
+   `format: date-time` accepts both, and the compact form is what the phone's `Date`
+   parser emits natively, so the generated client and the server agree without a
+   conversion on either side. **The pin is explicit** (`test_a_run_is_created_and_read_back`
+   asserts the `Z` form and says why), so a third form cannot arrive unannounced.
+2. **`GET /auth/verify` answers a union of two shapes discriminated on `valid`**, not one
+   model with a nullable `user_id`. The old answer never sent `user_id` when the token
+   was invalid, and an invalid token should disclose nothing about who it might have
+   belonged to; a nullable field would answer `"user_id": null`, which is a key the old
+   answer never sent (`test_verify_reports_an_invalid_token` caught exactly this). The API's
+   other answer models keep their fields required for the same reason: an answer that
+   omits a key is not the same as an answer that fills it with null, and the phone
+   branches on it.
+
+**Also recorded, because it is a real constraint rather than a preference:**
+`upload_pod` builds its `PodResponse` into a `JSONResponse` instead of returning the model,
+because that route already carries six parameters and `PLR0917` forbids a seventh - and an
+`UploadFile` parameter cannot be keyword-only, which was the other way out (tested: it
+answers 422). A suppression comment was the third way out, and this repository does not add
+one without an issue link.

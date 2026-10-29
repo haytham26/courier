@@ -5,6 +5,7 @@
 # the production environment of the deployment (never committed)
 infra/prod.env
 infra/*.env
+!infra/ci-staging.env
 *.pem
 *.key
 *.jks
@@ -70,3 +71,8 @@ research-private/
 not reach gitleaks' view of the repo.
 /.opencode-tmp/
 graphify-out/
+.deploy-state
+# The typed API client (ADR-019) regenerates beside itself to check freshness;
+# the temp file is never source.
+packages/shared/src/generated/.api-check.ts
+packages/shared/src/generated/.api-test.ts

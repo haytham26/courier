@@ -49,6 +49,18 @@ def _parse_segments(document: object) -> tuple[Segment, ...]:
     return tuple(segments)
 
 
+def _is_a_newer_fact(stored: SubscriptionRow, incoming: SubscriptionRow) -> bool:
+    """Whether the incoming fact is the one to keep.
+
+    A fact with no `renews_at` (a cancellation or a revocation) always applies;
+    otherwise the source's own later time wins, so a stale replay cannot rewind a
+    courier's access. The SQL repo expresses the same rule in its DO UPDATE's
+    WHERE clause."""
+    if incoming.renews_at is None or stored.renews_at is None:
+        return True
+    return incoming.renews_at >= stored.renews_at
+
+
 def _subscription_row(row: Any) -> SubscriptionRow:
     """A stored subscription row as the API reads it (ADR-017)."""
     return SubscriptionRow(
@@ -303,6 +315,11 @@ class InMemoryRepo:
 
     def put_subscription(self, row: SubscriptionRow) -> bool:
         existing = self.subscriptions.get(row.courier_id)
+        # The same monotonic rule the SQL repo's DO UPDATE carries (ADR-017 §3):
+        # a replay of an older fact is a no-op, a cancellation (which carries no
+        # renews_at) always applies. The two implementations must agree.
+        if existing is not None and not _is_a_newer_fact(existing, row):
+            return False
         self.subscriptions[row.courier_id] = row
         return existing is None
 

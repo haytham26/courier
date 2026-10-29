@@ -1,0 +1,1 @@
+﻿check-workflows: 8 workflows read their inputs through the github context and carry only keys GitHub accepts

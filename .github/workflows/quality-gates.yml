@@ -36,10 +36,19 @@ jobs:
         run: node scripts/ci/check-doc-links.mjs
       - name: No control characters in the tracked text
         run: node scripts/ci/check-control-chars.mjs
+      # BUG-070's mojibake: on 2026-10-28 the founder found three tracked text
+      # files whose UTF-8 had been read as Windows-1252 (or an OEM code page)
+      # and saved again - 168 corrupted sequences that still read fine. This
+      # gate keeps it from coming back, the way the control-character check
+      # does for BEL/VT/FF.
+      - name: No mojibake in the tracked text (UTF-8 read as Windows-1252)
+        run: node scripts/ci/check-mojibake.mjs
       # BUG-052: a workflow that boots the emulator without -gpu
       # swiftshader_indirect makes the headless runner pick its own GL mode and
       # the E2E gate dies at launchApp, which reads like an app bug. The gate's
       # own test runs with the rest of scripts/*/__tests__ (test:store-readiness).
+      - name: Every workflow file parses (the keys, and the dispatch inputs) (BUG-067)
+        run: node scripts/ci/check-workflows.mjs
       - name: Every emulator boot asks for software rendering
         run: node scripts/ci/check-emulator-gpu.mjs
       - name: Check the voice evaluation set

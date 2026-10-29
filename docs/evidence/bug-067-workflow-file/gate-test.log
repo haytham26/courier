@@ -1,0 +1,21 @@
+﻿Ô£ö the BUG-067 root cause: an input of the action written as a step key (1.1283ms)
+Ô£ö the same name inside with: is where the action reads it (0.1219ms)
+Ô£ö a key inside a run: block scalar is not YAML and is not read as one (0.081ms)
+Ô£ö a key inside a step with: is an input, not a step key (0.0723ms)
+Ô£ö the workflow-level mapping is not a job (0.0982ms)
+Ô£ö an unknown key at a job level fails, and a known one passes (0.1091ms)
+Ô£ö the bare inputs context is a violation, the github context is not (0.1856ms)
+Ô£ö a comment naming inputs is documentation, not an expression (0.1185ms)
+Ô£ö spacing is not a difference: ${{inputs.x}} is the same context (0.1166ms)
+Ô£ö a directory that does not exist fails rather than scanning nothing (0.41ms)
+Ô£ö the repo's own workflows pass, which is the bug fixed (2.7404ms)
+Ô£ö the script's exit code is what CI sees (198.615ms)
+Ô£ö the bug it exists for is named (0.1236ms)
+Ôä╣ tests 13
+Ôä╣ suites 0
+Ôä╣ pass 13
+Ôä╣ fail 0
+Ôä╣ cancelled 0
+Ôä╣ skipped 0
+Ôä╣ todo 0
+Ôä╣ duration_ms 316.9729

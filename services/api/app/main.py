@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
@@ -32,9 +33,16 @@ from .agents.omniroute import (
     ProviderUnavailableError,
     get_intake_provider,
 )
-from .auth.jwks import AuthPrincipal, get_auth_settings, get_current_principal
+from .auth.jwks import (
+    AuthPrincipal,
+    get_auth_settings,
+    get_current_principal,
+    get_websocket_verifier,
+)
 from .auth.routes import router as auth_router
-from .auth.websocket import get_websocket_principal
+from .auth.websocket import UnauthenticatedError, identify, refuse
+from .billing import WEBHOOK_MAX_BYTES, billing_sources
+from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
 from .locations import location_id_for
 from .pod import (
@@ -44,7 +52,24 @@ from .pod import (
     validate_pod_settings,
 )
 from .pod_store import LocalPodStore, pod_store
+from .providers import VERIFIERS, apply_facts, webhook_secret_for
 from .repo import DeliveryEventRow, LocationNoteRow, Repo, RouteStopRow, RunRecord, get_repo
+from .responses import (
+    DemoRunResponse,
+    EntitlementResponse,
+    HealthResponse,
+    IntakeAnswerResponse,
+    LocationNoteResponse,
+    PodResponse,
+    PodUrlResponse,
+    ReoptResponse,
+    RouteResponse,
+    RunResponse,
+    StopResponse,
+    SyncResponse,
+    TemplateResponse,
+    WebhookAcceptedResponse,
+)
 from .routing import (
     RoutePlan,
     RouteRequest,
@@ -64,7 +89,12 @@ get_auth_settings()
 # must stop the boot, not the first photo of the day.
 validate_pod_settings()
 
-app = FastAPI(title="Courier Copilot", version="0.1.0")
+# The version the smoke test proves (A5's done-when: "the API is the version that
+# was just deployed"). The compose file already passes APP_VERSION to the
+# container; the app ignored it and answered a hard-coded 0.1.0, so the smoke
+# test's version check could never see the swap and a stale replica behind the
+# edge looked identical to the new one.
+app = FastAPI(title="Courier Copilot", version=os.environ.get("APP_VERSION", "0.1.0"))
 
 # The unhandled-error trail the PLAYBOOK triage reads (RUNBOOK section 10).
 logger = logging.getLogger("courier_api")
@@ -354,7 +384,7 @@ def _route_body(
     }
 
 
-@app.get("/healthz")
+@app.get("/healthz", response_model=HealthResponse)
 def healthz():
     """The uptime probe's target (RUNBOOK section 9): data-free by construction.
 
@@ -369,7 +399,42 @@ def healthz():
     }
 
 
-@app.post("/runs", status_code=201)
+class DemoSeedRequest(BaseModel):
+    """The one reason this caller wants a demo day for."""
+
+    reason: Literal["e2e", "demo", "dev"] = "e2e"
+
+
+@app.post("/demo/runs", response_model=DemoRunResponse)
+def seed_demo_run(
+    body: DemoSeedRequest,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Seed the caller's demo day: a run and its stops, in the real tables.
+
+    The app's core flow needs a run with stops that exist, and it needs the ids
+    to stay still between calls, so an E2E job can reset the phone and run the
+    flow again. This is the seam for that (ADR-019): the ids are derived from the
+    caller, so a caller always gets their own day back.
+
+    The gate is the environment, not a hope: without DEMO_SEED_ENABLED=true this
+    route is 404, because seeding demo rows into a real database is not something
+    an unguarded endpoint should ever do.
+
+    A caller racing themself on the same reason is answered with the same 409
+    `POST /runs` answers, not a 500: the seed writes a run like any other.
+    """
+    if not seed_enabled():
+        raise HTTPException(status_code=404, detail="this deployment does not seed demo data")
+    try:
+        day = write_demo_day(repo, principal.user_id, body.reason)
+    except DemoDayConflictError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return demo_day_body(day)
+
+
+@app.post("/runs", status_code=201, response_model=RunResponse)
 def create_run(
     body: CreateRunRequest,
     principal: AuthPrincipal = Depends(get_current_principal),
@@ -399,7 +464,7 @@ def create_run(
     return _run_body(record)
 
 
-@app.get("/runs")
+@app.get("/runs", response_model=list[RunResponse])
 def list_runs(
     principal: AuthPrincipal = Depends(get_current_principal),
     repo: Repo = Depends(get_repo),
@@ -408,7 +473,7 @@ def list_runs(
     return [_run_body(run) for run in repo.list_runs(principal.user_id)]
 
 
-@app.get("/runs/{run_id}")
+@app.get("/runs/{run_id}", response_model=RunResponse)
 def get_run(
     run_id: uuid.UUID,
     principal: AuthPrincipal = Depends(get_current_principal),
@@ -445,7 +510,11 @@ class PodForm:
         self.event_id = event_id
 
 
-@app.post("/runs/{run_id}/stops/{stop_id}/pod", status_code=201)
+@app.post(
+    "/runs/{run_id}/stops/{stop_id}/pod",
+    status_code=201,
+    response_model=PodResponse,
+)
 def upload_pod(
     paths: Annotated[StopPaths, Depends()],
     image: UploadFile,
@@ -516,16 +585,22 @@ def upload_pod(
             )
         ],
     )
+    # The answer is the model, so a key rename is a construction error here
+    # rather than a silently different answer on the phone (B3's response_model
+    # slice). The status rides on the JSONResponse rather than an injected
+    # `Response` because this route already carries six parameters and
+    # `PLR0917` (too many positional arguments) forbids a seventh: the image is
+    # a file parameter, which keyword-only cannot carry either.
     return JSONResponse(
         status_code=200 if replayed else 201,
-        content={
-            "event_id": str(resolved_id),
-            "stop_id": str(paths.stop_id),
-            "sha256": digest,
-            "bytes": stored_bytes,
-            "stored_at": datetime.now(UTC).isoformat(),
-            "already_stored": replayed or outcome.stored == 0,
-        },
+        content=PodResponse(
+            event_id=resolved_id,
+            stop_id=paths.stop_id,
+            sha256=digest,
+            bytes=stored_bytes,
+            stored_at=datetime.now(UTC),
+            already_stored=replayed or outcome.stored == 0,
+        ).model_dump(mode="json"),
     )
 
 
@@ -576,7 +651,10 @@ def pod_bytes(
     )
 
 
-@app.get("/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url")
+@app.get(
+    "/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url",
+    response_model=PodUrlResponse,
+)
 def pod_url(
     paths: Annotated[StopPaths, Depends()],
     event_id: uuid.UUID,
@@ -608,7 +686,7 @@ def pod_url(
     return {"url": url, "expires_at": expires_at.isoformat(), "event_id": str(event_id)}
 
 
-@app.post("/runs/{run_id}/route:reopt")
+@app.post("/runs/{run_id}/route:reopt", response_model=ReoptResponse)
 def reopt_route(
     run_id: uuid.UUID,
     body: ReoptRequest,
@@ -654,7 +732,7 @@ def reopt_route(
     return body_out
 
 
-@app.put("/runs/{run_id}/template")
+@app.put("/runs/{run_id}/template", response_model=TemplateResponse)
 def put_template(
     run_id: uuid.UUID,
     body: TemplateRequest,
@@ -689,7 +767,7 @@ def put_template(
     }
 
 
-@app.get("/shifts/{shift_id}/route")
+@app.get("/shifts/{shift_id}/route", response_model=RouteResponse)
 def shift_route(
     shift_id: uuid.UUID,
     principal: AuthPrincipal = Depends(get_current_principal),
@@ -760,7 +838,7 @@ def _run_intake(
     return _intake_answer(result)
 
 
-@app.post("/shifts/{shift_id}/intake")
+@app.post("/shifts/{shift_id}/intake", response_model=IntakeAnswerResponse)
 def intake_text(
     shift_id: uuid.UUID,
     body: IntakeText,
@@ -790,7 +868,10 @@ def intake_text(
     )
 
 
-@app.post("/shifts/{shift_id}/intake/manifest")
+@app.post(
+    "/shifts/{shift_id}/intake/manifest",
+    response_model=IntakeAnswerResponse,
+)
 def intake_manifest(
     shift_id: uuid.UUID,
     image: UploadFile,
@@ -834,7 +915,38 @@ def intake_manifest(
     )
 
 
-@app.get("/account/entitlements")
+@app.post(
+    "/billing/webhooks/{source}",
+    response_model=WebhookAcceptedResponse,
+)
+async def billing_webhook(
+    source: str,
+    request: Request,
+    repo: Repo = Depends(get_repo),
+):
+    """A provider's webhook: verify it, then ingest the fact (ADR-018).
+
+    The signature rules run before the body is parsed, and every refusal after
+    that is a 400 with its reason - never a 500 the provider has to retry. The
+    body is capped like every other upload: this endpoint is unauthenticated
+    (the signature is the auth), so an unbounded read is a free amplifier.
+    """
+    accepted = billing_sources()
+    if source not in accepted or source not in VERIFIERS:
+        # An unaccepted source is 404, not 403: it is not this API's endpoint.
+        raise HTTPException(status_code=404, detail="this deployment does not accept that source")
+    body = await request.body()
+    if len(body) > WEBHOOK_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="the webhook body is over the cap")
+    try:
+        facts = VERIFIERS[source].verify(body, dict(request.headers), webhook_secret_for(source))
+        apply_facts(repo, facts, accepted=accepted)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"accepted": True}
+
+
+@app.get("/account/entitlements", response_model=EntitlementResponse)
 def get_entitlements(
     principal: AuthPrincipal = Depends(get_current_principal),
     repo: Repo = Depends(get_repo),
@@ -853,7 +965,7 @@ def get_entitlements(
     }
 
 
-@app.get("/shifts/{shift_id}/stops")
+@app.get("/shifts/{shift_id}/stops", response_model=list[StopResponse])
 def list_stops(
     shift_id: uuid.UUID,
     status: Literal["pending", "delivered", "skipped", "deferred", "failed"] | None = None,
@@ -892,18 +1004,30 @@ def list_stops(
     ]
 
 
-def _location_note_body(note: LocationNoteRow) -> dict[str, object]:
-    """The note as the contract's LocationNote (ADR-012 §2)."""
-    return {
-        "id": str(note.id),
-        "kind": note.kind,
-        "body": note.body,
-        "confidence": note.confidence,
-        "last_confirmed": note.last_confirmed.isoformat(),
-    }
+def _location_note_body(note: LocationNoteRow) -> LocationNoteResponse:
+    """The note as the contract's LocationNote (ADR-012 §2).
+
+    The model, not a dict: the response the list and the POST return is this
+    shape, and building it in one place is what keeps a key rename from
+    reaching one answer and not the other (B3's response_model slice).
+
+    `model_validate` rather than the constructor because the row's `kind` is a
+    `str` (the database's column is text, and the repository widens the row to
+    say so): the contract's vocabulary is the model's, so a value outside it is
+    rejected here at runtime instead of silently reaching the phone.
+    """
+    return LocationNoteResponse.model_validate(
+        {
+            "id": note.id,
+            "kind": note.kind,
+            "body": note.body,
+            "confidence": note.confidence,
+            "last_confirmed": note.last_confirmed,
+        }
+    )
 
 
-@app.get("/locations/{location_id}/notes")
+@app.get("/locations/{location_id}/notes", response_model=list[LocationNoteResponse])
 def get_location_notes(
     location_id: uuid.UUID,
     principal: AuthPrincipal = Depends(get_current_principal),
@@ -924,10 +1048,11 @@ def get_location_notes(
     ]
 
 
-@app.post("/locations/{location_id}/notes")
+@app.post("/locations/{location_id}/notes", response_model=LocationNoteResponse)
 def add_location_note(
     location_id: uuid.UUID,
     body: CreateLocationNote,
+    response: Response,
     principal: AuthPrincipal = Depends(get_current_principal),
     repo: Repo = Depends(get_repo),
 ):
@@ -958,10 +1083,14 @@ def add_location_note(
         for note in repo.get_location_notes(principal.user_id, location_id)
         if note.kind == body.kind
     )
-    return JSONResponse(status_code=201 if created else 200, content=_location_note_body(stored))
+    # The same rule as the POD upload: the model answers, the status rides on
+    # the injected Response, so the shape the contract declares is the shape the
+    # server validates (B3's response_model slice).
+    response.status_code = 201 if created else 200
+    return _location_note_body(stored)
 
 
-@app.post("/shifts/{shift_id}/events:batch")
+@app.post("/shifts/{shift_id}/events:batch", response_model=SyncResponse)
 def sync_events(
     shift_id: uuid.UUID,
     events: list[DeliveryEvent],
@@ -1012,27 +1141,42 @@ def sync_events(
 async def voice(
     ws: WebSocket,
     shift_id: uuid.UUID,
-    principal: AuthPrincipal = Depends(get_websocket_principal),
     repo: Repo = Depends(get_repo),
 ):
     """Bidirectional voice channel.
+    The handshake carries no token: the route accepts the socket first (it owns
+    the channel, and only an accepted socket can be answered with a close code),
+    then `identify` reads the credential from the header or the first message and
+    a refusal is one `error` frame and a 4403 (BUG-059).
     client -> server: {"type":"transcript","text":..., "final":true, "gps":{lat,lon,acc,speed}}
                       (STT runs on-device or via Deepgram streaming; we only receive finals)
                       {"type":"gps", ...}  (1 Hz; drives 50 m approach whispers)
     server -> client: {"type":"say","text":..., "priority":"now|queue"}  (client TTS / Cartesia)
                       {"type":"state","stop":...}
     """
+    # The route owns the channel, so it accepts the handshake before anything
+    # else is read: an `identify` refusal needs an open socket to deliver an
+    # `error` frame to (a rejected handshake discards every word and code).
+    await ws.accept()
+    try:
+        # The verifier is resolved through `dependency_overrides` because the
+        # voice route cannot take it as a `Depends` parameter: the dependency
+        # would be solved before the socket is accepted, and a refusal would
+        # then be an HTTP 403 on the handshake instead of an `error` frame and a
+        # 4403 close on a socket the caller actually holds.
+        verifier = app.dependency_overrides.get(get_websocket_verifier) or get_websocket_verifier
+        principal = await identify(ws, verifier())
+    except UnauthenticatedError as exc:
+        await refuse(ws, exc.reason)
+        return
     run = repo.get_run_for_shift(shift_id)
     if run is None or run.courier_id != principal.user_id:
         # The token is valid but the shift is not the caller's: the voice
         # channel carries the day's addresses, so a foreign shift is closed
         # without a word (ASVS V4 - the same 404 discipline as the routes).
-        # Accepted first: uvicorn only delivers a close CODE to an accepted
-        # socket; rejecting the handshake discards the code.
-        await ws.accept()
+        # Already accepted above, so the close CODE reaches the caller.
         await ws.close(code=4404)
         return
-    await ws.accept()
     try:
         while True:
             try:
