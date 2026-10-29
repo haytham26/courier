@@ -1,18 +1,26 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-29 · main at `e258873` (PR #101 merged) · **BUG-070 is closed. Its deploy chain
-took **seven** causes, all fixed (PRs #94, #96, #102, #104, #105, #106), and the founder's rule held:
-the row flipped to `fixed` only with a green `Deploy staging` run on main — three in a row now
-([40847886617](https://github.com/haytham26/courier/actions/runs/40847886617) on `821df19`,
-[40851207921](https://github.com/haytham26/courier/actions/runs/40851207921) on `e6443c2`,
-[40853373882](https://github.com/haytham26/courier/actions/runs/40853373882) on `e258873`, the main
-tip). The seven-cause table with every run and PR is in `docs/log/HANDOVER-2026-10-29-D.md`, and the
-lesson it leaves is in that file's own words: a red deploy whose message names a subsystem is naming
-the subsystem that *reported*, not the one that is wrong. B3's remaining backlog (`response_model`
-over every served answer — merged as PRs #104/#105; the BUG-059 fixture hoist and the bounded voice
-stores; the MASVS L1 self-review) and B4's mutmut floor (PR #106's lane) are what is left of the
-binding order before billing (D44).** This file was stale until this session: its `Updated` line
-named `3930171` and its proof named a run that failed, and both are corrected here.
+Updated: 2026-10-30 · main at `25f79b8` (PR #109 merged the register closure) · **BUG-070 is FIXED, and the proof is the green `Deploy staging` run on main [40847886617](https://github.com/haytham26/courier/actions/runs/40847886617) on `821df19` — the migration prints `migration was completed successfully!`, the whole stack comes up, and the smoke test passes 3/3. Seven causes were unwound one at a time, each at its cause; the table of runs is in `docs/evidence/deploy-verify-workspace-install/README.md`. B3's 
+Seven causes were unwound one at a time, each at its cause; the table of runs is in `docs/evidence/deploy-verify-workspace-install/README.md`. B3's `response_model` half is merged. BUG-110 (NEW, filed by this session) is the defect, and the register has it `fixed` - PR #109 closed it with the green run -
+the stack's next `Deploy staging` run found: `infra/compose.staging.yml`'s auth healthcheck asks for
+`/health/ready`, the auth service never served that route (every request fell to the Better Auth
+handler, which 404s it), so the container could never become healthy and the verify leg never
+reached its smoke test. A5's first slice had recorded that unhealthiness as the missing tables — the
+tables are created now, the container still went unhealthy, and that is how the real cause was
+found. The route (`services/auth/src/health.ts`) is merged with PR #104 and the whole stack came up
+Updated: 2026-10-29 · main at `27d82cc` (PR #110 merged) · **BUG-070, BUG-110 and BUG-111 are
+closed - the `Deploy staging` chain that was red on every push for seven causes is now green on
+three consecutive pushes to main, and the register says so with the runs. **B4 is merged** (PR
+#110, BUG-112 `doing`): mutmut in both services with the audit's own scope, the 70 % floor enforced
+by `scripts/ci/check-mutation-floor.mjs` in **mutmut's own arithmetic** (read from its installed
+source), a nightly `mutation.yml` lane per service, and ten tests pinning the floor - including the
+case that matters, a run with no mutants at all **failing** rather than passing. The one thing
+provable only on CI: mutmut refuses to start on Windows, so the run's harness is the ubuntu runner
+and the first baseline score is the lane's first nightly run. **Next in the binding order: the rest
+of A5 - `infra/monitoring` wired into the staging stack, the backups and the restore drill on
+staging - then C3 (the LINZ measure-fix-re-measure loop) and MASTER §22 (the Andee clean-room spec,
+still unwritten).** Billing (D44) resumes after those.
+healthy locally on the founder's machine, auth container included, for the first time. The proof
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
@@ -109,3 +117,40 @@ it is not redone here.
   and stop it after (`docker compose down`).
 - **15 minutes without output is a stop** (§15).
 - One rerun per merge; a leg red for a cause outside the diff is reported, not re-run (§17.4/§16).
+
+
+**The closing proof, 2026-10-29: `Deploy staging` is green on main [40913771504](https://github.com/haytham26/courier/actions/runs/40913771504) on `fc9a625`, 4 of 4 checks**, the version check among them (`PASS the deployed version fc9a625e...`). Eight causes were fixed in all, each at its cause, and none by skipping a step or turning the job off.
+## Where the queue stands, 2026-10-30
+
+**Merged and proven on main:**
+
+- **BUG-070 — FIXED** (the proof is the green `Deploy staging` run on main, see above).
+  Eight causes were unwound one at a time, each at its own cause: PR #94 (1), #96 (2), #102 (3),
+  #105 (4-6), #106 (7 - the smoke test raced the edge), #107 (8a - the version check read a path
+  with no body) and #111 (8b - that check did not count as a check).
+- **B3 — the remaining item of the audit.** `response_model` on every handler merged
+  (PR #104/#105), and the auth readiness route it needed merged with it. `BUG-110` is
+  filed for the healthcheck defect and is `fixed` in the register (PR #109 closed it with the green run on main).
+- **The mojibake repair and its gate** (PR #102): three files repaired byte-exact, and
+  `scripts/ci/check-mojibake.mjs` runs in the floor job.
+
+**Open, in the binding order:**
+
+1. **PR #107** — the smoke test's version check reads `/openapi.json` instead of the
+   404 the Caddyfile hides. Its merge is not yet on main.
+2. **B4 — mutmut at the 70 % floor** (not started). The worktree `.worktrees/b1028d` is
+   on `fix/b4-mutmut` for exactly this. The audit's done-when: mutmut runs scoped in CI
+   at the 70 % floor over `services/api` (sync, runs, auth) and `services/courier-voice`
+   (the turn machine).
+3. **The rest of A5**: `infra/monitoring`, the backups and the restore drill on the
+   staging host, and the OCI host/key/domain (FOUNDER_TODO carries all three already).
+4. **C3 — the LINZ squad toward 98 %** (the measure/fix/re-measure loop, ADR with the
+   before-and-after numbers and the trial target met on the eval set).
+5. **MASTER §22** — `docs/research/2026/andee-cleanroom-spec.md` is not written yet, and
+   its build (the pre-classifier, the ask-on-low-confidence rule, the visible memory)
+   follows it.
+6. **Then billing (D44) and the rest of queue 3.**
+
+**The handover for this session is `docs/log/HANDOVER-2026-10-29-D.md`** — the seven
+causes, the two evidence folders, the eight traps that cost time, and the state of the tree.
+
