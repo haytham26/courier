@@ -1,0 +1,141 @@
+// The B4 mutation-testing floor (docs/plan/AUDIT_2026-10-25.md §B4, PLAYBOOK §14.5).
+//
+// mutmut runs the suites against mutated copies of the source; a mutant that
+// survives is a test the suite does not have. The audit's done-when: mutmut runs
+// scoped in CI at the >= 70 % floor over `services/api` (sync, runs, auth) and
+// `services/courier-voice` (the turn machine).
+//
+// The score is **mutmut's own**, read from its installed source
+// (`mutmut/__main__.py`, the `badge` command):
+//
+//   tested = total - skipped
+//   score  = ((killed + timeout) / tested) * 100
+//
+// Two modes, because a mutation run is minutes and a check is seconds:
+//
+//   node scripts/ci/check-mutation-floor.mjs run services/api        # run + check
+//   node scripts/ci/check-mutation-floor.mjs check services/api      # check an existing
+//                                                                     # mutants/mutmut-cicd-stats.json
+//
+// The `check` mode is what a fast gate uses: the workflow runs the mutation
+// run, exports the stats, and checks them in the same job - so a slow suite
+// never blocks a PR, and the floor still blocks the merge when it drops.
+//
+// mutmut refuses to start on Windows (`platform.system() == "Windows"` exits
+// 1, boxed/mutmut#397), so the local run is WSL's; CI's ubuntu runner is the
+// harness for this gate, exactly as the restore drill's is Postgres.
+
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+
+export const BUG_ID = 'BUG-112';
+export const DEFAULT_FLOOR = 70;
+
+const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname.slice(1)), '..', '..');
+const STATS_RELATIVE = path.join('mutants', 'mutmut-cicd-stats.json');
+
+/**
+ * The mutation score, in mutmut's own arithmetic (see the header).
+ * @param {{killed?: number, timeout?: number, total?: number, skipped?: number}} stats
+ * @returns {number} the score in percent, 0 when there is nothing to check
+ */
+export function scoreOf(stats) {
+  const values = normaliseStats(stats);
+  const tested = values.total - values.skipped;
+  if (tested <= 0) return 0;
+  return ((values.killed + values.timeout) / tested) * 100;
+}
+
+function asCount(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  return parsed;
+}
+
+/**
+ * The stats normalised to non-negative integers, so a truncated or hand-written
+ * JSON cannot quietly turn a failing lane green (a NaN score, for example).
+ */
+export function normaliseStats(stats) {
+  if (stats === null || typeof stats !== 'object') {
+    throw new Error('the mutation stats must be an object');
+  }
+  return {
+    total: asCount(stats.total),
+    skipped: asCount(stats.skipped),
+    killed: asCount(stats.killed),
+    timeout: asCount(stats.timeout),
+  };
+}
+
+/**
+ * The reasons the lane is not green.
+ * @param {{killed?: number, timeout?: number, total?: number, skipped?: number}} stats
+ * @param {{floor?: number, label?: string}} options
+ * @returns {string[]} empty when the floor holds
+ */
+export function checkStats(stats, options = {}) {
+  const floor = options.floor ?? DEFAULT_FLOOR;
+  const label = options.label ?? 'the mutation suite';
+  const values = normaliseStats(stats);
+  const failures = [];
+  if (values.total === 0) {
+    failures.push(`${label}: no mutants were generated at all (total is 0) - the run is vacuous, not passing`);
+  }
+  const score = scoreOf(values);
+  const tested = values.total - values.skipped;
+  if (tested > 0 && score < floor) {
+    failures.push(
+      `${label}: the mutation score is ${score.toFixed(1)}%, under the ${floor}% floor `
+        + `(${values.killed + values.timeout} killed of ${tested} tested; ${values.total - values.skipped - values.killed - values.timeout} survived)`,
+    );
+  }
+  return failures;
+}
+
+/**
+ * Read the exported stats JSON. The `mutmut export-cicd-stats` command writes it
+ * after a run; a missing file is a missing run, never a passing one.
+ */
+export function readStats(serviceDir) {
+  const file = path.join(serviceDir, STATS_RELATIVE);
+  if (!existsSync(file)) {
+    throw new Error(`no mutation stats at ${file}: run "mutmut run" then "mutmut export-cicd-stats" first`);
+  }
+  return JSON.parse(readFileSync(file, 'utf8'));
+}
+
+function runMutmut(serviceDir, args) {
+  const dir = path.resolve(repoRoot, serviceDir);
+  execFileSync('mutmut', args, { cwd: dir, stdio: 'inherit' });
+}
+
+const main = () => {
+  const args = process.argv.slice(2);
+  const mode = args[0] ?? 'check';
+  const serviceDir = args[1] ?? 'services/api';
+  if (!['run', 'check'].includes(mode)) {
+    console.error(`check-mutation-floor: unknown mode "${mode}" (run or check)`);
+    process.exit(1);
+  }
+  if (mode === 'run') {
+    runMutmut(serviceDir, ['run']);
+    runMutmut(serviceDir, ['export-cicd-stats']);
+  }
+  const stats = readStats(path.resolve(repoRoot, serviceDir));
+  const failures = checkStats(stats, { label: `${BUG_ID} (${serviceDir})` });
+  const values = normaliseStats(stats);
+  if (failures.length > 0) {
+    for (const failure of failures) console.error(failure);
+    process.exit(1);
+  }
+  console.log(
+    `check-mutation-floor: ${scoreOf(values).toFixed(1)}% (${values.killed + values.timeout} of `
+      + `${values.total - values.skipped} tested) at the ${DEFAULT_FLOOR}% floor - ${BUG_ID} (${serviceDir})`,
+  );
+};
+
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname.slice(1))) {
+  main();
+}
