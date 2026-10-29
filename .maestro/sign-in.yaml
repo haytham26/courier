@@ -40,6 +40,11 @@ name: Sign in - the front door, the four ways in and the email form
 # The second tap answers it. The app is signed out and on the front door.
 - tapOn:
     id: "settings-sign-out"
+# The front door is the sign-in screen itself: the sign-out replaces the stack
+# with `/(auth)/login` (the app says where it lands, because the router's own
+# fallback for a route the guard has just removed is the unmatched screen -
+# which run 40872943163 hit on both legs). The welcome stays the cold-start
+# front door, one tap from here.
 - extendedWaitUntil:
     visible:
       id: "sign-in-screen"

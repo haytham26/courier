@@ -58,7 +58,16 @@ export type SignInOutcome =
   | { status: 'two-factor-required'; methods: string[] }
   | { status: 'failed'; message: string };
 
-interface AuthContextType {
+/**
+ * The shape the auth context hands to a consumer.
+ *
+ * It is exported because a consumer names what it reads: the root layout reads
+ * `isLoading` and `isAuthenticated` to build the guarded stack, the Account tab
+ * reads `logout`, and the sign-out-landing test reads the whole thing to reach
+ * the values the tab reaches. A context type that cannot be named is a contract
+ * that cannot be tested against.
+ */
+export interface AuthContextType {
   user: AuthUser | null;
   status: SessionStatus;
   isLoading: boolean;

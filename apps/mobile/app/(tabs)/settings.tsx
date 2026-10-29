@@ -108,7 +108,16 @@ export default function SettingsScreen() {
       return;
     }
     setConfirmSignOut(false);
-    void logout();
+    // The front door, on purpose. The sign-out closes the guarded stack (the
+    // tabs are behind `isAuthenticated`), and the router's own fallback for a
+    // route that has just left the stack is the unmatched screen - which the
+    // E2E run 40872943163 proved, on both legs: `sign-in.yaml` waited 60 s on
+    // the front door and got "This link is not on today's route". A courier who
+    // signs out is on their way back IN, so the app names the screen instead of
+    // leaving the router to guess with the driver staring at a 404.
+    void logout().finally(() => {
+      router.replace('/(auth)/login');
+    });
   }, [confirmSignOut, logout]);
 
   // The preferences the map mode is kept in (the Map tab's own store): a device

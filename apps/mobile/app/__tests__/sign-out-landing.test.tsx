@@ -18,18 +18,12 @@
  * walks: the app opens signed in on the tabs, the Account tab signs out, and the
  * front door has to be there afterwards.
  */
-import path from 'path';
 import React from 'react';
 import { act, render, waitFor } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import RootLayout from '../_layout';
-import {
-  AuthProvider,
-  useAuth,
-  type AuthContextType,
-  type AuthUser,
-} from '@/providers/AuthProvider';
+import { AuthProvider, useAuth, type AuthContextType } from '@/providers/AuthProvider';
 
 /** The routes the root Stack renders, recorded by the mock's Screen. */
 const mockRenderedRoutes: string[] = [];
@@ -55,10 +49,18 @@ jest.mock('expo-router', () => {
    */
   function screenFor(name: string): React.ComponentType | null {
     switch (name) {
-      case '(auth)':
-        return jest.requireActual(pathModule.join(APP_DIR, '(auth)/_layout')).default;
-      case 'login':
-        return jest.requireActual(pathModule.join(APP_DIR, '(auth)/login')).default;
+      case '(auth)': {
+        const group = jest.requireActual<{ default: React.ComponentType }>(
+          pathModule.join(APP_DIR, '(auth)/_layout'),
+        );
+        return group.default;
+      }
+      case 'login': {
+        const screen = jest.requireActual<{ default: React.ComponentType }>(
+          pathModule.join(APP_DIR, '(auth)/login'),
+        );
+        return screen.default;
+      }
       case '(tabs)':
         return function TabsGroup() {
           const RN = jest.requireActual<typeof import('react-native')>('react-native');
@@ -135,15 +137,17 @@ jest.mock('@/lib/auth-client', () => {
     authClient: {
       signIn: {
         email: jest.fn(async () => {
+          await Promise.resolve();
           store.session = { token: 'e2e-token' };
           answer = buildAnswer();
           return { data: { user: store.user, token: 'e2e-token' }, error: null };
         }),
-        social: jest.fn(async () => ({ data: null, error: null })),
-        passkey: jest.fn(async () => ({ data: null, error: null })),
+        social: jest.fn(() => Promise.resolve({ data: null, error: null })),
+        passkey: jest.fn(() => Promise.resolve({ data: null, error: null })),
       },
       signUp: {
         email: jest.fn(async () => {
+          await Promise.resolve();
           store.session = { token: 'e2e-token' };
           answer = buildAnswer();
           return { data: null, error: null };
@@ -151,24 +155,25 @@ jest.mock('@/lib/auth-client', () => {
       },
       // A sign-out clears the session: the front door has to be reachable.
       signOut: jest.fn(async () => {
+        await Promise.resolve();
         store.session = null;
         answer = buildAnswer();
         return { data: { success: true }, error: null };
       }),
-      getSession: jest.fn(async () => ({
+      getSession: jest.fn(() => Promise.resolve({
         data: store.session === null ? null : { user: store.user, session: store.session },
         error: null,
       })),
       useSession: () => answer,
-      $fetch: jest.fn(async () => ({ methods: {}, mfa: true, teamRoles: [] })),
+      $fetch: jest.fn(() => Promise.resolve({ methods: {}, mfa: true, teamRoles: [] })),
       twoFactor: {
-        verifyTotp: jest.fn(async () => ({ data: null, error: null })),
-        verifyBackupCode: jest.fn(async () => ({ data: null, error: null })),
+        verifyTotp: jest.fn(() => Promise.resolve({ data: null, error: null })),
+        verifyBackupCode: jest.fn(() => Promise.resolve({ data: null, error: null })),
       },
       organization: {
-        list: jest.fn(async () => ({ data: [], error: null })),
-        listUserTeams: jest.fn(async () => ({ data: [], error: null })),
-        setActiveTeam: jest.fn(async () => ({ data: null, error: null })),
+        list: jest.fn(() => Promise.resolve({ data: [], error: null })),
+        listUserTeams: jest.fn(() => Promise.resolve({ data: [], error: null })),
+        setActiveTeam: jest.fn(() => Promise.resolve({ data: null, error: null })),
       },
       // The test's own handle on the session the mock holds: a cold start with
       // nothing there, or the boot signed in the way the E2E mock boots it.
@@ -177,10 +182,10 @@ jest.mock('@/lib/auth-client', () => {
         answer = buildAnswer();
       },
     },
-    signIn: { email: jest.fn(async () => ({ data: null, error: null })) },
-    signUp: { email: jest.fn(async () => ({ data: null, error: null })) },
-    signOut: jest.fn(async () => ({ data: null, error: null })),
-    getSession: jest.fn(async () => ({ data: null, error: null })),
+    signIn: { email: jest.fn(() => Promise.resolve({ data: null, error: null })) },
+    signUp: { email: jest.fn(() => Promise.resolve({ data: null, error: null })) },
+    signOut: jest.fn(() => Promise.resolve({ data: null, error: null })),
+    getSession: jest.fn(() => Promise.resolve({ data: null, error: null })),
     useSession: () => answer,
     __setSession: (hasSession: boolean) => {
       store.session = hasSession ? { token: 'e2e-token' } : null;

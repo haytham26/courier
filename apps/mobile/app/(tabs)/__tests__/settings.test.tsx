@@ -73,6 +73,15 @@ jest.mock('@/providers/AuthProvider', () => ({
   useAuth: () => ({ logout: mockLogout }),
 }));
 
+// The router is not this screen's concern: the sign-out's landing is the front
+// door's, and `sign-out-landing.test.tsx` proves where the app ends up (the
+// sign-out names `/(auth)/login`, because the router's own fallback for a route
+// the guard has just removed is the unmatched screen - E2E run 40872943163).
+jest.mock('expo-router', () => ({
+  router: { replace: jest.fn(), navigate: jest.fn(), push: jest.fn(), back: jest.fn() },
+  useRouter: () => ({ replace: jest.fn(), navigate: jest.fn(), push: jest.fn() }),
+}));
+
 function renderScreen() {
   return render(
     <GestureHandlerRootView>
