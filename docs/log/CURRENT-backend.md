@@ -128,11 +128,16 @@ it is not redone here.
 
 **Open, in the binding order:**
 
-1. **The rest of A5** (the next item): `infra/monitoring`, the backups and the restore
-   drill on the staging host, and the OCI host/key/domain — FOUNDER_TODO carries all
-   three already. The deploy leg of `deploy.yml` names the secrets it waits for, so the
-   stack it deploys to is the only thing missing.
-2. **C3 — the LINZ squad toward 98 %** (the measure/fix/re-measure loop, each round with
+1. **A5 is done to the edge of the founder's input.** The monitoring side is merged
+   (`infra/monitoring` now watches the routes the stack serves — PR #115), the backup and
+   restore drills run in CI on PRs, nightly and manual (`restore-test.yml`, the real
+   `infra/backup.sh` and `infra/restore.sh` against a scratch Postgres), and the deploy
+   verify leg brings the whole stack up on every push to main. What is left needs the OCI
+   host: running the monitoring beside a production deployment, the backups against the
+   live database, OmniRoute's production config (self-hosted next to n8n, D25), and the
+   founder's phone pointer (`EXPO_PUBLIC_API_URL`, now a FOUNDER_TODO row). All four are
+   in FOUNDER_TODO, and none of them blocks the next queue item.
+2. **C3 — the LINZ squad toward 98 %** (the next item: the measure/fix/re-measure loop, each round with
    the before-and-after numbers committed, the ADR carrying the measured accuracy and
    the trial target met on the eval set).
 3. **MASTER §22** — `docs/research/2026/andee-cleanroom-spec.md` is not written yet, and

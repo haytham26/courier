@@ -22,7 +22,7 @@ founder looks at it within two working days.
 
 | Alert | The threshold | How it is measured | Severity | Who is woken |
 |---|---|---|---|---|
-| The API is down | 3 checks in a row answer something else than `200` (3 minutes with the default interval) | `GET /health/ready` of `api_a` | critical | the founder, straight away |
+| The API is down | 3 checks in a row answer something else than `200` (3 minutes with the default interval) | `GET /healthz` of `api_a` | critical | the founder, straight away |
 | The auth service is down | 3 checks in a row answer something else than `200` | `GET /health/ready` of `auth_a` | critical | the founder, straight away |
 | The error rate is too high | more than 5 % of the requests of the last minute answer 5xx, and there were at least 20 requests in that minute | the access log of the edge | high | the founder, the same day |
 | The database is full | the disk of the database volume is more than 85 % used | `df` on the volume of the database | high | the founder, the same day |
