@@ -146,20 +146,25 @@ if ! check "the edge answers TLS" "$BASE/healthz" 404 -k; then
 fi
 
 # --- 2. the version that was just deployed --------------------------------
-# /healthz carries the version (the contract's HealthResponse). A replica that
-# is still running the previous image answers the old version, so this is the
-# check that proves the swap happened.
-VERSION_FILE="$EVIDENCE_DIR/version.txt"
-curl -sS --max-time 15 -k "$BASE/healthz" | tee "$VERSION_FILE" > /dev/null || true
+# The deployed version, proved through the edge. It is read from /openapi.json,
+# which the edge proxies and which carries the API's `info.version` - NOT from
+# /healthz, which the Caddyfile answers 404 for on purpose so the version never
+# leaks publicly. The earlier version of this check read /healthz through the
+# edge, where the 404 has no body at all: the check could never pass, and it was
+# skipped in CI (APP_VERSION was not passed to the step) rather than fixed. A
+# check that cannot pass is worse than a check that is not run, because it looks
+# like coverage.
+VERSION_FILE="$EVIDENCE_DIR/version.json"
+curl -sS --max-time 15 -k "$BASE/openapi.json" | tee "$VERSION_FILE" > /dev/null || true
 if [ -n "${APP_VERSION:-}" ]; then
-  if grep -q "$APP_VERSION" "$VERSION_FILE"; then
+  if grep -q "\"version\":\"$APP_VERSION\"\|\"version\": \"$APP_VERSION\"" "$VERSION_FILE"; then
     PASSED=$((PASSED + 1))
     printf 'PASS  %-34s %s\n' "the deployed version" "$APP_VERSION"
     printf 'PASS  the deployed version is %s\n' "$APP_VERSION" >> "$REPORT"
   else
     CHECKS=$((CHECKS + 1))
-    printf 'FAIL  %-34s %s not in %s\n' "the deployed version" "$APP_VERSION" "$(cat "$VERSION_FILE")"
-    printf 'FAIL  the deployed version: %s not in the health answer\n' "$APP_VERSION" >> "$REPORT"
+    printf 'FAIL  %-34s %s not in %s\n' "the deployed version" "$APP_VERSION" "$(head -c 200 "$VERSION_FILE")"
+    printf 'FAIL  the deployed version: %s not in the openapi answer\n' "$APP_VERSION" >> "$REPORT"
     die "the stack answers a different version than the one deployed: rollback"
   fi
 else
