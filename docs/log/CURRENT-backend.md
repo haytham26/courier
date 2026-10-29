@@ -106,13 +106,16 @@ it is not redone here.
 - **15 minutes without output is a stop** (§15).
 - One rerun per merge; a leg red for a cause outside the diff is reported, not re-run (§17.4/§16).
 
+
+**The closing proof, 2026-10-29: `Deploy staging` is green on main [40913771504](https://github.com/haytham26/courier/actions/runs/40913771504) on `fc9a625`, 4 of 4 checks**, the version check among them (`PASS the deployed version fc9a625e...`). Eight causes were fixed in all, each at its cause, and none by skipping a step or turning the job off.
 ## Where the queue stands, 2026-10-30
 
 **Merged and proven on main:**
 
 - **BUG-070 — FIXED** (the proof is the green `Deploy staging` run on main, see above).
-  Seven causes were unwound one at a time, each at its cause; PR #102 (cause 3), #105
-  (causes 4-6), #106 (cause 7) and #107 (the version check that could never pass).
+  Eight causes were unwound one at a time, each at its own cause: PR #94 (1), #96 (2), #102 (3),
+  #105 (4-6), #106 (7 - the smoke test raced the edge), #107 (8a - the version check read a path
+  with no body) and #111 (8b - that check did not count as a check).
 - **B3 — the remaining item of the audit.** `response_model` on every handler merged
   (PR #104/#105), and the auth readiness route it needed merged with it. `BUG-110` is
   filed for the healthcheck defect and is `fixed` in the register (PR #109 closed it with the green run on main).
