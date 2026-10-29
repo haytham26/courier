@@ -17,6 +17,17 @@ name: "The lock screen's glance - the run's Live Activity (screen 13)"
     visible:
       id: "settings-screen"
     timeout: 30000
+# The row sits inside the settings screen's own ScrollView, and Android drops
+# the clipped rows out of the view hierarchy: below the fold it is not in the
+# tree at all, so a plain tap finds nothing (the api-34 leg of run 40872212564
+# failed at exactly this). The repo's own gesture for a row that is on the
+# screen but not visible is `scrollUntilVisible` (the same one summary.yaml and
+# today-list.yaml use inside the sheet), and it never weakens the tap's target.
+- scrollUntilVisible:
+    element:
+      id: "settings-lock-screen"
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: "settings-lock-screen"
 - extendedWaitUntil:
