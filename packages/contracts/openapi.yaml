@@ -32,6 +32,8 @@ tags:
     description: Master Template Lock
   - name: locations
     description: Learned door/park/entry points
+  - name: demo
+    description: The demo-run seed (ADR-019)
 paths:
   /runs/{run_id}/template:
     put:
@@ -278,6 +280,46 @@ paths:
         '101':
           description: Switching protocols to WebSocket
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /demo/runs:
+    post:
+      tags: [demo]
+      summary: Seed the caller's demo day (a run and its stops, in the real tables)
+      description: |
+        A1's seam (ADR-019): the app's core flow needs a run with stops that
+        exist, with ids that stay still between calls, so an E2E job can reset
+        the phone and run the flow again. The ids are derived from the caller, so
+        a caller always gets their own day back.
+
+        The gate is the environment: without DEMO_SEED_ENABLED=true this route
+        answers 404, because seeding demo rows into a real database is not
+        something an unguarded endpoint should ever do.
+
+        A caller racing themself on the same reason is answered with 409, the
+        same conflict `POST /runs` answers.
+      operationId: seed_demo_run
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoSeedRequest'
+      responses:
+        '200':
+          description: The caller's demo day
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoRun'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: The caller already has this day, written by a racing seed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404': { $ref: '#/components/responses/NotFound' }
 
   /runs:
@@ -644,6 +686,51 @@ components:
           type: string
         message:
           type: string
+
+    DemoSeedRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          enum: [e2e, demo, dev]
+          default: e2e
+          description: The one reason this caller wants a demo day for
+
+    DemoRun:
+      type: object
+      required: [run_id, shift_id, stops]
+      properties:
+        run_id:
+          type: string
+          format: uuid
+        shift_id:
+          type: string
+          format: uuid
+        stops:
+          type: array
+          description: The day's stops, in the seeded order
+          items:
+            $ref: '#/components/schemas/DemoStop'
+
+    DemoStop:
+      type: object
+      required: [id, address, lat, lon]
+      properties:
+        id:
+          type: string
+          format: uuid
+        address:
+          type: string
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        priority:
+          type: boolean
+        parcels:
+          type: integer
 
     Entitlement:
       type: object

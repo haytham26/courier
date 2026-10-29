@@ -65,5 +65,24 @@ describe('the root stack', () => {
     expect(mockRegisteredRoutes).toContain('driving');
     expect(mockRegisteredRoutes).toContain('delivered');
     expect(mockRegisteredRoutes).toContain('driving-night');
+    // The summary route rides this branch: the end-of-day action navigates to
+    // it, and a screen nobody can open is dead code (the flow that caught this
+    // is what this row is for).
+    expect(mockRegisteredRoutes).toContain('summary');
+  });
+
+  it('registers the routes the app owns outside the tabs', () => {
+    mockRegisteredRoutes.length = 0;
+    render(
+      <GestureHandlerRootView>
+        <RootLayout />
+      </GestureHandlerRootView>,
+    );
+
+    expect(mockRegisteredRoutes).toContain('(tabs)');
+    expect(mockRegisteredRoutes).toContain('scan');
+    expect(mockRegisteredRoutes).toContain('driving');
+    expect(mockRegisteredRoutes).toContain('delivered');
+    expect(mockRegisteredRoutes).toContain('driving-night');
   });
 });

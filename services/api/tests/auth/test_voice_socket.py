@@ -4,6 +4,16 @@ The voice channel is the most sensitive surface of the API: it drives the
 copilot for a shift. It must be closed to anonymous callers, exactly like the
 HTTP routes, and it must be closed to a caller whose token is valid but whose
 shift is somebody else's - the channel carries the day's addresses.
+
+BUG-059's second half is here: the route no longer takes a token from the query
+string. The credential arrives in the `Authorization` header, or in the first
+`auth` message once the socket is open, and every refusal is answered with one
+`error` frame that says which of the two to use.
+
+The two refusal paths are driven with the header ABSENT and one frame sent, so
+`identify` reads that one frame and refuses on it. A test that sends nothing
+would block in `receive_json`, which is exactly the hang this suite stopped on
+(§15) - so every refusal test below writes one frame first.
 """
 
 from __future__ import annotations
@@ -15,9 +25,8 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from starlette.websockets import WebSocketDisconnect
 
-from app.auth.jwks import get_verifier
+from app.auth.jwks import get_websocket_verifier
 from app.main import app
 from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
@@ -73,35 +82,81 @@ def repo() -> InMemoryRepo:
 def client(repo: InMemoryRepo, key_pair: tuple[Any, dict[str, Any]]) -> Iterator[TestClient]:
     _, jwk = key_pair
     app.dependency_overrides[get_repo] = lambda: repo
-    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
+    app.dependency_overrides[get_websocket_verifier] = lambda: make_verifier({"keys": [jwk]})
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
 
 
-class TestVoiceSocket:
-    def test_refuses_an_anonymous_caller(self, client: TestClient) -> None:
-        with (
-            pytest.raises(WebSocketDisconnect) as refused,
-            client.websocket_connect(f"/shifts/{SHIFT_ID}/voice"),
-        ):
-            pass
-        denial = refused.value
-        status_code = getattr(denial, "status_code", None)
-        assert status_code in (None, 401, 403)
+def bearer(token: str) -> dict[str, str]:
+    """The one header shape the voice socket accepts a token in."""
+    return {"Authorization": f"Bearer {token}"}
 
-    def test_refuses_a_garbage_token(self, client: TestClient) -> None:
-        with (
-            pytest.raises(WebSocketDisconnect),
-            client.websocket_connect(f"/shifts/{SHIFT_ID}/voice?token=not-a-token"),
-        ):
-            pass
+
+class TestVoiceSocket:
+    def test_refuses_an_anonymous_caller(
+        self, client: TestClient, key_pair: tuple[Any, Any]
+    ) -> None:
+        """No credential at all: the socket is accepted (the route owns the
+        channel), answered with one `error` frame that names what to send, and
+        closed with BUG-059's 4403."""
+        with client.websocket_connect(f"/shifts/{SHIFT_ID}/voice") as session:
+            session.send_json({"type": "gps"})
+            frame = session.receive_json()
+        assert frame["type"] == "error"
+        assert frame["code"] == 4403
+        assert frame["detail"].startswith("no token:")
+
+    def test_refuses_a_token_in_the_query_string(
+        self, client: TestClient, key_pair: tuple[Any, Any]
+    ) -> None:
+        """A token in the URL is a token in a log, and a VALID one is refused
+        exactly like a broken one - the caller has to know why, so the `error`
+        frame names the query string and both ways to send it instead."""
+        private_key, _ = key_pair
+        token = sign(private_key, subject=COURIER)
+        with client.websocket_connect(f"/shifts/{SHIFT_ID}/voice?token={token}") as session:
+            session.send_json({"type": "gps"})
+            frame = session.receive_json()
+        assert frame["type"] == "error"
+        assert frame["code"] == 4403
+        assert "query string" in frame["detail"]
+
+    def test_refuses_a_first_message_that_is_not_an_auth_frame(
+        self, client: TestClient
+    ) -> None:
+        """A client that puts its token somewhere other than an `auth` frame
+        has sent nothing usable, and the refusal says exactly what to send."""
+        with client.websocket_connect(f"/shifts/{SHIFT_ID}/voice") as session:
+            session.send_json({"type": "transcript", "text": "deliver this"})
+            frame = session.receive_json()
+        assert frame["type"] == "error"
+        assert frame["code"] == 4403
+        assert "'auth'" in frame["detail"]
 
     def test_accepts_a_verified_caller(self, client: TestClient, key_pair: tuple[Any, Any]) -> None:
         private_key, _ = key_pair
         token = sign(private_key, subject=COURIER)
-        with client.websocket_connect(f"/shifts/{SHIFT_ID}/voice?token={token}"):
-            pass
+        with client.websocket_connect(
+            f"/shifts/{SHIFT_ID}/voice", headers=bearer(token)
+        ) as session:
+            session.send_json({"type": "transcript", "final": True, "text": "how many left?"})
+            reply = session.receive_json()
+        assert reply["type"] == "say", reply
+
+    def test_accepts_the_token_in_the_first_message(
+        self, client: TestClient, key_pair: tuple[Any, Any]
+    ) -> None:
+        """The native client always has the header; a client that cannot set
+        one sends the token in the first `auth` message, and the channel opens
+        and keeps working."""
+        private_key, _ = key_pair
+        token = sign(private_key, subject=COURIER)
+        with client.websocket_connect(f"/shifts/{SHIFT_ID}/voice") as session:
+            session.send_json({"type": "auth", "token": token})
+            session.send_json({"type": "transcript", "final": True, "text": "how many left?"})
+            reply = session.receive_json()
+        assert reply["type"] == "say"
 
     def test_refuses_a_verified_caller_on_a_foreign_shift(
         self, key_pair: tuple[Any, dict[str, Any]]
@@ -111,19 +166,19 @@ class TestVoiceSocket:
         foreign shift is closed without a word (ASVS V4)."""
         _, jwk = key_pair
         app.dependency_overrides[get_repo] = a_fresh_repo
-        app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
+        app.dependency_overrides[get_websocket_verifier] = lambda: make_verifier({"keys": [jwk]})
         private_key, _ = key_pair
         token = sign(private_key, subject="someone-else")
         try:
             with TestClient(app) as bare, bare.websocket_connect(
-                f"/shifts/{SHIFT_ID}/voice?token={token}"
+                f"/shifts/{SHIFT_ID}/voice", headers=bearer(token)
             ) as session:
-                first_frame = session.receive()  # the accept lands, then the close
-                if first_frame["type"] == "websocket.close":
-                    code = first_frame.get("code")
-                else:
-                    code = session.receive().get("code")
-            assert code == 4404  # delivered: the socket was accepted first
+                # The accept lands, then the close. One read per frame.
+                first_frame = session.receive()
+                if first_frame["type"] == "websocket.send":
+                    first_frame = session.receive()
+                assert first_frame["type"] == "websocket.close"
+                assert first_frame["code"] == 4404  # delivered: accepted first
         finally:
             app.dependency_overrides.clear()
 
@@ -135,7 +190,9 @@ class TestVoiceSocket:
         raise out of the loop and die)."""
         private_key, _ = key_pair
         token = sign(private_key, subject=COURIER)
-        with client.websocket_connect(f"/shifts/{SHIFT_ID}/voice?token={token}") as ws:
+        with client.websocket_connect(
+            f"/shifts/{SHIFT_ID}/voice", headers=bearer(token)
+        ) as ws:
             ws.send_json({"no": "type"})  # a dict without the type
             reply = ws.receive_json()
             assert reply["type"] == "say"

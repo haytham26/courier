@@ -1,0 +1,6 @@
+﻿
+  Missing tables
+  help: Run `npx auth migrate` to add the missing tables and columns.
+  Missing tables
+
+

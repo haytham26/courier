@@ -1,0 +1,13 @@
+﻿docker : error while interpolating services.api_a.environment.POD_URL_SIGNING_SECRET: required variable 
+POD_URL_SIGNING_SECRET is missing a value: POD_URL_SIGNING_SECRET is required
+At line:1 char:112
++ ... ng-deploy'; docker compose --env-file infra/env.example -f infra/comp ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (error while int...RET is required:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+postgres
+valkey
+api_a
+auth_a
+caddy

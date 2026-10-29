@@ -7,6 +7,13 @@ name: Store readiness
 # MASTER_EXECUTION section 15: StoreReady is the primary pre-submission
 # checker. It runs on the release trigger and on demand, never on every push:
 # the private Actions minutes are limited (section 7.1).
+#
+# BUG-067: the release lane carries the same defect map-pack.yml did. The
+# `inputs` context exists for a dispatch and a call only, so the release
+# trigger's `push` (a `v*` tag, or a `release/**` branch) would have failed at
+# the workflow level, before any job. It has never run - no tag, no release
+# branch, no dispatch - so the failure was latent rather than visible. The two
+# inputs read through `github.event.inputs` now, which exists for every event.
 on:
   push:
     tags:
@@ -43,7 +50,7 @@ jobs:
       APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_P8_BASE64 }}
-      APP_STORE_CONNECT_APP_ID: ${{ inputs.app_id || vars.APP_STORE_CONNECT_APP_ID }}
+      APP_STORE_CONNECT_APP_ID: ${{ github.event.inputs.app_id || vars.APP_STORE_CONNECT_APP_ID }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -98,7 +105,9 @@ jobs:
         id: local
         continue-on-error: true
         env:
-          APK_PATH: ${{ inputs.apk_path }}
+          # BUG-067: the `github` context, not the bare `inputs` (see the note
+          # above).
+          APK_PATH: ${{ github.event.inputs.apk_path || '' }}
         run: |
           set -euo pipefail
           args=(--json artifacts/store-readiness.json)
