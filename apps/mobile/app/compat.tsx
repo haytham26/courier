@@ -71,6 +71,19 @@ export default function CompatScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID="compat-screen">
       <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Compatibility (B.7)</Text>
+      {/* The run's own state, read before the rows it describes. It used to sit
+          under the six module rows, and those rows grow a detail line each as
+          the probes finish - so the finished screen pushed this line below the
+          fold and a flow asserting it only ever saw it during the short
+          'running' window (the same class of failure as BUG-050's clipped
+          actions row). Above the rows it cannot scroll away. */}
+      <Text
+        testID="compat-running"
+        accessibilityLiveRegion="polite"
+        style={[styles.detail, { color: theme.colors.textSecondary }]}
+      >
+        {running ? 'running' : 'done'}
+      </Text>
       {MODULES.map((module) => {
         const result = results[module.id];
         return (
@@ -103,13 +116,6 @@ export default function CompatScreen() {
           </View>
         );
       })}
-      <Text
-        testID="compat-running"
-        accessibilityLiveRegion="polite"
-        style={[styles.detail, { color: theme.colors.textSecondary }]}
-      >
-        {running ? 'running' : 'done'}
-      </Text>
       <ReanimatedProbe onResult={(state, detail) => update('reanimated', state, detail)} />
       <AudioProbe onResult={(state, detail) => update('audio', state, detail)} />
     </ScrollView>

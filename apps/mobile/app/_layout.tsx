@@ -45,6 +45,10 @@ function AuthNavigator() {
             <Stack.Screen name="scan" />
             <Stack.Screen name="driving" />
             <Stack.Screen name="delivered" />
+            {/* Copilot over the map (screen 07): opened by the D34 sphere's
+                tap, which starts talking, so the driver sees the conversation
+                while it happens. */}
+            <Stack.Screen name="copilot" />
             {/* The end of the day (screen 10): Today's End of day action opens
                 it, and it is a root-stack route rather than a tab because the
                 day is finished - the dock behind it has nothing selected. */}
