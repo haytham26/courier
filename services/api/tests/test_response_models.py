@@ -155,3 +155,80 @@ def test_the_documented_models_match_the_responses_module() -> None:
     }
     for name in referenced:
         assert name in components, f"the document references an unknown schema: {name}"
+
+
+def test_the_version_the_smoke_test_proves_comes_from_the_environment() -> None:
+    """`APP_VERSION` is what the deploy just deployed (A5's version check).
+
+    The app answered a hard-coded `0.1.0` while the compose file already passed
+    `APP_VERSION` to the container, so the smoke test's version check compared
+    the deployed sha against a constant: it could never prove the swap, and a
+    stale replica behind the edge looked identical to the new one.
+
+    The build of the app object is a fresh subprocess, not a reload of this
+    one: reloading `app.main` in-process leaves the websocket routes holding the
+    previous module's `app`, which the voice-socket tests then trip over.
+    """
+    import json
+    import os
+    import subprocess
+    import sys
+
+    deployed = "a-sha-the-deploy-just-shipped"
+    original = os.environ.get("APP_VERSION")
+    # The override is built and kept: popping it afterwards would remove the
+    # very value this test is trying to prove travels.
+    environment = {**os.environ, "APP_VERSION": deployed}
+    try:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from app.main import app; print(app.version)",
+            ],
+            capture_output=True,
+            text=True,
+            env=environment,
+            timeout=120,
+            check=True,
+        )
+        assert completed.stdout.strip() == deployed
+
+        # And with no variable at all, the development default still answers: a
+        # boot with no version is a boot that cannot be identified.
+        without = {**os.environ}
+        without.pop("APP_VERSION", None)
+        fallback = subprocess.run(
+            [sys.executable, "-c", "from app.main import app; print(app.version)"],
+            capture_output=True,
+            text=True,
+            env=without,
+            timeout=120,
+            check=True,
+        )
+        assert fallback.stdout.strip() == "0.1.0"
+
+        # The health answer is a real shape, not a bare object, so the version
+        # travels inside the model the contract declares.
+        health = json.loads(
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-c",
+                    "from app.main import app; import json;"
+                    "print(json.dumps(app.openapi()['paths']['/healthz']['get']"
+                    "['responses']['200']['content']['application/json']['schema']))",
+                ],
+                capture_output=True,
+                text=True,
+                env=environment,
+                timeout=120,
+                check=True,
+            ).stdout
+        )
+        assert "$ref" in health
+    finally:
+        if original is None:
+            os.environ.pop("APP_VERSION", None)
+        else:
+            os.environ["APP_VERSION"] = original
