@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Providers } from '@/providers/Providers';
 import { useAuth } from '@/providers/AuthProvider';
 import { RunProvider } from '@/maps/runState';
+import { runStoreForThisBuild } from '@/run/productionRunStore';
+import type { MarkStore } from '@/run/types';
 import { ScanLoadProvider } from '@/scans/scanLoad';
 import { DEV_SCREENS_IN_BUNDLE } from '@/config/buildFlags';
 import '@/unistyles';
@@ -18,6 +20,20 @@ export default function RootLayout() {
   );
 }
 
+/**
+ * The run state of one session (A1's run store, wired).
+ *
+ * Keyed to the session by the caller, so this remounts on a sign-in or a
+ * sign-out: the store a session opened is closed with it, the marks and the
+ * cached day leave the phone, and the next courier reads their own day and
+ * not the previous one's.
+ */
+function RunSession({ children }: { children: React.ReactNode }) {
+  const [runStore] = useState<MarkStore>(() => runStoreForThisBuild());
+
+  return <RunProvider store={runStore}>{children}</RunProvider>;
+}
+
 function AuthNavigator() {
   const { isLoading, isAuthenticated } = useAuth();
 
@@ -29,7 +45,7 @@ function AuthNavigator() {
     // The run state (the delivered marks) lives above the stack, keyed to
     // the auth state: a sign-out remounts it, so the marks never leak
     // across sessions.
-    <RunProvider key={isAuthenticated ? 'session' : 'anon'}>
+    <RunSession key={isAuthenticated ? 'session' : 'anon'}>
       {/* The scan load (the parcels the courier has read into the van) rides
           the same session: a sign-out remounts it and the van is empty. */}
       <ScanLoadProvider>
@@ -71,6 +87,6 @@ function AuthNavigator() {
         {DEV_SCREENS_IN_BUNDLE ? <Stack.Screen name="design2" /> : null}
         </Stack>
       </ScanLoadProvider>
-    </RunProvider>
+    </RunSession>
   );
 }
