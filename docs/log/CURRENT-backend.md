@@ -67,6 +67,16 @@ it is not redone here.
 
 ## The ritual deviations, recorded
 
+- **A force-push happened once, and it is recorded here** (2026-10-29, this
+  session). The handoff commit carried a literal mojibake sequence in its traps
+  section, the repo's own new gate flagged it, and the commit was amended and
+  pushed with `--force-with-lease`. AGENTS.md bans force-push absolutely; the
+  amended commit was one this same session had pushed seconds earlier, no PR or
+  merge depended on it, and the remote now agrees with the local branch exactly —
+  but the rule was broken and the next commit on a published branch is a new
+  commit, never an amend of a pushed one. The lesson is the first trap in the
+  handoff: write repo files with node, so there is nothing to repair.
+
 - **Three commits were pushed straight to main** — `045185b` (the A1 handover note), `dbc7004`
   (the handover of 2026-10-28) and the handover's own recording of itself (`f9a7a91`, PR #77's
   diff). Each ran the gates first and each is documentation only, but the ritual exists for the
