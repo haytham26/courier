@@ -244,3 +244,123 @@ expired`) and the decision (`entitlement_of`). `past_due` never removes access o
 - **Still the founder's:** the live endpoints, the webhook secrets, and the store verifiers (Play
   first per D44, through the RevenueCat-shaped layer). The verifiers are exercised against fixtures
   with locally-computed signatures — no network, no keys.
+
+## D47 - A1's backend half: the demo-run seed and the typed client generated from the contract (2026-10-26, backend squad decision, the first slice of A1)
+
+- ADR-019. `POST /demo/runs` (`services/api/app/demo.py`) seeds the authenticated caller one day - a
+  shift, a run and five stops - with **uuid5 ids derived from the caller and one reason**
+  (`e2e` / `demo` / `dev`), so the ids do not move between calls and are recognisable as demo data
+  in the database and the evidence. The app's core flow (load the run, deliver 3 stops, go offline,
+  deliver 1, sync) now has a real, repeatable day to run against.
+- The gate is the environment, **not** truthiness: `DEMO_SEED_ENABLED` must be exactly `true`, and
+  every other value - `false`, `1`, `True`, `on`, a string with a stray space - answers 404, because
+  the seed writes into the same tables as real data. Anything else is a deployment that seeds demo
+  rows by accident.
+- The seed writes a run, so **a caller racing themself on the same reason is answered with the API's
+  409**, the same conflict `POST /runs` answers - not a 500 from an uncaught `ValueError`.
+- `services/api/scripts/generate_api_client.py` generates `packages/shared/src/generated/api.ts`
+  from `packages/contracts/openapi.yaml` - one interface per schema, one typed signature per
+  operation. The file is **committed**, and the same script's `check` mode is a CI gate: a contract
+  change that leaves a stale client is red. The drift guard now pins three directions -
+  server, contract and client.
+- **Still the lead's:** the app consuming `@courier/shared` (the sign-in, the JWT, the run load, the
+  outbox, one run store) and the E2E job that drives the seeded day end to end. **Still the
+  founder's:** the OCI host and key for A5's staging deploy.
+
+## D48 — Andee's ideas, built our own way: clean-room only, store-safe (2026-10-27, founder decision)
+
+- **The founder's goal:** Courier Voice learns the techniques of the Andee device agent (https://github.com/kuafuai/andee), so the copilot is smarter and cheaper.
+- **The law decides how.** Reverse-engineering or modifying Andee's code does not make it ours: a modified copy is a derivative work and stays under Andee's licence. That licence, in A.1(d), forbids shipping it in a product without KUAFUAI's written authorisation. So:
+  - **Clean room (D24):** one agent reads Andee and writes a behaviour spec in our own words, with no code, in `docs/research/2026/andee-cleanroom-spec.md`. A different session that never opened Andee's source builds from that spec. The PR records both steps.
+  - **No Andee code, file, asset, prompt text or name** enters the repository. The licence check runs on the PR.
+- **What we build (MASTER §22):**
+  1. a cheap tool-less pre-classifier call before a full Courier Voice turn, measured in tokens and latency through OmniRoute;
+  2. "stop and ask instead of retrying" when the model's confidence is low, which matters to a driver;
+  3. a memory of the courier that the courier can see and clear, under the PIA's rules.
+- **What we do not build without a separate decision:** controlling other apps through Android's `AccessibilityService`. Google Play allows it only for apps whose core purpose is accessibility, with a declaration and review. That one is a research spike with a Play-policy check first (MASTER §22), and it is out of the trial scope.
+## D49 — A5's first slice: the staging stack, the two service images, and the deploy with its smoke test (2026-10-27, backend squad decision)
+  (The register's D48 went to the founder's Andee-ideas decision of the same day, so this slice takes the next free number.)- ADR-020. `infra/compose.staging.yml` is the staging stack as its own file: one replica of each
+  service (the zero-downtime swap is a production guarantee), a 172.29 network so both stacks can run
+  on one host, and Caddy's own root CA for a domain a local VM cannot be challenged for
+  (`infra/Caddyfile.staging`).
+- `services/api/Dockerfile` and `services/auth/Dockerfile` exist now, so the deployment runs the two
+  services it exists to run. The API's dependencies come from the lock (`uv sync --frozen`) and the
+  image carries no test, ops or load-test package; the auth service builds the workspace and runs
+  `dist/index.js`. `infra/compose.prod.yml`'s two stale paths (`apps/api`, `../db/schema.sql`) are
+  corrected to the repository's layout.
+- `infra/deploy.sh` is one procedure with three steps — the migrations (applied with
+  `ON_ERROR_STOP=1`, after waiting for the server), the state file the rollback reads, and the swap —
+  and `infra/deploy.sh rollback` re-applies the recorded images. `infra/smoke.sh` drives a real round
+  trip through the edge with the demo seed A1 added, and says which checks it skipped rather than
+  faking a token.
+- `.github/workflows/deploy.yml` runs the same scripts: a **verify** leg on every push that builds
+  both images and brings the whole stack up on the runner (the local VM the audit names), and a
+  **deploy** leg over SSH that rolls back when the smoke test fails. Without the OCI host and key the
+  deploy leg names the secrets it is waiting for instead of doing nothing.
+- **Still the founder's:** the OCI host, the key and the staging domain (FOUNDER_TODO), and the
+  map-pack licence confirmation (`--confirm-offline-use`) that BUG-067's proof runs stop at.
+- **Still open:** the auth service's own schema — Better Auth creates its tables with its own
+  migration, which the deploy does not yet run (`missing-table "jwks"` in the container's logs) — and
+  `infra/monitoring`, which needs the same domain and mailbox.
+
+## D50 - the app opts out of GWP-ASan, because the detector itself is the crash (2026-10-28, lead squad)
+  (D49 is the last number; this takes the next free one.)
+- **The decision:** the mobile app ships `android:gwpAsanMode="never"` on `<application>` (the
+  documented per-app opt-out of the NDK GWP-ASan guide), set unconditionally by
+  `apps/mobile/plugins/withGwpAsanMode.js`. `GWP_ASAN=1` in a build environment re-arms `"always"`
+  for an experiment branch and for nothing else.
+- **What it fixes:** BUG-066 - the api-34 E2E legs dying 1-2 s into a cold start with SIGSEGV inside
+  `gwp_asan::GuardedPoolAllocator::deallocate` over `AllocationMetadata::CallSiteInfo::RecordBacktrace`
+  over `android_unsafe_frame_pointer_chase`, the caller libhermesvm.so (runs 40274121944, 40334465490,
+  40384380620, 40411581041, 40415183126 - five tombstones, one signature).
+- **Why it is the detector and not the app:** three measurements. (1) `gwpAsanMode=always` on the
+  release build: the first cold start after install died, twice, on two branches. (2)
+  `gwpAsanMode=never`: 0 of 30 cold starts on BOTH legs with the flows green (run 40498792925).
+  (3) bionic own malloc_debug - which records its traces with `_Unwind_Backtrace`, a real unwinder a
+  corrupted frame-pointer chain cannot fool - armed for that same 60-launch run found NO heap defect
+  at all: no double free, no use-after-free, no overflow. The freed memory is fine; the recorder dies.
+- **The mechanism, from the NDK guide text:** GWP-ASan records its allocation and deallocation
+  backtraces by walking the frame-pointer chain, and a 64-bit app must be built without
+  `-fomit-frame-pointer` for that to work. Every native library in this APK is built frame-pointerless
+  (the control scan: libappmodules.so, compiled by our own toolchain, has 1 frame prologue in 1.9 MB),
+  so the first GWP-ASan-sampled deallocation kills the process inside the recorder. Under Android 14+,
+  an app without the attribute gets Recoverable GWP-ASan on ~1% of launches - exactly the
+  red-on-some, green-on-others lottery the register recorded, and a risk to real devices, not only
+  the emulator.
+- **What was rejected, with its reason:** building our own C++ with `-fno-omit-frame-pointer` does not
+  cover the third-party prebuilts (libhermesvm.so, librnskia.so, libmaplibre.so, libonnxruntime.so),
+  which are the frames in the tombstone; upgrading React Native to a Hermes built differently is an
+  unverified guess (the per-version build flags are not published), so it stays off the plan until a
+  Hermes AAR built with frame pointers can be shown. GWP-ASan protection is lost deliberately: a
+  detector that kills the process is worse than none. bionic malloc_debug stays available for hunts
+  (the `MALLOC_DEBUG` path in `.maestro/run-all.sh`).
+- **Still open:** it is an upstream problem - whether recent Android GWP-ASan should refuse to arm
+  on a frame-pointerless process (or record safely) belongs in an AOSP bug report, filed with this
+  evidence. The founder can send it.
+## D51 — The answers are models, so their date-times and their unions are decided (2026-10-29, backend squad decision, B3's response_model half)
+
+**Why this exists.** B3's `response_model` slice made every served answer a Pydantic
+model, which decided two things the hand-built dicts had left open:
+
+1. **Date-times are the canonical compact form** (`2026-10-24T07:30:00Z`). The helpers
+   built them with `.isoformat()`, which answers `+00:00` for an aware UTC datetime;
+   Pydantic answers `Z`. Both are RFC 3339 date-times and the contract's
+   `format: date-time` accepts both, and the compact form is what the phone's `Date`
+   parser emits natively, so the generated client and the server agree without a
+   conversion on either side. **The pin is explicit** (`test_a_run_is_created_and_read_back`
+   asserts the `Z` form and says why), so a third form cannot arrive unannounced.
+2. **`GET /auth/verify` answers a union of two shapes discriminated on `valid`**, not one
+   model with a nullable `user_id`. The old answer never sent `user_id` when the token
+   was invalid, and an invalid token should disclose nothing about who it might have
+   belonged to; a nullable field would answer `"user_id": null`, which is a key the old
+   answer never sent (`test_verify_reports_an_invalid_token` caught exactly this). The API's
+   other answer models keep their fields required for the same reason: an answer that
+   omits a key is not the same as an answer that fills it with null, and the phone
+   branches on it.
+
+**Also recorded, because it is a real constraint rather than a preference:**
+`upload_pod` builds its `PodResponse` into a `JSONResponse` instead of returning the model,
+because that route already carries six parameters and `PLR0917` forbids a seventh - and an
+`UploadFile` parameter cannot be keyword-only, which was the other way out (tested: it
+answers 422). A suppression comment was the third way out, and this repository does not add
+one without an issue link.

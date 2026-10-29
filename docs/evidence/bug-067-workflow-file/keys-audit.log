@@ -1,0 +1,8 @@
+﻿.github/workflows\android-e2e.yml -> clean
+.github/workflows\ci.yml -> clean
+.github/workflows\codeql.yml -> clean
+.github/workflows\map-pack.yml -> clean
+.github/workflows\quality-gates.yml -> clean
+.github/workflows\release-apk.yml -> clean
+.github/workflows\restore-test.yml -> clean
+.github/workflows\store-ready.yml -> clean

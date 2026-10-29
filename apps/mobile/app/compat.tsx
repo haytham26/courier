@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { open } from '@op-engineering/op-sqlite';
 import { useTheme } from '@/providers/ThemeProvider';
+import { firstLine } from '@/lib/firstLine';
 
 type CheckState = 'pending' | 'running' | 'ok' | 'skipped' | 'failed';
 
@@ -70,6 +71,19 @@ export default function CompatScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} testID="compat-screen">
       <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Compatibility (B.7)</Text>
+      {/* The run's own state, read before the rows it describes. It used to sit
+          under the six module rows, and those rows grow a detail line each as
+          the probes finish - so the finished screen pushed this line below the
+          fold and a flow asserting it only ever saw it during the short
+          'running' window (the same class of failure as BUG-050's clipped
+          actions row). Above the rows it cannot scroll away. */}
+      <Text
+        testID="compat-running"
+        accessibilityLiveRegion="polite"
+        style={[styles.detail, { color: theme.colors.textSecondary }]}
+      >
+        {running ? 'running' : 'done'}
+      </Text>
       {MODULES.map((module) => {
         const result = results[module.id];
         return (
@@ -90,6 +104,10 @@ export default function CompatScreen() {
             {result.detail ? (
               <Text
                 testID={`compat-${result.id}-detail`}
+                // The belt under the sentence's braces: even a detail that
+                // somehow grew with the row cannot push the screen's state
+                // line below the fold (BUG-109).
+                numberOfLines={2}
                 style={[styles.detail, { color: theme.colors.textSecondary }]}
               >
                 {result.detail}
@@ -98,13 +116,6 @@ export default function CompatScreen() {
           </View>
         );
       })}
-      <Text
-        testID="compat-running"
-        accessibilityLiveRegion="polite"
-        style={[styles.detail, { color: theme.colors.textSecondary }]}
-      >
-        {running ? 'running' : 'done'}
-      </Text>
       <ReanimatedProbe onResult={(state, detail) => update('reanimated', state, detail)} />
       <AudioProbe onResult={(state, detail) => update('audio', state, detail)} />
     </ScrollView>
@@ -138,7 +149,10 @@ async function runSherpa(update: (id: string, state: CheckState, detail: string)
     // cannot be created here; the native binding is what this gate proves.
     update('sherpa', 'skipped', 'native module linked; the STT model asset is not bundled yet');
   } catch (error) {
-    update('sherpa', 'failed', `import failed: ${(error as Error).message}`);
+    // The sentence only, never the trace (BUG-109): a native message can be
+    // five lines long, and a row that grows with it pushes this screen's own
+    // state line out of view on the emulator's 320x640 viewport.
+    update('sherpa', 'failed', `import failed: ${firstLine(error)}`);
   }
 }
 
@@ -153,7 +167,10 @@ async function runCamera(update: (id: string, state: CheckState, detail: string)
       `permission granted: ${String(granted)}, devices: ${devices.length}`,
     );
   } catch (error) {
-    update('camera', 'failed', `camera failed: ${(error as Error).message}`);
+    // The sentence only, never the trace (BUG-109): the emulator's camera
+    // factory answers with its five-line Java trace, which grew this row to
+    // 265px and pushed the state line below the fold.
+    update('camera', 'failed', `camera failed: ${firstLine(error)}`);
   }
 }
 
@@ -172,7 +189,7 @@ async function runMapLibre(update: (id: string, state: CheckState, detail: strin
     }
     update('maplibre', 'failed', 'Map is missing from @maplibre/maplibre-react-native');
   } catch (error) {
-    update('maplibre', 'failed', `maplibre failed: ${(error as Error).message}`);
+    update('maplibre', 'failed', `maplibre failed: ${firstLine(error)}`);
   }
 }
 
@@ -190,7 +207,7 @@ async function runOpSqlite(update: (id: string, state: CheckState, detail: strin
     }
     update('opsqlite', 'ok', 'wrote a row and read it back');
   } catch (error) {
-    update('opsqlite', 'failed', `op-sqlite failed: ${(error as Error).message}`);
+    update('opsqlite', 'failed', `op-sqlite failed: ${firstLine(error)}`);
   }
 }
 
@@ -235,7 +252,7 @@ function AudioProbe({ onResult }: { onResult: (state: CheckState, detail: string
         }
       } catch (error) {
         if (!cancelled) {
-          onResult('failed', `expo-audio failed: ${(error as Error).message}`);
+          onResult('failed', `expo-audio failed: ${firstLine(error)}`);
         }
       }
     };

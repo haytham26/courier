@@ -1,0 +1,85 @@
+# The B4 mutation floor (docs/plan/AUDIT_2026-10-25.md §B4, PLAYBOOK §14.5).
+#
+# mutmut mutates the source and runs the suites against each mutant: a survivor
+# is a test the suite does not have. The audit's done-when is "mutmut runs
+# scoped in CI at the 70 % floor" over `services/api` (sync, runs, auth) and
+# `services/courier-voice` (the turn machine).
+#
+# A mutation run is minutes, not seconds, so it is a nightly lane and a manual
+# dispatch - never a PR's blocker. The scope is the config each service carries
+# (`[tool.mutmut] source_paths`), so the lane mutates exactly the modules the
+# audit names and nothing else. The floor itself is enforced by
+# `scripts/ci/check-mutation-floor.mjs`, which runs mutmut, exports its own
+# stats, and fails the job below 70 % - the score arithmetic is mutmut's, read
+# from its installed source.
+#
+# The PR-time variant is `check-mutation-floor.mjs check <service>` against the
+# stats artefact this workflow uploads; wiring it into the floor job is the
+# follow-up slice once the first nightly run has measured the runtime.
+
+name: Mutation floor
+
+on:
+  schedule:
+    # 03:40 UTC: after the nightly Android E2E is done and before the working
+    # day in Christchurch (UTC+13) starts.
+    - cron: '40 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  api:
+    name: The API's mutation floor (sync, runs, auth)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Python and the API's dependencies
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/api/uv.lock
+
+      - name: Run the floor
+        run: node scripts/ci/check-mutation-floor.mjs run services/api
+
+      - name: Keep the stats
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mutation-api-stats
+          path: services/api/mutants/mutmut-cicd-stats.json
+          retention-days: 90
+          if-no-files-found: warn
+
+  voice:
+    name: The voice service's mutation floor (the turn machine)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Python and the voice service's dependencies
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/courier-voice/uv.lock
+
+      - name: Run the floor
+        run: node scripts/ci/check-mutation-floor.mjs run services/courier-voice
+
+      - name: Keep the stats
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mutation-voice-stats
+          path: services/courier-voice/mutants/mutmut-cicd-stats.json
+          retention-days: 90
+          if-no-files-found: warn

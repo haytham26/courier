@@ -109,7 +109,14 @@ class TestCreatingARun:
         assert run["depot"] == {"lat": -43.5330, "lon": 172.6300}
         assert run["capacity_parcels"] == 120
         assert run["speed_kmh"] == 30.0
-        assert run["start_at"] == START_AT.isoformat()
+        # B3's response_model slice changed this answer's date-time text: the
+        # model serialises an aware UTC datetime in the canonical compact form
+        # (`...Z`), where the hand-built dict used `.isoformat()`'s `+00:00`
+        # offset. Both are RFC 3339 date-times and the contract's
+        # `format: date-time` accepts both; the compact form is the one the
+        # phone's `Date` parser and the openapi client emit natively. The pin
+        # is explicit here so a third form cannot arrive unannounced.
+        assert run["start_at"] == START_AT.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         read = client.get(f"/runs/{run['id']}")
         assert read.status_code == 200

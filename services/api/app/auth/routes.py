@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from fastapi.security import HTTPAuthorizationCredentials
 
+from ..responses import AuthMeResponse, AuthVerifyResponse
 from .jwks import (
     AuthPrincipal,
     InvalidTokenError,
@@ -21,7 +22,7 @@ from .jwks import (
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
-@router.get("/me")
+@router.get("/me", response_model=AuthMeResponse)
 async def get_me(principal: AuthPrincipal = Depends(get_current_principal)) -> dict:
     """Returns the identity behind the presented access token."""
     return {
@@ -32,7 +33,7 @@ async def get_me(principal: AuthPrincipal = Depends(get_current_principal)) -> d
     }
 
 
-@router.get("/verify")
+@router.get("/verify", response_model=AuthVerifyResponse)
 async def verify_session(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     verifier=Depends(get_verifier),

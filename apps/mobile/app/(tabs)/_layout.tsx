@@ -19,10 +19,11 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from 'react-native';
 
 import { ChosenProvider, TabBar } from '@/components/chosen';
-import type { CopilotState, TabSlot } from '@/components/chosen';
+import type { TabSlot } from '@/components/chosen';
 import { hapticFor } from '@/motion/haptics';
 import { useOptionalAuth } from '@/providers/AuthProvider';
-import type { VoiceCommand, VoiceState } from '@/voice/VoiceService';
+import type { VoiceCommand } from '@/voice/VoiceService';
+import { copilotStateOf } from '@/voice/copilotState';
 import { useCourierVoice } from '@/voice/useCourierVoice';
 import { useVoice } from '@/voice/useVoice';
 
@@ -56,21 +57,8 @@ const commandWords: Record<VoiceCommand['type'], string> = {
 };
 
 /** The words for each state of the voice engine, as the sphere announces them. */
-const copilotStateOf = (state: VoiceState, ready: boolean): CopilotState => {
-  if (!ready || state === 'error') {
-    return 'offline';
-  }
-  switch (state) {
-    case 'listening':
-      return 'listening';
-    case 'processing':
-      return 'thinking';
-    case 'speaking':
-      return 'speaking';
-    default:
-      return 'idle';
-  }
-};
+// copilotStateOf moved to '@/voice/copilotState' when a root-stack screen
+// (summary) needed the same mapping: one mapping, one place to fix.
 
 type TabRoute = 'index' | 'stops' | 'map' | 'settings';
 

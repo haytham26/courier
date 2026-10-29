@@ -1,0 +1,208 @@
+# The staging deploy (A5).
+#
+# A push to main deploys to staging: the images are built, the migrations run,
+# the stack comes up behind the edge, the smoke test drives a real round trip
+# through it, and a failing smoke test returns the previous images.
+#
+# The audit's founder input is the OCI host and key (FOUNDER_TODO). Until they
+# exist, the `verify` leg runs on every push - it builds the images and brings
+# the whole staging stack up on the runner itself, which is the local VM the
+# audit names - and the `deploy` leg is skipped, not quietly: it prints the
+# exact secrets it is waiting for. A deploy that silently did nothing would be
+# worse than one that says it has nowhere to go.
+#
+# Both legs use the same two scripts (`infra/deploy.sh`, `infra/smoke.sh`), so
+# the procedure the workflow runs and the procedure a developer runs by hand on
+# the host are one procedure. That is the whole point of testing against a local
+# VM first: when the host arrives, what is new is a hostname, not a script.
+
+name: Deploy staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "verify builds the stack locally; deploy pushes it to the staging host"
+        required: true
+        default: verify
+        type: choice
+        options: [verify, deploy]
+
+permissions:
+  contents: read
+
+concurrency:
+  # One deploy at a time: two pushes in a row would race on the same stack.
+  # The in-progress run is not cancelled - cancelling a deploy mid-migration
+  # leaves the host in a state nobody chose.
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Build and smoke-test the staging stack (the local VM)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # No workspace install on purpose: nothing here runs Node on the runner.
+      # The images build their own dependencies, and the auth service's
+      # migration runs INSIDE the auth image (`infra/deploy.sh`), where the
+      # service's own configuration and its node_modules live. Both host-side
+      # runs of that migration went red on main - once for a missing `zod`, once
+      # for a missing `AUTH_DATABASE_URL` - and one `docker compose run` in the
+      # image is the fix for the whole class (BUG-070).
+
+      - name: Build the API image
+        run: |
+          docker build \
+            --build-arg PYTHON_VERSION=3.12 \
+            -t courier-api:${{ github.sha }} \
+            -f services/api/Dockerfile services/api
+
+      - name: Build the auth image
+        run: |
+          docker build \
+            -t courier-auth:${{ github.sha }} \
+            -f services/auth/Dockerfile .
+
+      - name: The staging compose renders
+        # The same validation a developer runs before a deploy: the three files
+        # resolve, every required variable is named, and the network's addresses
+        # are inside the subnet.
+        run: |
+          # The CI env file names the throwaway values, the same way a
+          # developer's run does: a compose file that refuses to render without
+          # them is telling the truth, and the values are the runner's.
+          docker compose --env-file infra/ci-staging.env -f infra/compose.staging.yml config --quiet
+          echo "the services: $(docker compose --env-file infra/ci-staging.env -f infra/compose.staging.yml config --services | tr '\n' ' ')"
+
+      - name: Bring the staging stack up
+        # The migrations run here (the compose file applies the contract's own
+        # schema to a fresh volume), then the smoke test drives the core flow
+        # through the edge: the seed, the run, the stops, and the health
+        # endpoints' 404. A runner has more memory than the founder's local VM
+        # (capped at 3 GB), so the whole stack fits.
+        env:
+          POSTGRES_PASSWORD: ci-staging-postgres
+          VALKEY_PASSWORD: ci-staging-valkey
+          BETTER_AUTH_SECRET: ci-staging-better-auth-secret-0123456789abcdef
+          AUTH_TRUSTED_ORIGINS: "https://staging.courier.local,exp://"
+          APP_VERSION: ${{ github.sha }}
+          COURIER_API_IMAGE: courier-api:${{ github.sha }}
+          COURIER_AUTH_IMAGE: courier-auth:${{ github.sha }}
+          COURIER_DOMAIN: staging.courier.local
+        run: |
+          set -euo pipefail
+          bash infra/deploy.sh apply --from infra/ci-staging.env
+          # The staging edge publishes 8443 on the runner (the staging stack's
+          # own port, so it cannot fight a runner's own services). The domain
+          # answers on the loopback, and the edge holds Caddy's local-CA
+          # certificate for it.
+          echo "127.0.0.1 staging.courier.local" | sudo tee -a /etc/hosts
+
+      - name: The smoke test
+        # No token is passed on purpose: the CI verify leg has no staging
+        # identity, and faking one to make the check green would prove nothing.
+        # The smoke test runs what it can prove without an identity - the edge's
+        # TLS, the version, the health endpoints' 404, and the anonymous 401 on
+        # the seed - and reports which checks it skipped. The deploy leg runs
+        # the same test with the staging token, which is a secret.
+        env:
+          # The version check compares /healthz against what this push deployed.
+          # The stack step sets APP_VERSION for the API container, but a step's
+          # environment is not inherited by the next one, so without this the
+          # smoke test printed "APP_VERSION is not set: skipping the version
+          # check" and the deployment's own version went unproven - a check
+          # that silently does not run is a check nobody reads.
+          APP_VERSION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # --port 8443: the staging edge publishes 8443 on the runner (the
+          # runner's own 443 is not ours to take), and the smoke test aims at
+          # the edge it is asked for. Before this flag the script always used
+          # 443 and the verify leg could never reach the stack it built.
+          bash infra/smoke.sh --domain staging.courier.local --port 8443 --evidence .smoke
+
+      - name: The stacks' evidence
+        if: always()
+        run: |
+          docker compose --env-file infra/ci-staging.env -f infra/compose.staging.yml ps > .smoke/compose-ps.txt || true
+          docker compose --env-file infra/ci-staging.env -f infra/compose.staging.yml logs --tail=200 caddy > .smoke/caddy.log || true
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: staging-smoke
+          path: .smoke/
+          retention-days: 14
+
+  deploy:
+    name: Deploy to the staging host
+    # The audit's founder input: the OCI host, the key and the domain. Until
+    # they exist this leg says so, on every push, rather than doing nothing.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: The host the audit is waiting for
+        id: host
+        run: |
+          set -euo pipefail
+          for secret in COURIER_STAGING_HOST COURIER_STAGING_USER COURIER_STAGING_KEY; do
+            if [ -z "${!secret:-}" ]; then
+              echo "::notice::A5 is waiting for the OCI host (FOUNDER_TODO): $secret is not set, so the deploy leg is skipped"
+              echo "configured=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      - name: Nothing to deploy to yet
+        if: steps.host.outputs.configured != 'true'
+        run: |
+          echo "::notice::A5's deploy leg is skipped: the OCI host and key (FOUNDER_TODO) are not configured"
+          echo "The verify leg above builds the same stack and runs the same smoke test on the runner,"
+          echo "which is the local VM the audit names. The procedure is one procedure:"
+          echo "  infra/deploy.sh apply --from infra/staging.env"
+          echo "  infra/smoke.sh --domain <the staging domain> --token <a courier's JWT>"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        if: steps.host.outputs.configured == 'true'
+
+      - name: Deploy to the host
+        if: steps.host.outputs.configured == 'true'
+        env:
+          HOST: ${{ secrets.COURIER_STAGING_HOST }}
+          USER: ${{ secrets.COURIER_STAGING_USER }}
+          KEY: ${{ secrets.COURIER_STAGING_KEY }}
+          APP_VERSION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          # The deployment runs as the deploy user on the host, in the checked
+          # out tree. The compose files, the Dockerfiles and the two scripts
+          # are copied by rsync, so the host runs this commit's infra/ exactly.
+          rsync -az --delete -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" \
+            infra/ services/ packages/ "${USER}@${HOST}:/opt/courier/"
+          ssh -i ~/.ssh/id_ed25519 "${USER}@${HOST}" \
+            "cd /opt/courier/infra && bash deploy.sh apply --from staging.env"
+          ssh -i ~/.ssh/id_ed25519 "${USER}@${HOST}" \
+            "cd /opt/courier/infra && bash smoke.sh --domain \"${{ secrets.COURIER_STAGING_DOMAIN }}\" --token \"${{ secrets.COURIER_SMOKE_TOKEN }}\""
+
+      - name: Roll back on a failed smoke test
+        if: failure() && steps.host.outputs.configured == 'true'
+        env:
+          HOST: ${{ secrets.COURIER_STAGING_HOST }}
+          USER: ${{ secrets.COURIER_STAGING_USER }}
+          KEY: ${{ secrets.COURIER_STAGING_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          echo "::error::the smoke test failed: returning the images that were running"
+          ssh -i ~/.ssh/id_ed25519 "${USER}@${HOST}" \
+            "cd /opt/courier/infra && bash deploy.sh rollback --from staging.env"

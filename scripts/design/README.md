@@ -15,11 +15,13 @@ developer tools: the founder and the design squads run them, CI does not.
 | `build-design-research-tables.mjs` | Builds the tables of the research from the evidence. `node scripts/design/build-design-research-tables.mjs [--write]`. |
 | `measure-palettes.mjs` | Measures the candidate palettes against the WCAG bars of `docs/design/SYSTEM.md`, with the same contrast code the build gate uses. `node scripts/design/measure-palettes.mjs`. |
 | `print-palette-tables.mjs` | Prints the palette tables of the research from the measured snapshot. `node scripts/design/print-palette-tables.mjs`. |
-| `print-direction-tables.mjs` | Prints the measured tables of the second round. `node scripts/design/print-direction-tables.mjs`. |
-| `build-direction-renders.mjs` | Builds the static render of every direction (the four screens, day and night). `node scripts/design/build-direction-renders.mjs`. |
-| `render-directions.mjs` | Shoots the screens of the directions into PNG files (390 by 844). `node scripts/design/render-directions.mjs`. |
-| `render-directions-2.mjs` | The renders of the directions of the current team. `node scripts/design/render-directions-2.mjs`. |
-| `typescript-resolver.mjs` | The resolver hook of the design scripts: the token package is TypeScript without file extensions, so the hook adds them. It is registered by the scripts that read the package. |
+
+(The B2 deletion of 2026-10-27 removed the direction renderers and the second round of directions:
+`print-direction-tables.mjs`, `build-direction-renders.mjs`, `render-directions.mjs`, `render-directions-2.mjs`
+and `typescript-resolver.mjs` are gone with the `src/design2` / `src/design2a` / `app/design2` lab code, the
+`directions2`, `directions2a`, `directionsLab`, `themes2` and `themes2a` tokens and their renders. The
+direction evidence that already shipped stays in `docs/design/directions/` and `docs/design/directions-2/`;
+the chosen direction is the only direction the app builds.)
 
 ## The rules
 

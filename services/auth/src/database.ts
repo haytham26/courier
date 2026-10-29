@@ -19,8 +19,19 @@ import type { AuthConfig } from "./config.js";
  * `BetterAuthOptions["database"]` is typed as `any` upstream because the
  * union includes a Bun-only type (`bun:sqlite`), so the concrete members are
  * spelled out here instead.
+ *
+ * The `type` member is not decoration: Better Auth's kysely adapter reads
+ * `database.type` to learn which SQL dialect to speak (BUG-070, cause 3). A
+ * bare dialect object leaves it `undefined`, the adapter logs
+ * "Could not determine database type, defaulting to sqlite" and generates
+ * SQLite SQL (`FROM sqlite_master AS tables INNER JOIN pragma_index_list(…)`)
+ * against PostgreSQL — which the server rejects with `syntax error at or near
+ * "WHERE"` (42601) at the statement's 404th character.
  */
-export type AuthDatabase = DBAdapterInstance | Dialect;
+export type AuthDatabase =
+  | DBAdapterInstance
+  | { type: "postgres"; dialect: Dialect }
+  | Dialect;
 
 type MemoryStore = Record<string, unknown[]>;
 
@@ -44,7 +55,7 @@ export function createMemoryDatabase(options: BetterAuthOptions): AuthDatabase {
 
 export function createPostgresDatabase(url: string): AuthDatabase {
   const pool = new Pool({ connectionString: url });
-  return new PostgresDialect({ pool });
+  return { type: "postgres", dialect: new PostgresDialect({ pool }) };
 }
 
 /** Builds the Better Auth `database` option from the validated configuration. */

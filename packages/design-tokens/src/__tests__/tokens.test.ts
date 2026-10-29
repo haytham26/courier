@@ -56,8 +56,8 @@ describe('Design Tokens', () => {
 });
 
 describe('Themes', () => {
-  it('has the three product themes, the first three directions and the second round', () => {
-    expect(Object.keys(themes)).toHaveLength(26);
+  it('has the three product themes, the first three directions and the three team directions', () => {
+    expect(Object.keys(themes)).toHaveLength(12);
     expect(themes.day).toBeDefined();
     expect(themes.night).toBeDefined();
     expect(themes.highContrast).toBeDefined();
@@ -70,20 +70,6 @@ describe('Themes', () => {
     expect(themes.xrayParcelNight).toBeDefined();
     expect(themes.scanline).toBeDefined();
     expect(themes.scanlineNight).toBeDefined();
-    expect(themes.weatherLight).toBeDefined();
-    expect(themes.weatherLightNight).toBeDefined();
-    expect(themes.hapticCity).toBeDefined();
-    expect(themes.hapticCityNight).toBeDefined();
-    expect(themes.nightShift).toBeDefined();
-    expect(themes.nightShiftNight).toBeDefined();
-    expect(themes.gantryRun).toBeDefined();
-    expect(themes.gantryRunNight).toBeDefined();
-    expect(themes.controlRoom).toBeDefined();
-    expect(themes.controlRoomNight).toBeDefined();
-    expect(themes.topo).toBeDefined();
-    expect(themes.topoNight).toBeDefined();
-    expect(themes.addressFirst).toBeDefined();
-    expect(themes.addressFirstNight).toBeDefined();
   });
 
   it('day theme has correct colors', () => {
