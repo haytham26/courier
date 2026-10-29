@@ -1,16 +1,15 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-29 · main at `97a707f` (PR #102 merged) · **BUG-070 is fixed at the cause and its
-proof is the `Deploy staging` run on that merge (40791069420). The root cause was never the
-Postgres: `services/auth/src/database.ts` handed Better Auth a bare `PostgresDialect`, the kysely
-adapter read no `database.type`, defaulted to **sqlite**, and ran SQLite SQL (`FROM sqlite_master AS
-tables INNER JOIN pragma_index_list(...) WHERE ...`) against PostgreSQL — whose parser stops at
-that `WHERE`, character 404, which is the position the server reported. The fix is
-`{ type: "postgres", dialect }`; on the real image the same command creates the eleven tables and
-is idempotent. The same PR repaired the mojibake the founder found on main (three tracked text
-files, 168 sequences) and added `scripts/ci/check-mojibake.mjs` beside the control-character gate.
-**Next in flight:** PR #104 — B3's `response_model` half (every served answer now declares its
-shape; 438 tests, ruff, mypy green; red first proven four of four against main).**
+Updated: 2026-10-29 · main at `3930171` (PR #104 merged) · **BUG-070's cause 3 and B3's
+`response_model` half are both merged. BUG-110 (NEW, filed by this session, `doing`) is the defect
+the stack's next `Deploy staging` run found: `infra/compose.staging.yml`'s auth healthcheck asks for
+`/health/ready`, the auth service never served that route (every request fell to the Better Auth
+handler, which 404s it), so the container could never become healthy and the verify leg never
+reached its smoke test. A5's first slice had recorded that unhealthiness as the missing tables — the
+tables are created now, the container still went unhealthy, and that is how the real cause was
+found. The route (`services/auth/src/health.ts`) is merged with PR #104 and the whole stack came up
+healthy locally on the founder's machine, auth container included, for the first time. The proof
+that closes BUG-070's row is the `Deploy staging` run on this merge (40808382804).**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 

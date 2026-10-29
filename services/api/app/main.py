@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
@@ -88,7 +89,12 @@ get_auth_settings()
 # must stop the boot, not the first photo of the day.
 validate_pod_settings()
 
-app = FastAPI(title="Courier Copilot", version="0.1.0")
+# The version the smoke test proves (A5's done-when: "the API is the version that
+# was just deployed"). The compose file already passes APP_VERSION to the
+# container; the app ignored it and answered a hard-coded 0.1.0, so the smoke
+# test's version check could never see the swap and a stale replica behind the
+# edge looked identical to the new one.
+app = FastAPI(title="Courier Copilot", version=os.environ.get("APP_VERSION", "0.1.0"))
 
 # The unhandled-error trail the PLAYBOOK triage reads (RUNBOOK section 10).
 logger = logging.getLogger("courier_api")
