@@ -196,7 +196,6 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ~/.android/avd
-<<<<<<< HEAD
           # BUG-068: the key must carry EVERYTHING that shapes the AVD, not just
           # os+api+target+arch. The old key (os-api-target-arch only) restored a
           # snapshot created on a rotated runner image with a tiny device
@@ -204,7 +203,7 @@ jobs:
           # while `am start` still answered COLD/ok - red gates blamed on the
           # app when the harness was what changed. PR #88 made the key carry the
           # emulator-runner's pinned revision and a hash of the emulator-options;
-          # BUG-069's slice of this branch takes it further, to the fingerprint
+          # this branch's pins slice (BUG-065) takes it further, to the fingerprint
           # the pins step computes (the runner revision, the emulator build, the
           # system image's revision, the Maestro version and the emulator options
           # itself), so a change to any of them is the commit that renames the key.

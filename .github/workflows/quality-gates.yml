@@ -1,6 +1,6 @@
 ﻿name: Quality gates
 
-# The V4 Â§2 gates that are not part of the fast CI job: the floor guard, the
+# The V4 section 2 gates that are not part of the fast CI job: the floor guard, the
 # coverage ratchet, the licence inventory, the dependency audits and the static
 # analysis. Every job here blocks the merge.
 on:
