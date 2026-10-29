@@ -21,6 +21,7 @@ export interface DeliveryEvent {
   lat?: number;
   lon?: number;
   accuracyM?: number;
+  /** An aware instant (UTC, ISO-8601): the log orders by it (BUG-088). */
   occurredAt: string;
 }
 
@@ -31,6 +32,17 @@ export interface EventStore {
   pending(limit: number): Promise<DeliveryEvent[]>;
   /** Marks the events as delivered by the server. */
   markSynced(ids: string[]): Promise<void>;
+  /**
+   * Keeps events out of the send path without losing them (ADR-014 §3): a
+   * refusal is preserved for the courier's review, never re-offered.
+   */
+  quarantine(events: DeliveryEvent[]): Promise<void>;
+  /**
+   * Takes an event back out of the log while the server has not stored it:
+   * a delivery the courier undid before the phone managed to tell the server
+   * never reaches it. A stored event cannot be taken back by the phone.
+   */
+  forget(id: string): Promise<void>;
   /** How many events are still waiting. */
   pendingCount(): Promise<number>;
 }
@@ -39,6 +51,8 @@ export interface EventStore {
 export interface SyncResult {
   accepted: number;
   cursor: number;
+  /** The event ids the server refused: the courier-facing conflict answer. */
+  conflicts: string[];
 }
 
 /** The transport that talks to the API. */

@@ -1,11 +1,14 @@
 /**
  * The run state above the screens (src/maps/runState.tsx): the marks one
- * provider keeps, the double mark that stays one event, the undo, and the
- * clock read of the delivery moment.
+ * provider keeps, the double mark that stays one event, the undo, the clock
+ * read of the delivery moment - and the store the marks are written through,
+ * so a cold start or a driver swap no longer loses them (BUG-069).
  */
 import React from 'react';
 import { Pressable, Text } from 'react-native';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+
+import type { DeliveredMark, MarkStore } from '@/run/types';
 
 import { mockStops } from '../stops';
 import { RunProvider, useRun, type DeliveredEvent } from '../runState';
@@ -40,6 +43,39 @@ const textOf = (testId: string): string =>
 const renderHarness = () =>
   render(
     <RunProvider>
+      <RunHarness />
+    </RunProvider>,
+  );
+
+/** A mark store that keeps what it was given, like the phone would. */
+function aMemoryMarkStore(already: DeliveredMark[] = []): {
+  marks: DeliveredMark[];
+  store: MarkStore;
+} {
+  const marks = [...already];
+  return {
+    marks,
+    store: {
+      markDelivered: (stop) => {
+        marks.push({ stopId: stop.id, sequence: stop.sequence, at: Date.now(), eventId: `event-${stop.id}` });
+        return Promise.resolve();
+      },
+      undoDelivered: (stopId) => {
+        const index = marks.findIndex((mark) => mark.stopId === stopId);
+        if (index >= 0) {
+          marks.splice(index, 1);
+        }
+        return Promise.resolve();
+      },
+      deliveredMarks: () => Promise.resolve([...marks]),
+      close: () => Promise.resolve(),
+    },
+  };
+}
+
+const renderOverStore = (store: MarkStore) =>
+  render(
+    <RunProvider store={store}>
       <RunHarness />
     </RunProvider>,
   );
@@ -85,5 +121,44 @@ describe('the run state', () => {
     fireEvent.press(screen.getByTestId('run-undo-2'));
     expect(textOf('run-last')).toBe('3');
     expect(textOf('run-count')).toBe('1');
+  });
+});
+
+describe('the run state above the run store (BUG-069)', () => {
+  it('hydrates the marks the store carries when the provider mounts', async () => {
+    const memory = aMemoryMarkStore([
+      { stopId: '2', sequence: 2, at: 1_800_000_000_000, eventId: 'event-2' },
+    ]);
+
+    renderOverStore(memory.store);
+
+    await waitFor(() => expect(textOf('run-count')).toBe('1'));
+    expect(textOf('run-2-delivered')).toBe('yes');
+  });
+
+  it('writes the mark through the store, so a cold start finds it again', async () => {
+    const memory = aMemoryMarkStore();
+    const first = renderOverStore(memory.store);
+
+    fireEvent.press(screen.getByTestId('run-mark-2'));
+    await waitFor(() => expect(memory.marks.map((mark) => mark.stopId)).toEqual(['2']));
+
+    first.unmount();
+    renderOverStore(memory.store);
+
+    await waitFor(() => expect(textOf('run-count')).toBe('1'));
+    expect(textOf('run-2-delivered')).toBe('yes');
+  });
+
+  it('takes the mark off the store when the courier undoes it', async () => {
+    const memory = aMemoryMarkStore();
+    renderOverStore(memory.store);
+
+    fireEvent.press(screen.getByTestId('run-mark-2'));
+    await waitFor(() => expect(memory.marks).toHaveLength(1));
+    fireEvent.press(screen.getByTestId('run-undo-2'));
+
+    expect(memory.marks).toEqual([]);
+    expect(textOf('run-count')).toBe('0');
   });
 });
