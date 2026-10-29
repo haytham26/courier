@@ -212,6 +212,19 @@ jest.mock('@/scans/scanLoad', () => ({
 
 jest.mock('@/config/buildFlags', () => ({ DEV_SCREENS_IN_BUNDLE: false }));
 
+// The root layout imports the production run store, which opens op-sqlite -
+// a native module the jest worker has no runtime for (the same mock
+// `routes.test.tsx` uses; it is why this suite passed on Windows and failed
+// on the Linux worker in CI run 40938227623).
+jest.mock('@/run/productionRunStore', () => ({
+  runStoreForThisBuild: () => ({
+    markDelivered: () => {},
+    undoDelivered: () => {},
+    deliveredMarks: () => [],
+    close: () => Promise.resolve(),
+  }),
+}));
+
 /** Renders the app the way it launches, so a guard can be read off its tree. */
 function renderApp() {
   return render(
