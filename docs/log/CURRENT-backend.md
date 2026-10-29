@@ -1,15 +1,18 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-29 · main at `3930171` (PR #104 merged) · **BUG-070's cause 3 and B3's
-`response_model` half are both merged. BUG-110 (NEW, filed by this session, `doing`) is the defect
-the stack's next `Deploy staging` run found: `infra/compose.staging.yml`'s auth healthcheck asks for
-`/health/ready`, the auth service never served that route (every request fell to the Better Auth
-handler, which 404s it), so the container could never become healthy and the verify leg never
-reached its smoke test. A5's first slice had recorded that unhealthiness as the missing tables — the
-tables are created now, the container still went unhealthy, and that is how the real cause was
-found. The route (`services/auth/src/health.ts`) is merged with PR #104 and the whole stack came up
-healthy locally on the founder's machine, auth container included, for the first time. The proof
-that closes BUG-070's row is the `Deploy staging` run on this merge (40808382804).**
+Updated: 2026-10-29 · main at `e258873` (PR #101 merged) · **BUG-070 is closed. Its deploy chain
+took **seven** causes, all fixed (PRs #94, #96, #102, #104, #105, #106), and the founder's rule held:
+the row flipped to `fixed` only with a green `Deploy staging` run on main — three in a row now
+([40847886617](https://github.com/haytham26/courier/actions/runs/40847886617) on `821df19`,
+[40851207921](https://github.com/haytham26/courier/actions/runs/40851207921) on `e6443c2`,
+[40853373882](https://github.com/haytham26/courier/actions/runs/40853373882) on `e258873`, the main
+tip). The seven-cause table with every run and PR is in `docs/log/HANDOVER-2026-10-29-D.md`, and the
+lesson it leaves is in that file's own words: a red deploy whose message names a subsystem is naming
+the subsystem that *reported*, not the one that is wrong. B3's remaining backlog (`response_model`
+over every served answer — merged as PRs #104/#105; the BUG-059 fixture hoist and the bounded voice
+stores; the MASVS L1 self-review) and B4's mutmut floor (PR #106's lane) are what is left of the
+binding order before billing (D44).** This file was stale until this session: its `Updated` line
+named `3930171` and its proof named a run that failed, and both are corrected here.
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
