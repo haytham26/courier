@@ -7,6 +7,7 @@ import { createServer } from "node:http";
 import { toNodeHandler } from "better-auth/node";
 
 import { loadConfig } from "./config.js";
+import { healthBody, isHealthPath } from "./health.js";
 import { createAuth } from "./server.js";
 
 function main(): void {
@@ -15,6 +16,14 @@ function main(): void {
   const handler = toNodeHandler(auth);
 
   const server = createServer((req, res) => {
+    // The readiness probe is answered here, before the Better Auth handler: it
+    // owns no route, so it would answer 404 for a path the compose healthcheck
+    // asks for and the container would never become healthy (see health.ts).
+    if (isHealthPath(new URL(req.url ?? "/", "http://127.0.0.1").pathname)) {
+      res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+      res.end(JSON.stringify(healthBody(config)));
+      return;
+    }
     void handler(req, res);
   });
 

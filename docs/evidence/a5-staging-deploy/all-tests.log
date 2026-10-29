@@ -1,0 +1,65 @@
+﻿Ô£ö an acceptance carrying an owner and a future review date passes (0.9058ms)
+Ô£ö an acceptance without an owner fails the gate (0.3472ms)
+Ô£ö an acceptance whose review date has passed fails the gate (0.1616ms)
+Ô£ö an acceptance with no review date fails the gate (0.1618ms)
+Ô£ö a high advisory that is not on the list still fails the gate (0.1305ms)
+Ô£ö advisories below high are ignored, as before (0.1288ms)
+Ô£ö the repository allow list carries an owner and a finite review date on every entry (0.1966ms)
+Ô£ö the allow list is non-empty: an empty list is how a gate gets fooled (0.0836ms)
+An emulator boot does not ask for software rendering (BUG-060):
+  workflow.yml:4  emulator-options must include -gpu swiftshader_indirect
+Every workflow that boots an emulator must set -gpu swiftshader_indirect in its emulator-options.
+The emulator-GL gate could not read the workflow directory: No workflow directory at C:\Users\DCL\projects\courier-backend\no\such\directory
+Ô£ö the bug id is the tracker's BUG-060, renumbered past the audit's BUG-053 (0.8133ms)
+Ô£ö a boot without a -gpu flag fails the gate (0.7004ms)
+Ô£ö the same step with swiftshader_indirect passes the gate (0.719ms)
+Ô£ö a boot with no emulator-options at all fails the gate (0.2456ms)
+Ô£ö the list-item step form is read too (0.1771ms)
+Ô£ö a step whose inputs come before the uses line is still read (0.1329ms)
+Ô£ö the options of a neighbouring step are not read as the emulator's (0.1719ms)
+Ô£ö a comment naming the action is not an emulator boot (0.1104ms)
+Ô£ö a run body that mentions the action is not an emulator boot (0.1108ms)
+Ô£ö a block-scalar emulator-options value joins its lines (0.2651ms)
+Ô£ö a folded block scalar joins its lines too (1.1752ms)
+Ô£ö a script body that holds -lines does not end the scan early (0.2491ms)
+Ô£ö a second -gpu flag fails: the last one wins (0.2283ms)
+Ô£ö gpuVerdict reads the flag pair, not a substring (0.2035ms)
+Ô£ö an anchor or an alias the gate cannot read fails loudly (0.232ms)
+Ô£ö a workflow that never boots an emulator has no findings (0.1904ms)
+Ô£ö every boot in one file is checked, not only the first (0.1267ms)
+Ô£ö the gate over the repo's own tree is not vacuous (3.673ms)
+Ô£ö the CLI exits zero on the fixed tree, from any directory (168.2049ms)
+Ô£ö the CLI fails loudly on a tree that misses the flag (59.5071ms)
+Ô£ö the CLI passes a fixed tree and reports what it scanned (54.8652ms)
+Ô£ö the default workflow directory is the repo's own (0.2232ms)
+Ô£ö a missing workflow directory is one clean line, not a stack trace (51.221ms)
+Ô£ö a good app passes the local pre-submission check (293.2307ms)
+Ô£ö a missing privacy policy is a blocking problem (173.1749ms)
+Ô£ö the version strings in the store listing have to match the app (179.6993ms)
+Ô£ö the release APK has to carry the 64-bit libraries (158.8886ms)
+Ô£ö the report is written to a file when the check asks for it (153.6419ms)
+Ô£ö the BUG-067 root cause: an input of the action written as a step key (1.2385ms)
+Ô£ö the same name inside with: is where the action reads it (0.1541ms)
+Ô£ö a key inside a run: block scalar is not YAML and is not read as one (0.1002ms)
+Ô£ö a key inside a step with: is an input, not a step key (0.0843ms)
+Ô£ö the workflow-level mapping is not a job (0.1479ms)
+Ô£ö an unknown key at a job level fails, and a known one passes (0.1361ms)
+Ô£ö the bare inputs context is a violation, the github context is not (0.1583ms)
+Ô£ö a comment naming inputs is documentation, not an expression (0.1273ms)
+Ô£ö spacing is not a difference: ${{inputs.x}} is the same context (0.1291ms)
+Ô£ö a directory that does not exist fails rather than scanning nothing (0.4313ms)
+Ô£ö the repo's own workflows pass, which is the bug fixed (5.2426ms)
+Ô£ö the script's exit code is what CI sees (274.3951ms)
+Ô£ö the bug it exists for is named (0.123ms)
+Ô£ö a blocking finding stays a blocking finding in the job summary (0.9734ms)
+Ô£ö the summary shows the Play Console review the tool cannot do (0.2152ms)
+Ô£ö a report without blocking findings says so (0.1666ms)
+Ô£ö the App Store Connect report, which numbers its severities, is read too (0.1665ms)
+Ôä╣ tests 53
+Ôä╣ suites 0
+Ôä╣ pass 53
+Ôä╣ fail 0
+Ôä╣ cancelled 0
+Ôä╣ skipped 0
+Ôä╣ todo 0
+Ôä╣ duration_ms 1099.4816

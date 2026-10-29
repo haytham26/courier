@@ -190,6 +190,37 @@ async def test_the_licences_are_published(client: AsyncClient):
     assert "OmniRoute" in artefacts
 
 
+async def test_the_engines_are_not_public():
+    """The seam's surface is the service's own, not the internet's.
+
+    The module docstring says every call is authenticated with the courier's
+    own token; these two routes were the exception (BUG-059). An anonymous
+    caller is answered 401, the same as /v1/settings.
+    """
+    service = create_app()
+    from httpx import ASGITransport
+
+    transport = ASGITransport(app=service)
+    async with AsyncClient(transport=transport, base_url="http://courier-voice") as http:
+        response = await http.get("/v1/engines")
+    assert response.status_code == 401
+
+
+async def test_the_licences_are_not_public():
+    """The licence ledger travels with a token, too.
+
+    A licence ledger is a shipping artefact, not a status page; it answers the
+    deployment's own callers and nobody else.
+    """
+    service = create_app()
+    from httpx import ASGITransport
+
+    transport = ASGITransport(app=service)
+    async with AsyncClient(transport=transport, base_url="http://courier-voice") as http:
+        response = await http.get("/v1/licences")
+    assert response.status_code == 401
+
+
 async def test_the_shift_can_be_forgotten(client: AsyncClient):
     session_id = await a_session(client)
     response = await client.delete(f"/v1/sessions/{session_id}/memory")

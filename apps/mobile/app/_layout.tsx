@@ -45,6 +45,10 @@ function AuthNavigator() {
             <Stack.Screen name="scan" />
             <Stack.Screen name="driving" />
             <Stack.Screen name="delivered" />
+            {/* The end of the day (screen 10): Today's End of day action opens
+                it, and it is a root-stack route rather than a tab because the
+                day is finished - the dock behind it has nothing selected. */}
+            <Stack.Screen name="summary" />
             {/* The drive in the dark theme (screen 12): the same drive with
                 the mode pinned, so the design gate compares light against
                 dark side by side. */}
@@ -54,6 +58,11 @@ function AuthNavigator() {
             <Stack.Screen name="lock-screen" />
           </Stack.Protected>
           <Stack.Protected guard={!isAuthenticated}>
+            {/* The welcome is a courier's first screen: it sits in front of the
+                auth group so a signed-out phone opens on the mark, the line and
+                the two ways in. The draft session (the E2E mode's mock) skips
+                it entirely, which is what every flow expects. */}
+            <Stack.Screen name="welcome" />
             <Stack.Screen name="(auth)" />
           </Stack.Protected>
         {/* The design lab is outside the guard: the founder has to be able to

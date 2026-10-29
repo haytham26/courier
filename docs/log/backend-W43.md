@@ -411,3 +411,110 @@ POST /shifts/{id}/events:batch p95 370 ms > 300 ms` - with every request returni
   unauthenticated endpoint. ADR-018 §3b names the trust boundary: a verified webhook is trusted to
   name the courier, and the purchase-id directory is the next slice.
 - Queue 2 is fully closed (items 1–7, BUG-063, BUG-064).
+
+## 2026-10-26 — A1's backend half: the demo-run seed and the typed client from the contract (branch `feat/a1-contract-seed`, PR #57, ADR-019/D47)
+
+- **The order, from the audit.** The founder's brief is binding (AUDIT_2026-10-25 "The order", MASTER
+  §21): A1's backend half first, then A5, then B3 and B4, with billing after those (D44). PR #55's
+  correction to this squad's `Next` list was merged as `c2c852a` before this slice started.
+- **`POST /demo/runs` (`app/demo.py`).** A deterministic day for the authenticated caller: a shift, a
+  run and five stops with uuid5 ids derived from the caller and one reason (`e2e`/`demo`/`dev`), so a
+  repeat seed returns the same ids and the E2E job can reset the phone and run the flow again. The
+  gate is exact-match `DEMO_SEED_ENABLED == "true"` — `false`, `1`, `True`, `on` and a string with a
+  stray space all answer 404, pinned by a parametrized test — because the seed writes into the same
+  tables as real data. A caller racing themself on one reason gets the API's 409, not a 500.
+- **The typed client (`services/api/scripts/generate_api_client.py`).** One interface per schema and
+  one typed signature per operation, generated from `packages/contracts/openapi.yaml`, committed to
+  `packages/shared/src/generated/api.ts`. The same script's `check` mode is a CI gate, so the drift
+  guard's third direction is real: server, contract and client cannot drift apart. It formats its
+  regenerated copy with the repo's own prettier — resolving its config from the temp file's
+  directory — and a missing prettier makes it red, never silently green.
+- **The fresh-context review, twice.** The first round caught the CI step's path (`uv run
+--directory` changes the cwd, so a repo-root-relative argument resolves to
+  `services/api/services/api/...` and the gate failed on every run), two `type: ignore` comments in
+  the test, and the generated `plan` union collapsing the 3.1 `null` type into `unknown`. The second
+  round, after those landed, caught a stale-client test that proved nothing (it compared two strings
+  and never called the check), an untracked ADR naming files that do not exist, a dead in-memory
+  shift branch, sequences that renumbered the surviving stops on a partial re-seed, and the uncaught
+  `ValueError` behind the 409 gap. Every finding was verified by re-running the mutation locally
+  (a broken `check()` and a changed 409 each made the right test fail, and were restored).
+- **The machine limits held.** Docker was started for the db-marked suite only (17 tests against the
+  PostGIS 17.2 container), and the container was stopped and removed afterwards (`postgres:16-alpine`
+  was tried first and refused for lack of the PostGIS extension — the pinned image is the one the
+  suite needs).
+
+### Skills applied — A1
+
+| Step                          | Skills read and followed     | How it changed the work                                                                |
+| ----------------------------- | ---------------------------- | -------------------------------------------------------------------------------------- |
+| The contract and the endpoint | `api-and-interface-design`   | The demo path joined the contract with the same 404/409 discipline as every other run  |
+| The seed before the code      | `test-driven-development`    | RED first, then the ids, the gate and the stop writer; the two vacuous tests were      |
+| The half, not the whole       | `incremental-implementation` | The demo seed and the client are one slice, with the app side left to the lead         |
+| The security questions        | `security-and-hardening`     | The gate is exact-match, owner-only by the token, and 404 rather than a hopeful route  |
+| The generator's windows       | `source-driven-development`  | `uv run --directory` changes the cwd; `subprocess` on a `.cmd` needs the shell, and    |
+|                               |                              | prettier resolves its config from the file's own directory, so the temp sits beside it |
+| The review                    | `doubt-driven-development`   | Two fresh-context adversarial rounds; every finding verified by mutation, not accepted |
+| Before the push               | `code-review-and-quality`,   | The floor guard, the drift guard and the freshness gate all run locally first; no      |
+|                               | `code-simplification`        | suppressions, no skipped tests, and the retry/nested reads were folded into one place  |
+| The decision                  | `documentation-and-adrs`     | ADR-019 committed with the slice, D47 in the register from the next free number        |
+
+## 2026-10-26/27 — BUG-067: the map-pack workflow could not start, and BUG-064's guard took the blame (branch `fix/bug-067-map-pack-inputs`)
+
+- **The symptom, twice misread.** `.github/workflows/map-pack.yml` failed in **0 seconds** on every run
+  it ever had — 65 of them, from PR #43's first push (40176014202) onward — with GitHub's
+  `This run likely failed because of a workflow file issue`: no jobs, no steps, no log, no annotation
+  naming the line. BUG-064's job-level guard was the obvious suspect (it was added to stop a
+  feature-branch build), and I recorded the failure in `docs/a1-record` as a §16 case outside my
+  diff. **The founder corrected both readings**: the workflow is mine (`infra/` and its CI steps are
+  the backend's), and the guard was never reached — no job was ever created.
+- **The line.** `if-no-files-found: error` sat at a **step's own level**, a sibling of `uses:` and
+  `with:`. It is an **input of `actions/upload-artifact`**, so it belongs **inside `with:`**. An unknown
+  key at a step makes GitHub refuse the whole file, on every event, before any job exists. GitHub
+  states it precisely when asked to dispatch: `failed to parse workflow: (Line: 172, Col: 9):
+Unexpected value 'if-no-files-found'`. The same file also carried the dispatch-only `inputs` context
+  in three expressions, a second latent defect of the same class, fixed in the same change.
+- **The proof that it took a bisect, not a theory.** My first theory was the `inputs` context: it was
+  wrong (the run still failed with it fixed), and the bisect — a minimal file, then the full file
+  without the guard, then the dispatch — named the key. Both bisect commits are labelled in the
+  branch's history, and the dispatch that refuses to parse is in
+  `docs/evidence/bug-067-workflow-file/`.
+- **The gate.** `scripts/ci/check-workflows.mjs` (13 tests, wired into the Quality gates beside the
+  emulator gate) fails on both defects: an unknown key at a job or a step, and a bare `inputs`
+  context. A YAML anchor it cannot read fails rather than passes. `.github/workflows/store-ready.yml`
+  carried the same `inputs` defect in its release lane; it has never run, so its failure was latent.
+- **Two finds from the same proof runs.** The first dispatch after the fix died at
+  `UnsupportedClassVersionError: class file version 65.0` — planetiler 0.10.2 needs **Java 21**, the
+  runner image carries 17 — so the workflow now pins `actions/setup-java` (Temurin 21) beside the
+  tools that need it. The second dispatch passes every step until the licence gate, which refuses by
+  design: Geofabrik's terms page could not be read from the build machine on 2026-10-21, so the
+  operator has to confirm them with `--confirm-offline-use` (a founder decision, already open in
+  FOUNDER_TODO; this slice does not take it).
+
+### Skills applied — BUG-067
+
+| Step                               | Skills read and followed                              | How it changed the work                                                                                                                                                                                             |
+| ---------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The twice-misread symptom          | `debugging-and-error-recovery`                        | The playbook's evidence order (annotation, then bisect) over the plausible theory: the `inputs` fix was shipped and the run still failed, which is what forced the bisect that named the key                        |
+| The founder's ownership correction | `constraint-driven-development`                       | §16 was not weakened to fit my earlier note; the false §16 claim was corrected in the same slice and the register's Prevention column names the gate                                                                |
+| The gate's shape                   | `source-driven-development`                           | GitHub's dispatch endpoints and its workflow syntax were read for the error text and the key sets, and the action's input name was checked against the upload action's own documentation before `with:` was trusted |
+| The workflow changes               | `ci-cd-and-automation`                                | The push/dispatch/schedule triggers were exercised for real (two dispatches, one bisect push), and the pinned-Java step states its version where the tool that needs it can be read                                 |
+| Before the push                    | `code-review-and-quality`, `doubt-driven-development` | A fresh review of my own §16 note, the run-by-run bisect evidence, and the gate's own 13 tests; the register, the evidence folder and the week log all carry the same root cause                                    |
+
+## 2026-10-27 — A1's handover to the app side, and a ritual deviation recorded
+
+- **`docs/plan/A1-handover.md`** (commit `045185b`, pushed straight to main): the app side's brief for
+  the audit's A1. What the backend shipped — `POST /demo/runs` (owner-only, deterministic uuid5 ids,
+  one run per reason, `DEMO_SEED_ENABLED` exactly `true`, the idempotent repeat, the 409 on a race)
+  and the typed client at `packages/shared/src/generated/api.ts` — and what the app side owns: sign in
+  and attach the JWT, load the run through one store, deliver against it, go offline, sync through
+  `events:batch`, and the no-mock E2E job with `DEMO_SEED_ENABLED=true` on the API's environment.
+  The audit's own first piece of evidence (`index.tsx` importing `mockStops`) is named as the import
+  that goes when the store answers.
+- **The deviation, recorded.** The commit went straight to main, not through a branch and a PR. The
+  gates ran first and the change is documentation only, but the ritual's purpose is the second pair of
+  eyes, and no PR had one. `docs/log/CURRENT-backend.md` carries the note, and every commit from here
+  goes through a branch.
+- **Skills applied:** `documentation-and-adrs` (the handover names the ADR and the register entry it
+  rests on, and the index carries it), `api-and-interface-design` (every call in the note is the
+  contract's own shape, not a paraphrase), `code-review-and-quality` (the gates ran before the push;
+  the missing review is recorded rather than glossed over).

@@ -30,8 +30,8 @@ x-service-common: &service-common
   logging:
     driver: json-file
     options:
-      max-size: "10m"
-      max-file: "5"
+      max-size: '10m'
+      max-file: '5'
   security_opt:
     - no-new-privileges:true
 
@@ -55,13 +55,9 @@ services:
       -c maintenance_work_mem=256MB
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../packages/contracts/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-courier} -d ${POSTGRES_DB:-courier}",
-        ]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-courier} -d ${POSTGRES_DB:-courier}']
       interval: 10s
       timeout: 5s
       retries: 12
@@ -69,7 +65,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "2.0"
+          cpus: '2.0'
           memory: 2g
     networks:
       courier:
@@ -89,8 +85,7 @@ services:
     volumes:
       - valkey_data:/data
     healthcheck:
-      test:
-        ["CMD-SHELL", 'valkey-cli -a "$$VALKEY_PASSWORD" ping | grep -q PONG']
+      test: ['CMD-SHELL', 'valkey-cli -a "$$VALKEY_PASSWORD" ping | grep -q PONG']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -98,7 +93,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
+          cpus: '1.0'
           memory: 512m
     networks:
       courier:
@@ -107,7 +102,9 @@ services:
   api_a: &api
     image: ${COURIER_API_IMAGE:-courier-api:local}
     build:
-      context: ../apps/api
+      # The API lives in services/api (the compose file once said apps/api, a
+      # path that has not existed since the repo's first restructure).
+      context: ../services/api
       dockerfile: Dockerfile
     <<: *service-common
     environment:
@@ -132,10 +129,10 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "python",
-          "-c",
-          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3).status == 200 else 1)",
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).status == 200 else 1)",
         ]
       interval: 15s
       timeout: 5s
@@ -144,7 +141,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
+          cpus: '1.0'
           memory: 1g
     networks:
       courier:
@@ -169,7 +166,7 @@ services:
     environment:
       NODE_ENV: production
       APP_VERSION: ${APP_VERSION:?APP_VERSION is required}
-      PORT: "3001"
+      PORT: '3001'
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
       BETTER_AUTH_URL: https://${COURIER_DOMAIN:?COURIER_DOMAIN is required}
       AUTH_DATABASE_URL: postgresql://${POSTGRES_USER:-courier}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-courier}
@@ -188,9 +185,9 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "node",
-          "-e",
+          'CMD',
+          'node',
+          '-e',
           "fetch('http://127.0.0.1:3001/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 15s
@@ -200,7 +197,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
+          cpus: '1.0'
           memory: 512m
     networks:
       courier:
@@ -226,9 +223,9 @@ services:
       COURIER_DOMAIN: ${COURIER_DOMAIN:?COURIER_DOMAIN is required}
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -244,15 +241,7 @@ services:
       auth_b:
         condition: service_healthy
     healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "-q",
-          "-O",
-          "/dev/null",
-          "http://127.0.0.1:2019/config/",
-        ]
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:2019/config/']
       interval: 15s
       timeout: 5s
       retries: 5
@@ -260,7 +249,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
+          cpus: '1.0'
           memory: 256m
     networks:
       courier:
