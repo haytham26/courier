@@ -1,5 +1,5 @@
-# Mockups v1/v2 ÔÇö CONTENT INVENTORY ONLY (visual style rejected by the founder)
-These files show which screens exist and what each must contain. Their look (neon on black, glow, orbs) was rejected as "AI-looking". Do not copy their style. The real design comes from MASTER_EXECUTION ┬º13 (Design Studio: research, 3 directions, founder pick, library bench).
+# Mockups v1/v2 — CONTENT INVENTORY ONLY (visual style rejected by the founder)
+These files show which screens exist and what each must contain. Their look (neon on black, glow, orbs) was rejected as "AI-looking". Do not copy their style. The real design comes from MASTER_EXECUTION §13 (Design Studio: research, 3 directions, founder pick, library bench).
 
 **The look is now decided in three places, and the founder is choosing between them:**
 
@@ -82,17 +82,17 @@ Every spec has the same sections, in the same order:
 
 | Rule                                                             | Where it comes from        |
 | ---------------------------------------------------------------- | -------------------------- |
-| One primary action per screen, 72 pt                             | `docs/design/SYSTEM.md` Â§3 |
-| Every other target at least 56 pt                                | `docs/design/SYSTEM.md` Â§3 |
-| Body text at least 17 pt, key numbers 48-76 pt                   | `docs/design/SYSTEM.md` Â§2 |
-| Text 4.5:1, large text and boundaries 3:1, driving text 7:1      | `docs/design/SYSTEM.md` Â§6 |
-| Motion 150-250 ms, spring for the sheets                         | `docs/design/SYSTEM.md` Â§5 |
-| "Reduce motion" makes the movement instant, never removes it     | `docs/design/SYSTEM.md` Â§5 |
-| One icon set (Material Symbols), no emoji ever                   | `docs/design/SYSTEM.md` Â§7 |
-| Plain NZ English, voice prompts of at most 8 words while driving | `docs/design/SYSTEM.md` Â§8 |
-| Every interactive element has a label and a role                 | `docs/design/SYSTEM.md` Â§6 |
-| The status is never colour-only                                  | `docs/design/SYSTEM.md` Â§3 |
-| A skeleton, never a spinner for more than 300 ms                 | `docs/design/SYSTEM.md` Â§4 |
+| One primary action per screen, 72 pt                             | `docs/design/SYSTEM.md` §3 |
+| Every other target at least 56 pt                                | `docs/design/SYSTEM.md` §3 |
+| Body text at least 17 pt, key numbers 48-76 pt                   | `docs/design/SYSTEM.md` §2 |
+| Text 4.5:1, large text and boundaries 3:1, driving text 7:1      | `docs/design/SYSTEM.md` §6 |
+| Motion 150-250 ms, spring for the sheets                         | `docs/design/SYSTEM.md` §5 |
+| "Reduce motion" makes the movement instant, never removes it     | `docs/design/SYSTEM.md` §5 |
+| One icon set (Material Symbols), no emoji ever                   | `docs/design/SYSTEM.md` §7 |
+| Plain NZ English, voice prompts of at most 8 words while driving | `docs/design/SYSTEM.md` §8 |
+| Every interactive element has a label and a role                 | `docs/design/SYSTEM.md` §6 |
+| The status is never colour-only                                  | `docs/design/SYSTEM.md` §3 |
+| A skeleton, never a spinner for more than 300 ms                 | `docs/design/SYSTEM.md` §4 |
 
 ## The contrast, before and after
 

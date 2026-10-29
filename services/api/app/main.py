@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
@@ -53,6 +54,22 @@ from .pod import (
 from .pod_store import LocalPodStore, pod_store
 from .providers import VERIFIERS, apply_facts, webhook_secret_for
 from .repo import DeliveryEventRow, LocationNoteRow, Repo, RouteStopRow, RunRecord, get_repo
+from .responses import (
+    DemoRunResponse,
+    EntitlementResponse,
+    HealthResponse,
+    IntakeAnswerResponse,
+    LocationNoteResponse,
+    PodResponse,
+    PodUrlResponse,
+    ReoptResponse,
+    RouteResponse,
+    RunResponse,
+    StopResponse,
+    SyncResponse,
+    TemplateResponse,
+    WebhookAcceptedResponse,
+)
 from .routing import (
     RoutePlan,
     RouteRequest,
@@ -72,7 +89,12 @@ get_auth_settings()
 # must stop the boot, not the first photo of the day.
 validate_pod_settings()
 
-app = FastAPI(title="Courier Copilot", version="0.1.0")
+# The version the smoke test proves (A5's done-when: "the API is the version that
+# was just deployed"). The compose file already passes APP_VERSION to the
+# container; the app ignored it and answered a hard-coded 0.1.0, so the smoke
+# test's version check could never see the swap and a stale replica behind the
+# edge looked identical to the new one.
+app = FastAPI(title="Courier Copilot", version=os.environ.get("APP_VERSION", "0.1.0"))
 
 # The unhandled-error trail the PLAYBOOK triage reads (RUNBOOK section 10).
 logger = logging.getLogger("courier_api")
@@ -362,7 +384,7 @@ def _route_body(
     }
 
 
-@app.get("/healthz")
+@app.get("/healthz", response_model=HealthResponse)
 def healthz():
     """The uptime probe's target (RUNBOOK section 9): data-free by construction.
 
@@ -383,7 +405,7 @@ class DemoSeedRequest(BaseModel):
     reason: Literal["e2e", "demo", "dev"] = "e2e"
 
 
-@app.post("/demo/runs")
+@app.post("/demo/runs", response_model=DemoRunResponse)
 def seed_demo_run(
     body: DemoSeedRequest,
     principal: AuthPrincipal = Depends(get_current_principal),
@@ -412,7 +434,7 @@ def seed_demo_run(
     return demo_day_body(day)
 
 
-@app.post("/runs", status_code=201)
+@app.post("/runs", status_code=201, response_model=RunResponse)
 def create_run(
     body: CreateRunRequest,
     principal: AuthPrincipal = Depends(get_current_principal),
@@ -442,7 +464,7 @@ def create_run(
     return _run_body(record)
 
 
-@app.get("/runs")
+@app.get("/runs", response_model=list[RunResponse])
 def list_runs(
     principal: AuthPrincipal = Depends(get_current_principal),
     repo: Repo = Depends(get_repo),
@@ -451,7 +473,7 @@ def list_runs(
     return [_run_body(run) for run in repo.list_runs(principal.user_id)]
 
 
-@app.get("/runs/{run_id}")
+@app.get("/runs/{run_id}", response_model=RunResponse)
 def get_run(
     run_id: uuid.UUID,
     principal: AuthPrincipal = Depends(get_current_principal),
@@ -488,7 +510,11 @@ class PodForm:
         self.event_id = event_id
 
 
-@app.post("/runs/{run_id}/stops/{stop_id}/pod", status_code=201)
+@app.post(
+    "/runs/{run_id}/stops/{stop_id}/pod",
+    status_code=201,
+    response_model=PodResponse,
+)
 def upload_pod(
     paths: Annotated[StopPaths, Depends()],
     image: UploadFile,
@@ -559,16 +585,22 @@ def upload_pod(
             )
         ],
     )
+    # The answer is the model, so a key rename is a construction error here
+    # rather than a silently different answer on the phone (B3's response_model
+    # slice). The status rides on the JSONResponse rather than an injected
+    # `Response` because this route already carries six parameters and
+    # `PLR0917` (too many positional arguments) forbids a seventh: the image is
+    # a file parameter, which keyword-only cannot carry either.
     return JSONResponse(
         status_code=200 if replayed else 201,
-        content={
-            "event_id": str(resolved_id),
-            "stop_id": str(paths.stop_id),
-            "sha256": digest,
-            "bytes": stored_bytes,
-            "stored_at": datetime.now(UTC).isoformat(),
-            "already_stored": replayed or outcome.stored == 0,
-        },
+        content=PodResponse(
+            event_id=resolved_id,
+            stop_id=paths.stop_id,
+            sha256=digest,
+            bytes=stored_bytes,
+            stored_at=datetime.now(UTC),
+            already_stored=replayed or outcome.stored == 0,
+        ).model_dump(mode="json"),
     )
 
 
@@ -619,7 +651,10 @@ def pod_bytes(
     )
 
 
-@app.get("/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url")
+@app.get(
+    "/runs/{run_id}/stops/{stop_id}/pod/{event_id}/url",
+    response_model=PodUrlResponse,
+)
 def pod_url(
     paths: Annotated[StopPaths, Depends()],
     event_id: uuid.UUID,
@@ -651,7 +686,7 @@ def pod_url(
     return {"url": url, "expires_at": expires_at.isoformat(), "event_id": str(event_id)}
 
 
-@app.post("/runs/{run_id}/route:reopt")
+@app.post("/runs/{run_id}/route:reopt", response_model=ReoptResponse)
 def reopt_route(
     run_id: uuid.UUID,
     body: ReoptRequest,
@@ -697,7 +732,7 @@ def reopt_route(
     return body_out
 
 
-@app.put("/runs/{run_id}/template")
+@app.put("/runs/{run_id}/template", response_model=TemplateResponse)
 def put_template(
     run_id: uuid.UUID,
     body: TemplateRequest,
@@ -732,7 +767,7 @@ def put_template(
     }
 
 
-@app.get("/shifts/{shift_id}/route")
+@app.get("/shifts/{shift_id}/route", response_model=RouteResponse)
 def shift_route(
     shift_id: uuid.UUID,
     principal: AuthPrincipal = Depends(get_current_principal),
@@ -803,7 +838,7 @@ def _run_intake(
     return _intake_answer(result)
 
 
-@app.post("/shifts/{shift_id}/intake")
+@app.post("/shifts/{shift_id}/intake", response_model=IntakeAnswerResponse)
 def intake_text(
     shift_id: uuid.UUID,
     body: IntakeText,
@@ -833,7 +868,10 @@ def intake_text(
     )
 
 
-@app.post("/shifts/{shift_id}/intake/manifest")
+@app.post(
+    "/shifts/{shift_id}/intake/manifest",
+    response_model=IntakeAnswerResponse,
+)
 def intake_manifest(
     shift_id: uuid.UUID,
     image: UploadFile,
@@ -877,7 +915,10 @@ def intake_manifest(
     )
 
 
-@app.post("/billing/webhooks/{source}")
+@app.post(
+    "/billing/webhooks/{source}",
+    response_model=WebhookAcceptedResponse,
+)
 async def billing_webhook(
     source: str,
     request: Request,
@@ -905,7 +946,7 @@ async def billing_webhook(
     return {"accepted": True}
 
 
-@app.get("/account/entitlements")
+@app.get("/account/entitlements", response_model=EntitlementResponse)
 def get_entitlements(
     principal: AuthPrincipal = Depends(get_current_principal),
     repo: Repo = Depends(get_repo),
@@ -924,7 +965,7 @@ def get_entitlements(
     }
 
 
-@app.get("/shifts/{shift_id}/stops")
+@app.get("/shifts/{shift_id}/stops", response_model=list[StopResponse])
 def list_stops(
     shift_id: uuid.UUID,
     status: Literal["pending", "delivered", "skipped", "deferred", "failed"] | None = None,
@@ -963,18 +1004,30 @@ def list_stops(
     ]
 
 
-def _location_note_body(note: LocationNoteRow) -> dict[str, object]:
-    """The note as the contract's LocationNote (ADR-012 §2)."""
-    return {
-        "id": str(note.id),
-        "kind": note.kind,
-        "body": note.body,
-        "confidence": note.confidence,
-        "last_confirmed": note.last_confirmed.isoformat(),
-    }
+def _location_note_body(note: LocationNoteRow) -> LocationNoteResponse:
+    """The note as the contract's LocationNote (ADR-012 §2).
+
+    The model, not a dict: the response the list and the POST return is this
+    shape, and building it in one place is what keeps a key rename from
+    reaching one answer and not the other (B3's response_model slice).
+
+    `model_validate` rather than the constructor because the row's `kind` is a
+    `str` (the database's column is text, and the repository widens the row to
+    say so): the contract's vocabulary is the model's, so a value outside it is
+    rejected here at runtime instead of silently reaching the phone.
+    """
+    return LocationNoteResponse.model_validate(
+        {
+            "id": note.id,
+            "kind": note.kind,
+            "body": note.body,
+            "confidence": note.confidence,
+            "last_confirmed": note.last_confirmed,
+        }
+    )
 
 
-@app.get("/locations/{location_id}/notes")
+@app.get("/locations/{location_id}/notes", response_model=list[LocationNoteResponse])
 def get_location_notes(
     location_id: uuid.UUID,
     principal: AuthPrincipal = Depends(get_current_principal),
@@ -995,10 +1048,11 @@ def get_location_notes(
     ]
 
 
-@app.post("/locations/{location_id}/notes")
+@app.post("/locations/{location_id}/notes", response_model=LocationNoteResponse)
 def add_location_note(
     location_id: uuid.UUID,
     body: CreateLocationNote,
+    response: Response,
     principal: AuthPrincipal = Depends(get_current_principal),
     repo: Repo = Depends(get_repo),
 ):
@@ -1029,10 +1083,14 @@ def add_location_note(
         for note in repo.get_location_notes(principal.user_id, location_id)
         if note.kind == body.kind
     )
-    return JSONResponse(status_code=201 if created else 200, content=_location_note_body(stored))
+    # The same rule as the POD upload: the model answers, the status rides on
+    # the injected Response, so the shape the contract declares is the shape the
+    # server validates (B3's response_model slice).
+    response.status_code = 201 if created else 200
+    return _location_note_body(stored)
 
 
-@app.post("/shifts/{shift_id}/events:batch")
+@app.post("/shifts/{shift_id}/events:batch", response_model=SyncResponse)
 def sync_events(
     shift_id: uuid.UUID,
     events: list[DeliveryEvent],

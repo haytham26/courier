@@ -29,6 +29,13 @@ set -euo pipefail
 DOMAIN=""
 TOKEN=""
 EVIDENCE_DIR="${COURIER_SMOKE_DIR:-/tmp/courier-smoke}"
+# The edge's port. A real deployment answers HTTPS on 443, so that is the
+# default and the URL stays clean; the CI verify leg publishes the edge on 8443
+# (the runner's own 443 is not ours to take), and passes --port 8443. Before this
+# option existed the script always aimed at 443, so the verify leg could never
+# reach the stack it had just built: `curl: (7) Failed to connect ...
+# port 443`, which reads like a dead edge and is really a wrong port.
+PORT="${COURIER_SMOKE_PORT:-443}"
 
 die() {
   printf '::error::%s\n' "$*" >&2
@@ -56,16 +63,31 @@ while [ "$#" -gt 0 ]; do
       EVIDENCE_DIR="$2"
       shift 2
       ;;
+    --port)
+      [ "$#" -ge 2 ] || die "--port needs a value"
+      PORT="$2"
+      shift 2
+      ;;
     *) die "unknown argument: $1" ;;
   esac
 done
 
 [ -n "$DOMAIN" ] || die "--domain is required (the deployment's public name)"
+[ -n "$DOMAIN" ] || die "--port must be a number"   # DOMAIN is checked above; keep the port honest too
+case "$PORT" in
+  ''|*[!0-9]*) die "--port must be a number (the default is 443)" ;;
+esac
 [ -n "$TOKEN" ] || log "no --token: the checks that need an identity are skipped, and the report says so"
 mkdir -p "$EVIDENCE_DIR"
 REPORT="$EVIDENCE_DIR/smoke.md"
 
-BASE="https://$DOMAIN"
+# 443 is the default, and a URL with an explicit :443 is a URL nobody typed: the
+# port is only spelled when it is not the one a browser would use.
+if [ "$PORT" = "443" ]; then
+  BASE="https://$DOMAIN"
+else
+  BASE="https://$DOMAIN:$PORT"
+fi
 CHECKS=0
 PASSED=0
 
@@ -96,10 +118,29 @@ check() {
 : > "$REPORT"
 log "the smoke test of $DOMAIN (the evidence lands in $EVIDENCE_DIR)"
 
+# --- 0. the edge is listening ---------------------------------------------
+# `docker compose up -d` returns when the container is started, not when the
+# edge accepts a TLS handshake, so a smoke test that ran immediately could get
+# `curl: (35) SSL_ERROR_SYSCALL` for a stack that was coming up perfectly well.
+# The wait is bounded and it is honest about the deadline: a stack that is not
+# answering after 60 seconds is a failed deployment, not a slow one.
+EDGE_WAIT="${COURIER_SMOKE_EDGE_WAIT:-60}"
+EDGE_DEADLINE=$(( $(date +%s) + EDGE_WAIT ))
+until curl -sS -o /dev/null --max-time 5 -k "$BASE/healthz" 2>/dev/null; do
+  if [ "$(date +%s)" -ge "$EDGE_DEADLINE" ]; then
+    die "the edge did not answer HTTPS at $BASE within ${EDGE_WAIT}s: the deployment is not serving"
+  fi
+  sleep 2
+done
+log "the edge answers HTTPS at $BASE"
+
 # --- 1. the edge speaks TLS ------------------------------------------------
-# The deployment is HTTPS only: a plain request on 443 is refused by TLS, and
-# the port-80 redirect is the one way in. Both are checked, because Caddy's
-# config answers 301 on 80 only when a certificate for the domain exists.
+# The deployment is HTTPS only, and the port-80 redirect is the one way in -
+# but the redirect itself is NOT checked here: this script only proves the edge
+# answers TLS with a certificate. An earlier version of this comment claimed the
+# redirect was checked, which was a documentation lie the code never made true,
+# and a comment that promises a check the script does not run is how a reader
+# comes to trust a smoke test it has not read.
 if ! check "the edge answers TLS" "$BASE/healthz" 404 -k; then
   die "the edge does not answer HTTPS: nothing after this can be trusted"
 fi
@@ -188,6 +229,7 @@ fi
 {
   printf '\n## The smoke test of %s\n\n' "$DOMAIN"
   printf -- '- **Result:** %d of %d checks passed\n' "$PASSED" "$CHECKS"
+  printf -- '- **The edge:** %s (port %s)\n' "$BASE" "$PORT"
   if [ -z "$TOKEN" ]; then
     printf -- '- **The seeded round trip:** skipped (no --token)\n'
   fi
