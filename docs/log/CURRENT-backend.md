@@ -1,7 +1,7 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-30 · main at `821df19` · **BUG-070 is FIXED, and the proof is the green `Deploy staging` run on main [40847886617](https://github.com/haytham26/courier/actions/runs/40847886617) on `821df19` — the migration prints `migration was completed successfully!`, the whole stack comes up, and the smoke test passes 3/3. Seven causes were unwound one at a time, each at its cause; the table of runs is in `docs/evidence/deploy-verify-workspace-install/README.md`. B3's 
-`response_model` half is merged. BUG-110 (NEW, filed by this session, `doing`) is the defect
+Updated: 2026-10-30 · main at `25f79b8` (PR #109 merged the register closure) · **BUG-070 is FIXED, and the proof is the green `Deploy staging` run on main [40847886617](https://github.com/haytham26/courier/actions/runs/40847886617) on `821df19` — the migration prints `migration was completed successfully!`, the whole stack comes up, and the smoke test passes 3/3. Seven causes were unwound one at a time, each at its cause; the table of runs is in `docs/evidence/deploy-verify-workspace-install/README.md`. B3's 
+Seven causes were unwound one at a time, each at its cause; the table of runs is in `docs/evidence/deploy-verify-workspace-install/README.md`. B3's `response_model` half is merged. BUG-110 (NEW, filed by this session) is the defect, and the register has it `fixed` - PR #109 closed it with the green run -
 the stack's next `Deploy staging` run found: `infra/compose.staging.yml`'s auth healthcheck asks for
 `/health/ready`, the auth service never served that route (every request fell to the Better Auth
 handler, which 404s it), so the container could never become healthy and the verify leg never
@@ -9,7 +9,6 @@ reached its smoke test. A5's first slice had recorded that unhealthiness as the 
 tables are created now, the container still went unhealthy, and that is how the real cause was
 found. The route (`services/auth/src/health.ts`) is merged with PR #104 and the whole stack came up
 healthy locally on the founder's machine, auth container included, for the first time. The proof
-that closes BUG-070's row is the `Deploy staging` run on this merge (40808382804).**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
@@ -116,7 +115,7 @@ it is not redone here.
   (causes 4-6), #106 (cause 7) and #107 (the version check that could never pass).
 - **B3 — the remaining item of the audit.** `response_model` on every handler merged
   (PR #104/#105), and the auth readiness route it needed merged with it. `BUG-110` is
-  filed for the healthcheck defect and stays `doing` until the deploy leg names it fixed.
+  filed for the healthcheck defect and is `fixed` in the register (PR #109 closed it with the green run on main).
 - **The mojibake repair and its gate** (PR #102): three files repaired byte-exact, and
   `scripts/ci/check-mojibake.mjs` runs in the floor job.
 
