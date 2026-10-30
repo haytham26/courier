@@ -45,6 +45,17 @@ jest.mock('@/maps/runState', () => ({
   RunProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+// The root layout hands the run state its store; this suite asserts the routes
+// the stack registers, not the store, so the store is a mock here.
+jest.mock('@/run/productionRunStore', () => ({
+  runStoreForThisBuild: () => ({
+    markDelivered: () => Promise.resolve(),
+    undoDelivered: () => Promise.resolve(),
+    deliveredMarks: () => Promise.resolve([]),
+    close: () => Promise.resolve(),
+  }),
+}));
+
 jest.mock('@/scans/scanLoad', () => ({
   ScanLoadProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

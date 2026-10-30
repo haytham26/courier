@@ -1,14 +1,15 @@
-# HANDOVER 2026-10-29 — the backend squad, the `Deploy staging` chain and its seven causes
+# HANDOVER 2026-10-29 — the backend squad, the `Deploy staging` chain and its eight causes
 
 Read this with `docs/log/CURRENT-backend.md`. Written before this session's
 context fills, and merged through a PR so the next session starts from
 `origin/main`, not from a chat.
 
-**State at the time of writing:** `origin/main` is `856a158` (PR #105 merged).
-PR #106 (the smoke test's wait) is open and green on every backend check; the
-merge of it is what the next `Deploy staging` run on main proves. BUG-070's row
-reads `open` until that run is green — the founder's instruction is that the
-status flips to `fixed` **only** with a green run on main, so do not preempt it.
+**State at the close:** `origin/main` is `fc9a625` (PR #111 merged), and `Deploy staging` is green
+on it - [40913771504](https://github.com/haytham26/courier/actions/runs/40913771504) - 4 of 4
+checks, the version check among them. The whole chain this session worked is closed and proven on
+main, not on a branch. The founder's instruction was that BUG-070's row flips to `fixed` only with
+a green run on main; that run came and the row was flipped (PR #109 carried the register
+closure, and this file's evidence folder names the run).
 
 ## 1. What this session did
 
@@ -92,8 +93,9 @@ a red deploy whose message names a subsystem is naming the subsystem that
 
 ## 5. The order from here (the binding order, unchanged)
 
-1. **Merge PR #106 and watch `Deploy staging` on main.** It is the proof. When it
-   is green, flip BUG-070's status with a one-line PR and close BUG-111.
+1. ~~Merge PR #106 and watch `Deploy staging` on main.~~ **Done.** PRs #106, #107
+   and #111 carried causes 7, 8a and 8b; the run on main is green at 4 of 4 and
+   BUG-070 is `fixed` in the register.
 2. **B4 — mutmut at the 70 % floor** (not started). The worktree
    `.worktrees/b1028d` is on `fix/b4-mutmut` from `origin/main` for exactly this.
    The audit's done-when: mutmut runs scoped in CI at the 70 % floor over

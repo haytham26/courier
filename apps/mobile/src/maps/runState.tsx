@@ -14,11 +14,19 @@
  * Route screen's planner (08) will read the same provider when it is
  * staged.
  *
- * The lifetime is one signed-in session: the root layout keys this
- * provider to the auth state, so a sign-out remounts it and the marks are
- * gone. A storage-backed run is the Route screen's arrival decision.
+ * **BUG-069 is closed here**: the marks are no longer `useState` alone. The
+ * provider writes every mark through the run store (`src/run`) and rehydrates
+ * them from it on mount, so a cold start or a driver swap no longer loses
+ * them - the store is the only write path, and the event log records the
+ * delivery so the outbox can send it later. The lifetime is still one
+ * signed-in session: the store a session opened closes with it, so a
+ * sign-out clears the marks and the day, and the next courier starts clean.
  */
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+
+import { errorMessage } from '@/lib/errors';
+import { inMemoryMarkStore } from '@/run/inMemoryMarkStore';
+import type { MarkStore } from '@/run/types';
 
 import type { Stop } from './stops';
 
@@ -43,21 +51,63 @@ export interface RunState {
 
 const RunContext = createContext<RunState | undefined>(undefined);
 
-export const RunProvider = ({ children }: { children: React.ReactNode }) => {
+export const RunProvider = ({
+  children,
+  store,
+}: {
+  children: React.ReactNode;
+  /** The run store the marks live in. The in-memory one, by default. */
+  store?: MarkStore;
+}) => {
+  // Opened once per provider, so a build with no store handed to it keeps the
+  // marks in memory (the behaviour this provider had before the store).
+  const [marks] = useState<MarkStore>(() => store ?? inMemoryMarkStore());
   const [delivered, setDelivered] = useState<DeliveredEvent[]>([]);
 
-  const markDelivered = useCallback((stop: Stop) => {
-    setDelivered((current) => {
-      if (current.some((event) => event.stopId === stop.id)) {
-        return current;
-      }
-      return [...current, { stopId: stop.id, sequence: stop.sequence, at: Date.now() }];
-    });
-  }, []);
+  // The marks of the run come back from the store when the provider mounts.
+  useEffect(() => {
+    let alive = true;
+    void marks.deliveredMarks().then(
+      (stored) => {
+        if (alive) {
+          setDelivered(stored);
+        }
+      },
+      (error: unknown) => {
+        console.warn(`run: the marks could not be read back: ${errorMessage(error)}`);
+      },
+    );
+    return () => {
+      alive = false;
+      void marks.close().catch((error: unknown) => {
+        console.warn(`run: the run could not be closed: ${errorMessage(error)}`);
+      });
+    };
+  }, [marks]);
 
-  const undoDelivered = useCallback((stopId: string) => {
-    setDelivered((current) => current.filter((event) => event.stopId !== stopId));
-  }, []);
+  const markDelivered = useCallback(
+    (stop: Stop) => {
+      setDelivered((current) =>
+        current.some((event) => event.stopId === stop.id)
+          ? current
+          : [...current, { stopId: stop.id, sequence: stop.sequence, at: Date.now() }],
+      );
+      void marks.markDelivered(stop).catch((error: unknown) => {
+        console.warn(`run: the delivery of ${stop.id} could not be written: ${errorMessage(error)}`);
+      });
+    },
+    [marks],
+  );
+
+  const undoDelivered = useCallback(
+    (stopId: string) => {
+      setDelivered((current) => current.filter((event) => event.stopId !== stopId));
+      void marks.undoDelivered(stopId).catch((error: unknown) => {
+        console.warn(`run: the delivery of ${stopId} could not be taken back: ${errorMessage(error)}`);
+      });
+    },
+    [marks],
+  );
 
   const isDelivered = useCallback(
     (stopId: string) => delivered.some((event) => event.stopId === stopId),
