@@ -242,6 +242,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const finishSignIn = useCallback(async () => {
     const found = await loadTeams();
+    // The sign-in establishes the session here, from the sign-in itself,
+    // rather than waiting for the session hook to notice.
+    //
+    // The hook's answer is a value the provider reads on its own render, so a
+    // sign-in that happens after a sign-out in the same tick would leave the
+    // provider holding the signed-out session: the E2E flow signs out, then
+    // signs in with the email form, and the app stayed on the front door
+    // because the guard never saw a courier to let through (run 41015361739,
+    // both legs). Reading the session back here is the same answer the hook
+    // would give, taken at the moment the sign-in ends.
+    const session = await authClient.getSession();
+    const signedIn = session.data?.user;
+    if (signedIn) {
+      setUser(signedIn);
+      setStatus('signed-in');
+      await rememberSession(toOfflineUser(signedIn));
+    }
     setStep(found.length > 1 ? 'teams' : 'none');
   }, [loadTeams]);
 
