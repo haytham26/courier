@@ -1,14 +1,14 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-30 · main at `25f79b8` (PR #109 merged the register closure) · **BUG-070 is FIXED, and the proof is the green `Deploy staging` run on main [40847886617](https://github.com/haytham26/courier/actions/runs/40847886617) on `821df19` — the migration prints `migration was completed successfully!`, the whole stack comes up, and the smoke test passes 3/3. Seven causes were unwound one at a time, each at its cause; the table of runs is in `docs/evidence/deploy-verify-workspace-install/README.md`. B3's 
-Seven causes were unwound one at a time, each at its cause; the table of runs is in `docs/evidence/deploy-verify-workspace-install/README.md`. B3's `response_model` half is merged. BUG-110 (NEW, filed by this session) is the defect, and the register has it `fixed` - PR #109 closed it with the green run -
-the stack's next `Deploy staging` run found: `infra/compose.staging.yml`'s auth healthcheck asks for
-`/health/ready`, the auth service never served that route (every request fell to the Better Auth
-handler, which 404s it), so the container could never become healthy and the verify leg never
-reached its smoke test. A5's first slice had recorded that unhealthiness as the missing tables — the
-tables are created now, the container still went unhealthy, and that is how the real cause was
-found. The route (`services/auth/src/health.ts`) is merged with PR #104 and the whole stack came up
-healthy locally on the founder's machine, auth container included, for the first time. The proof
+Updated: 2026-10-30 · main at `d7483b8` · **BUG-070 is FIXED, and the proof is the green
+`Deploy staging` run on main [40913771504](https://github.com/haytham26/courier/actions/runs/40913771504)
+on `fc9a625` — the migration prints `migration was completed successfully!`, the whole stack comes up,
+and the smoke test passes **4 of 4**, the version check among them. Eight causes were unwound one at a
+time, each at its own cause (PR #94, #96, #102, #105, #106, #107, #111); the table of runs is in
+`docs/evidence/deploy-verify-workspace-install/README.md`. B3's `response_model` half is merged, and so
+is the auth readiness route it needed. A5 is done to the edge of the founder's input (the monitoring,
+the backups and the restore drill; the rest is FOUNDER_TODO). C3 is in flight (PR #120): two parser
+slices fixed against the failures the existing measurement printed.**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
@@ -137,9 +137,14 @@ it is not redone here.
    live database, OmniRoute's production config (self-hosted next to n8n, D25), and the
    founder's phone pointer (`EXPO_PUBLIC_API_URL`, now a FOUNDER_TODO row). All four are
    in FOUNDER_TODO, and none of them blocks the next queue item.
-2. **C3 — the LINZ squad toward 98 %** (the next item: the measure/fix/re-measure loop, each round with
-   the before-and-after numbers committed, the ADR carrying the measured accuracy and
-   the trial target met on the eval set).
+2. **C3 — the LINZ squad toward 98 %** (in flight, PR #120). The measure/fix/re-measure loop, each
+   round with the before-and-after numbers committed, the ADR carrying the measured accuracy and
+   the trial target met on the eval set. The baseline is already measured — **96.9 % (1745/1800)
+   against 656,044 real LINZ addresses** (`docs/evidence/phase-2.3/linz-accuracy.md`) — so the two
+   slices in flight fixed the failures that measurement printed: a unit carrying a letter before a
+   slash (`255C/28`, `4D/87`, `D/87`) and a road's direction word before the suburb (`193 Durham
+   Street South Christchurch Central`). The re-measure needs `data/linz`, a FOUNDER_TODO item, so the
+   ADR's numbers wait on the founder's data while the fixes do not.
 3. **MASTER §22** — `docs/research/2026/andee-cleanroom-spec.md` is not written yet, and
    its build (the pre-classifier, the ask-on-low-confidence rule, the visible memory)
    follows it.
