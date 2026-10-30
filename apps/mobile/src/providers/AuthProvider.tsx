@@ -319,6 +319,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (failure) {
       throw new Error(failure.message);
     }
+    // BUG-074: a new account ends in a session, the same way a sign-in does.
+    //
+    // The register screen replaces to `/(tabs)` the moment this resolves, and
+    // the guard's answer has to be "yes" by then. Before this the function
+    // established nothing, so the app navigated the newly created courier into
+    // a guard that was still refusing them (the audit's probe: the replace
+    // executing with `status: signed-out`). Reading the session back here is
+    // the same answer the session hook would give, taken at the moment the
+    // sign-up ends - and the read is the one place the provider trusts.
+    const session = await authClient.getSession();
+    const signedIn = session.data?.user;
+    if (signedIn) {
+      setUser(signedIn);
+      setStatus('signed-in');
+      await rememberSession(toOfflineUser(signedIn));
+    }
+    setStep('none');
   }, []);
 
   const logout = useCallback(async () => {
