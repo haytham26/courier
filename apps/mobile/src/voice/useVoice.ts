@@ -7,6 +7,20 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import type { VoiceState, VoiceCommand, VoiceCallbacks, VoiceConfig, EarbudEvent } from './VoiceService';
 import { voiceService } from './VoiceService';
 
+/**
+ * How many live consumers are holding the voice service open.
+ *
+ * The service is a singleton the whole app shares - the driving screen, the
+ * copilot, the map and the settings all mount this hook - so one consumer's
+ * unmount must not shut it down under another. Before this the cleanup called
+ * `voiceService.shutdown()` unconditionally, so the first screen to unmount
+ * nulled the shared engines and the driving screen still on top of them spoke
+ * no more (the C1 audit's BUG-075). The count is the claim each consumer takes
+ * on mount and drops on unmount, and the service is released when the last
+ * claim goes.
+ */
+let liveConsumers = 0;
+
 export function useVoice(config?: VoiceConfig) {
   const [state, setState] = useState<VoiceState>('idle');
   const [isReady, setIsReady] = useState(false);
@@ -35,12 +49,28 @@ export function useVoice(config?: VoiceConfig) {
   });
 
   useEffect(() => {
-    if (config) {
+    // Only a consumer that drives the service takes a claim on it. A screen
+    // that asks for nothing (four of them mount this hook with no config)
+    // never started the engines, so it has nothing to release - and before
+    // this it released the shared instance anyway, which took the driving
+    // screen's voice away (BUG-075).
+    const ownsTheService = config !== undefined;
+    if (ownsTheService) {
+      liveConsumers += 1;
       voiceService.initialize(config, callbacksRef.current).catch(console.error);
     }
 
     return () => {
-      voiceService.shutdown().catch(console.error);
+      if (!ownsTheService) {
+        return;
+      }
+      liveConsumers = Math.max(0, liveConsumers - 1);
+      // The service is released only by the LAST consumer that owns it. One
+      // screen closing never takes the courier's voice away from another
+      // screen that is still using it.
+      if (liveConsumers === 0) {
+        voiceService.shutdown().catch(console.error);
+      }
     };
   }, [config]);
 
