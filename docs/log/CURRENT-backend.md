@@ -145,9 +145,13 @@ it is not redone here.
    slash (`255C/28`, `4D/87`, `D/87`) and a road's direction word before the suburb (`193 Durham
    Street South Christchurch Central`). The re-measure needs `data/linz`, a FOUNDER_TODO item, so the
    ADR's numbers wait on the founder's data while the fixes do not.
-3. **MASTER §22** — `docs/research/2026/andee-cleanroom-spec.md` is not written yet, and
-   its build (the pre-classifier, the ask-on-low-confidence rule, the visible memory)
-   follows it.
+3. **MASTER §22 step 1 is merged** — `docs/research/2026/andee-cleanroom-spec.md` is written by a
+   fresh-context subagent that read only the repository's documentation: behaviours only, in our
+   words, with no code, no prompts and no file names. Step 2 — the build of the pre-classifier,
+   the ask-on-low-confidence rule and the visible memory in `services/courier-voice` and
+   `apps/mobile/src/voice`, each a red-first PR with the token and latency numbers before and
+   after — and step 3 — the accessibility spike (research only, ships nothing) — both follow. The
+   spec itself named six open questions, the first of which is what our own bars should be.
 4. **Then billing (D44) and the rest of queue 3.**
 
 **Closed since the last update:** PR #107, #110 and #111 (the smoke test's version check,
