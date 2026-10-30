@@ -5,6 +5,41 @@ Previous PROGRESS.md claims were not trusted and have been replaced.
 
 **The three labels, and nothing else**: **DONE** (the thing works, with the CI run or the test count as the evidence), **PARTIAL** (what exists and what is missing, both named), **NOT STARTED** (nothing of it exists). A seam, a scaffold, a stub or a code path that was never run is never called built.
 
+## The register counts (audit item B1, reconciled 2026-10-26)
+
+The command, and the only one that counts:
+
+```
+node scripts/ci/check-parity.mjs
+```
+
+It prints both registers' counts and exits 1 on a PARITY row whose status is not one of the four
+words of the status key, on a PARITY row marked `Have` that carries no merged PR or CI run link, or
+on a BUGS row whose status column is not one of the tracker's words. The gate is
+`scripts/ci/check-parity.mjs` with its test in `scripts/ci/__tests__/check-parity.test.mjs`.
+
+**The count at this merge (310 PARITY rows, 108 BUGS rows):**
+310 parity rows (Have 31 · Better 4 · Planned (task) 269 · Skip (reason) 6); 108 bug rows (open 38 · doing 2 · testing 2 · fixed 36 · closed 0 · moved to PARITY 30).
+
+**This count is updated with every merge to main**: the merge that changes a row re-runs the command
+and pastes its line above. A `Have` is only a `Have` when its row names the merged PR or the CI run
+that put it there (PARITY.md's Evidence column), so the Have count and the merged PRs move together.
+
+**What the 2026-10-26 pass changed** (the audit found 0 `Have`, 41 `Better`, 290 `Planned` and 36
+unclosed BUGS rows): every PARITY row was read against `origin/main`; 31 rows became `Have` with
+their PR, 4 rows kept `Better` with their evidence, 37 `Better` claims that were not on main moved
+down to `Planned (task)`, the `Parity` and bare `Planned` words were folded into the key's four, the
+duplicated 49-row block and the orphaned row 237 in the file were repaired, and the two gaps the
+audit named (a planned break, stop types) were added as rows 309 and 310. BUG-002 to BUG-033 - the
+pre-monorepo feature backlog - are each closed in `docs/status/BUGS.md` with a pointer to the PARITY
+row or the plan item that owns them now; the rows stay for history.
+
+**Two rows of this file the pass could not verify and did not change** (report, not a claim): the
+P5 earnings and P5 door memory rows below describe app halves that are not on main - nothing is
+tracked under `apps/mobile/src/earnings` or `apps/mobile/src/doorMemory`, and
+`services/api/app/earnings.py` does not exist. Their owner re-reads them on the next pass over this
+file.
+
 | area | status | what exists | what is missing | evidence |
 |---|---|---|---|---|
 | **P1 the Android E2E pipeline** | PARTIAL | the two-job pipeline (the release APK cached by content hash, then the emulator), the readiness gates (boot, install, start, pid, first screen), the E2E mode on local mocks, the permission grants, the evidence uploaded every run | the deep link courier:///compat still does not navigate from outside the app (BUG-046); the compat flow reaches the screen from the settings | the run 40112419901: all eight flows green on BOTH api legs (compat, smoke, map, stops, today-list, delivered, driving and, from PR #24, the map style screen) after BUG-060 (the emulator boots with software GL) |
