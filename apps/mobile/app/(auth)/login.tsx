@@ -36,6 +36,7 @@
  * The chosen names (`sign-in-*`) are the ones the new flows and tests use.
  */
 import React, { useCallback, useState } from 'react';
+import { Keyboard } from 'react-native';
 import {
   Pressable,
   SafeAreaView,
@@ -209,6 +210,12 @@ function SignInScreen() {
       setError('Enter your email and password');
       return;
     }
+
+    // The keyboard goes away with the tap that submits, so the screen the
+    // courier lands on is the whole screen and not the part the keyboard left.
+    // (The E2E flow proved this: with the keyboard up the footer sentences sit
+    // behind it and nothing can scroll to them.)
+    Keyboard.dismiss();
 
     setIsSubmitting(true);
     setError(null);
@@ -522,7 +529,12 @@ function SignInScreen() {
       style={[styles.container, { backgroundColor: t.colors.background }]}
     >
       <SafeAreaView testID="sign-in-screen" style={styles.container}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
+        >
           <View style={styles.header}>
             <View style={[styles.mark, { backgroundColor: t.colors.accent }]}>
               <Ionicons
