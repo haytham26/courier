@@ -35,7 +35,7 @@ of them red before the fix and green after it.
 from __future__ import annotations
 
 from app.address_correction import Address, AddressCorrector, InMemoryAddressStore
-from app.nz_address import parse
+from app.nz_address import ParsedAddress, parse
 
 # The register's own vocabulary for these roads, as the three areas really
 # carry it. Christchurch Central is NOT in `nz_address.CHCH_SUBURBS`, and
@@ -138,7 +138,7 @@ def test_the_town_the_driver_repeats_does_not_defeat_the_match() -> None:
     assert result_is_complete(parsed)
 
 
-def result_is_complete(parsed) -> bool:  # noqa: ANN001 - a ParsedAddress
+def result_is_complete(parsed: ParsedAddress) -> bool:
     return bool(parsed.number and parsed.street and parsed.suburb)
 
 
