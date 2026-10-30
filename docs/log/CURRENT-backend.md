@@ -1,14 +1,15 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-30 · main at `25f79b8` (PR #109 merged the register closure) · **BUG-070 is FIXED, and the proof is the green `Deploy staging` run on main [40847886617](https://github.com/haytham26/courier/actions/runs/40847886617) on `821df19` — the migration prints `migration was completed successfully!`, the whole stack comes up, and the smoke test passes 3/3. Seven causes were unwound one at a time, each at its cause; the table of runs is in `docs/evidence/deploy-verify-workspace-install/README.md`. B3's 
-Seven causes were unwound one at a time, each at its cause; the table of runs is in `docs/evidence/deploy-verify-workspace-install/README.md`. B3's `response_model` half is merged. BUG-110 (NEW, filed by this session) is the defect, and the register has it `fixed` - PR #109 closed it with the green run -
-the stack's next `Deploy staging` run found: `infra/compose.staging.yml`'s auth healthcheck asks for
-`/health/ready`, the auth service never served that route (every request fell to the Better Auth
-handler, which 404s it), so the container could never become healthy and the verify leg never
-reached its smoke test. A5's first slice had recorded that unhealthiness as the missing tables — the
-tables are created now, the container still went unhealthy, and that is how the real cause was
-found. The route (`services/auth/src/health.ts`) is merged with PR #104 and the whole stack came up
-healthy locally on the founder's machine, auth container included, for the first time. The proof
+Updated: 2026-10-30 · main at `4751128` · **BUG-070 is FIXED, and the proof is the green
+`Deploy staging` run on main [40913771504](https://github.com/haytham26/courier/actions/runs/40913771504)
+on `fc9a625` — the migration prints `migration was completed successfully!`, the whole stack comes up,
+and the smoke test passes **4 of 4**, the version check among them. Eight causes were unwound one at a
+time, each at its own cause (PR #94, #96, #102, #105, #106, #107, #111); the table of runs is in
+`docs/evidence/deploy-verify-workspace-install/README.md`. B3's `response_model` half is merged, and so
+is the auth readiness route it needed. A5 is done to the edge of the founder's input (the monitoring,
+the backups and the restore drill; the rest is FOUNDER_TODO). C3 has three parser slices merged
+(PR #120, #123) and MASTER §22's step 1 is on main (PR #125), and the deploy stays green on every push
+to main.**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
@@ -128,16 +129,29 @@ it is not redone here.
 
 **Open, in the binding order:**
 
-1. **The rest of A5** (the next item): `infra/monitoring`, the backups and the restore
-   drill on the staging host, and the OCI host/key/domain — FOUNDER_TODO carries all
-   three already. The deploy leg of `deploy.yml` names the secrets it waits for, so the
-   stack it deploys to is the only thing missing.
-2. **C3 — the LINZ squad toward 98 %** (the measure/fix/re-measure loop, each round with
-   the before-and-after numbers committed, the ADR carrying the measured accuracy and
-   the trial target met on the eval set).
-3. **MASTER §22** — `docs/research/2026/andee-cleanroom-spec.md` is not written yet, and
-   its build (the pre-classifier, the ask-on-low-confidence rule, the visible memory)
-   follows it.
+1. **A5 is done to the edge of the founder's input.** The monitoring side is merged
+   (`infra/monitoring` now watches the routes the stack serves — PR #115), the backup and
+   restore drills run in CI on PRs, nightly and manual (`restore-test.yml`, the real
+   `infra/backup.sh` and `infra/restore.sh` against a scratch Postgres), and the deploy
+   verify leg brings the whole stack up on every push to main. What is left needs the OCI
+   host: running the monitoring beside a production deployment, the backups against the
+   live database, OmniRoute's production config (self-hosted next to n8n, D25), and the
+   founder's phone pointer (`EXPO_PUBLIC_API_URL`, now a FOUNDER_TODO row). All four are
+   in FOUNDER_TODO, and none of them blocks the next queue item.
+2. **C3 — the LINZ squad toward 98 %.** The measure/fix/re-measure loop, with the ADR's
+   before-and-after numbers and the trial target met on the eval set as the done-when. The baseline is
+   measured — **96.9 % (1745/1800) against 656,044 real LINZ addresses**
+   (`docs/evidence/phase-2.3/linz-accuracy.md`) — and three fixes are merged against the failures that
+   measurement printed: a unit carrying a letter before a slash (`255C/28`, `4D/87`, `D/87`), a road's
+   direction word before the suburb, and a number word in a road's own name (`Two Chain Road`).
+   **What is left is the re-measure**, which needs `data/linz` — a FOUNDER_TODO item — so the next
+   session runs `fetch-linz.py` for the three areas, `build-linz-index.py`, then
+   `pytest tests/test_linz_accuracy.py`, and writes the numbers into the ADR.
+3. **MASTER §22 step 2** — the build, from the spec that is on main (PR #125): the
+   pre-classifier, the ask-on-low-confidence rule and the visible memory in `services/courier-voice`
+   and `apps/mobile/src/voice`, each a PR with red-first tests and the token and latency numbers
+   before and after measured through OmniRoute. Step 3, the accessibility spike, is research only and
+   ships nothing.
 4. **Then billing (D44) and the rest of queue 3.**
 
 **Closed since the last update:** PR #107, #110 and #111 (the smoke test's version check,

@@ -21,7 +21,12 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
-      API_HEALTH_URL: http://api_a:8000/health/ready
+      # The API's readiness endpoint is /healthz, not /health/ready: the API
+      # serves /healthz (its contract carries it, and both compose files
+      # healthcheck it there), and a heartbeat pointed at /health/ready would
+      # watch a route that answers 404 and call the API dead. The auth service
+      # below answers /health/ready for real (services/auth/src/health.ts).
+      API_HEALTH_URL: http://api_a:8000/healthz
       AUTH_HEALTH_URL: http://auth_a:3001/health/ready
       ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
       HEARTBEAT_INTERVAL: ${HEARTBEAT_INTERVAL:-60}

@@ -65,6 +65,15 @@ SPOKEN_FIXES = {
     "a ran ui": "Aranui",
     "whaka": "Whaka",
 }
+# The directions a road carries after its type, as a driver says them
+# ("Durham Street South"). They are not suburbs, and treating one as the tail of
+# the suburb made `parse` answer with no suburb at all.
+#
+# "central" is deliberately absent: in NZ it is far more often a suburb's own name
+# ("Central City", "Christchurch Central") than a road's direction, and stripping
+# it there moved a suburb name onto the road.
+ROAD_DIRECTIONS = {"north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest"}
+
 STREET_TYPES = {
     "street": "St",
     "st": "St",
@@ -163,12 +172,23 @@ class ParsedAddress:
 
 
 def _words_to_digits(text: str) -> str:
+    # Only the house number is spoken, and it comes first. The courier reads "928
+    # Two Chain Road" for a road whose own name contains a number; converting the
+    # whole string turned "Two Chain Road" into "2 Chain Road", so the parser
+    # looked for a road that does not exist and answered with the road's own name
+    # as the suburb (`docs/evidence/phase-2.3/linz-accuracy.md`).
+    #
+    # So the run of number words is converted only while it is *leading*: the
+    # first token that is not a number word (and not "and" inside the run) ends
+    # the number, and everything after it stays exactly as it was spoken. A road
+    # called "Two Chain Road" is a road called "Two Chain Road".
     out: list[str] = []
     buf: list[str] = []
     for tok in text.split():
-        if tok == "and" and buf:
+        if not out and not buf and tok == "and":
+            # A leading "and" carries no number: it is the driver's hesitation.
             continue
-        if tok in NUM_WORDS:
+        if not out and tok in NUM_WORDS:
             buf.append(NUM_WORDS[tok])
             continue
         if buf:
@@ -225,7 +245,14 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
 
     unit = None
     suffix = None
-    m = re.match(r"^(?:unit (\w+)\s+)?(\d+[a-z]?)(?:\s*/\s*(\d+[a-z]?))?\s+(.*)$", text)
+    # C3: the left of the slash is the unit, and a unit may carry letters with or
+    # without digits - "255C/28", "4D/87" and "D/87" are all units. The pattern
+    # used to be `(\d+[a-z]?)` on both sides, which read "4D/87" as unit 4 with a
+    # suffix D and could not match "D/87" at all. `[a-z]*\d*[a-z]?` covers unit
+    # names like "4d", "255c", "d" and "12a" while still refusing a bare "27" on
+    # the left (that is a plain number, not a unit).
+    m = re.match(r"^(?:unit (\w+)\s+)?([a-z]*\d+[a-z]?|[a-z]+\d*[a-z]?)(?:\s*/\s*(\d+[a-z]?))?\s+(.*)$", text)
+    unit_is_a_slash_unit = bool(m and m.group(3) and m.group(2))
     if m and m.group(3):  # "2/14 smith st" -> unit 2, number 14
         unit, number, rest = m.group(2), m.group(3), m.group(4)
     elif m:
@@ -237,8 +264,11 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
         m2 = re.match(r"^(\d+)([a-z])$", number)
         if m2:
             suffix, number = m2.group(2).upper(), m2.group(1)
-    if unit and suffix is None and re.match(r"^\d+[a-z]$", unit):
+    if unit and suffix is None and re.match(r"^\d+[a-z]$", unit) and not unit_is_a_slash_unit:
         # "unit 255C" is unit 255 with suffix C.
+        # A unit that came from the left of a slash keeps its letter: "4D/87" is
+        # flat 4D at 87, and splitting it into unit 4 + suffix D answers "4/87",
+        # which is the failure the LINZ accuracy report names.
         m_unit = re.match(r"^(\d+)([a-z])$", unit)
         if m_unit:
             unit, suffix = m_unit.group(1), m_unit.group(2).upper()
@@ -254,9 +284,36 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
     hint = None
     for i, tok in enumerate(tokens):
         if tok in STREET_TYPES:
+            # C3: the road's direction word comes after its type ("193 Durham
+            # Street South Christchurch Central"), and the driver then repeats the
+            # city's name. The whole tail was handed to the suburb matcher, so it
+            # saw "south christchurch central christchurch", matched nothing, and
+            # answered with no suburb at all. The direction is set aside for the
+            # suburb match and kept on the road, because that is what the driver
+            # said and what the register's road name carries.
+            #
+            # It is set aside only when a suburb matches after it: "South
+            # Christchurch" is a suburb in its own right, and stripping it there
+            # would answer with the direction moved onto the road and no suburb at
+            # all. The direction is only a direction when the words after it name
+            # somewhere.
+            direction_tokens: list[str] = []
+            tail_tokens = tokens[i + 1 :]
+            while tail_tokens and tail_tokens[0] in ROAD_DIRECTIONS:
+                direction_tokens.append(tail_tokens.pop(0))
             street = " ".join(t.title() for t in tokens[:i]) + " " + STREET_TYPES[tok]
-            tail = " ".join(tokens[i + 1 :])
-            if tail:
+            tail = " ".join(tail_tokens)
+            matched = match_suburb(tail, suburbs)[0] if tail else None
+            if direction_tokens and matched is None:
+                # The direction was not a direction: it belongs to the suburb.
+                tail_tokens = tokens[i + 1 :]
+                tail = " ".join(tail_tokens)
+                matched = match_suburb(tail, suburbs)[0] if tail else None
+                if matched is not None:
+                    direction_tokens.clear()
+            if direction_tokens:
+                street += " " + " ".join(token.title() for token in direction_tokens)
+            if tail and matched is not None:
                 suburb, conf = match_suburb(tail, suburbs)
                 hint = tail
             break
