@@ -66,7 +66,20 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # BUG-072 (the C1 audit): the auth base URL is a build-time literal,
+          # so a release that sets nothing shipped a bundle that could not
+          # reach any auth server (the app fell back to localhost, which on a
+          # phone is the phone). It comes from the repository variable, and the
+          # build fails loudly if it is absent: shipping an APK that cannot
+          # sign anyone in is not a release.
+          EXPO_PUBLIC_AUTH_URL: ${{ vars.EXPO_PUBLIC_AUTH_URL }}
         run: |
+          # BUG-072: without this the release bundle carries a localhost
+          # literal that no phone can reach, and nothing downstream can tell.
+          if [ -z "${EXPO_PUBLIC_AUTH_URL}" ]; then
+            echo "::error::EXPO_PUBLIC_AUTH_URL is not set: this release would build an APK that cannot reach an auth server. Set the repository variable (Settings > Secrets and variables > Actions > Variables)."
+            exit 1
+          fi
           pnpm --filter mobile exec expo prebuild --platform android --no-install
           cd apps/mobile/android
           if [ "${{ steps.keystore.outputs.signed }}" = "true" ]; then
