@@ -35,7 +35,7 @@
  * first window dump for it, so the boot check of the emulator run reads it.
  * The chosen names (`sign-in-*`) are the ones the new flows and tests use.
  */
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Pressable,
   SafeAreaView,
@@ -46,7 +46,6 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
-
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -146,17 +145,6 @@ function SignInScreen() {
    */
   const [waysInVisible, setWaysInVisible] = useState(true);
   /**
-   * The email field's own ref, so the reveal can hand the courier the cursor.
-   *
-   * A revealed form with no cursor is a form the courier has to hunt for:
-   * the E2E flow proved it on the device (`inputText` landed nowhere, the
-   * submit answered "Enter your email and password" with empty fields - run
-   * 41044469903, both legs, and it was the same on the head before it).
-   * Asking for focus when the form appears is the app's job: the courier
-   * tapped "Continue with Email" and the cursor is where they expect it.
-   */
-  const emailFieldRef = useRef<React.ComponentRef<typeof TextInput>>(null);
-  /**
    * The screen's own scroll view, so a revealed form can be brought to the
    * courier instead of left below the fold.
    *
@@ -206,13 +194,6 @@ function SignInScreen() {
     // way in comes back without losing the screen.
     setWaysInVisible(false);
     setShowEmailForm(true);
-    // The cursor goes where the courier looks next: the email field.
-    // `focus()` on a not-yet-mounted field is a no-op, so the ref is checked
-    // and the call is made after the form is on screen rather than guessing a
-    // layout timing.
-    requestAnimationFrame(() => {
-      emailFieldRef.current?.focus();
-    });
   }, []);
 
   /**
@@ -686,7 +667,6 @@ function SignInScreen() {
                   Email
                 </Text>
                 <TextInput
-                  ref={emailFieldRef}
                   testID="sign-in-email-field"
                   style={[styles.input, { backgroundColor: t.colors.fill, color: t.colors.label }]}
                   placeholder="you@example.co.nz"
