@@ -35,7 +35,7 @@
  * first window dump for it, so the boot check of the emulator run reads it.
  * The chosen names (`sign-in-*`) are the ones the new flows and tests use.
  */
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Pressable,
   SafeAreaView,
@@ -46,7 +46,6 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
-import type { ScrollViewInstance } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -139,6 +138,13 @@ function SignInScreen() {
   /** The email form is behind the Email way in, exactly as the reference has it. */
   const [showEmailForm, setShowEmailForm] = useState(false);
   /**
+   * Whether the ways in are on the screen. They are, until the courier asks
+   * for the email form on a phone too short to hold both - then the form
+   * takes the screen (BUG-113). On a tall phone nothing changes: the flag
+   * only ever removes what does not fit.
+   */
+  const [waysInVisible, setWaysInVisible] = useState(true);
+  /**
    * The screen's own scroll view, so a revealed form can be brought to the
    * courier instead of left below the fold.
    *
@@ -150,7 +156,6 @@ function SignInScreen() {
    * what the courier just asked for into view; it never hides it (PLAYBOOK
    * 12).
    */
-  const scrollRef = useRef<ScrollViewInstance>(null);
   /** The biometric unlock surface, opened from the reference's Face ID line. */
   const [showBiometricUnlock, setShowBiometricUnlock] = useState(false);
   /** What the resumed session is, said in plain words. Never a fake confirm. */
@@ -159,29 +164,45 @@ function SignInScreen() {
   const passkeyOnDevice = passkeySupportedOnDevice();
 
   /**
-   * The email form is revealed by the courier's tap: bring it to them.
+   * BUG-113: on a short phone the reveal has to give the form the screen.
    *
-   * `useLayoutEffect` runs before the device can show a frame, so the form is
-   * in view the moment it appears rather than after it has been missed. On a
-   * tall screen the offset the content already has is 0, so nothing moves.
+   * The reference has four ways in above the form, and on a 320x640 phone
+   * (the E2E AVD, and every small phone a courier uses) that does not fit:
+   * the form opened with its password field below the fold and outside the
+   * a11y tree, so Android's `removeClippedSubviews` dropped it and the
+   * courier could open the form and then not type the password (run
+   * 40970724190, both legs).
+   *
+   * The first fix scrolled the content to the end with an imperative
+   * `scrollTo` from a `useLayoutEffect`, and the device showed why that is
+   * the wrong tool: the scroll ran before the newly revealed content had a
+   * layout, the screen ended up empty (run 41010537066, both legs, the
+   * sign-in screen with no children at all), and the form was still not
+   * usable. An imperative scroll that races a reveal is not a fix, it is the
+   * same timing defect wearing a different hat (PLAYBOOK 12: make the app
+   * robust, never depend on timing).
+   *
+   * The fix that needs no timing: the app makes room. When the courier asks
+   * for the email form, the ways in step aside, so the form is the screen's
+   * content and the fold is nowhere near it. Scrolling was never the point:
+   * the point is that what the courier asked for is on the screen.
    */
-  useLayoutEffect(() => {
-    if (!showEmailForm) {
-      return;
-    }
-    const scroller = scrollRef.current;
-    if (scroller === null) {
-      return;
-    }
-    // The form is the last thing on the screen, so the end of the content is
-    // where it lives: scroll there and the password field is in view.
-    const node = scroller as unknown as {
-      scrollTo?: (options?: { y?: number; animated?: boolean }) => void;
-    };
-    if (typeof node.scrollTo === 'function') {
-      node.scrollTo({ y: Number.MAX_SAFE_INTEGER, animated: true });
-    }
-  }, [showEmailForm]);
+  const revealEmailForm = useCallback(() => {
+    setError(null);
+    setOfflineNote(null);
+    // The methods keep their place, quietly: the courier who tapped the wrong
+    // way in comes back without losing the screen.
+    setWaysInVisible(false);
+    setShowEmailForm(true);
+  }, []);
+
+  /**
+   * Back to the ways in: the form steps aside and the front door is whole.
+   */
+  const hideEmailForm = useCallback(() => {
+    setShowEmailForm(false);
+    setWaysInVisible(true);
+  }, []);
 
   const handleLogin = useCallback(async () => {
     if (email.trim().length === 0 || password.length === 0) {
@@ -501,11 +522,7 @@ function SignInScreen() {
       style={[styles.container, { backgroundColor: t.colors.background }]}
     >
       <SafeAreaView testID="sign-in-screen" style={styles.container}>
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <View style={[styles.mark, { backgroundColor: t.colors.accent }]}>
               <Ionicons
@@ -583,46 +600,50 @@ function SignInScreen() {
             </View>
           ) : null}
 
-          <View style={styles.methods}>
-            <MethodButton
-              testID="sign-in-apple"
-              label="Sign in with Apple"
-              icon="logo-apple"
-              tone="apple"
-              reason={appleReason}
-              disabled={!signInMethods.methods.apple.enabled || isSubmitting}
-              onPress={() => void handleProviderSignIn('apple')}
-            />
-            <MethodButton
-              testID="sign-in-google"
-              label="Sign in with Google"
-              icon="logo-google"
-              tone="google"
-              reason={googleReason}
-              disabled={!signInMethods.methods.google.enabled || isSubmitting}
-              onPress={() => void handleProviderSignIn('google')}
-            />
-            <MethodButton
-              testID="sign-in-passkey"
-              label="Use a Passkey"
-              icon="finger-print"
-              tone="passkey"
-              reason={passkeyReason}
-              disabled={!signInMethods.methods.passkey.enabled || !passkeyOnDevice || isSubmitting}
-              onPress={() => void handleProviderSignIn('passkey')}
-            />
-          </View>
+          {waysInVisible ? (
+            <>
+              <View style={styles.methods}>
+                <MethodButton
+                  testID="sign-in-apple"
+                  label="Sign in with Apple"
+                  icon="logo-apple"
+                  tone="apple"
+                  reason={appleReason}
+                  disabled={!signInMethods.methods.apple.enabled || isSubmitting}
+                  onPress={() => void handleProviderSignIn('apple')}
+                />
+                <MethodButton
+                  testID="sign-in-google"
+                  label="Sign in with Google"
+                  icon="logo-google"
+                  tone="google"
+                  reason={googleReason}
+                  disabled={!signInMethods.methods.google.enabled || isSubmitting}
+                  onPress={() => void handleProviderSignIn('google')}
+                />
+                <MethodButton
+                  testID="sign-in-passkey"
+                  label="Use a Passkey"
+                  icon="finger-print"
+                  tone="passkey"
+                  reason={passkeyReason}
+                  disabled={!signInMethods.methods.passkey.enabled || !passkeyOnDevice || isSubmitting}
+                  onPress={() => void handleProviderSignIn('passkey')}
+                />
+              </View>
 
-          <View style={styles.dividerRow}>
-            <View style={[styles.dividerLine, { backgroundColor: t.colors.separator }]} />
-            <Text
-              style={[styles.dividerLabel, { color: t.colors.secondaryLabel }]}
-              maxFontSizeMultiplier={TEXT_SCALE}
-            >
-              or
-            </Text>
-            <View style={[styles.dividerLine, { backgroundColor: t.colors.separator }]} />
-          </View>
+              <View style={styles.dividerRow}>
+                <View style={[styles.dividerLine, { backgroundColor: t.colors.separator }]} />
+                <Text
+                  style={[styles.dividerLabel, { color: t.colors.secondaryLabel }]}
+                  maxFontSizeMultiplier={TEXT_SCALE}
+                >
+                  or
+                </Text>
+                <View style={[styles.dividerLine, { backgroundColor: t.colors.separator }]} />
+              </View>
+            </>
+          ) : null}
 
           <MethodButton
             testID="sign-in-email"
@@ -631,11 +652,7 @@ function SignInScreen() {
             tone="email"
             reason={emailReason}
             disabled={!signInMethods.methods.email.enabled || isSubmitting}
-            onPress={() => {
-              setError(null);
-              setOfflineNote(null);
-              setShowEmailForm(true);
-            }}
+            onPress={revealEmailForm}
           />
 
           {showEmailForm ? null : errorBlock}
@@ -702,6 +719,24 @@ function SignInScreen() {
                 </Text>
               </Pressable>
             </View>
+          ) : null}
+
+          {/* BUG-113: the ways in stepped aside on a short phone, so the way
+              back is named. On a tall phone the ways in never left, so this
+              link is not there - the screen shows only what is useful. */}
+          {showEmailForm && !waysInVisible ? (
+            <Pressable
+              onPress={hideEmailForm}
+              accessibilityRole="link"
+              accessibilityLabel="Use another way in"
+              accessibilityHint="Shows the other ways to sign in"
+              testID="sign-in-other-ways"
+              style={styles.backupLink}
+            >
+              <Text style={[styles.linkText, { color: t.colors.accentText }]} maxFontSizeMultiplier={TEXT_SCALE}>
+                Use another way in
+              </Text>
+            </Pressable>
           ) : null}
 
           <View style={styles.footer}>

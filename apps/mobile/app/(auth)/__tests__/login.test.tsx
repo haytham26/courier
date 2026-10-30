@@ -28,7 +28,7 @@
  * half of that rule).
  */
 import React from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -260,43 +260,63 @@ describe('the sign-in screen', () => {
     await waitFor(() =>
       expect(mockAuth.login).toHaveBeenCalledWith('driver@example.co.nz', 'correct-horse-battery'),
     );
-    // The form is the screen's own: the methods stay reachable underneath.
-    expect(screen.getByTestId('sign-in-apple')).toBeTruthy();
+    // The form is the screen's own, and the other ways in are one named link
+    // away rather than stacked underneath it (BUG-113: on a short phone the
+    // stack pushed the password field out of the tree; the named link is how
+    // the door back stays open).
+    expect(screen.getByTestId('sign-in-other-ways')).toBeTruthy();
+    expect(screen.queryByTestId('sign-in-apple')).toBeNull();
   });
 
-  // The app bug this pins (BUG-113): the E2E AVD is 320x640, and the email
-  // form "Continue with Email" reveals opened below the fold - the password
-  // EditText fell outside the a11y tree, so Android's removeClippedSubviews
-  // dropped it and the sign-in flow could not type the password. A screen
-  // that reveals a form on a short phone scrolls it into view: the app brings
-  // what the courier just asked for into view, it never hides it (PLAYBOOK
-  // 12). The proof is the scroll command the app issues, so the test spies on
-  // the ScrollView instance the screen owns rather than faking layout
-  // geometry: the assertion is "the app called scrollTo", and the fix is the
-  // screen calling it, so a revert turns this red for exactly that reason
-  // (PLAYBOOK 14.1).
-  it('scrolls the revealed email form into view on a short screen', async () => {
+  // The app bug this pins (BUG-113), and the two shapes it took:
+  //
+  //   1. the E2E AVD is 320x640 and the email form opened below the fold, so
+  //      Android's removeClippedSubviews dropped the password field out of the
+  //      a11y tree and the courier could not type it (run 40970724190, both
+  //      legs, the assert failed at `sign-in-password-field`);
+  //   2. the first fix scrolled the revealed content with an imperative
+  //      `scrollTo` from a `useLayoutEffect`, and the device answered with a
+  //      BLANK screen - the scroll ran before the newly revealed content had
+  //      a layout (run 41010537066, both legs, the sign-in screen rendering
+  //      with no children at all).
+  //
+  // Both are the same defect wearing a different hat: the app let the reveal
+  // depend on timing. The fix that cannot race is the one asserted here - the
+  // ways in step aside, so the revealed form is the screen's content and the
+  // fold is nowhere near it. The assertion is the state of the tree, which is
+  // exactly what the device showed was wrong.
+  it('gives the email form the screen, so the password field is in the tree', async () => {
     renderScreen();
 
-    // RNTL mounts the screen's own ScrollView, so the instance it hands back
-    // is the one the screen holds the ref to: replacing its method is the
-    // spy, and the screen's own call is the thing under test.
-    const scroller = screen.UNSAFE_getByType(ScrollView);
-    const instance = scroller.instance as unknown as {
-      scrollTo?: (options?: { y?: number; animated?: boolean }) => void;
-    };
-    const scrollTo = jest.fn();
-    const original = instance.scrollTo;
-    instance.scrollTo = scrollTo;
+    fireEvent.press(screen.getByTestId('sign-in-email'));
 
-    try {
-      fireEvent.press(screen.getByTestId('sign-in-email'));
-      await waitFor(() => expect(screen.getByTestId('sign-in-form')).toBeTruthy());
+    await waitFor(() => {
+      expect(screen.getByTestId('sign-in-form')).toBeTruthy();
+      expect(screen.getByTestId('sign-in-password-field')).toBeTruthy();
+      expect(screen.getByTestId('sign-in-submit')).toBeTruthy();
+    });
 
-      expect(scrollTo).toHaveBeenCalled();
-    } finally {
-      instance.scrollTo = original;
-    }
+    // The two fields and the action are all on the screen the courier sees,
+    // which is what "in the tree" means on the device.
+    expect(screen.getByTestId('sign-in-email-field')).toBeTruthy();
+  });
+
+  // The way back is named, because the ways in stepped aside: a screen that
+  // hides its own front door with no way out is a defect, not a design.
+  it('offers the way back to the other ways in when the form holds the screen', async () => {
+    renderScreen();
+
+    fireEvent.press(screen.getByTestId('sign-in-email'));
+    await waitFor(() => expect(screen.getByTestId('sign-in-form')).toBeTruthy());
+
+    fireEvent.press(screen.getByTestId('sign-in-other-ways'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('sign-in-form')).toBeNull();
+      expect(screen.getByTestId('sign-in-email')).toBeTruthy();
+      expect(screen.getByTestId('sign-in-apple')).toBeTruthy();
+      expect(screen.getByTestId('sign-in-google')).toBeTruthy();
+    });
   });
 
   it('shows the error with a way out', async () => {
@@ -470,19 +490,26 @@ describe('the sign-in screen', () => {
   it('holds the touch floors: every target 48, the primary action 64', () => {
     renderScreen();
 
-    fireEvent.press(screen.getByTestId('sign-in-email'));
-
-    const targets = [
+    // The front door's own targets, before any way in is taken.
+    for (const target of [
       'sign-in-apple',
       'sign-in-google',
       'sign-in-passkey',
       'sign-in-email',
+      'sign-in-register',
+    ]) {
+      expect(targetHeight(target)).toBeGreaterThanOrEqual(touch.minimum);
+    }
+
+    // The form's targets, in the state where they are on screen. Measuring
+    // them in the state that shows them is the point: a floor is a claim
+    // about a target the courier can actually reach.
+    fireEvent.press(screen.getByTestId('sign-in-email'));
+    for (const target of [
       'sign-in-submit',
       'sign-in-email-field',
       'sign-in-password-field',
-      'sign-in-register',
-    ];
-    for (const target of targets) {
+    ]) {
       expect(targetHeight(target)).toBeGreaterThanOrEqual(touch.minimum);
     }
 
