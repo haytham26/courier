@@ -1,6 +1,6 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-30 · main at `0afa7d3` · **BUG-070 is FIXED, and the proof is the green
+Updated: 2026-10-30 · main at `4751128` · **BUG-070 is FIXED, and the proof is the green
 `Deploy staging` run on main [40913771504](https://github.com/haytham26/courier/actions/runs/40913771504)
 on `fc9a625` — the migration prints `migration was completed successfully!`, the whole stack comes up,
 and the smoke test passes **4 of 4**, the version check among them. Eight causes were unwound one at a
@@ -8,7 +8,8 @@ time, each at its own cause (PR #94, #96, #102, #105, #106, #107, #111); the tab
 `docs/evidence/deploy-verify-workspace-install/README.md`. B3's `response_model` half is merged, and so
 is the auth readiness route it needed. A5 is done to the edge of the founder's input (the monitoring,
 the backups and the restore drill; the rest is FOUNDER_TODO). C3 has three parser slices merged
-(PR #120, #123), and the deploy stays green on every push to main.**
+(PR #120, #123) and MASTER §22's step 1 is on main (PR #125), and the deploy stays green on every push
+to main.**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
@@ -146,13 +147,11 @@ it is not redone here.
    **What is left is the re-measure**, which needs `data/linz` — a FOUNDER_TODO item — so the next
    session runs `fetch-linz.py` for the three areas, `build-linz-index.py`, then
    `pytest tests/test_linz_accuracy.py`, and writes the numbers into the ADR.
-3. **MASTER §22, step 1 then step 2.** The clean-room spec
-   (`docs/research/2026/andee-cleanroom-spec.md`) is written on this branch and is being merged with
-   it — it was committed after PR #123's head was taken, so it is **not yet on main**. Step 2, the
-   build (the pre-classifier, the ask-on-low-confidence rule and the visible memory in
-   `services/courier-voice` and `apps/mobile/src/voice`, each a red-first PR with the token and latency
-   numbers measured through OmniRoute) follows it. Step 3, the accessibility spike, is research only
-   and ships nothing.
+3. **MASTER §22 step 2** — the build, from the spec that is on main (PR #125): the
+   pre-classifier, the ask-on-low-confidence rule and the visible memory in `services/courier-voice`
+   and `apps/mobile/src/voice`, each a PR with red-first tests and the token and latency numbers
+   before and after measured through OmniRoute. Step 3, the accessibility spike, is research only and
+   ships nothing.
 4. **Then billing (D44) and the rest of queue 3.**
 
 **Closed since the last update:** PR #107, #110 and #111 (the smoke test's version check,
