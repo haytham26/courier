@@ -1,6 +1,8 @@
 # The deep code audit, 2026-10 (C1) — method, verdicts, and the accepted findings
 
-Status: **IN PROGRESS — the three lead-owned squads have reported and have been verified; the findings below are the verified set.** The fix order (C1): critical and high before A1 continues; medium in the same slice as the code it touches; low as a batch. The accepted findings are NOT yet filed in `docs/status/BUGS.md`; they are filed in one PR with numbers taken from `origin/main` at that moment (the register's next free number as of this writing is **BUG-068**, main having reached BUG-067).
+Status: **IN PROGRESS — the three lead-owned squads (1, 3's app side, 6) have reported and have been
+verified, and the backend squad's four (2, 3's server side, 4, 5) have reported and have been
+verified; the findings below are the verified set for all seven.** The fix order (C1): critical and high before A1 continues; medium in the same slice as the code it touches; low as a batch. The accepted findings are NOT yet filed in `docs/status/BUGS.md`; they are filed in one PR with numbers taken from `origin/main` at that moment (the register's next free number as of this writing is **BUG-068**, main having reached BUG-067).
 
 ## Method (per the audit brief, `docs/plan/AUDIT_2026-10-25.md` C1)
 
@@ -87,10 +89,82 @@ Cross-cutting fact established by the verifier's reachability probe: **no produc
 
 Recorded per the brief ("an unreproduced finding is dropped, with its reason listed"): squad 1 #6 (`btoa` — Hermes ships it natively), #11 (the scan-load inheritance — the keyed parent remounts the subtree), #13 (the map-mode memo — it never re-evaluates), #17 (the write-queue clobber — the newer value survives); squad 3 #4 (the crash-replay duplicate — an identical replay is an ACK server-side); squad 6 #1 (the `base.sha` quoting — the expression is correct and the gate fails loudly), #13 (`check-audit.mjs` — it exits 2 on no-output).
 
+---
+
+# The backend squad's share — squads 2, 3 (the server side), 4 and 5 (2026-10-30)
+
+Run on `origin/main` = `5495dad`, read-only, in a worktree. Four fresh-context squads, each with both
+lenses (ASVS L2 for the services: injection, authz on every route, tenant scoping, secrets, PII in
+logs; and robustness: idempotency, concurrency, time zones, leaks), and a separate fresh-context
+verifier per squad that reproduced every finding with a failing test or a command or dropped it with
+its reason. The verbatim squad and verifier outputs are in the audit session record; the tables below
+are the verified set.
+
+**Numbers taken for the register before any new row:** the highest row number across `origin/main`
+(**BUG-114** — main moved past BUG-112 on 2026-10-30 with the screen-recordings row) and every open PR
+branch (#58 `chore/parity-reconcile` at BUG-112, #52 `feat/t6-02-sign-in` at BUG-113, #49
+`fix/e2e-determinism` at BUG-114) — so the first new row is **BUG-115**.
+
+## Squad 2 — the API (`services/api` minus auth and sync)
+
+| # | Verdict | Severity | The finding, and the verifier's reproduction |
+|---|---------|----------|----------------------------------------------|
+| 1 | DROPPED | — | A far-future `occurred_at` on `/runs/{id}/stops/{sid}/pod`. The route does accept it (`main.py:497-510` checks tzinfo only), but `pod_captured` is not in `STATUS_KINDS` (`repo.py:279`), so a POD event never enters the latest-per-stop contest and cannot win it: driving the real route, the POD answered 201, the statuses stayed `['pending']`, and a genuine later `skipped` still won. The route that *can* write a status kind (`/events:batch`) rejects anything more than an hour ahead (`main.py:210-218`) — `sync delivered@2099 -> 422`. The two halves of the claim are mutually exclusive. |
+| 2 | ACCEPTED | medium | **Nothing in production writes `stops.status`.** `SqlAlchemyRepo` writes subscriptions, delivery_events, runs, door_memory, run_templates, run_routes and run_route_stops — no `INSERT INTO stops`, no `UPDATE stops`. Reproduced end to end against a real SQL database: the courier syncs `delivered` → `200 {"accepted":1,"cursor":1,"conflicts":[]}`, the raw row says `stops.status = pending` with 1 delivery_event, `GET /shifts/{sid}/stops` answers `pending`, and `?status=delivered` returns `[]` — while `InMemoryRepo` derives status from the log and the tests go green. ADR-014 §2 orders the writer; it does not exist. |
+| 3 | ACCEPTED | medium | A fresh `anthropic.Anthropic()` per non-fast-path utterance (`copilot.py:139`), each with its own connection pool that is never closed, and no explicit `timeout` or `max_retries` — so the SDK default (600 s) applies and a slow gateway parks the socket. Reproduced by instrumenting the constructor: **4 constructions in 4 utterances, no module-level client reused** (`main.py:1206` calls `interpret(text, state)` with no client). |
+| 4 | ACCEPTED (latent) | medium | No cap on the stops a shift may hold, and `_matrices` builds two dense `(n+2)^2` int64 matrices with an O(n^2) Python fill loop. At 2,000 stops: 30.6 MiB per matrix, 61.2 MiB total, and a real `_matrices(n=400)` measured 0.92 us/pair → ~3.7 s of fill **before** PyVRP gets an iteration. No ingestion path caps stop count (only events at 500). |
+| 5 | AMENDED | low | `main.py:989-991` computes `location_id_for(...)` unguarded, which raises `ValueError` on an empty address → an unhandled 500 (reproduced on `InMemoryRepo`). But the filed precondition — a stop row with `location_id = None` — violates `schema.sql:20`'s `location_id uuid NOT NULL`: the INSERT is refused, so there is no production trigger. The residual defect is the unguarded call, not an exploitable path. |
+| 6 | ACCEPTED | low | With `POD_STORAGE_BACKEND=s3`, an object that exists but has no `sha256` metadata makes `fingerprint()` raise a bare `RuntimeError` (`pod_store.py:157-163`) that escapes the route: a replay of that event answers **500** and is killed before `append_events`. Reproduced with a stubbed boto3 (the exception is not converted to an `HTTPException`, and `store.save` is never reached). |
+| 7 | ACCEPTED | low | The POD route writes the bytes (`main.py:568`) **before** `append_events` (571), so a failing insert leaves an orphan object with no event row and the caller gets a 500 with nothing recorded. Reproduced by making `append_events` fail: the object is in the store, the event log is empty. |
+
+**The squad's "NOT findings", spot-checked by the verifier and held:** authorisation on every route
+(all 17 data-bearing handlers depend on `get_current_principal` and refuse a foreign row with 404 —
+verified with an anonymous and a foreign token, and `GET /runs` answered count 0 for the foreign
+owner); no SQL injection surface (all 25 `text(...)` sites use literal SQL with `:name` binds, and
+`IN :ids` uses `bindparam(..., expanding=True)`); no naive/aware mixing (`DeliveryEvent`,
+`CreateRunRequest` and `PodForm` all require an aware stamp, and `DeliveryEvent` bounds it).
+
+## Squad 3 — the server side of sync and the offline store
+
+<!-- squad 3 verified set: appended when its verifier reports -->
+
+## Squad 4 — auth (`services/auth`, `services/api/app/auth`)
+
+| # | Verdict | Severity | The finding, and the verifier's reproduction |
+|---|---------|----------|----------------------------------------------|
+| 1 | ACCEPTED | high | `jwks.py:94-105`: no negative cache and no freshness check on an unknown `kid`, so every unknown kid forces one synchronous JWKS fetch from the auth service. Probe with a local JWKS server: 6 distinct bogus kids → 6 real fetches; **4 repeats of the SAME bogus kid → 11 server hits**. An unauthenticated caller amplifies per request, per API replica. |
+| 2 | ACCEPTED | high | The API reads `AUTH_JWT_ISSUER` from env and the auth service signs with its own `config.jwt.issuer` (`config.ts:256`, defaulting from `BETTER_AUTH_URL`), and nothing cross-checks the two — a convention in `compose.prod.yml`, not a check (a repo-wide grep found no startup comparison). A disagreement fails **closed** (401 for every valid token, with a generic detail), so the damage is a total outage with no diagnosis, not an auth bypass. |
+| 3 | ACCEPTED | medium | `jwt.decode` (`jwks.py:121-128`) is called with PyJWT's default `leeway=0`: probes show `exp` skew → "Signature has expired" and `iat` skew → "The token is not yet valid" at any skew above zero. Two containers with no shared NTP log a courier out on a 1 s drift. Line corrected from 95 to 121-128. |
+| 4 | ACCEPTED | medium | `main.py:1160` accepts the socket **before** identity is proven, and `identify` blocks in `await websocket.receive_json()` (`websocket.py:72`) with no timeout: a client that connects and says nothing parks the coroutine forever. Probe with a never-yielding socket: `identify()` still pending after 0.5 s. |
+| 5 | ACCEPTED | medium | `refuse` (`websocket.py:117-122`) sends its reason inside `contextlib.suppress(Exception)` and then closes 4403, so a half-closed socket gets a bare code — probe: `sent frames=[], close codes=[4403]`. And `identify` forwards the PyJWT message verbatim ("the token is not valid: Signature has expired"), so an unauthenticated caller can distinguish expiry from audience mismatch from clock skew: a token-state oracle. |
+| 6 | ACCEPTED | medium | `get_verifier` and `get_websocket_verifier` are two `lru_cache(maxsize=1)` singletons, each building a **separate** `JwksVerifier` with its own `httpx.Client` and its own 300 s JWKS cache (probe: two distinct objects). A key rotation is picked up at different times on the HTTP and the WebSocket surfaces, so a valid session flaps between them. |
+| 7 | ACCEPTED | high | `config.ts:299-308`: Better Auth's `customRules` is keyed by **path only** — `createRateLimitKey(ip, path)` in 1.7.10's `resolveRateLimitConfig` — and nothing keys by account. The `accountLockout` of the two-factor plugin (`recordTwoFactorFailure`) is reachable only *after* `verifyTwoFactor` has resolved a user, i.e. after the password was correct. 500 password guesses against one account from rotating IPs never trips a bucket. |
+| 8 | ACCEPTED | medium | The breached-password check (`options.ts:130-132`, on by default) runs on `/sign-up/email`, `/change-password` and `/reset-password` — never on `/sign-in/email` — and its outbound call has no timeout at all: in `@better-fetch/fetch` 1.3.2 the abort timer is only armed when `options.timeout` is set, and neither `timeout` nor `signal` is passed. A PwnedPasswords outage makes sign-up fail closed with a 500. |
+| 9 | ACCEPTED | medium | `index.ts:27` is `void handler(req, res)`, and a grep across `services/**` finds **zero** `unhandledRejection`/`uncaughtException` handlers. Node's default terminates the process, so a route rejection (a DB blip) takes the auth container down instead of answering 500 — and the compose healthcheck then flaps behind it. |
+| 10 | ACCEPTED | medium | `index.ts:18` builds the server with no body-size cap and no request timeout, and `toNodeHandler` calls `getRequest` without `bodySizeLimit`, so better-call bounds the body only by the declared content-length. A 1 GB `POST /api/auth/sign-up/email` is fully buffered before the 128-character password check rejects it. |
+| 11 | ACCEPTED | medium | `AUTH_JWKS_URL` (`jwks.py:30`) has no scheme validation, and the compose default is plaintext (`http://auth:3001/api/auth/jwks`). The public keys are fetched over an unencrypted hop with no pinning, so a MITM on that hop can substitute a key pair and have every forged token accepted. |
+| 12 | ACCEPTED | medium | `rateLimit.enabled: true` is hard-coded with no env override (only `AUTH_RATE_LIMIT_MAX` exists), and Better Auth 1.7.10's default storage is memory — a module-level `Map`, per-process, lost on restart, not shared between `auth_a` and `auth_b`. The two replicas give 2x the effective limit and a restart resets the counters. |
+| 13 | ACCEPTED | medium | The passkey `origin` defaults to `https://${rpID}` (`config.ts:281`) and is never cross-checked against `BETTER_AUTH_URL`, so a wrong-but-legal origin/rpID pair is accepted and a phishing page served from that origin can have a credential replayed against the real service. |
+| 14 | ACCEPTED | medium | `parseCsv` (`config.ts:167-173`) filters only on length, so `AUTH_TRUSTED_ORIGINS=*` passes and `matchesOriginPattern`/`wildcardMatch("*")` compiles it to match any host — while `disableOriginCheck` is a hard-coded `false` (`options.ts:86`), so a reviewer reading the options concludes origin checking is on. |
+| 15 | ACCEPTED | low | `get_websocket_principal` (`websocket.py:125-127`) is dead code with exactly one grep hit — its own definition — no route and no test uses it, yet it is still exported, still `Depends(get_verifier)`, and still reads `websocket.query_params.get("token")`: the exact pattern BUG-059 removed. One future import reintroduces a logged token. |
+| 16 | ACCEPTED | low | `get_verifier_override` (`jwks.py:184-190`) is unreferenced anywhere in the repo, and its docstring's claim that "Both getters route through here" is false — both construct their verifier directly. |
+| 17 | AMENDED | low | The `.env.example` / compose defaults really do show `http://` for `AUTH_JWKS_URL` and `BETTER_AUTH_URL`, but the claimed mechanism is wrong: `compose.prod.yml:171` sets the auth service's `BETTER_AUTH_URL` to `https://${COURIER_DOMAIN}`, which agrees with the API's `AUTH_JWT_ISSUER`. There is no new failure mode here — it is finding 2's missing cross-check, dropped as a duplicate. |
+| 18 | ACCEPTED | low | `loadConfig` (`config.ts:208-213`) validates `AUTH_TRUSTED_ORIGINS` only for emptiness in production, so a wrong-but-non-empty list boots healthy and then refuses the app's every request with a 403 the app renders as "not set up on this server yet". |
+| 19 | ACCEPTED (amended) | low | `AuthPrincipal.user_id = claims["sub"]` (`jwks.py:136`) accepts an empty string — PyJWT's `require` asserts presence, not truthiness; probe: `AuthPrincipal(user_id='')`. The filed cascade to "owner of any row" needs a row whose `courier_id` is `""`, which no writer produces, so this is weak validation rather than a demonstrated ownership bypass. |
+
+**The squad's "NOT findings", spot-checked by the verifier and held:** `iss`/`aud`/`exp`/`alg` are all
+checked (`jwt.decode`'s `algorithms` restricts to ES256 and `options.require` forces the claims), and
+the JWKS endpoint failing open is not possible — `_refresh` raises `InvalidTokenError` and the route
+answers 401 (probed against a dead server and a 500).
+
+## Squad 5 — voice (`services/courier-voice`)
+
+<!-- squad 5 verified set: appended when its verifier reports -->
+
 ## What the squads judged NOT findings (kept for the reviewer)
 
 The `EXPO_PUBLIC_E2E` mocks themselves (tracked as A1/A4); the D33 contrast table (every pair is asserted, the non-text registry accounts for warning/info2); the `courier://` deep link (typed-routes plus the auth guard); `app/compat.tsx`'s own DB (release-blocked); the coverage floors themselves (the ratchet is the contract's number — the finding is its measurement path); action-pin hygiene (all third-party actions are SHA-pinned; the two network installers are guarded by the repo's own rule); `persist-credentials`; every scripts/data, scripts/design, scripts/eval and scripts/dev tool that runs in no CI job.
 
 ## Filing and the fix order
 
-The accepted findings are filed in `docs/status/BUGS.md` in one PR with numbers taken from `origin/main` at that moment (next free: **BUG-068**). Critical and high first — but note the interlock the verifier established: the squad-1/squad-3 CRITICAL runtime defects all sit on modules with **zero production callers** (no API client in the app yet), so they are fixed as part of A1's wiring, not before it; the squad-6 findings fix on their own slice in parallel.
+The accepted findings are filed in `docs/status/BUGS.md` in one PR with numbers taken from `origin/main` at that moment (next free: **BUG-113**). Critical and high first — but note the interlock the verifier established: the squad-1/squad-3 CRITICAL runtime defects all sit on modules with **zero production callers** (no API client in the app yet), so they are fixed as part of A1's wiring, not before it; the squad-6 findings fix on their own slice in parallel.
