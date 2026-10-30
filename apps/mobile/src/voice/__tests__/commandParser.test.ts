@@ -68,12 +68,54 @@ describe('the voice command catalogue', () => {
       });
     });
 
+    // BUG-073 (the C1 audit, squad 1 finding 4, accepted high): this test's
+    // name said "takes the safe place of a delivery" while its assertions
+    // proved the place was thrown away - a test whose name is not its claim
+    // (PLAYBOOK 14.2). The courier said "left it at the side gate" and the
+    // delivery reached the app with nowhere recorded, so the next person who
+    // looked for the parcel had nothing to go on.
+    //
+    // The claim is the name: the place the courier spoke is carried.
     it('takes the safe place of a delivery', () => {
+      // The place is the thing itself, without the preposition the courier
+      // used to say it: "on the porch" and "at the side gate" both describe
+      // where, and the spot they describe is what the next person needs.
       expect(parseVoiceCommand('left it on the porch')).toEqual({
         type: 'mark_delivered',
         stopId: 'current',
+        safePlace: 'porch',
       });
       expect(parseVoiceCommand('left at the side gate')).toEqual({
+        type: 'mark_delivered',
+        stopId: 'current',
+        safePlace: 'side gate',
+      });
+      expect(parseVoiceCommand('left it at the front door')).toEqual({
+        type: 'mark_delivered',
+        stopId: 'current',
+        safePlace: 'front door',
+      });
+    });
+
+    // The other delivery verb carries the place too, or the two paths disagree
+    // about what "the porch" means.
+    it('carries the safe place on the plain delivery verb', () => {
+      expect(parseVoiceCommand('left it under the mat')).toEqual({
+        type: 'mark_delivered',
+        stopId: 'current',
+        safePlace: 'mat',
+      });
+      expect(parseVoiceCommand('left it behind the bins')).toEqual({
+        type: 'mark_delivered',
+        stopId: 'current',
+        safePlace: 'bins',
+      });
+    });
+
+    // A delivery with no place spoken keeps the field absent rather than
+    // carrying an empty string, so nothing downstream writes a blank row.
+    it('leaves the safe place out when the courier says no place', () => {
+      expect(parseVoiceCommand('delivered')).toEqual({
         type: 'mark_delivered',
         stopId: 'current',
       });
