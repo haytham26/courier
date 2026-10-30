@@ -176,56 +176,17 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           # BUG-065: the pinned emulator binary, the same one the gate records.
           emulator-build: ${{ env.EMULATOR_BUILD }}
-          # The runner's `script` is REQUIRED: it is the body that runs on the
-          # booted emulator (run 39905489120 died without it: `Input required
-          # and not supplied: script`). The recording lives inside the boot:
-          # the tool install, the APK and its grants, then the keeper.
-          script: |
-            # The Maestro CLI: the pinned release, downloaded directly and its
-            # archive's checksum verified before any byte runs - exactly the way
-            # android-e2e.yml installs it (BUG-065). The installer would be the
-            # other path, and it prefixes `cli-` onto MAESTRO_VERSION, which
-            # turns this pin into a 404 and leaves no CLI on the box (run
-            # 40319441601: `maestro: not found`, exit 127). One install, one
-            # pin semantic, in both workflows.
-            set -euo pipefail
-            url="https://github.com/mobile-dev-inc/Maestro/releases/download/${MAESTRO_VERSION}/maestro.zip"
-            curl -fsSL --retry 3 -o "$RUNNER_TEMP/maestro.zip" "$url"
-            echo "${MAESTRO_SHA256}  $RUNNER_TEMP/maestro.zip" | sha256sum -c -
-            rm -rf "$HOME/.maestro" "$HOME/.maestro/tmp"
-            mkdir -p "$HOME/.maestro/tmp"
-            unzip -qo "$RUNNER_TEMP/maestro.zip" -d "$HOME/.maestro/tmp"
-            cp -rf "$HOME/.maestro/tmp/maestro/." "$HOME/.maestro/"
-            rm -rf "$HOME/.maestro/tmp" "$RUNNER_TEMP/maestro.zip"
-            # $GITHUB_PATH lands between steps, so the binary is on PATH here,
-            # before the keeper calls maestro.
-            export PATH="$HOME/.maestro/bin:$PATH"
-            "$HOME/.maestro/bin/maestro" --version
-
-            # The app and its permissions: granted up front so the system
-            # dialog never sits on the screen the recording has to show.
-            adb wait-for-device
-            adb install -r apk/app-release.apk
-            adb shell pm grant "$PKG" android.permission.RECORD_AUDIO || true
-            adb shell pm grant "$PKG" android.permission.ACCESS_FINE_LOCATION || true
-            adb shell pm grant "$PKG" android.permission.ACCESS_COARSE_LOCATION || true
-            adb shell input keyevent KEYCODE_WAKEUP || true
-            adb shell wm dismiss-keyguard || true
-
-            # The runner's action executes the script line by line, each line
-            # its own shell: nothing set by `export` survives into the next
-            # line (run 39909043491: `maestro: command not found` - the CLI
-            # installed and the PATH line died with its subshell). The binary
-            # is verified by full path and the keeper carries its own PATH.
-            "$HOME/.maestro/bin/maestro" --version
-
-            # The composition needs ffmpeg for the side-by-side (not on the
-            # runner image by default - run 39909043491 recorded the raw
-            # mp4s and then failed at the compose).
-            sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
-
-            # The recordings: one flow per screen file, light pass then dark.
-            PATH="$HOME/.maestro/bin:$PATH" bash .maestro/recordings-run.sh
+          # The runner's `script` is REQUIRED (run 39905489120 died without
+          # it: `Input required and not supplied: script`), and it is ONE LINE
+          # on purpose (BUG-114). The action does not run a multi-line script
+          # as one program: `src/script-parser.ts` splits it per line and
+          # `src/main.ts` runs each line as its own `sh -c`, so every `export`,
+          # every variable and every `set -o pipefail` dies on the spot
+          # (run 40962263045: `/usr/bin/sh: 1: set: Illegal option -o
+          # pipefail`, the job red on its first line). The body lives in
+          # `.maestro/recordings-boot.sh`, run under bash, exactly the way
+          # android-e2e.yml runs `bash .maestro/run-all.sh`.
+          script: bash .maestro/recordings-boot.sh
 
       - name: Upload the recordings
         if: always()
