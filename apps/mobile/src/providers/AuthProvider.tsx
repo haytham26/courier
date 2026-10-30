@@ -97,6 +97,34 @@ function messageFor(error: unknown, fallback: string): string {
   return fallback;
 }
 
+/**
+ * Whether the session error is the server refusing, or the network failing.
+ *
+ * BUG-071: Better Auth's client surfaces a failed session fetch as an error
+ * object that carries the HTTP status when there was an HTTP exchange at all.
+ * A status is the server's own answer (401 and 403 are the refusals), and
+ * `0` or a missing status is the transport giving up - no request ever got an
+ * answer. Better Auth also throws a `FetchError` for a transport failure,
+ * whose `status` is 0 in exactly that shape, which is why the test for the
+ * transport class plants `{ status: 0 }`.
+ *
+ * The distinction is the whole fix: a refusal signs the courier out, a
+ * transport failure keeps the shift going offline. Anything unrecognised is
+ * treated as a refusal, because the safe direction for a session is the one
+ * that does not grant access.
+ */
+function isSessionRefusal(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return true;
+  }
+  const shape = error as { status?: unknown; statusCode?: unknown };
+  const status = typeof shape.status === 'number' ? shape.status : shape.statusCode;
+  if (typeof status !== 'number') {
+    return true;
+  }
+  return status !== 0;
+}
+
 function toOfflineUser(user: AuthUser): OfflineSessionUser {
   return {
     id: user.id,
@@ -176,6 +204,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (error !== null && error !== undefined) {
+      // BUG-071: the error class decides where the app goes, and the two
+      // classes are not the same thing.
+      //
+      // A refusal (401, and any other status the server actually answered
+      // with) means the server said no: the credential is revoked or
+      // expired. The phone's receipt is a convenience, never a permission, so
+      // a refused session must not be spent - the courier is signed out and
+      // the receipt is dropped, so the next launch does not repeat the
+      // mistake. Mapping this onto `offline` was the audit's finding: a
+      // revoked session read as a bad signal and the courier kept working on
+      // a credential the server had already taken away.
+      //
+      // A transport failure (no network, DNS, a timeout, a dropped connection)
+      // is the offline case the whole product is built around: the phone's
+      // session is the best answer it has, the shift carries on, and the app
+      // says plainly that the server has not been asked.
+      const refused = isSessionRefusal(error);
+
+      if (refused) {
+        // The receipt goes, and the courier is signed out either way: a
+        // failure to clear the device store must not leave the app holding a
+        // credential the server has already refused.
+        void Promise.resolve()
+          .then(() => forgetSession())
+          .finally(() => {
+            setUser(null);
+            setStatus('signed-out');
+          });
+        return;
+      }
+
       // No network, or the service is down: the phone may still hold a
       // session that is good enough for the shift.
       void readOfflineSession().then((offline) => {
