@@ -220,15 +220,18 @@ async def run_simulations(
     async with AsyncClient(transport=transport, base_url="http://courier-voice") as client:
         for simulation in simulations:
             context = {
+                # The simulation's own run: the phone is the API in a
+                # simulation, so the shift is named inside the snapshot rather
+                # than at the session, which the API would have to answer for
+                # (BUG-148).
+                "shift_id": simulation.id,
                 "expected_stops": simulation.environment.get("expected_stops", 0),
                 "new_addresses": simulation.environment.get("new_addresses", 0),
                 "weather": simulation.environment.get("weather"),
                 "returns_in_van": simulation.environment.get("returns_in_van", 0),
                 "stops": simulation.stops,
             }
-            opened = await client.post(
-                "/v1/sessions", json={"shift_id": simulation.id, "context": context}
-            )
+            opened = await client.post("/v1/sessions", json={"context": context})
             session_id = str(opened.json()["id"])
 
             for row in simulation.proactive:

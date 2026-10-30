@@ -215,7 +215,108 @@ class TestJwksVerifier:
         assert calls["count"] >= 2
 
 
-class TestAuthRoutes:
+class TestTheNegativeCache:
+    """A caller who never presents a real key costs one fetch, not one per request.
+
+    BUG-121: the verifier refreshed whenever the `kid` was unknown, with no
+    record of the kids it had already asked the JWKS about, so an
+    unauthenticated caller sending distinct bogus kids made the API fetch the
+    auth service's JWKS once per request.
+    """
+
+    def test_a_bogus_key_id_is_refused_from_memory_after_the_first_lookup(
+        self, key_pair: tuple[Any, Any]
+    ) -> None:
+        private_key, jwk = key_pair
+        fetches = {"count": 0}
+
+        def counting(request: httpx.Request) -> httpx.Response:
+            fetches["count"] += 1
+            return httpx.Response(200, json={"keys": [jwk]})
+
+        verifier = make_verifier({}, handler=httpx.MockTransport(counting))
+
+        for _ in range(4):
+            with pytest.raises(InvalidTokenError):
+                verifier.verify(sign(private_key, kid="bogus-kid"))
+
+        assert fetches["count"] == 1
+
+    def test_distinct_bogus_key_ids_cost_one_fetch_each(self, key_pair: tuple[Any, Any]) -> None:
+        private_key, jwk = key_pair
+        fetches = {"count": 0}
+
+        def counting(request: httpx.Request) -> httpx.Response:
+            fetches["count"] += 1
+            return httpx.Response(200, json={"keys": [jwk]})
+
+        verifier = make_verifier({}, handler=httpx.MockTransport(counting))
+
+        for index in range(6):
+            with pytest.raises(InvalidTokenError):
+                verifier.verify(sign(private_key, kid=f"bogus-{index}"))
+
+        assert fetches["count"] == 6
+
+    def test_a_key_that_rotates_in_is_accepted_again(
+        self, key_pair: tuple[Any, Any]
+    ) -> None:
+        """The cache remembers what it refused; it does not remember it forever."""
+        private_key, old_jwk = key_pair
+        new_private_key, new_jwk = make_key_pair("bogus-kid")
+        documents = [{"keys": [old_jwk]}, {"keys": [new_jwk]}]
+        calls = {"count": 0}
+
+        def rotating(request: httpx.Request) -> httpx.Response:
+            index = min(calls["count"], len(documents) - 1)
+            calls["count"] += 1
+            return httpx.Response(200, json=documents[index])
+
+        verifier = make_verifier({}, handler=httpx.MockTransport(rotating))
+
+        with pytest.raises(InvalidTokenError):
+            verifier.verify(sign(new_private_key, kid="bogus-kid"))
+
+        # The cache is stale, so the next look actually asks again.
+        verifier._fetched_at = 0.0
+        principal = verifier.verify(sign(new_private_key, kid="bogus-kid"))
+        assert principal.user_id == "user-123"
+
+
+class TestTheIssuerTheApiAccepts:
+    """The issuer is the one thing a misconfigured deployment gets wrong silently.
+
+    BUG-122: the API reads `AUTH_JWT_ISSUER` from its own environment while the
+    auth service signs with its own `config.jwt.issuer`, and nothing compares
+    the two - a deployment where they disagree answers 401 for every correctly
+    issued token with no diagnosis at all. The gate on the value's shape
+    catches the classes of that mistake here, and `scripts/ci/check-auth-issuer.mjs`
+    catches the rest in the compose files.
+    """
+
+    def test_an_issuer_that_is_not_a_url_is_refused_at_startup(self) -> None:
+        with pytest.raises(ValueError, match="issuer"):
+            make_settings(auth_jwt_issuer="not-a-url")
+
+    def test_an_issuer_carrying_a_path_never_matches_a_claim(self) -> None:
+        with pytest.raises(ValueError, match="issuer"):
+            make_settings(auth_jwt_issuer="https://auth.example.com/issuer")
+
+    def test_an_issuer_with_a_query_never_matches_a_claim(self) -> None:
+        with pytest.raises(ValueError, match="issuer"):
+            make_settings(auth_jwt_issuer="https://auth.example.com?who=me")
+
+    def test_the_auth_services_own_issuer_is_accepted(self) -> None:
+        # What the auth service signs with when AUTH_JWT_ISSUER is unset:
+        # BETTER_AUTH_URL exactly, no trailing slash.
+        settings = make_settings(auth_jwt_issuer="https://courier.co.nz")
+        assert settings.auth_jwt_issuer == "https://courier.co.nz"
+
+    def test_a_missing_issuer_still_stops_the_service(self) -> None:
+        with pytest.raises(ValueError):
+            make_settings(auth_jwt_issuer="")
+
+
     def test_me_requires_a_token(self, client: TestClient) -> None:
         response = client.get("/auth/me")
         assert response.status_code == 401
