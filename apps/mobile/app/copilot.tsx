@@ -88,7 +88,15 @@ function CopilotSurface() {
           // reading stays null rather than guessing one.
           const stopId = 'stopId' in command ? command.stopId : null;
           const stop = mockStops.find((entry) => entry.id === stopId) ?? null;
-          const said = `${command.type.replace(/_/g, ' ')}`;
+          // BUG-073: when the courier said where they left it, the line reads
+          // back the place in their own words. Copilot's answer is computed
+          // from what the app actually did (MASTER_EXECUTION 13.2), and what
+          // it did was put the parcel there.
+          const safePlace = 'safePlace' in command ? command.safePlace : undefined;
+          const said =
+            safePlace === undefined
+              ? `${command.type.replace(/_/g, ' ')}`
+              : `left it ${safePlace}`;
           const reply = copilotReplyFor(
             { type: command.type, stopId, transcript: said },
             {

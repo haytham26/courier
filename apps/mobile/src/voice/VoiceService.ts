@@ -59,7 +59,21 @@ export type VoiceState =
  * the service understands does something on the phone.
  */
 export type VoiceCommand =
-  | { type: 'mark_delivered'; stopId: string }
+  | {
+      type: 'mark_delivered';
+      stopId: string;
+      /**
+       * Where the courier said the parcel was left, in their own words.
+       *
+       * BUG-073 (the C1 audit): the offline parser used to capture the place
+       * and throw it away, and the Courier Voice client dropped it a second
+       * time on the way out, so a delivery reached the server with nowhere
+       * recorded. A courier's spoken placement is the whole value of saying
+       * it aloud - the next person who looks for the parcel has nothing else
+       * to go on.
+       */
+      safePlace?: string;
+    }
   | { type: 'mark_skipped'; stopId: string }
   | { type: 'mark_failed'; stopId: string; reason: string }
   | { type: 'add_stop'; rawAddress: string }

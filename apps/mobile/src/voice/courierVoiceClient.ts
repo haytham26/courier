@@ -315,6 +315,12 @@ export function toVoiceCommand(action: CourierVoiceAction | null): VoiceCommand 
   const stopId = action.stop_id ?? 'current';
   switch (action.type) {
     case 'mark_delivered':
+      // BUG-073: the safe place the service (or the offline parser) captured
+      // is carried into the app's command. Dropping it here undid the whole
+      // point of the courier saying "left it at the side gate" out loud.
+      if (action.safe_place !== undefined && action.safe_place !== null && action.safe_place.trim().length > 0) {
+        return { type: 'mark_delivered', stopId, safePlace: action.safe_place.trim() };
+      }
       return { type: 'mark_delivered', stopId };
     case 'mark_failed':
       return { type: 'mark_failed', stopId, reason: action.reason ?? 'voice' };
