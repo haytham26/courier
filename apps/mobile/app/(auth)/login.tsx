@@ -35,7 +35,7 @@
  * first window dump for it, so the boot check of the emulator run reads it.
  * The chosen names (`sign-in-*`) are the ones the new flows and tests use.
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import {
   Pressable,
   SafeAreaView,
@@ -46,6 +46,7 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -137,12 +138,50 @@ function SignInScreen() {
   const [error, setError] = useState<string | null>(null);
   /** The email form is behind the Email way in, exactly as the reference has it. */
   const [showEmailForm, setShowEmailForm] = useState(false);
+  /**
+   * The screen's own scroll view, so a revealed form can be brought to the
+   * courier instead of left below the fold.
+   *
+   * On a 320x640 phone (the E2E AVD, and the small phones real couriers use)
+   * the screen is taller than the viewport: the four ways in and the form do
+   * not both fit. Before this the form opened with its password field outside
+   * the a11y tree, so Android's removeClippedSubviews dropped it and the
+   * courier (and the E2E flow) could not type the password. The app brings
+   * what the courier just asked for into view; it never hides it (PLAYBOOK
+   * 12).
+   */
+  const scrollRef = useRef<ScrollViewInstance>(null);
   /** The biometric unlock surface, opened from the reference's Face ID line. */
   const [showBiometricUnlock, setShowBiometricUnlock] = useState(false);
   /** What the resumed session is, said in plain words. Never a fake confirm. */
   const [offlineNote, setOfflineNote] = useState<string | null>(null);
 
   const passkeyOnDevice = passkeySupportedOnDevice();
+
+  /**
+   * The email form is revealed by the courier's tap: bring it to them.
+   *
+   * `useLayoutEffect` runs before the device can show a frame, so the form is
+   * in view the moment it appears rather than after it has been missed. On a
+   * tall screen the offset the content already has is 0, so nothing moves.
+   */
+  useLayoutEffect(() => {
+    if (!showEmailForm) {
+      return;
+    }
+    const scroller = scrollRef.current;
+    if (scroller === null) {
+      return;
+    }
+    // The form is the last thing on the screen, so the end of the content is
+    // where it lives: scroll there and the password field is in view.
+    const node = scroller as unknown as {
+      scrollTo?: (options?: { y?: number; animated?: boolean }) => void;
+    };
+    if (typeof node.scrollTo === 'function') {
+      node.scrollTo({ y: Number.MAX_SAFE_INTEGER, animated: true });
+    }
+  }, [showEmailForm]);
 
   const handleLogin = useCallback(async () => {
     if (email.trim().length === 0 || password.length === 0) {
@@ -462,7 +501,11 @@ function SignInScreen() {
       style={[styles.container, { backgroundColor: t.colors.background }]}
     >
       <SafeAreaView testID="sign-in-screen" style={styles.container}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.header}>
             <View style={[styles.mark, { backgroundColor: t.colors.accent }]}>
               <Ionicons

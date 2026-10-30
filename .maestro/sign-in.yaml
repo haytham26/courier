@@ -83,7 +83,11 @@ name: Sign in - the front door, the four ways in and the email form
     id: "sign-in-passkey-reason"
 
 # The email way in opens the form: the two fields with a label each and the
-# one primary action.
+# one primary action. The app scrolls the revealed form into view (BUG-113),
+# so the password field is on the 320x640 device's screen the moment the
+# form appears: the flow asserts it without a scroll of its own, because
+# making the flow scroll would hide the app's job of showing what the
+# courier asked for (PLAYBOOK 12).
 - tapOn:
     id: "sign-in-email"
 - extendedWaitUntil:

@@ -28,7 +28,7 @@
  * half of that rule).
  */
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -262,6 +262,41 @@ describe('the sign-in screen', () => {
     );
     // The form is the screen's own: the methods stay reachable underneath.
     expect(screen.getByTestId('sign-in-apple')).toBeTruthy();
+  });
+
+  // The app bug this pins (BUG-113): the E2E AVD is 320x640, and the email
+  // form "Continue with Email" reveals opened below the fold - the password
+  // EditText fell outside the a11y tree, so Android's removeClippedSubviews
+  // dropped it and the sign-in flow could not type the password. A screen
+  // that reveals a form on a short phone scrolls it into view: the app brings
+  // what the courier just asked for into view, it never hides it (PLAYBOOK
+  // 12). The proof is the scroll command the app issues, so the test spies on
+  // the ScrollView instance the screen owns rather than faking layout
+  // geometry: the assertion is "the app called scrollTo", and the fix is the
+  // screen calling it, so a revert turns this red for exactly that reason
+  // (PLAYBOOK 14.1).
+  it('scrolls the revealed email form into view on a short screen', async () => {
+    renderScreen();
+
+    // RNTL mounts the screen's own ScrollView, so the instance it hands back
+    // is the one the screen holds the ref to: replacing its method is the
+    // spy, and the screen's own call is the thing under test.
+    const scroller = screen.UNSAFE_getByType(ScrollView);
+    const instance = scroller.instance as unknown as {
+      scrollTo?: (options?: { y?: number; animated?: boolean }) => void;
+    };
+    const scrollTo = jest.fn();
+    const original = instance.scrollTo;
+    instance.scrollTo = scrollTo;
+
+    try {
+      fireEvent.press(screen.getByTestId('sign-in-email'));
+      await waitFor(() => expect(screen.getByTestId('sign-in-form')).toBeTruthy());
+
+      expect(scrollTo).toHaveBeenCalled();
+    } finally {
+      instance.scrollTo = original;
+    }
   });
 
   it('shows the error with a way out', async () => {
