@@ -172,12 +172,23 @@ class ParsedAddress:
 
 
 def _words_to_digits(text: str) -> str:
+    # Only the house number is spoken, and it comes first. The courier reads "928
+    # Two Chain Road" for a road whose own name contains a number; converting the
+    # whole string turned "Two Chain Road" into "2 Chain Road", so the parser
+    # looked for a road that does not exist and answered with the road's own name
+    # as the suburb (`docs/evidence/phase-2.3/linz-accuracy.md`).
+    #
+    # So the run of number words is converted only while it is *leading*: the
+    # first token that is not a number word (and not "and" inside the run) ends
+    # the number, and everything after it stays exactly as it was spoken. A road
+    # called "Two Chain Road" is a road called "Two Chain Road".
     out: list[str] = []
     buf: list[str] = []
     for tok in text.split():
-        if tok == "and" and buf:
+        if not out and not buf and tok == "and":
+            # A leading "and" carries no number: it is the driver's hesitation.
             continue
-        if tok in NUM_WORDS:
+        if not out and tok in NUM_WORDS:
             buf.append(NUM_WORDS[tok])
             continue
         if buf:
