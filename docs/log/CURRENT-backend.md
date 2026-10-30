@@ -154,6 +154,22 @@ it is not redone here.
    ships nothing.
 4. **Then billing (D44) and the rest of queue 3.**
 
+**And, between them, C1's own fix order** (`docs/plan/AUDIT_2026-10-25.md` C1's "the fix order"):
+the backend squad's four squads ran on 2026-10-30 and their verified findings are filed at
+**BUG-115..BUG-159** (`docs/audit/CODE_AUDIT_2026-10.md`, "The backend squad's share"; PR #132, which
+also carries this session's handoff `docs/log/HANDOVER-2026-10-30-F.md`). Critical and high first,
+each fixed at the root with a red-first test:
+
+- **BUG-115** — nothing in production writes `stops.status`, so on Postgres a delivered stop answers
+  `pending` and `?status=delivered` returns `[]`, while the in-memory tests go green;
+- **BUG-146 / BUG-147 / BUG-148** — the voice service's prompt injection by transcript, the path
+  traversal through `shift_id`, and a 403 answered from the caller's own snapshot;
+- **BUG-121 / BUG-127** — the missing JWKS negative cache and the IP-only rate limiter;
+- **BUG-150** — the unbounded `context.stops`.
+
+The lead is fixing their own C1 rows (BUG-071/072/073) in parallel; the registers are shared, so a new
+row's number is taken across `origin/main` and every open PR branch before it is written.
+
 **Closed since the last update:** PR #107, #110 and #111 (the smoke test's version check,
 then its accounting), and **B4** — mutmut at the 70 % floor is on main: the dependency,
 both services' `[tool.mutmut]` scope, `scripts/ci/check-mutation-floor.mjs`, and a
