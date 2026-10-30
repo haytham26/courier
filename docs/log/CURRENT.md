@@ -24,7 +24,7 @@
 | PR | What | Its state |
 |---|---|---|
 | **#49** | the E2E is deterministic (the pins, the push trigger, the nightly health — BUG-064) | head `394264b`: the E2E is green on both legs; the lint/mojibake/conflict-marker gates were red on the inherited register text and are fixed locally; its checks are running |
-| **#52** | 02 Sign in + the Sign out row (the last of the 13 screens) | head `2776226`: the sign-out now names the screen it lands on (`router.replace('/(auth)/login')` - the router's own fallback for a route the guard has just removed is the unmatched screen, which run 40872943163 hit on both legs), the 28 lint findings in the new test file are fixed, `AuthContextType` is exported, and the sign-out landing suite mocks the native run store the root layout pulls in (CI run 40938227623 failed it on the Linux worker while it passed on Windows: `src/run/productionRunStore` opens op-sqlite at module scope, and jest has no native runtime - the same mock `routes.test.tsx` carries); jest 552/tsc/eslint green locally; its run is re-running |
+
 | **#58** | the registers tell the truth (B1: PARITY + the counting gate + the feature rows closed with their pointers) | head `5f441e4`: docs-only; main merged in, the status vocabulary is in BUGS.md's header, 30 pre-monorepo feature rows carry `moved to PARITY`, and `scripts/ci/check-parity.mjs` is the gate; its checks are running |
 
 **Main is green** on the push runs (CodeQL, CI, Quality gates, Deploy staging all success on the last push).
