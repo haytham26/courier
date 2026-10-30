@@ -91,7 +91,10 @@ def test_the_areas_are_the_three_territorial_authorities() -> None:
         assert 165 < min_lon < max_lon < 180, f"{area}: the longitudes are not New Zealand"
 
 
-@pytest.mark.parametrize("name", ["fetch-linz.py", "build-linz-index.py", "list-linz-layers.py"])
+@pytest.mark.parametrize(
+    "name",
+    ["fetch-linz.py", "build-linz-index.py", "list-linz-layers.py", "fetch-linz-changeset.py"],
+)
 def test_no_script_prints_the_key(name: str) -> None:
     """The key is read from .env.local and never reaches stdout (AGENTS.md).
 
@@ -112,3 +115,80 @@ def test_no_script_prints_the_key(name: str) -> None:
         rendered = ast.dump(call)
         assert "api_key" not in rendered, f"{name}: a print call carries api_key()"
         assert "LINZ_LDS_API_KEY" not in rendered, f"{name}: a print call reads the key"
+
+
+# ---------------------------------------------------------------------------
+# The weekly changeset import (C3)
+# ---------------------------------------------------------------------------
+
+
+def test_the_changeset_layer_id_is_the_address_layer_with_the_suffix() -> None:
+    """LINZ's rule: the layer id carries `-changeset` (their URL syntax page)."""
+    changeset = load_script("fetch-linz-changeset.py")
+    fetcher = load_script("fetch-linz.py")
+
+    assert changeset.CHANGESET_LAYER == fetcher.LAYER_ADDRESSES + "-changeset"
+
+
+def test_the_changeset_request_carries_the_window_in_viewparams() -> None:
+    """A changeset is the difference between two revisions, so both are named."""
+    changeset = load_script("fetch-linz-changeset.py")
+
+    url = changeset.changeset_url("KEY", (1.0, 2.0, 3.0, 4.0), "2026-10-23", "2026-10-30", 5, 0)
+
+    assert "layer-123113-changeset" in url
+    assert "viewparams=from:2026-10-23;to:2026-10-30" in url
+    assert "bbox=1.0,2.0,3.0,4.0" in url
+    assert "count=5" in url
+    # The key is in the URL, which is how the service authenticates; it is never
+    # printed (the test above parses every print call for it).
+    assert "KEY" in url
+
+
+def test_the_changeset_counts_every_action_and_refuses_an_unknown_one() -> None:
+    """INSERT, UPDATE and DELETE are the actions LINZ publishes; nothing else
+    may be counted as a change, or the week's evidence lies."""
+    changeset = load_script("fetch-linz-changeset.py")
+
+    rows = changeset.changed_rows(
+        [
+            {"properties": {"__change__": "INSERT", "address_id": 1, "full_road_name": "A St"}},
+            {"properties": {"__change__": "UPDATE", "address_id": 2, "full_road_name": "B St"}},
+            {"properties": {"__change__": "DELETE", "address_id": 3, "full_road_name": "C St"}},
+            {"properties": {"__change__": "MAYBE", "address_id": 4, "full_road_name": "D St"}},
+            {"properties": {"address_id": 5, "full_road_name": "E St"}},
+        ]
+    )
+
+    assert [row["action"] for row in rows] == ["INSERT", "UPDATE", "DELETE"]
+    assert rows[0]["id"] == "1"
+    assert rows[0]["road"] == "A St"
+
+
+def test_the_changeset_rows_carry_what_the_index_builder_needs() -> None:
+    """The same fields `build-linz-index.py` writes, so a change can be applied
+    to the index without a second mapping."""
+    changeset = load_script("fetch-linz-changeset.py")
+    builder = load_script("build-linz-index.py")
+
+    row = changeset.changed_rows(
+        [
+            {
+                "properties": {
+                    "__change__": "INSERT",
+                    "address_id": 1234,
+                    "address_number": 12,
+                    "address_number_suffix": "B",
+                    "unit": "3",
+                    "full_road_name": "Foo Street",
+                    "suburb_locality": "Bar",
+                    "town_city": "Christchurch",
+                }
+            }
+        ]
+    )[0]
+
+    assert builder.DATA_DIR == changeset.OUTPUT_DIR
+    assert set(row) == {"action", "id", "number", "suffix", "unit", "road", "suburb", "town"}
+    assert row["id"] == "1234"
+    assert row["suburb"] == "Bar"

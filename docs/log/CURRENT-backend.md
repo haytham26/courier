@@ -139,14 +139,32 @@ it is not redone here.
    founder's phone pointer (`EXPO_PUBLIC_API_URL`, now a FOUNDER_TODO row). All four are
    in FOUNDER_TODO, and none of them blocks the next queue item.
 2. **C3 — the LINZ squad toward 98 %.** The measure/fix/re-measure loop, with the ADR's
-   before-and-after numbers and the trial target met on the eval set as the done-when. The baseline is
-   measured — **96.9 % (1745/1800) against 656,044 real LINZ addresses**
-   (`docs/evidence/phase-2.3/linz-accuracy.md`) — and three fixes are merged against the failures that
-   measurement printed: a unit carrying a letter before a slash (`255C/28`, `4D/87`, `D/87`), a road's
-   direction word before the suburb, and a number word in a road's own name (`Two Chain Road`).
-   **What is left is the re-measure**, which needs `data/linz` — a FOUNDER_TODO item — so the next
-   session runs `fetch-linz.py` for the three areas, `build-linz-index.py`, then
-   `pytest tests/test_linz_accuracy.py`, and writes the numbers into the ADR.
+   before-and-after numbers and the trial target met on the eval set as the done-when.
+   **The re-measure is DONE, and the founder's data was never needed:** `LINZ_LDS_API_KEY` is in
+   `.env.local`, so the session fetched the register itself (656,392 real addresses across the three
+   areas — 225,295 Christchurch, 236,205 Waimakariri, 194,892 Selwyn), built the index and ran
+   `pytest tests/test_linz_accuracy.py`. Two things came out of it, both with their evidence:
+
+   - **The pipeline's paths were broken by the repository restructure** (`89a8545`):
+     `scripts/data/fetch-linz.py` computed the repository root one parent short, so the data and the
+     index were written into `scripts/data/linz/` — outside the `data/linz/` entry `.gitignore`
+     covers, and away from where the accuracy suite looks. The previous session's "needs `data/linz`,
+     a FOUNDER_TODO item" was that defect, not a missing file. Fixed with a red-first test
+     (`services/api/tests/test_linz_pipeline_paths.py`, 14 tests) and the FOUNDER_TODO rows are
+     corrected.
+   - **The measured accuracy on today's revisions was 85.2 % (1534/1800)**, and the failures were
+     dominated by one defect: the parser recognised only 45 hardcoded Christchurch suburbs, so a
+     driver who had NAMED his suburb was still asked which suburb he meant (31 % of the register
+     sits on a road that spans several suburbs). The fix is the register's own vocabulary
+     (`AddressStore.suburbs()`, handed to `nz_address.parse`), red-first in
+     `services/api/tests/test_suburb_vocabulary.py` (12 tests, 9 red before). **After: 96.9 %
+     (1744/1800)** — the ADR carries both numbers and what the remaining 56 failures are. The trial
+     target (>= 98 %) is NOT met yet, and the loop continues on the classes the report prints.
+
+   The weekly import C3 asks for is on main: `.github/workflows/linz-changeset.yml` fetches the
+   week's changeset (this week: 426 inserts, 63 updates, 78 deletes over the three areas), rebuilds
+   the index from the live revisions, re-runs the accuracy measure, keeps both as evidence, and
+   skips with a clear notice rather than going red when the secret is absent.
 3. **MASTER §22 step 2** — the build, from the spec that is on main (PR #125): the
    pre-classifier, the ask-on-low-confidence rule and the visible memory in `services/courier-voice`
    and `apps/mobile/src/voice`, each a PR with red-first tests and the token and latency numbers
