@@ -100,11 +100,21 @@ name: Sign in - the front door, the four ways in and the email form
     id: "sign-in-password-field"
 - assertVisible:
     id: "sign-in-submit"
-- inputText:
+# Maestro's `inputText` types into the FOCUSED field (its own docs say so, and
+# "works even if no text field is focused" only when it taps one first). The
+# flow used to name each field and trust the focus to follow, and on the device
+# both strings landed in the email field - the failure dump shows
+# `driver@example.co.nzcorrect-horse-battery` on `sign-in-email-field` and an
+# empty password field. Tapping the field first is Maestro's documented idiom
+# for a targeted input, so the flow does that rather than depending on a focus
+# the app did not move (PLAYBOOK 12: the flow is honest about what it needs).
+- tapOn:
     id: "sign-in-email-field"
-    text: "driver@example.co.nz"
 - inputText:
+    text: "driver@example.co.nz"
+- tapOn:
     id: "sign-in-password-field"
+- inputText:
     text: "correct-horse-battery"
 
 # The two sentences the reference keeps at the bottom: the phone keeps the
