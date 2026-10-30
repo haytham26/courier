@@ -261,26 +261,32 @@ class TestTheNegativeCache:
     def test_a_key_that_rotates_in_is_accepted_again(
         self, key_pair: tuple[Any, Any]
     ) -> None:
-        """The cache remembers what it refused; it does not remember it forever."""
+        """The cache remembers what it refused; it does not remember it forever.
+
+        The JWKS answers with the old key and then with both, so the order of
+        the calls does not decide the outcome - the first look does not know the
+        key, and the next one does.
+        """
         private_key, old_jwk = key_pair
         new_private_key, new_jwk = make_key_pair("bogus-kid")
-        documents = [{"keys": [old_jwk]}, {"keys": [new_jwk]}]
         calls = {"count": 0}
 
         def rotating(request: httpx.Request) -> httpx.Response:
-            index = min(calls["count"], len(documents) - 1)
             calls["count"] += 1
-            return httpx.Response(200, json=documents[index])
+            keys = [old_jwk] if calls["count"] == 1 else [old_jwk, new_jwk]
+            return httpx.Response(200, json={"keys": keys})
 
         verifier = make_verifier({}, handler=httpx.MockTransport(rotating))
 
         with pytest.raises(InvalidTokenError):
             verifier.verify(sign(new_private_key, kid="bogus-kid"))
+        assert "bogus-kid" in verifier._unknown_kids
 
-        # The cache is stale, so the next look actually asks again.
+        # The cache is stale, so the next look asks again and finds it.
         verifier._fetched_at = 0.0
         principal = verifier.verify(sign(new_private_key, kid="bogus-kid"))
         assert principal.user_id == "user-123"
+        assert "bogus-kid" not in verifier._unknown_kids
 
 
 class TestTheIssuerTheApiAccepts:
