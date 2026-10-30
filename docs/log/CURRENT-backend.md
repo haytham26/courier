@@ -1,14 +1,15 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-10-30 · main at `d7483b8` · **BUG-070 is FIXED, and the proof is the green
+Updated: 2026-10-30 · main at `0afa7d3` · **BUG-070 is FIXED, and the proof is the green
 `Deploy staging` run on main [40913771504](https://github.com/haytham26/courier/actions/runs/40913771504)
 on `fc9a625` — the migration prints `migration was completed successfully!`, the whole stack comes up,
 and the smoke test passes **4 of 4**, the version check among them. Eight causes were unwound one at a
 time, each at its own cause (PR #94, #96, #102, #105, #106, #107, #111); the table of runs is in
 `docs/evidence/deploy-verify-workspace-install/README.md`. B3's `response_model` half is merged, and so
 is the auth readiness route it needed. A5 is done to the edge of the founder's input (the monitoring,
-the backups and the restore drill; the rest is FOUNDER_TODO). C3 is in flight (PR #120): two parser
-slices fixed against the failures the existing measurement printed.**
+the backups and the restore drill; the rest is FOUNDER_TODO). C3 has three parser slices merged
+(PR #120, #123), MASTER §22's step 1 is merged with them, and the deploy stays green on every push to
+main.**
 
 ## The binding order for this squad (AUDIT §"The order", MASTER §21)
 
@@ -137,17 +138,20 @@ it is not redone here.
    live database, OmniRoute's production config (self-hosted next to n8n, D25), and the
    founder's phone pointer (`EXPO_PUBLIC_API_URL`, now a FOUNDER_TODO row). All four are
    in FOUNDER_TODO, and none of them blocks the next queue item.
-2. **C3 — the LINZ squad toward 98 %** (in flight, PR #120). The measure/fix/re-measure loop, each
-   round with the before-and-after numbers committed, the ADR carrying the measured accuracy and
-   the trial target met on the eval set. The baseline is already measured — **96.9 % (1745/1800)
-   against 656,044 real LINZ addresses** (`docs/evidence/phase-2.3/linz-accuracy.md`) — so the two
-   slices in flight fixed the failures that measurement printed: a unit carrying a letter before a
-   slash (`255C/28`, `4D/87`, `D/87`) and a road's direction word before the suburb (`193 Durham
-   Street South Christchurch Central`). The re-measure needs `data/linz`, a FOUNDER_TODO item, so the
-   ADR's numbers wait on the founder's data while the fixes do not.
-3. **MASTER §22** — `docs/research/2026/andee-cleanroom-spec.md` is not written yet, and
-   its build (the pre-classifier, the ask-on-low-confidence rule, the visible memory)
-   follows it.
+2. **C3 — the LINZ squad toward 98 %.** The measure/fix/re-measure loop, with the ADR's
+   before-and-after numbers and the trial target met on the eval set as the done-when. The baseline is
+   measured — **96.9 % (1745/1800) against 656,044 real LINZ addresses**
+   (`docs/evidence/phase-2.3/linz-accuracy.md`) — and three fixes are merged against the failures that
+   measurement printed: a unit carrying a letter before a slash (`255C/28`, `4D/87`, `D/87`), a road's
+   direction word before the suburb, and a number word in a road's own name (`Two Chain Road`).
+   **What is left is the re-measure**, which needs `data/linz` — a FOUNDER_TODO item — so the next
+   session runs `fetch-linz.py` for the three areas, `build-linz-index.py`, then
+   `pytest tests/test_linz_accuracy.py`, and writes the numbers into the ADR.
+3. **MASTER §22 step 2** — the build, from the spec that is now merged: the pre-classifier, the
+   ask-on-low-confidence rule and the visible memory in `services/courier-voice` and
+   `apps/mobile/src/voice`, each a PR with red-first tests and the token and latency numbers before
+   and after measured through OmniRoute. Step 3 (the accessibility spike) is research only and ships
+   nothing.
 4. **Then billing (D44) and the rest of queue 3.**
 
 **Closed since the last update:** PR #107, #110 and #111 (the smoke test's version check,
