@@ -1,6 +1,48 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W43. **Local `main` == `origin/main` == `2a5b783` (the state at this handoff's merge). Lead session 7, 2026-10-29/30.**
+**Week:** 2026-W43. **Local `main` == `origin/main` == `fc9de3f` (the state at this handoff). Lead session 8, 2026-10-30.**
+
+
+## Lead session 8 (2026-10-30): PR #49 merges, BUG-113/114 land, and C1 starts
+
+**Merged this session, with the full ritual (merge commit → archive tag `archive/<branch>` → remote branch deleted, `git ls-remote --heads origin <branch>` printing nothing):**
+
+| PR | What | Merge |
+|---|---|---|
+| **#49** | the E2E is deterministic (the pins, the push trigger, the nightly health — BUG-065), and with it **BUG-114**: the screen-recordings job's boot was passed as a multi-line `script:`, and the emulator-runner runs each line as its own `sh -c`, so bash's `set -euo pipefail` died on dash and two more lines lost their shell state | `fc9de3f` |
+
+**#49's green:** 22/22 checks on the final head `fc9de3f`, both Maestro legs green, no re-run (§17.4). Its only red had been the recordings job, which BUG-114 fixed at the root.
+
+**Open, with their state:**
+
+| PR | What | Its state |
+|---|---|---|
+| **#52** | 02 Sign in + the Sign out row (the last of the 13 screens) | head `f7f0cae`: main merged in; **BUG-113** fixed — the 320x640 AVD put the revealed email form's password field below the fold, and the first fix (an imperative `scrollTo` from a `useLayoutEffect`) blanked the screen on the device instead (run 41010537066, both legs); the shipped fix makes the ways in step aside so the form is the screen's content, with a named way back; its E2E is re-running on `f7f0cae` |
+| **#58** | the registers tell the truth (B1: PARITY + the counting gate + the feature rows closed with their pointers) | head `efcc0f1`: its own new gate failed on its own register (34 findings: prose in the status column, two blank lines splitting one table into three, and BUG-058's row carrying seven cells); fixed at the register's root, the gate is 310 parity rows / 108 bug rows counted, all checks green |
+| **#128** | C1's squad-1 #2 (**BUG-071**, high): a 401 was read as "offline" and the stored receipt was spent on a refused session | head `8a9aa18`: red-first test reproduced `Expected: signed-out Received: offline`, then green; mobile 532/532, typecheck and lint clean; its gates are running |
+
+## C1, in order, from here
+
+The critical and high findings of squads 1, 3 (app side) and 6, each with a red-first test and a BUGS row closed with its PR. The six already fixed in #108 (BUG-069, 076, 086, 087, 088, 089) are skipped. The interlock the audit recorded: the squad-1/squad-3 runtime defects sit on modules with **zero production callers** until A1 wires the store in, so they ride their own slice rather than blocking A1.
+
+- **BUG-071** (HIGH, squad 1 #2) — **PR #128**, fixed: a refused session signs out.
+- **BUG-072** (HIGH, squad 1 #3) — `src/lib/auth-client.ts:17` hard-codes `http://localhost:3000` and `release-apk.yml` sets no `EXPO_PUBLIC_AUTH_URL`, so the release APK cannot reach any auth server. **Next.**
+- **BUG-073** (HIGH, squad 1 #4) — the voice command drops the safe place it captured; the existing test asserts the drop, so its name is not its claim (§14.2).
+- **BUG-074** (HIGH, squad 1 #5) — `app/(auth)/register.tsx:44` replaces to `/(tabs)` before the session settles.
+- **BUG-075** (HIGH, squad 1 #6) — the `voiceService` singleton is shut down by the first consumer that unmounts.
+
+## The numbering while I am here
+
+Main ends at **BUG-114** (BUG-113 is PR #52's, BUG-114 is #49's; DECISIONS ends at **D51**). Before any new row, take the highest across `origin/main` AND every open PR branch, then add one. Right now the highest across all three is **BUG-114**, so the next free number is **BUG-115**.
+
+## The traps of session 8 (all live, all this week)
+
+- **The emulator-runner does NOT run a multi-line `script:` as one program** (BUG-114). Its `src/script-parser.ts` splits the input per line, drops the comments and the blank lines, and `src/main.ts` runs each remaining line as its own `sh -c". So a standalone `set -euo pipefail` runs under dash, which has no `pipefail`: `/usr/bin/sh: 1: set: Illegal option -o pipefail`. A multi-line body also silently loses every variable and every `export` between lines. **Always one line calling a bash script**, as `android-e2e.yml` does.
+- **An imperative `scrollTo` from a `useLayoutEffect` on a revealed element can blank the screen** (BUG-113's second shape, run 41010537066, both legs): the scroll runs before the newly revealed content has a layout. Never fix a reveal-dependent layout with a scroll; make the app make room instead.
+- **jest passes while the device fails, when the suite never lays the screen out.** Both BUG-113 shapes were invisible to jest; the emulator was the only witness. A red E2E is evidence about the app, not about the flow (§12).
+- **A gate that a PR adds can fail on the register that same PR just wrote.** #58's own `check-parity.mjs` rejected #58's own prose statuses. Run the new gate against the new register before pushing.
+- **A row whose Fix cell holds a pipe inside an inline code span splits into extra cells** and its status column moves out of count. `|` escapes it; `BUG-064` in BUGS.md is the worked example.
+- **A register split by a blank line stops being one table**: the gate then reads each run's first line as a header, and the rows in it stop being counted.
 
 ## Lead session 7 (2026-10-29/30): the queue closes, BUG-109 is solved, and A1's foundation lands
 
