@@ -18,7 +18,12 @@ import os
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+# The repository root is three parents up from this file (scripts/data/), not
+# two: with two, the data landed in scripts/data/linz - outside the
+# `data/linz/` entry .gitignore covers - and the accuracy suite, which reads
+# data/linz/, skipped itself for want of an index that had been written
+# somewhere else. Pinned by tests/test_linz_pipeline_paths.py.
+REPO = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = REPO / "data" / "linz"
 
 # The LINZ Data Service WFS endpoint and the layer ids verified against the

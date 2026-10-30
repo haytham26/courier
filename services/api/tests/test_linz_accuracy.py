@@ -24,7 +24,11 @@ import pytest
 
 from app.address_correction import Address, AddressCorrector, InMemoryAddressStore
 
-REPO = Path(__file__).resolve().parents[2]
+# Three parents up from services/api/tests/, not two: with two the suite read
+# services/data/linz, which the pipeline does not write, so the accuracy test
+# skipped itself for want of an index that was never looked for. Pinned by
+# test_linz_pipeline_paths.py.
+REPO = Path(__file__).resolve().parents[3]
 DATA_DIR = REPO / "data" / "linz"
 AREAS = ("christchurch", "waimakariri", "selwyn")
 REPORT = REPO / "docs" / "evidence" / "phase-2.3" / "linz-accuracy.md"

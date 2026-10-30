@@ -11,7 +11,10 @@ import re
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+# Three parents up, not two (see the same fix in fetch-linz.py): with two, the
+# .env.local the key is read from was looked for in scripts/, not in the
+# repository root, and the lister refused to run wherever it was invoked from.
+REPO = Path(__file__).resolve().parents[2]
 
 
 def api_key() -> str:
