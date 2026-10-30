@@ -60,6 +60,13 @@ export interface RunStoreDeps {
   reason: SeedReason;
   /** The connections the construction site holds, released when the run ends. */
   release?: () => Promise<void>;
+  /**
+   * Ask the outbox to send what the log holds. Called after a delivery is
+   * recorded, so the delivery leaves the phone when there is signal and waits
+   * in the log when there is not. Optional: a store with no outbox (the
+   * marks-only construction) still records.
+   */
+  flush?: () => Promise<void>;
   /** The clock, for the moment of a delivery. The phone's, by default. */
   clock?: () => number;
 }
@@ -80,9 +87,13 @@ export class RunStore implements MarkStore {
 
   private readonly release: (() => Promise<void>) | undefined;
 
+  /** The seams this store takes its answers through, kept for the write path. */
+  private readonly deps: RunStoreDeps;
+
   private readonly clock: () => number;
 
   constructor(deps: RunStoreDeps) {
+    this.deps = deps;
     this.client = deps.client;
     this.cache = deps.cache;
     this.events = deps.events;
@@ -128,6 +139,16 @@ export class RunStore implements MarkStore {
       occurredAt: new Date(at).toISOString(),
     });
     await this.cache.markDelivered({ stopId: stop.id, sequence: stop.sequence, at, eventId });
+
+    // The delivery is in the log, so the outbox is asked to send it now. This
+    // is what makes a courier's mark leave the phone rather than sitting in a
+    // log nobody flushes (the audit's A1: the app does not sync).
+    // A failure to send leaves the event in the log: the delivery is recorded
+    // and the phone carries it, which is the one outcome the design must never
+    // lose.
+    if (this.deps.flush) {
+      await this.deps.flush();
+    }
   }
 
   /** Takes the stop back: the mark leaves the run, and the event leaves with it. */
