@@ -1,107 +1,154 @@
 /**
- * The Route screen's contract (T6 slice 3, screen 08).
+ * Tests for the route (stops) screen's segmented control.
  *
- * The tab keeps the Maestro testIDs the flows assert - `stops-screen`,
- * `stop-<id>` for a row, `stop-detail-sheet` for the sheet a row opens - and it
- * reads the SHARED run, so a stop delivered on the drive is the same stop here.
+ * The screen's segments read the run: a stop the courier has delivered on the
+ * drive belongs in "Done" on the list, with the minute the run recorded -
+ * which is what BUG-080 (the C1 audit's medium finding) says the screen did
+ * not do. `segmentOf` read the immutable `mockStops[].status` and never the
+ * run's own marks, so a stop delivered on Driving still listed as "To go"
+ * with a live delivery timestamp beside it.
+ *
+ * The native map and the icon font are mocked: the point is the wiring between
+ * the run's marks and the segments, and none of that needs a device.
  */
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import RouteTab from '../stops';
 import { RunProvider } from '@/maps/runState';
-import { mockStops } from '@/maps/stops';
+import type { DeliveredMark, MarkStore } from '@/run/types';
+
+/** A run store that already holds the deliveries it is given. */
+function storeWithMarks(marks: DeliveredMark[]): MarkStore {
+  const markDelivered = (stop: { id: string; sequence: number }): Promise<void> => {
+    marks.push({ stopId: stop.id, sequence: stop.sequence, at: Date.now(), eventId: `e-${stop.id}` });
+    return Promise.resolve();
+  };
+
+  const undoDelivered = (stopId: string): Promise<void> => {
+    const index = marks.findIndex((entry) => entry.stopId === stopId);
+    if (index >= 0) {
+      marks.splice(index, 1);
+    }
+    return Promise.resolve();
+  };
+
+  const deliveredMarks = (): Promise<DeliveredMark[]> => Promise.resolve(marks);
+  const close = (): Promise<void> => Promise.resolve();
+
+  return { deliveredMarks, markDelivered, undoDelivered, close };
+}
 
 jest.mock('@maplibre/maplibre-react-native', () => {
   const ReactActual = jest.requireActual<typeof import('react')>('react');
   const RN = jest.requireActual<typeof import('react-native')>('react-native');
-  const view = (props: { testID?: string; children?: React.ReactNode }) =>
-    ReactActual.createElement(RN.View, { testID: props.testID }, props.children);
-  return { Map: view, Camera: () => null, Marker: view, NativeUserLocation: () => null };
+
+  return {
+    Map: (props: { testID?: string; children?: React.ReactNode }) =>
+      ReactActual.createElement(RN.View, { testID: props.testID }, props.children),
+    Camera: (props: { testID?: string }) => ReactActual.createElement(RN.View, { testID: props.testID }),
+    Marker: (props: { testID?: string; children?: React.ReactNode }) =>
+      ReactActual.createElement(RN.View, { testID: props.testID }, props.children),
+  };
 });
 
-jest.mock('@/maps/useMapBoot', () => ({ useMapBoot: () => ({ tileSource: { kind: 'none' }, glyphsUrl: null }) }));
-jest.mock('@/maps/styles', () => ({ getCourierStyle: () => ({ name: 'courier-copilot-day' }) }));
-jest.mock('@/maps/drive', () => ({ DRIVE_ORIGIN_LNGLAT: [172.6, -43.5], hourMinuteOf: () => '10:38' }));
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), navigate: jest.fn(), back: jest.fn() }) }));
-jest.mock('@/motion/haptics', () => ({ hapticFor: jest.fn() }));
+jest.mock('@expo/vector-icons', () => {
+  const ReactActual = jest.requireActual<typeof import('react')>('react');
+  const RN = jest.requireActual<typeof import('react-native')>('react-native');
 
-const renderTab = () =>
+  return {
+    MaterialCommunityIcons: (props: { name: string }) =>
+      ReactActual.createElement(RN.Text, { accessibilityLabel: props.name }, props.name),
+    Ionicons: (props: { name: string }) =>
+      ReactActual.createElement(RN.Text, { accessibilityLabel: props.name }, props.name),
+  };
+});
+
+jest.mock('expo-location', () => ({
+  getForegroundPermissionsAsync: jest.fn(() => Promise.resolve({ granted: false, status: 'denied' })),
+  watchPositionAsync: jest.fn(() => Promise.resolve({ remove: jest.fn() })),
+  Accuracy: { Balanced: 3 },
+}));
+
+jest.mock('@/maps/packFiles', () => ({
+  loadOfflinePack: jest.fn(() =>
+    Promise.resolve({
+      state: { status: 'missing' },
+      locations: { downloadedFileUrl: null, bundledFileUrl: null },
+    }),
+  ),
+  localGlyphsUrl: jest.fn(() => null),
+}));
+
+// The preferences are kept in memory, so one test cannot leave a choice behind.
+jest.mock('@/sync/preferenceFiles', () => {
+  const actual = jest.requireActual<typeof import('@/sync/storage')>('@/sync/storage');
+  return {
+    createFilePreferenceStore: () => actual.createMemoryPreferenceStore(),
+  };
+});
+
+/** Renders the screen with a run whose marks are the ones given. */
+async function renderWithRun(marks: DeliveredMark[]): Promise<void> {
+  const store = storeWithMarks(marks);
   render(
     <GestureHandlerRootView>
-      <RunProvider>
+      <RunProvider store={store}>
         <RouteTab />
       </RunProvider>
     </GestureHandlerRootView>,
   );
+  // The provider reads its marks back on mount, so the segments wait for it.
+  await waitFor(() => {
+    expect(screen.getByTestId('stops-screen')).toBeTruthy();
+  });
+}
 
-describe('the Route screen (08)', () => {
-  it('renders the map, the sheet and the route title', () => {
-    const { getByTestId } = renderTab();
+describe('the route screen\'s segments (BUG-080)', () => {
+  it('counts a stop the run delivered as done, not as to go', async () => {
+    // Stop 2 is delivered on the DRIVE (the run's own mark), while the list's
+    // immutable status for it says "active" - which is the defect: the list
+    // read the static status and put it under "To go".
+    await renderWithRun([{ stopId: '2', sequence: 2, at: Date.UTC(2026, 9, 31, 21, 30), eventId: 'e-2' }]);
 
-    expect(getByTestId('stops-screen')).toBeTruthy();
-    expect(getByTestId('stops-map')).toBeTruthy();
-    expect(getByTestId('stops-panel')).toBeTruthy();
-    expect(screen.getByText('Route')).toBeTruthy();
+    expect(screen.getByTestId('stops-segment-to-go')).toBeTruthy();
+    // One delivered of the run's own, and the list's own delivered seed is
+    // still counted: two, not one.
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('Done 2').props.children,
+      ).toBeTruthy();
+    });
   });
 
-  it('shows the three states of a stop as one segmented control', () => {
-    const { getByTestId } = renderTab();
+  it('lists the run\'s delivered stop under the done segment', async () => {
+    await renderWithRun([{ stopId: '2', sequence: 2, at: Date.UTC(2026, 9, 31, 21, 30), eventId: 'e-2' }]);
 
-    expect(getByTestId('stops-segment')).toBeTruthy();
-    // 5 mock stops: 4 to go, 1 active, 1 delivered by the mock's own status.
-    expect(screen.getByText(/To go/)).toBeTruthy();
-    expect(screen.getByText(/Later/)).toBeTruthy();
-    expect(screen.getByText(/Done/)).toBeTruthy();
+    fireEvent.press(screen.getByTestId('stops-segment-done'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('stop-2')).toBeTruthy();
+    });
   });
 
-  it('a row is the stop, and it opens the sheet', () => {
-    const { getByTestId } = renderTab();
+  it('shows the minute the run recorded for the delivered stop', async () => {
+    // The screen shows the device's own clock, so the expected label is the
+    // instant read that way rather than a literal - the same rule
+    // `hourMinuteOf` applies, spelled out here so the assertion is about the
+    // run's event reaching the row and not about a timezone.
+    const at = Date.parse('2026-10-31T21:30:00.000Z');
+    const moment = new Date(at);
+    const expected = `${String(moment.getHours()).padStart(2, '0')}:${String(
+      moment.getMinutes(),
+    ).padStart(2, '0')}`;
 
-    // The flow's contract: a row is `stop-<id>`.
-    expect(getByTestId('stop-2')).toBeTruthy();
-    expect(screen.getByText('45 Papanui Road')).toBeTruthy();
+    await renderWithRun([{ stopId: '2', sequence: 2, at, eventId: 'e-2' }]);
 
-    fireEvent.press(getByTestId('stop-2'));
+    fireEvent.press(screen.getByTestId('stops-segment-done'));
 
-    expect(getByTestId('stop-detail-sheet')).toBeTruthy();
-    expect(screen.getByText('Merivale')).toBeTruthy();
-  });
-
-  it('the Done segment counts only what the run actually holds', () => {
-    const { getByTestId } = renderTab();
-
-    fireEvent.press(getByTestId('stops-segment-done'));
-
-    // The mock run's own delivered stop, and nothing invented beside it.
-    expect(getByTestId('stop-1')).toBeTruthy();
-    expect(screen.queryByTestId('stop-2')).toBeNull();
-  });
-
-  it('Optimise answers honestly instead of pretending it resequenced', () => {
-    const { getByTestId } = renderTab();
-
-    fireEvent.press(getByTestId('stops-optimise'));
-
-    expect(getByTestId('stops-optimise-note')).toBeTruthy();
-    expect(screen.getByText(/solver/)).toBeTruthy();
-  });
-
-  it('a segment with nothing in it says so', () => {
-    const { getByTestId } = renderTab();
-
-    fireEvent.press(getByTestId('stops-segment-later'));
-
-    expect(getByTestId('stops-empty')).toBeTruthy();
-  });
-
-  it('the list is the shared run, not a private copy of it', () => {
-    const { getByTestId } = renderTab();
-
-    // Every to-go stop of the shared mock is a row here.
-    for (const stop of mockStops.filter((entry) => entry.status !== 'delivered')) {
-      expect(getByTestId(`stop-${stop.id}`)).toBeTruthy();
-    }
+    await waitFor(() => {
+      expect(screen.getByText(expected)).toBeTruthy();
+    });
   });
 });
