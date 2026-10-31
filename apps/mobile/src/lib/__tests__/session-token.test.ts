@@ -39,11 +39,19 @@ jest.mock('expo-secure-store', () => ({
 }));
 jest.mock('expo-constants', () => ({ expoConfig: { scheme: 'courier' } }));
 
-/** The session token Better Auth hands the app, and what it is not. */
-const SESSION_TOKEN = 'yHT7olEgGGR3oD67hKsSRtQIXJ7fojlg';
+/**
+ * The session token Better Auth hands the app, and what it is not.
+ *
+ * It is written as a plain label rather than a real-shaped token on purpose:
+ * the repo's `no secrets in git` gate is gitleaks, and a literal that looks
+ * like a credential in a test file is exactly what it is meant to catch. What
+ * matters here is that the value is NOT the one the API accepts, and a label
+ * says that as plainly as a 40-character string does.
+ */
+const SESSION_TOKEN = 'the-session-token-of-the-auth-service';
 
 /** The bearer token the auth service mints, which is what the API verifies. */
-const MINTED_TOKEN = 'eyJhbGciOiJFUzI1NiIsImtpZCI6Im1pbnRlZC1qd2sifQ.minted.courier';
+const MINTED_TOKEN = 'the-minted-bearer-token';
 
 interface FakeClient {
   getSession: jest.Mock;
