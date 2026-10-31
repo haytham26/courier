@@ -66,7 +66,7 @@ def smoke(target: str) -> dict[str, float]:
 
     repo = SqlAlchemyRepo(engine)
     timings: dict[str, float] = {}
-    run_id, shift_id, stop_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    run_id, shift_id = uuid.uuid4(), uuid.uuid4()
 
     with engine.begin() as connection:
         # The seed speaks SQL directly: the drill is an ops tool, and the
@@ -92,19 +92,34 @@ def smoke(target: str) -> dict[str, float]:
             start_at=datetime.now(UTC),
         )
     )
+    # One stop that is about to be delivered, and one that is not: the read-back
+    # must derive the first stop's status from its event (BUG-115) and fall
+    # back to the seeded column for the second (the derivation's COALESCE).
+    evented_stop_id, unevented_stop_id = uuid.uuid4(), uuid.uuid4()
     with engine.begin() as connection:
         connection.execute(
             text(
                 "INSERT INTO stops (id, shift_id, sequence, address, latitude, longitude, "
                 "status, priority, parcels, location_id) "
-                "VALUES (:id, :shift, 1, '45 Papanui Road', -43.54, 172.60, 'pending', false, 1, "
+                "VALUES (:id, :shift, :sequence, :address, -43.54, 172.60, 'pending', false, 1, "
                 ":location)"
             ),
-            {
-                "id": stop_id,
-                "shift": shift_id,
-                "location": location_id_for("45 Papanui Road", None),
-            },
+            [
+                {
+                    "id": evented_stop_id,
+                    "shift": shift_id,
+                    "sequence": 1,
+                    "address": "45 Papanui Road",
+                    "location": location_id_for("45 Papanui Road", None),
+                },
+                {
+                    "id": unevented_stop_id,
+                    "shift": shift_id,
+                    "sequence": 2,
+                    "address": "56 Papanui Road",
+                    "location": location_id_for("56 Papanui Road", None),
+                },
+            ],
         )
     timings["write_run_and_stops_s"] = round(time.perf_counter() - started, 3)
 
@@ -115,7 +130,7 @@ def smoke(target: str) -> dict[str, float]:
             DeliveryEventRow(
                 id=uuid.uuid4(),
                 shift_id=shift_id,
-                stop_id=stop_id,
+                stop_id=evented_stop_id,
                 kind="delivered",
                 utterance=None,
                 safe_place=None,
@@ -136,11 +151,26 @@ def smoke(target: str) -> dict[str, float]:
     request, unroutable = _route_request_of(repo, run_id)
     built = build_plan(request)
     timings["read_back_and_plan_s"] = round(time.perf_counter() - started, 3)
-    # The SQL repo reads stops.status from the column (the in-memory repo
-    # derives it from the events) - the drill asserts the write-read
-    # contract: the stop row, the stored event and the plan.
-    if unroutable or len(built.stops) != len(rows) or rows[0].status != "pending":
-        print("SMOKE FAILED: the restored day does not read back as it was written")
+    # BUG-115: the stop's status is derived from its delivery events, on the SQL
+    # repo exactly as the in-memory repo always derived it, and the seeded
+    # column still answers for a stop with no event. This drill asserts that
+    # contract against the REAL restored database - a restore that stores a
+    # delivered event but reads the stop back as `pending` is a restore that
+    # loses the courier's day, which is the whole point of rehearsing it.
+    if unroutable or len(built.stops) != 2 or len(rows) != 2:
+        print(
+            "SMOKE FAILED: the restored day does not read back as it was written "
+            f"(routable={not unroutable}, planned={len(built.stops)}, read={len(rows)})"
+        )
+        raise SystemExit(1)
+    delivered = next(row for row in rows if row.id == evented_stop_id)
+    untouched = next(row for row in rows if row.id == unevented_stop_id)
+    if delivered.status != "delivered" or untouched.status != "pending":
+        print(
+            "SMOKE FAILED: the restored day does not read back as it was written "
+            f"(the delivered stop reads {delivered.status!r}, "
+            f"the untouched one reads {untouched.status!r})"
+        )
         raise SystemExit(1)
     return timings
 

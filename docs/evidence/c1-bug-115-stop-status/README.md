@@ -95,3 +95,37 @@ The repo's own `docker-compose.yml` cannot start its Postgres locally: its `comm
 `postgis/postgis:17-3.5` as a service container with no custom command), so the defect is local-only
 and does not block the suite; the local run used the CI's own image. **It is a real defect on a
 backend path and it is filed with the next free row.**
+
+## The red leg on this branch, fixed at its root (the new session, 2026-10-31)
+
+On the branch's final head (`ec823b7`), one leg was red: the restore drill (step 17 of the
+`lint, typecheck, test` job — everything else, including the whole pytest suite and the Postgres
+suite, passed):
+
+```
+SMOKE FAILED: the restored day does not read back as it was written
+##[error]Process completed with exit code 1.
+```
+
+The cause is this PR's own change, and the drill's contract was the stale half: `smoke()` seeded
+one stop, stored a `delivered` event through the repo, and then asserted
+`rows[0].status != "pending"` — a line whose comment said "the SQL repo reads stops.status from the
+column", which BUG-115 made false on the read. Playbook §4's contract check: the derivation is the
+design (ADR-014 §2 and the in-memory repo's behaviour), so the drill was fixed to it, not the fix
+to the drill.
+
+The drill now proves **both halves of the derivation against the real restored database**: two stops
+are seeded, one receives a `delivered` event, and the read-back must derive `delivered` for it and
+`pending` (the seeded column, the COALESCE fallback) for the other. Red first, on the real engine
+(`postgis/postgis:17-3.5` in Docker, the CI's own image; the probe script and the swap of
+`app/repo.py` to `origin/main`'s version were local only and reverted straight after):
+
+```
+=== 1. the branch's repo (the derivation in place) ===
+SMOKE PASSED: {'write_run_and_stops_s': 0.007, 'sync_batch_s': 0.003, 'read_back_and_plan_s': 13.099}
+=== 2. origin/main's repo (the pre-BUG-115 column read) ===
+SMOKE FAILED: the restored day does not read back as it was written (the delivered stop reads 'pending', the untouched one reads 'pending')
+```
+
+Gates on this tree: `-m db` 25 passed · the rest of the suite 478 passed, 1 skipped · ruff clean ·
+mypy clean.
