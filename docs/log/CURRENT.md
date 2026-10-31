@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W43. **Local `main` == `origin/main` == `fc9de3f` (the state at this handoff). Lead session 8, 2026-10-30.**
+**Week:** 2026-W43. **Local `main` == `origin/main` == `a6063b5` (the state at this handoff). Lead session 8b, 2026-10-30/31.
 
 
 ## Lead session 8 (2026-10-30): PR #49 merges, BUG-113/114 land, and C1 starts
@@ -43,6 +43,50 @@ Main ends at **BUG-114** (BUG-113 is PR #52's, BUG-114 is #49's; DECISIONS ends 
 - **A gate that a PR adds can fail on the register that same PR just wrote.** #58's own `check-parity.mjs` rejected #58's own prose statuses. Run the new gate against the new register before pushing.
 - **A row whose Fix cell holds a pipe inside an inline code span splits into extra cells** and its status column moves out of count. `|` escapes it; `BUG-064` in BUGS.md is the worked example.
 - **A register split by a blank line stops being one table**: the gate then reads each run's first line as a header, and the rows in it stop being counted.
+
+
+## Lead session 8b (2026-10-30/31): C1's five high findings land, A1 slice 3's seams land, and #52's last E2E leg
+
+**Merged this session, with the full ritual (merge commit → archive tag `archive/<branch>` → remote branch deleted, `git ls-remote --heads origin <branch>` printing nothing):**
+
+| PR | What | Merge |
+|---|---|---|
+| **#58** | the registers tell the truth (B1: PARITY reconciled, the feature backlog closed, `scripts/ci/check-parity.mjs` is the gate) | `acae966` |
+| **#128** | C1 squad 1 #2 — **BUG-071**: a refused session (401) is signed out, not read as offline | `e226abd` |
+| **#131** | C1 squad 1 #4 — **BUG-073**: the safe place a courier speaks is carried through to the delivery | `733ced5` |
+| **#133** | C1 squad 1 #5 — **BUG-074**: a new account ends in a session, so the guard lets it in | `f2058b1` |
+| **#130** | C1 squad 1 #3 — **BUG-072**: the release build has a real auth URL to dial | `04c1ef3` |
+| **#134** | C1 squad 1 #6 — **BUG-075**: one screen closing no longer takes the voice from another | `7009c73` |
+| **#129** | the session-8 CURRENT.md update (the founder's two corrections applied and verified) | `a6063b5` |
+
+**Every C1 finding above closed with a red-first test and a BUGS row closed with its PR.** The six already fixed in #108 (BUG-069, 076, 086, 087, 088, 089) were skipped, as C1 says.
+
+**Open, with their exact state:**
+
+| PR | What | Its state |
+|---|---|---|
+| **#52** | 02 Sign in (the last of the 13 screens) + BUG-113 | head `6147e88`: the screen's three BUG-113 shapes are fixed (the ways in step aside, the form takes the screen; the keyboard dismisses on submit and the footer is reachable; the flow taps each field before typing). **api-34 GREEN** on `6147e88` (run 41097310063); **api-35 RED on the same head, same step** — the failure dump shows the keyboard up and both strings merged into the email field again, the device quirk api-34 does not have. **NOT merged.** One re-run is not allowed here (§17.4: a flow ran). |
+| **#135** | A1 slice 3's seams: `useRunDay` (the one read path), `syncForThisSession` (the outbox's construction site), `apiSyncTransport` (the wire half of `events:batch`), and the store's `flush` | head `5374ae1`: gates running. **The screens still read `mockStops`** — replacing them is the slice's remaining work, and the E2E done-when (API + Postgres in compose, a flow that signs in, loads the seeded day, delivers, syncs, rows in Postgres) is NOT met. |
+
+**The numbering while I am here:** main ends at **BUG-114** (BUG-113 is #52's, BUG-114 was #49's). DECISIONS ends at **D51**. Before any new row, take the highest across `origin/main` AND every open PR branch, then add one: right now the highest of the three open branches is **BUG-114**, so the next free number is **BUG-115**.
+
+## The order from here
+
+1. **#52's api-35 leg.** The device evidence is unambiguous: the password field does not take focus on api-35 while api-34 passes on the same code. The app-side answer is to give each field a focus of its own on tap (rather than relying on the gesture), and then a fresh run on the final head — with NO re-run counted, because the change is a change.
+2. **#135's screens**: `app/(tabs)/index.tsx` and the drive read `useRunDay` and the `mockStops` import goes (the audit's A1 2.2, and C1 squad 1 #15).
+3. **A1 slice 4**: the no-mock E2E job (`android-e2e.yml` with the API and Postgres in compose, `DEMO_SEED_ENABLED=true`), which is A1's done-when.
+4. Then A4, A2, C2, A6, MASTER §22's app side, and the rest of the audit and MASTER to the §6 Definition of Done.
+
+## The traps of session 8b (all live)
+
+- **The emulator-runner does NOT run a multi-line `script:` as one program** (BUG-114). It splits it per line and runs each as its own `sh -c", so bash's `set -euo pipefail` dies on dash and every `export` dies with its line. **Always one line calling a bash script.**
+- **Maestro's `inputText` types into the FOCUSED field.** Its docs say it "works even if no text field is focused" only when the flow taps the field first. Naming both fields and trusting the focus put both strings in the email field.
+- **A `useLayoutEffect` scroll on a revealed element can blank the screen** (BUG-113's second shape): the scroll runs before the newly revealed content has a layout. Make the app make room instead of scrolling.
+- **A node splice of a register must keep the file's own encoding and line endings.** One splice wrote FOUNDER_TODO.md as replacement-character mojibake and the floor guard read it as control characters; another wrote CRLF into a file that is LF.
+- **A gate a PR adds can fail on the register that same PR just wrote** (#58's own `check-parity.mjs` rejected #58's own prose statuses). Run the new gate against the new register before pushing.
+- **A register split by a blank line stops being one table**, and the rows in it stop being counted.
+- **`await import()` is not available in this jest setup** — use a static import with `jest.mock` hoisting.
+- **jest's module factories may not reference out-of-scope variables** (names prefixed with `mock` are the exception), and a virtual mock is needed for a module that is not installed (`expo-audio`, `react-native-sherpa-onnx`).
 
 ## Lead session 7 (2026-10-29/30): the queue closes, BUG-109 is solved, and A1's foundation lands
 
