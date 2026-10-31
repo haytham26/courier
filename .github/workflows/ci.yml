@@ -165,8 +165,16 @@ jobs:
             --host http://127.0.0.1:8000 -u 50 -r 10 --run-time 60s
           kill %1 %2
 
+      # BUG-094 (C1 audit, squad 6 finding 2, accepted high): a cancelled run
+      # does not execute a queued `if: always()` step, so the superseded run of
+      # a flaky failure lost its only diagnosis artifact - the very evidence
+      # PLAYBOOK section 2 reads first. `cancelled()` runs on the
+      # success/cancellation outcomes, so the upload survives the cancellation
+      # that `concurrency.cancel-in-progress` performs (GitHub documents that a
+      # cancelled job skips `always()` steps; the conditional therefore names
+      # the cancellation as well as the normal end).
       - name: Upload the evidence logs
-        if: always()
+        if: always() || cancelled()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ci-logs

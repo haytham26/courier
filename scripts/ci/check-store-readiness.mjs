@@ -273,6 +273,9 @@ export function checkStoreReadiness(options = {}) {
   const appDir = options.appDir ? resolve(options.appDir) : join(repoDir, 'apps', 'mobile');
   const apkPath = options.apkPath ? resolve(options.apkPath) : null;
   const apkBudgetBytes = options.apkBudgetBytes ?? PLAY_POLICY.apkBudgetBytes;
+  // BUG-099: the release path measures the artefact it submits, so a missing
+  // one is a blocker there and a warning anywhere else.
+  const requireApk = options.requireApk === true;
 
   const findings = [];
   const add = (severity, id, title, detail, fix) => {
@@ -600,11 +603,17 @@ export function checkStoreReadiness(options = {}) {
   }
 
   // The release artefact: the size budget and the 64-bit requirement.
+  // BUG-099 (C1 audit, squad 6 finding 7, accepted high, consequence amended):
+  // a missing APK is a WARN when a developer runs this check by hand, and a
+  // BLOCKER on the release path (`--release`), where the artefact is the thing
+  // being submitted and the budget and the 64-bit requirement are the gate.
+  // Until this was split, no release-path workflow passed an APK at all, so
+  // the two teeth were never exercised on the path that submits.
   if (apkPath === null) {
     add(
-      'WARN',
+      requireApk ? 'BLOCKER' : 'WARN',
       'apk',
-      'The release APK was not checked',
+      requireApk ? 'the release APK is required on this path' : 'The release APK was not checked',
       'Without the release artefact the size budget and the 64-bit requirement cannot be measured.',
       'Run the check with --apk <the release APK> so the artefact is measured, not guessed.',
     );
@@ -733,7 +742,13 @@ export function renderReport(result, options = {}) {
 }
 
 function parseArguments(argv) {
-  const options = { repoDir: process.cwd(), appDir: null, apkPath: null, jsonPath: null };
+  const options = {
+    repoDir: process.cwd(),
+    appDir: null,
+    apkPath: null,
+    jsonPath: null,
+    release: false,
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     const next = () => {
@@ -744,6 +759,12 @@ function parseArguments(argv) {
     else if (argument === '--app') options.appDir = next() ?? options.appDir;
     else if (argument === '--apk') options.apkPath = next() ?? options.apkPath;
     else if (argument === '--json') options.jsonPath = next() ?? options.jsonPath;
+    // BUG-099 (C1 audit, squad 6 finding 7, accepted high): the path that
+    // submits builds the artefact it submits, so for that path a missing APK is
+    // a failure rather than a warning - the 80 MB budget and the 64-bit
+    // requirement are the teeth of this check, and they were never exercised
+    // where it matters.
+    else if (argument === '--release') options.release = true;
     else if (argument === '--help' || argument === '-h') options.help = true;
   }
   return options;
@@ -753,7 +774,7 @@ function main(argv) {
   const options = parseArguments(argv);
   if (options.help) {
     console.log(
-      'Usage: node scripts/ci/check-store-readiness.mjs [--repo <dir>] [--app <dir>] [--apk <file>] [--json <file>]',
+      'Usage: node scripts/ci/check-store-readiness.mjs [--repo <dir>] [--app <dir>] [--apk <file>] [--json <file>] [--release]',
     );
     return 0;
   }
@@ -764,6 +785,7 @@ function main(argv) {
     repoDir,
     appDir,
     apkPath: options.apkPath,
+    requireApk: options.release,
   });
 
   console.log(renderReport(result, { appDir: displayPath(relative(repoDir, appDir)) }));

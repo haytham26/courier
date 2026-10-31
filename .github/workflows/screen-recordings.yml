@@ -128,11 +128,23 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      # BUG-097 (C1 audit, squad 6 finding 5, accepted high, consequence
+      # amended): the key carried no hash of what determines the browser's
+      # bytes, so a dependency rotation (a new Playwright pin in the lockfile)
+      # was indistinguishable from the entry it replaced, and there were no
+      # restore-keys, so a partial entry was restored as a complete hit. A key
+      # over the lockfile's own hash makes a new browser a new key, and the
+      # restore-key lets an older Chromium still be restored (its download is
+      # only the delta, and Chromium is content-addressed by version). The
+      # runner's own cache of a 13-screen render is not worth a stale browser,
+      # but a partial entry is worth nothing at all.
       - name: Cache the Chromium of Playwright
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-chromium-1.49.1
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-chromium-1.49.1
+          restore-keys: |
+            playwright-${{ runner.os }}-chromium-1.49.1-
 
       - name: Render the 13 reference screens
         # The references are static HTML at a fixed 390×844 (the phone the
@@ -151,17 +163,37 @@ jobs:
           done
           ls -la render
 
-      - name: Enable KVM for the emulator
+      # BUG-068's shape, applied where the same defect survived: the AVD cache
+      # key in this workflow still carried only os+api+target+arch, so a rotated
+      # runner image (or an emulator/system-image upgrade) restored a snapshot
+      # made on a different toolset and the boot failure read as an app failure.
+      # The key carries the same pins and the same hash of the emulator options
+      # android-e2e.yml uses (BUG-065/BUG-068), so a pin change is a miss by
+      # construction, and the restore-keys let a compatible older snapshot
+      # still be reused.
+      - name: The AVD pins' fingerprint
+        id: pins
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
+          set -euo pipefail
+          opts="-no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim"
+          fingerprint="$MAESTRO_VERSION/$MAESTRO_SHA256/$EMULATOR_BUILD/34/google_apis/x86_64/$opts"
+          hash=$(printf '%s' "$fingerprint" | sha256sum | cut -d' ' -f1 | cut -c1-16)
+          echo "hash=$hash" >> "$GITHUB_OUTPUT"
+          echo "pin fingerprint: $fingerprint -> $hash"
 
       - name: Cache the AVD snapshot
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.android/avd
-          key: avd-${{ runner.os }}-34-google-apis-x86_64
+          key: avd-${{ runner.os }}-34-google-apis-x86_64-${{ steps.pins.outputs.hash }}
+          restore-keys: |
+            avd-${{ runner.os }}-34-google-apis-x86_64-
+
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
 
       - name: Boot the emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
