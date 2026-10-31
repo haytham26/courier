@@ -13,7 +13,11 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync } from 'node:zlib';
 
-const scriptPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'check-store-readiness.mjs');
+const scriptPath = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'check-store-readiness.mjs',
+);
 
 const GOOD_APP_JSON = {
   expo: {
@@ -329,6 +333,40 @@ test('the report is written to a file when the check asks for it', () => {
     const report = JSON.parse(readFileSync(reportPath, 'utf8'));
     assert.equal(report.summary.blockers, 0);
     assert.ok(Array.isArray(report.findings));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// BUG-099 (C1 audit, squad 6 finding 7, accepted high, consequence amended):
+// the missing-APK finding was a WARN, and no release-path workflow built or
+// passed an APK, so the 80 MB budget and the 64-bit requirement were never
+// enforced on the path that submits. The release mode (--release) turns an
+// unmeasured artefact into a blocker there, and stays a warning everywhere
+// else, because a developer running the check by hand on a tree with no APK is
+// not shipping anything.
+test('without an APK the check warns, and with --release it blocks', () => {
+  const { root } = makeFixture();
+  try {
+    const warn = runCheck(root);
+    assert.equal(warn.code, 0, 'a missing APK is still only a warning off the release path');
+    assert.match(warn.stdout, /The release APK was not checked/);
+
+    const release = runCheck(root, ['--release']);
+    assert.equal(release.code, 1, 'the release path cannot ship an unmeasured artefact');
+    assert.match(release.stdout, /the release APK is required on this path/);
+    assert.doesNotMatch(release.stdout, /The release APK was not checked/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('with --release a good APK still passes, so the gate is the artefact and not the flag', () => {
+  const { root, apk } = makeFixture();
+  try {
+    const result = runCheck(root, ['--apk', apk, '--release']);
+    assert.equal(result.code, 0, 'the check failed');
+    assert.match(result.stdout, /READY/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

@@ -1,0 +1,139 @@
+appId: com.courier.copilot
+name: Sign in - the front door, the four ways in and the email form
+---
+# The sign-in screen (02-sign-in.html) on the chosen tokens: the title and the
+# subtitle of the reference, the four ways in in the reference's order and
+# wording (Apple, Google, Passkey, then the "or" and Email), the plain reason
+# under a method the service does not offer, the email form with its one
+# primary action, and the two plain sentences the reference keeps at the
+# bottom.
+#
+# The screen is the app's front door: it opens when the phone has no session.
+# The E2E mock in `apps/mobile/src/lib/auth-client.ts` boots the app signed in,
+# so the app opens on Today there - the front door is reached the way a courier
+# reaches it: sign out from the Account tab first, then sign back in. The flow
+# proves both halves (the sign-out is the app's own action, so the app must
+# actually carry it), and it ends signed in, on the day, so the flows that run
+# after it alphabetically (smoke, stops, today-list) still open on a signed-in
+# screen.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The way out of a signed-in shift: the Account tab, then the sign-out row,
+# which asks first (a destructive-ish action is never one tap).
+- tapOn:
+    id: "tab-settings"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 30000
+- tapOn:
+    id: "settings-sign-out"
+# The first tap turns the row into the question: the app asks, and the flow
+# sees the ask rather than trusting that it happened.
+- assertVisible:
+    id: "settings-sign-out"
+    text: "Sign out?"
+# The second tap answers it. The app is signed out and on the front door.
+- tapOn:
+    id: "settings-sign-out"
+# The front door is the sign-in screen itself: the sign-out replaces the stack
+# with `/(auth)/login` (the app says where it lands, because the router's own
+# fallback for a route the guard has just removed is the unmatched screen -
+# which run 40872943163 hit on both legs). The welcome stays the cold-start
+# front door, one tap from here.
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-screen"
+    timeout: 60000
+
+# The reference's own copy. Maestro matches text exactly, so these are the
+# whole lines.
+- assertVisible: "Sign in"
+- assertVisible: "Use the account you drive with."
+
+# The four ways in, in the reference's order. The screen is taller than the
+# phone, so the ways in are revealed by their own testIDs: the copy moves with
+# the design, the testIDs are the contract.
+- scrollUntilVisible:
+    element:
+      id: "sign-in-apple"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    id: "sign-in-apple"
+- assertVisible:
+    id: "sign-in-google"
+- assertVisible:
+    id: "sign-in-passkey"
+- assertVisible:
+    id: "sign-in-email"
+
+# A method the service does not offer keeps its place and says why. The
+# emulator mock refuses the social and the passkey sign-ins, so all three
+# reasons are on the screen, and the buttons are disabled.
+- assertVisible:
+    id: "sign-in-apple-reason"
+- assertVisible:
+    id: "sign-in-google-reason"
+- assertVisible:
+    id: "sign-in-passkey-reason"
+
+# The email way in opens the form: the two fields with a label each and the
+# one primary action. The app scrolls the revealed form into view (BUG-113),
+# so the password field is on the 320x640 device's screen the moment the
+# form appears: the flow asserts it without a scroll of its own, because
+# making the flow scroll would hide the app's job of showing what the
+# courier asked for (PLAYBOOK 12).
+- tapOn:
+    id: "sign-in-email"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-form"
+    timeout: 20000
+- assertVisible:
+    id: "sign-in-email-field"
+- assertVisible:
+    id: "sign-in-password-field"
+- assertVisible:
+    id: "sign-in-submit"
+# Maestro's `inputText` types into the FOCUSED field (its own docs say so, and
+# "works even if no text field is focused" only when it taps one first). The
+# flow used to name each field and trust the focus to follow, and on the device
+# both strings landed in the email field - the failure dump shows
+# `driver@example.co.nzcorrect-horse-battery` on `sign-in-email-field` and an
+# empty password field. Tapping the field first is Maestro's documented idiom
+# for a targeted input, so the flow does that rather than depending on a focus
+# the app did not move (PLAYBOOK 12: the flow is honest about what it needs).
+- tapOn:
+    id: "sign-in-email-field"
+- inputText:
+    text: "driver@example.co.nz"
+- tapOn:
+    id: "sign-in-password-field"
+- inputText:
+    text: "correct-horse-battery"
+
+# The two sentences the reference keeps at the bottom: the phone keeps the
+# shift across a signal gap, and Face ID unlocks the app.
+- scrollUntilVisible:
+    element:
+      text: "You stay signed in for the whole shift, even without signal."
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "You stay signed in for the whole shift, even without signal."
+- assertVisible: "Face ID unlocks the app."
+
+# The submit calls through: the email and the password reach the provider,
+# the mock signs the driver in, and the app lands on Today, the same screen
+# every other flow opens on - so the flow that runs next still finds it.
+- tapOn:
+    id: "sign-in-submit"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+- takeScreenshot: "sign-in"
