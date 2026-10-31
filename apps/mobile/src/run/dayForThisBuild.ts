@@ -27,8 +27,16 @@ export const E2E_SHIFT_ID = 'shift-e2e';
  * still to deliver. The mapping is the one word that changes, and the rest of
  * the stop is the mock's own.
  */
-function contractStatus(status: string): 'pending' | 'delivered' | 'skipped' | 'deferred' | 'failed' {
-  return status === 'delivered' ? 'delivered' : status === 'skipped' ? 'skipped' : status === 'failed' ? 'failed' : 'pending';
+function contractStatus(
+  status: string,
+): 'pending' | 'delivered' | 'skipped' | 'deferred' | 'failed' {
+  return status === 'delivered'
+    ? 'delivered'
+    : status === 'skipped'
+      ? 'skipped'
+      : status === 'failed'
+        ? 'failed'
+        : 'pending';
 }
 
 /**
@@ -51,7 +59,11 @@ export function e2eDay(): RunSnapshot {
     stops: mockStops.map((stop) => ({
       id: stop.id,
       seq: stop.sequence,
-      address: stop.address,
+      // The contract answers one address string, with the suburb after its
+      // last comma - the shape the API's own seeded day answers ("12
+      // Riccarton Road, Riccarton"), so the E2E build's day reads the same
+      // way a real one does.
+      address: `${stop.address}, ${stop.suburb}`,
       status: contractStatus(stop.status),
       location_id: `e2e-loc-${stop.id}`,
       lat: stop.coordinates.lat,

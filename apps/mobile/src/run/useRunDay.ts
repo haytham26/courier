@@ -97,11 +97,25 @@ function toStop(api: {
   priority?: boolean;
   parcels?: number;
 }): Stop {
+  const whole = api.address ?? '';
+  // The contract answers one address string; the app's own view of a stop has
+  // a street and a suburb, and a New Zealand address carries the suburb after
+  // its last comma ("45 Papanui Road, Merivale" is the street "45 Papanui
+  // Road" in the suburb "Merivale"). An address with no comma has no suburb to
+  // name, which is the honest answer.
+  const parts = whole
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  const hasSuburb = parts.length > 1;
+  const suburb = hasSuburb ? parts[parts.length - 1] : '';
+  const street = hasSuburb ? parts.slice(0, -1).join(', ') : whole.trim();
+
   return {
     id: api.id,
     sequence: api.seq,
-    address: api.address ?? '',
-    suburb: '',
+    address: street,
+    suburb,
     status: (api.status ?? 'pending') as Stop['status'],
     coordinates: {
       lat: typeof api.lat === 'number' ? api.lat : 0,

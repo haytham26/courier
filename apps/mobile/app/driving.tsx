@@ -55,7 +55,6 @@ import {
   streetLine,
 } from '@/maps/drive';
 import { getCourierStyle } from '@/maps/styles';
-import { mockStops } from '@/maps/stops';
 import { useRun } from '@/maps/runState';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { useVoice } from '@/voice/useVoice';
@@ -153,17 +152,17 @@ export function DrivingScreen() {
   // planner (08, later) read the same marks.
   const run = useRun();
   const router = useRouter();
-  const deliveredIds = useMemo(
-    () => run.delivered.map((event) => event.stopId),
-    [run.delivered],
-  );
+  const deliveredIds = useMemo(() => run.delivered.map((event) => event.stopId), [run.delivered]);
 
-  const active = activeOf(mockStops, deliveredIds);
-  const after = active ? nextOf(mockStops, active.sequence, deliveredIds) : null;
+  // A1 slice 3: the drive moves on the run's own stops, read through the same
+  // store the marks are written to. The list is the day's own order, so the
+  // drive, Today and the confirm panel all answer with the same next stop.
+  const dayStops = run.day.stops;
 
-  const distance = active
-    ? formatDistance(haversineMeters(DRIVE_ORIGIN, positionOf(active)))
-    : '—';
+  const active = activeOf(dayStops, deliveredIds);
+  const after = active ? nextOf(dayStops, active.sequence, deliveredIds) : null;
+
+  const distance = active ? formatDistance(haversineMeters(DRIVE_ORIGIN, positionOf(active))) : '—';
 
   const mapStyle = useMemo(
     () =>
@@ -237,7 +236,7 @@ export function DrivingScreen() {
           trackUserLocation={locationAllowed ? 'heading' : undefined}
         />
         {locationAllowed ? <NativeUserLocation /> : null}
-        {mockStops.map((stop) => (
+        {dayStops.map((stop) => (
           <Marker
             key={stop.id}
             testID={`stop-marker-${stop.sequence}`}
@@ -287,7 +286,7 @@ export function DrivingScreen() {
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
             <Text style={[styles.stopCount, { color: t.colors.secondaryLabel }]}>
-              {active ? `STOP ${active.sequence} OF ${mockStops.length}` : 'THE RUN IS DELIVERED'}
+              {active ? `STOP ${active.sequence} OF ${dayStops.length}` : 'THE RUN IS DELIVERED'}
             </Text>
             <Text style={[styles.street, { color: t.colors.label }]}>
               {active ? streetLine(active.address) : ''}
