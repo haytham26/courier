@@ -25,7 +25,14 @@ import { useRunDay } from '../useRunDay';
 
 /** The day the API would answer with: a seeded run, two stops, in its order. */
 const mockSeededDay = {
-  run: { id: 'run-1', shift_id: 'shift-1', status: 'active' },
+  run: {
+    id: 'run-1',
+    shift_id: 'shift-1',
+    name: 'Northwood AM',
+    depot: { lat: -43.532, lon: 172.599 },
+    speed_kmh: 40,
+    start_at: '2026-10-31T07:30:00.000Z',
+  },
   stops: [
     {
       id: 'stop-1',
@@ -57,7 +64,11 @@ const mockMark = {
 };
 
 /** The answer the store gives `load` when the day is on the phone. */
-const okLoad = { status: 'ok', source: 'network', snapshot: mockSeededDay };
+const okLoad = {
+  status: 'ok' as const,
+  source: 'network' as const,
+  snapshot: mockSeededDay,
+};
 
 /** The store, answered by this test rather than by the phone. */
 const mockLoad = jest.fn(() => Promise.resolve(okLoad));
@@ -66,16 +77,21 @@ const mockMarkDelivered = jest.fn(() => Promise.resolve());
 const mockUndoDelivered = jest.fn(() => Promise.resolve());
 const mockClose = jest.fn(() => Promise.resolve());
 
-jest.mock('../productionRunStore', () => ({
-  productionRunStore: () => ({
-    load: mockLoad,
-    refresh: mockLoad,
-    deliveredMarks: mockDeliveredMarks,
-    markDelivered: mockMarkDelivered,
-    undoDelivered: mockUndoDelivered,
-    close: mockClose,
-  }),
-}));
+/**
+ * The store the hook reads, as the run state above the screens hands it over.
+ *
+ * The source is injected (the hook never opens a store of its own), so this
+ * suite proves the hook's own contract against a store that answers - the
+ * same seam the sign-out landing suite uses for the phone's handles.
+ */
+const storeSource = () => ({
+  load: mockLoad,
+  refresh: mockLoad,
+  deliveredMarks: mockDeliveredMarks,
+  markDelivered: mockMarkDelivered,
+  undoDelivered: mockUndoDelivered,
+  close: mockClose,
+});
 
 describe('the day the screens read (A1 slice 3)', () => {
   beforeEach(() => {
@@ -86,7 +102,7 @@ describe('the day the screens read (A1 slice 3)', () => {
 
   it("gives the screens the run's stops, in the run's order", async () => {
     const Probe = () => {
-      const day = useRunDay();
+      const day = useRunDay(storeSource);
       return <Text testID="order">{day.stops.map((stop) => stop.id).join(',')}</Text>;
     };
 
@@ -97,7 +113,7 @@ describe('the day the screens read (A1 slice 3)', () => {
 
   it('carries the marks the store holds, so every screen sees the same day', async () => {
     const Probe = () => {
-      const day = useRunDay();
+      const day = useRunDay(storeSource);
       return (
         <>
           <Text testID="delivered-count">{String(day.delivered.length)}</Text>
@@ -126,7 +142,7 @@ describe('the day the screens read (A1 slice 3)', () => {
     } as unknown as Awaited<ReturnType<typeof mockLoad>>);
 
     const Probe = () => {
-      const day = useRunDay();
+      const day = useRunDay(storeSource);
       return (
         <>
           <Text testID="has-run">{String(day.hasRun)}</Text>

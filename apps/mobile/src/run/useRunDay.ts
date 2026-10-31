@@ -18,24 +18,52 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { productionRunStore } from './productionRunStore';
 import type { DeliveredMark } from './types';
+import type { RunStore } from './runStore';
 import type { Stop } from '@/maps/stops';
 
 /**
- * The store this hook reads: the run store of the app's construction site,
- * which is both the day's loader and the marks' owner.
+ * The store this hook reads: the app's run store, which is both the day's
+ * loader and the marks' owner.
+ *
+ * It is passed in, never imported here: the caller (the run state above the
+ * screens) already holds the session's store, and a hook that opened a second
+ * one would be a second handle to look through.
  */
-type DayStore = ReturnType<typeof productionRunStore>;
+type DayStore = RunStore;
 
-/** Where the hook gets its store. Injectable, so a test can answer through. */
-type StoreSource = () => Pick<
+/** Where the hook gets its store: the caller's own, injected. */
+export type StoreSource = () => Pick<
   DayStore,
   'load' | 'deliveredMarks' | 'markDelivered' | 'undoDelivered' | 'close'
 >;
 
+/** Where the hook gets its store. Injectable, so a test can answer through. */
+
 /** The day the store answers with, as the hook holds it. */
 type RunLoad = Awaited<ReturnType<DayStore['load']>>;
+
+/**
+ * The read path of a store that holds no day (A1 slice 3).
+ *
+ * A build whose marks live in memory - a test's provider, or a phone whose
+ * encrypted database could not be opened - has no day behind them, and the
+ * screens answer with an empty one rather than opening a second handle to
+ * look. Nothing crashes, and nothing lies: `hasRun` is false and the stops are
+ * none.
+ */
+export function noDayStore(): Pick<
+  DayStore,
+  'load' | 'deliveredMarks' | 'markDelivered' | 'undoDelivered' | 'close'
+> {
+  return {
+    load: () => Promise.resolve({ status: 'offline', snapshot: null }),
+    deliveredMarks: () => Promise.resolve([]),
+    markDelivered: () => Promise.resolve(),
+    undoDelivered: () => Promise.resolve(),
+    close: () => Promise.resolve(),
+  };
+}
 
 /** What the screens need from the day, and nothing they can get two ways. */
 export interface RunDay {
@@ -89,7 +117,10 @@ function toStop(api: {
  * refresh; the marks are read from the same store the run state writes
  * through, so a delivery made on the drive is a delivery Today sees.
  */
-export function useRunDay(source: StoreSource = productionRunStore): RunDay {
+export function useRunDay(source: StoreSource): RunDay {
+  // The source is the caller's own function, so it may be a fresh closure each
+  // render: the store it answers with is what has to be stable, and it is
+  // read once per source rather than re-opened on every render.
   const store = useMemo(source, [source]);
   const [snapshot, setSnapshot] = useState<RunLoad | null>(null);
   const [marks, setMarks] = useState<DeliveredMark[]>([]);
@@ -129,12 +160,18 @@ export function useRunDay(source: StoreSource = productionRunStore): RunDay {
 
   const isDelivered = useCallback((stopId: string) => deliveredIds.has(stopId), [deliveredIds]);
 
-  return {
-    hasRun: stops.length > 0,
-    stops,
-    delivered: marks,
-    isDelivered,
-    nextStop,
-    remaining: stops.filter((stop) => !deliveredIds.has(stop.id)).length,
-  };
+  // One object per answer, not one per render: the screens read this through
+  // the run state above them, and an unstable identity would re-render every
+  // screen on every frame for a day that has not changed.
+  return useMemo(
+    () => ({
+      hasRun: stops.length > 0,
+      stops,
+      delivered: marks,
+      isDelivered,
+      nextStop,
+      remaining: stops.filter((stop) => !deliveredIds.has(stop.id)).length,
+    }),
+    [stops, marks, isDelivered, nextStop, deliveredIds],
+  );
 }

@@ -12,7 +12,7 @@
  */
 import { RunStore } from '../runStore';
 import { EventLog } from '@/sync/eventLog';
-import type { DeliveredMark, RunApi, RunCache } from '../types';
+import type { DeliveredMark, RunApi, RunCache, RunSnapshot } from '../types';
 import type { DeliveryEvent, EventStore } from '@/sync/types';
 
 /** An event store that keeps what it was given. */
@@ -54,11 +54,34 @@ class FakeStore implements EventStore {
 /** The one delivery the courier makes in these tests. */
 const stop = { id: 'stop-1', sequence: 1 };
 
+/**
+ * The day the phone holds: a shift with a stop on it.
+ *
+ * A mark cannot exist before the day does - the stops a courier marks are the
+ * day's own - so the cache answers with one, and the shift the outbox must
+ * send under comes from it.
+ */
+const DAY: RunSnapshot = {
+  run: {
+    id: 'run-1',
+    shift_id: 'shift-1',
+    name: 'Northwood AM',
+    depot: { lat: -43.532, lon: 172.599 },
+    speed_kmh: 40,
+    start_at: '2026-10-31T07:30:00.000Z',
+  },
+  stops: [
+    { id: 'stop-1', seq: 1, address: '12 Riccarton Road', status: 'pending', location_id: 'loc-1' },
+  ],
+};
+
 /** A cache that keeps the day and its marks. */
 class FakeCache implements RunCache {
   marks: DeliveredMark[] = [];
-  read(): Promise<null> {
-    return Promise.resolve(null);
+  /** The day the phone holds, or null on a first launch with no network. */
+  day: RunSnapshot | null = DAY;
+  read(): Promise<RunSnapshot | null> {
+    return Promise.resolve(this.day);
   }
   write(): Promise<void> {
     return Promise.resolve();
@@ -92,7 +115,14 @@ class FakeApi implements RunApi {
   getRun() {
     return Promise.resolve({
       status: 'ok',
-      data: { id: 'run-1', shift_id: 'shift-1', status: 'active' },
+      data: {
+        id: 'run-1',
+        shift_id: 'shift-1',
+        name: 'Northwood AM',
+        depot: { lat: -43.532, lon: 172.599 },
+        speed_kmh: 40,
+        start_at: '2026-10-31T07:30:00.000Z',
+      },
     } as unknown as Awaited<ReturnType<RunApi['getRun']>>);
   }
   getStops() {
@@ -106,7 +136,7 @@ class FakeApi implements RunApi {
 }
 
 describe("the store's write path leaves the phone when it can (A1 slice 3)", () => {
-  it('asks the outbox to send the delivery it just recorded', async () => {
+  it('asks the outbox to send the delivery it just recorded, under the run own shift', async () => {
     const store = new FakeStore();
     const flush = jest.fn(() => Promise.resolve());
 
@@ -120,9 +150,35 @@ describe("the store's write path leaves the phone when it can (A1 slice 3)", () 
 
     await runStore.markDelivered(stop);
 
-    // The event is in the log, and the outbox was asked to send.
+    // The event is in the log, and the outbox was asked to send it.
     expect(store.recorded).toHaveLength(1);
     expect(flush).toHaveBeenCalledTimes(1);
+    // The batch endpoint is the shift's own, so the shift the outbox is given
+    // is the run's: a delivery sent under the wrong shift lands in nobody's day.
+    expect(flush).toHaveBeenCalledWith('shift-1');
+  });
+
+  // A mark before the day has been read cannot happen on a phone (the stops a
+  // courier marks are the day's own), but a store that has no day on it must
+  // still record and carry on rather than crash: the phone keeps the delivery
+  // and sends it when it knows where it goes.
+  it('records the delivery with no day on the phone, and asks the outbox nothing', async () => {
+    const store = new FakeStore();
+    const flush = jest.fn(() => Promise.resolve());
+    const cache = new FakeCache();
+    cache.day = null;
+
+    const runStore = new RunStore({
+      client: new FakeApi(),
+      cache,
+      events: new EventLog(store),
+      reason: 'dev',
+      flush,
+    } as unknown as ConstructorParameters<typeof RunStore>[0]);
+
+    await expect(runStore.markDelivered(stop)).resolves.toBeUndefined();
+    expect(store.recorded).toHaveLength(1);
+    expect(flush).not.toHaveBeenCalled();
   });
 
   // A store with no outbox must keep working: the marks-only construction and
