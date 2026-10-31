@@ -525,6 +525,25 @@ function SignInScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets
+          /* BUG-113's last shape, second half: Android's own perf heuristic
+             drops a view from the accessibility tree once it falls outside the
+             ScrollView's clip - and where that clip sits is the keyboard's
+             business, not the app's. The api-34 leg of run 41150635942 proved
+             it: the form (y=24..296), the way back (308..356) and the first
+             footer sentence (376..408) were all in the tree, and the second
+             footer sentence, ten pixels lower, was gone - because that device
+             raised a taller keyboard (a password keyboard with its number row,
+             top edge at y=405 against y=381 on api-35). Same code, same taps,
+             one leg green and one leg red: the app let a keyboard height it
+             does not own decide whether its own content exists (PLAYBOOK 12).
+
+             Keeping the views in the tree is the app-side answer: the content
+             of this screen is fifteen nodes, so the heuristic buys nothing,
+             and a screen whose own sentences stop existing under a keyboard
+             is also a screen a courier using TalkBack cannot read to the end.
+             The fields keep their own place on the screen either way - this is
+             about what the tree holds, not about where anything is drawn. */
+          removeClippedSubviews={false}
         >
           {/* BUG-113's last shape: the revealed email form takes the screen.
               The front door's furniture is what pushes a form down a phone,

@@ -28,7 +28,7 @@
  * half of that rule).
  */
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -344,6 +344,28 @@ describe('the sign-in screen', () => {
     // The way back is named, because the front door stepped aside: a screen
     // that hides its own front door with no way out is a defect, not a design.
     expect(screen.getByTestId('sign-in-other-ways')).toBeTruthy();
+  });
+
+  // BUG-113's last shape, second half, proven on the api-34 leg of run
+  // 41150635942: the app's own content stopped existing. The form, the way
+  // back and the first footer sentence were in the accessibility tree, and the
+  // second footer sentence - ten pixels lower - was gone, because that device
+  // raised a taller keyboard (a password keyboard with its number row, top
+  // edge at y=405 against y=381 on api-35) and Android's `removeClippedSubviews`
+  // drops whatever falls outside the ScrollView's clip. The same code, the
+  // same taps, one leg green and one leg red: the app let a keyboard height it
+  // does not own decide whether its own sentences exist (PLAYBOOK 12).
+  //
+  // The app keeps its content in the tree: the heuristic buys nothing on a
+  // screen of fifteen nodes, and a screen whose own footer vanishes under a
+  // keyboard is also a screen a courier using TalkBack cannot read to the end.
+  // Where things are drawn is the layout's business and it is unchanged - this
+  // is about what the tree holds.
+  it('keeps the scrolled content in the accessibility tree, so a keyboard cannot drop it', () => {
+    renderScreen();
+
+    const scrollView = screen.UNSAFE_getByType(ScrollView);
+    expect(scrollView.props.removeClippedSubviews).toBe(false);
   });
 
   // The way back is named, because the ways in stepped aside: a screen that
