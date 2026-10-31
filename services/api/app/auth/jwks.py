@@ -11,6 +11,7 @@ secret: a missing `AUTH_JWKS_URL` stops the API from starting.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
@@ -94,11 +95,17 @@ class AuthPrincipal:
 class JwksVerifier:
     """Verifies JWTs against a remote JWKS, with a short-lived key cache."""
 
-    def __init__(self, settings: AuthSettings, client: httpx.Client | None = None) -> None:
+    def __init__(
+        self,
+        settings: AuthSettings,
+        client: httpx.Client | None = None,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self._settings = settings
         self._client = client or httpx.Client(timeout=settings.auth_jwks_timeout_seconds)
         self._keys: dict[str, dict[str, Any]] = {}
         self._unknown_kids: set[str] = set()
+        self._clock = clock
         self._fetched_at = 0.0
 
     def _refresh(self) -> None:
@@ -117,10 +124,10 @@ class JwksVerifier:
             raise InvalidTokenError("JWKS document contains no key with a 'kid'")
         # A kid the document now carries is no longer one we could not find.
         self._unknown_kids -= set(self._keys)
-        self._fetched_at = time.monotonic()
+        self._fetched_at = self._clock()
 
     def _signing_key(self, kid: str | None) -> Any:
-        stale = (time.monotonic() - self._fetched_at) > self._settings.auth_jwks_cache_seconds
+        stale = (self._clock() - self._fetched_at) > self._settings.auth_jwks_cache_seconds
         known = kid is None or kid in self._keys
         # A kid we have never seen is worth one lookup: the keys may have
         # rotated since the last fetch. A kid we have already asked the JWKS

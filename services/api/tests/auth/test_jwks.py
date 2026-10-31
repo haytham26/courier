@@ -89,13 +89,17 @@ def make_verifier(
     jwks: dict[str, Any],
     *,
     handler: httpx.MockTransport | None = None,
+    clock: Any | None = None,
     **settings_overrides: Any,
 ) -> JwksVerifier:
     def default_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=jwks)
 
     client = httpx.Client(transport=handler or httpx.MockTransport(default_handler))
-    return JwksVerifier(make_settings(**settings_overrides), client=client)
+    kwargs: dict[str, Any] = {}
+    if clock is not None:
+        kwargs["clock"] = clock
+    return JwksVerifier(make_settings(**settings_overrides), client=client, **kwargs)
 
 
 @pytest.fixture()
@@ -265,28 +269,38 @@ class TestTheNegativeCache:
 
         The JWKS answers with the old key and then with both, so the order of
         the calls does not decide the outcome - the first look does not know the
-        key, and the next one does.
+        key, and the next one does. The staleness is advanced through the
+        verifier's own clock rather than by poking `_fetched_at`, so the proof
+        does not depend on how long the machine running the suite has been up
+        (the 2026-10-31 CI failure: a young runner's monotonic clock read below
+        the cache TTL, so the faked staleness never became stale and the rotated
+        key stayed refused).
         """
         private_key, old_jwk = key_pair
         new_private_key, new_jwk = make_key_pair("bogus-kid")
         calls = {"count": 0}
+        now = {"value": 0.0}
+
+        def clock() -> float:
+            return now["value"]
 
         def rotating(request: httpx.Request) -> httpx.Response:
             calls["count"] += 1
             keys = [old_jwk] if calls["count"] == 1 else [old_jwk, new_jwk]
             return httpx.Response(200, json={"keys": keys})
 
-        verifier = make_verifier({}, handler=httpx.MockTransport(rotating))
+        verifier = make_verifier({}, handler=httpx.MockTransport(rotating), clock=clock)
 
         with pytest.raises(InvalidTokenError):
             verifier.verify(sign(new_private_key, kid="bogus-kid"))
         assert "bogus-kid" in verifier._unknown_kids
 
-        # The cache is stale, so the next look asks again and finds it.
-        verifier._fetched_at = 0.0
+        # The cache TTL passes: the next look asks the JWKS again and finds it.
+        now["value"] = 1_000.0
         principal = verifier.verify(sign(new_private_key, kid="bogus-kid"))
         assert principal.user_id == "user-123"
         assert "bogus-kid" not in verifier._unknown_kids
+        assert calls["count"] == 2
 
 
 class TestTheIssuerTheApiAccepts:

@@ -57,3 +57,41 @@ every open PR branch was 159, so the new row is 160.
 - `Deploy staging`: not re-run in this session — the only change on its path is `infra/deploy.sh`
   (the state file's source), which the stubbed-docker suite covers line by line; the leg runs on
   the push to main and is the first thing this session reads after the merge.
+
+## The red leg on the branch, fixed at its root (2026-10-31)
+
+After the push, two legs went red on the branch's final head (`e1a2a3c`), both with one cause: the
+`Test` step of `lint, typecheck, test` and the `Coverage ratchet` job, which runs the same suite:
+
+```
+FAILED tests/auth/test_jwks.py::TestTheNegativeCache::test_a_key_that_rotates_in_is_accepted_again
+  - app.auth.jwks.InvalidTokenError: unknown signing key 'bogus-kid'
+1 failed, 485 passed, 1 skipped, 17 deselected, 1 warning in 26.26s
+the API coverage run failed
+```
+
+**The root cause is in the test, not in the verifier.** The test faked cache staleness by poking
+the private field (`verifier._fetched_at = 0.0`), which only makes the 300 s cache stale when the
+machine's `time.monotonic()` reads above 300 s. It passes on a developer box that has been up for
+hours and fails on a young CI runner, whose monotonic clock reads below the TTL — proved by running
+the same handler with the clock pinned young and old (the probe is out-of-tree, per PLAYBOOK §10):
+
+```
+monotonic=120.0: first_in_unknown=True second=REFUSED (unknown signing key 'bogus-kid')
+monotonic=5000.0: first_in_unknown=True second=accepted as user-123
+```
+
+The product behaviour was right all along: a kid already asked about is not worth a second fetch
+(BUG-121), and a stale cache asks again and picks a key that rotated in.
+
+**The fix makes the time injectable, not the assertion weaker.** `JwksVerifier` now takes
+`clock: Callable[[], float] = time.monotonic` (the default is unchanged production behaviour), and
+the test advances its own clock past the TTL instead of poking a private field. The red-first proof
+is the same probe: with the clock held young the rotated key stays refused (one fetch), and with
+the clock advanced it is accepted (two fetches). `assert calls["count"] == 2` pins that the refresh
+actually happened.
+
+One local-only red was also explained, not chased (PLAYBOOK §6): in a worktree without
+`node_modules` the generated-API-client check fails on quote style, because the generator's own
+docstring says a missing formatter must make the gate red, never silently green. With the
+lockfile's prettier (3.9.10) on the PATH the check passes; CI runs it with prettier installed.
