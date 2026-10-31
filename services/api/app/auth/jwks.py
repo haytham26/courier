@@ -103,6 +103,22 @@ class AuthSettings(BaseSettings):
             )
         return value.rstrip("/")
 
+    @field_validator("auth_jwt_leeway_seconds")
+    @classmethod
+    def the_tolerance_is_bounded(cls, value: float) -> float:
+        """The clock tolerance is a skew, not a window (BUG-123).
+
+        A typo in the value would silently open a replay window: an hour of
+        leeway is a token valid for an hour after it expired. The bound is
+        generous for a real skew and small enough that a fat-fingered 3600
+        refuses to boot instead of passing quietly.
+        """
+        if value <= 0 or value > 300:
+            raise ValueError(
+                f"AUTH_JWT_LEEWAY_SECONDS is a skew bounded to 300 s, not {value}"
+            )
+        return value
+
     @field_validator("auth_jwks_url")
     @classmethod
     def the_jwks_url_is_absolute(cls, value: str) -> str:
@@ -324,7 +340,11 @@ def get_auth_settings() -> AuthSettings:
     try:
         settings = AuthSettings()
     except Exception as exc:  # pydantic ValidationError
-        raise RuntimeError("Missing required env: AUTH_JWKS_URL — see .env.example") from exc
+        # The validation message names the variable and the problem (a value
+        # that is set but plaintext-unlisted is not "missing"), so it is
+        # carried rather than flattened: an operator grepping the log for the
+        # real value finds it (BUG-131's startup refusal).
+        raise RuntimeError(f"Invalid auth configuration: {exc}") from exc
     if not settings.auth_jwks_url:
         raise RuntimeError("Missing required env: AUTH_JWKS_URL — see .env.example")
     if not settings.auth_jwt_issuer:

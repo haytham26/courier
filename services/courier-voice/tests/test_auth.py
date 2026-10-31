@@ -18,7 +18,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from app.auth import InvalidTokenError, JwksVerifier
+from app.auth import InvalidTokenError, JwksVerifier, canonical_jwk_digest
 from app.config import VoiceConfig
 
 ISSUER = "http://localhost:3001"
@@ -258,7 +258,7 @@ def test_a_substituted_key_is_refused_by_the_pin_and_the_cache_is_left_alone():
         attacker_jwk, auth_jwks_key_fingerprints=canonical_jwk_digest(jwk)
     )
 
-    with pytest.raises(InvalidTokenError, match="fingerprint is not pinned"):
+    with pytest.raises(InvalidTokenError, match="could not be verified against the pinned keys"):
         verifier.verify(a_token(private, kid="attacker"))
     assert verifier._keys == {}
 
@@ -273,3 +273,34 @@ def test_the_digest_matches_the_api_side_of_the_contract():
     # red there.
     assert voice_digest(dict(jwk)) == voice_digest(jwk)
     assert voice_digest(jwk) != voice_digest({**jwk, "alg": "ES512"})
+
+
+def test_the_digest_of_the_known_answer_key_is_the_pinned_value():
+    """The same literal key, the same digest, asserted on both surfaces.
+
+    The API's suite carries this vector too (`test_the_digest_of_the_
+    known_answer_key_is_the_pinned_value`), so a change to the canonical form
+    on one side alone goes red there and here.
+    """
+    known_answer = {
+        "kty": "EC",
+        "crv": "P-256",
+        "x": "s-6OL1BQ2xSxHJMMMFts4aLUWgtZnZLYj3yBKfDBfCQ8",
+        "y": "vqVMVnhCjCiWnImEn6JKrddnvzTDwNKMKEUhkTGxIUg",
+        "kid": "known-answer-key",
+        "alg": "ES256",
+        "use": "sig",
+    }
+
+    assert canonical_jwk_digest(known_answer) == "73c28f01c1c2dd06c66ff641e9df69a7cb8fabe59257b2fb10abdfe4d2cdb4e8"
+
+
+def test_a_url_whose_scheme_is_neither_http_nor_https_is_refused():
+    """The voice service refuses the same shapes the API refuses at startup."""
+    with pytest.raises(ValueError, match="absolute URL"):
+        _a_config(auth_jwks_url="ftp://auth:3001/jwks")
+
+
+def test_a_url_without_a_host_is_refused():
+    with pytest.raises(ValueError, match="absolute URL"):
+        _a_config(auth_jwks_url="https:///jwks")

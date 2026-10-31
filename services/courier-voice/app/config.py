@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from urllib.parse import urlsplit
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 #: The hosts whose plaintext hop has no network to be adjacent to (BUG-131's
@@ -86,6 +86,21 @@ class VoiceConfig(BaseSettings):
     def algorithms(self) -> tuple[str, ...]:
         """The signing algorithms the service accepts."""
         return tuple(item.strip() for item in self.auth_jwt_algorithms.split(",") if item.strip())
+
+    @field_validator("auth_jwks_url")
+    @classmethod
+    def the_jwks_url_is_absolute(cls, value: str) -> str:
+        """The URL is absolute, scheme and host and all (BUG-131's shape half).
+
+        The API's verifier refuses `ftp://…` and `https:///…` at startup; the
+        two resource servers read one JWKS, so one shape belongs to both.
+        """
+        if not value:
+            raise ValueError("AUTH_JWKS_URL is required - see .env.example")
+        parts = urlsplit(value)
+        if parts.scheme not in ("http", "https") or not parts.netloc:
+            raise ValueError(f"AUTH_JWKS_URL is not an absolute URL: {value!r}")
+        return value
 
     @model_validator(mode="after")
     def the_plaintext_jwks_host_is_listed_on_purpose(self) -> VoiceConfig:

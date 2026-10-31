@@ -510,7 +510,7 @@ class TestTheJwksUrlCarriesItsScheme:
         assert settings.auth_jwks_url == "http://auth:3001/api/auth/jwks"
         assert settings.internal_hosts == {"auth", "auth-b"}
 
-    def test_a_url_without_a_scheme_is_refused_at_startup(self) -> None:
+    def test_a_url_whose_scheme_is_not_a_known_one_is_refused_at_startup(self) -> None:
         with pytest.raises(ValueError, match="absolute URL"):
             make_settings(auth_jwks_url="auth:3001/api/auth/jwks")
 
@@ -564,3 +564,38 @@ class TestThePinnedFingerprints:
         # computes it once and a rotation is a new digest, not a re-derivation.
         assert canonical_jwk_digest(jwk) == canonical_jwk_digest(dict(jwk))
         assert canonical_jwk_digest(jwk) != canonical_jwk_digest({**jwk, "x": "00"})
+
+
+    # The known-answer vector the voice suite's suite carries too: one literal
+    # key, one expected digest, asserted by both, so a change to the canonical
+    # form on either side alone goes red there.
+    KNOWN_ANSWER_JWK = {
+        "kty": "EC",
+        "crv": "P-256",
+        "x": "s-6OL1BQ2xSxHJMMMFts4aLUWgtZnZLYj3yBKfDBfCQ8",
+        "y": "vqVMVnhCjCiWnImEn6JKrddnvzTDwNKMKEUhkTGxIUg",
+        "kid": "known-answer-key",
+        "alg": "ES256",
+        "use": "sig",
+    }
+
+    def test_the_digest_of_the_known_answer_key_is_the_pinned_value(self) -> None:
+        assert canonical_jwk_digest(self.KNOWN_ANSWER_JWK) == "73c28f01c1c2dd06c66ff641e9df69a7cb8fabe59257b2fb10abdfe4d2cdb4e8"
+
+    def test_the_tolerance_is_refused_when_it_is_not_a_skew(self) -> None:
+        # A fat-fingered 3600 would open an hour's replay window, so the bound
+        # refuses to boot instead of passing quietly.
+        with pytest.raises(ValueError, match="bounded to 300"):
+            make_settings(auth_jwt_leeway_seconds=3600)
+        with pytest.raises(ValueError, match="bounded to 300"):
+            make_settings(auth_jwt_leeway_seconds=0)
+
+    def test_a_url_whose_scheme_is_neither_http_nor_https_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="absolute URL"):
+            make_settings(auth_jwks_url="ftp://auth:3001/jwks")
+
+    def test_the_bracketed_ipv6_loopback_is_exempt(self) -> None:
+        # urlsplit's hostname gives the unbracketed form; both literals are one
+        # host.
+        settings = make_settings(auth_jwks_url="http://[::1]:9/jwks")
+        assert settings.auth_jwks_url == "http://[::1]:9/jwks"

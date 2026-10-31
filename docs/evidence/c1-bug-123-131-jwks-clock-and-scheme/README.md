@@ -61,9 +61,9 @@ FAILED tests/test_auth.py::test_the_digest_matches_the_api_side_of_the_contract
   - ImportError: cannot import name 'canonical_jwk_digest' from 'app.auth'
 ```
 
-Green after: the API 506 passed (20 new cases in `TestTheClockTolerance`,
-`TestTheJwksUrlCarriesItsScheme`, `TestThePinnedFingerprints`), the voice service 201 passed
-(7 new cases), ruff and mypy clean on both. The voice suite's existing
+Green after: the API 511 passed (12 new cases in `TestTheClockTolerance`,
+`TestTheJwksUrlCarriesItsScheme`, `TestThePinnedFingerprints`), the voice service 207 passed
+(10 new cases), ruff and mypy clean on both. The voice suite's existing
 `test_an_expired_token_is_refused` now expires a token by a minute instead of ten seconds: ten
 seconds was inside the tolerance BUG-123 deliberately adds, and the test's claim ("an expired
 token is refused") is unchanged for a token that is actually expired.
@@ -74,3 +74,29 @@ token is refused") is unchanged for a token that is actually expired.
 - `services/courier-voice`: 201 passed · ruff clean · mypy clean.
 - The compose files parse; `check-workflows`, `check-conflict-markers`, `check-mojibake`,
   `check-doc-links`, `check-floor` clean.
+
+
+## The review pass on this PR, and what it corrected (2026-10-31)
+
+The fresh-context review (Playbook 14.4) found the security halves real and the shapes coherent, and
+three things worth changing. All are landed:
+
+1. **The pin's production value was inert** — `AUTH_JWKS_KEY_FINGERPRINTS` defaults to empty and was
+   set nowhere, so the second half of BUG-131 protected nothing in any deployment while the register
+   implied it did. The mechanism is now recorded honestly: the check is fixed, and the pin's VALUE is
+   an operator decision (the auth service generates its key pair per deployment), documented in
+   `infra/env.example` with the command that computes it — exactly the shape of the issuer's public
+   name. The register row says that instead of implying the pin is active everywhere.
+2. **The cross-service digest test proved nothing** — it compared the voice digest to itself, so "a
+   change on one side alone goes red" was false. Both suites now assert one literal JWK's digest
+   (`test_the_digest_of_the_known_answer_key_is_the_pinned_value`, the known-answer vector
+   `73c28f01…`), so the two implementations of the canonical form are pinned against each other.
+3. **The register's totals line** matched the rows again (check-parity re-derives them).
+
+Also landed from the review: the leeway is bounded (`0 < value <= 300` — a fat-fingered 3600 would
+open an hour's replay window), the voice service carries the API's absolute-URL refusal (the two
+surfaces must not disagree about what they will fetch), the startup diagnostic carries the real
+validation message instead of "missing env" for a value that is set but refused, the voice socket's
+pin message is generic (BUG-125's oracle: an unauthenticated caller must not learn that pinning is
+active), the bracketed IPv6 loopback literal is exercised, both service READMEs document the new
+variables, and the test names say what they prove.

@@ -87,13 +87,16 @@ class JwksVerifier:
         # BUG-131, the same half the API's verifier carries: when fingerprints
         # are pinned, every key the document serves must carry one of them.
         # The check runs before the keys are installed, so a refused document
-        # leaves the cache as it was.
+        # leaves the cache as it was. The message is deliberate: the voice
+        # socket carries an exception's text to an unauthenticated caller
+        # (BUG-125's oracle), so it must not disclose that pinning is active -
+        # the operator's detail is in the API's log and this service's.
         pinned = self._config.pinned_fingerprints
         if pinned:
-            for kid, key in fresh.items():
+            for key in fresh.values():
                 if canonical_jwk_digest(key) not in pinned:
                     raise InvalidTokenError(
-                        f"the JWKS serves key '{kid}' whose fingerprint is not pinned"
+                        "the JWKS document could not be verified against the pinned keys"
                     )
         self._keys = fresh
         self._fetched_at = time.monotonic()
