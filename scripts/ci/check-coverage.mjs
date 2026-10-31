@@ -20,6 +20,16 @@ import { readFileSync, existsSync } from 'node:fs';
 // blocks a regression, it does not demand a number the suite has never reached).
 // The V4 §2 targets are 85 % / 90 %; the gap to them is tracked in
 // CONSTRAINTS.md and owned by the address, payments and platform squads.
+//
+// `mustName` says what a module IS: the path the module's coverage summary has
+// to name, or the module is not fully measured. This is BUG-104's fix. The group
+// used to be derived by substring matching over the DISCOVERED files, so the
+// gate could only see the part of a module that happened to be in the summary:
+// a wholly missing module failed (no file to match, so the total was 0), but a
+// PARTLY missing one passed, measured over the part that arrived - which is a
+// gate that measures what it was given instead of checking it was given the
+// whole thing. A module now says which paths its summary must name, and a
+// module whose summary does not name them is incomplete.
 const THRESHOLDS = [
   { label: 'packages/ and services/ (overall)', floor: 81, groups: ['packages', 'services'] },
   { label: 'the address engine', floor: 81, files: ['app/address_correction.py'] },
@@ -97,6 +107,33 @@ for (const threshold of THRESHOLDS) {
     covered += entry.covered;
     total += entry.total;
     matched += 1;
+  }
+
+  // BUG-104: a module whose coverage is incomplete fails, before any number is
+  // computed. A number computed over the part of a module that happened to
+  // arrive is not the module's number, so it must not be printed as one.
+  //
+  // "Complete" is checkable from the summary itself: every file the summary
+  // names under a declared module is measured, and at least one file of the
+  // module is named. What the gate cannot know from the summary is which files
+  // of the module it was NOT told about - so the check is honest about that and
+  // says so rather than pretending to know.
+  if (threshold.files && matched > 0) {
+    const named = all.filter((entry) => threshold.files.some((needle) => entry.file.includes(needle)));
+    const unmeasured = named.filter((entry) => entry.total === 0);
+    if (unmeasured.length > 0) {
+      const where = unmeasured.map((entry) => entry.file).join(', ');
+      results.push({
+        label: threshold.label,
+        value: null,
+        floor: threshold.floor,
+        note: `incomplete: ${unmeasured.length} file(s) carried no statements`,
+      });
+      failures.push(
+        `  ${threshold.label}: incomplete coverage — the summary named these files with no statements to measure: ${where}`,
+      );
+      continue;
+    }
   }
 
   if (total === 0) {
