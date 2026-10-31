@@ -50,3 +50,28 @@ k-anonymity shape (only the SHA-1's first five characters leave the service), wh
 
 The next session's cheapest decisive experiment is (1) with the suite moved onto the service's own
 server, or the library's own plugin forked under the D24 permissive-licence rule.
+
+
+## The review pass on this PR, and what it corrected (2026-10-31)
+
+The fresh-context review (Playbook 14.4) of this branch found that two rows were marked `fixed`
+against code that exists on no branch, and the table above overclaims accordingly. Corrected, per
+the register's own discipline (the BUG-128 pattern of an honest stop with its reason):
+
+- **BUG-129 and BUG-130** stay `fixed`: their code (`src/http.ts`, the awaited per-request handler,
+  the 500 answer, `installFailureHandlers()`, `MAX_BODY_BYTES`) is on the sibling PR #138's branch
+  (`c1-backend-fixes`), which merges before this branch does, so the state is true at this PR's
+  merge. The claim is now written down instead of implied.
+- **BUG-132** is reopened. The env exposure landed here (`AUTH_RATE_LIMIT_ENABLED`,
+  `AUTH_RATE_LIMIT_WINDOW`, pinned by `config.test.ts`); the other half - backing the limiter with
+  the Valkey the compose stack already provides - did not: Better Auth 1.7.10's limiter storage has
+  no external wiring on any branch, so the buckets stay per-process and two replicas still give 2x.
+- **BUG-137** is reopened. The health body landed here; the fail-fast-on-a-non-production-default
+  half did not.
+
+The review also found BUG-133's fail-fast was one-sided (it ran only on the operator-typed
+`AUTH_PASSKEY_ORIGIN`, so a derived origin whose host is off the rpID booted silently). Fixed: the
+check now runs on the derived value too (passkeys enabled), with two new red-first cases in
+`config.test.ts` - a derived origin off the rpID is refused by name, and one on the rpID is
+accepted. `infra/env.example` now documents `AUTH_RATE_LIMIT_ENABLED` and
+`AUTH_RATE_LIMIT_WINDOW`, which were missing.

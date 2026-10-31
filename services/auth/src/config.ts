@@ -295,11 +295,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
   // whose `rpID` is `example.co.nz` accept a ceremony replayed from
   // `https://example.co.nz` - a page the organisation does not serve from here.
   // Whatever the value is, its host has to be the relying party's own host or
-  // one beneath it.
+  // one beneath it - and the check runs on the derived value too, not only on
+  // the one the operator typed: a derived origin whose host is off the rpID is
+  // the same misconfiguration, reached without anyone naming
+  // AUTH_PASSKEY_ORIGIN at all.
   const passkeyOrigin = values.AUTH_PASSKEY_ORIGIN ?? baseURL;
-  if (values.AUTH_PASSKEY_ORIGIN !== undefined && !isOriginOfRpID(passkeyOrigin, rpID)) {
+  if (passkeyEnabled && !isOriginOfRpID(passkeyOrigin, rpID)) {
     throw new Error(
-      `AUTH_PASSKEY_ORIGIN=${values.AUTH_PASSKEY_ORIGIN} is not an origin of AUTH_PASSKEY_RP_ID=${rpID}: `
+      `AUTH_PASSKEY_ORIGIN=${passkeyOrigin} is not an origin of AUTH_PASSKEY_RP_ID=${rpID}: `
       + "the passkey origin must be the relying party's own host (or one beneath it)",
     );
   }

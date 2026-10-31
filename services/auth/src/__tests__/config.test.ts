@@ -228,3 +228,27 @@ describe("an empty variable is refused (BUG-137)", () => {
     }
   });
 });
+
+
+  // BUG-133: the check used to run only on the value the operator typed. A
+  // derived origin (BETTER_AUTH_URL's own host) that is off the rpID is the
+  // same misconfiguration, reached without anyone naming
+  // AUTH_PASSKEY_ORIGIN, and it booted silently.
+  it("refuses a derived origin whose host is not the rpID", () => {
+    expect(() =>
+      loadConfig({
+        ...VALID_ENV,
+        BETTER_AUTH_URL: "https://phishing.example.co.nz.phishing.test",
+        AUTH_PASSKEY_RP_ID: "example.co.nz",
+      }),
+    ).toThrow(/is not an origin of AUTH_PASSKEY_RP_ID/);
+  });
+
+  it("accepts a derived origin that belongs to the rpID", () => {
+    const config = loadConfig({
+      ...VALID_ENV,
+      BETTER_AUTH_URL: "https://auth.example.co.nz",
+      AUTH_PASSKEY_RP_ID: "example.co.nz",
+    });
+    expect(config.passkey.origin).toBe("https://auth.example.co.nz");
+  });
