@@ -1,0 +1,28 @@
+appId: com.courier.copilot
+name: 'A1 sync: the held delivery sends when the network comes back'
+---
+# A1's done-when, the sync half. The runner has given the network back, and the
+# outbox has to send what it held while there was no signal: the delivery made
+# offline reaches POST /shifts/{id}/events:batch for real, and the run the
+# courier sees agrees with what the server holds.
+#
+# The app sends on its own - the store's flush is asked after every mark, and
+# the outbox's own backoff decides when it asks again - so this flow does not
+# tap a "sync" button that a real app should not need. It waits for the number
+# the courier sees to become the number the server has.
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# Four deliveries are the run's own count: three sent while there was signal,
+# one held while there was not and sent once it came back. The wait is the
+# outbox's, and it is generous because a real server answers a real request.
+- extendedWaitUntil:
+    visible:
+      text: "4"
+    timeout: 120000
+- assertVisible:
+    id: "today-screen"
+- takeScreenshot: "a1-sync"
