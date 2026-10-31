@@ -162,6 +162,12 @@ status=0
 # flake. It is evidence, never a verdict: the run's status is decided below.
 FLOWS_RESULT="$EVIDENCE/flows.txt"
 : > "$FLOWS_RESULT"
+# The suite is the flows in THIS folder, and it is the E2E stack's own: no
+# Metro, no auth service, no API. The `a1/` subfolder is the no-mock job's own
+# (`.maestro/run-a1.sh` runs those three against the compose stack), and a glob
+# of one folder level is what keeps them out: the first run of that job had
+# them in this list, they failed on the E2E build against a server that is not
+# there, and they took four other flows of that leg down with them.
 for flow in .maestro/*.yaml; do
   name="$(basename "${flow}")"
   echo "::group::${flow}"
@@ -177,7 +183,13 @@ for flow in .maestro/*.yaml; do
     # exactly this dump, which is why the runner keeps it.
     newest="$(ls -1dt "$HOME"/.maestro/tests/*/ 2>/dev/null | head -1)"
     if [ -n "$newest" ]; then
-      dest="$EVIDENCE/maestro-failure-$(basename "$(dirname "$newest")")"
+      # The dump is named after the flow's own `name:`, which can carry a
+      # character the artifact upload refuses (a colon: "A1 online: the app
+      # signs up ..." made the whole evidence upload fail with "The path for
+      # one of the files in artifact is not valid"). Sanitise it here, so the
+      # name of a flow can never decide whether the evidence is uploaded.
+      safe="$(basename "$(dirname "$newest")" | tr -c 'A-Za-z0-9._-' '-')"
+      dest="$EVIDENCE/maestro-failure-${safe}"
       mkdir -p "$dest"
       cp -r "$newest". "$dest/" 2>/dev/null || true
       echo "the failure's own dump is in $dest"

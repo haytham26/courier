@@ -31,13 +31,18 @@ echo "::endgroup::"
 run_flow() {
   local name="$1"
   echo "::group::A1: $name"
-  maestro test ".maestro/$name" --format junit --output "$EVIDENCE/$name-result.xml"
+  # The a1 job's own three flows, in their own folder: they are not part of the
+  # mock legs' suite (`.maestro/run-all.sh` globs `.maestro/*.yaml`, and a flow
+  # that belongs to a different stack must not silently join those legs - the
+  # first run of this job proved it, when the glob's three a1 flows ran on the
+  # E2E build, failed, and took the other flows of that leg down with them).
+  maestro test ".maestro/a1/${name}.yaml" --format junit --output "$EVIDENCE/${name}-result.xml"
   echo "::endgroup::"
 }
 
 # The online half. A failure here is a failure of the real round trip, and the
 # run stops: there is nothing afterwards to prove.
-run_flow "a1-online.yaml"
+run_flow "online"
 
 echo "::group::A1: take the network away"
 # Both halves of the emulator's connectivity, so the app cannot reach the API
@@ -51,7 +56,7 @@ sleep 3
 echo "network is down"
 echo "::endgroup::"
 
-run_flow "a1-offline.yaml"
+run_flow "offline"
 
 echo "::group::A1: give the network back"
 adb shell svc wifi enable || true
@@ -61,12 +66,12 @@ sleep 3
 echo "network is back"
 echo "::endgroup::"
 
-run_flow "a1-sync.yaml"
+run_flow "sync"
 
 echo "::group::A1: the flow's own record"
 {
   echo "apk=$APK"
-  echo "flows=a1-online,a1-offline,a1-sync"
+  echo "flows=a1/online,a1/offline,a1/sync"
   echo "note=the network was taken away between the online and offline halves, and given back between the offline and sync halves"
 } | tee "$EVIDENCE/a1-run.txt"
 echo "::endgroup::"
