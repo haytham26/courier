@@ -1,0 +1,136 @@
+# The stack the Android E2E's no-mock job runs against (A1's done-when).
+#
+#   docker compose -f infra/compose.ci.yml up -d --wait
+#
+# The audit's A1: the app the founder would install today shows mock data, so
+# every green E2E run proves the screens on mocks. This stack is what makes the
+# last mile real: the API and Postgres on the runner, with DEMO_SEED_ENABLED
+# on, so a flow signs in against the real auth service, loads the seeded day,
+# delivers, goes offline, delivers, reconnects and syncs - and the job asserts
+# the rows in Postgres afterwards.
+#
+# It is deliberately NOT staging: no edge, no TLS, no Valkey replication, no
+# domain. What it keeps is the part that matters - the same services, the same
+# contract schema, the same seed gate.
+#
+# **The addresses are the emulator's.** The emulator reaches the runner's own
+# loopback at 10.0.2.2, so every service is published there and the issuer the
+# auth service signs with, the issuer the API verifies against and the URL the
+# app dials are all the same value (the audit's BUG-122 finding is that nothing
+# cross-checks those two env values - here they are one value by construction,
+# and the job fails loudly if they ever disagree).
+name: courier-ci
+
+services:
+  postgres:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_USER: courier
+      POSTGRES_PASSWORD: courier
+      POSTGRES_DB: courier
+    # The contract's own schema, the same file production and CI apply.
+    volumes:
+      - ../packages/contracts/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U courier -d courier']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  api:
+    build:
+      context: ../services/api
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: ci
+      APP_VERSION: e2e
+      DATABASE_URL: postgresql://courier:courier@postgres:5432/courier
+      VALKEY_URL: redis://valkey:6379/0
+      # The API is a resource server with no default secret: it refuses to boot
+      # without the JWKS it verifies against (app/main.py calls
+      # get_auth_settings() at import, app/auth/jwks.py raises on a missing
+      # AUTH_JWKS_URL or AUTH_JWT_ISSUER). The first run of this stack exited 1
+      # with exactly that error, so the service that proves A1 could not start
+      # and the flow never ran.
+      # The URL is the auth service's own address on this compose network: the
+      # emulator's 10.0.2.2 is only routable from the device, not from a peer
+      # container. The issuer is the one value the auth service signs with
+      # (BETTER_AUTH_URL, below), so the token the app dials with is the token
+      # the API verifies (the audit's BUG-122: nothing else cross-checks the
+      # two, so making them one value is what makes this stack correct).
+      AUTH_JWKS_URL: http://auth:3001/api/auth/jwks
+      AUTH_JWT_AUDIENCE: courier-api
+      AUTH_JWT_ISSUER: http://10.0.2.2:3001
+      # The POD store's signing grant (ADR-011): the API refuses to boot without
+      # it. A throwaway CI value, because this stack's photos are disposable.
+      POD_STORAGE_BACKEND: local
+      POD_URL_SIGNING_SECRET: ci-only-pod-signing-secret-0123456789
+      # The demo seed (ADR-019) is on: this is the stack that proves the app
+      # against a real seeded day, and this stack's data is disposable.
+      DEMO_SEED_ENABLED: 'true'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    ports:
+      - '8000:8000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).status == 200 else 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  auth:
+    build:
+      context: ..
+      dockerfile: services/auth/Dockerfile
+    environment:
+      NODE_ENV: production
+      APP_VERSION: e2e
+      PORT: '3001'
+      # One issuer, one audience, one base URL, and each of them is the
+      # emulator's own address of this service: the token the auth service
+      # signs and the token the API verifies are the same token.
+      BETTER_AUTH_SECRET: ci-only-better-auth-secret-0123456789abcdef
+      BETTER_AUTH_URL: http://10.0.2.2:3001
+      AUTH_DATABASE_URL: postgresql://courier:courier@postgres:5432/courier
+      AUTH_TRUSTED_ORIGINS: http://10.0.2.2:3001
+      AUTH_JWKS_PATH: /jwks
+      AUTH_JWT_ISSUER: http://10.0.2.2:3001
+      AUTH_JWT_AUDIENCE: courier-api
+      AUTH_JWT_EXPIRATION: 2h
+      AUTH_RATE_LIMIT_MAX: 1000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - '3001:3001'
+    healthcheck:
+      test:
+        ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3001/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s

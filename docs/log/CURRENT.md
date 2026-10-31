@@ -1,6 +1,40 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W43. **Local `main` == `origin/main` == `5839178` (the state at this handoff). Lead session 9, 2026-10-31.
+**Week:** 2026-W44. **Local `main` == `origin/main` == `cfa04cb` (the state at this handoff). Lead session 10, 2026-11-01.**
+
+
+## Lead session 10 (2026-11-01): the a1 job's first run, and C1's medium rows
+
+**What session 10 did, in order:**
+
+1. **The a1 job's first run** (run [41176664214](https://github.com/haytham26/courier/actions/runs/41176664214), head `7df246d`), read per PLAYBOOK §2 and rooted at §12. It stopped **before any flow ran**, at its own stack step, and the failure was **the app's and the stack's, never the flow's**. Two root causes, both proven locally from a fresh database before the push:
+   - **The API container exited 1** with `RuntimeError: Missing required env: AUTH_JWKS_URL` (`services/api/app/auth/jwks.py` raises at import when the resource server has no JWKS or no issuer). `infra/compose.ci.yml` gave it neither. Now: `AUTH_JWKS_URL: http://auth:3001/api/auth/jwks` (the auth service's **compose-network** address — `10.0.2.2` is the *emulator's* address and is not routable from a peer container), `AUTH_JWT_AUDIENCE: courier-api`, `AUTH_JWT_ISSUER: http://10.0.2.x` (one value everywhere, which is the audit's BUG-122 satisfied by construction).
+   - **The auth container followed it out** with Better Auth's `SCHEMA_MISMATCH`: `Missing tables user, session, account, verification, organization, team, teamMember, member, invitation, twoFactor, jwks`. Its own tables are a second migration the contract's `schema.sql` does not carry (`services/auth/src/migrate.config.ts`). The job now runs that migration between its two moves, **exactly as `infra/deploy.sh` runs it on the deploy path**, pinned to `auth@1.7.10` (the CLI of the `better-auth` version this repo depends on): postgres+valkey -> `docker compose run --rm --no-deps auth npx --yes auth@1.7.10 migrate --yes --config src/migrate.config.ts` -> `up -d --wait` for the API and auth.
+   - **The a1 job's second run** got further (the stack came up healthy, the failure moved to the flow) but its **sibling legs** api-34 and api-35 went red with a cascade: `.maestro/run-all.sh` runs `for flow in .maestro/*.yaml`, so slice 4's three flows **joined the E2E (mock) legs' suite**, failed against a server that is not there, and took four other flows of those legs down with them. The three flows moved to **`.maestro/a1/`** (`run-a1.sh` names them `online`, `offline`, `sync`), so one folder level per stack keeps them apart. The same run named the second half: the evidence upload failed on `The path for one of the files in artifact is not valid: .../A1 offline: the delivery is recorded with no network/commands.json. Contains the following character: Colon :` — the failure dump is named after the flow's own `name:`, so **a flow could be called anything and that would decide whether the run's evidence existed**. The dump's directory name is sanitised (`tr -c 'A-Za-z0-9._-' '-'`).
+   - **And the app sent the wrong credential.** `sessionToken()` answered Better Auth's *session* token, which the API has no way to verify. Proven against the real stack in compose: `POST /demo/runs` with the session token -> **401 `Invalid or expired token`**; with the token the auth service mints at `/token` -> **200 the seeded run, five stops**. `sessionToken()` mints at `/token` now, and answers `null` when there is no session, no radio, or no token in the answer. Red first, and the red was the exact defect (5 red, 1 green).
+
+2. **C1's medium rows, each at its root with a red-first test and its row closed with its PR:**
+
+| PR | Rows | What |
+|---|---|---|
+| **#144** | BUG-090, 091, 092 | the sync layer: the flush's batch read sits inside its try (an unreadable log answers a failed sync with a backoff instead of a rejection); the preference write queue is keyed by the **file's own name** (two ids that sanitise to one name no longer clobber one file) and an unreadable file is **not** written over; the auth provider publishes the signed-in driver, so a second driver on a shared phone no longer inherits the first's theme and map mode |
+| **#145** | BUG-077, 078 | a failed `forgetSession()` now **rethrows** instead of being swallowed, and a signed-out receipt reads as gone for the app's life; the auth client receives the app's `deviceStore` wrapper (not the raw module), so its cookie writes carry `keychainAccessible: AFTER_FIRST_UNLOCK` — readable while the phone is locked, which is where a courier's phone spends the shift |
+| **#146** | BUG-080 | the route screen's `segmentOf` reads the **run**, so a stop delivered on Driving is "Done" on the list, with the minute the run recorded |
+
+   **BUG-079 rides with A4** (its row says so: "the fix lands with A4's build check"), and **BUG-096 (`infra/deploy.sh`) is the backend's and was not touched**.
+
+**The traps of session 10 (all live):**
+
+- **`gitleaks` scans the PR's commit RANGE, not the head tree.** A finding is attributed to the commit where the line was *added*, so relabelling a literal in a later commit does not clear it — the range still carries the commit that introduced it. A test fixture in the shape of a credential has to go in `.gitleaks.toml`'s allowlist, which is the documented pattern that file already carries for exactly this class.
+- **`10.0.2.2` is the emulator's address of the runner, not a container's.** A peer service on the same compose network is reached by its service name (`http://auth:3001`), and the emulator reaches the published port at `10.0.2.2`. Writing `10.0.2.x` into a container-to-container URL is a boot failure with a stack trace that names the missing variable rather than the wrong address.
+- **One folder per stack.** `.maestro/run-all.sh` globs `.maestro/*.yaml`; a flow that belongs to a different stack must not be able to join that glob by being dropped into the folder.
+- **An artifact path cannot contain a colon**, so a flow's own `name:` must not decide whether the run's evidence is uploaded.
+- **`git checkout -- <file>` restores from the index** (session 9's trap, hit again here): it cost the `.gitleaks.toml` entry mid-session and it was re-applied and re-verified.
+- **A hook's injected source must be a stable function, and a passed method must be bound at the call site.** Passing `run.isDelivered` detached trips `unbound-method`; every call site in the app calls it as `run.isDelivered(...)`, so the fix is to pass the object.
+- **`react-hooks/exhaustive-deps` is NOT configured here** — an `eslint-disable-next-line` for it is an error ("Definition for rule ... was not found"), and a suppression would be a floor-guard finding anyway.
+- **A `this`-less object literal with method shorthand fails lint**; the repo's style is arrow-function properties.
+- **jest's module factories may not reference out-of-scope variables** unless they are prefixed `mock` — a `let writable` in a factory is a hard suite failure (renamed `mockWritable`).
+- **TZ**: a screen that renders `hourMinuteOf` shows the device's local clock, so a literal "09:30" in a test is a timezone assertion wearing a costume. Compute the expected label from the same instant.
 
 
 ## Lead session 9 (2026-10-31): step 0's register, #52's three device legs, and A1 slice 3's screens
@@ -28,12 +62,17 @@
 
 | PR | What | Its state |
 |---|---|---|
-| **#135** | A1 slice 3: the app reads the real run, and the write path leaves the phone | head `49258a2`: the seams (from session 8b) plus this session's work - Today and the drive read the day through the run store (`run.day`), the `mockStops` import is gone from both, the outbox is constructed beside the store (one log), the store's flush is the outbox's `syncAll` under the run's own shift, ADR-014's answers are the courier's (`src/sync/syncAnswers`, said on Today), and the E2E build answers with the mock run's own day (`src/run/dayForThisBuild`) so the flows still walk a day. mobile 576/576, typecheck and lint clean; its CI is running |
+| **#135** | A1 slice 3 (finished) and slice 4 (the done-when) | head `e1caaf3`. Slice 3 is complete. Slice 4 is **validated twice and still not green**: the first run stopped before any flow (the stack: the API's missing `AUTH_JWKS_URL`/issuer, then the auth service's own missing tables — both fixed, session 10's first item); the second got the stack healthy and the failure moved to the flow, and its **sibling legs** api-34 and api-35 went red because the three a1 flows had joined `.maestro/*.yaml` (fixed by moving them to `.maestro/a1/`); and the third push fixed the secrets gate on the fixtures. **The a1 job's own flow has not yet been witnessed green: the emulator boot timed out on run 41187692977 (`could not connect to TCP port 5554`, infrastructure before any flow ran, one re-run allowed), and the last run's legs were cancelled by the next push. The run is the evidence: a clean run on the final head, both E2E legs AND the a1 job green, no re-run (§17.4).** |
+| **#144** | C1 BUG-090, 091, 092 (the sync layer) | head `972c71a`, its two E2E legs green on api-34 and api-35, the rest green. Awaiting the merge ritual. |
+| **#145** | C1 BUG-077, 078 (the session and the auth client's storage) | head `d3dc9b6`, its checks running. |
+| **#146** | C1 BUG-080 (the route screen's segments) | head `6a3bfb9`, its checks running. |
 
 **What is left of A1, in order:**
 
-1. **A1 slice 4** - the no-mock E2E job, which is A1's done-when: `android-e2e.yml` (or a sibling job) starts the API and Postgres in compose with `DEMO_SEED_ENABLED=true`, and a flow signs in, loads the seeded day, delivers 3, goes offline, delivers 1, reconnects and syncs, with the rows asserted in Postgres. The app side is ready for it: the store seeds, reads and flushes through the real client.
-2. Then **A4** (the build check that fails a release build on a reachable mock - note `src/run/dayForThisBuild.ts` is the one import of `mockStops` a release build can reach, and it is gated by the build flag the same way `readerForThisBuild` is), **A2** (on-device voice), **C2** (TRIAL_SCOPE from the Spoke teardown), **A6** (the acceptance script + a stable APK link), MASTER §22's app side, then the C1 mediums (BUG-077, 078, 079, 080, 081, 085, 090, 091, 092 with the code they touch), the lows (BUG-082, 083, 084, 093 as one batch), and the rest of the audit and MASTER to the §6 Definition of Done.
+1. **A1 slice 4's green run on the final head.** The stack is proven (all four services healthy from a fresh database, and the seeded day read back through the compose network). What is NOT yet witnessed is the flow itself: the last run that reached the flow step died at the emulator boot, and the run after it was cancelled by this branch's next push. **Do not push to this branch again until the a1 job is green, so the legs are not cancelled mid-flight again** — watch `gh run list --branch feat/a1-slice-3-run-store --event pull_request`, and if the emulator boot fails before any flow ran, one re-run is allowed (§17.4) with the run link recorded here.
+2. Then **A4** (the build check that fails a release build on a reachable mock - note `src/run/dayForThisBuild.ts` is the one import of `mockStops` a release build can reach, and it is gated by the build flag the same way `readerForThisBuild` is). **BUG-079's row says its fix lands with A4's build check**, so it closes in that same PR.
+3. Then **the remaining C1 mediums** - BUG-081 (Today's own `doneIds` state; note slice 3 already rewired Today to the run store on this branch, so check the row against `origin/feat/a1-slice-3-run-store` before writing a red test: the finding may already be closed there and only need its row), BUG-085 (the offline pack's manifest `sha256` is parsed and never verified, in `src/maps/offlinePack.ts`), and BUG-100..104 (CI: `store-ready.yml`'s job-level secret, `ci.yml`'s restore-drill `DROP`/`CREATE` pair with no `ON_ERROR_STOP`, `map-pack.yml`'s `EXTRACT_URL` with no scheme/host allow-list, `check-licenses.mjs`'s `unknown` answer on a failed `pnpm view`, and `check-coverage.mjs`'s substring-derived coverage group - these five are the CI/infra rows and belong with the backend's §16 half, so **write one line per row in the PR saying which squad owns it**).
+4. Then **A2** (on-device voice), **C2** (TRIAL_SCOPE from the Spoke teardown), **A6** (the acceptance script + a stable APK link), MASTER §22's app side, the C1 lows (BUG-082, 083, 084, 093, 105, 106, 107, 108 as one batch), and the rest of the audit and MASTER to the §6 Definition of Done.
 
 **The traps of session 9 (all live):**
 
@@ -80,6 +119,7 @@ The critical and high findings of squads 1, 3 (app side) and 6, each with a red-
 
 Main ends at **BUG-114** (BUG-113 is PR #52's, BUG-114 is #49's; DECISIONS ends at **D51**). Before any new row, take the highest across `origin/main` AND every open PR branch, then add one. Right now the highest across all three is **BUG-114**, so the next free number is **BUG-115**.
 
+*(Corrected by session 10 on 2026-11-01: the backend squad filed BUG-115..BUG-159 and main is now at `cfa04cb` (PR #139's merge). Session 10 took highest-across-all-open-PRs before every new row, as §13 requires — **no new row was filed this session** because all six mediums were already in the register. The next session must re-read `origin/main`'s BUGS.md AND every open PR's copy before filing anything: the highest on main is now **BUG-159**.)*
 ## The traps of session 8 (all live, all this week)
 
 - **The emulator-runner does NOT run a multi-line `script:` as one program** (BUG-114). Its `src/script-parser.ts` splits the input per line, drops the comments and the blank lines, and `src/main.ts` runs each remaining line as its own `sh -c". So a standalone `set -euo pipefail` runs under dash, which has no `pipefail`: `/usr/bin/sh: 1: set: Illegal option -o pipefail`. A multi-line body also silently loses every variable and every `export` between lines. **Always one line calling a bash script**, as `android-e2e.yml` does.

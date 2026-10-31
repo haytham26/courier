@@ -10,7 +10,7 @@
  * The copy is plain New Zealand English, there is no emoji anywhere, and
  * every control has an accessibility label and a role.
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -28,8 +28,10 @@ import {
 } from '@/components/chosen';
 import { errorMessage } from '@/lib/errors';
 import { hapticFor } from '@/motion/haptics';
+import { useRun } from '@/maps/runState';
 import { getCourierStyle } from '@/maps/styles';
-import { mockStops, type Stop } from '@/maps/stops';
+import type { Stop } from '@/maps/stops';
+import { useSyncAnswers } from '@/sync/syncAnswers';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { publishVoiceCommand } from '@/voice/commandChannel';
 import { useVoice } from '@/voice/useVoice';
@@ -105,6 +107,11 @@ const styles = StyleSheet.create({
     lineHeight: typography.body.lineHeight,
     fontWeight: typography.body.weight,
   },
+  syncNote: {
+    fontSize: typography.secondary.size,
+    lineHeight: typography.secondary.lineHeight,
+    fontWeight: typography.secondary.weight,
+  },
   sectionLabel: {
     fontSize: typography.secondary.size,
     lineHeight: typography.secondary.lineHeight,
@@ -168,34 +175,22 @@ export default function TodayScreen() {
   const voice = useVoice();
   const courierVoice = useBriefOfTabs();
   const { tileSource, glyphsUrl } = useMapBoot();
+  // A1 slice 3: the day is read from the one run store the marks are written
+  // to, so Today shows the day the phone holds (and not a mock's copy of it),
+  // and a stop delivered on the drive is a stop Today counts. The write path
+  // is the run state's own, which records the delivery into the outbox.
+  const run = useRun();
+  const day = run.day;
+  // What the server answered the last send (ADR-014's conflicts and
+  // quarantine, in the courier's words): the outbox reports it, this screen
+  // says it.
+  const answers = useSyncAnswers();
 
-  // The day the courier acts on: delivering, skipping and failing a stop all
-  // move the run on. The write path of the stops (the sync) lands with the
-  // Route screen; until then the screen's own list is the state.
-  const [doneIds, setDoneIds] = useState<string[]>([]);
-  const [skippedIds, setSkippedIds] = useState<string[]>([]);
-  const [failedIds, setFailedIds] = useState<string[]>([]);
-
-  const remaining = useMemo(
-    () =>
-      mockStops.filter(
-        (stop) =>
-          stop.status !== 'delivered' &&
-          !doneIds.includes(stop.id) &&
-          !skippedIds.includes(stop.id) &&
-          !failedIds.includes(stop.id),
-      ),
-    [doneIds, skippedIds, failedIds],
-  );
-  const delivered = useMemo(
-    () =>
-      mockStops.filter(
-        (stop) => stop.status === 'delivered' || doneIds.includes(stop.id),
-      ),
-    [doneIds],
-  );
-  const nextStop: Stop | null = remaining[0] ?? null;
-  const progress = delivered.length / mockStops.length;
+  const stops = day.stops;
+  const remaining = useMemo(() => stops.filter((stop) => !day.isDelivered(stop.id)), [stops, day]);
+  const delivered = useMemo(() => stops.filter((stop) => day.isDelivered(stop.id)), [stops, day]);
+  const nextStop: Stop | null = day.nextStop;
+  const progress = stops.length === 0 ? 0 : delivered.length / stops.length;
 
   const style = useMemo(
     () =>
@@ -223,19 +218,23 @@ export default function TodayScreen() {
 
   const handleMarkDone = useCallback(
     (stop: Stop) => {
-      setDoneIds((current) => [...current, stop.id]);
+      // The write path is the run state's own: the mark is written through the
+      // store (so it survives a cold start) and the delivery is recorded in the
+      // outbox, which sends it when there is signal (A1 slice 3).
+      run.markDelivered(stop);
       hapticFor('deliver');
     },
-    [],
+    [run],
   );
 
-  const handleSkip = useCallback((stop: Stop) => {
-    setSkippedIds((current) => [...current, stop.id]);
+  // A skipped stop and a failed one are both still on the run: the run state
+  // keeps them, and Today's own copy of them is gone (C1 squad 1 #15). The
+  // haptics are the screen's own answer to the courier's hand.
+  const handleSkip = useCallback((_stop: Stop) => {
     hapticFor('confirm');
   }, []);
 
-  const handleFail = useCallback((stop: Stop) => {
-    setFailedIds((current) => [...current, stop.id]);
+  const handleFail = useCallback((_stop: Stop) => {
     hapticFor('error');
   }, []);
 
@@ -274,7 +273,7 @@ export default function TodayScreen() {
       <View style={styles.map}>
         <MapView testID="today-map" mapStyle={style} style={styles.map}>
           <Camera initialViewState={{ center: MAP_CENTRE, zoom: 12 }} minZoom={4} maxZoom={19} />
-          {mockStops.map((stop) => (
+          {stops.map((stop) => (
             <Marker
               key={stop.id}
               testID={`stop-marker-${stop.sequence}`}
@@ -337,6 +336,22 @@ export default function TodayScreen() {
             ]}
             progress={progress}
           />
+
+          {/* ADR-014's answers, in the courier's own words (A1 slice 3): a
+              delivery that could not be sent, or that the server already had,
+              is said out loud here rather than hidden in a log. A courier who
+              is told "all good" while three deliveries are quarantined is
+              being lied to. */}
+          {answers.message !== null ? (
+            <Text
+              testID="today-sync-note"
+              accessibilityLiveRegion="polite"
+              style={[styles.syncNote, { color: t.colors.secondaryLabel }]}
+              maxFontSizeMultiplier={1.4}
+            >
+              {answers.message}
+            </Text>
+          ) : null}
 
           {nextStop ? (
             <>

@@ -1,0 +1,29 @@
+appId: com.courier.copilot
+name: 'A1 offline: the delivery is recorded with no network'
+---
+# A1's done-when, the offline half. The runner has just taken the network away
+# (adb shell svc wifi disable and svc data disable), and the app has to behave
+# the way a courier in a dead zone needs: the day answers from the phone's own
+# cache, the delivery is recorded locally, and the outbox holds it instead of
+# losing it.
+#
+# The app is NOT relaunched here: this is the same session, the same phone, the
+# same day, with no signal - which is the condition the audit's A1 names.
+- launchApp:
+    clearState: false
+# The cache answers first, so the day is there without the network.
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+- assertVisible:
+    id: "today-go"
+# One more delivery, with no signal: the store records it (the mark and the
+# event) and the outbox cannot send it. The store's flush answers with the
+# network's own failure, the event stays in the log, and the courier is told -
+# ADR-014's answer, on the screen they are looking at (A1 slice 3).
+- tapOn:
+    id: "today-mark-delivered"
+- assertVisible:
+    id: "today-sync-note"
+- takeScreenshot: "a1-offline"

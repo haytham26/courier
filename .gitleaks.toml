@@ -25,4 +25,12 @@ regexes = [
   # The generic-api-key rule reads the argument after a `*_SECRET` constant as
   # the secret itself; this one is a TTL (and the call is one arg per line now).
   '''ttl_seconds=-1''',
+  # The auth client's token test: two hand-written stand-ins for Better Auth's
+  # session token and for the bearer token the auth service mints. They are
+  # fixtures for a test that asserts WHICH of the two values the app sends to
+  # the API (the API verifies the minted one and refuses the session's own),
+  # they are in the shapes those tokens have because that is what the code has
+  # to handle, and no service ever issued or verified either of them.
+  '''yHT7olEgGGR3oD67hKsSRtQIXJ7fojlg''',
+  '''eyJhbGciOiJFUzI1NiIsImtpZCI6Im1pbnRlZC1qd2sifQ.minted.courier''',
 ]

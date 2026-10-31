@@ -259,7 +259,13 @@ function createMockAuthClient(): CourierAuthClient {
       moveMockSession(null);
       return Promise.resolve({ data: { success: true }, error: null });
     },
-    $fetch: () => Promise.reject(new Error('the emulator run has no auth service to ask')),
+    // The token the API would be sent: the emulator run has no auth service to
+    // mint one, so the mock answers a token of its own. The app's API boundary
+    // is never reached in this mode, so no request carries it.
+    $fetch: (path: string) =>
+      path === '/token'
+        ? Promise.resolve({ token: mockSession.token })
+        : Promise.reject(new Error('the emulator run has no auth service to ask')),
     getSession: () => Promise.resolve({ data: currentSession, error: null }),
     useSession: () => mockSessionAnswer,
     twoFactor: {
@@ -299,16 +305,49 @@ export const getSession = authClient.getSession;
 export const useSession = authClient.useSession;
 
 /**
- * The courier's access token.
+ * The courier's access token: the bearer token the API and the voice service
+ * verify, and never the session's own token.
  *
- * The token is the one the auth service signs with its JWKS key pair, so the
- * other services (the Courier API, the voice service) can check who is asking
- * without a session of their own. It is null when there is no session.
+ * The Courier API is a resource server. It verifies a JWT against the JWKS the
+ * auth service publishes, with the issuer and the audience that service signs
+ * (`services/api/app/auth/jwks.py`: a missing `AUTH_JWKS_URL` or
+ * `AUTH_JWT_ISSUER` stops the service from booting, precisely because the token
+ * is the whole authorization). Better Auth's session token is a different
+ * credential: it is the auth service's own session cookie value, and no other
+ * service can check it.
+ *
+ * That distinction is not theoretical. With the real stack in compose
+ * (infra/compose.ci.yml, DEMO_SEED_ENABLED=true) on 2026-10-31, against the
+ * auth service and the API this branch's own job starts:
+ *
+ *   POST /demo/runs  Bearer <the session token>  ->  401 Invalid or expired token
+ *   POST /demo/runs  Bearer <the minted token>   ->  200 the seeded run, five stops
+ *
+ * so the app mints its token at the auth service's own `/token` endpoint - the
+ * endpoint better-auth's JWT plugin answers with the signed bearer token - and
+ * sends that. The session cookie is what authorizes the mint, and it is the
+ * expo client's own storage, so nothing extra is stored on the phone.
+ *
+ * It is null when there is no session, when the mint fails (no radio), or when
+ * the service answers with anything that is not a non-empty string, so no
+ * request ever goes out carrying a token that is not one.
  */
 export async function sessionToken(): Promise<string | null> {
-  const result = await authClient.getSession();
-  const token = result.data?.session?.token;
-  return typeof token === 'string' && token.length > 0 ? token : null;
+  let minted: unknown;
+  try {
+    minted = await authClient.$fetch('/token');
+  } catch {
+    // No radio, or no session behind the cookie: the caller answers the
+    // courier with its own unauthorized rather than sending nothing sensible.
+    return null;
+  }
+  if (typeof minted === 'object' && minted !== null) {
+    const token = (minted as { token?: unknown }).token;
+    if (typeof token === 'string' && token.length > 0) {
+      return token;
+    }
+  }
+  return null;
 }
 
 /** True when the app runs against the local mocks (the CI emulator run). */
