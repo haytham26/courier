@@ -388,6 +388,52 @@ describe('SyncService', () => {
     expect(outcome.retryAfterMs).toBe(0);
   });
 
+  // BUG-090 (the C1 audit squad 3's finding): the batch READ was the other
+  // place a flush can fail, and it sat outside the try that handles a
+  // failure. `pending()` reads the log back as events with `dbText`
+  // (`eventSchema.ts`), which throws when a column of a row is not the text
+  // it must be - a corrupt column - so one bad row made the whole flush
+  // REJECT: the outbox's `syncAll` never got an answer, and the events the
+  // flush had been sent to send stayed in the log with nothing said about
+  // them. The read belongs inside the try, and an unreadable log is a failed
+  // sync with a retry, exactly like a network failure.
+  it('answers a failed sync instead of rejecting when the log cannot be read (BUG-090)', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const store = new FakeStore();
+      store.pending = () =>
+        Promise.reject(new Error('the column utterance of the event log is not the text it must be'));
+      const log = new EventLog(store);
+      const service = new SyncService(log, new FakeTransport());
+
+      const outcome = await service.sync('shift-1');
+
+      expect(outcome.failed).toBe(true);
+      expect(outcome.sent).toBe(0);
+      expect(outcome.retryAfterMs).toBeGreaterThan(0);
+      expect(String(warn.mock.calls[0]?.[0])).toContain('could not be read');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('stops the run when the log cannot be read, rather than looping on it (BUG-090)', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const store = new FakeStore();
+      store.pending = () => Promise.reject(new Error('the log is unreadable'));
+      const log = new EventLog(store);
+      const service = new SyncService(log, new FakeTransport());
+
+      const outcomes = await service.syncAll('shift-1');
+
+      expect(outcomes).toHaveLength(1);
+      expect(outcomes[0]?.failed).toBe(true);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it('holds the pending/confirm window against a write that lands inside it (BUG-089)', async () => {
     const store = new FakeStore();
     const log = new EventLog(store);

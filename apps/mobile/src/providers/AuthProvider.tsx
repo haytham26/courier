@@ -13,6 +13,7 @@ import {
   fetchSignInMethods,
   type SignInMethods,
 } from '@/lib/sign-in-methods';
+import { setCurrentDriverId } from '@/sync/driverSession';
 
 export type { SignInMethods };
 
@@ -261,6 +262,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setStatus('signed-out');
   }, [data, error, isPending]);
+
+  // BUG-092 (the C1 audit squad 1's finding): the signed-in driver is
+  // published here, where the session is settled.
+  //
+  // `setCurrentDriverId` had no caller anywhere in the repo, so every
+  // preference write landed in the one `local-driver` bucket and a second
+  // driver on a shared van phone inherited the first driver's theme, map mode
+  // and toggles. The provider is the only place that knows who is signed in:
+  // the session hook above, the sign-in and sign-up reads below, the offline
+  // fallback and the sign-out all settle `user` here, so the published id is
+  // derived from it rather than from any one of those paths - and a sign-out
+  // publishes null, so the next driver starts from their own settings.
+  //
+  // The screens read the id through `useDriverId()` (the theme, the map
+  // mode), so this is the last link in the chain that was missing.
+  useEffect(() => {
+    setCurrentDriverId(user?.id ?? null);
+  }, [user]);
 
   const loadTeams = useCallback(async (): Promise<Team[]> => {
     try {
