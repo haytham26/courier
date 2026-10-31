@@ -79,10 +79,24 @@ export class SyncService {
    *
    * A failure stops the run: the events stay in the log and the next call
    * picks them up again.
+   *
+   * The batch READ is inside the try, not above it (BUG-090): reading the log
+   * back is the other place a flush can fail. `pending()` turns every row
+   * into an event with `dbText`, which throws when a column is not the text
+   * it must be, so a corrupt row made the whole flush REJECT - the outbox's
+   * `syncAll` never received an answer, the events stayed in the log and
+   * nothing was said about them. An unreadable log is now a failed sync with
+   * a retry, which is the same shape as a network failure: the events stay,
+   * the courier is told, and the phone tries again.
    */
   async sync(shiftId: string): Promise<SyncOutcome> {
     return this.log.window(async () => {
-      const batch = await this.log.nextBatch(this.batchSize);
+      let batch: DeliveryEvent[];
+      try {
+        batch = await this.log.nextBatch(this.batchSize);
+      } catch (error) {
+        return this.unreadable(error);
+      }
       if (batch.length === 0) {
         return this.answer({ sent: 0, accepted: 0, cursor: 0, failed: false });
       }
@@ -119,6 +133,28 @@ export class SyncService {
         return outcomes;
       }
     }
+  }
+
+  /**
+   * The log could not be read (BUG-090).
+   *
+   * Nothing was sent, so nothing is confirmed: the events stay in the log and
+   * the caller is told how long to wait. It is the same answer as a network
+   * failure, because from the courier's side it is the same thing - whatever
+   * went wrong, the phone has not sent what it is holding and will try again.
+   */
+  private unreadable(error: unknown): SyncOutcome {
+    this.failures += 1;
+    console.warn(
+      `sync: the event log could not be read, its events stay in it - ${errorMessage(error)}`,
+    );
+    return this.answer({
+      sent: 0,
+      accepted: 0,
+      cursor: 0,
+      failed: true,
+      retryAfterMs: retryBackoffMs(this.failures),
+    });
   }
 
   /** A refusal is kept for the courier; a network failure is retried later. */

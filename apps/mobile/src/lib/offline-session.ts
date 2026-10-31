@@ -14,7 +14,7 @@
  * The receipt is a convenience, not a permission: nothing in the app trusts
  * it for anything the server decides. It never leaves the device.
  */
-import { readStoredValue, writeStoredValue } from './session-storage';
+import { clearStoredValue, readStoredValue, writeStoredValue } from './session-storage';
 
 /** The key the receipt is stored under in the device store. */
 export const OFFLINE_SESSION_KEY = 'courier_offline_session';
@@ -101,6 +101,11 @@ export async function rememberSession(user: OfflineSessionUser, now = Date.now()
  * not keep it around.
  */
 export async function readOfflineSession(now = Date.now()): Promise<OfflineSession | null> {
+  // A receipt the driver signed out of reads as gone, whatever the device
+  // store did with the request to forget it (BUG-077).
+  if (receiptDiscarded) {
+    return null;
+  }
   // The device store is not readable on every platform: the app opens signed
   // out rather than breaking.
   const raw = await readStoredValue(OFFLINE_SESSION_KEY);
@@ -118,13 +123,58 @@ export async function readOfflineSession(now = Date.now()): Promise<OfflineSessi
     return null;
   }
   if (parsed.expiresAt <= now) {
-    await forgetSession();
+    // An old receipt goes. A store that will not take it is reported here,
+    // but the answer is the same: the receipt is too old to trust.
+    try {
+      await forgetSession();
+    } catch {
+      // The receipt is expired either way, and the read fails closed because
+      // `receiptDiscarded` is set by the attempt.
+    }
     return null;
   }
   return parsed;
 }
 
-/** Forgets the stored session (the courier signed out). */
+/**
+ * Whether the stored receipt has been discarded and could not be taken out.
+ *
+ * A driver who asked to forget the session must not be resolved from it
+ * again, so once a sign-out has asked for the receipt to go, this app
+ * session reads the receipt as gone - whatever the device store did with
+ * the request (BUG-077).
+ */
+let receiptDiscarded = false;
+
+/**
+ * Forgets the stored session (the courier signed out).
+ *
+ * The receipt is a convenience, never a permission, but it is the one thing
+ * that can sign a driver back in on a phone with no signal - so a sign-out
+ * that cannot clear it must say so, and the read must fail closed for the
+ * rest of this session (BUG-077). Before this, the failure was swallowed:
+ * a device store that refused the delete left the receipt in place and
+ * `readOfflineSession()` still resolved the driver the driver asked to
+ * forget.
+ */
 export async function forgetSession(): Promise<void> {
-  await writeStoredValue(OFFLINE_SESSION_KEY, '');
+  receiptDiscarded = true;
+  try {
+    await clearStoredValue(OFFLINE_SESSION_KEY);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'the delete failed';
+    console.warn(
+      `session: the stored session could not be forgotten, so this app session reads it as gone - ${detail}`,
+    );
+    throw new Error(`the stored session could not be forgotten: ${detail}`, { cause: error });
+  }
 }
+
+/**
+ * Reads the stored session.
+ *
+ * Returns null when there is no receipt, when the receipt is not readable,
+ * or when it is too old to trust. An old receipt is removed so the app does
+ * not keep it around. A receipt the driver has signed out of reads as gone,
+ * because a sign-out is the one thing it must never undo.
+ */

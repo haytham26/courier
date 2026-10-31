@@ -11,8 +11,6 @@
  */
 import { Directory, File, Paths } from 'expo-file-system';
 
-import { errorMessage } from '@/lib/errors';
-
 import {
   PREFERENCES_DIRECTORY_NAME,
   driverPreferenceFileName,
@@ -34,22 +32,22 @@ export function driverPreferencesFile(driverId: string): File {
  *
  * The file is created when it is not there, so the first write of a driver
  * does not have to care about the directory.
+ *
+ * A read that the file system refuses is NOT answered with `null`
+ * (BUG-091): `null` is what a driver who has set nothing yet answers with,
+ * and collapsing the two is how a stored value gets overwritten by the next
+ * write. The failure goes to the caller instead, where the write path can
+ * refuse to write over a file it could not read and a screen can carry on
+ * with its defaults. Only "the file is not there" is a null.
  */
 export function createFilePreferenceStore(): PreferenceStore {
   return {
     async read(driverId: string): Promise<string | null> {
-      try {
-        const file = driverPreferencesFile(driverId);
-        if (!file.exists) {
-          return null;
-        }
-        return await file.text();
-      } catch (error) {
-        console.warn(
-          `maps: the preferences of the driver could not be read: ${errorMessage(error)}`,
-        );
+      const file = driverPreferencesFile(driverId);
+      if (!file.exists) {
         return null;
       }
+      return await file.text();
     },
 
     async write(driverId: string, raw: string): Promise<void> {
