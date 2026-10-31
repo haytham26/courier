@@ -390,6 +390,29 @@ jobs:
       - name: Start the API, the auth service and Postgres
         run: |
           set -euo pipefail
+          # The stack comes up in two moves, because two migrations apply to
+          # this one database and only one of them is the postgres container's.
+          #
+          #   1. The contract's schema.sql (the API's tables: runs, shifts,
+          #      stops, delivery_events) is applied by the postgres image's own
+          #      entrypoint from
+          #      packages/contracts/db/schema.sql (infra/compose.ci.yml mounts
+          #      it under docker-entrypoint-initdb.d), so postgres and valkey
+          #      start first.
+          #   2. The auth service's OWN tables (Better Auth's user, session,
+          #      account, verification, organization, team, teamMember, member,
+          #      invitation, twoFactor, jwks) are not in that schema, and the
+          #      service refuses to serve a database without them: the first
+          #      run of this job stopped with the auth container logging
+          #      "Database schema mismatch ... Missing tables user, session, ..."
+          #      and exiting. Better Auth creates them with its own CLI
+          #      (services/auth/src/migrate.config.ts, the same module the
+          #      service loads), which infra/deploy.sh runs on the deploy path -
+          #      so it runs here too, inside the auth image, on this compose
+          #      network, where the database is reachable by its service name.
+          docker compose -f infra/compose.ci.yml up -d --wait postgres valkey
+          docker compose -f infra/compose.ci.yml run --rm --no-deps -T auth \
+            npx --yes auth@1.7.10 migrate --yes --config src/migrate.config.ts
           docker compose -f infra/compose.ci.yml up -d --wait
           docker compose -f infra/compose.ci.yml ps
 
