@@ -100,3 +100,131 @@ describe("auth service configuration", () => {
     expect(config.database).toEqual({ provider: "memory" });
   });
 });
+
+
+// BUG-134: a trusted origin that is a wildcard disables the origin and the
+// CSRF check for every Better Auth route.
+describe("the trusted origins are concrete hosts (BUG-134)", () => {
+  it("refuses a wildcard, naming the value that carries it", () => {
+    const { AUTH_TRUSTED_ORIGINS: _empty, ...env } = VALID_ENV;
+
+    try {
+      loadConfig({ ...env, AUTH_TRUSTED_ORIGINS: "*" });
+      throw new Error("expected loadConfig to refuse a wildcard");
+    } catch (error) {
+      expect((error as Error).message).toContain("AUTH_TRUSTED_ORIGINS");
+      expect((error as Error).message).toContain("scheme://host");
+    }
+  });
+
+  it("refuses an entry that has no scheme, because it is not a host", () => {
+    const { AUTH_TRUSTED_ORIGINS: _empty, ...env } = VALID_ENV;
+
+    try {
+      loadConfig({ ...env, AUTH_TRUSTED_ORIGINS: "app.example.co.nz" });
+      throw new Error("expected loadConfig to refuse a bare host");
+    } catch (error) {
+      expect((error as Error).message).toContain("AUTH_TRUSTED_ORIGINS");
+    }
+  });
+
+  it("takes the concrete origins the app and the edge use", () => {
+    const config = loadConfig({
+      ...VALID_ENV,
+      AUTH_TRUSTED_ORIGINS: "exp://,https://staging.courier.local",
+    });
+
+    expect(config.trustedOrigins).toEqual(["exp://", "https://staging.courier.local"]);
+  });
+});
+
+// BUG-133: the passkey origin is derived from the service's own URL, so a
+// phishing page served from the relying party's apex cannot be the origin a
+// ceremony is replayed against.
+describe("the passkey origin is the service's own URL (BUG-133)", () => {
+  it("defaults to BETTER_AUTH_URL", () => {
+    const config = loadConfig({
+      ...VALID_ENV,
+      AUTH_PASSKEY_RP_ID: "example.co.nz",
+    });
+
+    expect(config.passkey.origin).toBe("https://auth.example.co.nz");
+  });
+
+  it("is cross-checked against the rpID, and refuses one that does not match", () => {
+    try {
+      loadConfig({
+        ...VALID_ENV,
+        AUTH_PASSKEY_RP_ID: "example.co.nz",
+        AUTH_PASSKEY_ORIGIN: "https://example.co.nz.phishing.test",
+      });
+      throw new Error("expected loadConfig to refuse an origin off the rpID");
+    } catch (error) {
+      expect((error as Error).message).toContain("AUTH_PASSKEY_ORIGIN");
+      expect((error as Error).message).toContain("example.co.nz");
+    }
+  });
+
+  it("accepts an origin whose host is the rpID itself", () => {
+    const config = loadConfig({
+      ...VALID_ENV,
+      AUTH_PASSKEY_RP_ID: "example.co.nz",
+      AUTH_PASSKEY_ORIGIN: "https://example.co.nz",
+    });
+
+    expect(config.passkey.origin).toBe("https://example.co.nz");
+  });
+});
+
+// BUG-132: the limiter's window and its switch are the deployment's, not the
+// library's defaults, so a deployment can state its own numbers.
+describe("the rate limit is the deployment's own (BUG-132)", () => {
+  it("can be switched off in a deployment that fronts it with its own edge", () => {
+    const config = loadConfig({ ...VALID_ENV, AUTH_RATE_LIMIT_ENABLED: "false" });
+
+    expect(config.rateLimit.enabled).toBe(false);
+  });
+
+  it("carries its window and its bound from the environment", () => {
+    const config = loadConfig({
+      ...VALID_ENV,
+      AUTH_RATE_LIMIT_MAX: "25",
+      AUTH_RATE_LIMIT_WINDOW: "30",
+    });
+
+    expect(config.rateLimit.max).toBe(25);
+    expect(config.rateLimit.window).toBe(30);
+  });
+
+  it("stays on with its own numbers by default", () => {
+    const config = loadConfig(VALID_ENV);
+
+    expect(config.rateLimit.enabled).toBe(true);
+  });
+});
+
+// BUG-137: a variable that is set but empty is a misconfiguration, not a
+// default, and a production boot names it.
+describe("an empty variable is refused (BUG-137)", () => {
+  it("refuses an empty BETTER_AUTH_URL rather than booting with a default", () => {
+    const { AUTH_TRUSTED_ORIGINS: _empty, ...env } = VALID_ENV;
+
+    try {
+      loadConfig({ ...env, BETTER_AUTH_URL: "" });
+      throw new Error("expected loadConfig to refuse an empty URL");
+    } catch (error) {
+      expect((error as Error).message).toContain("BETTER_AUTH_URL");
+    }
+  });
+
+  it("refuses a variable that is only whitespace", () => {
+    const { AUTH_TRUSTED_ORIGINS: _empty, ...env } = VALID_ENV;
+
+    try {
+      loadConfig({ ...env, AUTH_TRUSTED_ORIGINS: "   " });
+      throw new Error("expected loadConfig to refuse a whitespace list");
+    } catch (error) {
+      expect((error as Error).message).toContain("AUTH_TRUSTED_ORIGINS");
+    }
+  });
+});

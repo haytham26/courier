@@ -31,9 +31,17 @@ describe("the readiness probe", () => {
     const config = loadConfig(ENV);
     const body = healthBody(config);
 
-    expect(body).toEqual({ status: "ok", db: "postgres" });
-    // The whole answer is two keys; anything else would be a leak or a hope.
-    expect(Object.keys(body).sort()).toEqual(["db", "status"]);
+    // The answer is what the service is and what it is on. BUG-137 added the
+    // configured sign-in methods and the origin, because a deployment whose
+    // configuration was wrong-but-non-empty booted healthy and then refused
+    // every request with a "not set up on this server yet" that named nothing.
+    expect(body.status).toBe("ok");
+    expect(body.db).toBe("postgres");
+    expect(body.methods).toEqual(["email", "mfa"]);
+    expect(body.origin).toBe("https://auth.example.co.nz");
+    // Nothing identifies a caller, an account or a request: the answer is the
+    // same for every probe.
+    expect(Object.keys(body).sort()).toEqual(["db", "methods", "origin", "status"]);
   });
 
   it("reports the database the service is actually on", () => {
