@@ -252,3 +252,16 @@ describe("an empty variable is refused (BUG-137)", () => {
     });
     expect(config.passkey.origin).toBe("https://auth.example.co.nz");
   });
+
+
+  it("exempts a loopback origin from the rpID cross-check", () => {
+    // The developer's own machine, and the test suite's: the BUG-133 threat is
+    // the network, so localhost is exempt the way the API's JWKS hop exempts
+    // it (BUG-131).
+    const config = loadConfig({
+      ...VALID_ENV,
+      BETTER_AUTH_URL: "http://localhost:3001",
+      AUTH_PASSKEY_RP_ID: "auth.example.co.nz",
+    });
+    expect(config.passkey.origin).toBe("http://localhost:3001");
+  });

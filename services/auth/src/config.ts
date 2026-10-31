@@ -208,6 +208,23 @@ function isOriginOfRpID(origin: string, rpID: string): boolean {
 }
 
 /**
+ * The origins whose host never leaves the machine (localhost and its
+ * literals). A passkey origin on such a host is the developer's own machine -
+ * local dev, or the test suite - and the BUG-133 threat is the network, so
+ * these are exempt from the rpID cross-check the API's JWKS hop exempts the
+ * same way (BUG-131).
+ */
+function isLoopbackOrigin(origin: string): boolean {
+  let host: string;
+  try {
+    host = new URL(origin).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]";
+}
+
+/**
  * Builds the service configuration from the process environment.
  *
  * @throws {MissingEnvError} when a required variable is absent or invalid.
@@ -298,9 +315,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
   // one beneath it - and the check runs on the derived value too, not only on
   // the one the operator typed: a derived origin whose host is off the rpID is
   // the same misconfiguration, reached without anyone naming
-  // AUTH_PASSKEY_ORIGIN at all.
+  // AUTH_PASSKEY_ORIGIN at all. Loopback is exempt, the same way the API's
+  // JWKS hop exempts it (BUG-131): the threat is the network, and a loopback
+  // origin is the developer's own machine - including the test suite, which
+  // runs the service on localhost with a production rpID.
   const passkeyOrigin = values.AUTH_PASSKEY_ORIGIN ?? baseURL;
-  if (passkeyEnabled && !isOriginOfRpID(passkeyOrigin, rpID)) {
+  if (passkeyEnabled && !isLoopbackOrigin(passkeyOrigin) && !isOriginOfRpID(passkeyOrigin, rpID)) {
     throw new Error(
       `AUTH_PASSKEY_ORIGIN=${passkeyOrigin} is not an origin of AUTH_PASSKEY_RP_ID=${rpID}: `
       + "the passkey origin must be the relying party's own host (or one beneath it)",
