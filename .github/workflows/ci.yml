@@ -140,6 +140,13 @@ jobs:
           LOADTEST_STOPS_PER_SHIFT: '5'
           LOADTEST_WAIT_MIN: '3'
           LOADTEST_WAIT_MAX: '8'
+          # A bounded day per user, so the request count is a property of the
+          # test rather than of the runner's speed: 50 users x 8 task
+          # executions lands ~400 requests wherever it runs, far above the
+          # vacuous floor of 100. Before this, a 60 s wall-clock window landed
+          # 141-197 requests on five runs and 99 and 70 on two healthy ones,
+          # and the floor read the difference as a broken API.
+          LOADTEST_ITERATIONS: '8'
         run: |
           set -euo pipefail
           # uv run --directory changes the cwd: the JWKS goes to an

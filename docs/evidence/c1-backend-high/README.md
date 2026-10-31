@@ -95,3 +95,51 @@ One local-only red was also explained, not chased (PLAYBOOK §6): in a worktree 
 `node_modules` the generated-API-client check fails on quote style, because the generator's own
 docstring says a missing formatter must make the gate red, never silently green. With the
 lockfile's prettier (3.9.10) on the PATH the check passes; CI runs it with prettier installed.
+
+## The second red leg on this branch: the vacuous floor of the Locust gate
+
+With the jwks fix green, the same `Test` job reached the Locust SLO profile for the first time on
+this branch's code — and the profile's vacuous guard failed, twice (the push-triggered and the
+PR-triggered runs of the same head, both red):
+
+```
+VACUOUS RUN: only 99 requests - the gate needs a seeded, reachable API
+VACUOUS RUN: only 70 requests - the gate needs a seeded, reachable API
+```
+
+Both runs were otherwise healthy: 0 failed requests, no SLO breach (route p95 74 ms against a
+5,000 ms budget, sync p95 8 ms against 300 ms, pod p95 8 ms against 2,000 ms), and every one of
+the four wanted surfaces exercised. The measured distribution of the same step:
+
+| Run | Requests | Verdict |
+|---|---|---|
+| #140's head, run 1 | 141 | SLOs met |
+| #140's head, run 2 | 175 | SLOs met |
+| main `ac49393` | 191 | SLOs met |
+| PR #142's head | 177 | SLOs met |
+| main `5839178` | 197 | SLOs met |
+| this head, push run | 99 | VACUOUS |
+| this head, PR run | 70 | VACUOUS |
+| this head, local run 1 (a slow Windows box) | 31 | VACUOUS |
+| this head, local run 2 (the same box) | 93 | VACUOUS |
+
+The defect is the guard, not the code under test: the count came from a 60 s wall-clock window
+(`--run-time 60s`, waits of 3-8 s), so it was a property of the runner's speed, and the floor of
+100 sits inside the healthy band. A threshold inside the band is a coin flip, and the luck of a
+green is not evidence (§17.4's rule, applied to a gate rather than to a flow).
+
+**The fix makes the count a property of the test.** `loadtests/day_budget.py` reads
+`LOADTEST_ITERATIONS` (unset/0/unparseable → uncapped, so the 1,000-driver staging run keeps the
+day shape), each user counts its task executions and `StopUser`s at the budget, and the CI step
+pins `LOADTEST_ITERATIONS: '8'` — 50 users x 8 tasks, ~400 requests wherever it runs, four times
+the floor. The floor itself is untouched (no weakening), every SLO threshold is untouched, and the
+sample the p95 numbers are measured over is four times larger. The parse is pinned by
+`services/api/tests/test_day_budget.py` (6 cases, red first: the module did not exist —
+`ModuleNotFoundError: loadtests.day_budget` — before this change). Gates on this tree: 492
+passed, 1 skipped · ruff clean · mypy clean · check-workflows, conflict markers, mojibake, control
+chars, doc links and the floor guard all clean.
+
+Known trap recorded per §8: the local reproduction of this profile is itself wall-clock-flaky on
+this machine (the JWKS static server goes unanswered and every request times out at 30 s), which
+is the same class of defect as the one being fixed — the CI runs above are the measured evidence,
+and the PR's own run is the final proof of the budget.

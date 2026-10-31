@@ -22,6 +22,16 @@ against the in-memory repo measures the application layer honestly):
     uv run --directory services/api --extra load \
       locust -f loadtests/locustfile.py --headless \
              --host http://127.0.0.1:8000 -u 1000 -r 100 --run-time 15m
+
+The CI profile pins `LOADTEST_ITERATIONS` so the request count is a property
+of the test, not of the runner's speed: each user's day is a fixed number of
+task executions (the budget is `loadtests/day_budget.py`), so a healthy run
+lands ~users x iterations requests whatever the machine, and the vacuous floor
+of 100 (the vacuous-green guard in `assert_the_slos`) stays far below it. Before
+that, a wall-clock run of the same profile landed 141-197 requests on five
+runs and 99 and 70 on two healthy ones, and the floor read the difference as a
+broken API — a threshold inside the healthy band is a coin flip, and the luck
+of a green is not evidence.
 """
 
 from __future__ import annotations
@@ -33,6 +43,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from day_budget import iteration_budget
 from locust import HttpUser, between, events, task
 from locust.exception import StopUser
 from seed_day import loadtest_shift_id, loadtest_stop_id
@@ -84,6 +95,22 @@ class DriverDay(HttpUser):
             for k in range(int(os.environ.get("LOADTEST_STOPS_PER_SHIFT", "5")))
         ]
         self._delivered: set[uuid.UUID] = set()
+        self._tasks_done = 0
+
+    def _another_task(self) -> None:
+        """One task execution against the user's day budget.
+
+        The CI profile sets `LOADTEST_ITERATIONS` (the staging run leaves it
+        unset and uncapped): a user whose budget is spent stops, so the request
+        count is a property of the test and not of how fast the runner is — the
+        2026-10-31 incident, where the same healthy profile landed 141-197
+        requests on five runs and 99 and 70 on two, and the vacuous floor of 100
+        read the difference as a broken API.
+        """
+        self._tasks_done += 1
+        budget = iteration_budget()
+        if budget and self._tasks_done >= budget:
+            raise StopUser("the day's task budget is spent")
 
     _user_counter = 0
 
@@ -101,6 +128,7 @@ class DriverDay(HttpUser):
 
     @task(1)
     def create_run(self) -> None:
+        self._another_task()
         if self.run_id is not None:
             return
         body = {
@@ -138,6 +166,7 @@ class DriverDay(HttpUser):
 
     @task(2)
     def read_the_route(self) -> None:
+        self._another_task()
         if self.run_id is None:
             return
         with self.client.get(f"/shifts/{self.shift_id}/route", catch_response=True) as response:
@@ -145,6 +174,7 @@ class DriverDay(HttpUser):
 
     @task(5)
     def list_the_stops(self) -> None:
+        self._another_task()
         if self.run_id is None:
             return
         # No separate SLO in RUNBOOK section 8: the stop list shares the
@@ -154,6 +184,7 @@ class DriverDay(HttpUser):
 
     @task(10)
     def sync_a_batch(self) -> None:
+        self._another_task()
         if self.run_id is None or not self.stop_ids:
             return  # no seeded day: nothing honest to sync
         batch = [
@@ -172,6 +203,7 @@ class DriverDay(HttpUser):
 
     @task(1)
     def upload_a_pod(self) -> None:
+        self._another_task()
         if self.run_id is None or not self.stop_ids:
             return  # no seeded day: nothing honest to upload against
         pending = [

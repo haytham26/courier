@@ -84,6 +84,11 @@ mediums **with the code they touch**, then the lows **as one batch**.
 - **A worktree has no `node_modules`**: the generated-client check then goes red on quote style
   because the generator refuses to pass silently without prettier (§6: make local equal CI — put
   the lockfile's prettier on the PATH).
+- **A wall-clock request count is a coin-flip threshold**: the Locust gate's vacuous floor of 100
+  counted the requests a 60 s window produced, and the healthy band of that count (141-197 here)
+  straddles the floor. Fixed with `LOADTEST_ITERATIONS` (each user's day is a fixed number of task
+  executions), which makes the count a property of the test. When a gate measures a quantity that
+  depends on the runner, fix the measurement before arguing about the run.
 
 ## The traps that cost time (this session's)
 
