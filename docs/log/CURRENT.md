@@ -1,6 +1,51 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W43. **Local `main` == `origin/main` == `a6063b5` (the state at this handoff). Lead session 8b, 2026-10-30/31.
+**Week:** 2026-W43. **Local `main` == `origin/main` == `5839178` (the state at this handoff). Lead session 9, 2026-10-31.
+
+
+## Lead session 9 (2026-10-31): step 0's register, #52's three device legs, and A1 slice 3's screens
+
+**Merged this session, with the full ritual (merge commit -> archive tag `archive/<branch>` -> remote branch deleted, `git ls-remote --heads origin <branch>` printing nothing):**
+
+| PR | What | Merge |
+|---|---|---|
+| **#137** | step 0: the register tells the truth about BUG-072 and BUG-074 (both fixed on main, their rows said `open`) | `d367b27` |
+| **#141** | the C1 audit's five lead-owned HIGHs (BUG-094, 095, 097, 098, 099), each fixed at its root with a red-first contract; BUG-096 (`infra/deploy.sh`) is the backend's and was not touched | `ac49393` |
+| **#52** | 02 Sign in + the Sign out row (the last of the 13 screens) + BUG-113 | `5839178` |
+
+**#52's three E2E runs, and what each one proved** (the api-35 leg was red from 2026-10-30; the fix is a chain, not a guess):
+
+| Run | Head | Leg | The failure, from its own dump | The answer |
+|---|---|---|---|---|
+| [41097310063](https://github.com/haytham26/courier/actions/runs/41097310063) | `6147e88` | api-35 red | `today-screen` missing; the email field held `driver@example.co.nzcorrect-horse-battery` with `focused: true`, and Gboard's clipboard panel was open | that device's keyboard was taller (top y=381 vs 405), so the password field's centre (y=397) was under it and the flow's tap opened the clipboard instead of focusing the field; the password typed into the email field and the app's own guard refused an empty password |
+| [41150635942](https://github.com/haytham26/courier/actions/runs/41150635942) | `d41913f` | api-35 **green**, api-34 red | `"Face ID unlocks the app."` absent from the tree; the form at y=24..296, the first sentence at 376..408, no second one | the form taking the screen fixed the keyboard; the api-34 leg raised a taller password keyboard (top y=382) and the second sentence (y=410..444) fell outside the app's own viewport |
+| [41159621203](https://github.com/haytham26/courier/actions/runs/41159621203) | `5564a34` | api-35 green, api-34 red | the same assert, the same tree | the first hypothesis (`removeClippedSubviews={false}`) was **disproved**: the drop was not the detach heuristic, it was the viewport. Recorded as dead, per the two-attempt rule |
+| [41163934020](https://github.com/haytham26/courier/actions/runs/41163934020) | `5d02b1c` | **both green** | - | with the form open, the app's two sentences live inside the form's own card (above any keyboard), and the card carries the tighter rhythm that buys the room. Merged with no re-run (17.4) |
+
+**Main is green after the #52 merge** (run [41170762316](https://github.com/haytham26/courier/actions/runs/41170762316): CI, Quality gates, CodeQL, Deploy staging and the Android E2E on the push, all success).
+
+**Open, with their exact state:**
+
+| PR | What | Its state |
+|---|---|---|
+| **#135** | A1 slice 3: the app reads the real run, and the write path leaves the phone | head `49258a2`: the seams (from session 8b) plus this session's work - Today and the drive read the day through the run store (`run.day`), the `mockStops` import is gone from both, the outbox is constructed beside the store (one log), the store's flush is the outbox's `syncAll` under the run's own shift, ADR-014's answers are the courier's (`src/sync/syncAnswers`, said on Today), and the E2E build answers with the mock run's own day (`src/run/dayForThisBuild`) so the flows still walk a day. mobile 576/576, typecheck and lint clean; its CI is running |
+
+**What is left of A1, in order:**
+
+1. **A1 slice 4** - the no-mock E2E job, which is A1's done-when: `android-e2e.yml` (or a sibling job) starts the API and Postgres in compose with `DEMO_SEED_ENABLED=true`, and a flow signs in, loads the seeded day, delivers 3, goes offline, delivers 1, reconnects and syncs, with the rows asserted in Postgres. The app side is ready for it: the store seeds, reads and flushes through the real client.
+2. Then **A4** (the build check that fails a release build on a reachable mock - note `src/run/dayForThisBuild.ts` is the one import of `mockStops` a release build can reach, and it is gated by the build flag the same way `readerForThisBuild` is), **A2** (on-device voice), **C2** (TRIAL_SCOPE from the Spoke teardown), **A6** (the acceptance script + a stable APK link), MASTER §22's app side, then the C1 mediums (BUG-077, 078, 079, 080, 081, 085, 090, 091, 092 with the code they touch), the lows (BUG-082, 083, 084, 093 as one batch), and the rest of the audit and MASTER to the §6 Definition of Done.
+
+**The traps of session 9 (all live):**
+
+- **`git checkout -- <file>` restores from the INDEX, so it discards unstaged work.** It cost this session the ci.yml and release-apk.yml fixes mid-session (both re-applied). To prove a contract red-first, copy the file's current content to the temp folder first, then restore it - never `git checkout`.
+- **The edit tool writes the worktree's line endings, and `core.autocrlf=true` means the worktree is CRLF while the BLOB must stay LF.** The E2E contract checks read the blob (`git show :path` after `git add`), which is the only check that tells the truth. Three files of this session came back from that trap.
+- **A `.cjs` file cannot use `import`** (ESM) - write `.mjs` for node's own test runner.
+- **`node -e "long string"` is mangled by PowerShell** (backticks, apostrophes, `\"`): write the file with the write tool and pass it with `-F`.
+- **A pipe inside an inline code span splits a register row** (BUG-064's worked example, hit again): this session's BUG-094 fix text (`if: always() \|\| cancelled()`) split its row into an extra cell and the status left the count. Escape the pipe, and verify the row with the register gate's own splitter, not a naive split.
+- **The device owns the app's viewport.** With the keyboard up, whatever the app keeps at the bottom of its scroll view is outside the window Android gives it - so what a flow reads has to be above the keyboard, and the app must make room rather than hope (the third shape of BUG-113).
+- **A hook's injected source must be a stable function.** A fresh closure each render re-read the store each render; the run-state suite caught it as a timeout.
+- **A hook's default source must not import the production store.** The `better-auth` ESM chain breaks every screen suite that pulls it in transitively.
+- **The plural of "delivery" is "deliveries"**, and the app's own words are asserted by a test that caught the "deliverys" draft.
 
 
 ## Lead session 8 (2026-10-30): PR #49 merges, BUG-113/114 land, and C1 starts
