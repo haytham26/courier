@@ -148,12 +148,25 @@ export type OfflinePackState =
 /**
  * Where the app looks for the pack. The probe is injected so the detection
  * can be tested without a file system.
+ *
+ * The digest functions are what BUG-085 fixed: the manifest's `sha256` was
+ * parsed into a value and never compared with the archive's bytes, so a
+ * truncated download or a corrupted write answered `ready` and the courier
+ * drove a map that was not the map the checksum was taken of. They are
+ * optional on purpose: a caller that does not have them yet still typechecks,
+ * and the decision below treats "no digest" as "not verified" rather than as
+ * "verified" - a probe that cannot answer must not be able to make a pack
+ * ready.
  */
 export interface OfflinePackProbe {
   /** The manifest of the downloaded pack, or null when there is none. */
   readDownloadedManifest(): Promise<string | null>;
   /** The manifest bundled with the app, or null when the bundle has none. */
   readBundledManifest(): Promise<string | null>;
+  /** The SHA-256 of the downloaded archive, lowercase hex, or null. */
+  digestOfDownloadedArchive?(): Promise<string | null>;
+  /** The SHA-256 of the bundled archive, lowercase hex, or null. */
+  digestOfBundledArchive?(): Promise<string | null>;
 }
 
 /** Where the pack files are, once the app knows. */
@@ -429,16 +442,33 @@ export function checkPackCompatibility(
  *
  * The downloaded pack wins over the bundled one: it is the fresher of the
  * two, and the weekly refresh is what puts it there. A pack that cannot be
- * read, or whose version or region is wrong, is skipped rather than used, and
- * the next candidate is tried.
+ * read, whose version or region is wrong, or whose archive does not hash to
+ * the checksum its own manifest carries is skipped rather than used, and the
+ * next candidate is tried.
  */
 export async function checkOfflinePack(
   probe: OfflinePackProbe,
   expectation: PackExpectation = DEFAULT_PACK_EXPECTATION,
 ): Promise<OfflinePackState> {
-  const candidates: { origin: 'downloaded' | 'bundled'; read: () => Promise<string | null> }[] = [
-    { origin: 'downloaded', read: () => probe.readDownloadedManifest() },
-    { origin: 'bundled', read: () => probe.readBundledManifest() },
+  const candidates: {
+    origin: 'downloaded' | 'bundled';
+    read: () => Promise<string | null>;
+    digest: (() => Promise<string | null>) | undefined;
+  }[] = [
+    {
+      origin: 'downloaded',
+      read: () => probe.readDownloadedManifest(),
+      digest: probe.digestOfDownloadedArchive === undefined
+        ? undefined
+        : () => probe.digestOfDownloadedArchive?.(),
+    },
+    {
+      origin: 'bundled',
+      read: () => probe.readBundledManifest(),
+      digest: probe.digestOfBundledArchive === undefined
+        ? undefined
+        : () => probe.digestOfBundledArchive?.(),
+    },
   ];
 
   let failure: OfflinePackState | null = null;
@@ -477,10 +507,85 @@ export async function checkOfflinePack(
       continue;
     }
 
+    // BUG-085: the manifest's checksum is only a value until the archive's own
+    // bytes are hashed and compared. This is the one place `ready` is decided,
+    // so this is where the comparison belongs - a call site that reads the
+    // state later cannot know whether the pack was ever checked.
+    //
+    // A probe that cannot answer the digest is a probe that cannot verify, and
+    // an unverified pack is not a ready one: the courier is told the map cannot
+    // be used rather than being handed a file nobody checked.
+    const verified = await verifyArchive(candidate, parsed.manifest.sha256);
+    if (verified.status === 'corrupt') {
+      failure = failure ?? {
+        status: 'unreadable',
+        reason: `the ${candidate.origin} pack is corrupt: ${verified.detail}`,
+      };
+      continue;
+    }
+    if (verified.status === 'unchecked') {
+      failure = failure ?? {
+        status: 'unreadable',
+        reason: `the ${candidate.origin} pack could not be verified: ${verified.detail}`,
+      };
+      continue;
+    }
+
     return { status: 'ready', manifest: parsed.manifest, origin: candidate.origin };
   }
 
   return failure ?? { status: 'missing' };
+}
+
+/**
+ * Hashes the archive and compares it with what the manifest says.
+ *
+ * `verified` when the bytes match. `corrupt` when they do not - the file the
+ * courier would drive on is not the file the checksum was taken of.
+ * `unchecked` when the digest could not be answered at all, which is not the
+ * same as matched and must never be treated as though it were.
+ */
+async function verifyArchive(
+  candidate: { origin: 'downloaded' | 'bundled'; digest: (() => Promise<string | null>) | undefined },
+  expectedSha256: string,
+): Promise<
+  | { status: 'verified' }
+  | { status: 'corrupt'; detail: string }
+  | { status: 'unchecked'; detail: string }
+> {
+  const readDigest = candidate.digest;
+  if (readDigest === undefined) {
+    return {
+      status: 'unchecked',
+      detail: 'nothing on this device can hash the archive',
+    };
+  }
+
+  let found: string | null;
+  try {
+    found = await readDigest();
+  } catch (error) {
+    return {
+      status: 'unchecked',
+      detail: `the archive could not be hashed: ${describe(error)}`,
+    };
+  }
+
+  if (found === null) {
+    return {
+      status: 'unchecked',
+      detail: 'the archive is not there to hash',
+    };
+  }
+
+  if (found !== expectedSha256) {
+    return {
+      status: 'corrupt',
+      detail: `the archive does not match the checksum its manifest carries (expected ${expectedSha256}, its bytes are ${found})`,
+    };
+  }
+
+  return { status: 'verified' };
 }
 
 /**
