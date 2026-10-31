@@ -113,9 +113,21 @@ export function readStats(serviceDir) {
   return JSON.parse(readFileSync(file, 'utf8'));
 }
 
+/**
+ * Run mutmut inside the service's own environment.
+ *
+ * `uv sync` installs the CLI into `<service>/.venv/bin`, which is **not** on the
+ * runner's PATH, so `execFileSync('mutmut', …)` dies with `spawnSync mutmut
+ * ENOENT` (run 41229140404, both jobs). Running it through `uv run` gives it the
+ * service's venv; `--directory` also makes the service directory the working
+ * directory, so mutmut writes its `mutants/` where `readStats` looks for it.
+ */
 function runMutmut(serviceDir, args) {
-  const dir = path.resolve(repoRoot, serviceDir);
-  execFileSync('mutmut', args, { cwd: dir, stdio: 'inherit' });
+  const relative = path.relative(repoRoot, path.resolve(repoRoot, serviceDir)) || '.';
+  execFileSync('uv', ['run', '--directory', relative, 'mutmut', ...args], {
+    cwd: repoRoot,
+    stdio: 'inherit',
+  });
 }
 
 export { repoRoot as mutationRepoRoot };
