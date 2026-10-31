@@ -133,7 +133,6 @@ function makeDayStore() {
  * screen's marks in these tests.
  */
 function makeEventStore(): EventStore {
-  const events: DeliveredMark[] = [];
   return {
     append: () => Promise.resolve(),
     pending: () => Promise.resolve([]),
