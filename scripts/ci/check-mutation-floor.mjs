@@ -132,12 +132,28 @@ export function readStats(serviceDir) {
  * 4. `--directory` is also what makes the service directory the working
  *    directory, so mutmut writes its `mutants/` where `readStats` looks for it.
  */
+/**
+ * The extras each service's suite needs, mirroring the workflow's own
+ * `uv sync --extra …`. The API's `tests/test_pod_store.py` raises at import
+ * without `s3test` (run 41240006171); the voice service has **no** `s3test`
+ * extra, so naming it there fails with
+ * `Extra s3test is not defined in the optional-dependencies table for courier-voice`
+ * (run 41241517747). A shared flag list for both services was wrong in both
+ * directions - one missing, one impossible - so each service names its own.
+ */
+const EXTRAS_BY_SERVICE = {
+  'services/api': ['dev', 's3test'],
+  'services/courier-voice': ['dev'],
+};
+
 function runMutmut(serviceDir, args) {
-  const relative = path.relative(repoRoot, path.resolve(repoRoot, serviceDir)) || '.';
-  execFileSync('uv', ['run', '--extra', 'dev', '--extra', 's3test', '--directory', relative, 'mutmut', ...args], {
-    cwd: repoRoot,
-    stdio: 'inherit',
-  });
+  const absolute = path.resolve(repoRoot, serviceDir);
+  const relative = path.relative(repoRoot, absolute) || '.';
+  const extras = EXTRAS_BY_SERVICE[relative] ?? ['dev'];
+  const command = ['run'];
+  for (const extra of extras) command.push('--extra', extra);
+  command.push('--directory', relative, 'mutmut', ...args);
+  execFileSync('uv', command, { cwd: repoRoot, stdio: 'inherit' });
 }
 
 export { repoRoot as mutationRepoRoot };
