@@ -514,6 +514,60 @@ function SignInScreen() {
       </Text>
     ) : null;
 
+  /**
+   * The reference's two plain sentences, as one element.
+   *
+   * BUG-113's last shape: the revealed email form takes the whole screen, and
+   * these two sentences go with it. On a 320x640 phone with the keyboard up the
+   * app's own viewport ends above the screen's bottom, and anything the app
+   * keeps at the bottom of the form state falls outside it - the api-34 leg of
+   * run 41159621203 lost the second sentence that way (its tree carried the
+   * first sentence at y=376..408 and no second one at all, with the second one
+   * sitting at y=410..444 under that device's keyboard).
+   *
+   * So the app makes room instead of hoping: with the form open these two
+   * sentences sit inside the form's own card, directly under the action the
+   * courier just took, where they are above any keyboard the device can raise.
+   * With the ways in showing they are where the reference keeps them, at the
+   * bottom of the front door.
+   */
+  const footerNotes = (
+    <>
+      <Text
+        style={[styles.footerNote, { color: t.colors.secondaryLabel }]}
+        maxFontSizeMultiplier={TEXT_SCALE}
+      >
+        You stay signed in for the whole shift, even without signal.
+      </Text>
+      {biometricAvailable ? (
+        /* The reference's line, and when the phone can do it the line is
+           the offer: the one biometric surface the app has. */
+        <Pressable
+          onPress={openBiometricUnlock}
+          accessibilityRole="button"
+          accessibilityLabel="Face ID unlocks the app"
+          accessibilityHint="Opens the app with your face or fingerprint"
+          testID="sign-in-biometric"
+          style={styles.footerAction}
+        >
+          <Text
+            style={[styles.footerLink, { color: t.colors.accentText }]}
+            maxFontSizeMultiplier={TEXT_SCALE}
+          >
+            Face ID unlocks the app.
+          </Text>
+        </Pressable>
+      ) : (
+        <Text
+          style={[styles.footerNote, { color: t.colors.secondaryLabel }]}
+          maxFontSizeMultiplier={TEXT_SCALE}
+        >
+          Face ID unlocks the app.
+        </Text>
+      )}
+    </>
+  );
+
   return (
     <View
       testID="login-screen"
@@ -525,24 +579,13 @@ function SignInScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets
-          /* BUG-113's last shape, second half: Android's own perf heuristic
-             drops a view from the accessibility tree once it falls outside the
-             ScrollView's clip - and where that clip sits is the keyboard's
-             business, not the app's. The api-34 leg of run 41150635942 proved
-             it: the form (y=24..296), the way back (308..356) and the first
-             footer sentence (376..408) were all in the tree, and the second
-             footer sentence, ten pixels lower, was gone - because that device
-             raised a taller keyboard (a password keyboard with its number row,
-             top edge at y=405 against y=381 on api-35). Same code, same taps,
-             one leg green and one leg red: the app let a keyboard height it
-             does not own decide whether its own content exists (PLAYBOOK 12).
-
-             Keeping the views in the tree is the app-side answer: the content
-             of this screen is fifteen nodes, so the heuristic buys nothing,
-             and a screen whose own sentences stop existing under a keyboard
-             is also a screen a courier using TalkBack cannot read to the end.
-             The fields keep their own place on the screen either way - this is
-             about what the tree holds, not about where anything is drawn. */
+          /* The screen keeps its own content in the accessibility tree.
+             Android's perf heuristic detaches a view from the native tree once
+             it falls outside the ScrollView's clip, and this screen is fifteen
+             nodes: the heuristic buys nothing measurable, and a courier using
+             TalkBack can then read the screen to the end (the way back and the
+             register line included) even when the keyboard has the bottom of
+             the scroll view covered. */
           removeClippedSubviews={false}
         >
           {/* BUG-113's last shape: the revealed email form takes the screen.
@@ -711,7 +754,10 @@ function SignInScreen() {
           {showEmailForm ? null : errorBlock}
 
           {showEmailForm ? (
-            <View testID="sign-in-form" style={[styles.card, { backgroundColor: t.colors.card }]}>
+            <View
+              testID="sign-in-form"
+              style={[styles.card, styles.formCard, { backgroundColor: t.colors.card }]}
+            >
               <View style={styles.field}>
                 <Text
                   style={[styles.fieldLabel, { color: t.colors.label }]}
@@ -771,6 +817,12 @@ function SignInScreen() {
                   {error !== null ? 'Try again' : 'Sign in'}
                 </Text>
               </Pressable>
+
+              {/* The app's two sentences, inside the card the courier is acting
+                  in: with the form open they sit above any keyboard the device
+                  can raise, which is where they have to be for the flow that
+                  reads them to hold (see footerNotes above). */}
+              {footerNotes}
             </View>
           ) : null}
 
@@ -796,38 +848,11 @@ function SignInScreen() {
           ) : null}
 
           <View style={styles.footer}>
-            <Text
-              style={[styles.footerNote, { color: t.colors.secondaryLabel }]}
-              maxFontSizeMultiplier={TEXT_SCALE}
-            >
-              You stay signed in for the whole shift, even without signal.
-            </Text>
-            {biometricAvailable ? (
-              /* The reference's line, and when the phone can do it the line is
-                 the offer: the one biometric surface the app has. */
-              <Pressable
-                onPress={openBiometricUnlock}
-                accessibilityRole="button"
-                accessibilityLabel="Face ID unlocks the app"
-                accessibilityHint="Opens the app with your face or fingerprint"
-                testID="sign-in-biometric"
-                style={styles.footerAction}
-              >
-                <Text
-                  style={[styles.footerLink, { color: t.colors.accentText }]}
-                  maxFontSizeMultiplier={TEXT_SCALE}
-                >
-                  Face ID unlocks the app.
-                </Text>
-              </Pressable>
-            ) : (
-              <Text
-                style={[styles.footerNote, { color: t.colors.secondaryLabel }]}
-                maxFontSizeMultiplier={TEXT_SCALE}
-              >
-                Face ID unlocks the app.
-              </Text>
-            )}
+            {/* The reference keeps its two sentences at the bottom of the front
+                door: that is where they are while the ways in are showing. With
+                the form open they are the form card's own (see footerNotes
+                above), so they are above any keyboard the device can raise. */}
+            {showEmailForm ? null : footerNotes}
 
             <View style={styles.registerRow}>
               <Text
@@ -970,6 +995,15 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     padding: spacing.space16,
     gap: spacing.space12,
+  },
+  // BUG-113's last shape: the revealed email form takes the whole screen, and
+  // it carries the app's two sentences with it (see the render below). The
+  // tighter rhythm is what buys the room for them on the smallest phone the
+  // app supports, with the keyboard up: the fields keep their floors, the
+  // padding and the gaps are what give.
+  formCard: {
+    padding: spacing.space12,
+    gap: spacing.space8,
   },
   offerTitle: {
     fontSize: typography.emphasis.size,

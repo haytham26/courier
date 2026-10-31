@@ -29,7 +29,7 @@
  */
 import React from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ChosenProvider } from '@/components/chosen';
@@ -366,6 +366,40 @@ describe('the sign-in screen', () => {
 
     const scrollView = screen.UNSAFE_getByType(ScrollView);
     expect(scrollView.props.removeClippedSubviews).toBe(false);
+  });
+
+  // BUG-113's last shape, third shape, proven on the api-34 leg of run
+  // 41159621203: keeping the views in the tree was not enough, because what
+  // dropped the sentence was the app's own viewport - the keyboard shrinks the
+  // window, the form state kept the two sentences at the bottom of a screen
+  // whose visible region ends above that bottom, and the api-34 dump carried
+  // the first sentence at y=376..408 and no second one at all (it sat at
+  // y=410..444). api-35 kept its margin, so the same code was green on one leg
+  // and red on the other: an app that lets a device's keyboard decide where its
+  // own sentences are is not robust (PLAYBOOK 12).
+  //
+  // The app makes room: with the form open, the two sentences live inside the
+  // form's own card - the card the courier is acting in, above any keyboard -
+  // and the footer's own copy is only there for the ways-in state, where the
+  // reference keeps them at the bottom of the front door.
+  it('carries the two sentences inside the form card, so the keyboard cannot push them off the screen', async () => {
+    renderScreen();
+
+    fireEvent.press(screen.getByTestId('sign-in-email'));
+    await waitFor(() => expect(screen.getByTestId('sign-in-form')).toBeTruthy());
+
+    // The two sentences are the form card's own children: on the device that is
+    // what puts them above the keyboard, where the api-34 dump showed the
+    // second one was not.
+    const withinForm = within(screen.getByTestId('sign-in-form'));
+    expect(
+      withinForm.getByText('You stay signed in for the whole shift, even without signal.'),
+    ).toBeTruthy();
+    expect(withinForm.getByText('Face ID unlocks the app.')).toBeTruthy();
+
+    // The way back stays named, and the register line stays at the bottom.
+    expect(screen.getByTestId('sign-in-other-ways')).toBeTruthy();
+    expect(screen.getByTestId('sign-in-register')).toBeTruthy();
   });
 
   // The way back is named, because the ways in stepped aside: a screen that
