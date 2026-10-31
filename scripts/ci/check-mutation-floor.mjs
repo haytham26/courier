@@ -124,12 +124,17 @@ export function readStats(serviceDir) {
  * 2. `uv run --directory <service>` alone syncs the **default** dependencies, so
  *    it built a fresh `.venv` and `Failed to spawn: mutmut` again (run
  *    41236313956): mutmut is a `dev` extra. `--extra dev` is what puts it back.
- * 3. `--directory` is also what makes the service directory the working
+ * 3. The suite needs the API's `s3test` extra, exactly as `ci.yml` installs it —
+ *    without it `tests/test_pod_store.py` raises at import
+ *    (`RuntimeError: the s3test extra (boto3 + moto) must be installed in CI`)
+ *    and mutmut's first mutant dies for the runner's reason, not the code's (run
+ *    41240006171).
+ * 4. `--directory` is also what makes the service directory the working
  *    directory, so mutmut writes its `mutants/` where `readStats` looks for it.
  */
 function runMutmut(serviceDir, args) {
   const relative = path.relative(repoRoot, path.resolve(repoRoot, serviceDir)) || '.';
-  execFileSync('uv', ['run', '--extra', 'dev', '--directory', relative, 'mutmut', ...args], {
+  execFileSync('uv', ['run', '--extra', 'dev', '--extra', 's3test', '--directory', relative, 'mutmut', ...args], {
     cwd: repoRoot,
     stdio: 'inherit',
   });
