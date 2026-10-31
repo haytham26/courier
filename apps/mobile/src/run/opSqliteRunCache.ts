@@ -13,10 +13,11 @@
  * `PRAGMA user_version` (the event log's BUG-087 lesson: a shape that grows a
  * column has to be able to land on an install that already has the table).
  */
-import { open, type DB, type Scalar } from '@op-engineering/op-sqlite';
+import type { Scalar } from '@op-engineering/op-sqlite';
 import { errorMessage } from '@/lib/errors';
 
 import { dbNumber, dbText, migrateTable, type TableShape } from '@/sync/eventSchema';
+import { sharedDatabase, type SharedHandle } from '@/sync/dbConnections';
 
 import type { DeliveredMark, RunCache, RunSnapshot } from './types';
 
@@ -80,7 +81,11 @@ const CONNECTIONS = new Map<string, OpSqliteRunCache>();
 export class OpSqliteRunCache implements RunCache {
   private readonly ready: Promise<void>;
 
-  private constructor(private readonly database: DB) {
+  /** The shared handle, released when this cache closes (it does not own it). */
+  private readonly handle: SharedHandle;
+
+  private constructor(handle: SharedHandle) {
+    this.handle = handle;
     this.ready = this.prepare();
   }
 
@@ -90,12 +95,12 @@ export class OpSqliteRunCache implements RunCache {
     if (cached !== undefined) {
       return cached;
     }
-    const cache = new OpSqliteRunCache(open({ name }));
+    const cache = new OpSqliteRunCache(sharedDatabase(name));
     CONNECTIONS.set(name, cache);
     return cache;
   }
 
-  /** Closes the connection and drops it, so the next open opens a new one. */
+  /** Closes the handle and drops it, so the next open opens a new one. */
   async close(): Promise<void> {
     for (const [name, cache] of CONNECTIONS) {
       if (cache === this) {
@@ -103,14 +108,16 @@ export class OpSqliteRunCache implements RunCache {
       }
     }
     await this.ready.catch((error: unknown) => {
-      console.warn(`run: the run cache was never ready, its connection is closed anyway: ${errorMessage(error)}`);
+      console.warn(`run: the run cache was never ready, its handle is released anyway: ${errorMessage(error)}`);
     });
-    await this.database.closeAsync();
+    // The handle is shared with the event log, so it is released rather than
+    // closed: the log may still be reading the same file.
+    await this.handle.release();
   }
 
   async read(): Promise<RunSnapshot | null> {
     await this.ready;
-    const run = await this.database.execute(
+    const run = await this.handle.database.execute(
       `SELECT run_id, shift_id, name, depot_lat, depot_lon, speed_kmh, start_at, capacity_parcels
          FROM ${RUN_TABLE.table} ORDER BY id ASC LIMIT 1`,
     );
@@ -118,7 +125,7 @@ export class OpSqliteRunCache implements RunCache {
     if (row === undefined) {
       return null;
     }
-    const stops = await this.database.execute(
+    const stops = await this.handle.database.execute(
       `SELECT id, location_id, seq, status, address, lat, lon, priority, parcels, service_time_s, window_start, window_end
          FROM ${STOP_TABLE.table} ORDER BY seq ASC`,
     );
@@ -129,9 +136,9 @@ export class OpSqliteRunCache implements RunCache {
     await this.ready;
     // One day is one run: the previous row and its stops leave before the new
     // ones are written, so a stop that left the run does not linger.
-    await this.database.execute(`DELETE FROM ${RUN_TABLE.table}`);
-    await this.database.execute(`DELETE FROM ${STOP_TABLE.table}`);
-    await this.database.execute(
+    await this.handle.database.execute(`DELETE FROM ${RUN_TABLE.table}`);
+    await this.handle.database.execute(`DELETE FROM ${STOP_TABLE.table}`);
+    await this.handle.database.execute(
       `INSERT OR REPLACE INTO ${RUN_TABLE.table}
          (id, run_id, shift_id, name, depot_lat, depot_lon, speed_kmh, start_at, capacity_parcels, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -149,7 +156,7 @@ export class OpSqliteRunCache implements RunCache {
       ],
     );
     for (const stop of snapshot.stops) {
-      await this.database.execute(
+      await this.handle.database.execute(
         `INSERT OR REPLACE INTO ${STOP_TABLE.table}
            (id, run_id, location_id, seq, status, address, lat, lon, priority, parcels, service_time_s, window_start, window_end)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -174,7 +181,7 @@ export class OpSqliteRunCache implements RunCache {
 
   async markDelivered(mark: DeliveredMark): Promise<void> {
     await this.ready;
-    await this.database.execute(
+    await this.handle.database.execute(
       `INSERT OR REPLACE INTO ${MARK_TABLE.table} (stop_id, sequence, at, event_id) VALUES (?, ?, ?, ?)`,
       [mark.stopId, mark.sequence, mark.at, mark.eventId],
     );
@@ -182,12 +189,12 @@ export class OpSqliteRunCache implements RunCache {
 
   async undoDelivered(stopId: string): Promise<void> {
     await this.ready;
-    await this.database.execute(`DELETE FROM ${MARK_TABLE.table} WHERE stop_id = ?`, [stopId]);
+    await this.handle.database.execute(`DELETE FROM ${MARK_TABLE.table} WHERE stop_id = ?`, [stopId]);
   }
 
   async markOf(stopId: string): Promise<DeliveredMark | null> {
     await this.ready;
-    const result = await this.database.execute(
+    const result = await this.handle.database.execute(
       `SELECT stop_id, sequence, at, event_id FROM ${MARK_TABLE.table} WHERE stop_id = ? LIMIT 1`,
       [stopId],
     );
@@ -197,7 +204,7 @@ export class OpSqliteRunCache implements RunCache {
 
   async deliveredMarks(): Promise<DeliveredMark[]> {
     await this.ready;
-    const result = await this.database.execute(
+    const result = await this.handle.database.execute(
       `SELECT stop_id, sequence, at, event_id FROM ${MARK_TABLE.table} ORDER BY at ASC, rowid ASC`,
     );
     return result.rows.map(markOf);
@@ -205,15 +212,15 @@ export class OpSqliteRunCache implements RunCache {
 
   async clear(): Promise<void> {
     await this.ready;
-    await this.database.execute(`DELETE FROM ${RUN_TABLE.table}`);
-    await this.database.execute(`DELETE FROM ${STOP_TABLE.table}`);
-    await this.database.execute(`DELETE FROM ${MARK_TABLE.table}`);
+    await this.handle.database.execute(`DELETE FROM ${RUN_TABLE.table}`);
+    await this.handle.database.execute(`DELETE FROM ${STOP_TABLE.table}`);
+    await this.handle.database.execute(`DELETE FROM ${MARK_TABLE.table}`);
   }
 
   private async prepare(): Promise<void> {
-    await migrateTable(this.database, RUN_TABLE);
-    await migrateTable(this.database, STOP_TABLE);
-    await migrateTable(this.database, MARK_TABLE);
+    await migrateTable(this.handle.database, RUN_TABLE);
+    await migrateTable(this.handle.database, STOP_TABLE);
+    await migrateTable(this.handle.database, MARK_TABLE);
   }
 }
 

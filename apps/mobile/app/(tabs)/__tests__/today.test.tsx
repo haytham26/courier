@@ -15,7 +15,10 @@ import * as Haptics from 'expo-haptics';
 import { ChosenProvider } from '@/components/chosen';
 import { RunProvider } from '@/maps/runState';
 import { e2eDay } from '@/run/dayForThisBuild';
-import type { DeliveredMark } from '@/run/types';
+import { RunStore } from '@/run/runStore';
+import { EventLog } from '@/sync/eventLog';
+import type { DeliveredMark, RunCache } from '@/run/types';
+import type { EventStore } from '@/sync/types';
 import { reportSyncAnswers, resetSyncAnswers } from '@/sync/syncAnswers';
 import { BriefContext } from '../briefContext';
 import { DEFAULT_VOICE_SETTINGS } from '@/voice/settings';
@@ -125,6 +128,22 @@ function makeDayStore() {
   };
 }
 
+/**
+ * An event log over an in-memory store, so no database is opened behind a
+ * screen's marks in these tests.
+ */
+function makeEventStore(): EventStore {
+  const events: DeliveredMark[] = [];
+  return {
+    append: () => Promise.resolve(),
+    pending: () => Promise.resolve([]),
+    markSynced: () => Promise.resolve(),
+    quarantine: () => Promise.resolve(),
+    forget: () => Promise.resolve(),
+    pendingCount: () => Promise.resolve(0),
+  };
+}
+
 const renderScreen = () => {
   const brief = makeBrief();
   const screenHandle = render(
@@ -148,6 +167,61 @@ describe('Today', () => {
     // The outbox's answers are the session's own: one suite's answer must not
     // leak into the next test's screen.
     resetSyncAnswers();
+  });
+
+  // The E2E build's own composition, which the mock legs of the Android E2E run
+  // against: the root layout hands the run state the production store, and its
+  // `load` answers the E2E build's day (the mock run's stops). The run of
+  // e59aaaf (both legs) showed why this composition has to be pinned: the day
+  // the screen answered with was EMPTY - "Every stop is delivered." with no
+  // `today-go` and no `today-mark-delivered` in the tree - and five flows of
+  // the suite died on those two testIDs. A screen that reads the run store and
+  // answers no stops is a courier shown an empty shift.
+  it('answers the E2E build\'s own day through the run store the root layout hands it', async () => {
+    // The store the E2E build's production construction site builds: the same
+    // reason it passes (`EXPO_PUBLIC_E2E=1` seeds `e2e`), over the app's own
+    // day. The cache is in memory, so no database is opened behind it - this
+    // test is about the DAY reaching the screen, which is what the run of
+    // e59aaaf lost.
+    const cache: RunCache = {
+      read: () => Promise.resolve(null),
+      write: () => Promise.resolve(),
+      markDelivered: () => Promise.resolve(),
+      markOf: () => Promise.resolve(null),
+      undoDelivered: () => Promise.resolve(),
+      deliveredMarks: () => Promise.resolve([]),
+      clear: () => Promise.resolve(),
+      close: () => Promise.resolve(),
+    };
+
+    const store = new RunStore({
+      client: {
+        seedDemoRun: () => Promise.resolve({ status: 'offline' }),
+        getRun: () => Promise.resolve({ status: 'offline' }),
+        getStops: () => Promise.resolve({ status: 'offline' }),
+      },
+      cache,
+      events: new EventLog(makeEventStore()),
+      reason: 'e2e',
+    });
+
+    render(
+      <ChosenProvider mode="light">
+        <RunProvider store={store}>
+          <BriefContext.Provider value={makeBrief()}>
+            <TodayScreen />
+          </BriefContext.Provider>
+        </RunProvider>
+      </ChosenProvider>,
+    );
+
+    // The day is the E2E build's own: five stops, and the first is the next one
+    // the courier drives to.
+    await waitFor(() => {
+      expect(screen.getByTestId('today-go')).toBeTruthy();
+    });
+    expect(screen.getByTestId('today-mark-delivered')).toBeTruthy();
+    expect(screen.queryByText('Every stop is delivered.')).toBeNull();
   });
 
   it('renders the root, the greeting and the day exactly as the flows find them', async () => {
