@@ -1,0 +1,100 @@
+name: LINZ weekly changeset
+
+# C3's "the weekly changeset import, so new subdivisions land within a week".
+#
+# LINZ publishes a new revision of NZ Addresses every week, and the Data
+# Service exposes the difference between two revisions as a WFS changeset (the
+# layer id carries `-changeset` and the request carries
+# `viewparams=from:...;to:...`, read 2026-10-30). This lane runs every week,
+# and on demand:
+#
+#   1. it fetches the week's changeset for the three areas we serve and keeps
+#      the counts by action (insert / update / delete) as evidence;
+#   2. it rebuilds the address index from the live revisions, which is the
+#      APPLY step: a new subdivision is in the register within a week, and the
+#      index the app reads is the live one;
+#   3. it re-runs the D8 accuracy measure and keeps its report as evidence,
+#      which is how "the register changed and the engine still resolves" is
+#      proved every week rather than claimed once.
+#
+# The key is `LINZ_LDS_API_KEY`, read from the GitHub Secrets. A missing secret
+# SKIPS the lane with a clear notice in the job log: it never fails the job,
+# because a repository without the key is a repository that is not doing LINZ
+# imports yet, not a broken build (the same rule the Store readiness lane
+# follows, BUG-112 era).
+
+on:
+  schedule:
+    # Sunday 18:00 UTC, which is Monday 07:00 in Christchurch (UTC+13): the
+    # week's changeset is fetched before the working week starts.
+    - cron: '0 18 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linz-changeset-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  weekly-import:
+    name: Fetch the week's changeset, rebuild the index, measure
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The value lives in the GitHub Secrets: it is never written to the
+      # repository, to the log or to an artefact, and a missing one never
+      # fails this job.
+      LINZ_LDS_API_KEY: ${{ secrets.LINZ_LDS_API_KEY }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Python and httpx
+        if: env.LINZ_LDS_API_KEY != ''
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+
+      - name: Fetch the week's changeset (inserts, updates, deletes)
+        if: env.LINZ_LDS_API_KEY != ''
+        run: uv run --with httpx python scripts/data/fetch-linz-changeset.py
+
+      - name: Rebuild the address index from the live revisions
+        if: env.LINZ_LDS_API_KEY != ''
+        run: |
+          set -euo pipefail
+          # No truncation: the default 200 000 per area silently drops the newest
+          # addresses of Christchurch and Waimakariri (225 295 and 236 205), which
+          # are exactly the new subdivisions this lane exists to land.
+          uv run --with httpx python scripts/data/fetch-linz.py --area all --limit 400000
+          for area in christchurch waimakariri selwyn; do
+            uv run python scripts/data/build-linz-index.py --area "$area"
+          done
+
+      - name: Re-run the D8 accuracy measure
+        if: env.LINZ_LDS_API_KEY != ''
+        run: |
+          set -euo pipefail
+          uv sync --directory services/api --extra dev
+          uv run --directory services/api pytest tests/test_linz_accuracy.py -q -p no:randomly
+
+      - name: Keep the evidence
+        if: always() && env.LINZ_LDS_API_KEY != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: linz-weekly-evidence
+          path: |
+            docs/evidence/phase-2.3/linz-accuracy.md
+            data/linz/changeset-summary-*.json
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Skip with a notice when the key is absent
+        if: env.LINZ_LDS_API_KEY == ''
+        run: |
+          echo "::notice title=LINZ weekly changeset skipped::LINZ_LDS_API_KEY is not set in"
+          echo "this repository's secrets, so the weekly LINZ import did not run. Add the key in"
+          echo "Settings -> Secrets and variables -> Actions to enable it (see"
+          echo "docs/status/FOUNDER_TODO.md). Nothing else is affected: this lane is the only"
+          echo "consumer of the key."

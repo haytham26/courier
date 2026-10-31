@@ -109,6 +109,15 @@ class AddressStore(Protocol):
     def suburbs_for_road(self, road: str) -> list[str]:
         """Every suburb a road runs through."""
 
+    def suburbs(self) -> list[str]:
+        """Every suburb the store knows: the register's own vocabulary.
+
+        The engine hands this to `nz_address.parse` so the parser can tell a
+        suburb from the rest of a road name without a hardcoded list. A store
+        that cannot answer cheaply may cache it; `correct` calls it once per
+        address, so an answer that walks every row on every call is not one.
+        """
+
     def by_id(self, linz_address_id: str) -> Address | None:
         """A single address by its LINZ id."""
 
@@ -120,6 +129,7 @@ class InMemoryAddressStore:
         self._addresses = list(addresses)
         self._by_road: dict[str, list[Address]] = {}
         self._by_id: dict[str, Address] = {}
+        self._suburbs: list[str] | None = None
         for address in self._addresses:
             self._by_road.setdefault(address.road_key, []).append(address)
             self._by_id[address.linz_address_id] = address
@@ -134,6 +144,11 @@ class InMemoryAddressStore:
 
     def suburbs_for_road(self, road: str) -> list[str]:
         return sorted({address.suburb for address in self._by_road.get(road, [])})
+
+    def suburbs(self) -> list[str]:
+        if self._suburbs is None:
+            self._suburbs = sorted({a.suburb for a in self._addresses if a.suburb})
+        return list(self._suburbs)
 
     def by_id(self, linz_address_id: str) -> Address | None:
         return self._by_id.get(linz_address_id)
@@ -157,6 +172,7 @@ class SqliteAddressStore:
 
     def __init__(self, db_path: str | Path) -> None:
         self.db_path = Path(db_path)
+        self._suburbs: list[str] | None = None
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -188,6 +204,16 @@ class SqliteAddressStore:
         finally:
             conn.close()
         return sorted(row["suburb"] for row in rows)
+
+    def suburbs(self) -> list[str]:
+        if self._suburbs is None:
+            conn = self._connect()
+            try:
+                rows = conn.execute("SELECT DISTINCT suburb FROM addresses ORDER BY suburb")
+                self._suburbs = sorted(row["suburb"] for row in rows if row["suburb"])
+            finally:
+                conn.close()
+        return list(self._suburbs)
 
     def by_id(self, linz_address_id: str) -> Address | None:
         conn = self._connect()
@@ -337,7 +363,11 @@ class AddressCorrector:
     def correct(self, raw: str) -> Correction:
         original = raw
         text = self._apply_self_correction(raw)
-        parsed = nz_address.parse(text)
+        # The register's own suburb vocabulary, not the parser's hardcoded
+        # Christchurch list: the parser has to be able to tell a suburb from the
+        # rest of a road name for every suburb we serve, and the store is the
+        # only thing that knows all of them.
+        parsed = nz_address.parse(text, self.store.suburbs())
 
         if not parsed.street:
             return Correction(

@@ -50,7 +50,19 @@ const DELIVERY_PATTERNS: readonly { pattern: RegExp; command: VoiceCommand }[] =
     command: { type: 'mark_delivered', stopId: 'current' },
   },
   {
-    pattern: /^left(?:\s+it)?\s+(?:at|by|in|on)\s+(?:the\s+)?(?<place>[\w\s]+?)\.?$/i,
+    // BUG-073 (the C1 audit, squad 1 finding 4): the place the courier spoke
+    // ("left it at the side gate") used to be captured by this pattern and
+    // then thrown away, so the delivery reached the app with nowhere recorded.
+    // The courier's own words are carried now, through the command and into
+    // the delivery request, because the next person who looks for the parcel
+    // has nothing else to go on.
+    //
+    // The preposition list is the words a NZ courier actually says for a
+    // parcel's resting spot, including "under" and "behind", which were not
+    // there before and are the reason "left it under the mat" made no command
+    // at all.
+    pattern:
+      /^left(?:\s+it)?\s+(?:at|by|in|on|under|behind|inside|next to|beside)\s+(?:the\s+)?(?<place>[\w\s]+?)\.?$/i,
     command: { type: 'mark_delivered', stopId: 'current' },
   },
   {
@@ -152,7 +164,16 @@ export function parseVoiceCommand(transcript: string): VoiceCommand | null {
     }
     const groups = match.groups ?? {};
     if (groups.place !== undefined) {
-      return { type: 'mark_delivered', stopId: 'current' };
+      // BUG-073: the place is carried, as the courier said it. The pattern
+      // matched against the sentence with its case kept, so "Left It At The
+      // Side Gate" stays the way it was spoken; the leading "the" the pattern
+      // allows is not part of the place itself.
+      const place = groups.place.trim();
+      return {
+        type: 'mark_delivered',
+        stopId: 'current',
+        safePlace: place.length > 0 ? place : undefined,
+      };
     }
     if (groups.address !== undefined) {
       return { type: 'add_stop', rawAddress: groups.address.trim() };

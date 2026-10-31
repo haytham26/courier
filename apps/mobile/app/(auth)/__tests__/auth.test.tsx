@@ -38,6 +38,15 @@ jest.mock('@/lib/auth-client', () => {
   };
 });
 
+// The receipt the phone keeps. Mocked so the store is not the test's problem,
+// and so a row can be planted exactly the way the device would have it.
+const mockStoredSession = { current: null as unknown };
+jest.mock('@/lib/offline-session', () => ({
+  forgetSession: jest.fn(),
+  readOfflineSession: jest.fn(() => Promise.resolve(mockStoredSession.current)),
+  rememberSession: jest.fn(() => Promise.resolve()),
+}));
+
 /**
  * The mocked client, as the provider calls it: the same members, but every
  * call is a mockable fn. `requireMock` comes back untyped, so the
@@ -105,6 +114,106 @@ describe('AuthProvider', () => {
     const { getByTestId } = render(<TestComponent />, { wrapper });
 
     await waitFor(() => expect(getByTestId('email').props.children).toBe('driver@example.co.nz'));
+  });
+
+  // BUG-071 (the C1 audit, squad 1 #2, accepted high): a refused session was
+  // read as a network failure. `useSession`'s catch mapped EVERY error class
+  // onto the offline branch, so a 401 - a revoked or expired session, the
+  // server saying plainly that this credential is no longer good - answered
+  // with `status: offline` and `isAuthenticated: yes`, built from the receipt
+  // the phone kept. The probe is better-auth's exact 401 shape.
+  //
+  // The distinction the app must make: no network means the phone's session
+  // is the best answer it has (the shift carries on, and the app says it is
+  // offline); a refusal means the server answered and the answer was no, so
+  // the receipt must not be spent.
+  it('does not spend the stored receipt when the server refuses the session', async () => {
+    // The phone DOES hold a receipt, and it is young: the whole defect is
+    // that this receipt was spent on a refusal, so the test has to plant one.
+    mockStoredSession.current = {
+      user: {
+        id: '1',
+        email: 'driver@example.co.nz',
+        emailVerified: true,
+        createdAt: '2026-10-20T00:00:00.000Z',
+      },
+      confirmedAt: Date.now() - 60 * 60 * 1000,
+      expiresAt: Date.now() + 6 * 60 * 60 * 1000,
+    };
+
+    mockAuthClient.useSession.mockReturnValue({
+      data: null,
+      // Better Auth surfaces an auth failure this way: a 401 with its own
+      // shape, distinct from a network failure.
+      error: { status: 401, statusText: 'Unauthorized', message: 'Unauthorized' },
+      isPending: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+
+    const TestComponent = () => {
+      const { status, isAuthenticated } = useAuth();
+      return (
+        <>
+          <Text testID="status">{status}</Text>
+          <Text testID="auth">{isAuthenticated ? 'yes' : 'no'}</Text>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(<TestComponent />, { wrapper });
+
+    // The refusal is the refusal: the courier is signed out, not offline, and
+    // the receipt is not treated as a ticket.
+    await waitFor(() => expect(getByTestId('status').props.children).toBe('signed-out'));
+    expect(getByTestId('auth').props.children).toBe('no');
+
+    mockStoredSession.current = null;
+  });
+
+  // The other half of the same finding: a network failure IS the offline
+  // case, so a courier with no signal keeps working. This test is the pair of
+  // the one above - it exists so the fix cannot be "treat every error as a
+  // refusal", which would take the offline-first design with it.
+  it('still works offline when the server simply cannot be reached', async () => {
+    // The phone keeps a receipt, young enough to be worth offering.
+    mockStoredSession.current = {
+      user: {
+        id: '1',
+        email: 'driver@example.co.nz',
+        emailVerified: true,
+        createdAt: '2026-10-20T00:00:00.000Z',
+      },
+      confirmedAt: Date.now() - 60 * 60 * 1000,
+      expiresAt: Date.now() + 6 * 60 * 60 * 1000,
+    };
+
+    mockAuthClient.useSession.mockReturnValue({
+      data: null,
+      error: { status: 0, message: 'Network request failed' },
+      isPending: false,
+      isRefetching: false,
+      refetch: jest.fn(),
+    });
+
+    const TestComponent = () => {
+      const { status, isAuthenticated, user } = useAuth();
+      return (
+        <>
+          <Text testID="status">{status}</Text>
+          <Text testID="auth">{isAuthenticated ? 'yes' : 'no'}</Text>
+          <Text testID="email">{user?.email ?? 'none'}</Text>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(<TestComponent />, { wrapper });
+
+    await waitFor(() => expect(getByTestId('status').props.children).toBe('offline'));
+    expect(getByTestId('auth').props.children).toBe('yes');
+    expect(getByTestId('email').props.children).toBe('driver@example.co.nz');
+
+    mockStoredSession.current = null;
   });
 });
 

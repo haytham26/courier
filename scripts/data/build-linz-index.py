@@ -17,7 +17,11 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+# Three parents up, not two: scripts/data/ is two below the repository root, so
+# one more parent than the path alone suggests. With two, the built index landed
+# in scripts/data/linz while the accuracy suite reads data/linz. Pinned by
+# services/api/tests/test_linz_pipeline_paths.py.
+REPO = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO / "data" / "linz"
 
 

@@ -1,6 +1,6 @@
-name: Quality gates
+﻿name: Quality gates
 
-# The V4 §2 gates that are not part of the fast CI job: the floor guard, the
+# The V4 section 2 gates that are not part of the fast CI job: the floor guard, the
 # coverage ratchet, the licence inventory, the dependency audits and the static
 # analysis. Every job here blocks the merge.
 on:
@@ -51,6 +51,15 @@ jobs:
         run: node scripts/ci/check-workflows.mjs
       - name: Every emulator boot asks for software rendering
         run: node scripts/ci/check-emulator-gpu.mjs
+      # BUG-065: the E2E used to take Maestro from `releases/latest`, the
+      # emulator binary and the system image from whatever the runner carried
+      # that day, and the AVD cache key ignored all of them plus the emulator
+      # options. The same APK was green on api-35 one hour and red on four PRs
+      # the next. This gate keeps the pins present, well-shaped and identical
+      # across every workflow that boots an emulator. Its own test runs with
+      # `node --test scripts/*/__tests__/*.test.mjs`.
+      - name: Every emulator boot carries the same pins
+        run: node scripts/ci/check-e2e-pins.mjs
       - name: Check the voice evaluation set
         run: node scripts/eval/check-voice-eval.mjs
       - name: Check the scanner evaluation set

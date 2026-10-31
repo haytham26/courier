@@ -161,6 +161,31 @@ describe('the actions of the service in the commands of the app', () => {
     expect(toVoiceCommand(action)).toEqual({ type: 'mark_delivered', stopId: 'current' });
   });
 
+  // BUG-073: the second drop site. The offline parser was carrying the place
+  // by the time this client ran, and the client then dropped it on the way to
+  // the app's command - so a spoken placement never reached the delivery.
+  it('carries the safe place of a delivery the service captured', () => {
+    const action: CourierVoiceAction = { type: 'mark_delivered', safe_place: 'side gate' };
+    expect(toVoiceCommand(action)).toEqual({
+      type: 'mark_delivered',
+      stopId: 'current',
+      safePlace: 'side gate',
+    });
+  });
+
+  // A place of nothing is no place: the field stays out rather than becoming
+  // an empty string that a later writer turns into a blank row.
+  it('leaves the safe place out when the service sent no place', () => {
+    expect(toVoiceCommand({ type: 'mark_delivered', safe_place: null })).toEqual({
+      type: 'mark_delivered',
+      stopId: 'current',
+    });
+    expect(toVoiceCommand({ type: 'mark_delivered', safe_place: '   ' })).toEqual({
+      type: 'mark_delivered',
+      stopId: 'current',
+    });
+  });
+
   it('keeps the reason of a failed delivery', () => {
     const action: CourierVoiceAction = { type: 'mark_failed', reason: 'dog' };
     expect(toVoiceCommand(action)).toEqual({

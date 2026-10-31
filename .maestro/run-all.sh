@@ -157,10 +157,17 @@ echo "the first screen is on the device"
 echo "::endgroup::"
 
 status=0
+# The per-flow result file: one line per flow, machine-readable, so the nightly
+# health run (PLAYBOOK 17.4) can count a pass rate instead of arguing about a
+# flake. It is evidence, never a verdict: the run's status is decided below.
+FLOWS_RESULT="$EVIDENCE/flows.txt"
+: > "$FLOWS_RESULT"
 for flow in .maestro/*.yaml; do
+  name="$(basename "${flow}")"
   echo "::group::${flow}"
   if ! timeout "$FLOW_TIMEOUT" maestro test "${flow}"; then
     echo "::error::the flow failed: ${flow}"
+    echo "flow=${name} status=fail" >> "$FLOWS_RESULT"
     status=1
     # The failure's own evidence: Maestro writes the hierarchy and the
     # screenshot of the moment the flow failed into its own test dir, and the
@@ -175,6 +182,8 @@ for flow in .maestro/*.yaml; do
       cp -r "$newest". "$dest/" 2>/dev/null || true
       echo "the failure's own dump is in $dest"
     fi
+  else
+    echo "flow=${name} status=pass" >> "$FLOWS_RESULT"
   fi
   echo "::endgroup::"
 done

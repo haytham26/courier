@@ -233,6 +233,59 @@ def match_suburb(text: str, suburbs: list[str] = CHCH_SUBURBS) -> tuple[str | No
     return lowered[best[0]], difflib.SequenceMatcher(None, text.lower(), best[0]).ratio()
 
 
+def match_suburb_tail(tail: str, suburbs: list[str]) -> tuple[str | None, float]:
+    """Matches the tail after the road against the suburb vocabulary, longest first.
+
+    A courier says "24 Dublin Street, Christchurch Central, Christchurch" - the
+    suburb and then the city again - so the whole tail is tried first, then the
+    tail without its last word, then without its last two. The vocabulary is
+    whatever the caller passes: the engine passes the register's own (see
+    `AddressStore.suburbs()`), which is the only reason a suburb the hardcoded
+    `CHCH_SUBURBS` list never heard of (`Prebbleton`, `Lyttelton`, `Rolleston`,
+    `Diamond Harbour`) resolves at all.
+    """
+    words = tail.split()
+    for size in range(len(words), 0, -1):
+        suburb, score = match_suburb(" ".join(words[:size]), suburbs)
+        if suburb is not None:
+            return suburb, score
+    return None, 0.0
+
+
+def _spoken_number_after_unit(text: str) -> str:
+    """Converts the spoken house number that follows a unit.
+
+    A courier says "unit 1 seven Michelle Road" and "unit 6 fifty seven Matipo
+    Street": the unit is spoken FIRST, so `_words_to_digits` (which converts a
+    leading run only, because a road's own name may be a number word) never
+    reaches the house number, and the engine is left looking for a house number
+    called "seven". The run of number words that follows the unit is the house
+    number, and it is converted here - "and" between the words is dropped, and
+    nothing after the run is touched, so "Two Chain Road" stays a road name.
+    """
+    match = re.match(r"^(unit\s+)(\S+)(\s+)(.*)$", text)
+    if not match:
+        return text
+    head, unit_word, _gap, rest = match.groups()
+    tokens = rest.split()
+    run: list[str] = []
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if token == "and" and run and index + 1 < len(tokens) and tokens[index + 1] in NUM_WORDS:
+            index += 1
+            continue
+        if token in NUM_WORDS:
+            run.append(NUM_WORDS[token])
+            index += 1
+            continue
+        break
+    if not run:
+        return text
+    digits = _join_spoken_number(run)
+    return " ".join([head.strip(), unit_word, digits, *tokens[index:]])
+
+
 def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
     text = raw.lower().strip()
     for wrong, right in SPOKEN_FIXES.items():
@@ -240,8 +293,13 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
     text = re.sub(r"[.,;]", " ", text)
     text = re.sub(r"\b(unit|flat|apartment|apt)\s+", "unit ", text)
     text = _words_to_digits(text)
+    text = _spoken_number_after_unit(text)
     text = re.sub(r"\s+", " ", text).strip()
-    text = re.sub(r"^(\d+) ([a-z])\b", r"\1\2", text)  # spoken "forty two B" -> 42b
+    # The spoken suffix "forty two B" -> 42b. The letter must be a token of its
+    # own: a road whose NAME starts with a letter ("19 O'Leary Street") used to
+    # be glued to its number here ("19o'Leary St") and the house number was
+    # lost, because a `\b` also holds between a letter and an apostrophe.
+    text = re.sub(r"^(\d+) ([a-z])(?=\s|$)", r"\1\2", text)
 
     unit = None
     suffix = None
@@ -273,8 +331,10 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
         if m_unit:
             unit, suffix = m_unit.group(1), m_unit.group(2).upper()
     if number and suffix is None:
-        # "20 B McBratneys Road" -> number 20, suffix B.
-        m3 = re.match(r"^(\d+)\s+([a-z])\b", f"{number} {rest}")
+        # "20 B McBratneys Road" -> number 20, suffix B. The letter must be a
+        # token of its own: a `\b` also holds between a letter and an
+        # apostrophe, so "19 O'Leary Street" lost its O and its number.
+        m3 = re.match(r"^(\d+)\s+([a-z])(?=\s|$)", f"{number} {rest}")
         if m3:
             suffix, number = m3.group(2).upper(), m3.group(1)
             rest = rest[m3.end(2) - len(number) :].strip()
@@ -303,29 +363,47 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
                 direction_tokens.append(tail_tokens.pop(0))
             street = " ".join(t.title() for t in tokens[:i]) + " " + STREET_TYPES[tok]
             tail = " ".join(tail_tokens)
-            matched = match_suburb(tail, suburbs)[0] if tail else None
+            matched = match_suburb_tail(tail, suburbs)[0] if tail else None
             if direction_tokens and matched is None:
                 # The direction was not a direction: it belongs to the suburb.
                 tail_tokens = tokens[i + 1 :]
                 tail = " ".join(tail_tokens)
-                matched = match_suburb(tail, suburbs)[0] if tail else None
+                matched = match_suburb_tail(tail, suburbs)[0] if tail else None
                 if matched is not None:
                     direction_tokens.clear()
             if direction_tokens:
                 street += " " + " ".join(token.title() for token in direction_tokens)
-            if tail and matched is not None:
-                suburb, conf = match_suburb(tail, suburbs)
+            if tail:
+                # The tail is handed to the engine as a hint EVEN WHEN this
+                # parser's own vocabulary does not know it. The engine matches
+                # the hint against the suburbs the road really runs through, so
+                # the register - not a hardcoded list of 45 Christchurch
+                # suburbs - decides. Throwing the tail away made the engine ask
+                # "which suburb?" about an address whose driver had just named
+                # it (`docs/evidence/phase-2.3/linz-accuracy.md`).
                 hint = tail
+                if matched is not None:
+                    suburb, conf = match_suburb_tail(tail, suburbs)
             break
     else:
-        # No street type spoken: try the last 1-2 words as suburb.
-        for k in (2, 1):
-            if len(tokens) > k:
-                suburb, s_conf = match_suburb(" ".join(tokens[-k:]), suburbs)
-                if suburb:
+        # No street type spoken: the tail that names the suburb is the SHORTEST
+        # exact match first, and a fuzzy match is only tried when no exact one
+        # exists. Longest-first let "brae prebbleton" fuzzy-match Prebbleton
+        # (SequenceMatcher 0.83) and cut the road's own name in half:
+        # "2 Skara Brae, Prebbleton" answered with the road "Skara".
+        for exact_only in (True, False):
+            for k in range(1, min(3, len(tokens)) + 1):
+                if len(tokens) <= k:
+                    continue
+                candidate = " ".join(tokens[-k:])
+                suburb, s_conf = match_suburb(candidate, suburbs)
+                if suburb and (s_conf >= 1.0 or not exact_only):
                     street, conf = " ".join(t.title() for t in tokens[:-k]), s_conf * 0.8
-                    hint = " ".join(tokens[-k:])
+                    hint = candidate
                     break
+            else:
+                continue
+            break
         else:
             street = " ".join(t.title() for t in tokens) or None
     if not number:

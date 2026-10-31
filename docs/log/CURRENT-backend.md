@@ -139,20 +139,54 @@ it is not redone here.
    founder's phone pointer (`EXPO_PUBLIC_API_URL`, now a FOUNDER_TODO row). All four are
    in FOUNDER_TODO, and none of them blocks the next queue item.
 2. **C3 — the LINZ squad toward 98 %.** The measure/fix/re-measure loop, with the ADR's
-   before-and-after numbers and the trial target met on the eval set as the done-when. The baseline is
-   measured — **96.9 % (1745/1800) against 656,044 real LINZ addresses**
-   (`docs/evidence/phase-2.3/linz-accuracy.md`) — and three fixes are merged against the failures that
-   measurement printed: a unit carrying a letter before a slash (`255C/28`, `4D/87`, `D/87`), a road's
-   direction word before the suburb, and a number word in a road's own name (`Two Chain Road`).
-   **What is left is the re-measure**, which needs `data/linz` — a FOUNDER_TODO item — so the next
-   session runs `fetch-linz.py` for the three areas, `build-linz-index.py`, then
-   `pytest tests/test_linz_accuracy.py`, and writes the numbers into the ADR.
+   before-and-after numbers and the trial target met on the eval set as the done-when.
+   **The re-measure is DONE, and the founder's data was never needed:** `LINZ_LDS_API_KEY` is in
+   `.env.local`, so the session fetched the register itself (656,392 real addresses across the three
+   areas — 225,295 Christchurch, 236,205 Waimakariri, 194,892 Selwyn), built the index and ran
+   `pytest tests/test_linz_accuracy.py`. Two things came out of it, both with their evidence:
+
+   - **The pipeline's paths were broken by the repository restructure** (`89a8545`):
+     `scripts/data/fetch-linz.py` computed the repository root one parent short, so the data and the
+     index were written into `scripts/data/linz/` — outside the `data/linz/` entry `.gitignore`
+     covers, and away from where the accuracy suite looks. The previous session's "needs `data/linz`,
+     a FOUNDER_TODO item" was that defect, not a missing file. Fixed with a red-first test
+     (`services/api/tests/test_linz_pipeline_paths.py`, 14 tests) and the FOUNDER_TODO rows are
+     corrected.
+   - **The measured accuracy on today's revisions was 85.2 % (1534/1800)**, and the failures were
+     dominated by one defect: the parser recognised only 45 hardcoded Christchurch suburbs, so a
+     driver who had NAMED his suburb was still asked which suburb he meant (31 % of the register
+     sits on a road that spans several suburbs). The fix is the register's own vocabulary
+     (`AddressStore.suburbs()`, handed to `nz_address.parse`), red-first in
+     `services/api/tests/test_suburb_vocabulary.py` (12 tests, 9 red before). **After: 96.9 %
+     (1744/1800)** — the ADR carries both numbers and what the remaining 56 failures are. The trial
+     target (>= 98 %) is NOT met yet, and the loop continues on the classes the report prints.
+
+   The weekly import C3 asks for is on main: `.github/workflows/linz-changeset.yml` fetches the
+   week's changeset (this week: 426 inserts, 63 updates, 78 deletes over the three areas), rebuilds
+   the index from the live revisions, re-runs the accuracy measure, keeps both as evidence, and
+   skips with a clear notice rather than going red when the secret is absent.
 3. **MASTER §22 step 2** — the build, from the spec that is on main (PR #125): the
    pre-classifier, the ask-on-low-confidence rule and the visible memory in `services/courier-voice`
    and `apps/mobile/src/voice`, each a PR with red-first tests and the token and latency numbers
    before and after measured through OmniRoute. Step 3, the accessibility spike, is research only and
    ships nothing.
 4. **Then billing (D44) and the rest of queue 3.**
+
+**And, between them, C1's own fix order** (`docs/plan/AUDIT_2026-10-25.md` C1's "the fix order"):
+the backend squad's four squads ran on 2026-10-30 and their verified findings are filed at
+**BUG-115..BUG-159** (`docs/audit/CODE_AUDIT_2026-10.md`, "The backend squad's share"; PR #132, which
+also carries this session's handoff `docs/log/HANDOVER-2026-10-30-F.md`). Critical and high first,
+each fixed at the root with a red-first test:
+
+- **BUG-115** — nothing in production writes `stops.status`, so on Postgres a delivered stop answers
+  `pending` and `?status=delivered` returns `[]`, while the in-memory tests go green;
+- **BUG-146 / BUG-147 / BUG-148** — the voice service's prompt injection by transcript, the path
+  traversal through `shift_id`, and a 403 answered from the caller's own snapshot;
+- **BUG-121 / BUG-127** — the missing JWKS negative cache and the IP-only rate limiter;
+- **BUG-150** — the unbounded `context.stops`.
+
+The lead is fixing their own C1 rows (BUG-071/072/073) in parallel; the registers are shared, so a new
+row's number is taken across `origin/main` and every open PR branch before it is written.
 
 **Closed since the last update:** PR #107, #110 and #111 (the smoke test's version check,
 then its accounting), and **B4** — mutmut at the 70 % floor is on main: the dependency,
