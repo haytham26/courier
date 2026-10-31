@@ -22,7 +22,7 @@ import time
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 
 from . import licences
 from .auth import Principal, get_principal
@@ -44,7 +44,7 @@ from .models import (
 )
 from .offline_brain import parse_command
 from .proactive import ProactiveEvent, for_event
-from .run_client import RunClient
+from .run_client import RunClient, RunForbiddenError, checked_shift_id
 from .safety import apply_safety, is_moving, real_word_count, word_count
 from .turns import TurnMachine
 
@@ -55,6 +55,33 @@ class CreateSession(BaseModel):
     shift_id: str | None = None
     settings: VoiceSettings | None = None
     context: RunContext | None = None
+
+    @field_validator("shift_id")
+    @classmethod
+    def the_shift_id_is_a_path_segment(cls, value: str | None) -> str | None:
+        """A shift id is a segment of the API's own path (BUG-147).
+
+        The API's `GET /shifts/{shift_id}` takes a UUID; a value that cannot
+        be one is refused here, by name, instead of being interpolated into
+        another service's URL and normalised into a path of its own.
+        """
+        return checked_shift_id(value) if value is not None else None
+
+    @model_validator(mode="after")
+    def a_named_shift_is_read_from_the_api(self) -> CreateSession:
+        """A named shift is the API's to answer, not the caller's (BUG-148).
+
+        The snapshot is the phone's own copy of its run, for when the API
+        cannot be reached at all. When the caller names a shift there is no
+        dead spot to explain: the API has the run or refuses it, and the
+        caller's own account of that shift is not the run.
+        """
+        if self.shift_id is not None and self.context is not None:
+            raise ValueError(
+                "a session that names a shift reads that run from the Courier API, "
+                "so it cannot also carry the caller's own snapshot of it"
+            )
+        return self
 
 
 class ProactiveRequest(BaseModel):
@@ -185,6 +212,15 @@ def create_app(
     ) -> TurnResponse:
         """One turn of the conversation."""
         memory = session_of(session_id, principal)
+        if memory.shift_id is not None and body.context is not None:
+            # The same rule the session was opened under (BUG-148): a named
+            # shift is the API's to answer, and a turn's own snapshot of it
+            # is not the run.
+            raise HTTPException(
+                status_code=422,
+                detail="this session names a shift, so a turn reads it from the "
+                "Courier API and cannot carry its own snapshot of it",
+            )
         return _turn(
             memory,
             body,
@@ -390,10 +426,21 @@ def _context_of(
     principal: Principal,
     client: RunClient,
 ) -> RunContext:
-    """The run of the shift: the API first, the phone second."""
+    """The run of the shift: the API first, the phone second.
+
+    A refusal from the API is carried to the caller as a refusal (BUG-148):
+    the turn fails rather than being answered from data the caller supplied
+    about a shift the API will not give him.
+    """
     context = body.context or memory.context
     if memory.shift_id:
-        return client.context(memory.shift_id, principal.token, fallback=context)
+        try:
+            return client.context(memory.shift_id, principal.token, fallback=context)
+        except RunForbiddenError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail="the API refused this shift, so the voice cannot speak about it",
+            ) from exc
     return context
 
 
