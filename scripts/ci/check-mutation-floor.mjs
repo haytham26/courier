@@ -28,11 +28,18 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const BUG_ID = 'BUG-112';
 export const DEFAULT_FLOOR = 70;
 
-const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname.slice(1)), '..', '..');
+// The script's own path, as `fileURLToPath` gives it. The earlier
+// `new URL(import.meta.url).pathname.slice(1)` form **resolved against the working
+// directory**, so the entry guard below never matched and the CLI was a silent
+// no-op: the mutation lane ran for 0.25 s, wrote no stats, and still reported
+// success (run 41190752114). A floor that cannot run is not a floor.
+const thisFile = fileURLToPath(import.meta.url);
+const repoRoot = path.resolve(path.dirname(thisFile), '..', '..');
 const STATS_RELATIVE = path.join('mutants', 'mutmut-cicd-stats.json');
 
 /**
@@ -111,6 +118,8 @@ function runMutmut(serviceDir, args) {
   execFileSync('mutmut', args, { cwd: dir, stdio: 'inherit' });
 }
 
+export { repoRoot as mutationRepoRoot };
+
 const main = () => {
   const args = process.argv.slice(2);
   const mode = args[0] ?? 'check';
@@ -136,6 +145,6 @@ const main = () => {
   );
 };
 
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname.slice(1))) {
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(thisFile)) {
   main();
 }
