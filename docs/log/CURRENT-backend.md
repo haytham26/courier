@@ -84,11 +84,14 @@ mediums **with the code they touch**, then the lows **as one batch**.
 - **A worktree has no `node_modules`**: the generated-client check then goes red on quote style
   because the generator refuses to pass silently without prettier (§6: make local equal CI — put
   the lockfile's prettier on the PATH).
-- **A wall-clock request count is a coin-flip threshold**: the Locust gate's vacuous floor of 100
-  counted the requests a 60 s window produced, and the healthy band of that count (141-197 here)
-  straddles the floor. Fixed with `LOADTEST_ITERATIONS` (each user's day is a fixed number of task
-  executions), which makes the count a property of the test. When a gate measures a quantity that
-  depends on the runner, fix the measurement before arguing about the run.
+- **A wall-clock request count is a coin-flip threshold, and bounding the users' work does not fix
+  it**: the Locust gate's vacuous floor of 100 counted the requests a 60 s window produced; the
+  healthy band (141-197 on CI, 31 on a slow box) straddles the floor, and an iteration budget
+  (`LOADTEST_ITERATIONS`) did NOT help - all 50 users spawn, but the rate their greenlets emit at
+  is the runner's property. The root fix is in the guard, not the users: measure the property the
+  count proxied for (surfaces touched, a 201 claim, a floor of 10) - `loadtests/vacuous_guard.py`.
+  Also: importing locust monkey-patches ssl, so it cannot be imported from a pytest session -
+  profile logic that needs testing lives in its own module.
 
 ## The traps that cost time (this session's)
 

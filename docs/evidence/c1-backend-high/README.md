@@ -143,3 +143,40 @@ Known trap recorded per §8: the local reproduction of this profile is itself wa
 this machine (the JWKS static server goes unanswered and every request times out at 30 s), which
 is the same class of defect as the one being fixed — the CI runs above are the measured evidence,
 and the PR's own run is the final proof of the budget.
+
+## The second attempt on that leg, and why it was reverted (§19.1.2: the hypothesis was dead)
+
+**The hypothesis:** make the request count a property of the test by bounding each user's day to a
+fixed number of task executions (`LOADTEST_ITERATIONS`, pinned to 8 in the CI step), so a healthy
+run lands users x iterations requests whatever the runner's speed. It was implemented, tested
+(6 parse cases) and pushed. **The run still failed, at 76 requests with `LOADTEST_ITERATIONS: 8`
+set** — the iteration cap was not the limiter: all 50 users spawn ("All users spawned: 50"), but
+the rate at which their greenlets emit requests is the runner's (a healthy CI runner reaches
+~3 req/s and produces 141-197; a slow one produces 70-99; a slow local box produces 31). The
+count of a wall-clock window cannot be made deterministic by bounding the users' work — the
+activation itself is the stochastic part.
+
+**The root fix (this PR): the guard measures the property the old count proxied for.**
+`loadtests/vacuous_guard.py` (a module with no locust import, so the default API suite tests it):
+a run is vacuous when **any of** holds — a surface of the day loop was never touched (`/runs`,
+`/stops`, `/events:batch`), no `POST /runs` answered 201 (the claim proves the identity, the
+seeded shift's foreign key and the API together), or fewer than `MIN_REQUESTS` (10) requests
+arrived (a backstop; the measured distribution is 0-13 for a vacuous run and 31-197 for a healthy
+one). The SLO thresholds and the error budget are untouched; the vacuous line now names what was
+missing. Proved end-to-end over a fake environment:
+
+```
+SLOs met: the run is green                                  <- the 76-request healthy shape
+VACUOUS RUN: ... 0 requests, claimed=0, missing all         <- a dead API
+VACUOUS RUN: ... 24 requests, claimed=0, missing stops, batch <- an unseeded day (409s, no claim)
+```
+
+Red first: `services/api/tests/test_vacuous_guard.py` (8 cases) fails with
+`ModuleNotFoundError: loadtests.vacuous_guard` against the unfixed tree. Gates: 494 passed, 1
+skipped · ruff clean · mypy clean · the profile imports and registers the listener under the
+`load` extra.
+
+**Traps recorded (§8):** (1) importing locust monkey-patches ssl at import time, so a pytest
+session that already imported ssl dies with a RecursionError — the guard therefore lives in its
+own import-free module, not in the profile; (2) a worktree has no `node_modules`, so the
+generated-client check goes red on quote style by the generator's own design.
