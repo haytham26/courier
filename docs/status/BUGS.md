@@ -196,7 +196,7 @@ The verdicts that did not survive verification are not filed: squad 2 #1 (the fa
 timestamp — `pod_captured` is not a status kind, and the one route that writes a status kind bounds
 the stamp) and squad 4 #17 (the `http://` example URLs — the compose issuer and `BETTER_AUTH_URL`
 agree, so it is a duplicate of BUG-122).
-**Total Bugs:** 156 | **Open:** 71 | **Fixed:** 48 | **Doing:** 3 | **Testing:** 3 | **Closed:** 1 | **Moved to PARITY:** 30
+**Total Bugs:** 156 | **Open:** 72 | **Fixed:** 47 | **Doing:** 3 | **Testing:** 3 | **Closed:** 1 | **Moved to PARITY:** 30
 
 ## The C1 audit's filings (BUG-069+), 2026-10-28
 
