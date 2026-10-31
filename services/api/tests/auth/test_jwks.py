@@ -80,6 +80,7 @@ def make_settings(**overrides: Any) -> AuthSettings:
         "auth_jwt_issuer": ISSUER,
         "auth_jwt_algorithms": "ES256",
         "auth_jwks_cache_seconds": 300,
+        "auth_jwks_negative_seconds": 30,
         "auth_jwks_timeout_seconds": 5.0,
     }
     values.update(overrides)
@@ -221,12 +222,16 @@ class TestJwksVerifier:
 
 
 class TestTheNegativeCache:
-    """A caller who never presents a real key costs one fetch, not one per request.
+    """A caller who never presents a real key costs at most one fetch per window.
 
     BUG-121: the verifier refreshed whenever the `kid` was unknown, with no
     record of the kids it had already asked the JWKS about, so an
     unauthenticated caller sending distinct bogus kids made the API fetch the
-    auth service's JWKS once per request.
+    auth service's JWKS once per request. The register's own probe counted
+    "6 distinct kids -> 6 fetches" and "4 repeats of the same bogus kid -> 11
+    server hits", and its fix says "only refresh when the cache is stale, so a
+    repeat is served from memory". The lookup an unknown kid forces is
+    therefore rate-limited to one per negative window.
     """
 
     def test_a_bogus_key_id_is_refused_from_memory_after_the_first_lookup(
@@ -247,7 +252,10 @@ class TestTheNegativeCache:
 
         assert fetches["count"] == 1
 
-    def test_distinct_bogus_key_ids_cost_one_fetch_each(self, key_pair: tuple[Any, Any]) -> None:
+    def test_a_burst_of_distinct_bogus_key_ids_costs_one_fetch(
+        self, key_pair: tuple[Any, Any]
+    ) -> None:
+        """The register's probe: 6 distinct kids used to mean 6 fetches."""
         private_key, jwk = key_pair
         fetches = {"count": 0}
 
@@ -261,7 +269,42 @@ class TestTheNegativeCache:
             with pytest.raises(InvalidTokenError):
                 verifier.verify(sign(private_key, kid=f"bogus-{index}"))
 
-        assert fetches["count"] == 6
+        assert fetches["count"] == 1
+
+    def test_a_refused_kid_asks_again_once_the_negative_window_has_passed(
+        self, key_pair: tuple[Any, Any]
+    ) -> None:
+        """A rotated-in key is picked up within the window, not only on the TTL."""
+        private_key, jwk = key_pair
+        fetches = {"count": 0}
+        now = {"value": 0.0}
+
+        def counting(request: httpx.Request) -> httpx.Response:
+            fetches["count"] += 1
+            return httpx.Response(200, json={"keys": [jwk]})
+
+        def clock() -> float:
+            return now["value"]
+
+        verifier = make_verifier(
+            {}, handler=httpx.MockTransport(counting), clock=clock
+        )
+
+        with pytest.raises(InvalidTokenError):
+            verifier.verify(sign(private_key, kid="bogus-kid"))
+        assert fetches["count"] == 1
+
+        # Still inside the negative window: served from memory, no fetch.
+        now["value"] = 10.0
+        with pytest.raises(InvalidTokenError):
+            verifier.verify(sign(private_key, kid="bogus-kid"))
+        assert fetches["count"] == 1
+
+        # Past it: one lookup re-asks (the rotation path), still refused.
+        now["value"] = 31.0
+        with pytest.raises(InvalidTokenError):
+            verifier.verify(sign(private_key, kid="bogus-kid"))
+        assert fetches["count"] == 2
 
     def test_a_key_that_rotates_in_is_accepted_again(
         self, key_pair: tuple[Any, Any]
@@ -294,13 +337,12 @@ class TestTheNegativeCache:
 
         with pytest.raises(InvalidTokenError):
             verifier.verify(sign(new_private_key, kid="bogus-kid"))
-        assert "bogus-kid" in verifier._unknown_kids
+        assert calls["count"] == 1
 
         # The cache TTL passes: the next look asks the JWKS again and finds it.
         now["value"] = 1_000.0
         principal = verifier.verify(sign(new_private_key, kid="bogus-kid"))
         assert principal.user_id == "user-123"
-        assert "bogus-kid" not in verifier._unknown_kids
         assert calls["count"] == 2
 
 

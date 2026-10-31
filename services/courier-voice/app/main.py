@@ -238,7 +238,23 @@ def create_app(
     ) -> ProactiveResponse:
         """What the voice wants to say first, if anything."""
         memory = session_of(session_id, principal)
-        context = body.context or memory.context
+        if memory.shift_id is None:
+            # An unnamed session's day is the phone's own snapshot: there is no
+            # shift for the API to answer about (the design the module is built
+            # on).
+            context = body.context or memory.context
+        else:
+            # The same rule the turn carries (BUG-148): a named shift is read
+            # through the API, so the caller's own account of it is not the
+            # run. The morning brief is the route this matters most on - it is
+            # spoken before the courier has said anything at all.
+            try:
+                context = client.context(memory.shift_id, principal.token)
+            except RunForbiddenError as exc:
+                raise HTTPException(
+                    status_code=403,
+                    detail="the API refused this shift, so the voice cannot speak about it",
+                ) from exc
         chosen = for_event(body.event, context, memory.settings)
         if chosen is None:
             return ProactiveResponse(kind=None, text="", words=0)

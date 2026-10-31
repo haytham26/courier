@@ -731,19 +731,48 @@ class SqlAlchemyRepo:
         )
 
     def get_run_stops(self, run_id: UUID) -> list[RouteStopRow]:
+        # BUG-115: the status is derived from the delivery events, exactly as
+        # the in-memory repo derives it (its own docstring says so). Until this
+        # the column was read as it was seeded - `pending` for ever - because no
+        # writer of the API touched it, so on Postgres a stop the courier had
+        # delivered read `pending` and `?status=delivered` answered nothing,
+        # while every test that ran the in-memory repo was green.
+        #
+        # The status is derived on the READ rather than written on the sync
+        # path, and that is deliberate: `append_events` is the courier's most
+        # frequent call and its statement budget is pinned by BUG-063's own gate
+        # (`test_an_all_new_batch_is_the_one_statement`), so the derivation is
+        # paid by the read that asks for a run's stops instead of by every
+        # batch. The column still answers when a stop has no event at all,
+        # which is what the seed's `pending` is there for.
         statement = text(
             """
             SELECT s.id, s.latitude, s.longitude, s.priority, s.parcels,
                    s.service_time_s, s.time_window_start, s.time_window_end,
-                   s.address, s.suburb, s.status, s.location_id
+                   s.address, s.suburb, s.location_id,
+                   COALESCE(
+                       (
+                           SELECT e.kind
+                           FROM delivery_events e
+                           WHERE e.shift_id = s.shift_id
+                             AND e.stop_id = s.id
+                             AND e.kind IN :kinds
+                           ORDER BY e.occurred_at DESC, e.received_at DESC
+                           LIMIT 1
+                       ),
+                       s.status
+                   ) AS status
             FROM stops s
             JOIN runs r ON r.shift_id = s.shift_id
             WHERE r.id = :run_id
             ORDER BY s.sequence
             """
-        )
+        ).bindparams(bindparam("kinds", expanding=True))
         with self._engine.connect() as connection:
-            rows = connection.execute(statement, {"run_id": run_id}).mappings().all()
+            rows = connection.execute(
+                statement,
+                {"run_id": run_id, "kinds": ["delivered", "skipped", "deferred", "failed"]},
+            ).mappings().all()
         return [
             RouteStopRow(
                 id=row["id"],

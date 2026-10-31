@@ -46,8 +46,9 @@ class TestTheVacuousGuard:
         # The shift's foreign key refuses every claim: 409s, never a 201.
         assert run_is_vacuous(dict(HEALTHY), claimed=0, total=110) is True
 
-    def test_a_missing_identity_is_vacuous(self) -> None:
-        # No token: the on_start guard stops every user before a request.
+    def test_a_missing_identity_stops_the_users_before_a_request(self) -> None:
+        # No token: on_start's StopUser takes every user before it speaks, so
+        # the run greets nothing at all.
         assert run_is_vacuous({}, claimed=0, total=0) is True
 
     def test_a_partially_answering_api_is_vacuous_below_the_floor(self) -> None:
