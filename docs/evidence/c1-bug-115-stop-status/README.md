@@ -115,10 +115,11 @@ design (ADR-014 §2 and the in-memory repo's behaviour), so the drill was fixed 
 to the drill.
 
 The drill now proves **both halves of the derivation against the real restored database**: two stops
-are seeded, one receives a `delivered` event, and the read-back must derive `delivered` for it and
-`pending` (the seeded column, the COALESCE fallback) for the other. Red first, on the real engine
-(`postgis/postgis:17-3.5` in Docker, the CI's own image; the probe script and the swap of
-`app/repo.py` to `origin/main`'s version were local only and reverted straight after):
+are seeded (two distinct doors, so the plan is a real two-leg route), one receives a `delivered`
+event, and the read-back must derive `delivered` for it and `pending` (the seeded column, the
+COALESCE fallback) for the other. Red first — **locally, against the CI's own image**
+(`postgis/postgis:17-3.5` in Docker), by swapping `app/repo.py` to `origin/main`'s version and
+re-running the drill's `smoke()`; the swap was reverted straight after and nothing was pushed:
 
 ```
 === 1. the branch's repo (the derivation in place) ===
@@ -128,4 +129,5 @@ SMOKE FAILED: the restored day does not read back as it was written (the deliver
 ```
 
 Gates on this tree: `-m db` 25 passed · the rest of the suite 478 passed, 1 skipped · ruff clean ·
-mypy clean.
+mypy clean. (These numbers are this commit's tree; the earlier "The gates" section's numbers are
+the PR's first tree, which carried the same suites one row smaller.)

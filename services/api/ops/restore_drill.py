@@ -101,7 +101,7 @@ def smoke(target: str) -> dict[str, float]:
             text(
                 "INSERT INTO stops (id, shift_id, sequence, address, latitude, longitude, "
                 "status, priority, parcels, location_id) "
-                "VALUES (:id, :shift, :sequence, :address, -43.54, 172.60, 'pending', false, 1, "
+                "VALUES (:id, :shift, :sequence, :address, :lat, :lon, 'pending', false, 1, "
                 ":location)"
             ),
             [
@@ -110,6 +110,8 @@ def smoke(target: str) -> dict[str, float]:
                     "shift": shift_id,
                     "sequence": 1,
                     "address": "45 Papanui Road",
+                    "lat": -43.54,
+                    "lon": 172.60,
                     "location": location_id_for("45 Papanui Road", None),
                 },
                 {
@@ -117,6 +119,11 @@ def smoke(target: str) -> dict[str, float]:
                     "shift": shift_id,
                     "sequence": 2,
                     "address": "56 Papanui Road",
+                    # Its own door, not the first stop's coordinates twice: the
+                    # plan over the day is a real two-leg route, and a
+                    # coincident pair would make the optimiser's swap a no-op.
+                    "lat": -43.51,
+                    "lon": 172.62,
                     "location": location_id_for("56 Papanui Road", None),
                 },
             ],
@@ -163,13 +170,20 @@ def smoke(target: str) -> dict[str, float]:
             f"(routable={not unroutable}, planned={len(built.stops)}, read={len(rows)})"
         )
         raise SystemExit(1)
-    delivered = next(row for row in rows if row.id == evented_stop_id)
-    untouched = next(row for row in rows if row.id == unevented_stop_id)
-    if delivered.status != "delivered" or untouched.status != "pending":
+    # Matched by id, never by position: the reads are the run's own rows, so the
+    # assertion cannot drift if the query's ORDER BY ever changes.
+    delivered = next((row for row in rows if row.id == evented_stop_id), None)
+    untouched = next((row for row in rows if row.id == unevented_stop_id), None)
+    if (
+        delivered is None
+        or untouched is None
+        or delivered.status != "delivered"
+        or untouched.status != "pending"
+    ):
         print(
             "SMOKE FAILED: the restored day does not read back as it was written "
-            f"(the delivered stop reads {delivered.status!r}, "
-            f"the untouched one reads {untouched.status!r})"
+            f"(the delivered stop reads {delivered and delivered.status!r}, "
+            f"the untouched one reads {untouched and untouched.status!r})"
         )
         raise SystemExit(1)
     return timings
