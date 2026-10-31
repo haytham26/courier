@@ -289,9 +289,7 @@ function SignInScreen() {
     setIsSubmitting(true);
     try {
       const resumed = await unlockWithBiometrics();
-      setOfflineNote(
-        resumed ? resumedNote : 'That did not unlock. Use one of the ways in below.',
-      );
+      setOfflineNote(resumed ? resumedNote : 'That did not unlock. Use one of the ways in below.');
     } finally {
       setIsSubmitting(false);
     }
@@ -364,10 +362,7 @@ function SignInScreen() {
                 </Text>
                 <TextInput
                   testID="sign-in-two-factor-code"
-                  style={[
-                    styles.input,
-                    { backgroundColor: t.colors.fill, color: t.colors.label },
-                  ]}
+                  style={[styles.input, { backgroundColor: t.colors.fill, color: t.colors.label }]}
                   placeholder={useBackupCode ? 'ABCDE-12345' : '123456'}
                   placeholderTextColor={t.colors.secondaryLabel}
                   value={code}
@@ -497,17 +492,13 @@ function SignInScreen() {
   const googleReason = signInMethods.methods.google.enabled
     ? ''
     : signInMethods.methods.google.reason;
-  const appleReason = signInMethods.methods.apple.enabled
-    ? ''
-    : signInMethods.methods.apple.reason;
+  const appleReason = signInMethods.methods.apple.enabled ? '' : signInMethods.methods.apple.reason;
   const passkeyReason = !signInMethods.methods.passkey.enabled
     ? signInMethods.methods.passkey.reason
     : passkeyOnDevice
       ? ''
       : PASSKEY_DEVICE_REASON;
-  const emailReason = signInMethods.methods.email.enabled
-    ? ''
-    : signInMethods.methods.email.reason;
+  const emailReason = signInMethods.methods.email.enabled ? '' : signInMethods.methods.email.reason;
   const storedSessionUser = storedSession?.user;
   const storedWho = storedSessionUser?.name ?? storedSessionUser?.email ?? '';
 
@@ -535,82 +526,106 @@ function SignInScreen() {
           keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets
         >
-          <View style={styles.header}>
-            <View style={[styles.mark, { backgroundColor: t.colors.accent }]}>
-              <Ionicons
-                name="cube-outline"
-                size={38}
-                color={t.colors.onAccent}
-                accessibilityElementsHidden
-                importantForAccessibility="no"
-              />
-            </View>
-            <Text
-              testID="sign-in-title"
-              role="heading"
-              style={[styles.title, { color: t.colors.label }]}
-              maxFontSizeMultiplier={TITLE_SCALE}
-            >
-              Sign in
-            </Text>
-            <Text
-              testID="sign-in-subtitle"
-              style={[styles.subtitle, { color: t.colors.secondaryLabel }]}
-              maxFontSizeMultiplier={TEXT_SCALE}
-            >
-              Use the account you drive with.
-            </Text>
-          </View>
+          {/* BUG-113's last shape: the revealed email form takes the screen.
+              The front door's furniture is what pushes a form down a phone,
+              and the keyboard the device owns has no fixed height - on the
+              api-35 leg of PR #52 Gboard carried its clipboard strip and its
+              top edge sat at y=381 against y=405 the run before, which put
+              the password field's centre (y=397) under the keyboard: the
+              flow's tap, which lands on an element's centre, opened the
+              keyboard's clipboard instead of focusing the field, the password
+              typed into the email field, and the submit then refused its own
+              empty password. The same code was green on api-34, which is the
+              tell: the app let a keyboard height it does not own decide
+              whether its own fields are reachable (PLAYBOOK 12).
 
-          {storedSession !== null ? (
-            <View style={[styles.card, { backgroundColor: t.colors.card }]}>
-              <Text
-                style={[styles.offerTitle, { color: t.colors.label }]}
-                maxFontSizeMultiplier={TEXT_SCALE}
-              >
-                Your session from this shift
-              </Text>
-              <Text
-                style={[styles.offerBody, { color: t.colors.secondaryLabel }]}
-                maxFontSizeMultiplier={TEXT_SCALE}
-              >
-                The phone kept your session, so you can carry on without signal.
-              </Text>
-              <Text
-                style={[styles.offerWho, { color: t.colors.secondaryLabel }]}
-                maxFontSizeMultiplier={TEXT_SCALE}
-              >
-                {storedWho}
-              </Text>
-              <Pressable
-                onPress={() => void resumeOfflineSession()}
-                disabled={isSubmitting}
-                accessibilityRole="button"
-                accessibilityLabel="Continue on this session"
-                accessibilityHint="Opens the session the phone kept for the shift"
-                accessibilityState={{ disabled: isSubmitting }}
-                testID="sign-in-offer-offline"
-                style={[styles.primaryAction, { backgroundColor: t.colors.accent }]}
-              >
+              So when the form opens it takes the whole screen: the header,
+              the remembered-session offer, the ways in and the way in that
+              opened it all step aside, and the form is the screen's content.
+              Its fields then sit in the top half of the smallest phone the app
+              supports, where no keyboard the device can raise reaches them.
+              The way back is named below, and every stepped-aside piece is
+              whole again when the courier takes it. */}
+          {showEmailForm ? null : (
+            <>
+              <View style={styles.header}>
+                <View style={[styles.mark, { backgroundColor: t.colors.accent }]}>
+                  <Ionicons
+                    name="cube-outline"
+                    size={38}
+                    color={t.colors.onAccent}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  />
+                </View>
                 <Text
-                  style={[styles.primaryLabel, { color: t.colors.onAccent }]}
+                  testID="sign-in-title"
+                  role="heading"
+                  style={[styles.title, { color: t.colors.label }]}
+                  maxFontSizeMultiplier={TITLE_SCALE}
+                >
+                  Sign in
+                </Text>
+                <Text
+                  testID="sign-in-subtitle"
+                  style={[styles.subtitle, { color: t.colors.secondaryLabel }]}
                   maxFontSizeMultiplier={TEXT_SCALE}
                 >
-                  Continue on this session
+                  Use the account you drive with.
                 </Text>
-              </Pressable>
-              {offlineNote !== null ? (
-                <Text
-                  testID="sign-in-offline-result"
-                  accessibilityLiveRegion="polite"
-                  style={[styles.offerNote, { color: t.colors.secondaryLabel }]}
-                  maxFontSizeMultiplier={TEXT_SCALE}
-                >
-                  {offlineNote}
-                </Text>
+              </View>
+
+              {storedSession !== null ? (
+                <View style={[styles.card, { backgroundColor: t.colors.card }]}>
+                  <Text
+                    style={[styles.offerTitle, { color: t.colors.label }]}
+                    maxFontSizeMultiplier={TEXT_SCALE}
+                  >
+                    Your session from this shift
+                  </Text>
+                  <Text
+                    style={[styles.offerBody, { color: t.colors.secondaryLabel }]}
+                    maxFontSizeMultiplier={TEXT_SCALE}
+                  >
+                    The phone kept your session, so you can carry on without signal.
+                  </Text>
+                  <Text
+                    style={[styles.offerWho, { color: t.colors.secondaryLabel }]}
+                    maxFontSizeMultiplier={TEXT_SCALE}
+                  >
+                    {storedWho}
+                  </Text>
+                  <Pressable
+                    onPress={() => void resumeOfflineSession()}
+                    disabled={isSubmitting}
+                    accessibilityRole="button"
+                    accessibilityLabel="Continue on this session"
+                    accessibilityHint="Opens the session the phone kept for the shift"
+                    accessibilityState={{ disabled: isSubmitting }}
+                    testID="sign-in-offer-offline"
+                    style={[styles.primaryAction, { backgroundColor: t.colors.accent }]}
+                  >
+                    <Text
+                      style={[styles.primaryLabel, { color: t.colors.onAccent }]}
+                      maxFontSizeMultiplier={TEXT_SCALE}
+                    >
+                      Continue on this session
+                    </Text>
+                  </Pressable>
+                  {offlineNote !== null ? (
+                    <Text
+                      testID="sign-in-offline-result"
+                      accessibilityLiveRegion="polite"
+                      style={[styles.offerNote, { color: t.colors.secondaryLabel }]}
+                      maxFontSizeMultiplier={TEXT_SCALE}
+                    >
+                      {offlineNote}
+                    </Text>
+                  ) : null}
+                </View>
               ) : null}
-            </View>
-          ) : null}
+            </>
+          )}
 
           {waysInVisible ? (
             <>
@@ -639,7 +654,9 @@ function SignInScreen() {
                   icon="finger-print"
                   tone="passkey"
                   reason={passkeyReason}
-                  disabled={!signInMethods.methods.passkey.enabled || !passkeyOnDevice || isSubmitting}
+                  disabled={
+                    !signInMethods.methods.passkey.enabled || !passkeyOnDevice || isSubmitting
+                  }
                   onPress={() => void handleProviderSignIn('passkey')}
                 />
               </View>
@@ -657,15 +674,20 @@ function SignInScreen() {
             </>
           ) : null}
 
-          <MethodButton
-            testID="sign-in-email"
-            label="Continue with Email"
-            icon="mail-outline"
-            tone="email"
-            reason={emailReason}
-            disabled={!signInMethods.methods.email.enabled || isSubmitting}
-            onPress={revealEmailForm}
-          />
+          {/* The way in that opened the form steps aside with it: the form is
+              the screen's content, the way back is the named link below, and
+              nothing else pushes the fields down towards the keyboard. */}
+          {showEmailForm ? null : (
+            <MethodButton
+              testID="sign-in-email"
+              label="Continue with Email"
+              icon="mail-outline"
+              tone="email"
+              reason={emailReason}
+              disabled={!signInMethods.methods.email.enabled || isSubmitting}
+              onPress={revealEmailForm}
+            />
+          )}
 
           {showEmailForm ? null : errorBlock}
 
@@ -745,7 +767,10 @@ function SignInScreen() {
               testID="sign-in-other-ways"
               style={styles.backupLink}
             >
-              <Text style={[styles.linkText, { color: t.colors.accentText }]} maxFontSizeMultiplier={TEXT_SCALE}>
+              <Text
+                style={[styles.linkText, { color: t.colors.accentText }]}
+                maxFontSizeMultiplier={TEXT_SCALE}
+              >
                 Use another way in
               </Text>
             </Pressable>

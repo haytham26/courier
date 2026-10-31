@@ -209,9 +209,7 @@ describe('the sign-in screen', () => {
     renderScreen();
 
     expect(screen.getByTestId('sign-in-apple-reason')).toBeTruthy();
-    expect(
-      screen.getByText('Apple sign-in is not set up on this server yet.'),
-    ).toBeTruthy();
+    expect(screen.getByText('Apple sign-in is not set up on this server yet.')).toBeTruthy();
     expect(screen.getByTestId('sign-in-apple')).toBeDisabled();
 
     expect(screen.getByTestId('sign-in-passkey-reason')).toBeTruthy();
@@ -301,6 +299,53 @@ describe('the sign-in screen', () => {
     expect(screen.getByTestId('sign-in-email-field')).toBeTruthy();
   });
 
+  // BUG-113's last shape, proven on the api-35 leg of PR #52 (run
+  // 41097310063): the keyboard is the device's, not the app's, and its height
+  // is not a constant. That day Gboard carried its clipboard strip and its top
+  // edge sat at y=381, where the run before had it at y=405; the password
+  // field is at y=369..425, so its centre (y=397) was under the keyboard.
+  // Maestro's tap lands on an element's centre, so the tap opened the
+  // keyboard's clipboard instead of focusing the field: the email field kept
+  // the focus, the typed password landed in it, and the submit then refused
+  // its own empty password. The same code, the same tap, green on api-34 -
+  // an action that works most of the time is an app bug (PLAYBOOK 12), and
+  // the app let a keyboard height it does not own decide whether its own
+  // fields are reachable.
+  //
+  // The fix the app owns: when the email form opens it takes the whole screen,
+  // the way the ways in already step aside, so nothing pushes the fields into
+  // the bottom half of a small phone where the keyboard lives - whatever
+  // height the device's keyboard has that day. The assertion is the state of
+  // the tree, which is the decision the screen makes; the device proved the
+  // decision wrong.
+  it('gives the email form the whole screen, so no field the courier taps sits under the keyboard', async () => {
+    renderScreen();
+
+    fireEvent.press(screen.getByTestId('sign-in-email'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sign-in-form')).toBeTruthy();
+      expect(screen.getByTestId('sign-in-password-field')).toBeTruthy();
+      expect(screen.getByTestId('sign-in-submit')).toBeTruthy();
+    });
+
+    // The front door's own furniture steps aside with the ways in: the header
+    // is what pushes a form down the screen, and on a small phone with the
+    // keyboard up exactly that is what covers the fields the courier taps.
+    expect(screen.queryByTestId('sign-in-title')).toBeNull();
+    expect(screen.queryByTestId('sign-in-subtitle')).toBeNull();
+    expect(screen.queryByTestId('sign-in-apple')).toBeNull();
+    expect(screen.queryByTestId('sign-in-google')).toBeNull();
+    expect(screen.queryByTestId('sign-in-passkey')).toBeNull();
+    // The way in that opened it steps aside too, so the form is the whole of
+    // the screen's content and starts at the top of it.
+    expect(screen.queryByTestId('sign-in-email')).toBeNull();
+
+    // The way back is named, because the front door stepped aside: a screen
+    // that hides its own front door with no way out is a defect, not a design.
+    expect(screen.getByTestId('sign-in-other-ways')).toBeTruthy();
+  });
+
   // The way back is named, because the ways in stepped aside: a screen that
   // hides its own front door with no way out is a defect, not a design.
   it('offers the way back to the other ways in when the form holds the screen', async () => {
@@ -368,9 +413,7 @@ describe('the sign-in screen', () => {
     fireEvent.changeText(screen.getByTestId('sign-in-two-factor-code'), 'ABCDE-12345');
     fireEvent.press(screen.getByTestId('sign-in-two-factor-submit'));
 
-    await waitFor(() =>
-      expect(mockAuth.verifyTwoFactor).toHaveBeenCalledWith('ABCDE-12345', true),
-    );
+    await waitFor(() => expect(mockAuth.verifyTwoFactor).toHaveBeenCalledWith('ABCDE-12345', true));
   });
 
   it('shows the team picker after the sign-in', () => {
@@ -505,11 +548,7 @@ describe('the sign-in screen', () => {
     // them in the state that shows them is the point: a floor is a claim
     // about a target the courier can actually reach.
     fireEvent.press(screen.getByTestId('sign-in-email'));
-    for (const target of [
-      'sign-in-submit',
-      'sign-in-email-field',
-      'sign-in-password-field',
-    ]) {
+    for (const target of ['sign-in-submit', 'sign-in-email-field', 'sign-in-password-field']) {
       expect(targetHeight(target)).toBeGreaterThanOrEqual(touch.minimum);
     }
 
