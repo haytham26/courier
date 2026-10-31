@@ -127,13 +127,17 @@ export class RunStore implements MarkStore {
     if (cached !== null) {
       return { status: 'ok', source: 'cache', snapshot: cached };
     }
-    const through = await this.readThrough(cached);
-    if (through.status === 'ok' || this.reason !== 'e2e') {
-      return through;
+    // The E2E build has no server to ask, so it answers with its own day
+    // straight away instead of spending a network timeout discovering that.
+    // The order matters on the device: the flows walk the screen the moment it
+    // opens, and a day that arrives after a tap is a day the flow never saw
+    // (the api-35 leg of run 41172592416 lost `today-go` that way).
+    if (this.reason === 'e2e') {
+      const day = e2eDay();
+      await this.cache.write(day);
+      return { status: 'ok', source: 'cache', snapshot: day };
     }
-    const day = e2eDay();
-    await this.cache.write(day);
-    return { status: 'ok', source: 'cache', snapshot: day };
+    return this.readThrough(cached);
   }
 
   /** The day the courier works, fresh: the network is always asked. */

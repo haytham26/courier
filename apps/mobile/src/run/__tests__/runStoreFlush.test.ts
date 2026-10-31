@@ -10,6 +10,8 @@
  * a store with no outbox (the marks-only construction, or a test) records and
  * carries on, and a store with one sends.
  */
+import assert from 'node:assert/strict';
+
 import { RunStore } from '../runStore';
 import { EventLog } from '@/sync/eventLog';
 import type { DeliveredMark, RunApi, RunCache, RunSnapshot } from '../types';
@@ -83,7 +85,8 @@ class FakeCache implements RunCache {
   read(): Promise<RunSnapshot | null> {
     return Promise.resolve(this.day);
   }
-  write(): Promise<void> {
+  write(snapshot: RunSnapshot): Promise<void> {
+    this.day = snapshot;
     return Promise.resolve();
   }
   markDelivered(mark: DeliveredMark): Promise<void> {
@@ -110,7 +113,10 @@ class FakeCache implements RunCache {
 /** The API of slice 1, answered by the test. */
 class FakeApi implements RunApi {
   seedDemoRun() {
-    return Promise.resolve({ status: 'ok', data: { run_id: 'run-1', shift_id: 'shift-1' } } as const);
+    return Promise.resolve({
+      status: 'ok',
+      data: { run_id: 'run-1', shift_id: 'shift-1' },
+    } as const);
   }
   getRun() {
     return Promise.resolve({
@@ -129,7 +135,13 @@ class FakeApi implements RunApi {
     return Promise.resolve({
       status: 'ok',
       data: [
-        { id: 'stop-1', seq: 1, address: '12 Riccarton Road', status: 'pending', location_id: 'loc-1' },
+        {
+          id: 'stop-1',
+          seq: 1,
+          address: '12 Riccarton Road',
+          status: 'pending',
+          location_id: 'loc-1',
+        },
       ],
     } as unknown as Awaited<ReturnType<RunApi['getStops']>>);
   }
@@ -179,6 +191,39 @@ describe("the store's write path leaves the phone when it can (A1 slice 3)", () 
     await expect(runStore.markDelivered(stop)).resolves.toBeUndefined();
     expect(store.recorded).toHaveLength(1);
     expect(flush).not.toHaveBeenCalled();
+  });
+
+  // The E2E build has no server to ask, so it answers with its own day
+  // immediately - and the order is what the device proved: run 41172592416
+  // asked the network first, spent a timeout discovering it was not there, and
+  // the flows walked the screen before the day arrived (copilot, delivered and
+  // driving all lost their `today-go`).
+  it('answers the E2E build with its own day, without spending a network timeout', async () => {
+    const store = new FakeStore();
+    const seed = jest.fn(() =>
+      Promise.resolve({ status: 'ok', data: { run_id: 'run-1', shift_id: 'shift-1' } } as const),
+    );
+    const cache = new FakeCache();
+    cache.day = null;
+
+    const runStore = new RunStore({
+      client: { ...new FakeApi(), seedDemoRun: seed },
+      cache,
+      events: new EventLog(store),
+      reason: 'e2e',
+    } as unknown as ConstructorParameters<typeof RunStore>[0]);
+
+    const loaded = await runStore.load();
+
+    // The network was not asked at all: this build has no server.
+    expect(seed).not.toHaveBeenCalled();
+    assert.ok(loaded.status === 'ok');
+    // And the day it answers with is the mock run's own: the five stops the
+    // flows walk, in the run's order.
+    expect(loaded.snapshot.stops).toHaveLength(5);
+    expect(loaded.snapshot.stops[0].address).toBe('2/14 Riccarton Road, Riccarton');
+    // The phone caches it, so the same day answers from the cache afterwards.
+    expect(await cache.read()).not.toBeNull();
   });
 
   // A store with no outbox must keep working: the marks-only construction and
