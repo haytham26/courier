@@ -1,8 +1,9 @@
 import { createAuthClient } from 'better-auth/react';
 import { expoClient } from '@better-auth/expo/client';
 import { organizationClient, twoFactorClient } from 'better-auth/client/plugins';
-import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+
+import { deviceStore } from './session-storage';
 
 /**
  * The mobile app is a client of the Better Auth service (`services/auth`).
@@ -283,7 +284,12 @@ export const authClient: CourierAuthClient = isE2E
       plugins: [
         expoClient({
           scheme: appScheme,
-          storage: SecureStore,
+          // The app's own wrapper, not the raw module (BUG-078): the wrapper
+          // sets `keychainAccessible: AFTER_FIRST_UNLOCK`, which is what makes
+          // the session cookie readable while the phone is locked - the whole
+          // shift, in a courier's van. Handing the client the raw module
+          // froze `WHEN_UNLOCKED` into every cookie write.
+          storage: deviceStore,
           storagePrefix: 'courier',
         }),
         organizationClient(),

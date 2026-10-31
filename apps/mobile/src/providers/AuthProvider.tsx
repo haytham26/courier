@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
+import { errorMessage } from '@/lib/errors';
 import {
   forgetSession,
   readOfflineSession,
@@ -237,6 +238,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // credential the server has already refused.
         void Promise.resolve()
           .then(() => forgetSession())
+          .catch((error: unknown) => {
+            // A refused session is dropped either way; a receipt the phone will
+            // not give up is reported (BUG-077).
+            console.warn(
+              `auth: the refused session could not be forgotten on the phone: ${errorMessage(error)}`,
+            );
+          })
           .finally(() => {
             setUser(null);
             setStatus('signed-out');
@@ -376,7 +384,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // The remembered session goes with the sign-out: the phone must not offer
     // a session it has just been told to forget.
     setStoredSession(null);
-    await forgetSession();
+    try {
+      await forgetSession();
+    } catch (error) {
+      // BUG-077: the device store refused to give the receipt up. The sign-out
+      // still stands - the courier is signed out here and now, and the app
+      // session reads the receipt as gone - but the courier is told the phone
+      // still holds a copy, because that is the truth and it is their phone.
+      console.warn(`auth: the session was signed out, but the phone still holds its receipt - ${errorMessage(error)}`);
+    }
   }, []);
 
   const refreshSession = useCallback(async () => {
