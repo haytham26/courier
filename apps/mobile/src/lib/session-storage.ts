@@ -17,6 +17,7 @@
  */
 import {
   AFTER_FIRST_UNLOCK,
+  deleteItemAsync,
   getItem,
   getItemAsync,
   setItem,
@@ -32,6 +33,11 @@ const OPTIONS = {
  *
  * The name is not `sessionStorage` on purpose: that is the name of the
  * browser storage, and the two are easy to mix up.
+ *
+ * It is the app's one wrapper over `expo-secure-store`, and it is exported
+ * once and used everywhere - including by the Better Auth client, which needs
+ * the whole surface its plugins call (BUG-078: the raw module was handed over
+ * before, so none of these options reached the client's cookie writes).
  */
 export const deviceStore = {
   getItem: (key: string): string | null => getItem(key, OPTIONS),
@@ -40,6 +46,7 @@ export const deviceStore = {
     setItem(key, value, OPTIONS);
   },
   setItemAsync: (key: string, value: string): Promise<void> => setItemAsync(key, value, OPTIONS),
+  deleteItemAsync: (key: string): Promise<void> => deleteItemAsync(key, OPTIONS),
 };
 
 /** Whether the device store is there at all (it is not on the web). */
@@ -68,4 +75,33 @@ export async function writeStoredValue(key: string, value: string): Promise<void
     // The device store is not writable: the app still works, it just cannot
     // keep a session for the days without a signal.
   }
+}
+
+/**
+ * Takes one value out of the device store.
+ *
+ * Unlike `writeStoredValue`, a failure here is NOT swallowed: the caller is
+ * the sign-out, and a receipt the device store will not give up is a receipt
+ * a driver asked to forget that is still there. The failure is the caller's
+ * to answer (BUG-077).
+ */
+export async function clearStoredValue(key: string): Promise<void> {
+  let failed: unknown;
+  try {
+    await deleteItemAsync(key, OPTIONS);
+    return;
+  } catch (error) {
+    failed = error;
+  }
+  // A store with no delete, or a delete that failed, gets the value emptied
+  // instead: an empty value is what `readStoredValue` hands back as nothing.
+  try {
+    await setItemAsync(key, '', OPTIONS);
+  } catch {
+    // Both ways failed: the receipt stays, and the caller is told.
+  }
+  const detail = failed instanceof Error ? failed.message : 'the delete failed';
+  throw new Error(`the value ${key} could not be taken out of the device store: ${detail}`, {
+    cause: failed,
+  });
 }

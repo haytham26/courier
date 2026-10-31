@@ -1,0 +1,193 @@
+# C1's backend highs, fixed (red first)
+
+**Date:** 2026-10-31 · **Owner:** the backend squad · **Task:** C1's fix order — the registered HIGH
+findings first, then BUG-115 (medium, but a delivered stop reads `pending` on Postgres, so the
+courier's day is a lie and the trial cannot run).
+
+**The PR:** one branch, one PR, the nine rows closed in it. Every fix below was RED first against the
+unfixed code; the red output is quoted per row, and every suite was re-run green afterwards.
+
+## The order of the work, and what proved each row
+
+| Row | Severity | What the red test printed before the fix | Where the test is now |
+|-----|----------|------------------------------------------|------------------------|
+| BUG-096 | HIGH | `not ok - the state holds the api image that was running (expected [courier-api:old-sha], got [courier-api:new-sha])` — the deploy recorded the image it was deploying and a rollback re-deployed the failure | `scripts/ci/test-deploy.sh` (10 checks, the real `infra/deploy.sh` with a stubbed docker) |
+| BUG-121 | HIGH | `assert 4 == 1` — four tokens with the same bogus `kid` fetched the JWKS four times | `services/api/tests/auth/test_jwks.py::TestTheNegativeCache` |
+| BUG-122 | HIGH | `DID NOT RAISE ValueError` for `auth_jwt_issuer="not-a-url"`, for a path and for a query | `…::TestTheIssuerTheApiAccepts` + `scripts/ci/check-auth-issuer.mjs` and its 10-check test |
+| BUG-127 | HIGH | eight attempts at one account from eight different IPs: all eight reached the handler | `services/auth/src/__tests__/http.test.ts` (13 tests against the real listener) |
+| BUG-146 | HIGH | `assert user.count("</transcript>") == 1` → `2 == 1`; `assert "<role>system</role>" not in user` failed | `services/courier-voice/tests/test_prompt_fence.py` |
+| BUG-147 / BUG-148 | HIGH | `ImportError: cannot import name 'RunForbidden'` (the distinct outcome did not exist), and the 403 answering transport came back as `[]` | `services/courier-voice/tests/test_run_client.py` |
+| BUG-150 | HIGH | `ImportError: cannot import name 'MAX_LEARNED_ENTRIES'` — nothing bounded the collections | `services/courier-voice/tests/test_context_bounds.py` |
+
+Two decisions worth writing down, because they are the places where the fix could have gone
+further than it should:
+
+1. **BUG-148's boundary is the register's own wording.** The register's fix says "reject
+   `body.context` when the session has a `shift_id`", and that is what the three routes that render
+   run data do: a session that *names* a shift carries no snapshot, so a caller cannot name another
+   courier's shift and hand the voice that run — the demonstrated attack. The trade is written down
+   rather than papered over: a named shift in a dead spot (the API unreachable) is an **empty run**,
+   not a fabricated one, because there is no snapshot to fall back to; the phone's own snapshot keeps
+   working for the sessions the phone owns (no named shift). The distinction the row asks for is
+   kept exactly: "the API refused" fails the turn with a 403, and "the API could not answer" is an
+   empty run. The 2026-10-31 review pass found the third route (`/proactive`, the morning brief)
+   still reading the caller's snapshot for a named session — it now reads through the API like the
+   turn does, and fails the same 403 on a refusal.
+2. **BUG-127 adds the bucket Better Auth cannot hold.** Its limiter is keyed by
+   `createRateLimitKey(ip, path)` and `customRules` can change the window and the count but never
+   the key, so the account bucket is a limiter in front of the handler (in `src/http.ts`, the
+   service's own server) rather than a configuration change. That same server also took the body cap
+   (BUG-130) and the failure paths (BUG-129), which are the next two rows on the same lines and are
+   not closed by this PR. The review pass also corrected two things here: the comment that claimed
+   the account windows match the IP buckets (they are deliberately stricter — the account is the
+   rarer key), and an account bucket on `/sign-up/email` that the register never asked for and that
+   would let anyone burn a chosen mailbox for its window and lock the real owner out of
+   registering.
+
+## One new row, filed with the PR
+
+**BUG-160** (medium): `RunClient._stop_of` read the phone's own row shape and not the API's, so
+every stop `GET /shifts/{shift_id}/stops` answered with arrived with an empty address. It was found
+while fixing BUG-148 — the tests pinned a shape the API does not produce — and it is fixed in the
+same rows, with the API's `seq`/`address` read and the phone's `number`/`street`/`suburb` kept as the
+fallback. The numbering was taken per the rule: the highest row across `origin/main` (BUG-159) and
+every open PR branch was 159, so the new row is 160.
+
+## The gates on the branch
+
+- `services/api`: 480 passed, 7 skipped · ruff clean · mypy clean.
+- `services/courier-voice`: 194 passed · ruff clean · mypy clean.
+- `services/auth`: 90 vitest tests passed · `tsc --noEmit` clean · eslint clean.
+- `node --test "scripts/*/__tests__/*.test.mjs"`: 116 passed (10 of them the new issuer gate), plus
+  `bash scripts/ci/test-deploy.sh` (10 checks).
+- `check-workflows`, `check-floor`, `check-conflict-markers`, `check-control-chars`,
+  `check-mojibake`, `check-doc-links`, `check-parity`, `check-auth-issuer`: all clean.
+- `Deploy staging`: not re-run in this session — the only change on its path is `infra/deploy.sh`
+  (the state file's source), which the stubbed-docker suite covers line by line; the leg runs on
+  the push to main and is the first thing this session reads after the merge.
+
+## The red leg on the branch, fixed at its root (2026-10-31)
+
+After the push, two legs went red on the branch's final head (`e1a2a3c`), both with one cause: the
+`Test` step of `lint, typecheck, test` and the `Coverage ratchet` job, which runs the same suite:
+
+```
+FAILED tests/auth/test_jwks.py::TestTheNegativeCache::test_a_key_that_rotates_in_is_accepted_again
+  - app.auth.jwks.InvalidTokenError: unknown signing key 'bogus-kid'
+1 failed, 485 passed, 1 skipped, 17 deselected, 1 warning in 26.26s
+the API coverage run failed
+```
+
+**The root cause is in the test, not in the verifier.** The test faked cache staleness by poking
+the private field (`verifier._fetched_at = 0.0`), which only makes the 300 s cache stale when the
+machine's `time.monotonic()` reads above 300 s. It passes on a developer box that has been up for
+hours and fails on a young CI runner, whose monotonic clock reads below the TTL — proved by running
+the same handler with the clock pinned young and old (the probe is out-of-tree, per PLAYBOOK §10):
+
+```
+monotonic=120.0: first_in_unknown=True second=REFUSED (unknown signing key 'bogus-kid')
+monotonic=5000.0: first_in_unknown=True second=accepted as user-123
+```
+
+The product behaviour was right all along: a kid already asked about is not worth a second fetch
+(BUG-121), and a stale cache asks again and picks a key that rotated in.
+
+**The fix makes the time injectable, not the assertion weaker.** `JwksVerifier` now takes
+`clock: Callable[[], float] = time.monotonic` (the default is unchanged production behaviour), and
+the test advances its own clock past the TTL instead of poking a private field. The red-first proof
+is the same probe: with the clock held young the rotated key stays refused (one fetch), and with
+the clock advanced it is accepted (two fetches). `assert calls["count"] == 2` pins that the refresh
+actually happened.
+
+One local-only red was also explained, not chased (PLAYBOOK §6): in a worktree without
+`node_modules` the generated-API-client check fails on quote style, because the generator's own
+docstring says a missing formatter must make the gate red, never silently green. With the
+lockfile's prettier (3.9.10) on the PATH the check passes; CI runs it with prettier installed.
+
+## The second red leg on this branch: the vacuous floor of the Locust gate
+
+With the jwks fix green, the same `Test` job reached the Locust SLO profile for the first time on
+this branch's code — and the profile's vacuous guard failed, twice (the push-triggered and the
+PR-triggered runs of the same head, both red):
+
+```
+VACUOUS RUN: only 99 requests - the gate needs a seeded, reachable API
+VACUOUS RUN: only 70 requests - the gate needs a seeded, reachable API
+```
+
+Both runs were otherwise healthy: 0 failed requests, no SLO breach (route p95 74 ms against a
+5,000 ms budget, sync p95 8 ms against 300 ms, pod p95 8 ms against 2,000 ms), and every one of
+the four wanted surfaces exercised. The measured distribution of the same step:
+
+| Run | Requests | Verdict |
+|---|---|---|
+| #140's head, run 1 | 141 | SLOs met |
+| #140's head, run 2 | 175 | SLOs met |
+| main `ac49393` | 191 | SLOs met |
+| PR #142's head | 177 | SLOs met |
+| main `5839178` | 197 | SLOs met |
+| this head, push run | 99 | VACUOUS |
+| this head, PR run | 70 | VACUOUS |
+| this head, local run 1 (a slow Windows box) | 31 | VACUOUS |
+| this head, local run 2 (the same box) | 93 | VACUOUS |
+
+The defect is the guard, not the code under test: the count came from a 60 s wall-clock window
+(`--run-time 60s`, waits of 3-8 s), so it was a property of the runner's speed, and the floor of
+100 sits inside the healthy band. A threshold inside the band is a coin flip, and the luck of a
+green is not evidence (§17.4's rule, applied to a gate rather than to a flow).
+
+**The fix measures the property the count proxied for.** `loadtests/vacuous_guard.py` (no locust
+import, so the default API suite tests it) decides vacuity from: every surface of the day loop
+touched (`/runs`, `/stops`, `/events:batch`), at least one `POST /runs` answered 201 (the claim
+proves identity + seeded day + API together), and a floor of 10 requests as a backstop (the
+measured distribution is 0-13 vacuous, 31-197 healthy). The SLO thresholds and the error budget
+are untouched. The first attempt on this leg — a per-user iteration budget,
+`LOADTEST_ITERATIONS` — was reverted: it was pushed and the run still failed at 76 requests,
+because all 50 users spawn but the rate their greenlets emit at is the runner's property. That
+attempt and its revert are recorded in the next section (§19.1.2: a second failed fix on one
+hypothesis means the hypothesis is dead). The guard is pinned by
+`services/api/tests/test_vacuous_guard.py` (8 cases, red first: `ModuleNotFoundError:
+loadtests.vacuous_guard`) and proved end-to-end over a fake environment — the 76-request healthy
+shape prints "SLOs met", a dead API and an unseeded day still print the vacuous line.
+
+Known trap recorded per §8: the local reproduction of this profile is itself wall-clock-flaky on
+this machine (the JWKS static server goes unanswered and every request times out at 30 s), which
+is the same class of defect as the one being fixed — the CI runs above are the measured evidence,
+and the PR's own run is the final proof of the budget.
+
+## The second attempt on that leg, and why it was reverted (§19.1.2: the hypothesis was dead)
+
+**The hypothesis:** make the request count a property of the test by bounding each user's day to a
+fixed number of task executions (`LOADTEST_ITERATIONS`, pinned to 8 in the CI step), so a healthy
+run lands users x iterations requests whatever the runner's speed. It was implemented, tested
+(6 parse cases) and pushed. **The run still failed, at 76 requests with `LOADTEST_ITERATIONS: 8`
+set** — the iteration cap was not the limiter: all 50 users spawn ("All users spawned: 50"), but
+the rate at which their greenlets emit requests is the runner's (a healthy CI runner reaches
+~3 req/s and produces 141-197; a slow one produces 70-99; a slow local box produces 31). The
+count of a wall-clock window cannot be made deterministic by bounding the users' work — the
+activation itself is the stochastic part.
+
+**The root fix (this PR): the guard measures the property the old count proxied for.**
+`loadtests/vacuous_guard.py` (a module with no locust import, so the default API suite tests it):
+a run is vacuous when **any of** holds — a surface of the day loop was never touched (`/runs`,
+`/stops`, `/events:batch`), no `POST /runs` answered 201 (the claim proves the identity, the
+seeded shift's foreign key and the API together), or fewer than `MIN_REQUESTS` (10) requests
+arrived (a backstop; the measured distribution is 0-13 for a vacuous run and 31-197 for a healthy
+one). The SLO thresholds and the error budget are untouched; the vacuous line now names what was
+missing. Proved end-to-end over a fake environment:
+
+```
+SLOs met: the run is green                                  <- the 76-request healthy shape
+VACUOUS RUN: ... 0 requests, claimed=0, missing all         <- a dead API
+VACUOUS RUN: ... 24 requests, claimed=0, missing stops, batch <- an unseeded day (409s, no claim)
+```
+
+Red first: `services/api/tests/test_vacuous_guard.py` (8 cases) fails with
+`ModuleNotFoundError: loadtests.vacuous_guard` against the unfixed tree. Gates: 494 passed, 1
+skipped · ruff clean · mypy clean · the profile imports and registers the listener under the
+`load` extra.
+
+**Traps recorded (§8):** (1) importing locust monkey-patches ssl at import time, so a pytest
+session that already imported ssl dies with a RecursionError — the guard therefore lives in its
+own import-free module, not in the profile; (2) a worktree has no `node_modules`, so the
+generated-client check goes red on quote style by the generator's own design.
