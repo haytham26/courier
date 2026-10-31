@@ -35,12 +35,17 @@ export const MAX_ACCOUNT_KEYS = 10_000;
  * The limits of an account, per path (BUG-127).
  *
  * Keyed by the account the caller names, so the limit holds however many
- * addresses a guesser burns. The windows are the same ones the IP buckets use
- * on these paths; only the key changes.
+ * addresses a guesser burns. These are deliberately stricter than the IP
+ * buckets the same paths already carry in `config.ts` (`/sign-in/email` is
+ * 10 per 900 s there), because the account is the rarer key: an attacker
+ * rotates IPs freely and cannot rotate a mailbox. Sign-up is NOT keyed by the
+ * account - the register's row named sign-in, forget-password and the
+ * two-factor verifications, and an account bucket on sign-up would let anyone
+ * burn a chosen mailbox for its whole window and lock the real owner out of
+ * registering.
  */
 export const ACCOUNT_RULES: Record<string, { window: number; max: number }> = {
   "/sign-in/email": { window: 900, max: 5 },
-  "/sign-up/email": { window: 900, max: 5 },
   "/forget-password": { window: 900, max: 3 },
   "/reset-password": { window: 900, max: 5 },
   "/two-factor/verify-totp": { window: 900, max: 5 },
@@ -58,9 +63,9 @@ export function authPathOf(url: URL): string {
  * The account a credential request names, or null when it names none.
  *
  * A request that carries no account cannot be keyed by one, and it stays where
- * it was: the IP bucket. Sign-up is anonymous by design, so it is limited by
- * the account only when the caller uses an address that already has one - the
- * repeated guesses at one mailbox.
+ * it was: the IP bucket. Sign-up is not in `ACCOUNT_RULES`, so it stays there
+ * entirely: an account bucket on registration would let anyone burn a chosen
+ * mailbox for the bucket's whole window and lock the real owner out.
  */
 export function accountOf(path: string, body: string): string | null {
   if (!(path in ACCOUNT_RULES)) return null;

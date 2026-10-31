@@ -5,12 +5,15 @@ the Courier API and is fetched with the courier's own token: the service never
 holds a list of stops of its own and never shows a courier another courier's
 run.
 
-The API is the source of truth and the phone is the fallback: when the API
-cannot be reached the phone's own snapshot of the run is used, so a dead spot
-in rural Canterbury does not take the voice away. A refusal is not "cannot be
-reached" (BUG-148): when the API answers about the shift and says the courier
-may not see it, that answer is carried to the caller and the snapshot is not
-read in its place.
+The API is the source of truth and the phone's own snapshot is the fallback,
+for the sessions the phone owns (no named shift): when the API cannot be
+reached the snapshot keeps the voice working in a dead spot. A refusal is not
+"cannot be reached" (BUG-148): when the API answers about the shift and says
+the courier may not see it, that answer is carried to the caller and no
+snapshot is read in its place. A session that NAMES a shift never carries a
+snapshot (the boundary refuses one), so a named shift in a dead spot is an
+empty run rather than a fabricated one - the register's own trade for
+BUG-148, pinned by the tests.
 """
 
 from __future__ import annotations
@@ -125,10 +128,6 @@ class RunClient:
     def _headers(self, token: str) -> dict[str, str]:
         """The headers of a call to the API: the courier's own token."""
         return {"Authorization": f"Bearer {token}"}
-
-    def _url_of(self, shift_id: str) -> str:
-        """The URL of one shift's stops, with the id quoted into it."""
-        return shift_stops_url(self._base_url, shift_id)
 
     def stops(self, shift_id: str, token: str) -> list[Stop]:
         """The stops of the shift, or an empty list when the API has none.

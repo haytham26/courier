@@ -35,6 +35,11 @@ class AuthSettings(BaseSettings):
     auth_jwt_issuer: str = ""
     auth_jwt_algorithms: str = "ES256"
     auth_jwks_cache_seconds: int = 300
+    # BUG-121: how often an unknown kid is allowed to force a lookup. Inside
+    # this window a refused kid is served from memory; after it, one lookup
+    # re-asks, so a rotated-in key is picked up without an unauthenticated
+    # caller being able to make the API fetch once per request.
+    auth_jwks_negative_seconds: int = 30
     auth_jwks_timeout_seconds: float = 5.0
 
     @field_validator("auth_jwt_issuer")
@@ -104,7 +109,12 @@ class JwksVerifier:
         self._settings = settings
         self._client = client or httpx.Client(timeout=settings.auth_jwks_timeout_seconds)
         self._keys: dict[str, dict[str, Any]] = {}
-        self._unknown_kids: set[str] = set()
+        # BUG-121: the clock reading of the last lookup an UNKNOWN kid forced.
+        # A burst of distinct bogus kids is worth one lookup per negative
+        # window, not one per request, and a repeat is served from memory for
+        # the rest of that window. The resource it bounds is the fetch itself,
+        # so the set of refused kids needs no storage of its own.
+        self._last_unknown_refresh = float("-inf")
         self._clock = clock
         self._fetched_at = 0.0
 
@@ -122,26 +132,37 @@ class JwksVerifier:
         }
         if not self._keys:
             raise InvalidTokenError("JWKS document contains no key with a 'kid'")
-        # A kid the document now carries is no longer one we could not find.
-        self._unknown_kids -= set(self._keys)
         self._fetched_at = self._clock()
 
     def _signing_key(self, kid: str | None) -> Any:
-        stale = (self._clock() - self._fetched_at) > self._settings.auth_jwks_cache_seconds
+        now = self._clock()
+        stale = (now - self._fetched_at) > self._settings.auth_jwks_cache_seconds
         known = kid is None or kid in self._keys
-        # A kid we have never seen is worth one lookup: the keys may have
-        # rotated since the last fetch. A kid we have already asked the JWKS
-        # about is worth nothing: a caller who never presents a real key must
-        # not make the API fetch once per request (BUG-121).
-        if stale or (not known and kid not in self._unknown_kids):
+        # A lookup an unknown kid forces is rate-limited to one per negative
+        # window (BUG-121): a caller who never presents a real key must not
+        # make the API fetch once per request, and the register's own probe of
+        # that defect counted "6 distinct kids -> 6 fetches" and "4 repeats ->
+        # 11 server hits". A repeat inside the window is served from memory;
+        # a rotated-in key is picked up when the window (or the cache) goes
+        # stale, which the rotation test pins through the injected clock.
+        unknown_allowed = (
+            not stale
+            and kid is not None
+            and not known
+            and (now - self._last_unknown_refresh) > self._settings.auth_jwks_negative_seconds
+        )
+        if stale or unknown_allowed:
             self._refresh()
+            if kid is not None and kid not in self._keys:
+                # Whatever made us look, a lookup that still does not know the
+                # kid opens the window: the next unknown kid waits it out.
+                self._last_unknown_refresh = now
         if kid is None:
             if len(self._keys) != 1:
                 raise InvalidTokenError("token header has no 'kid' and the JWKS has several keys")
             kid = next(iter(self._keys))
         jwk = self._keys.get(kid)
         if jwk is None:
-            self._unknown_kids.add(kid)
             raise InvalidTokenError(f"unknown signing key '{kid}'")
         return jwt.PyJWK.from_dict(jwk).key
 

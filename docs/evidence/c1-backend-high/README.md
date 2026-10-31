@@ -22,19 +22,27 @@ unfixed code; the red output is quoted per row, and every suite was re-run green
 Two decisions worth writing down, because they are the places where the fix could have gone
 further than it should:
 
-1. **BUG-148 keeps the offline fallback.** The register's fix says "reject `body.context` when the
-   session has a `shift_id`". A refusal (401/403) now fails the turn with a 403, and a session that
-   *names* a shift can no longer carry the caller's snapshot of it — that is the demonstrated attack
-   (a driver posting another courier's run snapshot got the voice to answer from it). What survives
-   is the dead-spot path the module is built on: an unnamed session's phone snapshot, and a named
-   shift whose API cannot be *reached* (a transport error), which the module's docstring has always
-   promised. The distinction is "the API refused" versus "the API could not answer".
+1. **BUG-148's boundary is the register's own wording.** The register's fix says "reject
+   `body.context` when the session has a `shift_id`", and that is what the three routes that render
+   run data do: a session that *names* a shift carries no snapshot, so a caller cannot name another
+   courier's shift and hand the voice that run — the demonstrated attack. The trade is written down
+   rather than papered over: a named shift in a dead spot (the API unreachable) is an **empty run**,
+   not a fabricated one, because there is no snapshot to fall back to; the phone's own snapshot keeps
+   working for the sessions the phone owns (no named shift). The distinction the row asks for is
+   kept exactly: "the API refused" fails the turn with a 403, and "the API could not answer" is an
+   empty run. The 2026-10-31 review pass found the third route (`/proactive`, the morning brief)
+   still reading the caller's snapshot for a named session — it now reads through the API like the
+   turn does, and fails the same 403 on a refusal.
 2. **BUG-127 adds the bucket Better Auth cannot hold.** Its limiter is keyed by
    `createRateLimitKey(ip, path)` and `customRules` can change the window and the count but never
    the key, so the account bucket is a limiter in front of the handler (in `src/http.ts`, the
    service's own server) rather than a configuration change. That same server also took the body cap
    (BUG-130) and the failure paths (BUG-129), which are the next two rows on the same lines and are
-   not closed by this PR.
+   not closed by this PR. The review pass also corrected two things here: the comment that claimed
+   the account windows match the IP buckets (they are deliberately stricter — the account is the
+   rarer key), and an account bucket on `/sign-up/email` that the register never asked for and that
+   would let anyone burn a chosen mailbox for its window and lock the real owner out of
+   registering.
 
 ## One new row, filed with the PR
 
@@ -128,16 +136,19 @@ The defect is the guard, not the code under test: the count came from a 60 s wal
 100 sits inside the healthy band. A threshold inside the band is a coin flip, and the luck of a
 green is not evidence (§17.4's rule, applied to a gate rather than to a flow).
 
-**The fix makes the count a property of the test.** `loadtests/day_budget.py` reads
-`LOADTEST_ITERATIONS` (unset/0/unparseable → uncapped, so the 1,000-driver staging run keeps the
-day shape), each user counts its task executions and `StopUser`s at the budget, and the CI step
-pins `LOADTEST_ITERATIONS: '8'` — 50 users x 8 tasks, ~400 requests wherever it runs, four times
-the floor. The floor itself is untouched (no weakening), every SLO threshold is untouched, and the
-sample the p95 numbers are measured over is four times larger. The parse is pinned by
-`services/api/tests/test_day_budget.py` (6 cases, red first: the module did not exist —
-`ModuleNotFoundError: loadtests.day_budget` — before this change). Gates on this tree: 492
-passed, 1 skipped · ruff clean · mypy clean · check-workflows, conflict markers, mojibake, control
-chars, doc links and the floor guard all clean.
+**The fix measures the property the count proxied for.** `loadtests/vacuous_guard.py` (no locust
+import, so the default API suite tests it) decides vacuity from: every surface of the day loop
+touched (`/runs`, `/stops`, `/events:batch`), at least one `POST /runs` answered 201 (the claim
+proves identity + seeded day + API together), and a floor of 10 requests as a backstop (the
+measured distribution is 0-13 vacuous, 31-197 healthy). The SLO thresholds and the error budget
+are untouched. The first attempt on this leg — a per-user iteration budget,
+`LOADTEST_ITERATIONS` — was reverted: it was pushed and the run still failed at 76 requests,
+because all 50 users spawn but the rate their greenlets emit at is the runner's property. That
+attempt and its revert are recorded in the next section (§19.1.2: a second failed fix on one
+hypothesis means the hypothesis is dead). The guard is pinned by
+`services/api/tests/test_vacuous_guard.py` (8 cases, red first: `ModuleNotFoundError:
+loadtests.vacuous_guard`) and proved end-to-end over a fake environment — the 76-request healthy
+shape prints "SLOs met", a dead API and an unseeded day still print the vacuous line.
 
 Known trap recorded per §8: the local reproduction of this profile is itself wall-clock-flaky on
 this machine (the JWKS static server goes unanswered and every request times out at 30 s), which
