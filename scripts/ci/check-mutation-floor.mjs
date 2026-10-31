@@ -28,11 +28,18 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const BUG_ID = 'BUG-112';
 export const DEFAULT_FLOOR = 70;
 
-const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname.slice(1)), '..', '..');
+// The script's own path, as `fileURLToPath` gives it. The earlier
+// `new URL(import.meta.url).pathname.slice(1)` form **resolved against the working
+// directory**, so the entry guard below never matched and the CLI was a silent
+// no-op: the mutation lane ran for 0.25 s, wrote no stats, and still reported
+// success (run 41190752114). A floor that cannot run is not a floor.
+const thisFile = fileURLToPath(import.meta.url);
+const repoRoot = path.resolve(path.dirname(thisFile), '..', '..');
 const STATS_RELATIVE = path.join('mutants', 'mutmut-cicd-stats.json');
 
 /**
@@ -106,10 +113,24 @@ export function readStats(serviceDir) {
   return JSON.parse(readFileSync(file, 'utf8'));
 }
 
+/**
+ * Run mutmut inside the service's own environment.
+ *
+ * `uv sync` installs the CLI into `<service>/.venv/bin`, which is **not** on the
+ * runner's PATH, so `execFileSync('mutmut', …)` dies with `spawnSync mutmut
+ * ENOENT` (run 41229140404, both jobs). Running it through `uv run` gives it the
+ * service's venv; `--directory` also makes the service directory the working
+ * directory, so mutmut writes its `mutants/` where `readStats` looks for it.
+ */
 function runMutmut(serviceDir, args) {
-  const dir = path.resolve(repoRoot, serviceDir);
-  execFileSync('mutmut', args, { cwd: dir, stdio: 'inherit' });
+  const relative = path.relative(repoRoot, path.resolve(repoRoot, serviceDir)) || '.';
+  execFileSync('uv', ['run', '--directory', relative, 'mutmut', ...args], {
+    cwd: repoRoot,
+    stdio: 'inherit',
+  });
 }
+
+export { repoRoot as mutationRepoRoot };
 
 const main = () => {
   const args = process.argv.slice(2);
@@ -136,6 +157,6 @@ const main = () => {
   );
 };
 
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname.slice(1))) {
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(thisFile)) {
   main();
 }

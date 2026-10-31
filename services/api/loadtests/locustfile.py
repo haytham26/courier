@@ -22,6 +22,16 @@ against the in-memory repo measures the application layer honestly):
     uv run --directory services/api --extra load \
       locust -f loadtests/locustfile.py --headless \
              --host http://127.0.0.1:8000 -u 1000 -r 100 --run-time 15m
+
+The vacuous-green guard (`run_is_vacuous`, applied by `assert_the_slos`) asks
+what "the run greets nothing" means - every surface of the day loop touched, a
+run claimed with a 201, a floor of requests - rather than how many requests a
+60 s window happened to produce. The request rate of a wall-clock window is a
+property of the runner: on 2026-10-31 the same healthy profile landed 99, 76
+and 70 requests on three runs of one head (the old floor of 100 failed all
+three) while five other runs landed 141-197, and a slow local machine lands 31.
+The SLO thresholds and the error budget are unchanged; only the guard's notion
+of "vacuous" was made to measure the property it proxies for.
 """
 
 from __future__ import annotations
@@ -36,6 +46,7 @@ from typing import Any
 from locust import HttpUser, between, events, task
 from locust.exception import StopUser
 from seed_day import loadtest_shift_id, loadtest_stop_id
+from vacuous_guard import VACUOUS_SURFACES, missing_surfaces, run_is_vacuous
 
 # The SLO thresholds, encoded as this test's own contract.
 ROUTE_P95_MS = 5_000
@@ -189,6 +200,39 @@ class DriverDay(HttpUser):
                 self._delivered.add(stop_id)
 
 
+# What the run actually greeted: the surfaces it touched and the runs it
+# claimed. One process, one run - the CI gate is a single headless process (the
+# staging run's workers each carry their own copy, where the guard falls back
+# to the stats the runner aggregates, which is correct there because a worker
+# dies loudly when it cannot reach the API at all).
+_observed: dict[str, Any] = {"surfaces": {}, "claimed": 0}
+
+
+@events.request.add_listener
+def _what_the_run_greeted(
+    request_type: str,
+    name: str,
+    response: Any,
+    **kwargs: Any,
+) -> None:
+    """Record the surfaces the run touched and the runs it claimed (a 201).
+
+    Locust fires the request event by name, so this handler declares only the
+    three arguments it reads and swallows the rest (response_time,
+    response_length, exception, context, ...).
+    """
+    for surface in VACUOUS_SURFACES:
+        if surface in name:
+            _observed["surfaces"][surface] = _observed["surfaces"].get(surface, 0) + 1
+    if (
+        request_type == "POST"
+        and name == "/runs"
+        and response is not None
+        and response.status_code == 201
+    ):
+        _observed["claimed"] += 1
+
+
 @events.test_stop.add_listener
 def assert_the_slos(environment: Any, **_kwargs: Any) -> None:
     """The run's verdict: the SLOs as thresholds, red on breach."""
@@ -210,13 +254,18 @@ def assert_the_slos(environment: Any, **_kwargs: Any) -> None:
     total = environment.stats.total
     # The vacuous-green guard (the review's must-fix): a run that greets
     # nothing - no identity, a path mismatch, a dead API, unseeded shifts -
-    # measures nothing, and "nothing failed" is not "the SLOs are met".
-    # The CI evidence: the broken run lands ~2 requests (two 409s), the
-    # seeded healthy run lands ~180. The floor sits between them.
-    if total.num_requests < 100:
+    # measures nothing, and "nothing failed" is not "the SLOs are met". The
+    # guard asks what vacuous means (every surface touched, a run claimed, a
+    # floor of requests) instead of how many requests a wall-clock window
+    # happened to produce on this runner - that count depends on the machine,
+    # and on 2026-10-31 it failed three healthy runs of one head (99, 76 and
+    # 70) while five other runs of the same profile passed at 141-197.
+    if run_is_vacuous(_observed["surfaces"], _observed["claimed"], total.num_requests):
         environment.process_exit_code = 1
         print(
-            f"VACUOUS RUN: only {total.num_requests} requests - the gate needs a seeded, reachable API"
+            "VACUOUS RUN: the gate needs a seeded, reachable API - "
+            f"{total.num_requests} requests, claimed={_observed['claimed']}, "
+            f"missing surfaces={missing_surfaces(_observed['surfaces']) or 'none'}"
         )
         failures += 1
     elif total.fail_ratio > MAX_ERROR_RATE:
