@@ -101,6 +101,14 @@ source_paths = [
     "app/auth/websocket.py",
 ]
 
+
+# The load test's helpers live beside the suites that prove them, and importing
+# `loadtests.vacuous_guard` from `tests/` needs `loadtests/` on sys.path - which
+# mutmut's forked runner does not add. `also_copy` is mutmut's own mechanism
+# for copying a directory into every mutant's tree; it is cheaper and truer than
+# bending the suite to find it.
+also_copy = ["loadtests"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
