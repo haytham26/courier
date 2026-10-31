@@ -117,13 +117,28 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "build input hash: $sha"
 
-      - name: Cache the APK by content hash
+      # BUG-098 (C1 audit, squad 6 finding 6, accepted high): the cache used to
+      # run before the build with no hit guard, so on a hit the APK was
+      # restored and the build then re-ran and re-wrote it anyway - the cache
+      # saved nothing, which is the cache this project's private Actions
+      # minutes ride on - and a failed build left the restored APK in place
+      # for the upload step to attach to a red run. The three steps below make
+      # the order explicit: the restore is keyed on the build inputs' own
+      # hash, the build is skipped when that key hits, and the upload only
+      # runs when this run can account for the APK it is attaching (it built
+      # it, or the cache did).
+      - name: Restore the APK from the cache
+        id: apk-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           key: apk-${{ steps.hash.outputs.sha }}
 
       - name: Build the release APK
+        id: build-apk
+        # A cache hit means the bytes on disk are the ones these inputs build:
+        # rebuilding them is the waste the cache exists to remove.
+        if: steps.apk-cache.outputs.cache-hit != 'true'
         env:
           # The E2E mode: the app runs on local mocks (no Metro, no auth, no API).
           EXPO_PUBLIC_E2E: '1'
@@ -133,6 +148,10 @@ jobs:
           ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
 
       - name: Upload the APK
+        # A restored APK from this run's own key is a valid artifact; a restored
+        # APK under a red build is not, and the guard is what keeps the two
+        # apart (the build step failing stops the job before this runs).
+        if: steps.build-apk.outcome == 'success' || steps.apk-cache.outputs.cache-hit == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: courier-release-apk

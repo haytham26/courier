@@ -66,7 +66,20 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # BUG-072 (the C1 audit): the auth base URL is a build-time literal,
+          # so a release that sets nothing shipped a bundle that could not
+          # reach any auth server (the app fell back to localhost, which on a
+          # phone is the phone). It comes from the repository variable, and the
+          # build fails loudly if it is absent: shipping an APK that cannot
+          # sign anyone in is not a release.
+          EXPO_PUBLIC_AUTH_URL: ${{ vars.EXPO_PUBLIC_AUTH_URL }}
         run: |
+          # BUG-072: without this the release bundle carries a localhost
+          # literal that no phone can reach, and nothing downstream can tell.
+          if [ -z "${EXPO_PUBLIC_AUTH_URL}" ]; then
+            echo "::error::EXPO_PUBLIC_AUTH_URL is not set: this release would build an APK that cannot reach an auth server. Set the repository variable (Settings > Secrets and variables > Actions > Variables)."
+            exit 1
+          fi
           pnpm --filter mobile exec expo prebuild --platform android --no-install
           cd apps/mobile/android
           if [ "${{ steps.keystore.outputs.signed }}" = "true" ]; then
@@ -79,8 +92,20 @@ jobs:
             ./gradlew assembleDebug --no-daemon --stacktrace
           fi
 
+      # BUG-095 (C1 audit, squad 6 finding 3, accepted high, consequence
+      # amended): this step runs at the repository root, while `cp
+      # app/build/outputs/...` resolves relative to where the build ran (the
+      # prebuild step ends with `cd apps/mobile/android`, and each step gets a
+      # fresh shell, so that `cd` does not survive here). The replay under
+      # `bash -e` made `cp` fail and the job red, and the `files:` path handed
+      # to the release action was a second mismatch - it resolved against the
+      # root, where the artifact was written by the same wrong assumption.
+      # Both are fixed by naming the directory the build writes into and
+      # resolving the release action's path from the root, which is where the
+      # `artifacts/` directory actually is.
       - name: Collect the APK
         id: apk
+        working-directory: apps/mobile/android
         run: |
           mkdir -p artifacts
           if [ "${{ steps.keystore.outputs.signed }}" = "true" ]; then
@@ -90,6 +115,28 @@ jobs:
           fi
           echo "path=artifacts/$(ls artifacts)" >> "$GITHUB_OUTPUT"
 
+      # BUG-099 (C1 audit, squad 6 finding 7, accepted high, consequence
+      # amended): no release-path workflow built or passed the APK, so the
+      # 80 MB budget and the 64-bit requirement were never enforced on the
+      # path that actually submits. This workflow builds the artefact it
+      # attaches, so it measures the very bytes it ships: the check runs in
+      # its release mode, where a missing or oversized APK fails the job
+      # rather than warning. The check reads the tree (app.json, the
+      # manifest, the signing configuration) and measures the APK this run
+      # collected.
+      - name: Check the release APK against the store budget
+        run: |
+          node scripts/ci/check-store-readiness.mjs \
+            --repo . --app apps/mobile \
+            --apk "apps/mobile/android/${{ steps.apk.outputs.path }}" \
+            --release
+
+      # BUG-095's second half: the `files:` path is resolved against the
+      # repository root (where this action runs), and the Collect step writes
+      # into `apps/mobile/android/artifacts/` - so the path the release action
+      # reads is the one that names that directory. Both halves of this fix
+      # are the same fact seen from two steps: the build writes under
+      # `apps/mobile/android`, not under the root.
       - name: Attach the APK to the release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:

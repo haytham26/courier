@@ -70,6 +70,11 @@ for flow in "$REC"/*.yaml; do
   done
 
   # The composition: screencap beside the reference, light and dark.
+  # BUG-097 (C1 audit, squad 6 finding 5, accepted high, consequence
+  # amended): the composition only warned, so a job could be green with 13
+  # blank (or absent) reference images - the exact "a green run that proves
+  # nothing" the audit names. A failed composition is now a failure of the
+  # same job: the status the script exits with is what the workflow sees.
   light="$REC/$name-light.png"
   dark="$REC/$name-dark.png"
   if [ -f "$light" ] && [ -f "$dark" ]; then
@@ -81,9 +86,10 @@ for flow in "$REC"/*.yaml; do
       -map "[l]" -frames:v 1 "$REC/$name-light-beside.png" \
       -map "[d]" -frames:v 1 "$REC/$name-dark-beside.png" \
       && echo "composed: $name" \
-      || echo "::warning::composition failed for $name"
+      || { echo "::error::composition failed for $name"; status=1; }
   else
-    echo "::warning::no screencaps for $name; the composition skipped"
+    echo "::error::no screencaps for $name; the composition skipped"
+    status=1
   fi
 done
 

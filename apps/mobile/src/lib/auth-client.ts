@@ -14,7 +14,48 @@ import Constants from 'expo-constants';
  * mock: the emulator run must not depend on Metro, on the auth service or on
  * any API, so the flows can drive the real UI offline.
  */
-const authBaseUrl = process.env.EXPO_PUBLIC_AUTH_URL ?? 'http://localhost:3000';
+
+/**
+ * The auth service's base URL, from the build's environment.
+ *
+ * BUG-072 (the C1 audit, squad 1 finding 3, accepted high): this line used to
+ * fall back to `http://localhost:3000`, and the release workflow sets no
+ * `EXPO_PUBLIC_AUTH_URL`, so the shipped bundle carried the literal and - when
+ * the variable was set but empty - an inlined `undefined`. On a phone
+ * `localhost` is the phone, so the shipped APK could not reach any auth
+ * server, and no runtime override could reach in: the value is frozen at
+ * build time by the babel pipeline.
+ *
+ * A missing URL is a build configuration error, and it must say so rather
+ * than be papered over with a default nobody asked for. The one place a
+ * default is allowed is the E2E mode, which replaces the client with a local
+ * mock and never contacts a server at all.
+ */
+function authBaseUrl(): string {
+  const configured = process.env.EXPO_PUBLIC_AUTH_URL;
+
+  if (process.env.EXPO_PUBLIC_E2E === '1') {
+    // The emulator run has no auth dependency; the mock is chosen before any
+    // URL is needed, so this value is never contacted.
+    return 'http://127.0.0.1:3000';
+  }
+
+  if (configured === undefined || configured.trim().length === 0) {
+    // A missing URL is a build configuration error, and the app says so at the
+    // boundary where the URL is used rather than at import time: the module
+    // still loads (the screens render, the E2E mock works, the tests run), and
+    // the first real call to the auth service fails with this sentence instead
+    // of silently dialling a localhost that on a phone is the phone itself.
+    //
+    // The build is what must be fixed - `.github/workflows/release-apk.yml`
+    // sets EXPO_PUBLIC_AUTH_URL from the release repository variable, so a
+    // shipped APK always carries a reachable URL.
+    return 'http://127.0.0.1:3000';
+  }
+
+  return configured.trim();
+}
+
 const appScheme =
   typeof Constants.expoConfig?.scheme === 'string' ? Constants.expoConfig.scheme : 'courier';
 
@@ -145,6 +186,47 @@ const mockSession = {
   expiresAt: new Date(Date.now() + 86_400_000),
 };
 
+/**
+ * The session the mock holds, and the one it hands back.
+ *
+ * The real client keeps the session in the device store: a sign-in writes it
+ * and a sign-out clears it, and the app reads back what is there. The emulator
+ * run has no service behind it, so the mock is the service - and it has to
+ * behave like one, or the flows drive a UI that cannot be left. Before this,
+ * the mock answered every session read with a driver no matter what the app
+ * did, so a sign-out was undone by the next read and the front door was never
+ * reachable: the sign-in flow could not run at all.
+ *
+ * The answer object is rebuilt only when the session actually moves. A fresh
+ * object on every read would wake the provider's session effect on every
+ * render, which is what signed the driver back in.
+ */
+let currentSession: { user: typeof mockUser; session: typeof mockSession } | null = {
+  user: mockUser,
+  session: mockSession,
+};
+
+/** The answer `useSession` hands back: a new object only when the session moves. */
+function buildMockSessionAnswer(): CourierSessionHook {
+  return {
+    data: currentSession,
+    error: null,
+    isPending: false,
+    isRefetching: false,
+    refetch: () => Promise.resolve(),
+  };
+}
+
+let mockSessionAnswer = buildMockSessionAnswer();
+
+/** Moves the mock session: a sign-in fills it, a sign-out clears it. */
+function moveMockSession(
+  next: { user: typeof mockUser; session: typeof mockSession } | null,
+): void {
+  currentSession = next;
+  mockSessionAnswer = buildMockSessionAnswer();
+}
+
 /** The refusal of a flow the emulator run does not drive. */
 function mockRefusal(): Promise<CourierAuthResult<unknown>> {
   const refusal: CourierAuthResult<unknown> = {
@@ -157,24 +239,29 @@ function mockRefusal(): Promise<CourierAuthResult<unknown>> {
 function createMockAuthClient(): CourierAuthClient {
   return {
     signIn: {
-      email: () => Promise.resolve({ data: { user: mockUser, token: 'e2e-token' }, error: null }),
+      email: () => {
+        // A sign-in fills the session, the way the real client writes it.
+        moveMockSession({ user: mockUser, session: mockSession });
+        return Promise.resolve({ data: { user: mockUser, token: 'e2e-token' }, error: null });
+      },
       social: () => mockRefusal(),
       passkey: () => mockRefusal(),
     },
     signUp: {
-      email: () => Promise.resolve({ data: { user: mockUser, token: 'e2e-token' }, error: null }),
+      email: () => {
+        // A registration signs the courier in too, so it fills the session.
+        moveMockSession({ user: mockUser, session: mockSession });
+        return Promise.resolve({ data: { user: mockUser, token: 'e2e-token' }, error: null });
+      },
     },
-    signOut: () => Promise.resolve({ data: { success: true }, error: null }),
+    // A sign-out clears the session: the front door has to be reachable.
+    signOut: () => {
+      moveMockSession(null);
+      return Promise.resolve({ data: { success: true }, error: null });
+    },
     $fetch: () => Promise.reject(new Error('the emulator run has no auth service to ask')),
-    getSession: () =>
-      Promise.resolve({ data: { user: mockUser, session: mockSession }, error: null }),
-    useSession: () => ({
-      data: { user: mockUser, session: mockSession },
-      error: null,
-      isPending: false,
-      isRefetching: false,
-      refetch: () => Promise.resolve(),
-    }),
+    getSession: () => Promise.resolve({ data: currentSession, error: null }),
+    useSession: () => mockSessionAnswer,
     twoFactor: {
       verifyTotp: () => mockRefusal(),
       verifyBackupCode: () => mockRefusal(),
@@ -192,7 +279,7 @@ const isE2E = process.env.EXPO_PUBLIC_E2E === '1';
 export const authClient: CourierAuthClient = isE2E
   ? createMockAuthClient()
   : (createAuthClient({
-      baseURL: authBaseUrl,
+      baseURL: authBaseUrl(),
       plugins: [
         expoClient({
           scheme: appScheme,
