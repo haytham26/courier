@@ -110,7 +110,13 @@ jobs:
           APK_PATH: ${{ github.event.inputs.apk_path || '' }}
         run: |
           set -euo pipefail
-          args=(--json artifacts/store-readiness.json)
+          # BUG-099 (C1 audit, squad 6 finding 7, accepted high, consequence
+          # amended): this lane runs on the release trigger too, so the APK is
+          # required wherever the caller gives one, and the check's release
+          # mode turns an unmeasured artefact into a failure. The missing-APK
+          # finding used to be a WARN here, which is why the size budget and
+          # the 64-bit requirement were never enforced on the path that submits.
+          args=(--json artifacts/store-readiness.json --release)
           if [ -n "$APK_PATH" ]; then
             args+=(--apk "$APK_PATH")
           fi
