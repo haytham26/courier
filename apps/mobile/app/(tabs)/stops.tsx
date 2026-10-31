@@ -33,7 +33,7 @@ import type { TimelineItem } from '@/components/chosen';
 import { radii, spacing, typography } from '@courier/design-tokens/chosen';
 import { DRIVE_ORIGIN_LNGLAT } from '@/maps/drive';
 import { mockStops, type Stop } from '@/maps/stops';
-import { useRun } from '@/maps/runState';
+import { useRun, type RunState } from '@/maps/runState';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { getCourierStyle } from '@/maps/styles';
 import { hourMinuteOf } from '@/maps/drive';
@@ -48,9 +48,28 @@ const SEGMENTS = [
 
 type SegmentKey = (typeof SEGMENTS)[number]['key'];
 
-/** Which segment a stop's status sits in. */
-const segmentOf = (stop: Stop): SegmentKey =>
-  stop.status === 'delivered' ? 'done' : stop.status === 'skipped' || stop.status === 'failed' ? 'later' : 'to-go';
+/**
+ * Which segment a stop's status sits in.
+ *
+ * The run decides, not the list (BUG-080, the C1 audit's medium finding): a
+ * stop the courier delivered is the run's own mark, and reading the immutable
+ * `mockStops[].status` instead put a stop delivered on Driving back under
+ * "To go" - the two screens disagreeing about the same delivery. The list's
+ * own statuses stay for what they are: the plan's shape, so a stop the plan
+ * already called delivered, skipped or failed keeps its segment, and a mark
+ * the run made on top of the plan moves the stop to "Done".
+ *
+ * The run is passed rather than its `isDelivered` method: the method belongs
+ * to the run object and the screen's own lint rule refuses a detached method
+ * reference, which is the same reason every other call site in the app calls
+ * it as `run.isDelivered(...)`.
+ */
+const segmentOf = (stop: Stop, run: RunState): SegmentKey =>
+  run.isDelivered(stop.id) || stop.status === 'delivered'
+    ? 'done'
+    : stop.status === 'skipped' || stop.status === 'failed'
+      ? 'later'
+      : 'to-go';
 
 function RouteScreen() {
   const { t } = useChosen();
@@ -71,15 +90,20 @@ function RouteScreen() {
     [run.delivered],
   );
 
+  // The run's marks are the dependency: `isDelivered` is a callback the run
+  // rebuilds whenever its marks move, so the length of the marks is what the
+  // memo reads - and it is what this screen already keyed its minutes on.
+  const marksCount = run.delivered.length;
+
   const counts = useMemo(() => {
     const tally: Record<SegmentKey, number> = { 'to-go': 0, later: 0, done: 0 };
-    for (const stop of mockStops) tally[segmentOf(stop)] += 1;
+    for (const stop of mockStops) tally[segmentOf(stop, run)] += 1;
     return tally;
-  }, [run.delivered.length]);
+  }, [marksCount, run]);
 
   const shown = useMemo(
-    () => mockStops.filter((stop) => segmentOf(stop) === segment),
-    [segment, run.delivered.length],
+    () => mockStops.filter((stop) => segmentOf(stop, run) === segment),
+    [segment, marksCount, run],
   );
 
   const mapStyle = useMemo(
@@ -160,14 +184,15 @@ function RouteScreen() {
           ) : (
             <Timeline
               items={shown.map((stop): TimelineItem => {
+                const inDone = segmentOf(stop, run) === 'done';
                 const state: TimelineItem['state'] =
-                  segmentOf(stop) === 'done' ? 'done' : stop.status === 'active' ? 'next' : 'later';
+                  inDone ? 'done' : stop.status === 'active' ? 'next' : 'later';
                 return {
                   id: stop.id,
                   street: stop.address,
-                  time: segmentOf(stop) === 'done' ? minuteOf(stop.id) : undefined,
+                  time: inDone ? minuteOf(stop.id) : undefined,
                   state,
-                  icon: segmentOf(stop) === 'done' ? 'checkmark-circle' : 'ellipse-outline',
+                  icon: inDone ? 'checkmark-circle' : 'ellipse-outline',
                   onPress: () => setSelected(stop),
                   // The Maestro contract: a row is `stop-<id>`.
                   testID: `stop-${stop.id}`,
