@@ -116,15 +116,20 @@ export function readStats(serviceDir) {
 /**
  * Run mutmut inside the service's own environment.
  *
- * `uv sync` installs the CLI into `<service>/.venv/bin`, which is **not** on the
- * runner's PATH, so `execFileSync('mutmut', …)` dies with `spawnSync mutmut
- * ENOENT` (run 41229140404, both jobs). Running it through `uv run` gives it the
- * service's venv; `--directory` also makes the service directory the working
- * directory, so mutmut writes its `mutants/` where `readStats` looks for it.
+ * Three defects in this one function, each found by dispatching the lane:
+ *
+ * 1. `execFileSync('mutmut', …)` - `uv sync` installs the CLI into
+ *    `<service>/.venv/bin`, which is not on the runner's PATH:
+ *    `spawnSync mutmut ENOENT` (run 41229140404, both jobs).
+ * 2. `uv run --directory <service>` alone syncs the **default** dependencies, so
+ *    it built a fresh `.venv` and `Failed to spawn: mutmut` again (run
+ *    41236313956): mutmut is a `dev` extra. `--extra dev` is what puts it back.
+ * 3. `--directory` is also what makes the service directory the working
+ *    directory, so mutmut writes its `mutants/` where `readStats` looks for it.
  */
 function runMutmut(serviceDir, args) {
   const relative = path.relative(repoRoot, path.resolve(repoRoot, serviceDir)) || '.';
-  execFileSync('uv', ['run', '--directory', relative, 'mutmut', ...args], {
+  execFileSync('uv', ['run', '--extra', 'dev', '--directory', relative, 'mutmut', ...args], {
     cwd: repoRoot,
     stdio: 'inherit',
   });
