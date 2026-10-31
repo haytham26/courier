@@ -577,3 +577,168 @@ class TestTheLocationNotes:
 
         assert rows[0].location_id == location_id_for("45 Papanui Road", None)
         assert rows[0].suburb is None
+
+
+class TestTheStopStatusTheCourierReads:
+    """BUG-115: on Postgres a stop's status was a lie after a sync.
+
+    `SqlAlchemyRepo` read the `stops.status` column while `InMemoryRepo`
+    derived the status from the delivery events, and no writer of the API ever
+    touched the column - it held the `pending` the seed wrote for ever. So on
+    Postgres a stop the courier had delivered read `pending`, and
+    `GET /shifts/{id}/stops` with `?status=delivered` answered an empty list,
+    while every test that ran on the in-memory double was green.
+
+    The SQL repo now derives the status the same way the in-memory one does,
+    and these tests prove it on the real Postgres (the `db` marker), in both
+    directions the register names: delivered to failed, and failed back to
+    delivered.
+    """
+
+    def _stored_status_of(self, engine: Engine, stop_id: uuid.UUID) -> str:
+        """The column as the seed left it: the value that was never updated."""
+        with engine.begin() as connection:
+            return str(
+                connection.execute(
+                    text("SELECT status FROM stops WHERE id = :id"), {"id": stop_id}
+                ).scalar_one()
+            )
+
+    def _later(self, event: DeliveryEventRow, minutes: int) -> DeliveryEventRow:
+        return DeliveryEventRow(
+            id=event.id,
+            shift_id=event.shift_id,
+            stop_id=event.stop_id,
+            kind=event.kind,
+            utterance=event.utterance,
+            safe_place=event.safe_place,
+            lat=event.lat,
+            lon=event.lon,
+            accuracy_m=event.accuracy_m,
+            occurred_at=event.occurred_at + timedelta(minutes=minutes),
+        )
+
+    def _a_stop(self, repo: SqlAlchemyRepo, engine: Engine) -> tuple[uuid.UUID, RunRecord]:
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        stop_id = uuid.uuid4()
+        seed_stop(engine, shift_id, stop_id, "45 Papanui Road")
+        return stop_id, run
+
+    def test_a_delivered_event_makes_the_stop_read_delivered(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        stop_id, run = self._a_stop(repo, engine)
+
+        result = repo.append_events(run.shift_id, [an_event(run.shift_id, stop_id, "delivered")])
+
+        assert result.stored == 1
+        assert [row.status for row in repo.get_run_stops(run.id)] == ["delivered"]
+
+    def test_the_latest_event_decides_delivered_to_failed(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        stop_id, run = self._a_stop(repo, engine)
+
+        repo.append_events(run.shift_id, [an_event(run.shift_id, stop_id, "delivered")])
+        assert [row.status for row in repo.get_run_stops(run.id)] == ["delivered"]
+
+        repo.append_events(
+            run.shift_id, [self._later(an_event(run.shift_id, stop_id, "failed"), 1)]
+        )
+        assert [row.status for row in repo.get_run_stops(run.id)] == ["failed"]
+
+    def test_a_failed_stop_can_come_back_to_delivered(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        stop_id, run = self._a_stop(repo, engine)
+
+        repo.append_events(run.shift_id, [an_event(run.shift_id, stop_id, "failed")])
+        repo.append_events(
+            run.shift_id, [self._later(an_event(run.shift_id, stop_id, "delivered"), 1)]
+        )
+
+        assert [row.status for row in repo.get_run_stops(run.id)] == ["delivered"]
+
+    def test_an_event_with_an_earlier_stamp_does_not_rewind_the_status(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """The order of the batch is not the order of the day (ADR-014 §2)."""
+        stop_id, run = self._a_stop(repo, engine)
+
+        repo.append_events(run.shift_id, [an_event(run.shift_id, stop_id, "failed")])
+        repo.append_events(
+            run.shift_id, [self._later(an_event(run.shift_id, stop_id, "delivered"), -30)]
+        )
+
+        assert [row.status for row in repo.get_run_stops(run.id)] == ["failed"]
+
+    def test_a_pod_event_does_not_decide_the_status(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """A captured photograph is not a delivery's verdict."""
+        stop_id, run = self._a_stop(repo, engine)
+
+        repo.append_events(run.shift_id, [an_event(run.shift_id, stop_id, "pod_captured")])
+
+        assert [row.status for row in repo.get_run_stops(run.id)] == ["pending"]
+
+    def test_the_stale_column_is_not_what_the_courier_is_told(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """The column stays as it was seeded; the answer is derived from the log.
+
+        This is the point of the fix: the row's stored value is the seed's, and
+        the status the courier is told comes from the events. It also says, in
+        one line, why the derivation is not a write on the sync path (BUG-063's
+        statement budget).
+        """
+        stop_id, run = self._a_stop(repo, engine)
+
+        repo.append_events(run.shift_id, [an_event(run.shift_id, stop_id, "delivered")])
+
+        assert self._stored_status_of(engine, stop_id) == "pending"
+        assert [row.status for row in repo.get_run_stops(run.id)] == ["delivered"]
+
+    def test_the_sql_repo_and_the_in_memory_repo_answer_the_same(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """The courier's day must not depend on which repository serves it."""
+        stop_id, run = self._a_stop(repo, engine)
+
+        from app.repo import InMemoryRepo
+
+        memory = InMemoryRepo()
+        memory.put_run(run)
+        memory.run_stops[run.id] = repo.get_run_stops(run.id)
+
+        repo.append_events(run.shift_id, [an_event(run.shift_id, stop_id, "delivered")])
+        repo.append_events(
+            run.shift_id, [self._later(an_event(run.shift_id, stop_id, "failed"), 1)]
+        )
+        memory.append_events(run.shift_id, [an_event(run.shift_id, stop_id, "delivered")])
+        memory.append_events(
+            run.shift_id, [self._later(an_event(run.shift_id, stop_id, "failed"), 1)]
+        )
+
+        assert [row.status for row in repo.get_run_stops(run.id)] == ["failed"]
+        assert [row.status for row in memory.get_run_stops(run.id)] == ["failed"]
+
+    def test_a_stop_with_events_is_not_the_only_row_of_the_run(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """A stop nothing happened to keeps the status it was seeded with."""
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        touched, untouched = uuid.uuid4(), uuid.uuid4()
+        seed_stop(engine, shift_id, touched, "45 Papanui Road")
+        seed_stop(engine, shift_id, untouched, "12 Riccarton Road")
+
+        repo.append_events(shift_id, [an_event(shift_id, touched, "delivered")])
+
+        assert [row.status for row in repo.get_run_stops(run.id)] == [
+            "delivered",
+            "pending",
+        ]

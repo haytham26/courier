@@ -58,7 +58,16 @@ export type SignInOutcome =
   | { status: 'two-factor-required'; methods: string[] }
   | { status: 'failed'; message: string };
 
-interface AuthContextType {
+/**
+ * The shape the auth context hands to a consumer.
+ *
+ * It is exported because a consumer names what it reads: the root layout reads
+ * `isLoading` and `isAuthenticated` to build the guarded stack, the Account tab
+ * reads `logout`, and the sign-out-landing test reads the whole thing to reach
+ * the values the tab reaches. A context type that cannot be named is a contract
+ * that cannot be tested against.
+ */
+export interface AuthContextType {
   user: AuthUser | null;
   status: SessionStatus;
   isLoading: boolean;
@@ -292,6 +301,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const finishSignIn = useCallback(async () => {
     const found = await loadTeams();
+    // The sign-in establishes the session here, from the sign-in itself,
+    // rather than waiting for the session hook to notice.
+    //
+    // The hook's answer is a value the provider reads on its own render, so a
+    // sign-in that happens after a sign-out in the same tick would leave the
+    // provider holding the signed-out session: the E2E flow signs out, then
+    // signs in with the email form, and the app stayed on the front door
+    // because the guard never saw a courier to let through (run 41015361739,
+    // both legs). Reading the session back here is the same answer the hook
+    // would give, taken at the moment the sign-in ends.
+    const session = await authClient.getSession();
+    const signedIn = session.data?.user;
+    if (signedIn) {
+      setUser(signedIn);
+      setStatus('signed-in');
+      await rememberSession(toOfflineUser(signedIn));
+    }
     setStep(found.length > 1 ? 'teams' : 'none');
   }, [loadTeams]);
 
@@ -347,6 +373,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus('signed-out');
     setStep('none');
     setTeams([]);
+    // The remembered session goes with the sign-out: the phone must not offer
+    // a session it has just been told to forget.
+    setStoredSession(null);
     await forgetSession();
   }, []);
 

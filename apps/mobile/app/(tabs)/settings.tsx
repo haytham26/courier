@@ -30,6 +30,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { useChosen } from '@/components/chosen';
+import { useAuth } from '@/providers/AuthProvider';
 import { areHapticsEnabled, hapticFor, setHapticsEnabled } from '@/motion/haptics';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { useDriverId } from '@/maps/useDriverId';
@@ -38,7 +39,7 @@ import { createFilePreferenceStore } from '@/sync/preferenceFiles';
 import { createMemoryPreferenceStore } from '@/sync/storage';
 import { VOICE_VERBOSITIES, type VoiceSettings, type VoiceVerbosity } from '@/voice/settings';
 import { useCourierVoice } from '@/voice/useCourierVoice';
-import { radii, spacing, typography } from '@courier/design-tokens/chosen';
+import { radii, spacing, touch, typography } from '@courier/design-tokens/chosen';
 
 /** The detail levels, as the reference's chips spell them. */
 const VERBOSITY_LABELS: Record<VoiceVerbosity, string> = {
@@ -72,11 +73,15 @@ interface Row {
   label: string;
   /** The value the row carries, when it carries one. */
   value?: string;
+  /** The line under the label, when the row has one (the sign-out confirm). */
+  hint?: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
   tone: TileTone;
   /** What the row does when the courier taps it. */
   onPress?: () => void;
   testID?: string;
+  /** A row that is a button (the sign-out) and needs the 48 pt floor. */
+  action?: boolean;
 }
 
 /** The initials of the signed-in courier, for the profile card. */
@@ -86,7 +91,34 @@ export default function SettingsScreen() {
   const { t } = useChosen();
   const courierVoice = useCourierVoice();
   const { pack } = useMapBoot();
+  const { logout } = useAuth();
   const [haptics, setHaptics] = useState(() => areHapticsEnabled());
+  /**
+   * The sign-out is destructive-ish, so it is confirmed with a second tap: the
+   * first turns the row into the question, and only the second signs out. The
+   * row goes back to what it was when the app is signed out, because the row
+   * is not there to be tapped again.
+   */
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+
+  const signOut = useCallback(() => {
+    hapticFor('confirm');
+    if (!confirmSignOut) {
+      setConfirmSignOut(true);
+      return;
+    }
+    setConfirmSignOut(false);
+    // The front door, on purpose. The sign-out closes the guarded stack (the
+    // tabs are behind `isAuthenticated`), and the router's own fallback for a
+    // route that has just left the stack is the unmatched screen - which the
+    // E2E run 40872943163 proved, on both legs: `sign-in.yaml` waited 60 s on
+    // the front door and got "This link is not on today's route". A courier who
+    // signs out is on their way back IN, so the app names the screen instead of
+    // leaving the router to guess with the driver staring at a 404.
+    void logout().finally(() => {
+      router.replace('/(auth)/login');
+    });
+  }, [confirmSignOut, logout]);
 
   // The preferences the map mode is kept in (the Map tab's own store): a device
   // whose file system will not open still gets the screen.
@@ -217,6 +249,21 @@ export default function SettingsScreen() {
     { key: 'team', label: 'Team', value: 'Northwood', icon: 'people', tone: 'warning', testID: 'settings-team' },
   ];
 
+  // The sign-out ends the shift, so it sits on its own at the end of the list
+  // and asks before it goes (the destructive-ish confirm above).
+  const signOutRows: Row[] = [
+    {
+      key: 'sign-out',
+      label: confirmSignOut ? 'Sign out?' : 'Sign out',
+      hint: confirmSignOut ? 'Tap again to sign out of this phone.' : undefined,
+      icon: 'log-out',
+      tone: 'danger',
+      onPress: signOut,
+      testID: 'settings-sign-out',
+      action: true,
+    },
+  ];
+
   return (
     <SafeAreaView testID="settings-screen" style={[styles.container, { backgroundColor: t.colors.background }]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -277,6 +324,13 @@ export default function SettingsScreen() {
           })}
         </View>
 
+        {/* The sign-out sits directly under the identity, not at the end of a
+            long scroll list: a row a courier has to hunt for is a row that is
+            never found, and the flow that taps it reads "Element not found" the
+            moment the list is taller than the window (the same class of
+            failure as BUG-050's clipped actions row). */}
+        <SettingsGroup title="Session" rows={signOutRows} />
+
         <SettingsGroup title="Map" rows={mapRows} />
         <SettingsGroup title="Device" rows={deviceRows} />
         <SettingsGroup title="Team" rows={teamRows} />
@@ -327,6 +381,14 @@ function SettingsGroup({ title, rows }: { title: string; rows: Row[] }) {
                 <Text style={[styles.rowLabel, { color: t.colors.label }]} maxFontSizeMultiplier={1.4}>
                   {row.label}
                 </Text>
+                {row.hint ? (
+                  <Text
+                    style={[styles.rowHint, { color: t.colors.secondaryLabel }]}
+                    maxFontSizeMultiplier={1.4}
+                  >
+                    {row.hint}
+                  </Text>
+                ) : null}
               </View>
               {row.value ? (
                 <Text style={[styles.rowValue, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
@@ -352,9 +414,17 @@ function SettingsGroup({ title, rows }: { title: string; rows: Row[] }) {
               key={row.key}
               accessibilityRole="button"
               accessibilityLabel={row.label}
+              accessibilityHint={row.hint}
               onPress={row.onPress}
               testID={row.testID}
-              style={({ pressed }) => [styles.row, border, pressed ? { opacity: 0.7 } : null]}
+              style={({ pressed }) => [
+                styles.row,
+                // The sign-out row is a real button, so it takes the 48 pt
+                // touch floor the reference asks of one.
+                row.action ? styles.rowAction : null,
+                border,
+                pressed ? { opacity: 0.7 } : null,
+              ]}
             >
               {content}
             </Pressable>
@@ -437,6 +507,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.space16,
     paddingVertical: spacing.space12,
     minHeight: 44,
+  },
+  // A row that is a button (the sign-out) takes the 48 pt touch floor.
+  rowAction: {
+    minHeight: touch.minimum,
   },
   rowText: { flex: 1, gap: spacing.space4 },
   rowLabel: {
