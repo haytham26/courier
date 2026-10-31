@@ -142,6 +142,11 @@ const envSchema = z.object({
   AUTH_JWT_EXPIRATION: z.string().min(1).optional(),
   AUTH_JWKS_PATH: z.string().min(1).optional(),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().optional(),
+  // BUG-132: the limiter's window and its switch are the deployment's to
+  // state. The library defaults are what they are, and a deployment that
+  // fronts this service with its own edge needs to say so.
+  AUTH_RATE_LIMIT_WINDOW: z.coerce.number().int().positive().optional(),
+  AUTH_RATE_LIMIT_ENABLED: z.enum(['true', 'false']).optional(),
   AUTH_SESSION_EXPIRES_IN: z.coerce.number().int().positive().optional(),
   AUTH_REQUIRE_EMAIL_VERIFICATION: z.enum(['true', 'false']).optional(),
   AUTH_MAX_PASSWORD_LENGTH: z.coerce.number().int().positive().optional(),
@@ -164,12 +169,59 @@ const envSchema = z.object({
 
 const NODE_ENVS: NodeEnv[] = ["development", "test", "production"];
 
+/**
+ * A concrete origin, with an optional port (BUG-134).
+ *
+ * `scheme://` is enough for the app's own schemes (`exp://`, `courier://`,
+ * which carry no host at all), and `scheme://host[:port]` is what a web origin
+ * is. What is NOT one: `*` (which Better Auth's own wildcard match compiles to
+ * match any host at all), a bare host with no scheme, or anything that could
+ * be read as a pattern.
+ */
+const CONCRETE_ORIGIN = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/(?:[a-zA-Z0-9.-]+)?(?::\d+)?$/;
+
 function parseCsv(value: string | undefined): string[] {
   if (!value) return [];
   return value
     .split(",")
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
+}
+
+/**
+ * Whether an origin is the relying party's own, or one beneath it (BUG-133).
+ *
+ * A subdomain is allowed because WebAuthn allows one: a ceremony that began on
+ * `https://auth.example.co.nz` is the same relying party as `example.co.nz`.
+ * What is not allowed is a host that merely shares a suffix - so the last two
+ * labels have to match exactly, and not a longer suffix string.
+ */
+function isOriginOfRpID(origin: string, rpID: string): boolean {
+  let host: string;
+  try {
+    host = new URL(origin).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  const rp = rpID.toLowerCase();
+  return host === rp || host.endsWith(`.${rp}`);
+}
+
+/**
+ * The origins whose host never leaves the machine (localhost and its
+ * literals). A passkey origin on such a host is the developer's own machine -
+ * local dev, or the test suite - and the BUG-133 threat is the network, so
+ * these are exempt from the rpID cross-check the API's JWKS hop exempts the
+ * same way (BUG-131).
+ */
+function isLoopbackOrigin(origin: string): boolean {
+  let host: string;
+  try {
+    host = new URL(origin).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]";
 }
 
 /**
@@ -205,6 +257,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
 
   const baseURL = values.BETTER_AUTH_URL.replace(/\/+$/, "");
   const trustedOrigins = parseCsv(values.AUTH_TRUSTED_ORIGINS);
+  // BUG-134: an entry that is not a concrete scheme+host is refused, because
+  // Better Auth's `matchesOriginPattern` compiles `*` to match ANY host - the
+  // origin check is then disabled for every route while `options.ts` still
+  // reports it as on, so a reviewer reading the options concludes it is
+  // protected. A wildcard therefore never boots.
+  for (const origin of trustedOrigins) {
+    if (!CONCRETE_ORIGIN.test(origin)) {
+      throw new Error(
+        `AUTH_TRUSTED_ORIGINS carries ${JSON.stringify(origin)}: every entry must be a `
+        + "concrete scheme://host (a wildcard, or a bare host, disables the origin check "
+        + "while reporting it as on)",
+      );
+    }
+  }
   if (trustedOrigins.length === 0) {
     if (nodeEnv === "production") {
       throw new MissingEnvError(["AUTH_TRUSTED_ORIGINS"]);
@@ -240,6 +306,26 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
   // Passkeys need a relying party domain; the founder supplies it.
   const passkeyEnabled = values.AUTH_PASSKEY_RP_ID !== undefined;
   const rpID = values.AUTH_PASSKEY_RP_ID ?? "localhost";
+  // BUG-133: the WebAuthn origin is derived from the service's own URL rather
+  // than defaulting to the apex of the relying party. The apex default let a
+  // deployment whose `BETTER_AUTH_URL` is `https://auth.example.co.nz` and
+  // whose `rpID` is `example.co.nz` accept a ceremony replayed from
+  // `https://example.co.nz` - a page the organisation does not serve from here.
+  // Whatever the value is, its host has to be the relying party's own host or
+  // one beneath it - and the check runs on the derived value too, not only on
+  // the one the operator typed: a derived origin whose host is off the rpID is
+  // the same misconfiguration, reached without anyone naming
+  // AUTH_PASSKEY_ORIGIN at all. Loopback is exempt, the same way the API's
+  // JWKS hop exempts it (BUG-131): the threat is the network, and a loopback
+  // origin is the developer's own machine - including the test suite, which
+  // runs the service on localhost with a production rpID.
+  const passkeyOrigin = values.AUTH_PASSKEY_ORIGIN ?? baseURL;
+  if (passkeyEnabled && !isLoopbackOrigin(passkeyOrigin) && !isOriginOfRpID(passkeyOrigin, rpID)) {
+    throw new Error(
+      `AUTH_PASSKEY_ORIGIN=${passkeyOrigin} is not an origin of AUTH_PASSKEY_RP_ID=${rpID}: `
+      + "the passkey origin must be the relying party's own host (or one beneath it)",
+    );
+  }
 
   return {
     appName: "Courier Copilot",
@@ -278,7 +364,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
       enabled: passkeyEnabled,
       rpID,
       rpName: values.AUTH_PASSKEY_RP_NAME ?? "Courier Copilot",
-      origin: values.AUTH_PASSKEY_ORIGIN ?? `https://${rpID}`,
+      origin: passkeyOrigin,
     },
     mfa: {
       issuer: values.AUTH_MFA_ISSUER ?? "Courier Copilot",
@@ -289,8 +375,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
       },
     },
     rateLimit: {
-      enabled: true,
-      window: 60,
+      enabled: values.AUTH_RATE_LIMIT_ENABLED !== "false",
+      window: values.AUTH_RATE_LIMIT_WINDOW ?? 60,
       max: values.AUTH_RATE_LIMIT_MAX ?? 100,
       // Credential endpoints get the strict treatment (OWASP: ~10 attempts
       // per 15 minutes); sign-up is even tighter because it is anonymous.

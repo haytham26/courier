@@ -28,6 +28,13 @@ export const HEALTH_PATHS = ["/health/ready", "/healthz"] as const;
 export interface HealthBody {
   status: "ok";
   db: AuthConfig["database"]["provider"];
+  // BUG-137: which sign-in methods this deployment actually configured. A
+  // wrong-but-non-empty configuration used to boot healthy and then refuse the
+  // app's every request with a 403 that renders as "not set up on this server
+  // yet" - an operator reading the health answer could not tell that from a
+  // service that was simply not configured. The probe now says what is on.
+  methods: string[];
+  origin: string;
 }
 
 /** Whether this request is the readiness probe (the compose healthcheck). */
@@ -43,5 +50,17 @@ export function isHealthPath(pathname: string): boolean {
 
 /** The body the readiness probe is answered with. */
 export function healthBody(config: AuthConfig): HealthBody {
-  return { status: "ok", db: config.database.provider };
+  const methods = [
+    "email",
+    ...(config.socialProviders.google === null ? [] : ["google"]),
+    ...(config.socialProviders.apple === null ? [] : ["apple"]),
+    ...(config.passkey.enabled ? ["passkey"] : []),
+    "mfa",
+  ];
+  return {
+    status: "ok",
+    db: config.database.provider,
+    methods,
+    origin: config.baseURL,
+  };
 }
