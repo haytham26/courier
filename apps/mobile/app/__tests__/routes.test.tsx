@@ -17,15 +17,13 @@ import RootLayout from '../_layout';
 /** The route names the root Stack registers, recorded by the mock Screen. */
 const mockRegisteredRoutes: string[] = [];
 
-/** The props the root Stack is mounted with, recorded per render. */
-const mockStackProps: Array<Record<string, unknown>> = [];
+/** The router the root layout drives, recorded per call. */
+const mockRouter = { navigate: jest.fn(), push: jest.fn(), replace: jest.fn() };
 
 jest.mock('expo-router', () => {
   const ReactActual = jest.requireActual<typeof import('react')>('react');
-  const Stack = (props: { children?: React.ReactNode } & Record<string, unknown>) => {
-    mockStackProps.push(props);
-    return ReactActual.createElement(ReactActual.Fragment, null, props.children);
-  };
+  const Stack = ({ children }: { children?: React.ReactNode }) =>
+    ReactActual.createElement(ReactActual.Fragment, null, children);
   Stack.Protected = ({ children }: { children?: React.ReactNode }) =>
     ReactActual.createElement(ReactActual.Fragment, null, children);
   Stack.Screen = ({ name }: { name: string }) => {
@@ -34,7 +32,7 @@ jest.mock('expo-router', () => {
   };
   return {
     Stack,
-    useRouter: () => ({ navigate: jest.fn(), push: jest.fn() }),
+    useRouter: () => mockRouter,
   };
 });
 
@@ -113,33 +111,33 @@ describe('the root stack', () => {
     expect(mockRegisteredRoutes).toContain('driving-night');
   });
 
-  it('names the stack\'s initial route for the session the phone already has (the a1 job\'s welcome screen)', () => {
+  it('sends the signed-out phone to the welcome, not the router\'s not-found (the a1 job\'s screen)', () => {
     // Run 41326369521's device dump: the root Stack mounts only after the
-    // 8 s session-restore bound, and with no initialRouteName the router
-    // resolved the initial route against the empty stack, so the a1 flow
-    // saw `not-found-screen` instead of `welcome-screen`. The stack must
-    // name its initial route for the session the phone already has - the
-    // signed-out phone opens on the welcome, the signed-in one on the tabs.
+    // 8 s session-restore bound, and the launch URL '/' matches no screen
+    // of the signed-out stack, so the a1 flow saw `not-found-screen` and
+    // waited 60 s for `welcome-screen`. The signed-out phone must be sent
+    // to the welcome explicitly; the signed-in one needs nothing ('/' is
+    // the tabs' index, which is why the mock legs were always green).
     const { __setAuthState } = jest.requireMock<{
       __setAuthState: (next: Partial<MockAuthState>) => void;
     }>('@/providers/AuthProvider');
 
     __setAuthState({ isLoading: false, isAuthenticated: false, user: null });
-    mockStackProps.length = 0;
+    mockRouter.replace.mockClear();
     render(
       <GestureHandlerRootView>
         <RootLayout />
       </GestureHandlerRootView>,
     );
-    expect(mockStackProps.at(-1)?.initialRouteName).toBe('welcome');
+    expect(mockRouter.replace).toHaveBeenCalledWith('/welcome');
 
     __setAuthState({ isLoading: false, isAuthenticated: true, user: { id: 'driver-1' } });
-    mockStackProps.length = 0;
+    mockRouter.replace.mockClear();
     render(
       <GestureHandlerRootView>
         <RootLayout />
       </GestureHandlerRootView>,
     );
-    expect(mockStackProps.at(-1)?.initialRouteName).toBe('(tabs)');
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 });

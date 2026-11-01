@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Stack } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Stack, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Providers } from '@/providers/Providers';
 import { useAuth } from '@/providers/AuthProvider';
@@ -36,6 +36,21 @@ function RunSession({ children }: { children: React.ReactNode }) {
 
 function AuthNavigator() {
   const { isLoading, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // The a1 job's first real run (41326369521) proved what the launch URL
+  // does to a signed-out phone: the stack mounts only after the bounded
+  // session restore answers, and '/' matches no screen of the signed-out
+  // stack, so the router landed on not-found-screen (the flow waited 60 s
+  // for welcome-screen). The signed-out phone is sent to the welcome
+  // explicitly; a signed-in phone needs nothing - '/' is the tabs' index.
+  // The loading phase still renders nothing, so the run state's key never
+  // flips while the restore is pending (the reverted 483a5ef/aa2672e
+  // attempts are why this is an effect, not a render of the stack).
+  useEffect(() => {
+    if (isLoading || isAuthenticated) return;
+    router.replace('/welcome');
+  }, [isLoading, isAuthenticated, router]);
 
   if (isLoading) {
     return null; // Or show a loading screen
@@ -51,16 +66,6 @@ function AuthNavigator() {
       <ScanLoadProvider>
         <Stack
           id="root"
-          // The a1 job's first real run (41326369521) proved why this names
-          // the initial route explicitly: the stack mounts only after the
-          // bounded session restore answers, and with no initialRouteName
-          // the router resolved the launch URL against the empty stack, so
-          // the flow saw not-found-screen instead of the welcome. The
-          // signed-out phone opens on the welcome, the signed-in one on the
-          // tabs - and the loading phase still renders nothing, so the run
-          // state's key never flips while the restore is pending (the two
-          // reverted attempts, 483a5ef and aa2672e, are why).
-          initialRouteName={isAuthenticated ? '(tabs)' : 'welcome'}
           screenOptions={{
             headerShown: false,
             gestureEnabled: true,

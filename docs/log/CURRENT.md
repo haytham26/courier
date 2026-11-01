@@ -31,10 +31,12 @@ green: 29 pass), wired into quality-gates.yml's floor job. Merged as PR #172 (`9
 **Step 1 in flight on `feat/a1-slice-3-run-store` (session 13):** both red checks on
 4241000 rooted and fixed on the branch — the CI lint (`require-await` at
 sessionRestoreBounded.test.tsx:81, now an explicit `await Promise.resolve()`) and the
-a1 job's `not-found-screen` (root Stack mounts only after the 8 s restore bound, so the
-router resolved the launch URL against the empty stack; fix: `initialRouteName={
-isAuthenticated ? '(tabs)' : 'welcome'}` on the root Stack, red-first in
-routes.test.tsx: `Expected: "welcome", Received: undefined` → green). BUG-081 proven
+a1 job's `not-found-screen` (the signed-out stack mounts after the 8 s restore bound and
+'/' matches no screen of it, so the router landed on not-found; fix: AuthNavigator's
+effect sends the signed-out phone to `/welcome` via `router.replace`, red-first in
+routes.test.tsx: `Expected: "/welcome"` never called → green; the Stack-prop form does
+not typecheck in expo-router 58, whose layouts take the anchor via `unstable_settings`).
+BUG-081 proven
 fixed by slice 3 (new test in today.test.tsx: red against origin/main's screen, green
 here) and its row is `fixed`. main merged in (BUGS.md resolved from main's copy + the
 branch's own BUG-081/BUG-161 rows re-applied). Merge #135 only when CI + a1 + both E2E
