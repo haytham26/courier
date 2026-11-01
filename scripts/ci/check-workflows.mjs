@@ -119,6 +119,20 @@ export function violationsOf(lines) {
 
     const key = /^(\s*)([A-Za-z_][A-Za-z0-9_-]*):/.exec(line);
 
+    // BUG-100: a `secrets.*` reference at six spaces is a JOB-level env, and a
+    // job-level env is present in every step's environment - so every
+    // third-party action the job runs can read the credential. It belongs at
+    // the step that reads it. Eight spaces is a step-level env, which is right.
+    if (inJobs && inSteps === false && indent === 6 && /\$\{\{\s*secrets\./.test(line)) {
+      found.push({
+        line: index + 1,
+        text: line.trim(),
+        problem:
+          'a job-level `env:` carries a secret, so every step (and every third-party action) can read it - move it to the step that reads it (BUG-100)',
+      });
+      continue;
+    }
+
     // The two context rules first, on every line at all: an `inputs`
     // expression is wrong wherever it is written, and a key line may carry it.
     if (!EVENT_INPUTS.test(line) && BARE_INPUTS.test(line)) {
@@ -195,6 +209,32 @@ export function violationsOf(lines) {
  * @param {string[]} lines
  * @returns {{ ok: boolean, violations: Array<{ line: number, text: string, problem: string }> }}
  */
+/**
+ * A secret in a job-level `env:` is a secret in every step's environment.
+ *
+ * BUG-100: `store-ready.yml` carried the App Store Connect key as a job-level
+ * env, so every third-party action the job ran could read it. A credential a
+ * job cannot keep from its steps is a credential any of them can take, and the
+ * fix is one the gate should enforce rather than remember: a `secrets.*`
+ * reference belongs at the STEP that reads it, never at the job's own level.
+ *
+ * The shape that matters is the indentation, which is how this repository
+ * writes its workflows: a job's `env:` at four spaces with its keys at six,
+ * against a step's `env:` at six spaces with its keys at eight. A `secrets.*`
+ * reference at six spaces is therefore a job-level one.
+ */
+export function jobLevelSecretFindings(lines) {
+  const findings = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!/^ {6}[A-Za-z0-9_-]+:\s*\$\{\{\s*secrets\./.test(line)) continue;
+    findings.push(
+      `line ${String(i + 1)}: ${line.trim().split(':')[0]} is read from secrets at a JOB level - it is then present in every step's environment. Move it to the step that reads it (BUG-100)`,
+    );
+  }
+  return findings;
+}
+
 export function checkWorkflow(lines) {
   const violations = violationsOf(lines);
   return { ok: violations.length === 0, violations };

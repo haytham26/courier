@@ -123,8 +123,15 @@ jobs:
           # the dump must carry tables, not an empty public schema.
           psql -h 127.0.0.1 -U courier -d courier -v ON_ERROR_STOP=1 -f packages/contracts/db/schema.sql
           docker exec ${{ job.services.postgres.id }} pg_dump -U courier --no-owner --no-privileges courier > "$RUNNER_TEMP/drill-backup.sql"
-          psql -h 127.0.0.1 -U courier -d postgres -c "DROP DATABASE IF EXISTS drill;"
-          psql -h 127.0.0.1 -U courier -d postgres -c "CREATE DATABASE drill;"
+          # BUG-101: the DROP/CREATE pair needs `-v ON_ERROR_STOP=1` on BOTH
+          # calls. psql continues after a failed statement by default, so a
+          # failed DROP let CREATE run against the very database the DROP was
+          # meant to remove - the drill then "restored" into a populated
+          # database and reported success, which is the one outcome a restore
+          # drill exists to catch. With the flag, a failed DROP stops the step
+          # before CREATE is ever reached.
+          psql -h 127.0.0.1 -U courier -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS drill;"
+          psql -h 127.0.0.1 -U courier -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE drill;"
           uv run --directory services/api python ops/restore_drill.py \
             --dump "$RUNNER_TEMP/drill-backup.sql" \
             --target postgresql://courier:courier@127.0.0.1:5432/drill
