@@ -58,6 +58,7 @@ export type BreachVerdict = "breached" | "fresh" | "unknown";
  */
 // lgtm [js/insufficient-password-hash] The k-anonymity range API is SHA-1 by specification; the digest is a 5-character bucket selector, not stored.
 export function sha1(value: string): string {
+  // lgtm [js/insufficient-password-hash] Same reason, on the digest line itself: 20 bits leave the process.
   return createHash("sha1").update(value).digest("hex").toUpperCase();
 }
 

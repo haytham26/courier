@@ -30,6 +30,7 @@ export function setPwnedBehaviour(next: { hangFor: string[] }): void {
 
 // lgtm [js/insufficient-password-hash] The k-anonymity range API is SHA-1 by specification; the stub speaks the same 5-character bucket selector the service does.
 export function sha1(value: string): string {
+  // lgtm [js/insufficient-password-hash] Same reason, on the digest line itself.
   return createHash("sha1").update(value).digest("hex").toUpperCase();
 }
 
