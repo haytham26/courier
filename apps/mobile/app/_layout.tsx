@@ -37,15 +37,22 @@ function RunSession({ children }: { children: React.ReactNode }) {
 function AuthNavigator() {
   const { isLoading, isAuthenticated } = useAuth();
 
-  if (isLoading) {
-    return null; // Or show a loading screen
-  }
+  // The first screen is the welcome, and the welcome is the signed-out front
+  // door. While the session is still being restored the app shows exactly that
+  // - the stack the guard draws for a session it does not have yet - instead of
+  // a blank screen. A slow or hung restore used to hold the whole app hostage:
+  // the a1 flow's `welcome-screen is visible` failed on a 60-second timeout
+  // with nothing on screen, and a courier on a bad signal would have seen the
+  // same blank app at the depot. The guard swaps the stack the moment the
+  // answer lands, so a restore that succeeds never shows the front door for
+  // more than a frame.
+  const signedIn = isAuthenticated && !isLoading;
 
   return (
     // The run state (the delivered marks) lives above the stack, keyed to
     // the auth state: a sign-out remounts it, so the marks never leak
     // across sessions.
-    <RunSession key={isAuthenticated ? 'session' : 'anon'}>
+    <RunSession key={signedIn ? 'session' : 'anon'}>
       {/* The scan load (the parcels the courier has read into the van) rides
           the same session: a sign-out remounts it and the van is empty. */}
       <ScanLoadProvider>
@@ -56,7 +63,7 @@ function AuthNavigator() {
             gestureEnabled: true,
           }}
         >
-          <Stack.Protected guard={isAuthenticated}>
+          <Stack.Protected guard={signedIn}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="scan" />
             <Stack.Screen name="driving" />
@@ -77,7 +84,7 @@ function AuthNavigator() {
                 which on a device is the OS surface. */}
             <Stack.Screen name="lock-screen" />
           </Stack.Protected>
-          <Stack.Protected guard={!isAuthenticated}>
+          <Stack.Protected guard={!signedIn}>
             {/* The welcome is a courier's first screen: it sits in front of the
                 auth group so a signed-out phone opens on the mark, the line and
                 the two ways in. The draft session (the E2E mode's mock) skips
