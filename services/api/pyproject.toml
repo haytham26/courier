@@ -107,7 +107,7 @@ source_paths = [
 # mutmut's forked runner does not add. `also_copy` is mutmut's own mechanism
 # for copying a directory into every mutant's tree; it is cheaper and truer than
 # bending the suite to find it.
-also_copy = ["loadtests", "packages", "scripts"]
+also_copy = ["loadtests"]
 
 # The typed-client freshness test regenerates through the repository root
 # (`REPO_ROOT = parents[3]` from `mutants/tests/`), which the copied mutant tree
@@ -115,7 +115,16 @@ also_copy = ["loadtests", "packages", "scripts"]
 # `node_modules`. Its own CI job proves it (ci.yml runs the whole suite); here it
 # would fail every mutant for the runner's reason, not the code's. mutmut appends
 # this to every pytest invocation it makes.
-pytest_add_cli_args = ["--ignore=tests/test_api_client.py"]
+pytest_add_cli_args = [
+    "--ignore=tests/test_api_client.py",
+    # The same root-relative shape: `REPO_ROOT = parents[3]` from
+    # `mutants/tests/` resolves to the service directory, which no `also_copy`
+    # can satisfy (run 41264345233 proved it with `packages` copied in).
+    "--ignore=tests/test_contract.py",
+    # And a third of the same shape: the LINZ pipeline's test resolves
+    # `scripts/data/fetch-linz.py` from the repository root (run 41268007824).
+    "--ignore=tests/test_linz_pipeline_paths.py",
+]
 
 [tool.ruff]
 line-length = 100

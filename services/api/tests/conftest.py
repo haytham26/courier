@@ -15,3 +15,7 @@ os.environ.setdefault("AUTH_JWT_ISSUER", "http://localhost:3001")
 os.environ.setdefault(
     "POD_URL_SIGNING_SECRET", "test-only-pod-url-signing-secret-0123456789"
 )
+# The copilot's client is built lazily on first use (BUG-116), so the agent
+# tests need a placeholder key - the real gateway is never called (the tests
+# pass their own client, and the socket's loop is tested with a fallback).
+os.environ.setdefault("ANTHROPIC_API_KEY", "test-only-placeholder")

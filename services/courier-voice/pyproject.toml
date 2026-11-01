@@ -58,9 +58,13 @@ source_paths = [
 ]
 
 # The eval harness's test reads `packages/eval/voice/manifest/shift_sims.json`
-# through `parents[3]` (the repository root), which the copied mutant tree
-# resolves differently. `also_copy` is mutmut's own mechanism.
-also_copy = ["packages"]
+# through `parents[3]` - the REPOSITORY ROOT - which the copied mutant tree
+# resolves to the service directory, so no `also_copy` can satisfy it (run
+# 41264345233: `also_copy = ["packages"]` was in place and the test still
+# failed). Its own CI job proves it (ci.yml runs the whole suite); here it would
+# fail every mutant for the harness's reason, not the code's. mutmut appends
+# this to every pytest invocation it makes.
+pytest_add_cli_args = ["--ignore=tests/test_eval_harness.py"]
 
 [tool.ruff]
 line-length = 100
