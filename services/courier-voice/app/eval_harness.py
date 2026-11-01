@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import csv
+import hashlib
 import json
 import platform
 import sys
@@ -393,7 +394,14 @@ def write_results(out_dir: Path, results: list[TurnResult], summary: dict[str, A
             [
                 "simulation",
                 "turn",
-                "transcript",
+                # BUG-157: the transcript is hashed, never written verbatim. The
+                # results directory is git-tracked, and the moment the
+                # real-courier slice is recorded a driver's own words and the
+                # addresses of his run would land in a tracked artifact. A
+                # 16-hex-character digest still lets a reader see that two runs
+                # scored the same words (and that a change in the engine moved
+                # a turn) without storing anybody's words.
+                "transcript_sha256",
                 "expected_intent",
                 "actual_intent",
                 "speech",
@@ -410,7 +418,7 @@ def write_results(out_dir: Path, results: list[TurnResult], summary: dict[str, A
                 [
                     row.simulation,
                     row.turn,
-                    row.transcript,
+                    hashlib.sha256(row.transcript.encode("utf-8")).hexdigest()[:16],
                     row.expected_intent,
                     row.actual_intent,
                     row.speech,

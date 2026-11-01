@@ -8,6 +8,7 @@ acceptance counts of EVAL.md have to be checked.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from app.eval_harness import (
@@ -159,3 +160,54 @@ def test_the_environment_names_the_platform_too(tmp_path: Path):
     document = json.loads((tmp_path / "environment.json").read_text(encoding="utf-8"))
 
     assert document["platform"] == platform.platform()
+
+
+def test_the_results_carry_a_digest_and_never_the_words(tmp_path: Path):
+    """BUG-157: a driver's words must never reach a tracked artifact.
+
+    The results directory is git-tracked, and the harness wrote each turn's
+    transcript verbatim. Today it holds only our own synthetic script bank, so
+    the hazard is latent - but the real-courier slice is added during the beta,
+    and the whole point of a results directory nobody reads before committing
+    is that it will hold somebody's words one day.
+    """
+    simulations = load_simulations(the_manifest())
+    import asyncio
+
+    results, proactive = asyncio.run(run_simulations(simulations))
+    write_results(tmp_path, results, score(results, proactive))
+
+    rows = (tmp_path / "per_turn.csv").read_text(encoding="utf-8").splitlines()
+    header = rows[0].split(",")
+    assert "transcript" not in header, header
+    assert "transcript_sha256" in header, header
+    column = header.index("transcript_sha256")
+    # Every cell of that column is the digest, and nothing that looks like a
+    # sentence: a driver's words never reach the file.
+    for line in rows[1:]:
+        cell = line.split(",")[column]
+        assert re.fullmatch(r"[0-9a-f]{16}", cell), cell
+    # And a long verbatim line from the manifest is nowhere in the body.
+    body = "\n".join(rows[1:])
+    for spoken in (row.transcript for row in results):
+        if len(spoken) > 12:
+            assert spoken not in body, f"a verbatim transcript reached the results: {spoken}"
+
+
+def test_the_digest_identifies_the_same_words_across_runs(tmp_path: Path):
+    """The digest is not a hash of nothing: the same words hash the same, so a
+    reader can still tell a run scored the same turn twice."""
+    import hashlib
+
+    simulations = load_simulations(the_manifest())
+    import asyncio
+
+    results, proactive = asyncio.run(run_simulations(simulations))
+    write_results(tmp_path, results, score(results, proactive))
+
+    rows = (tmp_path / "per_turn.csv").read_text(encoding="utf-8").splitlines()
+    header = rows[0].split(",")
+    column = header.index("transcript_sha256")
+    written = [line.split(",")[column] for line in rows[1:]]
+
+    assert written[0] == hashlib.sha256(results[0].transcript.encode("utf-8")).hexdigest()[:16]
