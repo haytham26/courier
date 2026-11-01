@@ -328,7 +328,16 @@ class JwksVerifier:
         except (httpx.HTTPError, ValueError) as exc:
             raise InvalidTokenError(f"cannot reach the JWKS endpoint: {exc}") from exc
 
-        return AuthPrincipal(user_id=claims["sub"], claims=claims)
+        subject = claims.get("sub")
+        if not isinstance(subject, str) or not subject.strip():
+            # BUG-138: PyJWT's `options.require` asserts the claim's *presence*,
+            # not its truthiness, so a token carrying `sub: ""` verified and the
+            # verifier answered a principal with an empty `user_id`. Every row
+            # lookup compares a courier id, and the identity behind a request is
+            # not something a claim may leave blank: it is refused like an
+            # expired one, and the reason names the claim.
+            raise InvalidTokenError("the token's subject (sub) is not a usable identity")
+        return AuthPrincipal(user_id=subject, claims=claims)
 
 
 security = HTTPBearer(auto_error=False)

@@ -656,3 +656,48 @@ class TestNoUnusedExportedSymbolRemains:
     def _app_sources() -> list[Path]:
         app_dir = Path(__file__).resolve().parents[2] / "app"
         return sorted(path for path in app_dir.rglob("*.py") if path != app_dir / "auth" / "jwks.py")
+
+
+class TestTheSubjectIsARealIdentity:
+    """BUG-138: `sub` is validated, not only required.
+
+    PyJWT's `options.require` asserts the claim's *presence*, not its truthiness:
+    a token carrying `sub: ""` verified fine and the verifier handed back a
+    principal with an empty `user_id`. Every row lookup that compares a courier id
+    then compares `""`, so the filed risk (a weak gate on identity) is real even
+    though no writer produces an empty courier id today. An empty subject is
+    refused, like an expired one.
+    """
+
+    def test_an_empty_subject_is_refused(
+        self, verifier: JwksVerifier, key_pair: tuple[Any, Any]
+    ) -> None:
+        private_key, _ = key_pair
+
+        with pytest.raises(InvalidTokenError) as refused:
+            verifier.verify(sign(private_key, subject=""))
+
+        assert "sub" in str(refused.value).lower() or "subject" in str(refused.value).lower()
+
+    def test_a_blank_subject_is_refused(
+        self, verifier: JwksVerifier, key_pair: tuple[Any, Any]
+    ) -> None:
+        private_key, _ = key_pair
+
+        with pytest.raises(InvalidTokenError):
+            verifier.verify(sign(private_key, subject="   "))
+
+    def test_a_non_string_subject_is_refused(
+        self, verifier: JwksVerifier, key_pair: tuple[Any, Any]
+    ) -> None:
+        private_key, _ = key_pair
+
+        with pytest.raises(InvalidTokenError):
+            verifier.verify(sign(private_key, extra={"sub": 42}))
+
+    def test_a_real_subject_is_still_accepted(
+        self, verifier: JwksVerifier, key_pair: tuple[Any, Any]
+    ) -> None:
+        private_key, _ = key_pair
+        principal = verifier.verify(sign(private_key, subject="driver-7"))
+        assert principal.user_id == "driver-7"
