@@ -34,6 +34,16 @@ for (const line of lock.split('\n')) {
   packages.set(name, true);
 }
 
+/**
+ * The registry's answer for one package, and whether it answered at all.
+ *
+ * BUG-103: `pnpm view` used to fail into `'unknown'`, and the loop below read
+ * `'unknown'` as neither forbidden nor reviewable - so a registry outage left
+ * all 31 packages uncleared and the gate GREEN, which is the one outcome this
+ * gate exists to prevent ("31 packages all unknown, exit 0", reproduced against
+ * the real script). A lookup that did not answer is a failure now: an
+ * unreadable licence cannot be cleared, and the gate says so.
+ */
 function licenceOf(name) {
   try {
     const output = execFileSync('pnpm', ['view', name, 'license', '--json'], {
@@ -41,9 +51,9 @@ function licenceOf(name) {
       stdio: ['ignore', 'pipe', 'ignore'],
       timeout: 20000,
     });
-    return output.replace(/"/g, '').trim();
+    return { answered: true, value: output.replace(/"/g, '').trim() };
   } catch {
-    return 'unknown';
+    return { answered: false, value: '' };
   }
 }
 
@@ -86,7 +96,19 @@ const rows = [];
 let failures = 0;
 
 for (const name of mobileDeps) {
-  const licence = licenceOf(name);
+  const answer = licenceOf(name);
+  // BUG-103: an unanswered lookup is a failure, not a third state that reads
+  // as a pass. An empty answer is the same: the registry was reached and said
+  // nothing a licence can be read from.
+  if (!answer.answered || answer.value === '') {
+    failures += 1;
+    console.error(
+      `  [licence] ${name}: the registry did not answer a licence (pnpm view failed) — an unreadable licence cannot be cleared (BUG-103)`,
+    );
+    rows.push({ name, licence: 'unreadable' });
+    continue;
+  }
+  const licence = answer.value;
   const forbidden = FORBIDDEN.find((needle) =>
     licence.toUpperCase().includes(needle.toUpperCase()),
   );
@@ -94,7 +116,7 @@ for (const name of mobileDeps) {
   if (forbidden) {
     failures += 1;
     console.error(`  [licence] ${name}: ${licence} is forbidden in the shipped app`);
-  } else if (!allowed && licence !== 'unknown') {
+  } else if (!allowed) {
     console.error(`  [licence] ${name}: ${licence} is not on the allow-list — review it`);
     failures += 1;
   }

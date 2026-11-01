@@ -115,16 +115,51 @@ async function copyBundledPack(): Promise<File | null> {
 }
 
 /**
+ * The SHA-256 of a file, lowercase hex, or null when it is not there.
+ *
+ * WebCrypto is the platform's own hash (`crypto.subtle.digest`), so the app
+ * carries no crypto of its own and the value it puts beside the manifest is
+ * the same value `sha256sum` would print (this is what
+ * `scripts/data/build-pmtiles.mjs` writes into the manifest, so the two agree).
+ */
+async function digestOf(file: File): Promise<string | null> {
+  try {
+    if (!file.exists) {
+      return null;
+    }
+    const bytes = await file.bytes();
+    const subtle = globalThis.crypto?.subtle;
+    if (subtle === undefined) {
+      // A platform with no WebCrypto cannot verify, and a pack that cannot be
+      // verified is not a ready one (BUG-085): the decision in
+      // `checkOfflinePack` answers `unreadable` rather than `ready`.
+      throw new Error('this device has no crypto.subtle to hash the archive with');
+    }
+    const digest = await subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
+  } catch (error) {
+    console.warn(`maps: the archive could not be hashed: ${describe(error)}`);
+    return null;
+  }
+}
+
+/**
  * Looks for the pack on the device and works out where the tiles are.
  *
  * The downloaded pack wins over the bundled one: it is the fresher of the two,
- * because that is where the weekly refresh puts it.
+ * because that is where the weekly refresh puts it. The digest of each archive
+ * goes with its manifest, so a pack whose bytes are not the bytes its checksum
+ * was taken of is answered `unreadable` instead of drawn (BUG-085).
  */
 export async function loadOfflinePack(): Promise<OfflinePackRuntime> {
   const state = await checkOfflinePack({
     readDownloadedManifest: () => readTextFile(new File(packDirectory(), PACK_MANIFEST_NAME)),
     readBundledManifest: () =>
       readTextFile(new File(Paths.bundle, PACK_DIRECTORY_NAME, PACK_MANIFEST_NAME)),
+    digestOfDownloadedArchive: () => digestOf(downloadedPackFile()),
+    digestOfBundledArchive: () => digestOf(bundledPackFile()),
   });
 
   const locations: PackFileLocations = {
