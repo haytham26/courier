@@ -284,14 +284,9 @@ describe('where a sign-out lands', () => {
 
     // The signed-in shift stays on the tabs, and the front door is nowhere in
     // the tree: the guard on (auth) is closed.
-    //
-    // The first frame draws the front door while the session restore is still
-    // pending (that is the deliberate contract since the a1 run: a hung or slow
-    // restore must not leave a blank app - the router resolved its first route
-    // against a stack that rendered nothing and landed the app on +not-found).
-    // What matters is what is LEFT standing once the answer lands, and that is
-    // the live tree, which is what these assertions read.
     await waitFor(() => expect(screen.getByTestId('tabs-group')).toBeTruthy());
+    expect(mockRenderedRoutes).toContain('(tabs)');
+    expect(mockRenderedRoutes).not.toContain('(auth)');
     expect(screen.queryByTestId('sign-in-screen')).toBeNull();
     expect(screen.queryByTestId('login-screen')).toBeNull();
   });

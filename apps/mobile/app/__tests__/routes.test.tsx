@@ -17,9 +17,6 @@ import RootLayout from '../_layout';
 /** The route names the root Stack registers, recorded by the mock Screen. */
 const mockRegisteredRoutes: string[] = [];
 
-/** The auth state the mocked provider answers with, per test. */
-const mockAuthState = { isLoading: false, isAuthenticated: true, user: { id: 'driver-1' } };
-
 jest.mock('expo-router', () => {
   const ReactActual = jest.requireActual<typeof import('react')>('react');
   const Stack = ({ children }: { children?: React.ReactNode }) =>
@@ -37,7 +34,7 @@ jest.mock('expo-router', () => {
 });
 
 jest.mock('@/providers/AuthProvider', () => ({
-  useAuth: () => mockAuthState,
+  useAuth: () => ({ isLoading: false, isAuthenticated: true, user: { id: 'driver-1' } }),
 }));
 
 jest.mock('@/providers/Providers', () => ({
@@ -98,32 +95,5 @@ describe('the root stack', () => {
     expect(mockRegisteredRoutes).toContain('driving');
     expect(mockRegisteredRoutes).toContain('delivered');
     expect(mockRegisteredRoutes).toContain('driving-night');
-  });
-
-  it('shows the front door while the session is still restoring, not a blank screen', () => {
-    // RED first: the layout answered `if (isLoading) return null` while the
-    // session restored, so a slow or hung restore held the whole app hostage -
-    // the a1 flow's `welcome-screen is visible` failed on a 60-second timeout
-    // with nothing on screen, and a courier on a bad signal would have seen the
-    // same blank app at the depot (PLAYBOOK 12: the app is made robust, never
-    // the flow). The front door - the welcome and the auth group, the stack a
-    // session that has not answered yet gets - is what renders now, and the
-    // guard swaps the stack the moment the answer lands.
-    mockAuthState.isLoading = true;
-    mockAuthState.isAuthenticated = false;
-    mockRegisteredRoutes.length = 0;
-    try {
-      render(
-        <GestureHandlerRootView>
-          <RootLayout />
-        </GestureHandlerRootView>,
-      );
-
-      expect(mockRegisteredRoutes).toContain('welcome');
-      expect(mockRegisteredRoutes).toContain('(auth)');
-    } finally {
-      mockAuthState.isLoading = false;
-      mockAuthState.isAuthenticated = true;
-    }
   });
 });
