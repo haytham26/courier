@@ -115,6 +115,9 @@ services:
       APP_VERSION: ${APP_VERSION:?APP_VERSION is required}
       DATABASE_URL: postgresql://${POSTGRES_USER:-courier}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-courier}
       AUTH_JWKS_URL: http://auth:3001/api/auth${AUTH_JWKS_PATH:-/jwks}
+      # BUG-131: the plaintext hop on the compose network is an explicit,
+      # named decision, not a default the API tolerates silently.
+      AUTH_JWKS_INTERNAL_HOSTS: ${AUTH_JWKS_INTERNAL_HOSTS:-auth}
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
       VALKEY_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0

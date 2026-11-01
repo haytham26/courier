@@ -8,6 +8,8 @@ never sees another courier's run.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import time
 from dataclasses import dataclass
 from functools import lru_cache
@@ -19,6 +21,19 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from .config import VoiceConfig
+
+
+def canonical_jwk_digest(key: dict[str, Any]) -> str:
+    """The sha256 of one JWK's canonical form, lowercase hex.
+
+    This mirrors `app/auth/jwks.py`'s helper in the API service exactly — the
+    two resource servers read the same auth service and must pin with the same
+    digest. Both suites pin the same fixed vector, so a change on one side
+    alone goes red.
+    """
+    return hashlib.sha256(
+        json.dumps(key, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
 
 
 class InvalidTokenError(Exception):
@@ -62,13 +77,28 @@ class JwksVerifier:
         keys = document.get("keys") if isinstance(document, dict) else None
         if not isinstance(keys, list) or not keys:
             raise InvalidTokenError("the JWKS document holds no keys")
-        self._keys = {
+        fresh = {
             key["kid"]: key
             for key in keys
             if isinstance(key, dict) and isinstance(key.get("kid"), str)
         }
-        if not self._keys:
+        if not fresh:
             raise InvalidTokenError("the JWKS holds no key with a kid")
+        # BUG-131, the same half the API's verifier carries: when fingerprints
+        # are pinned, every key the document serves must carry one of them.
+        # The check runs before the keys are installed, so a refused document
+        # leaves the cache as it was. The message is deliberate: the voice
+        # socket carries an exception's text to an unauthenticated caller
+        # (BUG-125's oracle), so it must not disclose that pinning is active -
+        # the operator's detail is in the API's log and this service's.
+        pinned = self._config.pinned_fingerprints
+        if pinned:
+            for key in fresh.values():
+                if canonical_jwk_digest(key) not in pinned:
+                    raise InvalidTokenError(
+                        "the JWKS document could not be verified against the pinned keys"
+                    )
+        self._keys = fresh
         self._fetched_at = time.monotonic()
 
     def _signing_key(self, kid: str | None) -> Any:
@@ -99,6 +129,10 @@ class JwksVerifier:
                 algorithms=list(self._config.algorithms),
                 audience=list(self._config.audiences),
                 issuer=self._config.auth_jwt_issuer,
+                # BUG-123: the API and the voice surface read the same auth
+                # service over separate hops, so they carry the same small
+                # clock tolerance rather than disagreeing about a valid token.
+                leeway=self._config.auth_jwt_leeway_seconds,
                 options={"require": ["exp", "sub", "aud", "iss"]},
             )
         except jwt.PyJWTError as exc:
