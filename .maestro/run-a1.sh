@@ -79,7 +79,18 @@ keep_flow_dump() {
   dest="$EVIDENCE/maestro-failure-${safe_name}"
   rm -rf "$dest"
   mkdir -p "$dest"
-  cp -r "$newest". "$dest/" 2>/dev/null || true
+  # Maestro's dump carries a folder named after the flow's own `name:`, and a
+  # name can contain a colon - the artifact upload refuses a path with one,
+  # which is how this run's evidence was lost the first time (the legs' runner
+  # learned the same lesson on the copilot flow). The dump's one inner folder
+  # is flattened away: its files keep their names, its folder's do not reach
+  # the artifact.
+  inner="$(ls -1d "$newest"*/ 2>/dev/null | head -1)"
+  if [ -n "$inner" ]; then
+    cp -r "$inner". "$dest/" 2>/dev/null || true
+  else
+    cp -r "$newest". "$dest/" 2>/dev/null || true
+  fi
 }
 
 echo "::group::A1: install the no-mock APK"
