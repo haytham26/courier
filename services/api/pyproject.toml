@@ -121,6 +121,9 @@ pytest_add_cli_args = [
     # `mutants/tests/` resolves to the service directory, which no `also_copy`
     # can satisfy (run 41264345233 proved it with `packages` copied in).
     "--ignore=tests/test_contract.py",
+    # And a third of the same shape: the LINZ pipeline's test resolves
+    # `scripts/data/fetch-linz.py` from the repository root (run 41268007824).
+    "--ignore=tests/test_linz_pipeline_paths.py",
 ]
 
 [tool.ruff]
