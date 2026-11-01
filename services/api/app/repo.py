@@ -24,7 +24,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
 from .entitlements import Plan, SubscriptionState, SubscriptionView
-from .locations import canonical_address, location_id_for_stop
+from .locations import canonical_address, location_id_for
 from .routing import PlannedStop, RoutePlan, RunTemplate
 from .sequencing import Segment
 
@@ -318,17 +318,39 @@ class InMemoryRepo:
     location_notes: dict[tuple[str, UUID, str], LocationNoteRow] = field(default_factory=dict)
 
     def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
+        """The batch applied as one decision, then one mutation.
+
+        BUG-145: this used to write each row into `self.events` (and its id into
+        `self.by_shift`) as it walked the batch, so a raise in the middle left
+        half the batch applied and the two dicts could disagree. The SQL repo
+        wraps its whole batch in `engine.begin()`, and a test double that answers
+        non-atomically lets a test pass on an atomicity production has and the
+        double does not - the shape that hid BUG-115.
+
+        The decision (what is new, what conflicts, what a batch's own second
+        copy of an id does) is made against the store *and* the batch first; the
+        mutations are applied once, after it. The SQL repo's intra-batch rule
+        travels with it: a batch carrying the same id twice with different
+        content is a conflict, not a second row.
+        """
         stored = 0
         conflicts: list[UUID] = []
+        fresh: list[tuple[UUID, DeliveryEventRow]] = []
+        decided: dict[UUID, DeliveryEventRow] = {}
         for event in events:
             existing = self.events.get(event.id)
-            if existing is not None:
-                if not _same_event(existing, event):
-                    conflicts.append(event.id)
+            if existing is None:
+                existing = decided.get(event.id)
+            if existing is None:
+                decided[event.id] = event
+                fresh.append((shift_id, event))
+                stored += 1
                 continue
+            if not _same_event(existing, event):
+                conflicts.append(event.id)
+        for row_shift, event in fresh:
             self.events[event.id] = event
-            self.by_shift.setdefault(shift_id, []).append(event.id)
-            stored += 1
+            self.by_shift.setdefault(row_shift, []).append(event.id)
         return AppendResult(
             stored=stored, conflicts=tuple(conflicts), cursor=self.cursor(shift_id)
         )
@@ -426,26 +448,13 @@ class InMemoryRepo:
         ]
 
     def courier_location_key(self, courier_id: str, location_id: UUID) -> str | None:
-        """The canonical address key when the courier has a stop there, else
-        `None` (ADR-012 §3: the one authz + audit lookup).
-
-        A stop with no address text has nothing to canonicalise, so the key
-        answers with the derived id's own seed rather than raising: the lookup
-        is an authorisation, and an authorisation that raises is a 500 rather
-        than a 404 (BUG-118's second half).
-        """
         for run_id, stops in self.run_stops.items():
             run = self.runs.get(run_id)
             if run is None or run.courier_id != courier_id:
                 continue
             for stop in stops:
-                derived = stop.location_id or location_id_for_stop(
-                    stop.id, stop.address, stop.suburb
-                )
+                derived = stop.location_id or location_id_for(stop.address or "", stop.suburb)
                 if derived == location_id:
-                    text = (stop.address or "").strip()
-                    if not text:
-                        return f"stop/{stop.id}"
                     return canonical_address(stop.address or "", stop.suburb)
         return None
 

@@ -429,3 +429,79 @@ def test_a_pod_row_does_not_bump_the_sync_cursor(
     )
 
     assert seeded_run.cursor(SHIFT_ID) == 1
+
+
+def an_event(stop_id: Any = STOP_ID, **overrides: Any) -> DeliveryEventRow:
+    """One delivery event row, as the sync endpoint would carry it."""
+    values: dict[str, Any] = {
+        "id": uuid.uuid4(),
+        "shift_id": SHIFT_ID,
+        "stop_id": stop_id,
+        "kind": "delivered",
+        "utterance": None,
+        "safe_place": None,
+        "lat": None,
+        "lon": None,
+        "accuracy_m": None,
+        "occurred_at": datetime.now(UTC),
+    }
+    values.update(overrides)
+    return DeliveryEventRow(**values)
+
+
+class TestTheInMemoryAppendIsAtomic:
+    """BUG-145: the double applies the batch as one decision, then one mutation.
+
+    Production wraps its whole batch in `engine.begin()`; the in-memory repo
+    wrote each row as it walked the batch, so a raise in the middle left half
+    the batch applied and `self.events` and `self.by_shift` could disagree. A
+    test double that answers non-atomically lets a test pass on an atomicity
+    production has and the double does not - which is exactly the shape that
+    hid BUG-115.
+    """
+
+    def test_a_failure_in_the_middle_of_a_batch_applies_nothing(
+        self, repo: InMemoryRepo, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        known = an_event()
+        repo.append_events(SHIFT_ID, [known])
+        fresh = an_event()
+        replay = an_event(id=known.id)
+
+        def explode(existing: Any, incoming: Any) -> bool:
+            if incoming is replay:
+                raise RuntimeError("the batch's last row")
+            return True
+
+        monkeypatch.setattr("app.repo._same_event", explode)
+
+        with pytest.raises(RuntimeError):
+            repo.append_events(SHIFT_ID, [fresh, replay])
+
+        # Only what the store held before the batch is there: the fresh row is
+        # not applied, and the shift's index did not grow.
+        assert list(repo.events) == [known.id]
+        assert repo.by_shift[SHIFT_ID] == [known.id]
+
+    def test_a_batch_that_succeeds_applies_all_of_it(self, repo: InMemoryRepo) -> None:
+        first = an_event()
+        second = an_event()
+
+        answer = repo.append_events(SHIFT_ID, [first, second])
+
+        assert answer.stored == 2
+        assert len(repo.events) == 2
+        assert len(repo.by_shift[SHIFT_ID]) == 2
+
+    def test_a_batch_carrying_the_same_id_twice_is_a_conflict(
+        self, repo: InMemoryRepo
+    ) -> None:
+        """The SQL repo answers an intra-batch divergence; so does this one."""
+        first = an_event()
+        again = an_event(id=first.id, safe_place="a different door")
+
+        answer = repo.append_events(SHIFT_ID, [first, again])
+
+        assert answer.stored == 1
+        assert answer.conflicts == (first.id,)
+        assert repo.by_shift[SHIFT_ID] == [first.id]
