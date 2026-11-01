@@ -30,8 +30,9 @@ export function setPwnedBehaviour(next: { hangFor: string[] }): void {
 
 // lgtm [js/insufficient-password-hash] The k-anonymity range API is SHA-1 by specification; the stub speaks the same 5-character bucket selector the service does.
 export function sha1(value: string): string {
-  // codeql[js/insufficient-password-hash] Same reason on the digest line itself: the stub answers the range endpoint with the same 5-character bucket selector the service sends.
-  return createHash("sha1").update(value).digest("hex").toUpperCase();
+  // codeql[js/insufficient-password-hash] Same reason: the stub answers the range endpoint with the same 5-character bucket selector the service sends, so no password is stored or compared anywhere.
+  const hex = createHash("sha1").update(value).digest("hex"); // lgtm [js/insufficient-password-hash] Same reason, on the digest line itself.
+  return hex.toUpperCase();
 }
 
 const RANGE_PREFIX = "https://api.pwnedpasswords.com/range/";
