@@ -217,6 +217,46 @@ export function checkRegister(content, name, statuses, vocabulary, rowPattern, e
   return { findings, counts, rows };
 }
 
+/** The one and only key a register row has: its own number. */
+const BUG_NUMBER = /^BUG-\d+$/;
+
+/**
+ * Checks that no bug number is filed twice.
+ *
+ * The register's key is the number. Two rows that share one are one row nobody
+ * can count: the gate's counts, the founder's numbering rule ("the highest row
+ * across `origin/main` and every open PR branch, plus one") and every citation
+ * that says "BUG-113" all read the pair as one thing - and the pair can hold
+ * two different findings, one closed and one still open, which is exactly how
+ * the mutmut lane's row came back to life on 2026-11-01 beside the sign-in
+ * screen's closed row. A duplicate is a finding here, with both lines named.
+ *
+ * @param {string} content the file's text
+ * @param {string} [name] the file name, for the findings
+ * @returns {Array<{ file: string, line: number, problem: string }>}
+ */
+export function checkBugNumbers(content, name = 'docs/status/BUGS.md') {
+  const findings = [];
+  const seen = new Map();
+  for (const table of tablesOf(content)) {
+    for (const row of table.rows) {
+      const number = (row.cells[0] ?? '').trim();
+      if (!BUG_NUMBER.test(number)) continue;
+      const first = seen.get(number);
+      if (first === undefined) {
+        seen.set(number, row.line);
+        continue;
+      }
+      findings.push({
+        file: name,
+        line: row.line,
+        problem: `the number \`${number}\` is filed twice (line ${first} and line ${row.line}): two rows that share a number are one row nobody can count - renumber the newer one, or fold the older one into it`,
+      });
+    }
+  }
+  return findings;
+}
+
 /**
  * Checks one BUGS.md file.
  *
@@ -225,7 +265,8 @@ export function checkRegister(content, name, statuses, vocabulary, rowPattern, e
  * @returns {{ findings: Array<{ file: string, line: number, problem: string }>, counts: Record<string, number>, rows: number }}
  */
 export function checkBugs(content, name = 'docs/status/BUGS.md') {
-  return checkRegister(content, name, BUGS_STATUSES, "the tracker's words", /^BUG-\d+$/, null);
+  const register = checkRegister(content, name, BUGS_STATUSES, "the tracker's words", BUG_NUMBER, null);
+  return { ...register, findings: [...register.findings, ...checkBugNumbers(content, name)] };
 }
 
 /** The default PARITY.md: the repo's own, resolved from this module. */

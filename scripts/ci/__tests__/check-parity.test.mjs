@@ -19,7 +19,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -96,6 +96,29 @@ test('a clean register is counted and has no findings', () => {
   assert.equal(bugs.counts.testing, 1);
 });
 
+test('a BUG number filed twice fails the gate, and names both lines', () => {
+  const withDuplicate =
+    BUGS_HEADER +
+    `| BUG-113 | the mutation floor's lane was a silent no-op | the entry guard never compared its own path | \`fileURLToPath(import.meta.url)\` | the CLI suite runs it as a process | doing |
+| BUG-113 | the sign-in screen hid the email form | the reveal raced the layout | room is made instead | the login suite | closed |
+`;
+  const { findings, rows } = checkBugs(withDuplicate);
+  assert.equal(rows, 2, 'both rows are still counted');
+  const duplicate = findings.find((finding) => finding.problem.includes('filed twice'));
+  assert.ok(duplicate, findings.join('|'));
+  assert.match(duplicate.problem, /BUG-113/);
+  assert.match(duplicate.problem, /line 5 and line 6/);
+});
+
+test('a register whose numbers are all unique has no finding', () => {
+  assert.deepEqual(checkBugs(CLEAN_BUGS).findings, []);
+});
+
+test('the gate over the repository\'s own BUGS.md has no duplicated number', () => {
+  const { findings } = checkBugs(readFileSync(defaultBugsFile(), 'utf8'), defaultBugsFile());
+  const duplicate = findings.filter((finding) => finding.problem.includes('filed twice'));
+  assert.deepEqual(duplicate, [], duplicate.map((f) => f.problem).join('|'));
+});
 test('a Have row whose only citation is a hex colour fails: a colour is not a PR number', () => {
   const withColour =
     PARITY_HEADER +
