@@ -17,14 +17,29 @@ read `websocket.query_params.get("token")`, and this file is what makes it green
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi import WebSocketDisconnect
 
-from app.auth.jwks import AuthPrincipal, JwksVerifier, get_verifier
-from app.auth.websocket import UnauthenticatedError, identify, refuse
+from app.auth.jwks import (
+    AuthPrincipal,
+    JwksVerifier,
+    get_verifier,
+    get_websocket_verifier,
+)
+from app.auth.websocket import (
+    CLOSE_INVALID_TOKEN,
+    CLOSE_UNAUTHENTICATED,
+    IDENTIFY_TIMEOUT_SECONDS,
+    INVALID_TOKEN_MESSAGE,
+    UnauthenticatedError,
+    _token_from_first_message,
+    identify,
+    refuse,
+)
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 
 COURIER = "driver-7"
@@ -174,3 +189,89 @@ class TestWhereTheTokenMayComeFrom:
 
         with pytest.raises(UnauthenticatedError):
             await _identify(websocket, verifier)
+
+
+# --- BUG-124: the first-message handshake has a deadline --------------------
+
+
+class ASilentSocket:
+    """A caller that connected and never sends: the frame never arrives."""
+
+    headers: dict[str, str] = {}
+    query_params: dict[str, str] = {}
+
+    async def receive_json(self) -> object:
+        await asyncio.sleep(IDENTIFY_TIMEOUT_SECONDS + 2)
+        return {"type": "auth", "token": "late"}
+
+
+class TestTheHandshakeDeadline:
+    """A client that connects and sends nothing parked the coroutine - and the
+    accepted socket - for the life of the process (BUG-124)."""
+
+    async def test_a_silent_client_is_refused_after_the_deadline(self) -> None:
+        loop = asyncio.get_event_loop()
+        started = loop.time()
+
+        with pytest.raises(UnauthenticatedError) as refused:
+            # The helper reads one frame off a socket; the silent one is the
+            # caller that never sends it, which is what the timeout is for.
+            await _token_from_first_message(cast(Any, ASilentSocket()))
+
+        assert "no credential within" in refused.value.reason
+        assert loop.time() - started < IDENTIFY_TIMEOUT_SECONDS + 1
+
+    async def test_a_prompt_client_still_authenticates(
+        self, verifier_pair: tuple[JwksVerifier, object]
+    ) -> None:
+        private_key = verifier_pair[1]
+        verifier = verifier_pair[0]
+        from tests.auth.test_jwks import sign as sign_a_token
+
+        token = sign_a_token(private_key)
+        socket = FakeWebSocket(messages=[{"type": "auth", "token": token}])
+
+        principal = await identify(socket, verifier)
+
+        assert principal.user_id == "user-123"
+
+
+# --- BUG-125: the refusal is not a token-state oracle ------------------------
+
+
+class TestTheRefusalIsNotAnOracle:
+    """The caller hears one stable sentence; the reason travels to the log."""
+
+    async def test_an_invalid_token_answers_the_stable_sentence(
+        self, verifier_pair: tuple[JwksVerifier, object]
+    ) -> None:
+        verifier = verifier_pair[0]
+        socket = FakeWebSocket(messages=[{"type": "auth", "token": "not-a-token"}])
+
+        with pytest.raises(UnauthenticatedError) as refused:
+            await identify(socket, verifier)
+
+        assert refused.value.reason == INVALID_TOKEN_MESSAGE
+        # None of PyJWT's vocabulary survives to the caller.
+        for secret in ("expired", "audience", "not yet valid", "signature"):
+            assert secret not in refused.value.reason.lower()
+
+    async def test_the_two_close_codes_are_distinct(self) -> None:
+        assert CLOSE_UNAUTHENTICATED == 4403
+        assert CLOSE_INVALID_TOKEN == 4405
+
+
+# --- BUG-126: one verifier object for both surfaces --------------------------
+
+
+class TestOneVerifierForBothSurfaces:
+    """Two cached getters gave the HTTP surface and the voice socket their own
+    key caches, so a rotation was picked up at different moments (BUG-126)."""
+
+    def test_the_two_getters_hand_out_the_same_object(self) -> None:
+        if hasattr(get_verifier, "cache_clear"):
+            get_verifier.cache_clear()
+        if hasattr(get_websocket_verifier, "cache_clear"):
+            get_websocket_verifier.cache_clear()
+
+        assert get_verifier() is get_websocket_verifier()

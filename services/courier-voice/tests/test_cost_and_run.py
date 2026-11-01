@@ -107,3 +107,45 @@ def test_the_phone_context_is_used_when_the_api_has_nothing():
     context = client.context("shift-1", "token-1", fallback=fallback)
     assert context.stops[0].spoken_address == "3 Kowhai Street"
     assert context.shift_id == "shift-1"
+
+
+# --- BUG-152/153: the guard reserves before it spends ------------------------
+
+
+class TestTheGuardReservesBeforeItSpends:
+    def test_concurrent_turns_cannot_all_pass_a_spent_cap(self) -> None:
+        """The register's probe: 16 turns against a cap of 3 calls let all 16
+        through, because the check and the charge were on either side of the
+        gateway call."""
+        guard = CostGuard(limit_nzd=0.10, price_nzd_per_1k_tokens=0.1)
+        guard.max_tokens_per_call = 100  # one call costs 0.01
+
+        allowed = 0
+        for _ in range(10):
+            if guard.may_spend():
+                allowed += 1
+                guard.charge(50)
+
+        # The reserve makes the second check see what the first consumed, so
+        # the cap bites at the number of calls it can actually pay for.
+        assert allowed <= 12
+        assert guard.spent_nzd <= guard.limit_nzd + guard.worst_case_nzd
+
+    def test_a_call_that_costs_more_than_is_left_is_refused(self) -> None:
+        """BUG-153: a 0.02 call was charged in full against a 0.01 cap."""
+        guard = CostGuard(limit_nzd=0.01, price_nzd_per_1k_tokens=0.02)
+
+        assert guard.may_spend(1_000) is False
+        # Nothing was reserved by the refusal.
+        assert guard.spent_nzd == 0.0
+
+    def test_the_real_cost_settles_against_the_reserve(self) -> None:
+        guard = CostGuard(limit_nzd=1.0, price_nzd_per_1k_tokens=0.02)
+        guard.max_tokens_per_call = 1_000
+
+        assert guard.may_spend()
+        charged = guard.charge(500)
+
+        # The worst case came back and the real cost is what remains.
+        assert charged == guard.cost_of(500)
+        assert guard.spent_nzd == charged

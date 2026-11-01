@@ -39,10 +39,18 @@ from .auth.jwks import (
     AuthPrincipal,
     get_auth_settings,
     get_current_principal,
+    get_verifier,
     get_websocket_verifier,
 )
 from .auth.routes import router as auth_router
-from .auth.websocket import UnauthenticatedError, identify, refuse
+from .auth.websocket import (
+    CLOSE_INVALID_TOKEN,
+    CLOSE_UNAUTHENTICATED,
+    INVALID_TOKEN_MESSAGE,
+    UnauthenticatedError,
+    identify,
+    refuse,
+)
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
@@ -1217,10 +1225,25 @@ async def voice(
         # would be solved before the socket is accepted, and a refusal would
         # then be an HTTP 403 on the handshake instead of an `error` frame and a
         # 4403 close on a socket the caller actually holds.
-        verifier = app.dependency_overrides.get(get_websocket_verifier) or get_websocket_verifier
+        # BUG-126: the HTTP surfaces' `get_verifier` is checked FIRST, so one
+        # override covers both surfaces (and, in production, both getters hand
+        # out the same cached instance - the surfaces cannot disagree about
+        # which keys are current).
+        verifier = (
+            app.dependency_overrides.get(get_verifier)
+            or app.dependency_overrides.get(get_websocket_verifier)
+            or get_websocket_verifier
+        )
         principal = await identify(ws, verifier())
     except UnauthenticatedError as exc:
-        await refuse(ws, exc.reason)
+        # BUG-125: the reason's category rides in the close code, so a
+        # half-closed socket still gets an answer (the frame may never land).
+        code = (
+            CLOSE_INVALID_TOKEN
+            if exc.reason == INVALID_TOKEN_MESSAGE
+            else CLOSE_UNAUTHENTICATED
+        )
+        await refuse(ws, exc.reason, code)
         return
     # BUG-140: the owner is part of the lookup, so the 404 is the store's
     # answer and not only a comparison this line makes afterwards.

@@ -127,8 +127,15 @@ export function buildAuthOptions(config: AuthConfig): BetterAuthOptions {
           ]
         : []),
       expo(),
+      // BUG-128: Better Auth's own breached-password plugin is OFF by default,
+      // because its outbound call to the corpus carries no timeout at all - a
+      // PwnedPasswords outage made sign-up fail closed with a 500. The live
+      // check is the guarded one in `src/http.ts`: bounded, and fail-open with
+      // a log. A deployment that wants the plugin as well (its unbounded call
+      // and all) sets AUTH_HIBP_PLUGIN=true.
       haveIBeenPwned({
-        enabled: config.emailAndPassword.breachedPasswordCheck,
+        enabled:
+          config.emailAndPassword.breachedPasswordCheck && config.emailAndPassword.hibpPlugin,
       }),
       jwt({
         jwks: {
