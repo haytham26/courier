@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from httpx import AsyncClient
+from httpx import AsyncClient, Response
 
 from app.auth import Principal, get_principal
 from app.main import create_app
@@ -326,3 +326,107 @@ async def test_the_stop_of_the_run_is_used_by_the_conversation():
     """The model of a stop holds what the voice says about it."""
     stop = Stop(id="s1", number="14", street="Harewood", status=StopStatus.ACTIVE)
     assert stop.spoken_address == "14 Harewood"
+
+
+# --- BUG-148's third route: the morning brief reads a named shift too --------
+
+
+async def the_brief_of(
+    rows: list[dict[str, object]], event: str, snapshot: dict[str, object] | None = None
+) -> Response:
+    """The brief a named shift speaks, with the API answering `rows`."""
+    from httpx import ASGITransport, AsyncClient
+
+    from tests.conftest import FakeRunClient
+
+    principal = Principal(user_id="driver-1", claims={"sub": "driver-1"}, token="t")
+    service = create_app(run_client=FakeRunClient(rows))
+    service.dependency_overrides[get_principal] = lambda: principal
+    transport = ASGITransport(app=service)
+    body: dict[str, object] = {"event": event}
+    if snapshot is not None:
+        body["context"] = snapshot
+    async with AsyncClient(transport=transport, base_url="http://courier-voice") as http:
+        opened = await http.post("/v1/sessions", json={"shift_id": "shift-1"})
+        session_id = opened.json()["id"]
+        return await http.post(f"/v1/sessions/{session_id}/proactive", json=body)
+
+
+async def test_the_morning_brief_of_a_named_shift_is_read_from_the_api():
+    """The brief is spoken before the courier says anything: it must be the API's run."""
+    rows = [
+        {
+            "id": "s1",
+            "sequence": 1,
+            "number": "7",
+            "street": "Cranmer Street",
+            "status": "pending",
+        }
+    ]
+
+    response = await the_brief_of(rows, "shift_start")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["kind"] == "morning_brief"
+    # One stop, the API's - not the caller's snapshot of two hundred.
+    assert body["text"].startswith("1 stops")
+
+
+async def test_the_morning_brief_of_a_named_shift_ignores_the_callers_snapshot():
+    """BUG-148's attack, on the route that speaks first.
+
+    A named shift is the API's to answer; the caller's own account of it is not
+    the run, on the proactive route exactly as on the turn.
+    """
+    rows = [
+        {
+            "id": "s1",
+            "sequence": 1,
+            "number": "7",
+            "street": "Cranmer Street",
+            "status": "pending",
+        }
+    ]
+    snapshot = {
+        "expected_stops": 214,
+        "new_addresses": 9,
+        "stops": [
+            {"id": "x", "sequence": 1, "number": "99", "street": "Elsewhere"}
+        ],
+    }
+
+    response = await the_brief_of(rows, "shift_start", snapshot=snapshot)
+
+    assert response.status_code == 200
+    text = response.json()["text"]
+    assert text.startswith("1 stops")
+    assert "214" not in text
+    assert "Elsewhere" not in text
+    assert "9" not in text.split("stops", 1)[1]
+
+
+async def test_the_morning_brief_of_a_named_shift_fails_the_refusal():
+    """A 403 from the API is carried to the caller, not answered from a snapshot."""
+    from httpx import ASGITransport, AsyncClient
+
+    from tests.conftest import FakeRunClient
+
+    class Refusing(FakeRunClient):
+        def stops(self, shift_id: str, token: str) -> list[Stop]:
+            from app.run_client import RunForbiddenError
+
+            raise RunForbiddenError("no")
+
+    principal = Principal(user_id="driver-1", claims={"sub": "driver-1"}, token="t")
+    service = create_app(run_client=Refusing())
+    service.dependency_overrides[get_principal] = lambda: principal
+    transport = ASGITransport(app=service)
+    async with AsyncClient(transport=transport, base_url="http://courier-voice") as http:
+        opened = await http.post("/v1/sessions", json={"shift_id": "shift-1"})
+        session_id = opened.json()["id"]
+        response = await http.post(
+            f"/v1/sessions/{session_id}/proactive", json={"event": "shift_start"}
+        )
+
+    assert response.status_code == 403

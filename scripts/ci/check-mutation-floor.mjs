@@ -113,9 +113,47 @@ export function readStats(serviceDir) {
   return JSON.parse(readFileSync(file, 'utf8'));
 }
 
+/**
+ * Run mutmut inside the service's own environment.
+ *
+ * Three defects in this one function, each found by dispatching the lane:
+ *
+ * 1. `execFileSync('mutmut', …)` - `uv sync` installs the CLI into
+ *    `<service>/.venv/bin`, which is not on the runner's PATH:
+ *    `spawnSync mutmut ENOENT` (run 41229140404, both jobs).
+ * 2. `uv run --directory <service>` alone syncs the **default** dependencies, so
+ *    it built a fresh `.venv` and `Failed to spawn: mutmut` again (run
+ *    41236313956): mutmut is a `dev` extra. `--extra dev` is what puts it back.
+ * 3. The suite needs the API's `s3test` extra, exactly as `ci.yml` installs it —
+ *    without it `tests/test_pod_store.py` raises at import
+ *    (`RuntimeError: the s3test extra (boto3 + moto) must be installed in CI`)
+ *    and mutmut's first mutant dies for the runner's reason, not the code's (run
+ *    41240006171).
+ * 4. `--directory` is also what makes the service directory the working
+ *    directory, so mutmut writes its `mutants/` where `readStats` looks for it.
+ */
+/**
+ * The extras each service's suite needs, mirroring the workflow's own
+ * `uv sync --extra …`. The API's `tests/test_pod_store.py` raises at import
+ * without `s3test` (run 41240006171); the voice service has **no** `s3test`
+ * extra, so naming it there fails with
+ * `Extra s3test is not defined in the optional-dependencies table for courier-voice`
+ * (run 41241517747). A shared flag list for both services was wrong in both
+ * directions - one missing, one impossible - so each service names its own.
+ */
+const EXTRAS_BY_SERVICE = {
+  'services/api': ['dev', 's3test'],
+  'services/courier-voice': ['dev'],
+};
+
 function runMutmut(serviceDir, args) {
-  const dir = path.resolve(repoRoot, serviceDir);
-  execFileSync('mutmut', args, { cwd: dir, stdio: 'inherit' });
+  const absolute = path.resolve(repoRoot, serviceDir);
+  const relative = path.relative(repoRoot, absolute) || '.';
+  const extras = EXTRAS_BY_SERVICE[relative] ?? ['dev'];
+  const command = ['run'];
+  for (const extra of extras) command.push('--extra', extra);
+  command.push('--directory', relative, 'mutmut', ...args);
+  execFileSync('uv', command, { cwd: repoRoot, stdio: 'inherit' });
 }
 
 export { repoRoot as mutationRepoRoot };

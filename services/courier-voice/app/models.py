@@ -9,9 +9,18 @@ cannot be changed under the app's feet.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+#: How many stops one run may hold (BUG-150). The ceiling is a courier's day,
+#: not the memory of the machine: the API itself refuses to plan a shift above
+#: 200 stops, and 500 leaves room for a rural round without letting one turn
+#: store a city and hold it until the client deletes the session.
+MAX_STOPS_IN_A_CONTEXT = 500
+
+#: How many entries the phone's own learning may hold per shift (BUG-150).
+MAX_LEARNED_ENTRIES = 200
 
 
 class Frozen(BaseModel):
@@ -103,20 +112,29 @@ class LearnedRuns(Frozen):
     """What the phone has learned about how this courier works.
 
     The phone keeps it (on-device first) and sends it with the turn, so the
-    service never has to keep a picture of the courier.
+    service never has to keep a picture of the courier. Every collection is
+    bounded: the learning is one note per stop of the shift, not a dictionary
+    of the city (BUG-150).
     """
 
-    usual_order: tuple[str, ...] = ()
-    service_times_s: dict[str, int] = Field(default_factory=dict)
-    door_notes: dict[str, str] = Field(default_factory=dict)
-    preferences: dict[str, str] = Field(default_factory=dict)
+    usual_order: Annotated[tuple[str, ...], Field(max_length=MAX_LEARNED_ENTRIES)] = ()
+    service_times_s: Annotated[
+        dict[str, int], Field(max_length=MAX_LEARNED_ENTRIES)
+    ] = {}
+    door_notes: Annotated[dict[str, str], Field(max_length=MAX_LEARNED_ENTRIES)] = {}
+    preferences: Annotated[dict[str, str], Field(max_length=MAX_LEARNED_ENTRIES)] = {}
 
 
 class RunContext(Frozen):
-    """The run as it is right now."""
+    """The run as it is right now.
+
+    The stops are bounded (BUG-150): a turn cannot hand the service a list of
+    stops the day does not have and leave it stored until the client deletes
+    the session, which it may never do.
+    """
 
     shift_id: str | None = None
-    stops: tuple[Stop, ...] = ()
+    stops: Annotated[tuple[Stop, ...], Field(max_length=MAX_STOPS_IN_A_CONTEXT)] = ()
     current_stop_id: str | None = None
     new_addresses: int = 0
     weather: str | None = None

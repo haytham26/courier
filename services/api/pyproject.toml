@@ -101,6 +101,22 @@ source_paths = [
     "app/auth/websocket.py",
 ]
 
+
+# The load test's helpers live beside the suites that prove them, and importing
+# `loadtests.vacuous_guard` from `tests/` needs `loadtests/` on sys.path - which
+# mutmut's forked runner does not add. `also_copy` is mutmut's own mechanism
+# for copying a directory into every mutant's tree; it is cheaper and truer than
+# bending the suite to find it.
+also_copy = ["loadtests"]
+
+# The typed-client freshness test regenerates through the repository root
+# (`REPO_ROOT = parents[3]` from `mutants/tests/`), which the copied mutant tree
+# does not have, and it formats through `npx prettier`, which needs the workspace
+# `node_modules`. Its own CI job proves it (ci.yml runs the whole suite); here it
+# would fail every mutant for the runner's reason, not the code's. mutmut appends
+# this to every pytest invocation it makes.
+pytest_add_cli_args = ["--ignore=tests/test_api_client.py"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
