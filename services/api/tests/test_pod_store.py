@@ -124,6 +124,50 @@ class TestTheS3Store:
         # `sha256` must be true on both backends.
         assert store.fingerprint(RUN_ID, EVENT_ID) == (len(PNG), digest)
 
+    def test_a_copy_without_the_digest_metadata_is_rehashed_not_a_500(
+        self, store: S3PodStore
+    ) -> None:
+        """BUG-119: another tool's copy carries no sha256 metadata.
+
+        A partial multipart or a copy written outside the API leaves the
+        object with no `Metadata.sha256`. The fingerprint used to raise a bare
+        `RuntimeError` out of the replay route - a 500 on the courier's screen,
+        with the event log untouched. The fallback is a re-hash of the bytes
+        actually stored, which is the honest answer either way.
+        """
+        client = store._client
+
+        # Another tool's copy: the bytes, and no metadata at all.
+        client.put_object(
+            Bucket="courier-pod-test",
+            Key=object_key(RUN_ID, EVENT_ID),
+            Body=PNG,
+        )
+
+        assert store.fingerprint(RUN_ID, EVENT_ID) == (
+            len(PNG),
+            hashlib.sha256(PNG).hexdigest(),
+        )
+
+    def test_an_unreadable_copy_raises_a_typed_error_with_the_reason(
+        self, store: S3PodStore, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The fingerprinted bytes may be gone: the route answers 500 with a
+        logged reason rather than a bare, unexplained RuntimeError."""
+        from app.pod_store import PodFingerprintError  # the new name (BUG-119)
+
+        client_error = importlib.import_module("botocore.exceptions").ClientError
+        store.save(RUN_ID, EVENT_ID, PNG)
+
+        def broken(**kwargs: object) -> None:
+            raise client_error({"Error": {"Code": "500", "Message": "backend down"}}, "HeadObject")
+
+        monkeypatch.setattr(store._client, "head_object", broken)
+
+        with pytest.raises(PodFingerprintError) as raised:
+            store.fingerprint(RUN_ID, EVENT_ID)
+        assert "backend down" in str(raised.value)
+
     def test_the_key_is_scoped_to_the_run(self, store: S3PodStore) -> None:
         store.save(RUN_ID, EVENT_ID, PNG)
 

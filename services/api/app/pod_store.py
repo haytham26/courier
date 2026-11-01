@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import importlib
+import logging
 import shutil
 import time
 import uuid
@@ -23,6 +24,18 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from .pod import POD_URL_TTL_SECONDS, PodSettings, pod_settings
+
+logger = logging.getLogger(__name__)
+
+
+class PodFingerprintError(RuntimeError):
+    """The bytes are stored but their fingerprint cannot be read.
+
+    Raised only when the object is *unreadable* - a 403 or a 5xx from the
+    store - never when the metadata is merely absent, which the re-hash
+    answers honestly. The route converts this into a 500 with the reason,
+    so a courier sees an explanation rather than a bare crash.
+    """
 
 
 def object_key(run_id: uuid.UUID, event_id: uuid.UUID) -> str:
@@ -155,11 +168,28 @@ class S3PodStore:
         return digest
 
     def fingerprint(self, run_id: uuid.UUID, event_id: uuid.UUID) -> tuple[int, str]:
+        """The bytes and sha256 of an already-stored upload.
+
+        The digest is the `sha256` metadata `save` writes. When it is absent -
+        a copy written by another tool, or a partial multipart - the bytes are
+        read and hashed here instead of raising: the honest answer is what is
+        stored, however it got there (BUG-119). Only a store that cannot be
+        read at all raises, and then it raises `PodFingerprintError` with the
+        reason, so the route's 500 carries an explanation.
+        """
         key = object_key(run_id, event_id)
-        head = self._client.head_object(Bucket=self._bucket, Key=key)
+        try:
+            head = self._client.head_object(Bucket=self._bucket, Key=key)
+        except Exception as error:  # a 403, a 5xx, a timeout: not "absent"
+            logger.warning("the POD fingerprint of %s could not be read: %s", key, error)
+            raise PodFingerprintError(
+                f"the stored POD object {key} cannot be read: {error}"
+            ) from error
         digest = head.get("Metadata", {}).get("sha256")
         if not digest:
-            raise RuntimeError(f"the stored POD object {key} has no sha256 metadata")
+            logger.warning("the POD object %s carries no sha256 metadata: re-hashing", key)
+            body = self._client.get_object(Bucket=self._bucket, Key=key)["Body"].read()
+            return len(body), hashlib.sha256(body).hexdigest()
         return int(head["ContentLength"]), str(digest)
 
     def exists(self, run_id: uuid.UUID, event_id: uuid.UUID) -> bool:

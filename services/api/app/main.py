@@ -53,7 +53,7 @@ from .pod import (
     sniff_image_kind,
     validate_pod_settings,
 )
-from .pod_store import LocalPodStore, pod_store
+from .pod_store import LocalPodStore, PodFingerprintError, pod_store
 from .providers import VERIFIERS, apply_facts, webhook_secret_for
 from .repo import DeliveryEventRow, LocationNoteRow, Repo, RouteStopRow, RunRecord, get_repo
 from .responses import (
@@ -584,7 +584,17 @@ def upload_pod(
     replayed = existing is not None
 
     if replayed and store.exists(run.id, resolved_id):
-        stored_bytes, digest = store.fingerprint(run.id, resolved_id)
+        try:
+            stored_bytes, digest = store.fingerprint(run.id, resolved_id)
+        except PodFingerprintError as error:
+            # The bytes are stored but cannot be read. Answer with the reason
+            # (BUG-119: it used to escape as a bare RuntimeError, a 500 with no
+            # explanation), and leave the event log untouched so the phone's
+            # retry is a replay rather than a second event.
+            logger.warning(
+                "the POD replay of %s cannot be fingerprinted: %s", resolved_id, error
+            )
+            raise HTTPException(status_code=500, detail=str(error)) from error
     else:
         # Not a replay: the upload is the record, and bytes that sit there
         # without their own event row (a crash orphan, or a planted file)
