@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import uuid
@@ -25,6 +26,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .agents import copilot
+from .agents.copilot import COPILOT_MAX_RETRIES, COPILOT_TIMEOUT_SECONDS
 from .agents.intake_geo import RepoGeo
 from .agents.intake_graph import build_graph
 from .agents.omniroute import (
@@ -71,9 +73,11 @@ from .responses import (
     WebhookAcceptedResponse,
 )
 from .routing import (
+    MAX_ROUTE_STOPS,
     RoutePlan,
     RouteRequest,
     RouteStop,
+    RouteTooLargeError,
     RunConstraints,
     RunTemplate,
     TimeWindow,
@@ -99,8 +103,29 @@ app = FastAPI(title="Courier Copilot", version=os.environ.get("APP_VERSION", "0.
 # The unhandled-error trail the PLAYBOOK triage reads (RUNBOOK section 10).
 logger = logging.getLogger("courier_api")
 
+# The budget around one copilot turn (BUG-116): longer than the client's own
+# timeout and its retries, so the budget is the last word rather than the
+# first. A stalled gateway answers the fallback instead of parking the socket.
+COPILOT_BUDGET_SECONDS = COPILOT_TIMEOUT_SECONDS * (COPILOT_MAX_RETRIES + 1) + 15.0
+
 # Include auth routes
 app.include_router(auth_router)
+
+
+@app.exception_handler(RouteTooLargeError)
+async def the_day_is_too_big(
+    request: Request, error: RouteTooLargeError
+) -> JSONResponse:
+    """A day over the route cap is a 422 the caller can act on (BUG-117).
+
+    The refusal is the API's boundary rather than the solver's: without it a
+    2,000-stop shift allocates 61.2 MiB and spends seconds of matrix fill per
+    worker before anything is optimized.
+    """
+    return JSONResponse(
+        status_code=422,
+        content={"detail": str(error), "max_route_stops": MAX_ROUTE_STOPS},
+    )
 
 
 @app.middleware("http")
@@ -108,7 +133,6 @@ async def hardening_headers(
     request: Request, call_next: Callable[[Request], Awaitable[Response]]
 ) -> Response:
     """The ASVS V14 hardening on every response, errors included.
-
     The API serves JSON only, so the content policy allows nothing and the
     authenticated bodies are never cached by anything between the phone and
     the server. An unhandled exception gets the same headers on a clean 500 -
@@ -1234,7 +1258,15 @@ async def voice(
                     str, Any
                 ] = {}  # repo.copilot_state(shift_id) | {"speed_kmh": msg["gps"]["speed"]}
                 try:
-                    intent = copilot.interpret(text, state)
+                    # BUG-116: the client carries its own timeout now, and the
+                    # blocking call is bounded here so a stalled gateway cannot
+                    # park the socket forever. The interpret runs in a worker
+                    # thread because the socket's loop is async: awaiting it
+                    # with a budget is the only way the budget can interrupt.
+                    intent = await asyncio.wait_for(
+                        asyncio.to_thread(copilot.interpret, text, state),
+                        timeout=COPILOT_BUDGET_SECONDS,
+                    )
                 except Exception:  # any LLM failure falls back, never a dead socket
                     intent = copilot.fallback_intent(text)
                 # repo.apply(shift_id, intent) -> delivery_event / stop mutation
