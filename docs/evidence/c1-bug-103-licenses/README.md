@@ -1,4 +1,4 @@
-# BUG-103 — the licence gate's silent pass (PR #158, fix/c1-bug-103-licenses-gate)
+# BUG-103 — the licence gate's silent pass (PR #161, fix/c1-bug-103-licenses-gate)
 
 ## The defect, reproduced against the real script
 
