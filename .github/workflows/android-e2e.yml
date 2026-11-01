@@ -413,7 +413,15 @@ jobs:
           docker compose -f infra/compose.ci.yml up -d --wait postgres valkey
           docker compose -f infra/compose.ci.yml run --rm --no-deps -T auth \
             npx --yes auth@1.7.10 migrate --yes --config src/migrate.config.ts
-          docker compose -f infra/compose.ci.yml up -d --wait
+          # `--wait` fails with only "container X exited (1)" - it does not
+          # print the container's logs, which is how run 41356105462's a1
+          # failure (the API refusing to boot over an unlisted plaintext JWKS
+          # host) had to be root-caused locally. On failure, dump the logs so
+          # the job itself names the reason.
+          docker compose -f infra/compose.ci.yml up -d --wait || {
+            docker compose -f infra/compose.ci.yml logs --no-color --tail 200 api auth
+            exit 1
+          }
           docker compose -f infra/compose.ci.yml ps
 
       - name: Install Maestro

@@ -39,7 +39,25 @@ not typecheck in expo-router 58, whose layouts take the anchor via `unstable_set
 BUG-081 proven
 fixed by slice 3 (new test in today.test.tsx: red against origin/main's screen, green
 here) and its row is `fixed`. main merged in (BUGS.md resolved from main's copy + the
-branch's own BUG-081/BUG-161 rows re-applied). Merge #135 only when CI + a1 + both E2E
+branch's own BUG-081/BUG-161 rows re-applied).
+
+**Step 1's a1 stack defect rooted and fixed (BUG-164, this PR):** run 41356105462's a1 job
+failed at its own stack step — `courier-ci-api-1 exited (1)` before any flow ran. Root
+cause: the merge of main (e04b5aa) brought in BUG-131's JWKS allow-list
+(`services/api/app/auth/jwks.py`), and `infra/compose.ci.yml` names the plaintext host
+`auth` in `AUTH_JWKS_URL` without listing it in `AUTH_JWKS_INTERNAL_HOSTS` (prod/staging/
+env.example got the line; the CI stack was missed), so `get_auth_settings()` at import
+raised and the container exited 1. Fixed: `AUTH_JWKS_INTERNAL_HOSTS: auth` in
+compose.ci.yml + the a1 stack step now dumps `docker compose logs api auth` when
+`up --wait` fails + `check-auth-issuer.mjs` gained the BUG-131 rule over every
+`infra/compose*.yml` (red on the pre-fix tree, 14/14 tests). Proven locally with the
+stack itself: rebuilt api image without the line → exit 1 with the RuntimeError in the
+container log (red); with the line → all four containers healthy, `/healthz` 200,
+`/api/auth/jwks` 200 (green). Local-repro trap: `docker compose up` reuses a cached
+`courier-ci-api` image — `docker compose build api` first, or the old jwks.py boots fine
+and the repro lies.
+
+Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
 branch: both read `useRun()`).

@@ -73,6 +73,15 @@ services:
       # the API verifies (the audit's BUG-122: nothing else cross-checks the
       # two, so making them one value is what makes this stack correct).
       AUTH_JWKS_URL: http://auth:3001/api/auth/jwks
+      # BUG-131: the hop is plaintext because the compose network is ours, and
+      # that is an explicit named decision - the API refuses to boot with a
+      # plaintext JWKS host that is not listed here. compose.prod.yml and
+      # compose.staging.yml carry the same line as an override
+      # (${AUTH_JWKS_INTERNAL_HOSTS:-auth}); this CI stack has no operator
+      # env, so the name is literal. Run 41356105462's a1 job proved the cost
+      # of missing it: the api container exited 1 at import and no flow ran.
+      # scripts/ci/check-auth-issuer.mjs fails the tree without this line.
+      AUTH_JWKS_INTERNAL_HOSTS: auth
       AUTH_JWT_AUDIENCE: courier-api
       AUTH_JWT_ISSUER: http://10.0.2.2:3001
       # The POD store's signing grant (ADR-011): the API refuses to boot without
