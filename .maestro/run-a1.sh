@@ -34,7 +34,53 @@ if [ ! -f "$APK" ]; then
   exit 1
 fi
 EVIDENCE=".maestro/evidence"
+PKG="com.courier.copilot"
 mkdir -p "$EVIDENCE"
+
+# The device's own dump of what it was showing when something failed: the
+# activity on top, the process, the crash buffer, the main log and the screen.
+# The first flow run against the real server failed at the flow's first
+# assertion (`id: welcome-screen is visible`) with nothing but a junit line to
+# read - the same blindness BUG-062's dump removed, which is why the legs'
+# runner carries this exact function (run-all.sh's dump_evidence).
+dump_evidence() {
+  echo "::group::A1: evidence"
+  adb shell dumpsys activity activities 2>/dev/null | grep -i "mResumedActivity" | tee "$EVIDENCE/activity.txt" || true
+  adb shell pidof "$PKG" > "$EVIDENCE/pid.txt" 2>/dev/null || echo "the app process is not running" > "$EVIDENCE/pid.txt"
+  adb logcat -b crash -d > "$EVIDENCE/logcat-crash.txt" 2>/dev/null || true
+  adb logcat -d -t 3000 > "$EVIDENCE/logcat.txt" 2>/dev/null || true
+  adb exec-out screencap -p > "$EVIDENCE/screen.png" 2>/dev/null || true
+  echo "::endgroup::"
+}
+
+# Maestro's own dump of the moment a flow failed, kept under a name the artifact
+# upload accepts - a flow's name can carry a colon, and one character once
+# decided whether a run's evidence could be uploaded at all (the legs' runner
+# learned it first; this is the same function).
+keep_flow_dump() {
+  local newest dump_path dump_name safe_name remainder character dest
+  newest="$(ls -1dt "$HOME"/.maestro/tests/*/ 2>/dev/null | head -1)"
+  [ -n "$newest" ] || return 0
+  dump_path="${newest%/}"
+  dump_name="${dump_path##*/}"
+  safe_name=""
+  remainder="$dump_name"
+  while [ -n "$remainder" ]; do
+    character="${remainder%"${remainder#?}"}"
+    remainder="${remainder#?}"
+    case "$character" in
+      [A-Za-z0-9._-]) safe_name="$safe_name$character" ;;
+      *) safe_name="$safe_name-" ;;
+    esac
+  done
+  if [ -z "$safe_name" ]; then
+    safe_name="unnamed-dump"
+  fi
+  dest="$EVIDENCE/maestro-failure-${safe_name}"
+  rm -rf "$dest"
+  mkdir -p "$dest"
+  cp -r "$newest". "$dest/" 2>/dev/null || true
+}
 
 echo "::group::A1: install the no-mock APK"
 adb install -r "$APK"
@@ -48,8 +94,15 @@ run_flow() {
   # that belongs to a different stack must not silently join those legs - the
   # first run of this job proved it, when the glob's three a1 flows ran on the
   # E2E build, failed, and took the other flows of that leg down with them).
-  maestro test ".maestro/a1/${name}.yaml" --format junit --output "$EVIDENCE/${name}-result.xml"
-  echo "::endgroup::"
+  if maestro test ".maestro/a1/${name}.yaml" --format junit --output "$EVIDENCE/${name}-result.xml"; then
+    echo "::endgroup::"
+  else
+    echo "::error::the flow failed: A1 $name - the device's dump is in the evidence"
+    dump_evidence
+    keep_flow_dump
+    echo "::endgroup::"
+    exit 1
+  fi
 }
 
 # The online half. A failure here is a failure of the real round trip, and the
