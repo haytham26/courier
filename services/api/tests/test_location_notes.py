@@ -16,7 +16,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.auth.jwks import get_verifier
-from app.locations import canonical_address, location_id_for
+from app.locations import LOCATION_NAMESPACE, canonical_address, location_id_for
 from app.main import app
 from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
@@ -98,6 +98,78 @@ def seed_run_with_location(
         )
     ]
     return run_id, stop_id, str(location_id_for(address, None))
+
+
+
+def seed_a_stop_with_no_address(repo: InMemoryRepo) -> tuple[uuid.UUID, uuid.UUID, uuid.UUID]:
+    """A run of one stop whose address column is empty (BUG-118)."""
+    run_id, shift_id, stop_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+    repo.runs[run_id] = RunRecord(
+        id=run_id,
+        shift_id=shift_id,
+        courier_id=COURIER,
+        name="Hornby run",
+        depot_lat=-43.5330,
+        depot_lon=172.6300,
+        capacity_parcels=None,
+        speed_kmh=30.0,
+        start_at=START_AT,
+    )
+    repo.run_stops[run_id] = [
+        RouteStopRow(
+            id=stop_id,
+            lat=-43.5400,
+            lon=172.6000,
+            priority=False,
+            parcels=1,
+            service_time_s=None,
+            window_start=None,
+            window_end=None,
+            address="",
+            location_id=None,
+        )
+    ]
+    return run_id, shift_id, stop_id
+
+
+class TestAStopWithNoAddressText:
+    """A stop whose address column is empty still has to answer (BUG-118).
+
+    The route derived its `location_id` from the address text, and the
+    derivation raises on empty text: the unguarded call escaped the route as a
+    500 and the courier's whole stop list failed with it. The schema keeps
+    `location_id NOT NULL`, so an empty address is not a shape production can
+    seed today; the residual defect is that the route *raised* rather than
+    answering, and that a NULL address would go down the same path.
+    """
+
+    def test_the_stop_list_answers_for_a_stop_with_no_address(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        _, shift_id, stop_id = seed_a_stop_with_no_address(repo)
+
+        listed = client.get(f"/shifts/{shift_id}/stops")
+
+        assert listed.status_code == 200, listed.text
+        stop = listed.json()[0]
+        # The id is the stop's own identity, and it is the same on both reads.
+        expected = str(uuid.uuid5(LOCATION_NAMESPACE, f"stop/{stop_id}"))
+        assert stop["location_id"] == expected
+        assert (
+            client.get(f"/shifts/{shift_id}/stops").json()[0]["location_id"]
+            == stop["location_id"]
+        )
+
+    def test_the_notes_authz_answers_for_a_stop_with_no_address(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        """The one authz + audit lookup derives the same id and does not raise."""
+        _, _, stop_id = seed_a_stop_with_no_address(repo)
+
+        asked = client.get(f"/locations/{uuid.uuid5(LOCATION_NAMESPACE, f'stop/{stop_id}')}/notes")
+
+        assert asked.status_code == 200, asked.text
+        assert asked.json() == []
 
 
 class TestTheStopLocationId:

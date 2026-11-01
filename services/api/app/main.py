@@ -46,7 +46,7 @@ from .auth.websocket import UnauthenticatedError, identify, refuse
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
-from .locations import location_id_for
+from .locations import location_id_for_stop
 from .pod import (
     POD_MAX_BYTES,
     pod_settings,
@@ -1020,7 +1020,9 @@ def list_stops(
         {
             "id": str(row.id),
             "address": row.address,
-            "location_id": str(row.location_id or location_id_for(row.address or "", row.suburb)),
+            "location_id": str(
+                row.location_id or location_id_for_stop(row.id, row.address, row.suburb)
+            ),
             "seq": seq,
             "status": row.status,
             "lat": row.lat,

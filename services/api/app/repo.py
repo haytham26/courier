@@ -24,7 +24,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
 from .entitlements import Plan, SubscriptionState, SubscriptionView
-from .locations import canonical_address, location_id_for
+from .locations import canonical_address, location_id_for_stop
 from .routing import PlannedStop, RoutePlan, RunTemplate
 from .sequencing import Segment
 
@@ -426,13 +426,26 @@ class InMemoryRepo:
         ]
 
     def courier_location_key(self, courier_id: str, location_id: UUID) -> str | None:
+        """The canonical address key when the courier has a stop there, else
+        `None` (ADR-012 §3: the one authz + audit lookup).
+
+        A stop with no address text has nothing to canonicalise, so the key
+        answers with the derived id's own seed rather than raising: the lookup
+        is an authorisation, and an authorisation that raises is a 500 rather
+        than a 404 (BUG-118's second half).
+        """
         for run_id, stops in self.run_stops.items():
             run = self.runs.get(run_id)
             if run is None or run.courier_id != courier_id:
                 continue
             for stop in stops:
-                derived = stop.location_id or location_id_for(stop.address or "", stop.suburb)
+                derived = stop.location_id or location_id_for_stop(
+                    stop.id, stop.address, stop.suburb
+                )
                 if derived == location_id:
+                    text = (stop.address or "").strip()
+                    if not text:
+                        return f"stop/{stop.id}"
                     return canonical_address(stop.address or "", stop.suburb)
         return None
 

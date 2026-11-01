@@ -41,3 +41,26 @@ def canonical_address(address: str, suburb: str | None) -> str:
 def location_id_for(address: str, suburb: str | None) -> uuid.UUID:
     """The stable id of the door at `address` (ADR-012 §1)."""
     return uuid.uuid5(LOCATION_NAMESPACE, canonical_address(address, suburb))
+
+
+def location_id_for_stop(
+    stop_id: uuid.UUID, address: str | None, suburb: str | None
+) -> uuid.UUID:
+    """The location id of one stop row, without a raise for an empty address.
+
+    A row the schema seeds carries both a `location_id` and an address, and the
+    two callers of this function (`main.py`'s stops route and the in-memory
+    repo's `courier_location_key`) reach for the derived id only as the
+    fallback for a row that does not. When that fallback is asked of an address
+    with no text, the derivation has nothing to derive from: the stop still
+    needs one stable id for the phone's notes endpoint, and the only stable
+    identity such a row carries is its own id.
+
+    BUG-118: the route called `location_id_for` unguarded, so a stop with an
+    empty (or NULL) address turned the whole stop list into a 500. This is the
+    same derivation, guarded, and it is the one place both callers share.
+    """
+    text = (address or "").strip()
+    if not text:
+        return uuid.uuid5(LOCATION_NAMESPACE, f"stop/{stop_id}")
+    return location_id_for(text, suburb)
