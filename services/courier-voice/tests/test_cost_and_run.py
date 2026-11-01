@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import httpx
 import pytest
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.cost import CostGuard
 from app.models import RunContext, Stop
@@ -49,6 +51,66 @@ def test_the_guard_starts_again_on_a_new_day():
     guard.reset_for_a_new_day(now=guard.day_started + 86_401)
     assert guard.spent_nzd == 0.0
     assert guard.calls == 0
+
+
+def _nz_epoch(year: int, month: int, day: int, hour: int, minute: int = 0) -> float:
+    """The epoch seconds of a wall-clock moment in New Zealand."""
+    from zoneinfo import ZoneInfo
+
+    return datetime(year, month, day, hour, minute, tzinfo=ZoneInfo("Pacific/Auckland")).timestamp()
+
+
+def test_the_guards_day_is_a_new_zealand_calendar_day_not_a_rolling_window():
+    """BUG-155: the reset fires on the calendar day, not after 86,400 s.
+
+    A courier's shift is a New Zealand day. The guard's "day" was a rolling
+    86,400 s window from the first call, so on the 25-hour day (the clocks go
+    back on the first Sunday in April) the window ran out in the last half hour
+    of the calendar day and the deployment could spend twice the intended cap.
+    """
+    # 00:30 on 5 April 2026: the morning the clocks go back an hour.
+    day_started = _nz_epoch(2026, 4, 5, 0, 30)
+    guard = CostGuard(limit_nzd=20.0, price_nzd_per_1k_tokens=0.02, day_started=day_started)
+    guard.charge(1000)
+
+    # Twenty-four hours later it is 23:30 on 5 April in New Zealand: the clock
+    # went back, so the calendar day is not over. No new budget for the last
+    # half hour of it.
+    guard.reset_for_a_new_day(now=day_started + 24 * 3600)
+
+    assert guard.spent_nzd == pytest.approx(0.02)
+    assert guard.calls == 1
+
+    # One hour later the New Zealand date has turned over: now it resets.
+    guard.reset_for_a_new_day(now=day_started + 25 * 3600)
+
+    assert guard.spent_nzd == 0.0
+    assert guard.calls == 0
+
+
+def test_the_guard_resets_on_the_local_midnight():
+    """The reset does fire, on the New Zealand midnight."""
+    day_started = _nz_epoch(2026, 4, 5, 1, 0)
+    guard = CostGuard(limit_nzd=20.0, price_nzd_per_1k_tokens=0.02, day_started=day_started)
+    guard.charge(1000)
+
+    # 00:30 on 6 April: the calendar day has turned over.
+    guard.reset_for_a_new_day(now=_nz_epoch(2026, 4, 6, 0, 30))
+
+    assert guard.spent_nzd == 0.0
+    assert guard.calls == 0
+
+
+def test_the_guard_does_not_reset_before_its_own_local_midnight():
+    """A normal day: the window is the calendar, so a long shift never resets."""
+    day_started = _nz_epoch(2026, 11, 2, 6, 30)
+    guard = CostGuard(limit_nzd=20.0, price_nzd_per_1k_tokens=0.02, day_started=day_started)
+    guard.charge(1000)
+
+    # Twelve hours later it is still 2 November in New Zealand.
+    guard.reset_for_a_new_day(now=day_started + 12 * 3600)
+
+    assert guard.spent_nzd == pytest.approx(0.02)
 
 
 def the_stops() -> list[dict[str, object]]:
