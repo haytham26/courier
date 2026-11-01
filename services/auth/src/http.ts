@@ -18,6 +18,7 @@
  * all three rules testable against the real listener.
  */
 
+import { createHash } from "node:crypto";
 import { createServer as createHttpServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 
@@ -27,6 +28,101 @@ import { healthBody, isHealthPath } from "./health.js";
 
 /** How much of a request body the service will read (BUG-130). */
 export const MAX_BODY_BYTES = 256 * 1024;
+
+/**
+ * The paths that set a new password, where the breached check runs (BUG-128).
+ *
+ * The same three Better Auth's own `haveIBeenPwned` plugin names - and the
+ * same reason it is not the live one any more: its outbound call carries no
+ * timeout at all, so a PwnedPasswords outage made sign-up fail closed with a
+ * 500 and a courier could not register during a third-party outage.
+ */
+export const BREACHED_PASSWORD_PATHS = ["/sign-up/email", "/change-password", "/reset-password"];
+
+/** How long the corpus call may take before the request goes through anyway. */
+export const HIBP_TIMEOUT_MS = 2_000;
+
+const HIBP_RANGE_PREFIX = "https://api.pwnedpasswords.com/range/";
+
+/** What the corpus answered, or `unknown` when it could not be asked. */
+export type BreachVerdict = "breached" | "fresh" | "unknown";
+
+/** The SHA-1 of a password, as the k-anonymity range wants it. */
+export function sha1(value: string): string {
+  return createHash("sha1").update(value).digest("hex").toUpperCase();
+}
+
+/**
+ * The password a credential request sets, or null when it carries none.
+ *
+ * Only the three paths that set a password are read, so no other route's body
+ * is parsed for a field it does not have.
+ */
+export function passwordOf(path: string, body: string): string | null {
+  if (!BREACHED_PASSWORD_PATHS.includes(path)) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const candidate = (parsed as Record<string, unknown>).password;
+  if (typeof candidate !== "string") return null;
+  return candidate.length > 0 ? candidate : null;
+}
+
+/**
+ * Whether the password appears in the breached corpus - BOUNDED (BUG-128).
+ *
+ * The k-anonymity shape is unchanged (only the SHA-1's first five characters
+ * leave the service); what the row asked for and the plugin could not give is
+ * the deadline and the policy: the call is raced by `AbortSignal.timeout`, and
+ * any failure - a timeout, a reset, an outage, a non-200 - answers `unknown`
+ * so the caller can let the request through instead of failing closed.
+ */
+export async function breachedPasswordVerdict(
+  password: string,
+  options: {
+    timeoutMs?: number;
+    fetchImpl?: typeof fetch;
+    sha1Of?: (value: string) => string;
+  } = {},
+): Promise<BreachVerdict> {
+  const timeoutMs = options.timeoutMs ?? HIBP_TIMEOUT_MS;
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  const digest = (options.sha1Of ?? sha1)(password);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    // The deadline is raced explicitly rather than left to the signal: a
+    // caller that ignores `AbortSignal` (a proxy, a stub, a connection that
+    // accepted) would otherwise park the request even with a timeout set.
+    const response = await Promise.race([
+      fetchImpl(`${HIBP_RANGE_PREFIX}${digest.slice(0, 5)}`, {
+        signal: AbortSignal.timeout(timeoutMs),
+      }),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("the breached-password corpus did not answer in time")),
+          timeoutMs,
+        );
+      }),
+    ]);
+    if (!response.ok) return "unknown";
+    const suffix = digest.slice(5);
+    for (const line of (await response.text()).split(/\r?\n/)) {
+      const [hash, count] = line.split(":");
+      if (hash === suffix && Number(count) > 0) return "breached";
+    }
+    return "fresh";
+  } catch {
+    // The third party could not be asked in time: fail open (BUG-128). A
+    // deployment's sign-up must not be hostage to a corpus outage.
+    return "unknown";
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
 
 /** How many accounts the limiter remembers before it forgets the oldest. */
 export const MAX_ACCOUNT_KEYS = 10_000;
@@ -218,6 +314,34 @@ export function createServer(config: AuthConfig, auth: AuthInstance): Server {
       }
       const { request } = read;
       const path = authPathOf(request.url);
+      // BUG-128: the breached-password check runs here, bounded and fail-open.
+      // Better Auth's own plugin still exists (a deployment can turn it back
+      // on with AUTH_HIBP_ENABLED=true), but its outbound call carries no
+      // timeout, so the guarded check in front of the handler is the live one.
+      if (config.emailAndPassword.breachedPasswordCheck) {
+        const password = passwordOf(path, request.body);
+        if (password !== null) {
+          const verdict = await breachedPasswordVerdict(password, {
+            timeoutMs: config.emailAndPassword.hibpTimeoutMs,
+          });
+          if (verdict === "breached") {
+            // The wording is Better Auth's own (the plugin this replaces), so
+            // the phone's copy and the existing contract do not change.
+            json(res, 400, {
+              message: "Password is compromised. Please choose another.",
+            });
+            return;
+          }
+          if (verdict === "unknown") {
+            // The corpus could not be asked in time: the request goes through
+            // (fail open), with the reason in the log rather than a 500 on the
+            // courier's screen.
+            console.warn(
+              `[auth] the breached-password corpus could not be reached for ${path}; the request goes through (BUG-128, fail open)`,
+            );
+          }
+        }
+      }
       const account = accountOf(path, request.body);
       if (account !== null) {
         const decision = limiter.consume(path, account);

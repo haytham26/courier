@@ -75,3 +75,55 @@ E   ImportError: cannot import name 'CLOSE_INVALID_TOKEN' from 'app.auth.websock
   included).
 - `services/courier-voice`: 216 passed · ruff clean · mypy clean.
 - Conflict markers and mojibake clean.
+
+
+## BUG-128: the third session, and the approach that worked
+
+The register's own note named the cheapest decisive experiment: the bounded
+check in `src/http.ts` **with the suite moved onto the service's own server**.
+The two earlier attempts failed because the suite drove `auth.handler`
+directly (so nothing the service's own server does was ever tested) and because
+a top-level `hooks.before` in this Better Auth version does not short-circuit
+the route.
+
+**What landed.** Better Auth's `haveIBeenPwned` plugin's outbound call carries
+no timeout at all (`@better-fetch/fetch` 1.3.2 arms the abort timer only when
+`timeout` is set), so a PwnedPasswords outage made sign-up fail closed with a
+500. The live check is now in `src/http.ts`, in front of the handler:
+
+- `passwordOf` reads the password only on the three paths that set one
+  (`/sign-up/email`, `/change-password`, `/reset-password`);
+- `breachedPasswordVerdict` races the k-anonymity range call against
+  `AUTH_HIBP_TIMEOUT_MS` (2 s default) **explicitly** (`Promise.race`, not only
+  `AbortSignal.timeout`), because a caller that ignores the signal — a proxy, a
+  stub, an accepted connection — would otherwise park the request anyway;
+- `breached` answers the same 400 and the same wording the plugin used ("Password
+  is compromised. Please choose another."), so the contract the app sees does
+  not change;
+- `unknown` (a timeout, a reset, an outage, a non-200) **fails open**: the
+  request goes through and `console.warn` carries the reason — the register's
+  "fail-open-with-log".
+
+The plugin is off by default (`hibpPlugin` in the config, `AUTH_HIBP_PLUGIN=true`
+to add it back) and the `AUTH_HIBP_ENABLED` switch still plumbs the same flag
+name, so a deployment's env does not change. The k-anonymity shape is unchanged
+(only the SHA-1's first five characters leave the service), still pinned.
+
+**The suite moved.** `password-policy.test.ts` now drives the real listener from
+`createServer` (`aServerOn` from `http.test.ts`, extended with an env parameter),
+which is the only place the reachability policy can be proven. The length bound
+stays on `AuthTestClient` because it is the handler's own behaviour. The setup
+stub gained `setPwnedBehaviour({hangFor})` — the corpus that never answers, so
+the deadline is what turns it into a fail-open sign-up.
+
+**Red first**, quoted per case:
+
+```
+=== against origin/main's modules ===
+× refuses a password in the breached corpus
+× sends only the five-character SHA-1 prefix (the k-anonymity shape)
+× carries a deadline the plugin never had (BUG-128)
+× refuses a breached password again once the corpus answers
+=== restored ===
+23 passed
+```
