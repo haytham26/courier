@@ -353,7 +353,7 @@ class TestTheDemoSeedOnPostgres:
             assert second.run.id == first.run.id
             stops = repo.get_run_stops(first.run.id)
             assert len(stops) == DEMO_STOPS
-            seeded_run = repo.get_run_for_shift(first.run.shift_id)
+            seeded_run = repo.get_run_for_shift(first.run.shift_id, COURIER)
             assert seeded_run is not None
             assert seeded_run.courier_id == COURIER
             # The seeded stop reads back with the status a seeded stop starts at.

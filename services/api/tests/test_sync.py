@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from app.auth.jwks import get_verifier
 from app.main import app
-from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
+from app.repo import DeliveryEventRow, InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 
 COURIER = "driver-7"
@@ -313,3 +313,119 @@ class TestTheConflictRules:
 
         assert refused.status_code == 422
         assert "7 days" in refused.text
+
+
+# --- BUG-139: the refusal names every event it refused ----------------------
+
+
+def test_the_refusal_names_every_event_it_refused(client: TestClient, seeded_run) -> None:
+    """A whole-batch refusal must still tell the caller WHICH of its events was
+    the problem: one named stop is not an answer (BUG-139)."""
+    good = event()
+    first_bad = {
+        "id": str(uuid.uuid4()),
+        "stop_id": str(uuid.uuid4()),
+        "kind": "delivered",
+        "occurred_at": datetime.now(UTC).isoformat(),
+    }
+    second_bad = {
+        "id": str(uuid.uuid4()),
+        "stop_id": str(uuid.uuid4()),
+        "kind": "skipped",
+        "occurred_at": datetime.now(UTC).isoformat(),
+    }
+
+    refused = client.post(
+        f"/shifts/{SHIFT_ID}/events:batch", json=[good, first_bad, second_bad]
+    )
+
+    assert refused.status_code == 422
+    detail = refused.json()["detail"]
+    # Both offending events are named, with their index in the batch.
+    assert first_bad["stop_id"] in detail
+    assert second_bad["stop_id"] in detail
+    assert "1" in detail and "2" in detail
+    # Nothing landed: the refusal is whole-batch (ADR-014 section 3).
+    assert seeded_run.cursor(SHIFT_ID) == 0
+
+
+# --- BUG-140: the shift's owner is the query's answer, not a second line ----
+
+
+def test_a_run_of_another_courier_is_not_found_by_the_lookup(
+    repo: InMemoryRepo, seeded_run: InMemoryRepo
+) -> None:
+    """The tenant predicate is the repository's, not only the route's (BUG-140).
+
+    A future caller that forgets the comparison gets None from the store, not
+    another courier's row.
+    """
+    from app.repo import RunRecord
+
+    mine = uuid.uuid4()
+    theirs = uuid.uuid4()
+    repo.runs[theirs] = RunRecord(
+        id=theirs,
+        shift_id=uuid.uuid4(),
+        courier_id="another-courier",
+        name="Their run",
+        depot_lat=-43.5330,
+        depot_lon=172.6300,
+        capacity_parcels=None,
+        speed_kmh=30.0,
+        start_at=datetime.now(UTC),
+    )
+
+    assert repo.get_run_for_shift(theirs_shift_id := repo.runs[theirs].shift_id, COURIER) is None
+    assert repo.get_run_for_shift(theirs_shift_id, "another-courier") is not None
+    assert repo.get_run_for_shift(SHIFT_ID, COURIER) is not None
+    assert mine is not None
+
+
+# --- BUG-141: the cursor is what the phone's sync writes, not what the API --
+
+
+def test_a_pod_row_does_not_bump_the_sync_cursor(
+    repo: InMemoryRepo, seeded_run: InMemoryRepo
+) -> None:
+    """The POD route writes through the same path, and the phone's sync loop
+    reads this counter: a photograph must not advance it (BUG-141)."""
+    repo.append_events(
+        SHIFT_ID,
+        [
+            DeliveryEventRow(
+                id=uuid.uuid4(),
+                shift_id=SHIFT_ID,
+                stop_id=STOP_ID,
+                kind="pod_captured",
+                utterance=None,
+                safe_place=None,
+                lat=None,
+                lon=None,
+                accuracy_m=None,
+                occurred_at=datetime.now(UTC),
+            )
+        ],
+    )
+
+    assert seeded_run.cursor(SHIFT_ID) == 0
+
+    repo.append_events(
+        SHIFT_ID,
+        [
+            DeliveryEventRow(
+                id=uuid.uuid4(),
+                shift_id=SHIFT_ID,
+                stop_id=STOP_ID,
+                kind="delivered",
+                utterance=None,
+                safe_place=None,
+                lat=None,
+                lon=None,
+                accuracy_m=None,
+                occurred_at=datetime.now(UTC),
+            )
+        ],
+    )
+
+    assert seeded_run.cursor(SHIFT_ID) == 1

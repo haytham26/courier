@@ -112,10 +112,17 @@ class AppendResult:
 
     A conflict is a same-id replay whose content differs: the stored row
     wins, the incoming copy is discarded, and the id travels back to the
-    phone so it can surface the divergence instead of living it."""
+    phone so it can surface the divergence instead of living it.
+
+    The cursor is the shift's sync-event count as the batch's own transaction
+    saw it (BUG-141, BUG-142): the kinds the phone's sync writes, and a value
+    read on the same connection as the INSERT, so it is a snapshot of this
+    batch's effect rather than a later connection's.
+    """
 
     stored: int
     conflicts: tuple[UUID, ...] = ()
+    cursor: int = 0
 
 
 def _same_event(stored: DeliveryEventRow, incoming: DeliveryEventRow) -> bool:
@@ -220,13 +227,14 @@ class Repo(Protocol):
         conflict the caller reports (ADR-014: the stored row wins)."""
 
     def cursor(self, shift_id: UUID) -> int:
-        """The number of events stored for the shift (the sync cursor)."""
+        """The shift's sync events, the count the phone's sync loop compares."""
 
     def get_run(self, run_id: UUID) -> RunRecord | None:
         """The run, when the run exists."""
 
-    def get_run_for_shift(self, shift_id: UUID) -> RunRecord | None:
-        """The run of the shift, when the shift has one."""
+    def get_run_for_shift(self, shift_id: UUID, courier_id: str) -> RunRecord | None:
+        """The run of the shift, for the courier who owns it (the owner is part
+        of the lookup, BUG-140)."""
 
     def get_run_stops(self, run_id: UUID) -> list[RouteStopRow]:
         """The stops of the run, in the order the manifest gave them."""
@@ -277,6 +285,22 @@ class Repo(Protocol):
 
 
 STATUS_KINDS = frozenset({"delivered", "skipped", "deferred", "failed"})
+
+#: The kinds the phone's sync writes, and therefore the rows the sync cursor
+#: counts (BUG-141). `pod_captured` is written by the POD route through the
+#: same table, and a photograph must not advance the counter the phone's sync
+#: loop compares against its stored value.
+SYNC_CURSOR_KINDS = ("delivered", "skipped", "deferred", "failed")
+
+#: The sync cursor: the shift's sync events, read in the batch's transaction
+#: (BUG-142), so the answer is a snapshot of that batch's effect.
+_CURSOR_STATEMENT = text(
+    """
+    SELECT count(*)
+    FROM delivery_events
+    WHERE shift_id = :shift_id AND kind IN :kinds
+    """
+).bindparams(bindparam("kinds", expanding=True))
 """The delivery-event kinds that decide a stop's status (ADR-010 §2)."""
 
 
@@ -305,10 +329,21 @@ class InMemoryRepo:
             self.events[event.id] = event
             self.by_shift.setdefault(shift_id, []).append(event.id)
             stored += 1
-        return AppendResult(stored=stored, conflicts=tuple(conflicts))
+        return AppendResult(
+            stored=stored, conflicts=tuple(conflicts), cursor=self.cursor(shift_id)
+        )
 
     def cursor(self, shift_id: UUID) -> int:
-        return len(self.by_shift.get(shift_id, []))
+        """The shift's sync events, the same count the SQL repo answers (BUG-141).
+
+        The two repositories carry one contract, so the kinds counted are the
+        same list: a POD route's `pod_captured` row does not advance it.
+        """
+        return sum(
+            1
+            for event_id in self.by_shift.get(shift_id, [])
+            if self.events[event_id].kind in SYNC_CURSOR_KINDS
+        )
 
     def get_subscription(self, courier_id: str) -> SubscriptionRow | None:
         return self.subscriptions.get(courier_id)
@@ -341,9 +376,13 @@ class InMemoryRepo:
     def get_run(self, run_id: UUID) -> RunRecord | None:
         return self.runs.get(run_id)
 
-    def get_run_for_shift(self, shift_id: UUID) -> RunRecord | None:
+    def get_run_for_shift(self, shift_id: UUID, courier_id: str) -> RunRecord | None:
+        """The run of the shift for the courier who owns it (BUG-140).
+
+        The owner is part of the lookup, the same predicate the SQL repo binds.
+        """
         for run in self.runs.values():
-            if run.shift_id == shift_id:
+            if run.shift_id == shift_id and run.courier_id == courier_id:
                 return run
         return None
 
@@ -489,7 +528,17 @@ class SqlAlchemyRepo:
 
     def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
         if not events:
-            return AppendResult(stored=0)
+            # An empty batch still answers where the shift stands (BUG-142:
+            # the cursor is the count the caller's own transaction saw, and an
+            # empty batch's transaction is exactly the current count).
+            with self._engine.begin() as connection:
+                cursor = int(
+                    connection.execute(
+                        _CURSOR_STATEMENT,
+                        {"shift_id": shift_id, "kinds": list(SYNC_CURSOR_KINDS)},
+                    ).scalar_one()
+                )
+            return AppendResult(stored=0, cursor=cursor)
         # A batch carrying the same id twice with different content is a
         # divergence too: the insert keeps the first copy, and the phone is
         # told - the in-memory repo answers the same way.
@@ -526,7 +575,20 @@ class SqlAlchemyRepo:
         ]
         with self._engine.begin() as connection:
             result = connection.execute(statement, parameters)
-        stored = int(result.rowcount or 0)
+            stored = int(result.rowcount or 0)
+            # BUG-142: the cursor is read on the SAME connection, inside the
+            # INSERT's transaction, so the answer is a snapshot of this batch's
+            # effect. A second connection opened after the commit would, under
+            # READ COMMITTED, count a batch that committed in between - rows
+            # the caller never wrote.
+            # BUG-141: the count carries the sync kinds only, so the POD
+            # route's rows do not advance it.
+            cursor = int(
+                connection.execute(
+                    _CURSOR_STATEMENT,
+                    {"shift_id": shift_id, "kinds": list(SYNC_CURSOR_KINDS)},
+                ).scalar_one()
+            )
 
         # BUG-063: the comparison is only needed when the INSERT refused rows.
         # The rowcount already says how many of the batch it stored, and when
@@ -546,7 +608,7 @@ class SqlAlchemyRepo:
             or event.id in intra_batch
         ]
         deduped = tuple(dict.fromkeys(conflicts))
-        return AppendResult(stored=stored, conflicts=deduped)
+        return AppendResult(stored=stored, conflicts=deduped, cursor=cursor)
 
     def _existing_events(self, ids: list[UUID]) -> dict[UUID, DeliveryEventRow]:
         """The stored rows for the batch's ids, for the conflict comparison."""
@@ -603,9 +665,18 @@ class SqlAlchemyRepo:
         )
 
     def cursor(self, shift_id: UUID) -> int:
-        statement = text("SELECT count(*) FROM delivery_events WHERE shift_id = :shift_id")
+        """The shift's sync events: what the phone's sync loop compares (BUG-141).
+
+        The POD route's `pod_captured` rows are not counted - a photograph
+        must not advance the counter the client uses to know what landed.
+        """
         with self._engine.connect() as connection:
-            return int(connection.execute(statement, {"shift_id": shift_id}).scalar_one())
+            return int(
+                connection.execute(
+                    _CURSOR_STATEMENT,
+                    {"shift_id": shift_id, "kinds": list(SYNC_CURSOR_KINDS)},
+                ).scalar_one()
+            )
 
     def put_run(self, run: RunRecord) -> None:
         statement = text(
@@ -705,17 +776,25 @@ class SqlAlchemyRepo:
             start_at=row["start_at"],
         )
 
-    def get_run_for_shift(self, shift_id: UUID) -> RunRecord | None:
+    def get_run_for_shift(self, shift_id: UUID, courier_id: str) -> RunRecord | None:
+        """The run of the shift, for the courier who owns it (BUG-140).
+
+        The owner is part of the query, not only a comparison the caller makes
+        afterwards: a future caller that forgets the comparison gets `None`
+        from the store rather than another courier's row.
+        """
         statement = text(
             """
             SELECT id, shift_id, courier_id, name, depot_lat, depot_lon,
                    capacity_parcels, speed_kmh, start_at
             FROM runs
-            WHERE shift_id = :shift_id
+            WHERE shift_id = :shift_id AND courier_id = :courier_id
             """
         )
         with self._engine.connect() as connection:
-            row = connection.execute(statement, {"shift_id": shift_id}).mappings().one_or_none()
+            row = connection.execute(
+                statement, {"shift_id": shift_id, "courier_id": courier_id}
+            ).mappings().one_or_none()
         if row is None:
             return None
         return RunRecord(
