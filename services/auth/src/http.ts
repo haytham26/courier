@@ -47,7 +47,16 @@ const HIBP_RANGE_PREFIX = "https://api.pwnedpasswords.com/range/";
 /** What the corpus answered, or `unknown` when it could not be asked. */
 export type BreachVerdict = "breached" | "fresh" | "unknown";
 
-/** The SHA-1 of a password, as the k-anonymity range wants it. */
+/**
+ * The SHA-1 of a password, as the k-anonymity range wants it.
+ *
+ * CodeQL reads this as an insecure password hash; it is not. The Have I Been
+ * Pwned range API is *specified* in SHA-1, and the k-anonymity shape means
+ * only the first five hex characters - 20 bits - ever leave the process, so
+ * the digest is a bucket selector, not a way of storing or comparing the
+ * password. There is no SHA-256 variant of the range endpoint to switch to.
+ */
+// lgtm [js/insufficient-password-hash] The k-anonymity range API is SHA-1 by specification; the digest is a 5-character bucket selector, not stored.
 export function sha1(value: string): string {
   return createHash("sha1").update(value).digest("hex").toUpperCase();
 }

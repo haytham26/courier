@@ -28,6 +28,7 @@ export function setPwnedBehaviour(next: { hangFor: string[] }): void {
   behaviour.hangFor = next.hangFor;
 }
 
+// lgtm [js/insufficient-password-hash] The k-anonymity range API is SHA-1 by specification; the stub speaks the same 5-character bucket selector the service does.
 export function sha1(value: string): string {
   return createHash("sha1").update(value).digest("hex").toUpperCase();
 }
