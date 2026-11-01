@@ -30,6 +30,23 @@ import { readFileSync, existsSync } from 'node:fs';
 // gate that measures what it was given instead of checking it was given the
 // whole thing. A module now says which paths its summary must name, and a
 // module whose summary does not name them is incomplete.
+//
+// What the gate CANNOT know from a summary is which of the module's files it
+// was not told about, and BUG-104's attempted enforcement of that learned it
+// the hard way: the rule added here failed the real repo (run 41252213583) on
+// `services/courier-voice/app/__init__.py`, a file the summary names with no
+// statements to measure. That file is a docstring (50 bytes, zero statements):
+// it is measured in full by construction, because there is nothing in it that
+// could be left uncovered. So the rule was reading the one shape that is always
+// complete as the one shape that is never measured - a false positive on every
+// docstring-only module in the tree, and it is removed. The honest statement of
+// the limit is now in run-coverage.mjs: vitest is started without `all:`, so a
+// JavaScript file its tests never import is not named by the summary at all,
+// and the floor over what arrived is what this gate can honestly check. The
+// fix that would close the gap is to make the JS summary name every file, so a
+// partial closure shows up as 0-% rows instead of vanishing - BUG-104's row
+// carries that as its named next step, because it needs the missing tests
+// written, not a gate waved through.
 const THRESHOLDS = [
   { label: 'packages/ and services/ (overall)', floor: 81, groups: ['packages', 'services'] },
   { label: 'the address engine', floor: 81, files: ['app/address_correction.py'] },
@@ -109,32 +126,12 @@ for (const threshold of THRESHOLDS) {
     matched += 1;
   }
 
-  // BUG-104: a module whose coverage is incomplete fails, before any number is
-  // computed. A number computed over the part of a module that happened to
-  // arrive is not the module's number, so it must not be printed as one.
-  //
-  // "Complete" is checkable from the summary itself: every file the summary
-  // names under a declared module is measured, and at least one file of the
-  // module is named. What the gate cannot know from the summary is which files
-  // of the module it was NOT told about - so the check is honest about that and
-  // says so rather than pretending to know.
-  if (threshold.files && matched > 0) {
-    const named = all.filter((entry) => threshold.files.some((needle) => entry.file.includes(needle)));
-    const unmeasured = named.filter((entry) => entry.total === 0);
-    if (unmeasured.length > 0) {
-      const where = unmeasured.map((entry) => entry.file).join(', ');
-      results.push({
-        label: threshold.label,
-        value: null,
-        floor: threshold.floor,
-        note: `incomplete: ${unmeasured.length} file(s) carried no statements`,
-      });
-      failures.push(
-        `  ${threshold.label}: incomplete coverage — the summary named these files with no statements to measure: ${where}`,
-      );
-      continue;
-    }
-  }
+  // BUG-104's attempted enforcement lived here and was removed on 2026-11-01
+  // for the reason the header comment records: its only signal (a named file
+  // with no statements) is the docstring-only file, which is complete, not
+  // unmeasured. The declared `files` above keep each module's group a
+  // declaration rather than a discovery, and the wholly-missing case is the
+  // `total === 0` branch below.
 
   if (total === 0) {
     results.push({ label: threshold.label, value: null, floor: threshold.floor, note: 'not built yet' });

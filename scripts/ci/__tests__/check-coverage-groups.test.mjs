@@ -15,6 +15,18 @@
  * These tests prove it over synthetic trees, the way the audit's own verifier
  * did, and then pin the fix: the group is declared (what the module IS), not
  * discovered, so a missing file is missing whatever else the summary carries.
+ *
+ * The 2026-11-01 correction, recorded here so the next reader cannot repeat it:
+ * the enforcement first written for this finding read "a named file with no
+ * statements" as the tell-tale of a discovered-but-unmeasured file. The real
+ * repo disproved the premise - `services/courier-voice/app/__init__.py` is a
+ * docstring-only module with zero statements, and it is measured in full by
+ * construction (nothing in it can be left uncovered). The rule failed the real
+ * gate on run 41252213583, so it was removed and the second test below pins
+ * the truth it got wrong. A partial closure is NOT visible from a vitest
+ * summary at all (vitest names only the files its tests import, and
+ * run-coverage.mjs starts it without `all:`), which is why the fix for that
+ * half is recorded on BUG-104's row rather than pretended away here.
  */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -84,22 +96,37 @@ test('the coverage gate fails when a module is wholly missing', () => {
   assert.match(result.out, /no coverage data/);
 });
 
-test('the coverage gate fails when a module is only partially missing', () => {
-  // The tell-tale the honest check reads: a file the summary names with NO
-  // statements to measure is a file that was discovered but not measured, so
-  // the number over the rest of the module is not the module's number.
+test('a docstring-only file the summary names is measured in full, not incomplete', () => {
+  // RED first (2026-11-01): against the enforcement this PR first wrote, this
+  // exact shape failed the real repo - `check-coverage: below the floor: the
+  // voice service: incomplete coverage — the summary named these files with no
+  // statements to measure: services/courier-voice/app/__init__.py` (run
+  // 41252213583). A file with no statements has nothing to leave uncovered, so
+  // it is complete, and the gate must say so. The voice service's real shape:
+  // the docstring-only `app/__init__.py` beside the measured files.
   const dir = tree({
     'coverage/coverage-summary.json': jsSummary({
       [API_FILE]: { covered: 90, total: 100 },
       [AUTH_CONFIG]: { covered: 95, total: 100 },
-      [AUTH_SERVER]: { covered: 0, total: 0 },
+      [AUTH_SERVER]: { covered: 99, total: 100 },
     }),
+    'services/api/coverage.json': {
+      files: {
+        'app/address_correction.py': { summary: { covered_lines: 90, num_statements: 100 } },
+      },
+    },
+    'services/courier-voice/coverage.json': {
+      files: {
+        'app/__init__.py': { summary: { covered_lines: 0, num_statements: 0 } },
+        'app/main.py': { summary: { covered_lines: 90, num_statements: 100 } },
+      },
+    },
   });
 
   const result = runIn(dir);
 
-  assert.equal(result.ok, false);
-  assert.match(result.out.toLowerCase(), /incomplete/);
+  assert.equal(result.ok, true, result.out);
+  assert.match(result.out, /the voice service: 90\.0%/);
 });
 
 test('the coverage gate passes when the module is complete', () => {

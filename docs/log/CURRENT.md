@@ -1,6 +1,26 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `73da005` (the state at this handoff). Lead session 11, 2026-11-01.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `412d978` (PR #156 merged). Lead session 12, 2026-11-01.**
+
+
+## Lead session 12 (2026-11-01): the four open PRs triaged, both reds rooted, the numbering verified
+
+**State at the session's start, verified on origin (§13.1):** `origin/main` at `412d978`. The four open PRs from session 11's handoff, re-checked after main moved:
+
+| PR | Its state now | The red, and its root |
+|---|---|---|
+| **#155** | head `4eda7b8`, the coverage ratchet RED on the final head (runs 41252210370, 41252213583) | this PR's own BUG-104 enforcement read a zero-statement file as unmeasured; `services/courier-voice/app/__init__.py` is a docstring-only module, measured in full by construction. Rule removed with its reason recorded, red-first regression test added, BUG-104's row corrected (the partial closure is invisible from a vitest summary: `all:` is off). |
+| **#135** | head `d6f7172`, the a1 job RED at the emulator boot (run 41236076988) | the a1 job has no `Enable KVM` step, so `-accel off`; software emulation cannot boot inside the runner's 10-minute wait (the two sibling legs in the same run booted in 35 s with KVM). The flow never ran, hence `delivery_events: 0`. Fix: the legs' KVM step joins the a1 job. |
+| **#146**, **#147** | green on their final heads (`e2e9a4e`, `1a44d7c`), behind main 26/22 | none; they take main and merge. |
+
+**The numbering, verified:** main ends at BUG-160 with one duplicate (BUG-113 x2, the backend owns that fix); the highest across `origin/main` AND every open PR branch is **BUG-162** (#155's), so the next free number is **BUG-163**.
+
+**The traps found this session (all live):**
+
+- **The a1 job boots its emulator without KVM** because the `Enable KVM for the emulator` step (udev rule + trigger) exists only in the e2e legs of `android-e2e.yml`. With `-accel off` the QEMU process starts, prints its INFO lines, and never finishes booting — the runner waits 10 minutes, `adb: device 'emulator-5554' not found` on every poll, then `Timeout waiting for emulator to boot`. The job's own assert then (correctly) fails on 0 rows. A job that runs the emulator must carry the legs' KVM step, or it can never go green.
+- **A file with zero statements is measured in full.** The BUG-104 enforcement's tell-tale (a named file with no statements) is the docstring-only module; it is not evidence of a half-measured module. The only honest JS-summary limit: vitest without `all:` never names a file its tests did not import, so the gate cannot see a partial closure at all — the fix is the missing tests, not a rule that fails on empty files.
+
+**What is left, in order:** #155's green run on its new head (the coverage fix pushed, main merged in), #135's KVM fix and its a1 green run (the done-when of A1 slice 4), then #146/#147 take main and merge with the ritual; then the C1 mediums (BUG-079 with A4's build check, BUG-081 — check it against #135's branch first, BUG-103), the lows as one batch, and the audit's order to the §6 Definition of Done.
 
 
 ## Lead session 11 (2026-11-01): the CI mediums, the gate that found a second one, and the app-side root cause of five red flows
