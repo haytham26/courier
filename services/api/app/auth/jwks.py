@@ -380,13 +380,6 @@ def get_websocket_verifier() -> JwksVerifier:
     this slice proved it (`cannot reach the JWKS endpoint`).
     """
     return JwksVerifier(get_auth_settings())
-def get_verifier_override() -> JwksVerifier:
-    """The single point the tests override for the WebSocket surface.
-
-    Both getters route through here, so one `dependency_overrides` entry covers
-    the voice route's direct call and the HTTP routes' `Depends`.
-    """
-    return JwksVerifier(get_auth_settings())
 
 
 def get_current_principal(

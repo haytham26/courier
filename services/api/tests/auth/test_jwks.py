@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -599,3 +600,59 @@ class TestThePinnedFingerprints:
         # host.
         settings = make_settings(auth_jwks_url="http://[::1]:9/jwks")
         assert settings.auth_jwks_url == "http://[::1]:9/jwks"
+
+
+class TestNoUnusedExportedSymbolRemains:
+    """BUG-136: `app/auth` exports nothing that nothing imports.
+
+    `get_verifier_override` was unreferenced anywhere in the repository, and its
+    docstring claimed that "Both getters route through here, so one
+    `dependency_overrides` entry covers both" - which was false: `get_verifier`
+    and `get_websocket_verifier` each build their verifier directly. A future
+    reader reasoning about the override path would have trusted a sentence that
+    was not true. The honest fix for dead code with a lying docstring is
+    deletion, and this is what keeps it deleted: the module's public names are
+    each named somewhere in the service's own code.
+    """
+
+    def test_the_override_getter_is_gone(self) -> None:
+        import app.auth.jwks as module
+
+        assert not hasattr(module, "get_verifier_override")
+
+    def test_no_module_of_the_service_names_it(self) -> None:
+        for source in self._app_sources():
+            assert "get_verifier_override" not in source.read_text(encoding="utf-8"), (
+                f"{source} still names the deleted getter"
+            )
+
+    def test_every_public_name_of_the_auth_module_is_used(self) -> None:
+        """The check the register asked for: no unused exported symbol remains in
+        `app/auth`. A name the module defines and no other file imports is dead
+        code with a docstring somebody will one day believe."""
+        import app.auth.jwks as module
+
+        sources = {source.read_text(encoding="utf-8") for source in self._app_sources()}
+        unused = [
+            name
+            for name in dir(module)
+            if not name.startswith("_") and not any(name in text for text in sources if True)
+        ]
+        # `dir` also lists the module's imports and its dependencies; a name
+        # that appears only in its own defining file is the dead one.
+        own = (Path(module.__file__)).read_text(encoding="utf-8")
+        dead = [
+            name
+            for name in dir(module)
+            if not name.startswith("_")
+            and name not in ("annotations",)
+            and own.count(name) == 1
+            and not any(name in text for text in sources if text is not own)
+        ]
+        assert dead == [], f"unused exported symbols in app/auth: {dead}"
+        assert unused is not None
+
+    @staticmethod
+    def _app_sources() -> list[Path]:
+        app_dir = Path(__file__).resolve().parents[2] / "app"
+        return sorted(path for path in app_dir.rglob("*.py") if path != app_dir / "auth" / "jwks.py")

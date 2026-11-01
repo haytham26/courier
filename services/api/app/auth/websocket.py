@@ -30,9 +30,9 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
-from fastapi import Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import WebSocket, WebSocketDisconnect
 
-from .jwks import AuthPrincipal, InvalidTokenError, JwksVerifier, get_verifier
+from .jwks import AuthPrincipal, InvalidTokenError, JwksVerifier
 
 #: The frame that carries a token when the header could not. It is the first
 #: message the server reads, before any other frame is answered.
@@ -81,8 +81,9 @@ async def _token_from_first_message(websocket: WebSocket) -> str | None:
 def _reason_for(websocket: WebSocket) -> str:
     """Why this handshake has no token, in the words the caller needs.
 
-    `identify` raises it and the deprecated adapter puts it in its 401's detail,
-    so an old query-string caller learns what to change from either path.
+    `identify` raises it, and an old query-string caller learns from it what to
+    change: the URL's `token` is read **only** to name the refusal, never as a
+    credential (BUG-059, and BUG-135 pins that it stays that way).
     """
     if websocket.query_params.get("token"):
         return (
@@ -120,38 +121,3 @@ async def refuse(websocket: Any, reason: str) -> None:
             {"type": "error", "code": CLOSE_UNAUTHENTICATED, "detail": reason}
         )
     await websocket.close(code=CLOSE_UNAUTHENTICATED)
-
-
-async def get_websocket_principal(
-    websocket: WebSocket,
-    verifier: JwksVerifier = Depends(get_verifier),
-) -> AuthPrincipal:
-    """The old route dependency, deleted with BUG-059's route half.
-
-    It took the token from the query string, which is exactly what the audit
-    named; the route now accepts the socket and calls `identify` itself, so a
-    refusal is an `error` frame and a 4403 instead of an HTTP 403 on the
-    handshake. It is kept for two commits because a caller that still sends the
-    token in the URL must get a 401 with a reason it can act on rather than a
-    silent drop - and the audit's BUG-059 closes when that caller has no reason
-    to exist.
-
-    DEPRECATED: do not use it in a new route. `identify` answers the same
-    question correctly, and the voice route in `app/main.py` is the shape every
-    WebSocket surface follows from here.
-    """
-    token = _token_from_header(websocket)
-    if token is None:
-        token = websocket.query_params.get("token")
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=_reason_for(websocket),
-        )
-    try:
-        return verifier.verify(token)
-    except InvalidTokenError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"the token is not valid: {exc}",
-        ) from exc

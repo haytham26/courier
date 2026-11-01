@@ -18,6 +18,7 @@ read `websocket.query_params.get("token")`, and this file is what makes it green
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -174,3 +175,51 @@ class TestWhereTheTokenMayComeFrom:
 
         with pytest.raises(UnauthenticatedError):
             await _identify(websocket, verifier)
+
+
+def app_sources() -> list[Path]:
+    """Every Python file of the service's own application code."""
+    app_dir = Path(__file__).resolve().parents[2] / "app"
+    return sorted(app_dir.rglob("*.py"))
+
+
+class TestTheDeletedDependency:
+    """BUG-135: the token-in-the-URL dependency is gone for good.
+
+    `get_websocket_principal` was dead code with exactly one grep hit - its own
+    definition - that still read `websocket.query_params.get("token")`: the
+    exact pattern BUG-059 removed from the live route. One future import would
+    put a token in a URL again, and a URL lands in every access log. The
+    deletion is only a deletion while nothing can import it, so this is what
+    the suite pins.
+    """
+
+    def test_the_module_does_not_define_it_any_more(self) -> None:
+        import app.auth.websocket as module
+
+        assert not hasattr(module, "get_websocket_principal")
+
+    def test_no_module_of_the_service_imports_it(self) -> None:
+        for source in app_sources():
+            text = source.read_text(encoding="utf-8")
+            assert "get_websocket_principal" not in text, f"{source} still names the dead dependency"
+
+    def test_the_query_string_is_read_only_to_explain_the_refusal(self) -> None:
+        """The pattern itself, not only the function.
+
+        `query_params.get("token")` may appear once, and only as the
+        explanation `_reason_for` gives a caller who sent his token in the URL
+        - a read that *accepts* the token as a credential is what BUG-059
+        removed, and this is what keeps it removed.
+        """
+        readers = [
+            (source, line)
+            for source in app_sources()
+            for line, text in enumerate(source.read_text(encoding="utf-8").splitlines(), start=1)
+            if 'query_params.get("token")' in text
+        ]
+
+        assert len(readers) == 1, readers
+        source, line = readers[0]
+        head = "\n".join(source.read_text(encoding="utf-8").splitlines()[:line])
+        assert "def _reason_for" in head, f"{source}:{line} reads a token outside the refusal's reason"
