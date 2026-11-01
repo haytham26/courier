@@ -121,3 +121,41 @@ def test_the_results_are_written(tmp_path: Path):
     assert (tmp_path / "environment.json").exists()
     document = json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))
     assert document["turns"] == len(results)
+
+
+def test_the_environment_names_the_interpreter_that_ran(tmp_path: Path):
+    """BUG-158: `environment.json` must not lie about what produced it.
+
+    The Python version was the literal string `"3.11"` regardless of the
+    interpreter that ran, and the engine a fixed string regardless of the engine
+    configured. It happened to be correct today, which is what makes it
+    dangerous: an artifact that can lie about its own run is not evidence.
+    """
+    import platform
+
+    simulations = load_simulations(the_manifest())
+    import asyncio
+
+    results, proactive = asyncio.run(run_simulations(simulations))
+    write_results(tmp_path, results, score(results, proactive))
+
+    document = json.loads((tmp_path / "environment.json").read_text(encoding="utf-8"))
+
+    assert document["python"] == platform.python_version()
+    assert document["service"] == "courier-voice"
+
+
+def test_the_environment_names_the_platform_too(tmp_path: Path):
+    """The same answer for the machine: an artifact nobody can place is not
+    evidence (BUG-158)."""
+    import platform
+
+    simulations = load_simulations(the_manifest())
+    import asyncio
+
+    results, proactive = asyncio.run(run_simulations(simulations))
+    write_results(tmp_path, results, score(results, proactive))
+
+    document = json.loads((tmp_path / "environment.json").read_text(encoding="utf-8"))
+
+    assert document["platform"] == platform.platform()
