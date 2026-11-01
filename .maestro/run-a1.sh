@@ -20,7 +20,19 @@
 # really landed.
 set -euo pipefail
 
-APK="app/build/outputs/apk/release/app-release.apk"
+# The APK's address is the job's own build, not the legs' artifact. The two
+# e2e legs install `apk/app-release.apk` - the APK the build job uploads and
+# they download (run-all.sh) - but this job builds its own release APK with
+# `gradle assembleRelease` inside apps/mobile/android, and this script runs
+# from the repository root, so the route to gradle's output is the whole one.
+# The first green-emulator run proved the wrong path loudly:
+# `adb install -r app/build/outputs/apk/release/app-release.apk` answered
+# "failed to stat ... No such file or directory" seconds after the boot.
+APK="apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
+if [ ! -f "$APK" ]; then
+  echo "::error::the no-mock APK is not at $APK - the a1 job's gradle output is not where this script installs from"
+  exit 1
+fi
 EVIDENCE=".maestro/evidence"
 mkdir -p "$EVIDENCE"
 
