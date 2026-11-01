@@ -135,7 +135,31 @@ class TestTheRunLifecycle:
         repo.put_run(run)
 
         assert repo.get_run(run.id) == run
-        assert repo.get_run_for_shift(shift_id) == run
+        assert repo.get_run_for_shift(shift_id, run.courier_id) == run
+
+    def test_a_run_of_another_courier_is_not_found_by_the_query(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        """BUG-140 on the real engine: the owner is in the WHERE clause, so a
+        caller who forgets the comparison gets None from the store, not another
+        courier's row."""
+        their_shift = a_shift(engine)
+        their_run = a_run(their_shift)
+        their_run = RunRecord(
+            id=their_run.id,
+            shift_id=their_run.shift_id,
+            courier_id="another-courier",
+            name=their_run.name,
+            depot_lat=their_run.depot_lat,
+            depot_lon=their_run.depot_lon,
+            capacity_parcels=their_run.capacity_parcels,
+            speed_kmh=their_run.speed_kmh,
+            start_at=their_run.start_at,
+        )
+        repo.put_run(their_run)
+
+        assert repo.get_run_for_shift(their_shift, COURIER) is None
+        assert repo.get_run_for_shift(their_shift, "another-courier") == their_run
 
     def test_the_runs_list_is_the_couriers_own_newest_first(
         self, repo: SqlAlchemyRepo, engine: Engine
@@ -742,3 +766,87 @@ class TestTheStopStatusTheCourierReads:
             "delivered",
             "pending",
         ]
+
+
+# --- BUG-141: the cursor counts what the phone's sync writes -----------------
+
+
+class TestTheSyncCursor:
+    """The cursor the phone compares is the shift's sync events, not its rows."""
+
+    def test_a_pod_row_does_not_advance_the_cursor(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        stop_id = uuid.uuid4()
+        seed_stop(engine, shift_id, stop_id, "45 Papanui Road")
+
+        repo.append_events(shift_id, [an_event(shift_id, stop_id, "pod_captured")])
+
+        assert repo.cursor(shift_id) == 0
+
+    def test_the_cursor_the_append_answers_with_is_the_batchs_own_effect(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        stop_id = uuid.uuid4()
+        seed_stop(engine, shift_id, stop_id, "45 Papanui Road")
+
+        outcome = repo.append_events(shift_id, [an_event(shift_id, stop_id, "delivered")])
+
+        # BUG-142: the cursor is read in the batch's own transaction, so it is a
+        # snapshot of that batch's effect and not a later connection's read.
+        assert outcome.cursor == 1
+        assert repo.cursor(shift_id) == 1
+
+    def test_a_concurrent_commit_cannot_enter_the_batchs_own_cursor(
+        self, engine: Engine
+    ) -> None:
+        """BUG-142, proved on the real engine rather than argued.
+
+        The race the register names: under READ COMMITTED a batch that commits
+        between the INSERT and a cursor read on a SEPARATE connection is
+        counted, so the answer carries rows the caller never wrote. Reading the
+        cursor in the INSERT's own transaction closes it - the statement's
+        snapshot predates the concurrent commit, so it cannot enter the answer.
+        """
+        shift_id = a_shift(engine)
+        mine = uuid.uuid4()
+        theirs = uuid.uuid4()
+        theirs_shift = a_shift(engine)
+        with engine.connect() as first:
+            first.execute(
+                text(
+                    "INSERT INTO delivery_events (id, shift_id, stop_id, kind, occurred_at) "
+                    "VALUES (:id, :shift, :stop, 'delivered', :at)"
+                ),
+                {"id": mine, "shift": shift_id, "stop": uuid.uuid4(), "at": datetime.now(UTC)},
+            )
+            # The concurrent batch commits while ours is still open.
+            with engine.begin() as second:
+                second.execute(
+                    text(
+                        "INSERT INTO delivery_events (id, shift_id, stop_id, kind, occurred_at) "
+                        "VALUES (:id, :shift, :stop, 'delivered', :at)"
+                    ),
+                    {
+                        "id": theirs,
+                        "shift": theirs_shift,
+                        "stop": uuid.uuid4(),
+                        "at": datetime.now(UTC),
+                    },
+                )
+            seen = first.execute(
+                text(
+                    "SELECT count(*) FROM delivery_events "
+                    "WHERE shift_id = :shift AND kind = 'delivered'"
+                ),
+                {"shift": shift_id},
+            ).scalar_one()
+            first.rollback()
+
+        assert seen == 1

@@ -43,25 +43,50 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      # The value lives in the GitHub Secrets: it is never written to the
-      # repository, to the log or to an artefact, and a missing one never
-      # fails this job.
-      LINZ_LDS_API_KEY: ${{ secrets.LINZ_LDS_API_KEY }}
+      # BUG-162 (the class BUG-100 established): the key is NOT a job-level
+      # env. A job-level env is present in every step's process environment,
+      # so every third-party action this job runs could read it - and this job
+      # runs `actions/checkout` and `astral-sh/setup-uv` before it ever needs
+      # the credential. What stays is the app id (a repository variable, not a
+      # secret), which the steps' `if:` conditions need.
+      LINZ_LDS_AREAS: ${{ github.event.inputs.areas || 'chch,waimakariri,selwyn' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - name: Whether the LINZ key is configured
+        # A step that reports the credential's PRESENCE without reading it:
+        # the steps after this need to know whether the lane can run, and
+        # exporting the value to find out is the thing being fixed.
+        id: linz-key
+        env:
+          LINZ_LDS_API_KEY: ${{ secrets.LINZ_LDS_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$LINZ_LDS_API_KEY" ]; then
+            echo "configured=no" >> "$GITHUB_OUTPUT"
+            echo "::notice::The LINZ key (LINZ_LDS_API_KEY) is not configured, so the weekly import is skipped. Its name is in docs/status/FOUNDER_TODO.md."
+          else
+            echo "configured=yes" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Python and httpx
-        if: env.LINZ_LDS_API_KEY != ''
+        if: steps.linz-key.outputs.configured == 'yes'
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
       - name: Fetch the week's changeset (inserts, updates, deletes)
-        if: env.LINZ_LDS_API_KEY != ''
+        if: steps.linz-key.outputs.configured == 'yes'
+        env:
+          # The one step that dials the LINZ API, so the one step that holds
+          # the credential.
+          LINZ_LDS_API_KEY: ${{ secrets.LINZ_LDS_API_KEY }}
         run: uv run --with httpx python scripts/data/fetch-linz-changeset.py
 
       - name: Rebuild the address index from the live revisions
-        if: env.LINZ_LDS_API_KEY != ''
+        if: steps.linz-key.outputs.configured == 'yes'
+        env:
+          LINZ_LDS_API_KEY: ${{ secrets.LINZ_LDS_API_KEY }}
         run: |
           set -euo pipefail
           # No truncation: the default 200 000 per area silently drops the newest
@@ -73,14 +98,14 @@ jobs:
           done
 
       - name: Re-run the D8 accuracy measure
-        if: env.LINZ_LDS_API_KEY != ''
+        if: steps.linz-key.outputs.configured == 'yes'
         run: |
           set -euo pipefail
           uv sync --directory services/api --extra dev
           uv run --directory services/api pytest tests/test_linz_accuracy.py -q -p no:randomly
 
       - name: Keep the evidence
-        if: always() && env.LINZ_LDS_API_KEY != ''
+        if: always() && steps.linz-key.outputs.configured == 'yes'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: linz-weekly-evidence
@@ -91,7 +116,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Skip with a notice when the key is absent
-        if: env.LINZ_LDS_API_KEY == ''
+        if: steps.linz-key.outputs.configured != 'yes'
         run: |
           echo "::notice title=LINZ weekly changeset skipped::LINZ_LDS_API_KEY is not set in"
           echo "this repository's secrets, so the weekly LINZ import did not run. Add the key in"

@@ -107,7 +107,7 @@ source_paths = [
 # mutmut's forked runner does not add. `also_copy` is mutmut's own mechanism
 # for copying a directory into every mutant's tree; it is cheaper and truer than
 # bending the suite to find it.
-also_copy = ["loadtests"]
+also_copy = ["loadtests", "packages", "scripts"]
 
 # The typed-client freshness test regenerates through the repository root
 # (`REPO_ROOT = parents[3]` from `mutants/tests/`), which the copied mutant tree

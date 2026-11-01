@@ -802,8 +802,10 @@ def shift_route(
     The locked template wins when the run has one; otherwise the route is
     planned from the stops. The answer is the same every time it is asked.
     """
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="no run for this shift")
     rows = repo.get_run_stops(run.id)
     request, unroutable = _route_request(run, rows)
@@ -879,8 +881,10 @@ def intake_text(
     otherwise. A provider that cannot answer is a 502, never a silent empty
     manifest.
     """
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="no run for this shift")
     return _run_intake(
         repo=repo,
@@ -909,8 +913,10 @@ def intake_manifest(
     type are never trusted. Without a configured gateway the OCR provider is
     unavailable and the endpoint says so (503) - it never invents a manifest.
     """
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="no run for this shift")
     content = image.file.read(POD_MAX_BYTES + 1)
     if len(content) > POD_MAX_BYTES:
@@ -1004,8 +1010,10 @@ def list_stops(
     `location_id` (ADR-012 §1), so the phone calls the notes endpoints with
     the id the server honours.
     """
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="no run for this shift")
     rows = repo.get_run_stops(run.id)
     return [
@@ -1128,16 +1136,35 @@ def sync_events(
     is bounded (500, the reopt's cap too), and every event's stop must belong
     to the run's stops - an event for an invented stop would sit in the log
     forever, never flipping a status, inflating the cursor.
+
+    The cursor is the count of the shift's sync events (the kinds this route
+    writes), read in the batch's own transaction: the POD route's rows do not
+    advance it (BUG-141), and the answer is a snapshot of this batch's effect
+    rather than a later connection's read (BUG-142). A whole-batch refusal
+    names every offending event with its index, so the caller can tell which
+    of its events was the problem (BUG-139).
     """
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="no run for this shift")
     if len(events) > 500:
         raise HTTPException(status_code=422, detail="the batch is over the 500-event cap")
     known = {row.id for row in repo.get_run_stops(run.id)}
-    unknown = [event.stop_id for event in events if event.stop_id not in known]
+    unknown = [
+        (index, event.stop_id) for index, event in enumerate(events)
+        if event.stop_id not in known
+    ]
     if unknown:
-        raise HTTPException(status_code=422, detail=f"stop {unknown[0]} is not in this run")
+        # BUG-139: the refusal is whole-batch (ADR-014 section 3), but the
+        # caller must be able to tell WHICH of its events was refused, so the
+        # detail names every offending stop with its index in the batch.
+        named = ", ".join(f"event {index} (stop {stop_id})" for index, stop_id in unknown)
+        raise HTTPException(
+            status_code=422,
+            detail=f"nothing was stored: stops not in this run - {named}",
+        )
     rows = [
         DeliveryEventRow(
             id=event.id,
@@ -1156,7 +1183,9 @@ def sync_events(
     outcome = repo.append_events(shift_id, rows)
     return {
         "accepted": outcome.stored,
-        "cursor": repo.cursor(shift_id),
+        # BUG-142: the cursor the append answered with is the count its own
+        # transaction saw, not a third connection's read of what later landed.
+        "cursor": outcome.cursor,
         "conflicts": [str(event_id) for event_id in outcome.conflicts],
     }
 
@@ -1193,8 +1222,10 @@ async def voice(
     except UnauthenticatedError as exc:
         await refuse(ws, exc.reason)
         return
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         # The token is valid but the shift is not the caller's: the voice
         # channel carries the day's addresses, so a foreign shift is closed
         # without a word (ASVS V4 - the same 404 discipline as the routes).

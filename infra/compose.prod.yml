@@ -115,7 +115,11 @@ services:
       # replicas, so the API keeps verifying tokens while one of them is being
       # replaced (the HTTP client tries the second address when the first one
       # refuses the connection).
+      # BUG-131: the hop is plaintext because the compose network is ours, and
+      # that is now an explicit decision - the API refuses to boot with a
+      # plaintext JWKS host that is not named here.
       AUTH_JWKS_URL: http://auth:3001/api/auth${AUTH_JWKS_PATH:-/jwks}
+      AUTH_JWKS_INTERNAL_HOSTS: ${AUTH_JWKS_INTERNAL_HOSTS:-auth}
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
       # The issuer the API checks on the token. The default is the public URL
       # of the auth service, the same one the auth service signs with.
