@@ -21,6 +21,7 @@ from app.auth.jwks import (
     AuthSettings,
     InvalidTokenError,
     JwksVerifier,
+    canonical_jwk_digest,
     get_verifier,
 )
 from app.main import app
@@ -425,3 +426,176 @@ class TestTheIssuerTheApiAccepts:
 
         assert response.status_code == 200
         assert response.json() == {"valid": True, "user_id": "driver-9"}
+
+
+class TestTheClockTolerance:
+    """BUG-123: a small skew between the API and the auth service must not log
+    a courier out.
+
+    The two are separate hosts with no shared NTP guarantee, and PyJWT's
+    default `leeway=0` refuses a validly issued token on a second of drift
+    ("Signature has expired", "The token is not yet valid").
+    """
+
+    def test_a_token_one_second_past_its_expiry_is_accepted(
+        self, key_pair: tuple[Any, Any]
+    ) -> None:
+        private_key, jwk = key_pair
+        verifier = make_verifier({"keys": [jwk]})
+
+        principal = verifier.verify(sign(private_key, expires_in=timedelta(seconds=-1)))
+
+        assert principal.user_id == "user-123"
+
+    def test_a_token_one_second_before_its_start_is_accepted(
+        self, key_pair: tuple[Any, Any]
+    ) -> None:
+        private_key, jwk = key_pair
+        verifier = make_verifier({"keys": [jwk]})
+        now = datetime.now(UTC)
+        token = jwt.encode(
+            {
+                "sub": "user-123",
+                "aud": AUDIENCE,
+                "iss": ISSUER,
+                "iat": now + timedelta(seconds=1),
+                "exp": now + timedelta(minutes=15),
+            },
+            private_key,
+            algorithm="ES256",
+            headers={"kid": "test-key"},
+        )
+
+        principal = verifier.verify(token)
+
+        assert principal.user_id == "user-123"
+
+    def test_a_token_an_hour_expired_is_still_refused(self, key_pair: tuple[Any, Any]) -> None:
+        private_key, jwk = key_pair
+        verifier = make_verifier({"keys": [jwk]})
+
+        with pytest.raises(InvalidTokenError):
+            verifier.verify(sign(private_key, expires_in=timedelta(hours=-1)))
+
+    def test_the_tolerance_is_bounded_and_configurable(self) -> None:
+        # The default tolerates a real skew, not forever: the register's fix is
+        # "so a small skew is tolerated and the failure mode is a re-issue".
+        assert make_settings().auth_jwt_leeway_seconds == 30.0
+        assert make_settings(auth_jwt_leeway_seconds=5.0).auth_jwt_leeway_seconds == 5.0
+
+
+class TestTheJwksUrlCarriesItsScheme:
+    """BUG-131: the public keys are fetched over https, or over a hop the
+    operator has explicitly listed.
+
+    A plaintext hop a network-adjacent attacker can read lets them substitute a
+    key pair and have every forged token accepted as any `sub`.
+    """
+
+    def test_an_https_url_is_accepted(self) -> None:
+        settings = make_settings(auth_jwks_url="https://auth.example.co.nz/api/auth/jwks")
+
+        assert settings.auth_jwks_url == "https://auth.example.co.nz/api/auth/jwks"
+
+    def test_a_plaintext_url_on_an_unlisted_host_is_refused_at_startup(self) -> None:
+        with pytest.raises(ValueError, match="AUTH_JWKS_INTERNAL_HOSTS"):
+            make_settings(auth_jwks_url="http://auth.example.co.nz/api/auth/jwks")
+
+    def test_a_plaintext_url_on_a_listed_internal_host_is_accepted(self) -> None:
+        settings = make_settings(
+            auth_jwks_url="http://auth:3001/api/auth/jwks",
+            auth_jwks_internal_hosts="auth, auth-b",
+        )
+
+        assert settings.auth_jwks_url == "http://auth:3001/api/auth/jwks"
+        assert settings.internal_hosts == {"auth", "auth-b"}
+
+    def test_a_url_whose_scheme_is_not_a_known_one_is_refused_at_startup(self) -> None:
+        with pytest.raises(ValueError, match="absolute URL"):
+            make_settings(auth_jwks_url="auth:3001/api/auth/jwks")
+
+    def test_a_url_without_a_host_is_refused_at_startup(self) -> None:
+        with pytest.raises(ValueError, match="absolute URL"):
+            make_settings(auth_jwks_url="https:///api/auth/jwks")
+
+
+class TestThePinnedFingerprints:
+    """BUG-131's second half: a substituted key pair is refused, not trusted.
+
+    The scheme check cannot stop an attacker who can substitute the document's
+    contents on an allowed hop; the pin refuses a key that is not the one the
+    operator pinned.
+    """
+
+    def test_a_pinned_key_is_accepted(self, key_pair: tuple[Any, Any]) -> None:
+        private_key, jwk = key_pair
+        digest = canonical_jwk_digest(jwk)
+        verifier = make_verifier({"keys": [jwk]}, auth_jwks_key_fingerprints=digest)
+
+        principal = verifier.verify(sign(private_key))
+
+        assert principal.user_id == "user-123"
+
+    def test_a_substituted_key_is_refused_and_the_cache_is_left_alone(
+        self, key_pair: tuple[Any, Any]
+    ) -> None:
+        private_key, jwk = key_pair
+        _, attacker_jwk = make_key_pair("attacker-kid")
+        digest = canonical_jwk_digest(jwk)
+        verifier = make_verifier({}, auth_jwks_key_fingerprints=digest)
+
+        # The attacker's document: the real key replaced by theirs.
+        verifier._client = httpx.Client(
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(200, json={"keys": [attacker_jwk]})
+            )
+        )
+
+        with pytest.raises(InvalidTokenError, match="fingerprint is not pinned"):
+            verifier.verify(sign(private_key, kid="attacker-kid"))
+        # A refused document leaves the cache as it was: nothing was installed.
+        assert verifier._keys == {}
+
+    def test_the_digest_is_stable_over_the_keys_canonical_form(
+        self, key_pair: tuple[Any, Any]
+    ) -> None:
+        _, jwk = key_pair
+        # The pinned value depends only on the key's own bytes, so the operator
+        # computes it once and a rotation is a new digest, not a re-derivation.
+        assert canonical_jwk_digest(jwk) == canonical_jwk_digest(dict(jwk))
+        assert canonical_jwk_digest(jwk) != canonical_jwk_digest({**jwk, "x": "00"})
+
+
+    # The known-answer vector the voice suite's suite carries too: one literal
+    # key, one expected digest, asserted by both, so a change to the canonical
+    # form on either side alone goes red there.
+    KNOWN_ANSWER_JWK = {
+        "kty": "EC",
+        "crv": "P-256",
+        "x": "s-6OL1BQ2xSxHJMMMFts4aLUWgtZnZLYj3yBKfDBfCQ8",
+        "y": "vqVMVnhCjCiWnImEn6JKrddnvzTDwNKMKEUhkTGxIUg",
+        "kid": "known-answer-key",
+        "alg": "ES256",
+        "use": "sig",
+    }
+
+    def test_the_digest_of_the_known_answer_key_is_the_pinned_value(self) -> None:
+        assert canonical_jwk_digest(self.KNOWN_ANSWER_JWK) == "73c28f01c1c2dd06c66ff641e9df69a7cb8fabe59257b2fb10abdfe4d2cdb4e8"
+
+    def test_the_tolerance_is_refused_when_it_is_not_a_skew(self) -> None:
+        # A fat-fingered 3600 would open an hour's replay window, so the bound
+        # refuses to boot instead of passing quietly.
+        with pytest.raises(ValueError, match="bounded to 300"):
+            make_settings(auth_jwt_leeway_seconds=3600)
+        with pytest.raises(ValueError, match="bounded to 300"):
+            make_settings(auth_jwt_leeway_seconds=0)
+
+    def test_a_url_whose_scheme_is_neither_http_nor_https_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="absolute URL"):
+            make_settings(auth_jwks_url="ftp://auth:3001/jwks")
+
+    def test_the_bracketed_ipv6_loopback_is_exempt(self) -> None:
+        # urlsplit's hostname gives the unbracketed form; both literals are one
+        # host.
+        settings = make_settings(auth_jwks_url="http://[::1]:9/jwks")
+        assert settings.auth_jwks_url == "http://[::1]:9/jwks"

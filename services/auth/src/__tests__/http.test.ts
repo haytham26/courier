@@ -29,7 +29,7 @@ interface FakeAuth {
   handler: (request: Request) => Promise<Response>;
 }
 
-function aFakeAuth(): FakeAuth {
+export function aFakeAuth(): FakeAuth {
   const auth: FakeAuth = {
     calls: 0,
     handler: (request: Request): Promise<Response> => {
@@ -45,12 +45,15 @@ function aFakeAuth(): FakeAuth {
   return auth;
 }
 
-function aServerOn(auth: FakeAuth | ReturnType<typeof createAuth>): {
+export function aServerOn(
+  auth: FakeAuth | ReturnType<typeof createAuth>,
+  extraEnv: Record<string, string> = {},
+): {
   server: Server;
   base: string;
   close: () => Promise<void>;
 } {
-  const config = testConfig();
+  const config = testConfig({}, extraEnv);
   const server = createServer(
     config,
     auth as unknown as ReturnType<typeof createAuth>,

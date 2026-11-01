@@ -27,19 +27,39 @@ code instead of an HTTP error on the handshake. The route's own suite is
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
+import logging
 from typing import Any
 
 from fastapi import Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 
 from .jwks import AuthPrincipal, InvalidTokenError, JwksVerifier, get_verifier
 
+logger = logging.getLogger("courier_api.websocket_auth")
+
 #: The frame that carries a token when the header could not. It is the first
 #: message the server reads, before any other frame is answered.
 AUTH_MESSAGE_TYPE = "auth"
 
-#: The close code for an authentication refusal, beside the route's 4404.
+#: The close code for a handshake with no usable token, beside the route's
+#: 4404 ("the token is valid but the shift is not yours").
 CLOSE_UNAUTHENTICATED = 4403
+
+#: The close code for a token that is not valid (BUG-125). A caller can tell
+#: "no credential" from "a credential that did not verify" without the reason
+#: itself travelling to anyone else.
+CLOSE_INVALID_TOKEN = 4405
+
+#: How long a client that cannot set the header has to put its token in the
+#: first message (BUG-124). A client that connects and sends nothing parked
+#: the coroutine - and the accepted socket - for the life of the process.
+IDENTIFY_TIMEOUT_SECONDS = 10.0
+
+#: The one sentence an unauthenticated caller ever hears about a token that
+#: did not verify (BUG-125): the reason travels to the service's own log
+#: instead, so the refusal is not a token-state oracle.
+INVALID_TOKEN_MESSAGE = "the token is not valid"
 
 
 class UnauthenticatedError(Exception):
@@ -67,11 +87,22 @@ async def _token_from_first_message(websocket: WebSocket) -> str | None:
 
     One message is read; a caller that sends nothing, or sends a frame that is
     not an `auth` frame, has nothing to authenticate with.
+
+    The read is bounded (BUG-124): a client that connects and never sends
+    parked this coroutine - and the socket it was accepted for - forever, one
+    task per idle connection. The deadline refuses it instead.
     """
     try:
-        message = await websocket.receive_json()
+        message = await asyncio.wait_for(
+            websocket.receive_json(), timeout=IDENTIFY_TIMEOUT_SECONDS
+        )
     except (WebSocketDisconnect, ValueError, TypeError):
         return None
+    except TimeoutError:
+        raise UnauthenticatedError(
+            f"no credential within {IDENTIFY_TIMEOUT_SECONDS:.0f} seconds: send it in the "
+            "Authorization header, or in the first message's 'auth' frame"
+        ) from None
     if not isinstance(message, dict) or message.get("type") != AUTH_MESSAGE_TYPE:
         return None
     token = message.get("token")
@@ -109,17 +140,26 @@ async def identify(websocket: Any, verifier: JwksVerifier) -> AuthPrincipal:
     try:
         return verifier.verify(token)
     except InvalidTokenError as exc:
-        raise UnauthenticatedError(f"the token is not valid: {exc}") from exc
+        # BUG-125: the caller's answer is the stable sentence, and the reason
+        # travels only to the service's own log. Forwarding PyJWT's message
+        # made the refusal a token-state oracle: expiry, audience and clock
+        # skew were distinguishable by anyone holding a socket.
+        logger.info("a websocket token was refused: %s", exc)
+        raise UnauthenticatedError(INVALID_TOKEN_MESSAGE) from exc
 
 
-async def refuse(websocket: Any, reason: str) -> None:
-    """Tell the caller why the handshake was refused, then close with 4403."""
+async def refuse(websocket: Any, reason: str, code: int = CLOSE_UNAUTHENTICATED) -> None:
+    """Tell the caller why the handshake was refused, then close.
+
+    BUG-125: the frame's detail is the stable sentence (not the verifier's),
+    and the reason's CATEGORY rides in the close code - 4403 for a handshake
+    that carries no usable token, 4405 for one that did not verify - so a
+    half-closed socket, which never sees the frame, still gets an answer.
+    """
     with contextlib.suppress(Exception):
         # A caller that is already gone needs no message; the close is enough.
-        await websocket.send_json(
-            {"type": "error", "code": CLOSE_UNAUTHENTICATED, "detail": reason}
-        )
-    await websocket.close(code=CLOSE_UNAUTHENTICATED)
+        await websocket.send_json({"type": "error", "code": code, "detail": reason})
+    await websocket.close(code=code)
 
 
 async def get_websocket_principal(

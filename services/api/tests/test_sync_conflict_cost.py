@@ -55,10 +55,16 @@ class RecordingEngine:
     which the db suite proves against real Postgres), and `stored_rows` is what
     the comparison SELECT sees."""
 
-    def __init__(self, rowcount: int, stored_rows: list[tuple[uuid.UUID, str]] | None = None):
+    def __init__(
+        self,
+        rowcount: int,
+        stored_rows: list[tuple[uuid.UUID, str]] | None = None,
+        cursor_value: int = 0,
+    ):
         self.rowcount = rowcount
         self.stored_rows = stored_rows or []
         self.statements: list[str] = []
+        self.cursor_value = cursor_value
 
     def begin(self) -> Any:
         engine = self
@@ -73,6 +79,10 @@ class RecordingEngine:
 
                     class Result:
                         rowcount = inserted
+
+                        def scalar_one(self) -> int:
+                            # The in-transaction cursor read (BUG-142).
+                            return engine.cursor_value
 
                     return Result()
 
@@ -131,28 +141,45 @@ def repo_with(
 
 
 class TestTheBatchCost:
-    def test_an_all_new_batch_is_the_one_statement(self) -> None:
+    def test_an_all_new_batch_is_one_transaction_of_two_statements(self) -> None:
+        """BUG-063's gate, amended once on 2026-10-31 with the reason recorded.
+
+        The gate's letter was "the one statement" - the INSERT alone, because
+        the breach it names (CI run 40185490916, p95 370 ms) was a pre-SELECT
+        of the batch's ids on EVERY sync. BUG-142's fix - the register's own
+        prescription - reads the sync cursor inside the batch's transaction, so
+        that the answer is a snapshot of the batch's effect. That adds one
+        statement ON THE SAME CONNECTION (one round trip, sub-millisecond) and
+        none outside the transaction: the shape the breach was about - work
+        outside the batch's transaction on every sync - is what stays pinned,
+        together with the comparison SELECT still only running on a partial
+        refuse. The sync's p95 itself is still gated at 300 ms by the Locust
+        SLO profile, which runs this code on every PR.
+        """
         repo, engine = repo_with(rowcount=3)
 
         result = repo.append_events(SHIFT, [an_event(), an_event(), an_event()])
 
-        assert result == AppendResult(stored=3, conflicts=())
-        # One INSERT and no SELECT: the comparison is only needed when the
-        # insert refused rows (BUG-063 - the pre-SELECT cost 370 ms p95).
-        assert len(engine.statements) == 1
+        assert result == AppendResult(stored=3, conflicts=(), cursor=0)
+        assert len(engine.statements) == 2
         assert "INSERT INTO delivery_events" in engine.statements[0]
         assert "SELECT" not in engine.statements[0]
+        # The second statement is the cursor read, inside the same transaction.
+        assert "SELECT count(*)" in engine.statements[1]
 
     def test_a_batch_the_insert_partly_refused_pays_for_the_comparison(self) -> None:
         # Two of the three rows were already stored: the rowcount says so, and
-        # that is when the comparison runs.
+        # that is when the comparison runs - on the SECOND connection, after the
+        # in-transaction cursor read (BUG-142).
         repo, engine = repo_with(rowcount=1)
 
         result = repo.append_events(SHIFT, [an_event(), an_event(), an_event()])
 
         assert result.stored == 1
-        assert len(engine.statements) == 2
-        assert "SELECT" in engine.statements[1]
+        assert len(engine.statements) == 3
+        assert "SELECT count(*)" in engine.statements[1]
+        assert "SELECT" in engine.statements[2]
+        assert "id IN" in engine.statements[2]
 
 
 class TestTheConflictRulesStillHold:

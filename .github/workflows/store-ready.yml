@@ -44,12 +44,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      # The names only. The values live in the GitHub Secrets: they are never
-      # written to the repository, to the log or to an artefact, and a missing
-      # one never fails this job (see docs/status/FOUNDER_TODO.md).
-      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-      APP_STORE_CONNECT_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_P8_BASE64 }}
+      # BUG-100: the credential is NOT a job-level env. A job-level env is
+      # present in every step's process environment - including every
+      # third-party action this job runs - and a credential that is readable
+      # by any of them is a credential that any of them can take. The App
+      # Store Connect key is set in the ONE step that reads it (below), which
+      # is also the step that deletes the decoded file afterwards.
+      #
+      # What stays here is what the steps' `if:` conditions need to decide
+      # whether that lane runs at all: the app id (a repository variable, not
+      # a secret), and whether the key was configured - reported as a job
+      # output by the step below, NOT by exporting the key itself.
       APP_STORE_CONNECT_APP_ID: ${{ github.event.inputs.app_id || vars.APP_STORE_CONNECT_APP_ID }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -122,14 +127,35 @@ jobs:
           fi
           node scripts/ci/check-store-readiness.mjs "${args[@]}" | tee artifacts/store-readiness.txt
 
+      - name: Whether the App Store Connect key is configured
+        # BUG-100: the steps after this need to know whether the credential is
+        # there, and reading it to find out would export it. This step reports
+        # its presence as an output - a yes or a no, never the value.
+        id: asc-key
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APP_STORE_CONNECT_KEY_ID" ]; then
+            echo "configured=no" >> "$GITHUB_OUTPUT"
+            echo "::notice::The App Store Connect key is not configured (its names are in docs/status/FOUNDER_TODO.md), so that lane is skipped."
+          else
+            echo "configured=yes" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run the App Store Connect metadata check
-        # The only lane of the tool that needs a credential. The key stays in
-        # the runner folder, never in the workspace and never in an artefact.
+        # The only lane of the tool that needs a credential. The key is this
+        # step's own environment (BUG-100), it is decoded into the runner
+        # folder - never the workspace, never an artefact - and the decoded
+        # file is deleted when the step is done.
         id: asc
-        if: env.APP_STORE_CONNECT_KEY_ID != '' && env.APP_STORE_CONNECT_APP_ID != ''
+        if: steps.asc-key.outputs.configured == 'yes' && env.APP_STORE_CONNECT_APP_ID != ''
         continue-on-error: true
         env:
           HOME: ${{ runner.temp }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_P8_BASE64 }}
         run: |
           set -euo pipefail
           umask 077
@@ -143,7 +169,7 @@ jobs:
           rm -f "$HOME/.storeready/key.p8"
 
       - name: The App Store Connect lane was skipped
-        if: env.APP_STORE_CONNECT_KEY_ID == '' || env.APP_STORE_CONNECT_APP_ID == ''
+        if: steps.asc-key.outputs.configured != 'yes' || env.APP_STORE_CONNECT_APP_ID == ''
         run: |
           echo "::warning::The App Store Connect lane was skipped: the key (APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_P8_BASE64) or the app id is not set. The names are in docs/status/FOUNDER_TODO.md. The Google Play check ran anyway."
 

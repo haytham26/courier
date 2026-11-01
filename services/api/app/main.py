@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import uuid
@@ -25,6 +26,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .agents import copilot
+from .agents.copilot import COPILOT_MAX_RETRIES, COPILOT_TIMEOUT_SECONDS
 from .agents.intake_geo import RepoGeo
 from .agents.intake_graph import build_graph
 from .agents.omniroute import (
@@ -37,10 +39,18 @@ from .auth.jwks import (
     AuthPrincipal,
     get_auth_settings,
     get_current_principal,
+    get_verifier,
     get_websocket_verifier,
 )
 from .auth.routes import router as auth_router
-from .auth.websocket import UnauthenticatedError, identify, refuse
+from .auth.websocket import (
+    CLOSE_INVALID_TOKEN,
+    CLOSE_UNAUTHENTICATED,
+    INVALID_TOKEN_MESSAGE,
+    UnauthenticatedError,
+    identify,
+    refuse,
+)
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
@@ -71,9 +81,11 @@ from .responses import (
     WebhookAcceptedResponse,
 )
 from .routing import (
+    MAX_ROUTE_STOPS,
     RoutePlan,
     RouteRequest,
     RouteStop,
+    RouteTooLargeError,
     RunConstraints,
     RunTemplate,
     TimeWindow,
@@ -99,8 +111,29 @@ app = FastAPI(title="Courier Copilot", version=os.environ.get("APP_VERSION", "0.
 # The unhandled-error trail the PLAYBOOK triage reads (RUNBOOK section 10).
 logger = logging.getLogger("courier_api")
 
+# The budget around one copilot turn (BUG-116): longer than the client's own
+# timeout and its retries, so the budget is the last word rather than the
+# first. A stalled gateway answers the fallback instead of parking the socket.
+COPILOT_BUDGET_SECONDS = COPILOT_TIMEOUT_SECONDS * (COPILOT_MAX_RETRIES + 1) + 15.0
+
 # Include auth routes
 app.include_router(auth_router)
+
+
+@app.exception_handler(RouteTooLargeError)
+async def the_day_is_too_big(
+    request: Request, error: RouteTooLargeError
+) -> JSONResponse:
+    """A day over the route cap is a 422 the caller can act on (BUG-117).
+
+    The refusal is the API's boundary rather than the solver's: without it a
+    2,000-stop shift allocates 61.2 MiB and spends seconds of matrix fill per
+    worker before anything is optimized.
+    """
+    return JSONResponse(
+        status_code=422,
+        content={"detail": str(error), "max_route_stops": MAX_ROUTE_STOPS},
+    )
 
 
 @app.middleware("http")
@@ -108,7 +141,6 @@ async def hardening_headers(
     request: Request, call_next: Callable[[Request], Awaitable[Response]]
 ) -> Response:
     """The ASVS V14 hardening on every response, errors included.
-
     The API serves JSON only, so the content policy allows nothing and the
     authenticated bodies are never cached by anything between the phone and
     the server. An unhandled exception gets the same headers on a clean 500 -
@@ -778,8 +810,10 @@ def shift_route(
     The locked template wins when the run has one; otherwise the route is
     planned from the stops. The answer is the same every time it is asked.
     """
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="no run for this shift")
     rows = repo.get_run_stops(run.id)
     request, unroutable = _route_request(run, rows)
@@ -855,8 +889,10 @@ def intake_text(
     otherwise. A provider that cannot answer is a 502, never a silent empty
     manifest.
     """
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="no run for this shift")
     return _run_intake(
         repo=repo,
@@ -885,8 +921,10 @@ def intake_manifest(
     type are never trusted. Without a configured gateway the OCR provider is
     unavailable and the endpoint says so (503) - it never invents a manifest.
     """
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="no run for this shift")
     content = image.file.read(POD_MAX_BYTES + 1)
     if len(content) > POD_MAX_BYTES:
@@ -980,8 +1018,10 @@ def list_stops(
     `location_id` (ADR-012 §1), so the phone calls the notes endpoints with
     the id the server honours.
     """
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="no run for this shift")
     rows = repo.get_run_stops(run.id)
     return [
@@ -1104,16 +1144,35 @@ def sync_events(
     is bounded (500, the reopt's cap too), and every event's stop must belong
     to the run's stops - an event for an invented stop would sit in the log
     forever, never flipping a status, inflating the cursor.
+
+    The cursor is the count of the shift's sync events (the kinds this route
+    writes), read in the batch's own transaction: the POD route's rows do not
+    advance it (BUG-141), and the answer is a snapshot of this batch's effect
+    rather than a later connection's read (BUG-142). A whole-batch refusal
+    names every offending event with its index, so the caller can tell which
+    of its events was the problem (BUG-139).
     """
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="no run for this shift")
     if len(events) > 500:
         raise HTTPException(status_code=422, detail="the batch is over the 500-event cap")
     known = {row.id for row in repo.get_run_stops(run.id)}
-    unknown = [event.stop_id for event in events if event.stop_id not in known]
+    unknown = [
+        (index, event.stop_id) for index, event in enumerate(events)
+        if event.stop_id not in known
+    ]
     if unknown:
-        raise HTTPException(status_code=422, detail=f"stop {unknown[0]} is not in this run")
+        # BUG-139: the refusal is whole-batch (ADR-014 section 3), but the
+        # caller must be able to tell WHICH of its events was refused, so the
+        # detail names every offending stop with its index in the batch.
+        named = ", ".join(f"event {index} (stop {stop_id})" for index, stop_id in unknown)
+        raise HTTPException(
+            status_code=422,
+            detail=f"nothing was stored: stops not in this run - {named}",
+        )
     rows = [
         DeliveryEventRow(
             id=event.id,
@@ -1132,7 +1191,9 @@ def sync_events(
     outcome = repo.append_events(shift_id, rows)
     return {
         "accepted": outcome.stored,
-        "cursor": repo.cursor(shift_id),
+        # BUG-142: the cursor the append answered with is the count its own
+        # transaction saw, not a third connection's read of what later landed.
+        "cursor": outcome.cursor,
         "conflicts": [str(event_id) for event_id in outcome.conflicts],
     }
 
@@ -1164,13 +1225,30 @@ async def voice(
         # would be solved before the socket is accepted, and a refusal would
         # then be an HTTP 403 on the handshake instead of an `error` frame and a
         # 4403 close on a socket the caller actually holds.
-        verifier = app.dependency_overrides.get(get_websocket_verifier) or get_websocket_verifier
+        # BUG-126: the HTTP surfaces' `get_verifier` is checked FIRST, so one
+        # override covers both surfaces (and, in production, both getters hand
+        # out the same cached instance - the surfaces cannot disagree about
+        # which keys are current).
+        verifier = (
+            app.dependency_overrides.get(get_verifier)
+            or app.dependency_overrides.get(get_websocket_verifier)
+            or get_websocket_verifier
+        )
         principal = await identify(ws, verifier())
     except UnauthenticatedError as exc:
-        await refuse(ws, exc.reason)
+        # BUG-125: the reason's category rides in the close code, so a
+        # half-closed socket still gets an answer (the frame may never land).
+        code = (
+            CLOSE_INVALID_TOKEN
+            if exc.reason == INVALID_TOKEN_MESSAGE
+            else CLOSE_UNAUTHENTICATED
+        )
+        await refuse(ws, exc.reason, code)
         return
-    run = repo.get_run_for_shift(shift_id)
-    if run is None or run.courier_id != principal.user_id:
+    # BUG-140: the owner is part of the lookup, so the 404 is the store's
+    # answer and not only a comparison this line makes afterwards.
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
         # The token is valid but the shift is not the caller's: the voice
         # channel carries the day's addresses, so a foreign shift is closed
         # without a word (ASVS V4 - the same 404 discipline as the routes).
@@ -1203,7 +1281,15 @@ async def voice(
                     str, Any
                 ] = {}  # repo.copilot_state(shift_id) | {"speed_kmh": msg["gps"]["speed"]}
                 try:
-                    intent = copilot.interpret(text, state)
+                    # BUG-116: the client carries its own timeout now, and the
+                    # blocking call is bounded here so a stalled gateway cannot
+                    # park the socket forever. The interpret runs in a worker
+                    # thread because the socket's loop is async: awaiting it
+                    # with a budget is the only way the budget can interrupt.
+                    intent = await asyncio.wait_for(
+                        asyncio.to_thread(copilot.interpret, text, state),
+                        timeout=COPILOT_BUDGET_SECONDS,
+                    )
                 except Exception:  # any LLM failure falls back, never a dead socket
                     intent = copilot.fallback_intent(text)
                 # repo.apply(shift_id, intent) -> delivery_event / stop mutation

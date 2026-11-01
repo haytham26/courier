@@ -160,6 +160,23 @@ class RunTemplate:
     stop_order: tuple[UUID, ...]
 
 
+class RouteTooLargeError(Exception):
+    """The day is bigger than the routing layer will plan (BUG-117).
+
+    Nothing capped the stops a shift may hold, and the solver's dense
+    (n+2)^2 matrices with an O(n^2) fill turn a cheap request into a
+    multi-minute CPU hog per worker: 2,000 stops allocate 61.2 MiB and spend
+    ~3.7 s of fill before the solver's first iteration. The cap is the API's
+    own boundary, the same number the events batch uses, and the routes answer
+    it as a 422 with the reason.
+    """
+
+
+#: The most stops one planned day may carry (BUG-117). The register's probe
+#: measured the cost curve past this; the events batch uses the same number.
+MAX_ROUTE_STOPS = 500
+
+
 class RouteEngine(Protocol):
     """The seam every engine implements.
 
@@ -338,6 +355,14 @@ def _build_plan(
     break_position: int | None = None,
 ) -> RoutePlan:
     """The plan for an order: the ordered stops, the arrival times, the distance."""
+    # BUG-117: the day's size is the API's boundary, not something the solver
+    # discovers by allocating. Every planning path funnels here - the engines,
+    # the template lock and the partial reopt - so one check covers them all.
+    if len(request.stops) > MAX_ROUTE_STOPS:
+        raise RouteTooLargeError(
+            f"this day carries {len(request.stops)} stops and the route is capped at "
+            f"{MAX_ROUTE_STOPS}: split the shift, or plan the part you need"
+        )
     walked = _schedule(order, request, break_position)
     capacity = request.constraints.capacity_parcels
     parcels = sum(stop.parcels for stop in order)

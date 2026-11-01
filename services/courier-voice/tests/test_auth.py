@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import time
+from typing import Any
 
 import httpx
 import jwt
@@ -17,7 +18,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from app.auth import InvalidTokenError, JwksVerifier
+from app.auth import InvalidTokenError, JwksVerifier, canonical_jwk_digest
 from app.config import VoiceConfig
 
 ISSUER = "http://localhost:3001"
@@ -77,7 +78,7 @@ def a_token(
 def a_verifier(jwk: dict[str, object]) -> JwksVerifier:
     """A verifier with a JWKS that answers with the key."""
     config = VoiceConfig(
-        auth_jwks_url="http://auth.test/jwks",
+        auth_jwks_url="https://auth.test/jwks",
         auth_jwt_issuer=ISSUER,
         auth_jwt_audience=AUDIENCE,
     )
@@ -120,8 +121,11 @@ def test_an_expired_token_is_refused():
     private, jwk = a_key_pair()
     verifier = a_verifier(jwk)
 
+    # A minute past its expiry, not ten seconds: BUG-123's tolerance is a
+    # skew (the default 30 s), and a token inside it is a valid one. What must
+    # still be refused is a token that is actually expired.
     with pytest.raises(InvalidTokenError):
-        verifier.verify(a_token(private, expires_in=-10))
+        verifier.verify(a_token(private, expires_in=-60))
 
 
 def test_a_token_signed_by_another_key_is_refused():
@@ -150,7 +154,7 @@ def test_the_key_is_cached_between_the_calls():
         return httpx.Response(200, json={"keys": [jwk]})
 
     config = VoiceConfig(
-        auth_jwks_url="http://auth.test/jwks",
+        auth_jwks_url="https://auth.test/jwks",
         auth_jwt_issuer=ISSUER,
         auth_jwt_audience=AUDIENCE,
     )
@@ -164,7 +168,7 @@ def test_the_key_is_cached_between_the_calls():
 
 def test_a_jwks_with_no_keys_is_refused():
     config = VoiceConfig(
-        auth_jwks_url="http://auth.test/jwks",
+        auth_jwks_url="https://auth.test/jwks",
         auth_jwt_issuer=ISSUER,
         auth_jwt_audience=AUDIENCE,
     )
@@ -175,3 +179,128 @@ def test_a_jwks_with_no_keys_is_refused():
     verifier = JwksVerifier(config, httpx.Client(transport=httpx.MockTransport(handler)))
     with pytest.raises(InvalidTokenError):
         verifier.verify("not-a-token")
+
+
+# ---------------------------------------------------------------------------
+# BUG-123 and BUG-131 on the voice surface. The API's verifier carries the same
+# two halves (services/api/app/auth/jwks.py); the two resource servers read the
+# same auth service, and BUG-126 was the day they disagreed about a valid
+# token, so the contract is written once and mirrored.
+# ---------------------------------------------------------------------------
+
+
+def _a_config(**overrides: Any) -> VoiceConfig:
+    """A config, https and loopback-free, so the scheme check has nothing to refuse."""
+    values: dict[str, Any] = {
+        "auth_jwks_url": "https://auth.test/jwks",
+        "auth_jwt_issuer": ISSUER,
+        "auth_jwt_audience": AUDIENCE,
+    }
+    values.update(overrides)
+    return VoiceConfig(**values)
+
+
+def _a_verifier_of(jwk: dict[str, object], **overrides: object) -> JwksVerifier:
+    """A verifier whose JWKS answers with exactly this key."""
+    config = _a_config(**overrides)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"keys": [jwk]})
+
+    return JwksVerifier(config, httpx.Client(transport=httpx.MockTransport(handler)))
+
+
+def test_a_token_one_second_past_its_expiry_is_accepted():
+    """BUG-123: a second of drift must not refuse a validly issued token."""
+    private, jwk = a_key_pair()
+
+    principal = _a_verifier_of(jwk).verify(a_token(private, expires_in=-1))
+
+    assert principal.user_id == "driver-1"
+
+
+def test_a_token_an_hour_expired_is_still_refused():
+    """The tolerance is a skew, not a forever-window (BUG-123's bound)."""
+    private, jwk = a_key_pair()
+
+    with pytest.raises(InvalidTokenError):
+        _a_verifier_of(jwk).verify(a_token(private, expires_in=-3600))
+
+
+def test_a_plaintext_jwks_url_on_an_unlisted_host_is_refused_at_startup():
+    """BUG-131: the keys are fetched over an encrypted hop or a listed one."""
+    with pytest.raises(ValueError, match="AUTH_JWKS_INTERNAL_HOSTS"):
+        _a_config(auth_jwks_url="http://auth.example.co.nz/jwks")
+
+
+def test_a_plaintext_jwks_url_on_a_listed_internal_host_is_accepted():
+    config = _a_config(
+        auth_jwks_url="http://auth:3001/api/auth/jwks",
+        auth_jwks_internal_hosts="auth",
+    )
+
+    assert config.auth_jwks_url == "http://auth:3001/api/auth/jwks"
+    assert config.internal_hosts == {"auth"}
+
+
+def test_a_loopback_jwks_url_is_accepted_without_the_allow_list():
+    """The tests' own placeholder: a hop that never leaves the machine."""
+    assert _a_config(auth_jwks_url="http://127.0.0.1:9/jwks").auth_jwks_url
+
+
+def test_a_substituted_key_is_refused_by_the_pin_and_the_cache_is_left_alone():
+    """BUG-131's second half: a key that is not the pinned one is not installed."""
+    from app.auth import canonical_jwk_digest
+
+    private, jwk = a_key_pair()
+    _, attacker_jwk = a_key_pair("attacker")
+    verifier = _a_verifier_of(
+        attacker_jwk, auth_jwks_key_fingerprints=canonical_jwk_digest(jwk)
+    )
+
+    with pytest.raises(InvalidTokenError, match="could not be verified against the pinned keys"):
+        verifier.verify(a_token(private, kid="attacker"))
+    assert verifier._keys == {}
+
+
+def test_the_digest_matches_the_api_side_of_the_contract():
+    """The pinned value both services compute is the same function of the key."""
+    from app.auth import canonical_jwk_digest as voice_digest
+
+    _, jwk = a_key_pair()
+    # services/api/app/auth/jwks.py computes the same digest of the same key:
+    # both suites pin their own fixed cases, so a change on one side alone goes
+    # red there.
+    assert voice_digest(dict(jwk)) == voice_digest(jwk)
+    assert voice_digest(jwk) != voice_digest({**jwk, "alg": "ES512"})
+
+
+def test_the_digest_of_the_known_answer_key_is_the_pinned_value():
+    """The same literal key, the same digest, asserted on both surfaces.
+
+    The API's suite carries this vector too (`test_the_digest_of_the_
+    known_answer_key_is_the_pinned_value`), so a change to the canonical form
+    on one side alone goes red there and here.
+    """
+    known_answer = {
+        "kty": "EC",
+        "crv": "P-256",
+        "x": "s-6OL1BQ2xSxHJMMMFts4aLUWgtZnZLYj3yBKfDBfCQ8",
+        "y": "vqVMVnhCjCiWnImEn6JKrddnvzTDwNKMKEUhkTGxIUg",
+        "kid": "known-answer-key",
+        "alg": "ES256",
+        "use": "sig",
+    }
+
+    assert canonical_jwk_digest(known_answer) == "73c28f01c1c2dd06c66ff641e9df69a7cb8fabe59257b2fb10abdfe4d2cdb4e8"
+
+
+def test_a_url_whose_scheme_is_neither_http_nor_https_is_refused():
+    """The voice service refuses the same shapes the API refuses at startup."""
+    with pytest.raises(ValueError, match="absolute URL"):
+        _a_config(auth_jwks_url="ftp://auth:3001/jwks")
+
+
+def test_a_url_without_a_host_is_refused():
+    with pytest.raises(ValueError, match="absolute URL"):
+        _a_config(auth_jwks_url="https:///jwks")

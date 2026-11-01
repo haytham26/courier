@@ -34,7 +34,12 @@ uv run --directory services/courier-voice pytest -q
 
 The service needs `AUTH_JWKS_URL` and `AUTH_JWT_ISSUER` (the same tokens the
 Courier API accepts) and, for the server brain, `OMNIROUTE_BASE_URL` and
-`OMNIROUTE_API_KEY`. Without a gateway the service still runs: the on-device
+`OMNIROUTE_API_KEY`. The tokens are verified under the API's own rules
+(`AUTH_JWKS_INTERNAL_HOSTS` names the hosts a plaintext JWKS hop may use,
+loopback exempt; `AUTH_JWKS_KEY_FINGERPRINTS` pins the keys that document may
+serve; `AUTH_JWT_LEEWAY_SECONDS` is the clock skew between hosts, default
+30 s), so the two surfaces cannot disagree about a valid token. Without a
+gateway the service still runs: the on-device
 engine answers every command.
 
 ## The rules it keeps

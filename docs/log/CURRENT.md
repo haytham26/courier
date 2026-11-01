@@ -1,40 +1,170 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `cfa04cb` (the state at this handoff). Lead session 10, 2026-11-01.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `0b083b9` (PR #170's handoff). Lead session 13, 2026-11-02.**
+
+## Lead session 13, started (2026-11-02): D62 recorded — the trial build IS the product
+
+Verified on origin (every branch, `scripts/ci`-style register scan): highest BUG = 162
+(main, c1-voice-mediums, fix/c1-lows-batch), highest D = 61 (main, c1-voice-mediums) —
+so the new decision is **D62** and the first new BUG row is **164** (163 stays reserved
+for the backend's BUG-113 renumber). D62 supersedes D52–D59: every TRIAL_SCOPE deferral
+is in the trial, scheduled queue steps 4.1 (nav hand-off deep links), 4.2 (reopt /
+time-window / priority app surfaces), 4.3 (import, reasons, stop types, breaks, finish).
+DECISIONS + TRIAL_SCOPE + PARITY update in one PR (`docs/d62-trial-is-the-product`).
+Open PRs verified: #135 (feat/a1-slice-3-run-store @ 4241000, both checks on the head
+red: CI lint `require-await` at sessionRestoreBounded.test.tsx:81 and the a1 E2E job —
+the device dump shows `not-found-screen`, root cause: the root Stack mounts only after
+the 8 s restore bound, so the router resolves the initial route against the empty stack;
+planned fix: `initialRouteName` on the root Stack), #166 (fix/c1-lows-batch @ 4eb353e).
+#164 (c1-voice-mediums) merged as 1c12d7b during session 13.
+
+**Step 0 done (PR on `fix/register-step0-reopen-guard`):** the six stale rows
+(BUG-080/#146, BUG-085/#147, BUG-100/101/162/#155, BUG-103/#161) are `fixed` with their
+PR links — verified merged on origin and the fixes read in the tree (stops.tsx:67-68,
+offlinePack.ts:518, ci.yml:133-134, linz-changeset.yml step env, check-licenses.mjs);
+BUG-104 checked against #155: its row already carries #155's correction and stays open
+for the vitest `all:` half. BUGS footer now 160 rows: open 33, fixed 88. The reopen
+guard is in: `check-parity.mjs --base <ref>` + `checkReopened`, five red-first tests
+(red output: `SyntaxError: ... does not provide an export named 'checkReopened'`,
+green: 29 pass), wired into quality-gates.yml's floor job. Merged as PR #172 (`943cd3f`).
+
+**Step 1 in flight on `feat/a1-slice-3-run-store` (session 13):** both red checks on
+4241000 rooted and fixed on the branch — the CI lint (`require-await` at
+sessionRestoreBounded.test.tsx:81, now an explicit `await Promise.resolve()`) and the
+a1 job's `not-found-screen` (root Stack mounts only after the 8 s restore bound, so the
+router resolved the launch URL against the empty stack; fix: `initialRouteName={
+isAuthenticated ? '(tabs)' : 'welcome'}` on the root Stack, red-first in
+routes.test.tsx: `Expected: "welcome", Received: undefined` → green). BUG-081 proven
+fixed by slice 3 (new test in today.test.tsx: red against origin/main's screen, green
+here) and its row is `fixed`. main merged in (BUGS.md resolved from main's copy + the
+branch's own BUG-081/BUG-161 rows re-applied). Merge #135 only when CI + a1 + both E2E
+legs are green on the final head with no re-run (§17.4); then confirm on main that
+mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
+branch: both read `useRun()`).
 
 
-## Lead session 10 (2026-11-01): the a1 job's first run, and C1's medium rows
+## Lead session 12, the closing state (2026-11-02): the a1 job's blank first screen is rooted and fixed
 
-**What session 10 did, in order:**
+**What the device's own dump proved (run 41293886729, the evidence artifact):** no crash
+(`logcat-crash.txt` empty), the process alive, and the a11y tree showing
+`not-found-screen` — "This link is not on today's route". The flow launched the app and
+waited 60 s for `welcome-screen`. **The root cause:** the root layout answers
+`if (isLoading) return null` while the auth session is restored, so a server that never
+answers keeps the root stack unmounted and the app without a screen for the whole launch.
 
-1. **The a1 job's first run** (run [41176664214](https://github.com/haytham26/courier/actions/runs/41176664214), head `7df246d`), read per PLAYBOOK §2 and rooted at §12. It stopped **before any flow ran**, at its own stack step, and the failure was **the app's and the stack's, never the flow's**. Two root causes, both proven locally from a fresh database before the push:
-   - **The API container exited 1** with `RuntimeError: Missing required env: AUTH_JWKS_URL` (`services/api/app/auth/jwks.py` raises at import when the resource server has no JWKS or no issuer). `infra/compose.ci.yml` gave it neither. Now: `AUTH_JWKS_URL: http://auth:3001/api/auth/jwks` (the auth service's **compose-network** address — `10.0.2.2` is the *emulator's* address and is not routable from a peer container), `AUTH_JWT_AUDIENCE: courier-api`, `AUTH_JWT_ISSUER: http://10.0.2.x` (one value everywhere, which is the audit's BUG-122 satisfied by construction).
-   - **The auth container followed it out** with Better Auth's `SCHEMA_MISMATCH`: `Missing tables user, session, account, verification, organization, team, teamMember, member, invitation, twoFactor, jwks`. Its own tables are a second migration the contract's `schema.sql` does not carry (`services/auth/src/migrate.config.ts`). The job now runs that migration between its two moves, **exactly as `infra/deploy.sh` runs it on the deploy path**, pinned to `auth@1.7.10` (the CLI of the `better-auth` version this repo depends on): postgres+valkey -> `docker compose run --rm --no-deps auth npx --yes auth@1.7.10 migrate --yes --config src/migrate.config.ts` -> `up -d --wait` for the API and auth.
-   - **The a1 job's second run** got further (the stack came up healthy, the failure moved to the flow) but its **sibling legs** api-34 and api-35 went red with a cascade: `.maestro/run-all.sh` runs `for flow in .maestro/*.yaml`, so slice 4's three flows **joined the E2E (mock) legs' suite**, failed against a server that is not there, and took four other flows of those legs down with them. The three flows moved to **`.maestro/a1/`** (`run-a1.sh` names them `online`, `offline`, `sync`), so one folder level per stack keeps them apart. The same run named the second half: the evidence upload failed on `The path for one of the files in artifact is not valid: .../A1 offline: the delivery is recorded with no network/commands.json. Contains the following character: Colon :` — the failure dump is named after the flow's own `name:`, so **a flow could be called anything and that would decide whether the run's evidence existed**. The dump's directory name is sanitised (`tr -c 'A-Za-z0-9._-' '-'`).
-   - **And the app sent the wrong credential.** `sessionToken()` answered Better Auth's *session* token, which the API has no way to verify. Proven against the real stack in compose: `POST /demo/runs` with the session token -> **401 `Invalid or expired token`**; with the token the auth service mints at `/token` -> **200 the seeded run, five stops**. `sessionToken()` mints at `/token` now, and answers `null` when there is no session, no radio, or no token in the answer. Red first, and the red was the exact defect (5 red, 1 green).
+**Two fixes were tried and reverted, and the reason matters:**
 
-2. **C1's medium rows, each at its root with a red-first test and its row closed with its PR:**
+1. Rendering the signed-out stack during the restore (483a5ef) — reddened BOTH mock legs
+   at `today-go`: the run state's key flipped and the RunProvider's close-on-unmount
+   (BUG-069) cleared the day's cache the second store was about to read.
+2. Moving the run state inside the signed-in guard (aa2672e) — the router itself: the legs'
+   readiness gate answered "the app died before the first screen with an UNKNOWN crash
+   signature", because `Stack.Screen` must be a direct child of `Stack.Protected`.
 
-| PR | Rows | What |
+**What is on `feat/a1-slice-3-run-store` now, running (run 41326369521 on head `4241000`):**
+the bounded session restore — eight seconds, then the phone's own session (offline) or the
+front door (signed-out), with the server's late answer still landing through the same effect.
+Red first: `Expected: "signed-out" Received: "loading"`. The layout is untouched (proven green).
+**Watch 41326369521: the a1 job's next stop past the welcome screen is the flow's real
+sign-up on the auth service.**
+
+**The queues, unchanged:** #135 merges when that run is green (read the §13.4 diff, verify
+`mockStops` is gone from `app/(tabs)/index.tsx`, close BUG-081's row — the marks already go
+through `run.markDelivered` on that branch — merge with the ritual). #166 waits out the §17.3
+shared failure (its api-35 leg's five flows are the BUG-161 double-handle bug, whose fix is on
+#135's branch) and merges after. A NEW bug row starts at BUG-163; a new decision at D62.
+
+## Lead session 12, the handoff state (2026-11-01): six PRs merged, two open, the a1 job's fifth layer running
+
+**Merged this session, each with the ritual (merge commit -> archive tag -> remote branch deleted -> `git ls-remote --heads origin <branch>` printing nothing):**
+
+| PR | What | Merge |
 |---|---|---|
-| **#144** | BUG-090, 091, 092 | the sync layer: the flush's batch read sits inside its try (an unreadable log answers a failed sync with a backoff instead of a rejection); the preference write queue is keyed by the **file's own name** (two ids that sanitise to one name no longer clobber one file) and an unreadable file is **not** written over; the auth provider publishes the signed-in driver, so a second driver on a shared phone no longer inherits the first's theme and map mode |
-| **#145** | BUG-077, 078 | a failed `forgetSession()` now **rethrows** instead of being swallowed, and a signed-out receipt reads as gone for the app's life; the auth client receives the app's `deviceStore` wrapper (not the raw module), so its cookie writes carry `keychainAccessible: AFTER_FIRST_UNLOCK` — readable while the phone is locked, which is where a courier's phone spends the shift |
-| **#146** | BUG-080 | the route screen's `segmentOf` reads the **run**, so a stop delivered on Driving is "Done" on the list, with the minute the run recorded |
+| **#155** | C1's CI mediums: BUG-100, 101, 104 corrected (the coverage gate's docstring-only false positive, red-first) and 162 (the LINZ weekly's job-level secret — the backend owns that workflow, §16, and the weekly run stays correct) | `45132ef` |
+| **#146** | BUG-080: a stop delivered on the drive is Done on the list, with its minute | `5a83427` |
+| **#147** | BUG-085: the pack's checksum is checked against the archive | `d264659` |
+| **#161** | BUG-103: an unanswered licence lookup fails the gate instead of passing as a third state (and the 31-`unknown` inventory now carries the registry's real answers, all MIT) | `7e84b6a` |
+| **#167** | A6: the acceptance script and the stable APK link of every merge to main (`releases/download/latest/courier.apk`) | `5392ea9` |
+| **#168** | C2: TRIAL_SCOPE.md with the verified day-one list, D52-D61 for what is not in the trial and why, and four stale PARITY rows corrected | `918f25d` |
 
-   **BUG-079 rides with A4** (its row says so: "the fix lands with A4's build check"), and **BUG-096 (`infra/deploy.sh`) is the backend's and was not touched**.
+**Open, with their exact state:**
 
-**The traps of session 10 (all live):**
+| PR | What | Its state |
+|---|---|---|
+| **#135** | A1 slice 3 + slice 4's done-when | head `483a5ef`: main in, then five layers of the a1 job's chain fixed at the root, each on its own run's evidence — KVM (`Boot completed in 44109 ms`), the APK path this job builds, Maestro's install (the legs' pinned step), the failure dump the runner keeps, and the app's blank first screen. **The app fix, with the device's own dump behind it:** the root layout answered `if (isLoading) return null` while the session restored, so the router resolved its first route against a stack with no routes and landed on `not-found-screen`; the front door now renders until the answer lands. **Its E2E is running on `483a5ef` (41298078187): the a1 job's next stop is the flow's real sign-up.** When it is green: read the §13.4 diff, verify `mockStops` is gone from `app/(tabs)/index.tsx`, close BUG-081's row (the marks already go through `run.markDelivered` on this branch), merge with the ritual. |
+| **#166** | C1's eight lows (082, 083, 084, 093, 105, 106, 107, 108), each red-first | head `4eb353e`, main in; its one red is the api-35 leg's five flows — the BUG-161 double-handle signature, whose fix (`src/sync/dbConnections.ts`) is on #135's branch. **Per §17.3 it waits for #135's merge, then takes main, re-runs, and merges.** |
 
-- **`gitleaks` scans the PR's commit RANGE, not the head tree.** A finding is attributed to the commit where the line was *added*, so relabelling a literal in a later commit does not clear it — the range still carries the commit that introduced it. A test fixture in the shape of a credential has to go in `.gitleaks.toml`'s allowlist, which is the documented pattern that file already carries for exactly this class.
-- **`10.0.2.2` is the emulator's address of the runner, not a container's.** A peer service on the same compose network is reached by its service name (`http://auth:3001`), and the emulator reaches the published port at `10.0.2.2`. Writing `10.0.2.x` into a container-to-container URL is a boot failure with a stack trace that names the missing variable rather than the wrong address.
-- **One folder per stack.** `.maestro/run-all.sh` globs `.maestro/*.yaml`; a flow that belongs to a different stack must not be able to join that glob by being dropped into the folder.
-- **An artifact path cannot contain a colon**, so a flow's own `name:` must not decide whether the run's evidence is uploaded.
-- **`git checkout -- <file>` restores from the index** (session 9's trap, hit again here): it cost the `.gitleaks.toml` entry mid-session and it was re-applied and re-verified.
-- **A hook's injected source must be a stable function, and a passed method must be bound at the call site.** Passing `run.isDelivered` detached trips `unbound-method`; every call site in the app calls it as `run.isDelivered(...)`, so the fix is to pass the object.
-- **`react-hooks/exhaustive-deps` is NOT configured here** — an `eslint-disable-next-line` for it is an error ("Definition for rule ... was not found"), and a suppression would be a floor-guard finding anyway.
-- **A `this`-less object literal with method shorthand fails lint**; the repo's style is arrow-function properties.
-- **jest's module factories may not reference out-of-scope variables** unless they are prefixed `mock` — a `let writable` in a factory is a hard suite failure (renamed `mockWritable`).
-- **TZ**: a screen that renders `hourMinuteOf` shows the device's local clock, so a literal "09:30" in a test is a timezone assertion wearing a costume. Compute the expected label from the same instant.
+**What session 12 found that the next session needs:**
+
+- **A4's prerequisite:** five screens still import `mockStops` unconditionally on #135's branch — `(tabs)/map.tsx`, `(tabs)/stops.tsx`, `copilot.tsx`, `delivered.tsx`, `lock-screen.tsx`. Only Today and the drive were rewired to the run store. A4's check ("no mock reachable from a release build") is red until they are, so the next slice is the rewiring, one screen at a time against `useRunDay`/`run.day`, then the check + its red-first deliberate-import test.
+- **The a1 job's chain** (one layer per run, each fixed at its root): the stack's env and the auth migration (session 10), the three a1 flows joining the mock legs' glob (session 10), the app sending the wrong credential (session 10), the emulator without KVM, the APK path, Maestro's install, the missing failure dump, and the blank first screen (session 12, evidence: `logcat-crash.txt` empty, the process alive, the a11y tree showing `not-found-screen`).
+- **The numbering:** the highest BUG row across origin/main and every open PR branch is BUG-162; a NEW row starts at BUG-163. DECISIONS is at D61 (D52-D61 were written for C2), so a new decision is D62.
+- **The mutation floor's red on main** (run 41274033506) is the backend's B4 lane — one line per §16.3, not chased here.
+
+
+## Lead session 12 (2026-11-01): the four open PRs triaged, both reds rooted, the numbering verified
+
+**State at the session's start, verified on origin (§13.1):** `origin/main` at `412d978`. The four open PRs from session 11's handoff, re-checked after main moved:
+
+| PR | Its state now | The red, and its root |
+|---|---|---|
+| **#155** | head `4eda7b8`, the coverage ratchet RED on the final head (runs 41252210370, 41252213583) | this PR's own BUG-104 enforcement read a zero-statement file as unmeasured; `services/courier-voice/app/__init__.py` is a docstring-only module, measured in full by construction. Rule removed with its reason recorded, red-first regression test added, BUG-104's row corrected (the partial closure is invisible from a vitest summary: `all:` is off). |
+| **#135** | head `d6f7172`, the a1 job RED at the emulator boot (run 41236076988) | the a1 job has no `Enable KVM` step, so `-accel off`; software emulation cannot boot inside the runner's 10-minute wait (the two sibling legs in the same run booted in 35 s with KVM). The flow never ran, hence `delivery_events: 0`. Fix: the legs' KVM step joins the a1 job. |
+| **#146**, **#147** | green on their final heads (`e2e9a4e`, `1a44d7c`), behind main 26/22 | none; they take main and merge. |
+
+**The numbering, verified:** main ends at BUG-160 with one duplicate (BUG-113 x2, the backend owns that fix); the highest across `origin/main` AND every open PR branch is **BUG-162** (#155's), so the next free number is **BUG-163**.
+
+**The traps found this session (all live):**
+
+- **The a1 job boots its emulator without KVM** because the `Enable KVM for the emulator` step (udev rule + trigger) exists only in the e2e legs of `android-e2e.yml`. With `-accel off` the QEMU process starts, prints its INFO lines, and never finishes booting — the runner waits 10 minutes, `adb: device 'emulator-5554' not found` on every poll, then `Timeout waiting for emulator to boot`. The job's own assert then (correctly) fails on 0 rows. A job that runs the emulator must carry the legs' KVM step, or it can never go green.
+- **A file with zero statements is measured in full.** The BUG-104 enforcement's tell-tale (a named file with no statements) is the docstring-only module; it is not evidence of a half-measured module. The only honest JS-summary limit: vitest without `all:` never names a file its tests did not import, so the gate cannot see a partial closure at all — the fix is the missing tests, not a rule that fails on empty files.
+
+**What is left, in order:** #155's green run on its new head (the coverage fix pushed, main merged in), #135's KVM fix and its a1 green run (the done-when of A1 slice 4), then #146/#147 take main and merge with the ritual; then the C1 mediums (BUG-079 with A4's build check, BUG-081 — check it against #135's branch first, BUG-103), the lows as one batch, and the audit's order to the §6 Definition of Done.
+
+**Where it stands as this commit is pushed (session 12 continues):** #155 MERGED (`45132ef`, archive tag pushed, remote branch deleted — the ls-remote proof is on file). #135's KVM fix is pushed (`46341bd`), its E2E is running; **do not push to that branch while the run is in flight**. #146 (`1f053eb`) and #147 (`3e3c397`) have taken main and are re-running. **BUG-103 is fixed on `fix/c1-bug-103-licenses-gate`** (an unanswered `pnpm view` fails the gate instead of passing as a third state, red-first, and the 31-`unknown` inventory now carries the registry's real answers — all MIT), and the branch's E2E/gate run is next. The numbering still stands: the highest is **BUG-162**, so a NEW row starts at **BUG-163**.
+
+
+## Lead session 11 (2026-11-01): the CI mediums, the gate that found a second one, and the app-side root cause of five red flows
+
+**Merged this session (each: merge commit -> archive tag -> remote branch deleted, `git ls-remote --heads origin <branch>` printing nothing):**
+
+| PR | What | Merge |
+|---|---|---|
+| **#144** | C1 BUG-090, 091, 092 — the sync layer's three mediums | `b8693c9` |
+| **#145** | C1 BUG-077, 078 — the session, and the auth client's storage | `10f9f76` |
+
+**Open, with their exact state:**
+
+| PR | What | Its state |
+|---|---|---|
+| **#135** | A1 slice 3 (finished) and slice 4 (the done-when) | head `d6f7172`. The a1 job's own flow has still not been witnessed green on the final head — three runs so far stopped at the stack (twice, both now fixed and both proven locally with all four services healthy from a fresh database), and at the emulator boot (infrastructure, one re-run recorded on the PR per 17.4). **Do not push to this branch while a run is in flight**: each push cancels the legs. |
+| **#146** | C1 BUG-080 — the route screen's segments read the run | head `e2e9a4e` (main merged in, 13.3's no-deletion check passed on the merge commit). Both Maestro legs green. Awaiting the merge ritual. |
+| **#147** | C1 BUG-085 — the pack's checksum is checked against the archive | head `1a44d7c` (main merged in). Both Maestro legs green. Awaiting the merge ritual. |
+| **#155** | C1 BUG-100, 101, 104, 162 — the CI mediums | head `de52907`. CodeQL was starting. CI-only, so no Android E2E. |
+
+**What session 11 did, in order:**
+
+1. **The a1 job's runs, rooted at 12.** The first stopped before any flow ran at its own stack: the API's missing `AUTH_JWKS_URL`/issuer, then the auth service's own missing tables — both fixed, both proven locally. Then its **sibling legs** went red because slice 4's three flows had joined `.maestro/*.yaml`'s glob (fixed by moving them to `.maestro/a1/`, one folder per stack), and the evidence upload failed on a flow name carrying a colon (fixed with parameter expansion, because `ls` prints the directory with a trailing slash so `basename`/`dirname` read the parent's name — `maestro-failure-tests-`). And **the app sent the wrong credential**: `sessionToken()` answered Better Auth's session token, which the API has no way to verify — proven 401 against the real stack, and 200 for the token the auth service mints at `/token`.
+2. **BUG-161, filed by the device and fixed at its root.** The run of `e59aaaf` was red on **both** legs at five flows. The device logcat named it: `[op-sqlite] statement execution error: database is locked`, and the failure dump's own a11y tree showed an empty day (`today-go` and `today-mark-delivered` nowhere in it, "Every stop is delivered."). The cause was in the app's own construction site: the event log and the run cache each opened `courier.db` with their own `open({name})` — BUG-089's lesson applied per-store, not to the handle. Two handles on one SQLCipher file, a write lock per file, and the cache read that holds the day never completed. Fixed with one shared handle per name (`src/sync/dbConnections.ts`), red-first (4 of 6 cases red against the unshared form), and Today pinned to answer the E2E build's day through the store the root layout hands it.
+3. **C1's CI mediums, and the gate that found a second one while fixing the first.** BUG-100 (the App Store Connect key in a job-level `env:`), BUG-101 (the restore drill's DROP/CREATE pair with no `ON_ERROR_STOP`), BUG-104 (a half-measured module passing as measured) — and **BUG-162**, filed new because the gate added for BUG-100 caught `linz-changeset.yml:49` carrying `LINZ_LDS_API_KEY` at a job level, in a job that runs `actions/checkout` before it needs the credential. That is the proof it is a gate and not a note. **BUG-102 (`map-pack.yml`'s `EXTRACT_URL`) is the backend's and is left open with a 16.3 line**, as is BUG-096 (`infra/deploy.sh`).
+
+*(Session 10's handoff, written on the unmerged `#135` branch, is on that branch: it records the same a1 runs and the same six mediums in more detail, plus the traps as they cost time.)*
+
+**The traps of session 11 (all live):**
+
+- **`gitleaks` scans the PR's commit RANGE, not the head tree.** A finding is attributed to the commit where the line was *added*, so relabelling a literal in a later commit does not clear it. A test fixture in the shape of a credential goes in `.gitleaks.toml`'s allowlist, the documented pattern that file carries for exactly this class.
+- **One folder per stack.** `.maestro/run-all.sh` globs `.maestro/*.yaml`; a flow for a different stack must not be able to join that glob by being dropped in the folder.
+- **`ls -1dt .../tests/*/` prints the directory WITH a trailing slash**, so `basename`/`dirname` read the parent's name, not the dump's own — which is what left the sanitised name empty and put the dump in a directory carrying the colon that made the artifact upload fail.
+- **A merge's BUGS.md conflict must be resolved from MAIN's copy, never "ours wins".** The naive resolution reopened six rows main had fixed (BUG-077, 078, 090, 091, 092, 115) — the clobber that took BUG-074 twice. Main's text is the answer for every row main carries; only a row main does NOT carry is restored from the branch. Verify it afterwards, with a script that compares the three sides.
+- **`git add` stages the merge, and 13.3's no-deletion check must run on the STAGED tree, not HEAD** — the first run of it reported three deletions that were only files HEAD lacked and the merge brought in.
+- **A whole-file rewrite of a register destroys the record**: a `write` over CURRENT.md replaced 370 lines with 23, and only the byte-for-byte restore put them back. Insert, never replace.
+- **A PowerShell `$env:VAR` does not always survive into `gh`** in the same command chain the way it does for `git`; load it in the same command, and never print the token.
+- **The `Read` tool can return the same head of a file repeatedly** when a `grep` would have answered; `grep` with line numbers, or reading with an offset, is faster than repeated reads.
+- **An `eslint-disable-next-line` for a rule that is not configured is an error**, not a no-op — and a suppression would be a floor-guard finding anyway.
+
+**What is left, in order:** A1 slice 4's green run on the final head of #135 (watch the run, do not push while it is in flight); then A4 (the build check that fails a release build on a reachable mock — **BUG-079's row says its fix lands with that build check**, so it closes in that PR), A2, C2, A6, MASTER 22's app side, the remaining mediums (BUG-081 — but slice 3 already rewired Today to the run store on #135, so check the row against that branch before writing a red test), the lows as one batch, BUG-102 and BUG-096 left to the backend, and the rest of the audit and MASTER to the 6 Definition of Done.
+
+
 
 
 ## Lead session 9 (2026-10-31): step 0's register, #52's three device legs, and A1 slice 3's screens
@@ -62,20 +192,12 @@
 
 | PR | What | Its state |
 |---|---|---|
-| **#135** | A1 slice 3 (finished) and slice 4 (the done-when) | head `e1caaf3`. Slice 3 is complete. Slice 4 is **validated twice and still not green**: the first run stopped before any flow (the stack: the API's missing `AUTH_JWKS_URL`/issuer, then the auth service's own missing tables — both fixed, session 10's first item); the second got the stack healthy and the failure moved to the flow, and its **sibling legs** api-34 and api-35 went red because the three a1 flows had joined `.maestro/*.yaml` (fixed by moving them to `.maestro/a1/`); and the third push fixed the secrets gate on the fixtures. **The a1 job's own flow has not yet been witnessed green: the emulator boot timed out on run 41187692977 (`could not connect to TCP port 5554`, infrastructure before any flow ran, one re-run allowed), and the last run's legs were cancelled by the next push. The run is the evidence: a clean run on the final head, both E2E legs AND the a1 job green, no re-run (§17.4).** |
-| **#144** | C1 BUG-090, 091, 092 (the sync layer) | head `972c71a`, its two E2E legs green on api-34 and api-35, the rest green. Awaiting the merge ritual. |
-| **#145** | C1 BUG-077, 078 (the session and the auth client's storage) | head `d3dc9b6`, its checks running. |
-| **#146** | C1 BUG-080 (the route screen's segments) | head `6a3bfb9`, its checks running. |
+| **#135** | A1 slice 3: the app reads the real run, and the write path leaves the phone | head `49258a2`: the seams (from session 8b) plus this session's work - Today and the drive read the day through the run store (`run.day`), the `mockStops` import is gone from both, the outbox is constructed beside the store (one log), the store's flush is the outbox's `syncAll` under the run's own shift, ADR-014's answers are the courier's (`src/sync/syncAnswers`, said on Today), and the E2E build answers with the mock run's own day (`src/run/dayForThisBuild`) so the flows still walk a day. mobile 576/576, typecheck and lint clean; its CI is running |
 
 **What is left of A1, in order:**
 
-1. **A1 slice 4's green run on the final head.** The stack is proven (all four services healthy from a fresh database, and the seeded day read back through the compose network). What is NOT yet witnessed is the flow itself: the last run that reached the flow step died at the emulator boot, and the run after it was cancelled by this branch's next push. **Do not push to this branch again until the a1 job is green, so the legs are not cancelled mid-flight again** — watch `gh run list --branch feat/a1-slice-3-run-store --event pull_request`, and if the emulator boot fails before any flow ran, one re-run is allowed (§17.4) with the run link recorded here.
-   - **Session 12 (2026-11-01) rooted that emulator death at §12 and fixed it here:** the a1 job never had the `Enable KVM for the emulator` step the e2e legs carry, so the runner disabled hardware acceleration (`-accel off`), QEMU printed its INFO lines and never finished booting inside the action's 10-minute wait (`adb: device 'emulator-5554' not found` on every poll, then `Timeout waiting for emulator to boot.`, run 41236076988 on head `d6f7172`) — no flow ran, so `assert-a1-rows.sh` correctly answered `delivery_events: 0`. The legs booted in 35 s in the same run with KVM on. The step now runs in the a1 job too.
-   - **The KVM fix proved itself on run 41261701192 (head `46341bd`):** `disable Linux hardware acceleration: false`, `Boot completed in 45604 ms`, `Emulator booted.` — and the next layer of the same job's chain surfaced immediately: the flow runner installed `app/build/outputs/apk/release/app-release.apk`, a path that exists nowhere (this job builds its own APK under `apps/mobile/android/`, unlike the legs, which install the build job's downloaded artifact at `apk/`), so `adb install` answered `failed to stat ... No such file or directory` and the job died before any flow ran. Fixed at the root in `run-a1.sh` (the job's own build route, plus a loud existence check), and the job has still never been witnessed green: the layers surface one per run because the job itself is new. The prevention gate (an emulator job must enable KVM) rides the follow-up on `check-workflows.mjs`, which was #155's file and is on main now.
-   - **The third layer, on run 41276278118 (head `8f64c22`):** the APK installed (`Performing Streamed Install` → `Success`) and the flow runner still died in two seconds with `maestro: command not found` (exit 127) — the a1 job is the only emulator job in the workflow with no `Install Maestro` step, so the pinned CLI the legs use was never on its PATH. Fixed at the root: the legs' own step, verbatim (the pinned release and its recorded checksum, BUG-065's rule), now runs in the a1 job before the emulator step. The chain so far, one layer per run, all fixed at the root: the stack's env (session 10), the flows joining the wrong glob (session 10), the app's wrong credential (session 10), the emulator without KVM (session 12), the APK path, and now Maestro's install.
-2. Then **A4** (the build check that fails a release build on a reachable mock - note `src/run/dayForThisBuild.ts` is the one import of `mockStops` a release build can reach, and it is gated by the build flag the same way `readerForThisBuild` is). **BUG-079's row says its fix lands with A4's build check**, so it closes in that same PR.
-3. Then **the remaining C1 mediums** - BUG-081 (Today's own `doneIds` state; note slice 3 already rewired Today to the run store on this branch, so check the row against `origin/feat/a1-slice-3-run-store` before writing a red test: the finding may already be closed there and only need its row), BUG-085 (the offline pack's manifest `sha256` is parsed and never verified, in `src/maps/offlinePack.ts`), and BUG-100..104 (CI: `store-ready.yml`'s job-level secret, `ci.yml`'s restore-drill `DROP`/`CREATE` pair with no `ON_ERROR_STOP`, `map-pack.yml`'s `EXTRACT_URL` with no scheme/host allow-list, `check-licenses.mjs`'s `unknown` answer on a failed `pnpm view`, and `check-coverage.mjs`'s substring-derived coverage group - these five are the CI/infra rows and belong with the backend's §16 half, so **write one line per row in the PR saying which squad owns it**).
-4. Then **A2** (on-device voice), **C2** (TRIAL_SCOPE from the Spoke teardown), **A6** (the acceptance script + a stable APK link), MASTER §22's app side, the C1 lows (BUG-082, 083, 084, 093, 105, 106, 107, 108 as one batch), and the rest of the audit and MASTER to the §6 Definition of Done.
+1. **A1 slice 4** - the no-mock E2E job, which is A1's done-when: `android-e2e.yml` (or a sibling job) starts the API and Postgres in compose with `DEMO_SEED_ENABLED=true`, and a flow signs in, loads the seeded day, delivers 3, goes offline, delivers 1, reconnects and syncs, with the rows asserted in Postgres. The app side is ready for it: the store seeds, reads and flushes through the real client.
+2. Then **A4** (the build check that fails a release build on a reachable mock - note `src/run/dayForThisBuild.ts` is the one import of `mockStops` a release build can reach, and it is gated by the build flag the same way `readerForThisBuild` is), **A2** (on-device voice), **C2** (TRIAL_SCOPE from the Spoke teardown), **A6** (the acceptance script + a stable APK link), MASTER §22's app side, then the C1 mediums (BUG-077, 078, 079, 080, 081, 085, 090, 091, 092 with the code they touch), the lows (BUG-082, 083, 084, 093 as one batch), and the rest of the audit and MASTER to the §6 Definition of Done.
 
 **The traps of session 9 (all live):**
 
@@ -122,7 +244,6 @@ The critical and high findings of squads 1, 3 (app side) and 6, each with a red-
 
 Main ends at **BUG-114** (BUG-113 is PR #52's, BUG-114 is #49's; DECISIONS ends at **D51**). Before any new row, take the highest across `origin/main` AND every open PR branch, then add one. Right now the highest across all three is **BUG-114**, so the next free number is **BUG-115**.
 
-*(Corrected by session 10 on 2026-11-01: the backend squad filed BUG-115..BUG-159 and main is now at `cfa04cb` (PR #139's merge). Session 10 took highest-across-all-open-PRs before every new row, as §13 requires — **no new row was filed this session** because all six mediums were already in the register. The next session must re-read `origin/main`'s BUGS.md AND every open PR's copy before filing anything: the highest on main is now **BUG-159**.)*
 ## The traps of session 8 (all live, all this week)
 
 - **The emulator-runner does NOT run a multi-line `script:` as one program** (BUG-114). Its `src/script-parser.ts` splits the input per line, drops the comments and the blank lines, and `src/main.ts` runs each remaining line as its own `sh -c". So a standalone `set -euo pipefail` runs under dash, which has no `pipefail`: `/usr/bin/sh: 1: set: Illegal option -o pipefail`. A multi-line body also silently loses every variable and every `export` between lines. **Always one line calling a bash script**, as `android-e2e.yml` does.

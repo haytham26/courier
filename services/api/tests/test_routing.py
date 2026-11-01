@@ -21,10 +21,12 @@ from app.auth.jwks import get_verifier
 from app.main import app
 from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from app.routing import (
+    MAX_ROUTE_STOPS,
     BreakConstraint,
     HeuristicEngine,
     RouteRequest,
     RouteStop,
+    RouteTooLargeError,
     RunConstraints,
     TimeWindow,
     _schedule,
@@ -726,3 +728,31 @@ class TestTheRouteEndpoint:
         assert response.status_code == 200
         arrival = datetime.fromisoformat(response.json()["stops"][0]["arrival_at"])
         assert arrival >= later
+
+
+# --- BUG-117: the day has a size, and the solver is not where it learns it ---
+
+
+class TestTheRouteCap:
+    """An uncapped day spends gigabytes and seconds of fill before the solver's
+    first iteration, so a cheap request becomes a multi-minute CPU hog
+    (BUG-117)."""
+
+    def test_a_day_over_the_cap_is_refused_by_name(self) -> None:
+        request = make_request(
+            [make_stop(lat=DEPOT_LAT, lon=DEPOT_LON) for _ in range(MAX_ROUTE_STOPS + 1)]
+        )
+
+        with pytest.raises(RouteTooLargeError) as refused:
+            build_plan(request)
+
+        assert str(MAX_ROUTE_STOPS + 1) in str(refused.value)
+
+    def test_a_day_at_the_cap_is_planned(self) -> None:
+        request = make_request(
+            [make_stop(lat=DEPOT_LAT, lon=DEPOT_LON) for _ in range(MAX_ROUTE_STOPS)]
+        )
+
+        plan = build_plan(request)
+
+        assert len(plan.stops) == MAX_ROUTE_STOPS
