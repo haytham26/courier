@@ -57,6 +57,11 @@ source_paths = [
     "app/offline_brain.py",
 ]
 
+# The eval harness's test reads `packages/eval/voice/manifest/shift_sims.json`
+# through `parents[3]` (the repository root), which the copied mutant tree
+# resolves differently. `also_copy` is mutmut's own mechanism.
+also_copy = ["packages"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
