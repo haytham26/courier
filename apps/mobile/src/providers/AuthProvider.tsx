@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { authClient } from '@/lib/auth-client';
+import { errorMessage } from '@/lib/errors';
 import {
   forgetSession,
   readOfflineSession,
@@ -13,6 +14,7 @@ import {
   fetchSignInMethods,
   type SignInMethods,
 } from '@/lib/sign-in-methods';
+import { setCurrentDriverId } from '@/sync/driverSession';
 
 export type { SignInMethods };
 
@@ -237,6 +239,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // credential the server has already refused.
         void Promise.resolve()
           .then(() => forgetSession())
+          .catch((error: unknown) => {
+            // A refused session is dropped either way; a receipt the phone will
+            // not give up is reported (BUG-077).
+            console.warn(
+              `auth: the refused session could not be forgotten on the phone: ${errorMessage(error)}`,
+            );
+          })
           .finally(() => {
             setUser(null);
             setStatus('signed-out');
@@ -261,6 +270,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setStatus('signed-out');
   }, [data, error, isPending]);
+
+  // BUG-092 (the C1 audit squad 1's finding): the signed-in driver is
+  // published here, where the session is settled.
+  //
+  // `setCurrentDriverId` had no caller anywhere in the repo, so every
+  // preference write landed in the one `local-driver` bucket and a second
+  // driver on a shared van phone inherited the first driver's theme, map mode
+  // and toggles. The provider is the only place that knows who is signed in:
+  // the session hook above, the sign-in and sign-up reads below, the offline
+  // fallback and the sign-out all settle `user` here, so the published id is
+  // derived from it rather than from any one of those paths - and a sign-out
+  // publishes null, so the next driver starts from their own settings.
+  //
+  // The screens read the id through `useDriverId()` (the theme, the map
+  // mode), so this is the last link in the chain that was missing.
+  useEffect(() => {
+    setCurrentDriverId(user?.id ?? null);
+  }, [user]);
 
   const loadTeams = useCallback(async (): Promise<Team[]> => {
     try {
@@ -376,7 +403,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // The remembered session goes with the sign-out: the phone must not offer
     // a session it has just been told to forget.
     setStoredSession(null);
-    await forgetSession();
+    try {
+      await forgetSession();
+    } catch (error) {
+      // BUG-077: the device store refused to give the receipt up. The sign-out
+      // still stands - the courier is signed out here and now, and the app
+      // session reads the receipt as gone - but the courier is told the phone
+      // still holds a copy, because that is the truth and it is their phone.
+      console.warn(`auth: the session was signed out, but the phone still holds its receipt - ${errorMessage(error)}`);
+    }
   }, []);
 
   const refreshSession = useCallback(async () => {

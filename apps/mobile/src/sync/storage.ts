@@ -13,6 +13,20 @@
  *
  * Everything here is pure - the file system lives in `preferenceFiles.ts` -
  * so the behaviour can be tested without a device and without a network.
+ *
+ * Two filed defects live where this module keeps its keys (BUG-091, the C1
+ * audit squad 1's storage finding):
+ *
+ *   - the write queue was keyed by the driver id while the FILE is keyed by
+ *     the sanitised name, so two ids that sanitise to one name were queued
+ *     apart and wrote to one file, losing one of the two values;
+ *   - a file that could not be read answered as an empty one, so the next
+ *     write overwrote the stored value with the single key it happened to
+ *     hold.
+ *
+ * The first is fixed by keying the queue by the file's own name; the second
+ * by a read that says "unreadable" instead of "nothing is stored", and a
+ * write that refuses to overwrite a value it could not read.
  */
 
 /** The preferences of one driver, as they are stored. */
@@ -47,13 +61,62 @@ export function driverPreferenceFileName(driverId: string): string {
 }
 
 /**
+ * What a read of one driver's preferences came back with.
+ *
+ * The two states are not the same thing and must not be collapsed: a driver
+ * who has set nothing yet has the empty set, while a file the device refused
+ * to read holds a value nobody can see. The write path reads this to decide
+ * whether it may write at all.
+ */
+export type PreferencesRead =
+  /** The file was read, or there is none: the preferences it holds. */
+  | { status: 'read'; preferences: DriverPreferences }
+  /** The file is there but could not be read, so its value is not known. */
+  | { status: 'unreadable'; message: string };
+
+/**
+ * Reads the preferences of a driver, and says how the read went.
+ *
+ * `readDriverPreferences` is the shape the screens want; this is the shape
+ * the write path needs, because a write that cannot read the file must not
+ * overwrite it.
+ */
+export async function readDriverPreferencesRead(
+  store: PreferenceStore,
+  driverId: string,
+): Promise<PreferencesRead> {
+  let raw: string | null;
+  try {
+    raw = await store.read(driverId);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return {
+      status: 'unreadable',
+      message: `the preferences of the driver could not be read: ${detail}`,
+    };
+  }
+  return { status: 'read', preferences: parseDriverPreferences(raw) };
+}
+
+/**
  * Reads the preferences of a driver.
  *
  * A file that is not there is not an error: the driver has simply not set
  * anything yet, so the empty set comes back. A file that cannot be read is
- * also not an error: the empty set comes back and the caller carries on with
- * the defaults. A broken preferences file must never take the screen down.
+ * also not an error here: the empty set comes back and the caller carries on
+ * with the defaults, because a broken preferences file must never take the
+ * screen down. It is the WRITE path that must not be told "empty" - a write
+ * would then destroy the stored value - and that is what
+ * `readDriverPreferencesRead` is for.
  */
+export async function readDriverPreferences(
+  store: PreferenceStore,
+  driverId: string,
+): Promise<DriverPreferences> {
+  const read = await readDriverPreferencesRead(store, driverId);
+  return read.status === 'read' ? read.preferences : {};
+}
+
 export function parseDriverPreferences(raw: string | null): DriverPreferences {
   if (raw === null || raw.trim().length === 0) {
     return {};
@@ -78,22 +141,19 @@ export function serialiseDriverPreferences(preferences: DriverPreferences): stri
   return JSON.stringify(preferences);
 }
 
-/** The preferences of one driver, read from the store. */
-export async function readDriverPreferences(
-  store: PreferenceStore,
-  driverId: string,
-): Promise<DriverPreferences> {
-  const raw = await store.read(driverId);
-  return parseDriverPreferences(raw);
-}
-
 /**
  * The writes of one driver, one after the other.
  *
  * The map mode, the map settings and the theme are three separate choices
- * and they all live in the same file, so the writes are queued per driver:
+ * and they all live in the same file, so the writes are queued per file:
  * a write reads the file, changes one value and writes it back, and two
  * writes at the same time would lose one of them.
+ *
+ * The key is the FILE's own name (`driverPreferenceFileName`), not the raw
+ * driver id (BUG-091): the file system is addressed by the sanitised name,
+ * so two ids that sanitise to one name are one file and must therefore be
+ * one queue. Keyed by the id they were two queues writing one file, and the
+ * second read-modify-write overwrote the first's key.
  */
 const writeQueues = new Map<string, Promise<void>>();
 
@@ -102,6 +162,11 @@ const writeQueues = new Map<string, Promise<void>>();
  *
  * The other preferences of that driver are kept: the file is read, the one
  * value is replaced and the file is written back.
+ *
+ * A file that cannot be read is NOT written over (BUG-091): the read says
+ * "unreadable" rather than "empty", so the write refuses and the caller sees
+ * the failure, because overwriting a value the app cannot see with the one
+ * key it happens to hold is how a courier's settings get silently lost.
  */
 export async function writeDriverPreference(
   store: PreferenceStore,
@@ -109,11 +174,17 @@ export async function writeDriverPreference(
   key: string,
   value: unknown,
 ): Promise<void> {
-  const previous = writeQueues.get(driverId) ?? Promise.resolve();
+  // One file, one queue: the key is the name the file system uses, so two
+  // ids that sanitise to it cannot race each other.
+  const queueKey = driverPreferenceFileName(driverId);
+  const previous = writeQueues.get(queueKey) ?? Promise.resolve();
 
   const write: Promise<void> = previous.then(async () => {
-    const preferences = await readDriverPreferences(store, driverId);
-    preferences[key] = value;
+    const read = await readDriverPreferencesRead(store, driverId);
+    if (read.status === 'unreadable') {
+      throw new Error(read.message);
+    }
+    const preferences = { ...read.preferences, [key]: value };
     await store.write(driverId, serialiseDriverPreferences(preferences));
   });
 
@@ -122,7 +193,7 @@ export async function writeDriverPreference(
   // the non-strict mode of the app, an `undefined` callback result widens
   // the catch chain off the void promise type.
   writeQueues.set(
-    driverId,
+    queueKey,
     write.catch(() => Promise.resolve()),
   );
 

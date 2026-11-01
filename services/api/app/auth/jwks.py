@@ -11,14 +11,17 @@ secret: a missing `AUTH_JWKS_URL` stops the API from starting.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,7 +35,35 @@ class AuthSettings(BaseSettings):
     auth_jwt_issuer: str = ""
     auth_jwt_algorithms: str = "ES256"
     auth_jwks_cache_seconds: int = 300
+    # BUG-121: how often an unknown kid is allowed to force a lookup. Inside
+    # this window a refused kid is served from memory; after it, one lookup
+    # re-asks, so a rotated-in key is picked up without an unauthenticated
+    # caller being able to make the API fetch once per request.
+    auth_jwks_negative_seconds: int = 30
     auth_jwks_timeout_seconds: float = 5.0
+
+    @field_validator("auth_jwt_issuer")
+    @classmethod
+    def the_issuer_matches_what_the_auth_service_signs(cls, value: str) -> str:
+        """The issuer is an absolute URL and nothing else (BUG-122).
+
+        The auth service signs with its own `config.jwt.issuer`, which is
+        `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL` - a bare origin, no trailing
+        slash, no path. A value this side of the wire that is not exactly that
+        shape can never match the `iss` claim, and every correctly issued
+        token would be refused with a 401 that says nothing about why. Failing
+        fast here names the value instead.
+        """
+        if not value:
+            raise ValueError("AUTH_JWT_ISSUER is required - see .env.example")
+        parts = urlsplit(value)
+        if parts.scheme not in ("http", "https") or not parts.netloc:
+            raise ValueError(f"AUTH_JWT_ISSUER is not an absolute URL: {value!r}")
+        if parts.path.strip("/") or parts.query or parts.fragment:
+            raise ValueError(
+                f"AUTH_JWT_ISSUER is an origin and carries no path or query: {value!r}"
+            )
+        return value.rstrip("/")
 
     @property
     def algorithms(self) -> list[str]:
@@ -69,10 +100,22 @@ class AuthPrincipal:
 class JwksVerifier:
     """Verifies JWTs against a remote JWKS, with a short-lived key cache."""
 
-    def __init__(self, settings: AuthSettings, client: httpx.Client | None = None) -> None:
+    def __init__(
+        self,
+        settings: AuthSettings,
+        client: httpx.Client | None = None,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self._settings = settings
         self._client = client or httpx.Client(timeout=settings.auth_jwks_timeout_seconds)
         self._keys: dict[str, dict[str, Any]] = {}
+        # BUG-121: the clock reading of the last lookup an UNKNOWN kid forced.
+        # A burst of distinct bogus kids is worth one lookup per negative
+        # window, not one per request, and a repeat is served from memory for
+        # the rest of that window. The resource it bounds is the fetch itself,
+        # so the set of refused kids needs no storage of its own.
+        self._last_unknown_refresh = float("-inf")
+        self._clock = clock
         self._fetched_at = 0.0
 
     def _refresh(self) -> None:
@@ -89,12 +132,31 @@ class JwksVerifier:
         }
         if not self._keys:
             raise InvalidTokenError("JWKS document contains no key with a 'kid'")
-        self._fetched_at = time.monotonic()
+        self._fetched_at = self._clock()
 
     def _signing_key(self, kid: str | None) -> Any:
-        stale = (time.monotonic() - self._fetched_at) > self._settings.auth_jwks_cache_seconds
-        if stale or kid not in self._keys:
+        now = self._clock()
+        stale = (now - self._fetched_at) > self._settings.auth_jwks_cache_seconds
+        known = kid is None or kid in self._keys
+        # A lookup an unknown kid forces is rate-limited to one per negative
+        # window (BUG-121): a caller who never presents a real key must not
+        # make the API fetch once per request, and the register's own probe of
+        # that defect counted "6 distinct kids -> 6 fetches" and "4 repeats ->
+        # 11 server hits". A repeat inside the window is served from memory;
+        # a rotated-in key is picked up when the window (or the cache) goes
+        # stale, which the rotation test pins through the injected clock.
+        unknown_allowed = (
+            not stale
+            and kid is not None
+            and not known
+            and (now - self._last_unknown_refresh) > self._settings.auth_jwks_negative_seconds
+        )
+        if stale or unknown_allowed:
             self._refresh()
+            if kid is not None and kid not in self._keys:
+                # Whatever made us look, a lookup that still does not know the
+                # kid opens the window: the next unknown kid waits it out.
+                self._last_unknown_refresh = now
         if kid is None:
             if len(self._keys) != 1:
                 raise InvalidTokenError("token header has no 'kid' and the JWKS has several keys")

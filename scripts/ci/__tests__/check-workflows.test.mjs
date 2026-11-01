@@ -207,3 +207,41 @@ test("the script's exit code is what CI sees", () => {
 test('the bug it exists for is named', () => {
   assert.equal(BUG_ID, 'BUG-067');
 });
+
+// BUG-100: a `secrets.*` reference in a JOB-level `env:` is a secret every step
+// (and every third-party action) can read, so the gate enforces where the
+// credential lives. This is the test that was red before the rule: the shape
+// `store-ready.yml` carried, with no finding written by hand.
+test('a secret at a job level is a violation, at a step level it is not', () => {
+  const atJobLevel = checkWorkflow([
+    'jobs:',
+    '  store-ready:',
+    '    runs-on: ubuntu-latest',
+    '    env:',
+    '      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}',
+    '    steps:',
+    '      - run: echo the check',
+  ]);
+  assert.equal(atJobLevel.ok, false);
+  assert.match(atJobLevel.violations[0].problem, /job-level/);
+
+  const atStepLevel = checkWorkflow([
+    'jobs:',
+    '  store-ready:',
+    '    runs-on: ubuntu-latest',
+    '    steps:',
+    '      - name: the one step that reads it',
+    '        env:',
+    '          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}',
+    '        run: echo the check',
+  ]);
+  assert.equal(atStepLevel.ok, true);
+});
+
+// BUG-162: the rule is what found the second instance, on the repo's own
+// workflows, while it was being added - which is the proof it is a gate and not
+// a note. The repo's workflows are clean now, and this keeps them that way.
+test("the repo's own workflows carry no job-level secret", () => {
+  const result = checkWorkflowDir();
+  assert.equal(result.ok, true, result.violations.map((v) => `${v.file}:${v.line}`).join(', '));
+});

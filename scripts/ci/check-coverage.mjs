@@ -20,6 +20,33 @@ import { readFileSync, existsSync } from 'node:fs';
 // blocks a regression, it does not demand a number the suite has never reached).
 // The V4 §2 targets are 85 % / 90 %; the gap to them is tracked in
 // CONSTRAINTS.md and owned by the address, payments and platform squads.
+//
+// `mustName` says what a module IS: the path the module's coverage summary has
+// to name, or the module is not fully measured. This is BUG-104's fix. The group
+// used to be derived by substring matching over the DISCOVERED files, so the
+// gate could only see the part of a module that happened to be in the summary:
+// a wholly missing module failed (no file to match, so the total was 0), but a
+// PARTLY missing one passed, measured over the part that arrived - which is a
+// gate that measures what it was given instead of checking it was given the
+// whole thing. A module now says which paths its summary must name, and a
+// module whose summary does not name them is incomplete.
+//
+// What the gate CANNOT know from a summary is which of the module's files it
+// was not told about, and BUG-104's attempted enforcement of that learned it
+// the hard way: the rule added here failed the real repo (run 41252213583) on
+// `services/courier-voice/app/__init__.py`, a file the summary names with no
+// statements to measure. That file is a docstring (50 bytes, zero statements):
+// it is measured in full by construction, because there is nothing in it that
+// could be left uncovered. So the rule was reading the one shape that is always
+// complete as the one shape that is never measured - a false positive on every
+// docstring-only module in the tree, and it is removed. The honest statement of
+// the limit is now in run-coverage.mjs: vitest is started without `all:`, so a
+// JavaScript file its tests never import is not named by the summary at all,
+// and the floor over what arrived is what this gate can honestly check. The
+// fix that would close the gap is to make the JS summary name every file, so a
+// partial closure shows up as 0-% rows instead of vanishing - BUG-104's row
+// carries that as its named next step, because it needs the missing tests
+// written, not a gate waved through.
 const THRESHOLDS = [
   { label: 'packages/ and services/ (overall)', floor: 81, groups: ['packages', 'services'] },
   { label: 'the address engine', floor: 81, files: ['app/address_correction.py'] },
@@ -98,6 +125,13 @@ for (const threshold of THRESHOLDS) {
     total += entry.total;
     matched += 1;
   }
+
+  // BUG-104's attempted enforcement lived here and was removed on 2026-11-01
+  // for the reason the header comment records: its only signal (a named file
+  // with no statements) is the docstring-only file, which is complete, not
+  // unmeasured. The declared `files` above keep each module's group a
+  // declaration rather than a discovery, and the wholly-missing case is the
+  // `total === 0` branch below.
 
   if (total === 0) {
     results.push({ label: threshold.label, value: null, floor: threshold.floor, note: 'not built yet' });

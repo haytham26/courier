@@ -60,6 +60,20 @@ jobs:
       # `node --test scripts/*/__tests__/*.test.mjs`.
       - name: Every emulator boot carries the same pins
         run: node scripts/ci/check-e2e-pins.mjs
+      # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
+      # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
+      # nothing compared the two - a deployment where they disagree answers
+      # 401 for every correctly issued token with no diagnosis. This gate
+      # reads the compose files and refuses a tree where the two sides do not
+      # come from one source.
+      - name: The API and the auth service agree on the issuer (BUG-122)
+        run: node scripts/ci/check-auth-issuer.mjs
+      # BUG-096: `apply()` used to write the images it was deploying into
+      # .deploy-state, so a failed smoke test's rollback re-deployed the image
+      # that failed. The suite drives the real script with a stubbed docker, so
+      # it needs no daemon of its own.
+      - name: The deploy's state file records what was running (BUG-096)
+        run: bash scripts/ci/test-deploy.sh
       - name: Check the voice evaluation set
         run: node scripts/eval/check-voice-eval.mjs
       - name: Check the scanner evaluation set
