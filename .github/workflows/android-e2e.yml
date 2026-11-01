@@ -416,6 +416,24 @@ jobs:
           docker compose -f infra/compose.ci.yml up -d --wait
           docker compose -f infra/compose.ci.yml ps
 
+      - name: Enable KVM for the emulator
+        # The step the e2e legs carry, and this job needs it exactly as they do.
+        # Without it the runner has no /dev/kvm, the emulator-runner prints
+        # "Disabling Linux hardware acceleration." and launches QEMU with
+        # `-accel off` (full software emulation), which cannot boot an x86_64
+        # Android image inside the action's 10-minute boot wait: the process
+        # prints its INFO lines and then goes silent, every `adb -s
+        # emulator-5554 shell getprop sys.boot_completed` answers
+        # "device 'emulator-5554' not found", and the job dies with
+        # "Timeout waiting for emulator to boot." before any flow ran - which
+        # is why every a1 run so far ended with delivery_events: 0. With the
+        # rule in place the same emulator boots in ~35 s, as both legs of the
+        # same runs prove.
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Run the no-mock flow on the emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
