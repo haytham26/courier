@@ -45,8 +45,19 @@ const OPTIONAL_VARS = [
   'GLITCHTIP_DSN',
 ];
 
+/**
+ * The repository's own .env.local, wherever the gate is called from.
+ *
+ * BUG-107: the path used to be built from `process.cwd()`, so a caller in a
+ * subdirectory (a pnpm filter, a compose step, a squad's own script) read a
+ * .env.local that was not there and the gate answered with an environment the
+ * repository never declared. This script lives in scripts/ci/, two levels
+ * under the root, so the root is reachable from the script itself.
+ */
+const REPO_ROOT = path.join(__dirname, '..', '..');
+
 function loadEnvFile() {
-  const envPath = path.join(process.cwd(), '.env.local');
+  const envPath = path.join(REPO_ROOT, '.env.local');
   if (fs.existsSync(envPath)) {
     const content = fs.readFileSync(envPath, 'utf-8');
     content.split('\n').forEach(line => {

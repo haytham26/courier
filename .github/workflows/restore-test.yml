@@ -28,7 +28,11 @@ jobs:
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:16-alpine
+        # BUG-106: production's own image (infra/postgres/Dockerfile pins
+        # postgis/postgis:16-3.6), because the contract's schema is PostgreSQL
+        # 16 + PostGIS. A plain postgres service made the drill restore into a
+        # server the application never runs on.
+        image: postgis/postgis:16-3.6
         env:
           POSTGRES_USER: courier
           POSTGRES_PASSWORD: courier

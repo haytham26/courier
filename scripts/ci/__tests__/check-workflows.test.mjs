@@ -245,3 +245,52 @@ test("the repo's own workflows carry no job-level secret", () => {
   const result = checkWorkflowDir();
   assert.equal(result.ok, true, result.violations.map((v) => `${v.file}:${v.line}`).join(', '));
 });
+
+// BUG-108: the parser used to read the indentation itself, so a workflow
+// written in any other valid YAML style was not parsed and was reported clean -
+// a gate that waves through what it cannot see. The structure is read now, and
+// these are the two shapes that fooled the indent reader:
+//   - a wider indent, where the job-level secret sits at twelve columns instead
+//     of the six the old rule recognised;
+//   - a sequence at its parent key's own column, where a step's keys sit where
+//     the old reader expected a job's.
+test('a wider indent carries the same job-level secret (BUG-108)', () => {
+  const result = checkWorkflow([
+    'jobs:',
+    '    store-ready:',
+    '        runs-on: ubuntu-latest',
+    '        env:',
+    '            APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}',
+    '        steps:',
+    '            - run: echo the check',
+  ]);
+  assert.equal(result.ok, false);
+  assert.match(result.violations[0].problem, /job-level/);
+});
+
+test('a sequence at its parent key\'s column is read too (BUG-108)', () => {
+  const clean = checkWorkflow([
+    'jobs:',
+    '  build:',
+    '    runs-on: ubuntu-latest',
+    '    steps:',
+    '    - name: Upload',
+    '      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
+    '    - run: echo ok',
+  ]);
+  assert.equal(clean.ok, true, clean.violations.map((v) => v.problem).join('; '));
+
+  const dirty = checkWorkflow([
+    'jobs:',
+    '  build:',
+    '    runs-on: ubuntu-latest',
+    '    steps:',
+    '    - name: Upload',
+    '      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+    '      with:',
+    '        name: canterbury-pack',
+    '      if-no-files-found: error',
+  ]);
+  assert.equal(dirty.ok, false);
+  assert.match(dirty.violations[0].problem, /not a key a step may carry/);
+});

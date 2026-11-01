@@ -226,7 +226,15 @@ class VoiceService {
   }
 
   startListening(): Promise<void> {
-    if (this.state === 'listening') return Promise.resolve();
+    // BUG-083: the machine is not moved into `listening` while it is speaking.
+    // The long press used to be honoured in every state, so a courier pressing
+    // the earbud during an answer flipped the state to `listening` while the
+    // playback carried on: the machine then claimed to be hearing while it was
+    // still talking, and every later transition ran from a state that was
+    // never true. Barge-in - stop the answer, then listen - is its own
+    // feature, and this guard is not it: while speaking, the press is refused
+    // and the answer finishes.
+    if (this.state === 'listening' || this.state === 'speaking') return Promise.resolve();
 
     this.setState('listening');
 
