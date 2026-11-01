@@ -2,7 +2,15 @@
 // registers have to be able to tell the truth, and a human cannot keep 300 rows
 // honest by eye.
 //
-//   node scripts/ci/check-parity.mjs [parity.md] [bugs.md]
+//   node scripts/ci/check-parity.mjs [parity.md] [bugs.md] [--base <git-ref>]
+//
+// With `--base <git-ref>` the gate also runs the reopen guard: the base
+// register is read with `git show <ref>:docs/status/BUGS.md` (so the job that
+// runs it needs fetch-depth: 0), and a BUGS row that was `fixed` or `closed`
+// at the base but is `open` at the head fails - unless the head row states its
+// reason ("Reopened with ...", the BUG-132/BUG-137 convention). BUG-074 was
+// clobbered back to `open` twice by branches whose BUGS.md was edited against
+// a stale main; this rule makes that a red gate instead of a silent reopen.
 //
 // Why it exists: on 2026-10-25 PARITY.md carried 0 rows marked `Have`, 41 marked
 // `Better` and 290 marked `Planned`, while the screens, the POD storage, the sync
@@ -25,6 +33,9 @@
 //   3. a BUGS row's status is one of the tracker's words (`open`, `doing`,
 //      `testing`, `fixed`, `closed`, `moved to PARITY`). Prose in the status
 //      column is a row nobody closed.
+//   4. with `--base <ref>`, a BUGS row that was `fixed`/`closed` at the base
+//      and is `open` at the head is a reopen: it fails unless the row says
+//      "Reopened with ..." (a stale register write is how BUG-074 reopened).
 // It also fails a table that holds register rows but whose header carries no
 // `Status` column: a row that stops being counted is a register nobody can
 // measure. A table with no register rows (BUGS.md's hypothesis table, its
@@ -36,6 +47,7 @@
 // respects inline code spans is not optional here - BUG-064's fix column holds
 // `if: github.event_name != 'push' || github.ref == 'refs/heads/main'`, and a
 // naive split reads that as extra columns and loses the status.
+import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -228,6 +240,70 @@ export function checkBugs(content, name = 'docs/status/BUGS.md') {
   return checkRegister(content, name, BUGS_STATUSES, "the tracker's words", /^BUG-\d+$/, null);
 }
 
+/**
+ * The reopen guard: BUGS rows by id, for one file's text.
+ *
+ * A row is keyed by its first cell (`BUG-\d+`) and carries its `Status` cell,
+ * its 1-based line and its full text (the "Reopened with ..." reason may live
+ * in any cell). A duplicate id keeps the last occurrence, matching what a
+ * reader sees at the bottom of the file.
+ *
+ * @param {string} content the file's text
+ * @returns {Map<string, { status: string, line: number, text: string }>}
+ */
+function bugRowsById(content) {
+  const rows = new Map();
+  for (const table of tablesOf(content)) {
+    const statusColumn = columnOf(table.header, 'Status');
+    if (statusColumn === -1) continue;
+    for (const row of table.rows) {
+      const id = row.cells[0] ?? '';
+      if (!/^BUG-\d+$/.test(id)) continue;
+      rows.set(id, {
+        status: row.cells[statusColumn] ?? '',
+        line: row.line,
+        text: row.cells.join(' | '),
+      });
+    }
+  }
+  return rows;
+}
+
+/** The register's stated-reason convention for a deliberate reopen. */
+const REOPENED_REASON = /re-?opened\s+\S/i;
+
+/**
+ * The reopen guard (step 0, 2026-11-02): a BUGS row that was `fixed` or `closed`
+ * at the base and is `open` at the head is a reopen, and it fails unless the
+ * head row states its reason ("Reopened with ..."). A row that is gone from
+ * the head is not this guard's finding - a deletion is PLAYBOOK §13.3's check.
+ *
+ * @param {string} baseContent the base register's text (`git show <ref>:...`)
+ * @param {string} headContent the head register's text
+ * @param {string} [name] the file name, for the findings
+ * @returns {{ findings: Array<{ file: string, line: number, problem: string }>, compared: number }}
+ */
+export function checkReopened(baseContent, headContent, name = 'docs/status/BUGS.md') {
+  const base = bugRowsById(baseContent);
+  const head = bugRowsById(headContent);
+  const findings = [];
+  let compared = 0;
+  for (const [id, baseRow] of base) {
+    if (baseRow.status !== 'fixed' && baseRow.status !== 'closed') continue;
+    const headRow = head.get(id);
+    if (headRow === undefined) continue; // a deletion is PLAYBOOK §13.3's check, not this one
+    compared += 1;
+    if (headRow.status !== 'open') continue;
+    if (REOPENED_REASON.test(headRow.text)) continue;
+    findings.push({
+      file: name,
+      line: headRow.line,
+      problem: `${id} was \`${baseRow.status}\` at the base and is \`open\` here with no stated reason: a stale register write reopened a fixed row (BUG-074 was reopened twice this way). Reopen on purpose by writing "Reopened with <reason>" in the row, or restore \`${baseRow.status}\` with its PR link`,
+    });
+  }
+  return { findings, compared };
+}
+
 /** The default PARITY.md: the repo's own, resolved from this module. */
 export function defaultParityFile() {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'docs', 'status', 'PARITY.md');
@@ -269,9 +345,39 @@ export function countLine(result) {
   return `${result.parity.rows} parity rows (${parity}); ${result.bugs.rows} bug rows (${bugs})`;
 }
 
+/**
+ * Reads one register file out of git at a ref, or exits 2 with one clean line:
+ * the base register is what the reopen guard diffs against, so an unreadable
+ * base (a shallow fetch) must fail loudly, never pass in silence.
+ */
+function gitShowRegister(ref, repoPath) {
+  try {
+    return execFileSync('git', ['show', `${ref}:${repoPath}`], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+  } catch {
+    console.error(
+      `The register gate could not read the base register: git show ${ref}:${repoPath} failed ` +
+        `(is ${ref} fetched? the job that runs --base needs fetch-depth: 0)`,
+    );
+    process.exit(2);
+  }
+}
+
 function main(argv) {
-  const parityFile = argv[0] ? path.resolve(argv[0]) : defaultParityFile();
-  const bugsFile = argv[1] ? path.resolve(argv[1]) : defaultBugsFile();
+  let base = null;
+  const positional = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    if (argv[index] === '--base') {
+      base = argv[index + 1] ?? null;
+      index += 1;
+      continue;
+    }
+    positional.push(argv[index]);
+  }
+  const parityFile = positional[0] ? path.resolve(positional[0]) : defaultParityFile();
+  const bugsFile = positional[1] ? path.resolve(positional[1]) : defaultBugsFile();
   let result;
   try {
     result = checkTree(parityFile, bugsFile);
@@ -280,6 +386,18 @@ function main(argv) {
     process.exit(2);
   }
   console.log(countLine(result));
+  if (base !== null) {
+    const reopened = checkReopened(
+      gitShowRegister(base, 'docs/status/BUGS.md'),
+      readRegister(bugsFile, 'bug register'),
+      bugsFile,
+    );
+    console.log(
+      `reopen guard vs ${base}: ${reopened.compared} fixed/closed rows compared, ` +
+        `${reopened.findings.length} reopened without a stated reason`,
+    );
+    result.findings.push(...reopened.findings);
+  }
   if (result.findings.length > 0) {
     console.error('The registers do not tell the truth (audit item B1):');
     for (const finding of result.findings) {
