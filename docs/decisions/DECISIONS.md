@@ -364,3 +364,127 @@ because that route already carries six parameters and `PLR0917` forbids a sevent
 `UploadFile` parameter cannot be keyword-only, which was the other way out (tested: it
 answers 422). A suppression comment was the third way out, and this repository does not add
 one without an issue link.
+
+## D52 — A spreadsheet import is not in the trial (2026-11-01, lead squad decision, C2)
+
+**Why this exists.** C2's day-one list names stop import from a spreadsheet, a photo of a
+manifest, voice and a scan. The photo and the text paths are built (ADR-013/D40, PR #34: the
+API's `/intake` and `/intake/manifest`, the courier pastes or photographs a manifest), the
+label scan is built (#15), and the voice path rides A2's models. A CSV/Excel importer is a
+different product surface: a column mapping a courier has to trust with their own
+addresses, a format nobody can verify by looking at it, and a UI that invites the exact
+failure (a silent mis-import) the voice-first import avoids.
+
+**The decision:** not in the trial. It is scheduled in P5 slice 15 (import from Spoke and
+other planners), where the same surface serves a CSV from any planner, with its own format
+tests and the D8 engine correcting every extracted stop.
+
+## D53 — The four surfaces the contract refuses are deferred together (2026-11-01, lead squad decision, C2)
+
+**Why this exists.** C2 verified the day-one routing features against the code, not the
+register: the solver models re-optimisation (PR #21, `POST /runs/{id}/route:reopt`), time
+windows (PR #19, `Client(tw_early, tw_late)`), priority (PR #19, the two-phase priority tour),
+the finish point and the break window - and the app can set **none** of them, because
+`CreateRunRequest` carries no break window and no finish point (the contract says so at
+`openapi.yaml`'s own note) and the generated client has no way to set a window or a
+priority. PARITY rows 309 and 12 claimed `Have` for behaviour unreachable through the API;
+the rows are corrected to `Planned (task)` in the same PR, because a feature the phone
+cannot ask for is not a feature the courier has.
+
+**The decision:** each of the four lands as ONE PR that carries the whole half - the column,
+the contract change, the regenerated typed client, and the app surface - rather than being
+spread across PRs where the engine half can be merged and the courier-facing half forgotten.
+Until then they are not in the trial, and the solver's work is real and waiting. The app
+surfaces ride the routing slice (P5 slice 2), and the break and finish-point halves ride the
+contract change (D56, D57 below).
+
+## D54 — Time windows and priority get their app surface with the routing slice (2026-11-01, lead squad decision, C2)
+
+**Why this exists.** The solver respects a window and a priority (PR #19, with the API tests
+that prove it), and the day-one courier can set neither: the app has no surface for them and
+the contract's run request carries no window or priority for a stop.
+
+**The decision:** not in the trial as a courier-facing feature; scheduled with the routing
+slice (P5 slice 2) as one PR per D53 - the contract field, the regenerated client, and the
+stop card's surface. The solver half stays as built.
+
+## D55 — A planned break is not in the trial until the runs table gains its columns (2026-11-01, lead squad decision, C2)
+
+**Why this exists.** Spoke shows a break window and a duration fed into the optimiser
+(TEARDOWN line 221). Our solver places the break (PR #19), and the value cannot reach the
+API at all: the contract's `CreateRunRequest` has no break fields and the `runs` table no
+break columns, so the optimiser's placement has nothing to be fed.
+
+**The decision:** not in the trial. The slice is one PR: the columns, the migration, the
+contract and client regeneration, the app's break row, and the E2E flow that proves the
+break survives the round trip. Until then PARITY row 309 reads `Planned (task)`, which is the
+truth.
+
+## D56 — The end location and the round trip are not in the trial (2026-11-01, lead squad decision, C2)
+
+**Why this exists.** Spoke lets a route end anywhere and models a round trip. Our solver
+models the finish point (PR #19, `finish_lat/finish_lon`, with the test that the day ends
+there), and the contract refuses it for the same reason it refuses the break: no columns, no
+fields, and PARITY row 12 claimed `Have` for what the phone cannot set.
+
+**The decision:** not in the trial; it rides the same contract change as D55 (one PR, the
+whole half). PARITY row 12 is corrected to `Planned (task)`.
+
+## D57 — Navigation hand-off to Google, Apple and Waze is not in the trial's first slice (2026-11-01, lead squad decision, C2)
+
+**Why this exists.** A courier expects to hand the drive to the maps app they know. C2
+verified there is no hand-off in the app at all (no `Linking.openURL`, no `geo:` scheme
+anywhere in `apps/mobile`), while PARITY row 21 correctly says `Planned (task)`.
+
+**The decision:** not in the trial's first slice. The in-app map with its own turn
+instruction (driving.yaml, driving-night.yaml) covers the drive, and the hand-off ships with
+Courier Nav (P5 slice 7) as one surface that picks the installed maps app and carries the
+stop's coordinates - not three URL shapes sprinkled across screens.
+
+## D58 — A failed-delivery reason is a contract change, so it is not in the trial (2026-11-01, lead squad decision, C2)
+
+**Why this exists.** Spoke records why a delivery failed. We record the outcome (the stop
+status, PR #21) and the courier's own words are captured in the event (the utterance, and
+the safe place it names, #131), but there is no structured reason field anywhere - not in the
+event schema, not in the contract, not in the app - and PARITY row 25 claimed `Have` on the
+statuses alone. The row is corrected to `Planned (task)`.
+
+**The decision:** not in the trial as a structured field. The reason's vocabulary is a
+product decision (a courier's own list, not a generic enum) and it lands with the POD slice
+(P5 slice 9) as one contract change: the field, the validation, the app's picker and the
+sync's carry of it.
+
+## D59 — Stop types are not in the trial; the spoken safe place covers the need (2026-11-01, lead squad decision, C2)
+
+**Why this exists.** Spoke has reusable presets on an address (TEARDOWN, five mentions) and
+PARITY row 310 correctly says `Planned (task)` - there is no stop-type model, field or screen
+anywhere. The day-one need a preset serves ("leave it at the side gate", "the door sticks") is
+served today by what the courier says: the safe place is captured by voice, carried through
+the client (BUG-073/#131) and stored on the delivery.
+
+**The decision:** not in the trial. The presets ride the address squad's door memory, where
+the same per-address knowledge also fixes the pin on the building - one slice, not two.
+
+## D60 — Earnings tracking is not in the trial; the summary's counts are (2026-11-01, lead squad decision, C2)
+
+**Why this exists.** The end-of-day summary is on main (#30, `.maestro/summary.yaml`) and it
+shows the day's counts on the reference day's numbers. Earnings - the per-stop money, the
+NZD ledger with GST - is neither in the app nor on the server, and it depends on the contract
+change that carries a stop's fee.
+
+**The decision:** not in the trial; it is P5 slice 13 (Stripe NZD Trial/Solo/Team), where the
+same ledger answers the IRD logbook (P7). The summary's counts stay what they are until then.
+
+## D61 — Offline is in the trial for the shift and the queue; the offline map pack is P3 (2026-11-01, lead squad decision, C2)
+
+**Why this exists.** Offline is the product's spine, and C2 verified what exists: the event
+log survives with no signal (PR #3), the run store caches the day (PR #108), the outbox
+holds and sends what it can (BUG-093 bounds it), and the a1 job proves the exact stretch on
+the emulator (signal down, a delivery recorded, signal back, the row lands). What is NOT
+shipped is the offline MAP pack - `apps/mobile/assets/maps/README.md` says the tiles are not
+in the repository - so a drive through a signal gap has its map, but not new tiles.
+
+**The decision:** the offline shift and the queue are in the trial (they are built); the
+offline map pack is P3 (Courier Maps' weekly pack, D15/D26), and its absence is a P3
+dependency rather than a trial blocker. The trial's routing happens in Christchurch's
+coverage, and the pack's first delivery closes the gap.
