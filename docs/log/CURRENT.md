@@ -3,6 +3,37 @@
 **Week:** 2026-W44. **Local `main` == `origin/main` == `918f25d2` (C2's merge, PR #168). Lead session 12, 2026-11-01.**
 
 
+## Lead session 12, the closing state (2026-11-02): the a1 job's blank first screen is rooted and fixed
+
+**What the device's own dump proved (run 41293886729, the evidence artifact):** no crash
+(`logcat-crash.txt` empty), the process alive, and the a11y tree showing
+`not-found-screen` — "This link is not on today's route". The flow launched the app and
+waited 60 s for `welcome-screen`. **The root cause:** the root layout answers
+`if (isLoading) return null` while the auth session is restored, so a server that never
+answers keeps the root stack unmounted and the app without a screen for the whole launch.
+
+**Two fixes were tried and reverted, and the reason matters:**
+
+1. Rendering the signed-out stack during the restore (483a5ef) — reddened BOTH mock legs
+   at `today-go`: the run state's key flipped and the RunProvider's close-on-unmount
+   (BUG-069) cleared the day's cache the second store was about to read.
+2. Moving the run state inside the signed-in guard (aa2672e) — the router itself: the legs'
+   readiness gate answered "the app died before the first screen with an UNKNOWN crash
+   signature", because `Stack.Screen` must be a direct child of `Stack.Protected`.
+
+**What is on `feat/a1-slice-3-run-store` now, running (run 41326369521 on head `4241000`):**
+the bounded session restore — eight seconds, then the phone's own session (offline) or the
+front door (signed-out), with the server's late answer still landing through the same effect.
+Red first: `Expected: "signed-out" Received: "loading"`. The layout is untouched (proven green).
+**Watch 41326369521: the a1 job's next stop past the welcome screen is the flow's real
+sign-up on the auth service.**
+
+**The queues, unchanged:** #135 merges when that run is green (read the §13.4 diff, verify
+`mockStops` is gone from `app/(tabs)/index.tsx`, close BUG-081's row — the marks already go
+through `run.markDelivered` on that branch — merge with the ritual). #166 waits out the §17.3
+shared failure (its api-35 leg's five flows are the BUG-161 double-handle bug, whose fix is on
+#135's branch) and merges after. A NEW bug row starts at BUG-163; a new decision at D62.
+
 ## Lead session 12, the handoff state (2026-11-01): six PRs merged, two open, the a1 job's fifth layer running
 
 **Merged this session, each with the ritual (merge commit -> archive tag -> remote branch deleted -> `git ls-remote --heads origin <branch>` printing nothing):**
