@@ -416,6 +416,30 @@ jobs:
           docker compose -f infra/compose.ci.yml up -d --wait
           docker compose -f infra/compose.ci.yml ps
 
+      - name: Install Maestro
+        # The legs carry this step, and this job needs it exactly as they do:
+        # `run-a1.sh` calls `maestro test`, and without the install the flow
+        # runner died with `maestro: command not found` (exit 127) seconds
+        # after the APK installed - the emulator and the install were fine,
+        # and the flow never ran (run 41276278118 on head 8f64c22). Same
+        # pinned release and the same recorded checksum as the legs' own
+        # (BUG-065: the version is a commit, never the runner's whim).
+        env:
+          MAESTRO_VERSION: ${{ env.MAESTRO_VERSION }}
+          MAESTRO_SHA256: ${{ env.MAESTRO_SHA256 }}
+        run: |
+          set -euo pipefail
+          url="https://github.com/mobile-dev-inc/Maestro/releases/download/${MAESTRO_VERSION}/maestro.zip"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/maestro.zip" "$url"
+          echo "${MAESTRO_SHA256}  $RUNNER_TEMP/maestro.zip" | sha256sum -c -
+          rm -rf "$HOME/.maestro" "$HOME/.maestro/tmp"
+          mkdir -p "$HOME/.maestro/tmp"
+          unzip -qo "$RUNNER_TEMP/maestro.zip" -d "$HOME/.maestro/tmp"
+          cp -rf "$HOME/.maestro/tmp/maestro/." "$HOME/.maestro/"
+          rm -rf "$HOME/.maestro/tmp" "$RUNNER_TEMP/maestro.zip"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          "$HOME/.maestro/bin/maestro" --version
+
       - name: Enable KVM for the emulator
         # The step the e2e legs carry, and this job needs it exactly as they do.
         # Without it the runner has no /dev/kvm, the emulator-runner prints
