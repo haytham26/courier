@@ -30,6 +30,12 @@ jobs:
           node-version: 22
       - name: Check the diff against the floor
         run: node scripts/ci/check-floor.mjs ${{ github.event.pull_request.base.sha || 'origin/main' }}
+      # Step 0 (2026-11-02): a PR that turns a `fixed`/`closed` BUGS row back
+      # to `open` fails here unless the row says "Reopened with ..." - the
+      # stale-write class that reopened BUG-074 twice. fetch-depth: 0 above is
+      # what makes the base sha readable through `git show`.
+      - name: The registers did not silently reopen (check-parity --base)
+        run: node scripts/ci/check-parity.mjs --base ${{ github.event.pull_request.base.sha || 'origin/main' }}
       - name: No merge conflict markers in the tree
         run: node scripts/ci/check-conflict-markers.mjs
       - name: Check the links of the documentation

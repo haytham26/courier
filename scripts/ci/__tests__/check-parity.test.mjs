@@ -19,7 +19,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -29,6 +29,7 @@ import {
   PARITY_STATUSES,
   checkBugs,
   checkParity,
+  checkReopened,
   checkTree,
   countLine,
   defaultBugsFile,
@@ -327,3 +328,137 @@ function writeTemp(name, content) {
   writeFileSync(file, content, 'utf8');
   return file;
 }
+
+// The reopen guard (step 0, 2026-11-02): BUG-074 was clobbered back to `open`
+// twice by branches whose BUGS.md was edited against a stale main, so a diff
+// that turns a `fixed`/`closed` row back to `open` fails unless the row states
+// its reason ("Reopened with ...", the BUG-132/BUG-137 convention).
+
+const BASE_BUGS =
+  BUGS_HEADER +
+  '| BUG-001 | the parser read "42B" as a unit | legacy code | `ParsedAddress.suffix` added on PR #13 | the suffix suite | fixed |\n' +
+  '| BUG-002 | the deep link does not navigate | the scheme was never registered | - | the deep-link flow | open |\n';
+
+test('checkReopened flags a fixed row turned back to open with no stated reason', () => {
+  const head =
+    BUGS_HEADER +
+    '| BUG-001 | the parser read "42B" as a unit | legacy code | `ParsedAddress.suffix` added on PR #13 | the suffix suite | open |\n' +
+    '| BUG-002 | the deep link does not navigate | the scheme was never registered | - | the deep-link flow | open |\n';
+  const { findings, compared } = checkReopened(BASE_BUGS, head);
+  assert.equal(compared, 1);
+  assert.equal(findings.length, 1);
+  assert.match(findings[0].problem, /BUG-001/);
+  assert.match(findings[0].problem, /reopened/i);
+  assert.match(findings[0].problem, /Reopened with/i);
+});
+
+test('checkReopened accepts a reopen that states its reason in the row', () => {
+  const head =
+    BUGS_HEADER +
+    '| BUG-001 | the parser read "42B" as a unit | legacy code | the suffix fix regressed on the new parser | Reopened with the regression named, PR #13 stands | open |\n';
+  const { findings, compared } = checkReopened(BASE_BUGS, head);
+  assert.equal(compared, 1);
+  assert.deepEqual(findings, []);
+});
+
+test('checkReopened ignores rows open at the base, rows closed further, and rows gone from the head', () => {
+  const head =
+    BUGS_HEADER +
+    '| BUG-001 | the parser read "42B" as a unit | legacy code | `ParsedAddress.suffix` added on PR #13 | the suffix suite, green on CI run 41300000000 | closed |\n' +
+    '| BUG-002 | the deep link does not navigate | the scheme was never registered | - | the deep-link flow | doing |\n';
+  const { findings, compared } = checkReopened(BASE_BUGS, head);
+  assert.equal(compared, 1, 'the base fixed row is compared against the head');
+  assert.deepEqual(findings, [], 'but only a fixed/closed row that lands on `open` is a reopen');
+});
+
+test('the CLI with --base fails on a reopened row, over a real temp git repo', () => {
+  // The gate job runs with fetch-depth: 0, so `git show <base>:docs/status/BUGS.md`
+  // is how the base register is read; this test drives exactly that path.
+  const dir = mkdtempSync(path.join(tmpdir(), 'parity-reopen-'));
+  try {
+    const bugsPath = path.join(dir, 'docs', 'status', 'BUGS.md');
+    const parityPath = path.join(dir, 'docs', 'status', 'PARITY.md');
+    mkdirSync(path.dirname(bugsPath), { recursive: true });
+    writeFileSync(parityPath, CLEAN_PARITY, 'utf8');
+    writeFileSync(bugsPath, BASE_BUGS, 'utf8');
+    const git = (args) =>
+      execFileSync('git', ['-c', 'user.email=gate@test', '-c', 'user.name=gate', ...args], {
+        cwd: dir,
+        encoding: 'utf8',
+      });
+    git(['init', '-q']);
+    git(['add', '.']);
+    git(['commit', '-qm', 'base']);
+    const base = git(['rev-parse', 'HEAD']).trim();
+    writeFileSync(
+      bugsPath,
+      BUGS_HEADER +
+        '| BUG-001 | the parser read "42B" as a unit | stale register write | - | - | open |\n' +
+        '| BUG-002 | the deep link does not navigate | the scheme was never registered | - | the deep-link flow | open |\n',
+      'utf8',
+    );
+    let failed;
+    try {
+      execFileSync(process.execPath, [GATE, parityPath, bugsPath, '--base', base], {
+        cwd: dir,
+        encoding: 'utf8',
+      });
+    } catch (error) {
+      failed = error;
+    }
+    assert.ok(failed, 'the gate exits non-zero on a reopened row');
+    assert.equal(failed.status, 1);
+    assert.match(String(failed.stderr), /BUG-001/);
+    assert.match(String(failed.stderr), /no stated reason/i);
+    assert.match(String(failed.stdout), /reopen guard vs /);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the CLI with --base passes when no fixed row reopened, and exits 2 loudly on an unreadable base', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'parity-reopen-ok-'));
+  try {
+    const bugsPath = path.join(dir, 'docs', 'status', 'BUGS.md');
+    const parityPath = path.join(dir, 'docs', 'status', 'PARITY.md');
+    mkdirSync(path.dirname(bugsPath), { recursive: true });
+    writeFileSync(parityPath, CLEAN_PARITY, 'utf8');
+    writeFileSync(bugsPath, BASE_BUGS, 'utf8');
+    const git = (args) =>
+      execFileSync('git', ['-c', 'user.email=gate@test', '-c', 'user.name=gate', ...args], {
+        cwd: dir,
+        encoding: 'utf8',
+      });
+    git(['init', '-q']);
+    git(['add', '.']);
+    git(['commit', '-qm', 'base']);
+    const base = git(['rev-parse', 'HEAD']).trim();
+    // the head closes a row: open -> fixed is allowed, only reopens fail
+    writeFileSync(
+      bugsPath,
+      BUGS_HEADER +
+        '| BUG-001 | the parser read "42B" as a unit | legacy code | `ParsedAddress.suffix` added on PR #13 | the suffix suite | fixed |\n' +
+        '| BUG-002 | the deep link does not navigate | the scheme was never registered | the scheme is registered on PR #14 | the deep-link flow | fixed |\n',
+      'utf8',
+    );
+    const output = execFileSync(process.execPath, [GATE, parityPath, bugsPath, '--base', base], {
+      cwd: dir,
+      encoding: 'utf8',
+    });
+    assert.match(output, /reopen guard vs [0-9a-f]{40}: 1 fixed\/closed rows compared, 0 reopened/);
+    let failed;
+    try {
+      execFileSync(process.execPath, [GATE, parityPath, bugsPath, '--base', 'no-such-ref'], {
+        cwd: dir,
+        encoding: 'utf8',
+      });
+    } catch (error) {
+      failed = error;
+    }
+    assert.ok(failed, 'an unreadable base ref fails loudly');
+    assert.equal(failed.status, 2);
+    assert.match(String(failed.stderr), /could not read the base register/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
