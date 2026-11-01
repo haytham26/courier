@@ -22,6 +22,8 @@
 
 **What is left, in order:** #155's green run on its new head (the coverage fix pushed, main merged in), #135's KVM fix and its a1 green run (the done-when of A1 slice 4), then #146/#147 take main and merge with the ritual; then the C1 mediums (BUG-079 with A4's build check, BUG-081 — check it against #135's branch first, BUG-103), the lows as one batch, and the audit's order to the §6 Definition of Done.
 
+**Where it stands as this commit is pushed (session 12 continues):** #155 MERGED (`45132ef`, archive tag pushed, remote branch deleted — the ls-remote proof is on file). #135's KVM fix is pushed (`46341bd`), its E2E is running; **do not push to that branch while the run is in flight**. #146 (`1f053eb`) and #147 (`3e3c397`) have taken main and are re-running. **BUG-103 is fixed on `fix/c1-bug-103-licenses-gate`** (an unanswered `pnpm view` fails the gate instead of passing as a third state, red-first, and the 31-`unknown` inventory now carries the registry's real answers — all MIT), and the branch's E2E/gate run is next. The numbering still stands: the highest is **BUG-162**, so a NEW row starts at **BUG-163**.
+
 
 ## Lead session 11 (2026-11-01): the CI mediums, the gate that found a second one, and the app-side root cause of five red flows
 
