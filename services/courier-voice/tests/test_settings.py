@@ -191,10 +191,9 @@ class TestTheTurnsOfOneShiftAreSerialised:
         second.join()
 
         # One turn is whole before the other starts: no interleaving.
-        assert order == ["a-start", "a-end", "b-start", "b-end"] or order == [
-            "b-start",
-            "b-end",
-            "a-start",
-            "a-end",
+        whole = [
+            ["a-start", "a-end", "b-start", "b-end"],
+            ["b-start", "b-end", "a-start", "a-end"],
         ]
+        assert order in whole
         assert memory.last_instruction in ("a", "b")

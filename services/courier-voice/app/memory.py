@@ -16,8 +16,8 @@ courier can make the service forget a shift.
 
 from __future__ import annotations
 
-import time
 import threading
+import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Protocol
