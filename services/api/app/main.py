@@ -55,7 +55,15 @@ from .pod import (
 )
 from .pod_store import LocalPodStore, PodFingerprintError, pod_store
 from .providers import VERIFIERS, apply_facts, webhook_secret_for
-from .repo import DeliveryEventRow, LocationNoteRow, Repo, RouteStopRow, RunRecord, get_repo
+from .repo import (
+    AppendResult,
+    DeliveryEventRow,
+    LocationNoteRow,
+    Repo,
+    RouteStopRow,
+    RunRecord,
+    get_repo,
+)
 from .responses import (
     DemoRunResponse,
     EntitlementResponse,
@@ -602,23 +610,44 @@ def upload_pod(
         digest = store.save(run.id, resolved_id, content)
         stored_bytes = len(content)
 
-    outcome = repo.append_events(
-        shift_id=run.shift_id,
-        events=[
-            DeliveryEventRow(
-                id=resolved_id,
-                shift_id=run.shift_id,
-                stop_id=paths.stop_id,
-                kind="pod_captured",
-                utterance=None,
-                safe_place=form.safe_place,
-                lat=None,
-                lon=None,
-                accuracy_m=None,
-                occurred_at=form.occurred_at,
-            )
-        ],
-    )
+    outcome: AppendResult | None = None
+    try:
+        outcome = repo.append_events(
+            shift_id=run.shift_id,
+            events=[
+                DeliveryEventRow(
+                    id=resolved_id,
+                    shift_id=run.shift_id,
+                    stop_id=paths.stop_id,
+                    kind="pod_captured",
+                    utterance=None,
+                    safe_place=form.safe_place,
+                    lat=None,
+                    lon=None,
+                    accuracy_m=None,
+                    occurred_at=form.occurred_at,
+                )
+            ],
+        )
+    except Exception as error:
+        # BUG-120: the bytes were written first, so a failed insert left an
+        # object under the run's prefix that no event row and no re-seed
+        # accounted for - and the answer was a 500 with no record of the event,
+        # so the courier's photo had landed nowhere he could find it. The bytes
+        # written here go with the row that failed, and the reason is logged.
+        if not replayed:
+            try:
+                store.delete(run.id, resolved_id)
+            except Exception as cleanup_error:  # the orphan is worse than the 500
+                logger.warning(
+                    "the POD bytes of %s could not be removed after a failed insert: %s",
+                    resolved_id,
+                    cleanup_error,
+                )
+        logger.warning("the POD insert of %s failed: %s", resolved_id, error)
+        raise HTTPException(
+            status_code=500, detail="the delivery event could not be recorded"
+        ) from error
     # The answer is the model, so a key rename is a construction error here
     # rather than a silently different answer on the phone (B3's response_model
     # slice). The status rides on the JSONResponse rather than an injected

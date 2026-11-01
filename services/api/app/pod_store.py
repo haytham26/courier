@@ -66,6 +66,15 @@ class PodStore(Protocol):
         """A short-lived URL the phone can fetch the photo from."""
         ...
 
+    def delete(self, run_id: uuid.UUID, event_id: uuid.UUID) -> bool:
+        """Delete one object. Returns whether it was there.
+
+        The pairing half of `save`: the POD route writes the bytes and the
+        event row as one step, and a failed insert deletes the bytes it just
+        wrote rather than leaving a photo no record accounts for (BUG-120).
+        """
+        ...
+
     def delete_run(self, run_id: uuid.UUID) -> int:
         """Delete every byte of a run (DATA-SAFETY: the photos die with the
         run). Returns how many objects went."""
@@ -129,6 +138,13 @@ class LocalPodStore:
 
     def read_bytes(self, run_id: uuid.UUID, event_id: uuid.UUID) -> bytes:
         return self._path(run_id, event_id).read_bytes()
+
+    def delete(self, run_id: uuid.UUID, event_id: uuid.UUID) -> bool:
+        path = self._path(run_id, event_id)
+        if not path.exists():
+            return False
+        path.unlink()
+        return True
 
     def delete_run(self, run_id: uuid.UUID) -> int:
         directory = self._directory / str(run_id)
@@ -211,6 +227,18 @@ class S3PodStore:
             ExpiresIn=self._ttl,
         )
         return url, datetime.fromtimestamp(int(time.time()) + self._ttl, tz=UTC)
+
+    def delete(self, run_id: uuid.UUID, event_id: uuid.UUID) -> bool:
+        try:
+            self._client.delete_object(Bucket=self._bucket, Key=object_key(run_id, event_id))
+        except Exception as error:  # a 403 or a 5xx: the caller is told
+            logger.warning(
+                "the POD object %s could not be deleted: %s", object_key(run_id, event_id), error
+            )
+            raise PodFingerprintError(
+                f"the stored POD object {object_key(run_id, event_id)} cannot be deleted: {error}"
+            ) from error
+        return True
 
     def delete_run(self, run_id: uuid.UUID) -> int:
         """Delete every object under the run's prefix, in honest batches.

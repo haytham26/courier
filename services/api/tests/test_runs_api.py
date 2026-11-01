@@ -1108,3 +1108,68 @@ class TestTheHardenedEdges:
         assert pod.status_code == 401
         assert reopt.status_code == 401
         assert stops.status_code == 401
+
+
+class TestABrokenInsertLeavesNoOrphanBytes:
+    """BUG-120: the bytes and the event row are written together, or neither is.
+
+    The POD route wrote the bytes before `append_events`, so a database failure
+    left an object under the run's prefix that no event row and no re-seed
+    accounted for - and the answer was a 500 with no record of the event, so
+    the courier's photo had landed nowhere he could find it.
+    """
+
+    def test_a_failed_insert_deletes_the_object_it_just_wrote(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        payload = png_bytes()
+
+        def broken_append(**kwargs: object) -> None:
+            raise RuntimeError("the event table is unreachable")
+
+        monkeypatch.setattr(repo, "append_events", broken_append)
+
+        answered = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": recent_iso()},
+        )
+
+        assert answered.status_code == 500
+        assert "could not be recorded" in answered.json()["detail"]
+        # Nothing is left under the run's prefix: no photo without a record.
+        directory = Path(str(tmp_path)) / str(run_id)
+        assert not directory.exists() or list(directory.glob("*.bin")) == []
+        assert repo.events == {}
+
+    def test_a_successful_upload_keeps_its_bytes(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The same route, with a store that works: the object stays, the row is
+        written, and the answer is the pair."""
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        payload = png_bytes()
+
+        stored = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": recent_iso()},
+        )
+
+        assert stored.status_code == 201, stored.text
+        event_id = stored.json()["event_id"]
+        assert (Path(str(tmp_path)) / str(run_id) / f"{event_id}.bin").read_bytes() == payload
+        assert len(repo.events) == 1
