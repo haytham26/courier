@@ -34,8 +34,11 @@
 //   3. a YAML anchor or an alias in a place this gate cannot read FAILS rather
 //      than passes: a gate that waves through what it cannot see is not a gate.
 //
-// The parser is deliberately small, like check-emulator-gpu.mjs's: the workflow
-// files in this repository are flat, hand-written and pinned.
+// The parser is deliberately small, like check-emulator-gpu.mjs's, but it reads
+// the STRUCTURE - the mapping paths, whatever indentation a file is written in
+// (BUG-108) - not this repository's two-space habit: a workflow written in any
+// other valid YAML style used to be reported clean without being read at all.
+// A line the structure cannot place is a violation, not a skip.
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -96,107 +99,200 @@ const LIST_ITEM = /^(\s*)-\s/;
 
 const indentOf = (line) => line.length - line.replace(/^\s+/, '').length;
 
+/** A key line: `key:` or `key: value`, with the key's name and its column. */
+const KEY_LINE = /^(\s*)([A-Za-z_][A-Za-z0-9_-]*):(.*)$/;
+
+/** A block scalar's opening: `|`, `>`, with the optional chomping indicators. */
+const BLOCK_SCALAR = /^[|>][+-]?[0-9]*\s*$/;
+
+/**
+ * The structure of one workflow: the path of mapping keys every line sits
+ * under, read as YAML rather than as this repository's indentation habit.
+ *
+ * BUG-108: the gate used to read the indentation itself ("six spaces is a
+ * job-level env, eight is a step key"), so a file written in any other valid
+ * YAML style - a different indent width, a sequence at its parent key's
+ * column, a flow mapping - was not parsed at all and was reported clean. The
+ * paths below are derived from the nesting, so the style cannot hide a defect.
+ *
+ * A line the parser cannot place (a tab in the indentation, a bare scalar
+ * where a key belongs, an anchor or an alias in a value) is reported rather
+ * than skipped: a gate that waves through what it cannot see is not a gate.
+ *
+ * @param {string[]} lines
+ * @returns {Array<{ line: number, path: string[], key: string | null, value: string, problem?: string } | null>}
+ */
+export function structureOf(lines) {
+  const entries = new Array(lines.length).fill(null);
+  // The open mappings and sequences: one entry per column the file has opened.
+  const stack = [];
+  // While a block scalar is open, its content is not YAML.
+  let blockIndent = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line.trim() === '' || line.trim().startsWith('#')) continue;
+    const indent = indentOf(line);
+
+    // Inside a `run: |` or an `if: >` block: the content is data, not keys.
+    if (blockIndent !== null && indent > blockIndent) continue;
+    blockIndent = null;
+
+    const problem = (text) => {
+      entries[index] = { line: index + 1, path: [], key: null, value: '', problem: text };
+    };
+
+    if (/^[ \t]*\t/.test(line)) {
+      problem('a tab is not YAML indentation: write the file with spaces');
+      continue;
+    }
+
+    const dash = /^(\s*)-( *)()/.exec(line);
+    const key = KEY_LINE.exec(line);
+    const listContent = /^(\s*)-\s*(.*)$/.exec(line);
+
+    if (!key && listContent) {
+      // A sequence item. Its content may be a mapping (`- name: x`) or a
+      // scalar (`- 'v*'`). The item belongs to the innermost mapping that owns
+      // this column - which may be the key the sequence hangs from when a file
+      // writes the sequence at its parent key's own indent.
+      const itemIndent = indentOf(line);
+      const dashMatch = /^(\s*)-(\s*)/.exec(line);
+      const contentColumn = dashMatch[0].length;
+      const content = line.slice(contentColumn);
+      while (stack.length > 0 && stack[stack.length - 1].indent > itemIndent) stack.pop();
+      let marker = stack[stack.length - 1];
+      if (marker && marker.isSeq && marker.indent === itemIndent) {
+        marker.count += 1;
+        marker.path = [...marker.parentPath, marker.count];
+      } else {
+        const parentPath = marker && marker.indent <= itemIndent ? marker.path : [];
+        const count = 0;
+        marker = { indent: itemIndent, isSeq: true, parentPath, count, path: [...parentPath, count] };
+        stack.push(marker);
+      }
+      const itemPath = [...marker.path];
+      const contentKey = KEY_LINE.exec(content);
+      if (contentKey) {
+        const entry = {
+          line: index + 1,
+          path: itemPath,
+          key: contentKey[2],
+          value: contentKey[3],
+        };
+        entries[index] = entry;
+        const block = BLOCK_SCALAR.test(contentKey[3].trim());
+        if (contentKey[3].trim() === '' || block) {
+          stack.push({ indent: contentColumn, path: [...itemPath, contentKey[2]] });
+          if (block) blockIndent = contentColumn;
+        }
+        continue;
+      }
+      entries[index] = { line: index + 1, path: itemPath, key: null, value: content.trim() };
+      if (/^[*&]/.test(content.trim())) {
+        entries[index].problem = 'a YAML anchor or alias this gate cannot read: write the value out';
+      }
+      continue;
+    }
+
+    if (!key) {
+      if (blockIndent === null) {
+        problem('a line this gate cannot read: it is neither a key nor a sequence item');
+      }
+      continue;
+    }
+
+    const [, , keyName, rawValue] = key;
+    const value = rawValue.trim();
+    while (stack.length > 0 && stack[stack.length - 1].indent >= indent) stack.pop();
+    const parentPath = stack.length > 0 ? stack[stack.length - 1].path : [];
+    const path = [...parentPath, keyName];
+    entries[index] = { line: index + 1, path, key: keyName, value };
+    if (value === '' || BLOCK_SCALAR.test(value)) {
+      stack.push({ indent, path });
+      if (BLOCK_SCALAR.test(value)) blockIndent = indent;
+    }
+  }
+  return entries;
+}
+
 /**
  * The violations of one workflow's lines: an unknown key at a job or a step, a
- * bare `inputs` context, or an `inputs` expression the gate cannot read.
+ * bare `inputs` context, an `inputs` expression the gate cannot read, a line
+ * the structure cannot place, and a secret read at a job level.
  *
- * The mapping is read by indentation, the way these files are written: the
- * `jobs:` block at column 0 opens the jobs mapping, a job id sits at two
- * columns, its keys at four, `steps:` at four and a step's keys at eight.
+ * The rules read the paths `structureOf` derives, so they hold for any YAML
+ * style, not only this repository's two-space habit.
  *
  * @param {string[]} lines
  * @returns {Array<{ line: number, text: string, problem: string }>}
  */
 export function violationsOf(lines) {
   const found = [];
-  let inJobs = false;
-  let inSteps = false;
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (line.trim() === '') continue;
-    if (line.trim().startsWith('#')) continue;
-    const indent = indentOf(line);
+  const entries = structureOf(lines);
 
-    const key = /^(\s*)([A-Za-z_][A-Za-z0-9_-]*):/.exec(line);
+  for (const entry of entries) {
+    if (!entry) continue;
+    const line = lines[entry.line - 1] ?? '';
+    const push = (problem) => found.push({ line: entry.line, text: line.trim(), problem });
 
-    // BUG-100: a `secrets.*` reference at six spaces is a JOB-level env, and a
-    // job-level env is present in every step's environment - so every
-    // third-party action the job runs can read the credential. It belongs at
-    // the step that reads it. Eight spaces is a step-level env, which is right.
-    if (inJobs && inSteps === false && indent === 6 && /\$\{\{\s*secrets\./.test(line)) {
-      found.push({
-        line: index + 1,
-        text: line.trim(),
-        problem:
-          'a job-level `env:` carries a secret, so every step (and every third-party action) can read it - move it to the step that reads it (BUG-100)',
-      });
+    if (entry.problem) {
+      push(entry.problem);
       continue;
     }
 
-    // The two context rules first, on every line at all: an `inputs`
-    // expression is wrong wherever it is written, and a key line may carry it.
+    // The context rules, on every line at all: an `inputs` expression is wrong
+    // wherever it is written, and a key line may carry it.
     if (!EVENT_INPUTS.test(line) && BARE_INPUTS.test(line)) {
-      found.push({
-        line: index + 1,
-        text: line.trim(),
-        problem:
-          'a bare `inputs` context is dispatch-and-call only; read it through `github.event.inputs` instead',
-      });
+      push(
+        'a bare `inputs` context is dispatch-and-call only; read it through `github.event.inputs` instead',
+      );
       continue;
     }
     for (const expression of line.match(/\$\{\{[^}]*\}\}/g) ?? []) {
       if (/[*&!]/.test(expression) && /\binputs\b/.test(expression)) {
-        found.push({
-          line: index + 1,
-          text: line.trim(),
-          problem:
-            'an `inputs` expression this gate cannot read (an anchor or an alias): write it out so the check can see it',
-        });
+        push('an `inputs` expression this gate cannot read (an anchor or an alias): write it out so the check can see it');
       }
     }
 
-    if (!key) continue;
-    const keyName = key[2];
-
-    if (indent === 0) {
-      // A workflow-level key: name, on, permissions, concurrency, jobs. Its
-      // whole subtree is not a job or a step.
-      inJobs = keyName === 'jobs';
-      inSteps = false;
+    // BUG-100: a `secrets.*` reference in a JOB-level `env:` (the path
+    // `jobs.<job>.env`, with the credential either on its own line one deeper
+    // or inline in a flow mapping) is a secret every step - and every
+    // third-party action - can read. A step's own env is
+    // `jobs.<job>.steps.<n>.env`, which is right.
+    const jobLevelEnv =
+      entry.path[0] === 'jobs' &&
+      entry.path[2] === 'env' &&
+      (entry.path.length === 3 || entry.path.length === 4);
+    if (/\$\{\{\s*secrets\./.test(line) && jobLevelEnv) {
+      push(
+        'a job-level `env:` carries a secret, so every step (and every third-party action) can read it - move it to the step that reads it (BUG-100)',
+      );
       continue;
     }
-    if (!inJobs) continue;
 
-    if (indent === 2) {
-      // A job id, or a key of one of the jobs mapping's own children.
-      inSteps = false;
-      continue;
-    }
-    if (indent === 4) {
-      if (keyName === 'steps') {
-        inSteps = true;
-        continue;
-      }
-      inSteps = false;
-      if (!JOB_KEYS.has(keyName)) {
-        found.push({
-          line: index + 1,
-          text: line.trim(),
-          problem: `${keyName} is not a key a job may carry (expected one of ${[...JOB_KEYS].sort().join(', ')})`,
-        });
+    if (entry.key === null || entry.path[0] !== 'jobs') continue;
+
+    // A key directly under `steps:` (no item column) is a step key that lost
+    // its `- `; a key one deeper is inside the item's own mapping.
+    if (entry.path.length === 4 && entry.path[2] === 'steps') {
+      // A key directly under `steps:` is a step key that lost its `- `.
+      if (!STEP_KEYS.has(entry.key)) {
+        push(`${entry.key} is not a key a step may carry (expected one of ${[...STEP_KEYS].sort().join(', ')})`);
       }
       continue;
     }
-    if (inSteps && indent >= 6) {
-      // A step's own key at eight columns. Everything deeper is inside a step's
-      // `with:`, `env:`, `strategy:` or a `run:` block scalar, where
-      // `KEY: value` is not YAML.
-      if (indent === 8 && !STEP_KEYS.has(keyName)) {
-        found.push({
-          line: index + 1,
-          text: line.trim(),
-          problem: `${keyName} is not a key a step may carry (expected one of ${[...STEP_KEYS].sort().join(', ')})`,
-        });
+    if (entry.path.length === 5 && entry.path[2] === 'steps') {
+      // A key inside the item's own mapping: a step key.
+      if (!STEP_KEYS.has(entry.key)) {
+        push(`${entry.key} is not a key a step may carry (expected one of ${[...STEP_KEYS].sort().join(', ')})`);
+      }
+      continue;
+    }
+    if (entry.path.length === 3 && entry.path[2] !== 'steps') {
+      // A key of a job: depth 2 is the job's own id, depth 3 its keys.
+      if (!JOB_KEYS.has(entry.key)) {
+        push(`${entry.key} is not a key a job may carry (expected one of ${[...JOB_KEYS].sort().join(', ')})`);
       }
     }
   }
@@ -218,10 +314,9 @@ export function violationsOf(lines) {
  * fix is one the gate should enforce rather than remember: a `secrets.*`
  * reference belongs at the STEP that reads it, never at the job's own level.
  *
- * The shape that matters is the indentation, which is how this repository
- * writes its workflows: a job's `env:` at four spaces with its keys at six,
- * against a step's `env:` at six spaces with its keys at eight. A `secrets.*`
- * reference at six spaces is therefore a job-level one.
+ * This helper reports the same finding text-first, for a caller that has the
+ * lines and not the parsed paths; the enforced rule is `violationsOf`'s, which
+ * reads the paths and is style-independent (BUG-108).
  */
 export function jobLevelSecretFindings(lines) {
   const findings = [];
