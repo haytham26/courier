@@ -1,6 +1,34 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `412d978` (PR #156 merged). Lead session 12, 2026-11-01.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `918f25d2` (C2's merge, PR #168). Lead session 12, 2026-11-01.**
+
+
+## Lead session 12, the handoff state (2026-11-01): six PRs merged, two open, the a1 job's fifth layer running
+
+**Merged this session, each with the ritual (merge commit -> archive tag -> remote branch deleted -> `git ls-remote --heads origin <branch>` printing nothing):**
+
+| PR | What | Merge |
+|---|---|---|
+| **#155** | C1's CI mediums: BUG-100, 101, 104 corrected (the coverage gate's docstring-only false positive, red-first) and 162 (the LINZ weekly's job-level secret — the backend owns that workflow, §16, and the weekly run stays correct) | `45132ef` |
+| **#146** | BUG-080: a stop delivered on the drive is Done on the list, with its minute | `5a83427` |
+| **#147** | BUG-085: the pack's checksum is checked against the archive | `d264659` |
+| **#161** | BUG-103: an unanswered licence lookup fails the gate instead of passing as a third state (and the 31-`unknown` inventory now carries the registry's real answers, all MIT) | `7e84b6a` |
+| **#167** | A6: the acceptance script and the stable APK link of every merge to main (`releases/download/latest/courier.apk`) | `5392ea9` |
+| **#168** | C2: TRIAL_SCOPE.md with the verified day-one list, D52-D61 for what is not in the trial and why, and four stale PARITY rows corrected | `918f25d` |
+
+**Open, with their exact state:**
+
+| PR | What | Its state |
+|---|---|---|
+| **#135** | A1 slice 3 + slice 4's done-when | head `483a5ef`: main in, then five layers of the a1 job's chain fixed at the root, each on its own run's evidence — KVM (`Boot completed in 44109 ms`), the APK path this job builds, Maestro's install (the legs' pinned step), the failure dump the runner keeps, and the app's blank first screen. **The app fix, with the device's own dump behind it:** the root layout answered `if (isLoading) return null` while the session restored, so the router resolved its first route against a stack with no routes and landed on `not-found-screen`; the front door now renders until the answer lands. **Its E2E is running on `483a5ef` (41298078187): the a1 job's next stop is the flow's real sign-up.** When it is green: read the §13.4 diff, verify `mockStops` is gone from `app/(tabs)/index.tsx`, close BUG-081's row (the marks already go through `run.markDelivered` on this branch), merge with the ritual. |
+| **#166** | C1's eight lows (082, 083, 084, 093, 105, 106, 107, 108), each red-first | head `4eb353e`, main in; its one red is the api-35 leg's five flows — the BUG-161 double-handle signature, whose fix (`src/sync/dbConnections.ts`) is on #135's branch. **Per §17.3 it waits for #135's merge, then takes main, re-runs, and merges.** |
+
+**What session 12 found that the next session needs:**
+
+- **A4's prerequisite:** five screens still import `mockStops` unconditionally on #135's branch — `(tabs)/map.tsx`, `(tabs)/stops.tsx`, `copilot.tsx`, `delivered.tsx`, `lock-screen.tsx`. Only Today and the drive were rewired to the run store. A4's check ("no mock reachable from a release build") is red until they are, so the next slice is the rewiring, one screen at a time against `useRunDay`/`run.day`, then the check + its red-first deliberate-import test.
+- **The a1 job's chain** (one layer per run, each fixed at its root): the stack's env and the auth migration (session 10), the three a1 flows joining the mock legs' glob (session 10), the app sending the wrong credential (session 10), the emulator without KVM, the APK path, Maestro's install, the missing failure dump, and the blank first screen (session 12, evidence: `logcat-crash.txt` empty, the process alive, the a11y tree showing `not-found-screen`).
+- **The numbering:** the highest BUG row across origin/main and every open PR branch is BUG-162; a NEW row starts at BUG-163. DECISIONS is at D61 (D52-D61 were written for C2), so a new decision is D62.
+- **The mutation floor's red on main** (run 41274033506) is the backend's B4 lane — one line per §16.3, not chased here.
 
 
 ## Lead session 12 (2026-11-01): the four open PRs triaged, both reds rooted, the numbering verified
