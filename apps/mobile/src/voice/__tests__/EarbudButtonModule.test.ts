@@ -22,22 +22,25 @@
 const mockEmitterListeners = new Map<string, Array<(event: unknown) => void>>();
 
 jest.mock('react-native', () => {
-  // The real module for everything else (the suite setup and the renderers
-  // use it), with only the emitter and the native module replaced: the
-  // emitter is a native bridge object a test run has no device for.
-    class MockNativeEventEmitter {
-    addListener(event: string, fn: (event: unknown) => void): void {
+  // The emitter is a native bridge object a test run has no device for, and
+  // its contract is the subscription: `addListener` hands back an object whose
+  // `remove()` detaches exactly the listener it was created for (RN's
+  // NativeEventEmitter has no `removeListener` - which is the API BUG-082's
+  // fix uses).
+  class MockNativeEventEmitter {
+    addListener(event: string, fn: (event: unknown) => void) {
       const forEvent = mockEmitterListeners.get(event) ?? [];
       forEvent.push(fn);
       mockEmitterListeners.set(event, forEvent);
-    }
-
-    removeListener(event: string, fn: (event: unknown) => void): void {
-      const forEvent = mockEmitterListeners.get(event) ?? [];
-      mockEmitterListeners.set(
-        event,
-        forEvent.filter((listener) => listener !== fn),
-      );
+      return {
+        remove: () => {
+          const held = mockEmitterListeners.get(event) ?? [];
+          mockEmitterListeners.set(
+            event,
+            held.filter((listener) => listener !== fn),
+          );
+        },
+      };
     }
 
     removeAllListeners(): void {

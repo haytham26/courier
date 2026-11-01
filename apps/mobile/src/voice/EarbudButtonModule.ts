@@ -4,7 +4,7 @@
  * that handles earbud button events (Android/iOS)
  */
 
-import { NativeModules, Platform, NativeEventEmitter } from 'react-native';
+import { NativeModules, Platform, NativeEventEmitter, type EventSubscription } from 'react-native';
 
 export interface EarbudEvent {
   type: 'single' | 'double' | 'triple' | 'long';
@@ -45,15 +45,15 @@ if (EarbudButtonManager && Platform.OS !== 'web') {
 }
 
 /**
- * The listeners this wrapper added, by event name, newest last.
+ * The subscriptions this wrapper holds, newest last.
  *
  * BUG-082: `removeListeners(count)` used to call `removeAllListeners()`, so one
  * unmounting subscriber detached EVERY earbud listener on the emitter - with
  * one subscriber the effect is invisible, with two a screen closing silences
- * the other. NativeEventEmitter can only remove the exact function it was
- * given, so the wrappers we create are remembered here and removed one by one.
+ * the other. The subscriptions the emitter hands back are kept here, and
+ * `removeListeners(count)` removes exactly that many of them, newest first.
  */
-const addedListeners = new Map<string, Array<(event: EarbudEvent) => void>>();
+const subscriptions: EventSubscription[] = [];
 
 export const EarbudButtonModule: EarbudButtonModuleInterface = {
   startListening(): Promise<void> {
@@ -86,26 +86,17 @@ export const EarbudButtonModule: EarbudButtonModuleInterface = {
     }
     // NativeEventEmitter expects (...args: any[]) => void, so we wrap the listener
     const wrappedListener = (event: unknown) => listener(event as EarbudEvent);
-    eventEmitter.addListener(eventName, wrappedListener);
-    const forEvent = addedListeners.get(eventName) ?? [];
-    forEvent.push(wrappedListener);
-    addedListeners.set(eventName, forEvent);
+    subscriptions.push(eventEmitter.addListener(eventName, wrappedListener));
   },
 
   removeListeners(count: number): void {
-    if (!eventEmitter) return;
-    // The count is honoured: this many listeners are removed, the newest
-    // first, and each one by the name it was added under - never another
-    // subscriber's (BUG-082).
+    // The count is honoured: this many subscriptions are removed, the newest
+    // first, and each one only detaches the listener it was created for -
+    // never another subscriber's (BUG-082).
     let left = Math.max(0, Math.floor(count));
-    for (const [eventName, forEvent] of [...addedListeners.entries()]) {
-      while (left > 0 && forEvent.length > 0) {
-        const wrapped = forEvent.pop();
-        if (wrapped) eventEmitter.removeListener(eventName, wrapped);
-        left -= 1;
-      }
-      if (forEvent.length === 0) addedListeners.delete(eventName);
-      if (left === 0) break;
+    while (left > 0 && subscriptions.length > 0) {
+      subscriptions.pop()?.remove();
+      left -= 1;
     }
   },
 };

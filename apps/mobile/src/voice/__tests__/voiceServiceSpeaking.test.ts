@@ -27,15 +27,15 @@ jest.mock(
 jest.mock(
   'react-native-sherpa-onnx/stt',
   () => ({
-    createSTT: jest.fn(async () => ({ destroy: jest.fn() })),
-    detectSttModel: jest.fn(async () => ({ success: true })),
+    createSTT: jest.fn(() => ({ destroy: jest.fn() })),
+    detectSttModel: jest.fn(() => ({ success: true })),
   }),
   { virtual: true },
 );
 jest.mock(
   'react-native-sherpa-onnx/tts',
   () => ({
-    createTTS: jest.fn(async () => ({
+    createTTS: jest.fn(() => ({
       destroy: jest.fn(),
       generateSpeech: jest.fn(
         () =>
@@ -45,7 +45,7 @@ jest.mock(
           }),
       ),
     })),
-    detectTtsModel: jest.fn(async () => ({ success: true })),
+    detectTtsModel: jest.fn(() => ({ success: true })),
   }),
   { virtual: true },
 );
