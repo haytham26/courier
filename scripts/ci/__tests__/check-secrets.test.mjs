@@ -63,22 +63,28 @@ test('the gate reads the repository root\'s .env.local, not the caller\'s cwd (B
 
 test('the gate prints names, never a secret value', () => {
   // Pins a behaviour that already works (the §14 exception, said plainly): the
-  // gate loads the root's .env.local into its own environment and answers, and
-  // whatever it loaded, no VALUE appears in the output - the promise its
-  // header makes and the reason it may run in a CI log. The missing-variable
-  // failure path is the same probe the first test runs red: with no reachable
-  // .env.local the gate answered `MISSING DATABASE_URL` and exit 1.
+  // gate answers, and whatever it loaded, no VALUE appears in the output - the
+  // promise its header makes and the reason it may run in a CI log. The
+  // checkout decides the outcome honestly: a developer's machine carries the
+  // root's .env.local (so the gate clears), and CI carries none (so the gate
+  // names what is missing and fails) - and neither path may print a value.
+  const hasEnvFile = existsSync(path.join(repoRoot, '.env.local'));
   const result = spawnSync(process.execPath, [script], {
     cwd: repoRoot,
     encoding: 'utf8',
     env: cleanEnv(),
   });
 
-  assert.equal(result.status, 0, `${result.stdout ?? ''}${result.stderr ?? ''}`);
-  assert.match(result.stdout, /OK DATABASE_URL/);
-  const databaseUrl = envFileValue('DATABASE_URL');
-  if (databaseUrl) {
-    assert.ok(!result.stdout.includes(databaseUrl), 'the gate printed a secret value');
+  if (hasEnvFile) {
+    assert.equal(result.status, 0, `${result.stdout ?? ''}${result.stderr ?? ''}`);
+    assert.match(result.stdout, /OK DATABASE_URL/);
+    const databaseUrl = envFileValue('DATABASE_URL');
+    if (databaseUrl) {
+      assert.ok(!result.stdout.includes(databaseUrl), 'the gate printed a secret value');
+    }
+  } else {
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /MISSING DATABASE_URL/);
   }
 });
 
