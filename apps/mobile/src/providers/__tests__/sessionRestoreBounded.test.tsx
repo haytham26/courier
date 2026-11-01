@@ -79,6 +79,11 @@ describe('the session restore is bounded (the a1 job\'s first real run)', () => 
       // The deadline passes without an answer: the app goes on, and the front
       // door (signed-out, no session on the phone) is what shows.
       await act(async () => {
+        // The lint rule (@typescript-eslint/require-await, CI run
+        // 41326362048) wants an await in this async act: the microtask flush
+        // is what lets the provider's promise callbacks land before the
+        // timers advance past the deadline.
+        await Promise.resolve();
         jest.advanceTimersByTime(9_000);
       });
 

@@ -51,6 +51,16 @@ function AuthNavigator() {
       <ScanLoadProvider>
         <Stack
           id="root"
+          // The a1 job's first real run (41326369521) proved why this names
+          // the initial route explicitly: the stack mounts only after the
+          // bounded session restore answers, and with no initialRouteName
+          // the router resolved the launch URL against the empty stack, so
+          // the flow saw not-found-screen instead of the welcome. The
+          // signed-out phone opens on the welcome, the signed-in one on the
+          // tabs - and the loading phase still renders nothing, so the run
+          // state's key never flips while the restore is pending (the two
+          // reverted attempts, 483a5ef and aa2672e, are why).
+          initialRouteName={isAuthenticated ? '(tabs)' : 'welcome'}
           screenOptions={{
             headerShown: false,
             gestureEnabled: true,

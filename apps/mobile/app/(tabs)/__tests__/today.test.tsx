@@ -13,12 +13,12 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-
 import * as Haptics from 'expo-haptics';
 
 import { ChosenProvider } from '@/components/chosen';
-import { RunProvider } from '@/maps/runState';
+import { RunProvider, useRun } from '@/maps/runState';
 import { e2eDay } from '@/run/dayForThisBuild';
 import { RunStore } from '@/run/runStore';
 import { EventLog } from '@/sync/eventLog';
 import type { DeliveredMark, RunCache } from '@/run/types';
-import type { EventStore } from '@/sync/types';
+import type { DeliveryEvent, EventStore } from '@/sync/types';
 import { reportSyncAnswers, resetSyncAnswers } from '@/sync/syncAnswers';
 import { BriefContext } from '../briefContext';
 import { DEFAULT_VOICE_SETTINGS } from '@/voice/settings';
@@ -337,5 +337,83 @@ describe('Today', () => {
     });
 
     expect(screen.queryByTestId('today-sync-note')).toBeNull();
+  });
+
+  // BUG-081's done-when, proven: a mark made on Today is ONE fact - it is
+  // written through the shared run state (so Driving, which reads the same
+  // provider, sees it) and it records an event in the outbox's log (so the
+  // delivery leaves the phone when there is signal). The old screen kept its
+  // own doneIds, so the two screens disagreed and no event was ever recorded.
+  it('a mark made on Today is one fact across screens and records an event (BUG-081)', async () => {
+    const marks: DeliveredMark[] = [];
+    const appended: DeliveryEvent[] = [];
+    const cache: RunCache = {
+      read: () => Promise.resolve(null),
+      write: () => Promise.resolve(),
+      markDelivered: (mark) => {
+        marks.push(mark);
+        return Promise.resolve();
+      },
+      markOf: (stopId) => Promise.resolve(marks.find((m) => m.stopId === stopId) ?? null),
+      undoDelivered: (stopId) => {
+        const at = marks.findIndex((m) => m.stopId === stopId);
+        if (at >= 0) marks.splice(at, 1);
+        return Promise.resolve();
+      },
+      deliveredMarks: () => Promise.resolve([...marks]),
+      clear: () => Promise.resolve(),
+      close: () => Promise.resolve(),
+    };
+    const eventStore: EventStore = {
+      append: (event) => {
+        appended.push(event);
+        return Promise.resolve();
+      },
+      pending: () => Promise.resolve([...appended]),
+      markSynced: () => Promise.resolve(),
+      quarantine: () => Promise.resolve(),
+      forget: () => Promise.resolve(),
+      pendingCount: () => Promise.resolve(appended.length),
+    };
+    const store = new RunStore({
+      client: {
+        seedDemoRun: () => Promise.resolve({ status: 'offline' }),
+        getRun: () => Promise.resolve({ status: 'offline' }),
+        getStops: () => Promise.resolve({ status: 'offline' }),
+      },
+      cache,
+      events: new EventLog(eventStore),
+      reason: 'e2e',
+    });
+
+    // A second reader of the SAME run state - the way Driving reads it: one
+    // provider, one fact.
+    let seenByTheOtherScreen: string[] = [];
+    const DrivingProbe = () => {
+      const run = useRun();
+      seenByTheOtherScreen = run.delivered.map((event) => event.stopId);
+      return null;
+    };
+
+    render(
+      <ChosenProvider mode="light">
+        <RunProvider store={store}>
+          <BriefContext.Provider value={makeBrief()}>
+            <TodayScreen />
+            <DrivingProbe />
+          </BriefContext.Provider>
+        </RunProvider>
+      </ChosenProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('today-mark-delivered')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('today-mark-delivered'));
+
+    // The event is in the log the outbox sends from...
+    await waitFor(() => expect(appended.some((event) => event.kind === 'delivered')).toBe(true));
+    // ...the mark is in the store (so it survives a cold start)...
+    expect(marks).toHaveLength(1);
+    // ...and the other screen reading the same run state sees the stop.
+    await waitFor(() => expect(seenByTheOtherScreen).toContain(marks[0].stopId));
   });
 });
