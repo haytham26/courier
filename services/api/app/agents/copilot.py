@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 from dataclasses import dataclass
 
 import anthropic
@@ -125,6 +126,37 @@ def fallback_intent(transcript: str) -> Intent:
     return Intent("none", {}, speech="I did not catch that. Say it again.")
 
 
+#: The one client the copilot shares (BUG-116). A fresh `Anthropic()` per
+#: utterance opened a connection pool per utterance and never closed it, so a
+#: 400-stop shift of 1 Hz traffic leaked a pool per utterance and carried the
+#: SDK's default (600 s total) timeout: a slow gateway parked the socket.
+COPILOT_TIMEOUT_SECONDS = 30.0
+COPILOT_MAX_RETRIES = 2
+
+#: The client lives in a cell rather than a `global`: the lock and the cell
+#: together make the first construction safe in the socket's thread pool
+#: without ruff's PLW0603.
+_CLIENT_CELL: dict[str, anthropic.Anthropic] = {}
+_CLIENT_LOCK = threading.Lock()
+
+
+def _shared_client() -> anthropic.Anthropic:
+    """The one client for this process, built on first use.
+
+    Built lazily and under a lock: the module is imported by the test suite
+    without a key, and the voice socket's loop is a thread pool where two
+    first calls could otherwise race.
+    """
+    with _CLIENT_LOCK:
+        client = _CLIENT_CELL.get("client")
+        if client is None:
+            client = anthropic.Anthropic(
+                timeout=COPILOT_TIMEOUT_SECONDS, max_retries=COPILOT_MAX_RETRIES
+            )
+            _CLIENT_CELL["client"] = client
+        return client
+
+
 def interpret(transcript: str, state: dict, client=None, region: str = "Christchurch") -> Intent:
     """The transcript, bounded and wrapped in the state envelope.
 
@@ -136,7 +168,7 @@ def interpret(transcript: str, state: dict, client=None, region: str = "Christch
     if hit := fast_path(transcript):
         return hit
     bounded = transcript[:2000]
-    client = client or anthropic.Anthropic()
+    client = client or _shared_client()
     resp = client.messages.create(
         model=MODEL,
         max_tokens=200,
