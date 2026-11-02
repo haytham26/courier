@@ -194,6 +194,8 @@ class RouteStopRow:
     status: str = "pending"
     suburb: str | None = None
     location_id: UUID | None = None
+    # The stop's type (ADR-024, D59's server half): the preset's core.
+    type: str = "delivery"
 
 
 @dataclass(frozen=True)
@@ -452,6 +454,7 @@ class InMemoryRepo:
                 status=latest.get(row.id, ("", 0, "pending"))[2],
                 suburb=row.suburb,
                 location_id=row.location_id,
+                type=row.type,
             )
             for row in self.run_stops.get(run_id, [])
         ]
@@ -896,7 +899,7 @@ class SqlAlchemyRepo:
             """
             SELECT s.id, s.latitude, s.longitude, s.priority, s.parcels,
                    s.service_time_s, s.time_window_start, s.time_window_end,
-                   s.address, s.suburb, s.location_id,
+                   s.address, s.suburb, s.location_id, s.type,
                    COALESCE(
                        (
                            SELECT e.kind
@@ -934,6 +937,7 @@ class SqlAlchemyRepo:
                 status=row["status"],
                 suburb=row["suburb"],
                 location_id=row["location_id"],
+                type=row["type"],
             )
             for row in rows
         ]

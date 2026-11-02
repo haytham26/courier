@@ -199,7 +199,7 @@ const run: RunResponse = {
 };
 
 function stop(id: string, seq: number): StopResponse {
-  return { id, location_id: `loc-${id}`, address: `${id} Riccarton Road`, seq, status: 'pending' };
+  return { id, location_id: `loc-${id}`, address: `${id} Riccarton Road`, seq, status: 'pending', type: 'delivery' };
 }
 
 const aDay: RunSnapshot = { run, stops: [stop('stop-2', 2), stop('stop-1', 1)] };

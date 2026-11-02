@@ -995,7 +995,7 @@ components:
         shape. `location_id` (ADR-012) is the door's stable id the notes
         endpoints take; `van_zone` and `tip` return when the van-loading
         lands.
-      required: [id, seq, status, location_id]
+      required: [id, seq, status, location_id, type]
       properties:
         id:
           type: string
@@ -1004,6 +1004,13 @@ components:
           type: string
           format: uuid
           description: The stable door id (ADR-012) the notes endpoints take
+        type:
+          type: string
+          enum: [delivery, pickup]
+          description: >-
+            The stop's type (D59, ADR-024): the core of the reusable preset
+            Spoke bundles on an address; the preset's other fields ride the
+            address squad's door memory.
         address:
           type: string
           nullable: true

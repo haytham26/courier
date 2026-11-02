@@ -1133,6 +1133,7 @@ def list_stops(
             ),
             "seq": seq,
             "status": row.status,
+            "type": row.type,
             "lat": row.lat,
             "lon": row.lon,
             "priority": row.priority,
