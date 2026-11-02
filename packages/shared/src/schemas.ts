@@ -115,7 +115,13 @@ export const DeliveryEventSchema = z.object({
   lat: z.number().min(-90).max(90).optional(),
   lon: z.number().min(-180).max(180).optional(),
   accuracy_m: z.number().positive().optional(),
-  occurred_at: z.string().datetime(),
+  // BUG-143: the phone's own gate accepts `Z` or a `±HH:MM` offset
+  // (apps/mobile/src/sync/eventSchema.ts) and the API refuses a naive stamp
+  // (services/api/app/occurred_at.py), so the shared contract is
+  // `.datetime({ offset: true })`: an offset is required, and either form
+  // of it is accepted. The plain `.datetime()` accepted only `Z` here, which
+  // disagreed with the phone's gate in the other direction.
+  occurred_at: z.string().datetime({ offset: true }),
 });
 
 export const SyncPayloadSchema = z.object({

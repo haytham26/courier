@@ -141,6 +141,8 @@ A test that passes without proving anything is worse than no test: it hides the 
 
 **Each session keeps its CURRENT file true** at every push: what it is on, its open PRs, and the red steps it is fixing. That file is how the other session knows.
 
+**Each session writes only its own log** (founder directive 2026-11-02). The lead writes `docs/log/CURRENT.md`; the backend writes `docs/log/CURRENT-backend.md` and its own `HANDOVER-*.md`. Never edit, append to or reword the other session's log, not even its header line; to tell the other session something, write it in your own log. A PR that changes the other session's log is refused at review, and the change is reverted to the line it replaced.
+
 ## 17. The E2E is deterministic, and main is never silently red (founder directive 2026-10-25)
 
 **Why this section exists.** On 2026-10-25, api-35 went red on four PRs (#18, #30, #36, #40) right after they took main, while one of them (#36) does not touch the app. Nobody saw it on main itself, because the Android E2E runs only on PRs and nightly. The workflow also takes inputs that change without a commit:

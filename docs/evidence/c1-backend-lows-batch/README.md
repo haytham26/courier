@@ -1,0 +1,52 @@
+# The C1 lows batch (the backend squad's rows)
+
+One PR, one branch (`c1-backend-lows-batch`), one register row closed per commit. Every
+row is fixed at its root with a red-first test: the suite runs against `origin/main`'s
+modules first and the output is quoted here, then the fix lands and the suite is green.
+The lead's own lows (mobile, `.maestro`, the CI scripts) are on `fix/c1-lows-batch` (PR
+#166) and are **not** in this file.
+
+## The rows this batch closes
+
+BUG-118, 119, 120, 135, 136, 138, 143, 144, 145, 155, 156, 157, 158, 159, and the new
+**BUG-163** (the repository's own `docker-compose.yml` Postgres, whose image carries no
+`vector` library).
+
+## How each row was proven
+
+| Row | The red before | The green after | The root it was fixed at |
+|-----|----------------|-----------------|--------------------------|
+| BUG-118 | the address-less stop answered `500 an internal error occurred`, twice | 520 passed | `app/locations.py`'s guarded derivation, shared by both callers |
+| BUG-135 | 3 red against origin/main: hasattr, the module still naming it, the query-string read twice | 3 green | app/auth/websocket.py: the dead export and the imports only it used are deleted, and the suite pins the deletion |
+| BUG-136 | unused exported symbols in app/auth: [get_verifier_override] | 3 green | app/auth/jwks.py: the getter and its false docstring are deleted, and TestNoUnusedExportedSymbolRemains reads the module public names |
+| BUG-138 | DID NOT RAISE InvalidTokenError on both the empty and the blank subject | 66 passed | app/auth/jwks.py: the subject is validated where it is assigned (a non-blank string, or an InvalidTokenError) |
+| BUG-143 | the shared schema refused the `+13:00` offset the phone's own gate accepts (vitest: `expected false to be true`), and the 422 named neither the offset nor an example (`assert 'offset' in '...occurred_at must carry its timezone...'` failed) | 29 passed in `packages/shared`, 542 passed in the API suite | `packages/shared/src/schemas.ts` is `.datetime({ offset: true })`, and `app/occurred_at.py` carries the one rule whose messages name the field and show the `+13:00` example; pinned by `schemas.test.ts` and `test_sync.py::TestTheOccurredAtContract` |
+| BUG-144 | the POD form's hand-rolled gate answered the old text (`assert 'offset' in ...` failed), so the two paths disagreed about the same stamp | 542 passed in the API suite | `app/occurred_at.py` is the one validator both paths read; the ADR-014 §3 bounds exemption on POD is pinned by `test_sync.py::TestOneRuleForBothPaths` (two years ahead: accepted on POD, refused on sync) |
+| BUG-145 | the fresh row was applied and the shift index grew before the failing row (Left contains one more item) | 3 green, and 27 in the sync suites | app/repo.py: the decision is made first, the mutations happen once, after it |
+| BUG-155 | on the 25-hour day the rolling window reset 24 h after the first call, at 23:30 on 5 April (assert 0.0 == 0.02) | 3 green, and 210 in the voice suite | services/courier-voice/app/cost.py: the reset compares the New Zealand date, and tzdata rides behind a win32 marker |
+| BUG-159 | uv.lock carried no mutmut entry, so uv sync --frozen silently omitted it | uv lock resolves 55 packages and uv sync --frozen installs mutmut 3.8.1 and tzdata 2026.6 | services/courier-voice: uv lock re-run and committed, with the win32 tzdata the calendar day needs |
+| BUG-158 | the new tests answered KeyError: platform, and the Python version did not match platform.python_version() | 2 green, 10 in the harness suite | services/courier-voice/app/eval_harness.py: the interpreter and the machine are read, not written |
+| BUG-157 | the header carried transcript and every row its verbatim words | 2 green, 12 in the harness suite, and the tracked artifact regenerated with digests | services/courier-voice/app/eval_harness.py: the transcript column is a 16-hex-character digest of the words |
+| BUG-120 | a broken insert answered 500 with "an internal error occurred" and left the object in place | 2 green, and 538 in the API suite | services/api/app/main.py: the failed insert deletes the bytes it just wrote and names the reason, with PodStore.delete as the pairing half of save |
+| BUG-156 | a token issued 20 minutes ago with a valid signature and an unexpired `exp` was accepted (DID NOT RAISE), and so was a token with no `iat` at all | 5 green in `test_auth.py`, 219 in the voice suite | services/courier-voice/app/auth.py requires `iat` and refuses a token older than `AUTH_MAX_TOKEN_AGE_SECONDS` (300 s default plus the 30 s leeway), read from app/config.py; the HTTP layer's generic 401 keeps the age detail off the wire |
+
+## The merge of origin/main (943cd3f, #171 + #172) into this branch
+
+Both register gates survive and pass together: `node scripts/ci/check-parity.mjs` exits 0
+(310 parity rows; 160 bug rows — open 19 · doing 3 · testing 3 · fixed 103 · closed 2 ·
+moved to PARITY 30, the footer's counts) and `node scripts/ci/check-parity.mjs --base
+origin/main` exits 0 ("reopen guard vs origin/main: 90 fixed/closed rows compared, 0
+reopened without a stated reason"). The gate's own suite holds both sides' tests:
+`node --test scripts/ci/__tests__/check-parity.test.mjs` 32 passed, 0 failed, and the
+whole `node --test "scripts/*/__tests__/*.test.mjs"` run is 145 passed, 0 failed, 2
+skipped. The merge's seven conflicts and their resolutions are written up in
+`docs/log/2026-W44.md` (2026-11-02, the merge entry): per-row newest state in BUGS.md,
+both test sets in the parity suite, main's BUG-126 one-verifier rework kept minus the
+BUG-136-deleted getter, the BUG-135 adapter deletion kept, and cost.py carrying both
+BUG-152/153 (reserve under the lock) and BUG-155 (NZ calendar day under the same lock).
+
+Gates re-run on the merge commit: API 547 passed, 1 skipped · voice 228 passed · auth
+120 passed · shared vitest 29 passed · tsc clean (shared and auth) · eslint clean ·
+ruff and mypy clean in both Python services · check-floor, conflict-markers,
+control-chars, mojibake, doc-links, workflows, emulator-gpu, e2e-pins, auth-issuer and
+both eval checks exit 0 · no file deleted vs origin/main (§13.3).

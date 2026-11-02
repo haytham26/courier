@@ -19,6 +19,7 @@ from app.auth.jwks import get_verifier
 from app.main import app
 from app.repo import DeliveryEventRow, InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+from tests.test_runs_api import png_bytes, recent_iso, seed_run_with_stops
 
 COURIER = "driver-7"
 SHIFT_ID = uuid.uuid4()
@@ -76,7 +77,11 @@ def client(repo: InMemoryRepo) -> Iterator[TestClient]:
     app.dependency_overrides.clear()
 
 
-def event(event_id: uuid.UUID | None = None, kind: str = "delivered") -> dict[str, Any]:
+def event(
+    event_id: uuid.UUID | None = None,
+    kind: str = "delivered",
+    occurred_at: str | None = None,
+) -> dict[str, Any]:
     return {
         "id": str(event_id or uuid.uuid4()),
         "stop_id": str(STOP_ID),
@@ -86,7 +91,7 @@ def event(event_id: uuid.UUID | None = None, kind: str = "delivered") -> dict[st
         "lat": -43.535,
         "lon": 172.605,
         "accuracy_m": 8.5,
-        "occurred_at": datetime.now(UTC).isoformat(),
+        "occurred_at": occurred_at or datetime.now(UTC).isoformat(),
     }
 
 
@@ -429,3 +434,173 @@ def test_a_pod_row_does_not_bump_the_sync_cursor(
     )
 
     assert seeded_run.cursor(SHIFT_ID) == 1
+
+
+def an_event(stop_id: Any = STOP_ID, **overrides: Any) -> DeliveryEventRow:
+    """One delivery event row, as the sync endpoint would carry it."""
+    values: dict[str, Any] = {
+        "id": uuid.uuid4(),
+        "shift_id": SHIFT_ID,
+        "stop_id": stop_id,
+        "kind": "delivered",
+        "utterance": None,
+        "safe_place": None,
+        "lat": None,
+        "lon": None,
+        "accuracy_m": None,
+        "occurred_at": datetime.now(UTC),
+    }
+    values.update(overrides)
+    return DeliveryEventRow(**values)
+
+
+class TestTheInMemoryAppendIsAtomic:
+    """BUG-145: the double applies the batch as one decision, then one mutation.
+
+    Production wraps its whole batch in `engine.begin()`; the in-memory repo
+    wrote each row as it walked the batch, so a raise in the middle left half
+    the batch applied and `self.events` and `self.by_shift` could disagree. A
+    test double that answers non-atomically lets a test pass on an atomicity
+    production has and the double does not - which is exactly the shape that
+    hid BUG-115.
+    """
+
+    def test_a_failure_in_the_middle_of_a_batch_applies_nothing(
+        self, repo: InMemoryRepo, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        known = an_event()
+        repo.append_events(SHIFT_ID, [known])
+        fresh = an_event()
+        replay = an_event(id=known.id)
+
+        def explode(existing: Any, incoming: Any) -> bool:
+            if incoming is replay:
+                raise RuntimeError("the batch's last row")
+            return True
+
+        monkeypatch.setattr("app.repo._same_event", explode)
+
+        with pytest.raises(RuntimeError):
+            repo.append_events(SHIFT_ID, [fresh, replay])
+
+        # Only what the store held before the batch is there: the fresh row is
+        # not applied, and the shift's index did not grow.
+        assert list(repo.events) == [known.id]
+        assert repo.by_shift[SHIFT_ID] == [known.id]
+
+    def test_a_batch_that_succeeds_applies_all_of_it(self, repo: InMemoryRepo) -> None:
+        first = an_event()
+        second = an_event()
+
+        answer = repo.append_events(SHIFT_ID, [first, second])
+
+        assert answer.stored == 2
+        assert len(repo.events) == 2
+        assert len(repo.by_shift[SHIFT_ID]) == 2
+
+    def test_a_batch_carrying_the_same_id_twice_is_a_conflict(
+        self, repo: InMemoryRepo
+    ) -> None:
+        """The SQL repo answers an intra-batch divergence; so does this one."""
+        first = an_event()
+        again = an_event(id=first.id, safe_place="a different door")
+
+        answer = repo.append_events(SHIFT_ID, [first, again])
+
+        assert answer.stored == 1
+        assert answer.conflicts == (first.id,)
+        assert repo.by_shift[SHIFT_ID] == [first.id]
+
+
+class TestTheOccurredAtContract:
+    """BUG-143: the refusal names the field and the shape the phone sends.
+
+    The old texts said "occurred_at must carry its timezone" and "the phone's
+    clock is wrong", so a courier whose stamp was perfectly well formed was told
+    his clock was broken. The field is named and the expected shape is shown.
+    """
+
+    def test_a_naive_stamp_names_the_field_and_the_shape(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        naive = datetime.now(UTC).replace(tzinfo=None).isoformat()
+
+        answered = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[event(occurred_at=naive)])
+
+        assert answered.status_code == 422, answered.text
+        detail = answered.text
+        assert "occurred_at" in detail
+        assert "offset" in detail
+        assert "+13:00" in detail
+
+    def test_a_future_stamp_names_the_bound_rather_than_blaming_the_clock(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        far_future = (datetime.now(UTC) + timedelta(days=30)).isoformat()
+
+        answered = client.post(
+            f"/shifts/{SHIFT_ID}/events:batch", json=[event(occurred_at=far_future)]
+        )
+
+        assert answered.status_code == 422, answered.text
+        assert "occurred_at" in answered.text
+        assert "within an hour of now" in answered.text
+
+
+class TestOneRuleForBothPaths:
+    """BUG-144: the naive check has one source, and the POD exemption is pinned.
+
+    ADR-014 §3 keeps the clock *bounds* off the POD upload (`pod_captured` never
+    flips a stop), and that exemption is now a test rather than a comment, so
+    the next kind added to both paths cannot drift.
+    """
+
+    def test_the_pod_form_reads_the_same_naive_check(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        naive = recent_iso().replace("+00:00", "")
+
+        answered = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", png_bytes(), "image/png")},
+            data={"occurred_at": naive},
+        )
+
+        assert answered.status_code == 422, answered.text
+        assert "offset" in answered.text
+
+    def test_the_pod_upload_keeps_adr_014_clock_exemption(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Two years ahead is accepted on the POD path and refused on the sync
+        path - the same stamp, the same day, and the difference is ADR-014's."""
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        two_years_ahead = datetime.now(UTC) + timedelta(days=730)
+
+        stored = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", png_bytes(), "image/png")},
+            data={"occurred_at": two_years_ahead.isoformat()},
+        )
+
+        assert stored.status_code == 201, stored.text
+
+        answered = client.post(
+            f"/shifts/{SHIFT_ID}/events:batch",
+            json=[event(occurred_at=two_years_ahead.isoformat())],
+        )
+
+        assert answered.status_code == 422, answered.text

@@ -7,7 +7,7 @@ import logging
 import os
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import (
@@ -54,16 +54,25 @@ from .auth.websocket import (
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
-from .locations import location_id_for
+from .locations import location_id_for_stop
+from .occurred_at import bound_occurred_at, require_aware_occurred_at
 from .pod import (
     POD_MAX_BYTES,
     pod_settings,
     sniff_image_kind,
     validate_pod_settings,
 )
-from .pod_store import LocalPodStore, pod_store
+from .pod_store import LocalPodStore, PodFingerprintError, pod_store
 from .providers import VERIFIERS, apply_facts, webhook_secret_for
-from .repo import DeliveryEventRow, LocationNoteRow, Repo, RouteStopRow, RunRecord, get_repo
+from .repo import (
+    AppendResult,
+    DeliveryEventRow,
+    LocationNoteRow,
+    Repo,
+    RouteStopRow,
+    RunRecord,
+    get_repo,
+)
 from .responses import (
     DemoRunResponse,
     EntitlementResponse,
@@ -236,18 +245,14 @@ class DeliveryEvent(BaseModel):
     @classmethod
     def _aware_occurred_at(cls, value: datetime) -> datetime:
         """A naive timestamp would break the status ordering (and lie about
-        when it happened) - the phone always knows its zone."""
-        if value.tzinfo is None:
-            raise ValueError("occurred_at must carry its timezone")
-        now = datetime.now(UTC)
-        if value > now + timedelta(hours=1):
-            raise ValueError(
-                "occurred_at is more than an hour in the future: the phone's clock is wrong"
-            )
-        if value < now - timedelta(days=7):
-            raise ValueError(
-                "occurred_at is more than 7 days old: the log is stale or the clock is wrong"
-            )
+        when it happened) - the phone always knows its zone.
+
+        The check and the bounds are `app/occurred_at.py`'s (BUG-143/144), the
+        same one the POD path reads its naive check from, so the two paths
+        cannot disagree about what a timestamp is again.
+        """
+        require_aware_occurred_at("occurred_at", value)
+        bound_occurred_at("occurred_at", value)
         return value
 
     @field_validator("kind")
@@ -535,8 +540,14 @@ class PodForm:
         safe_place: str | None = Form(None, max_length=200),
         event_id: uuid.UUID | None = Form(None),
     ) -> None:
-        if occurred_at.tzinfo is None:
-            raise HTTPException(status_code=422, detail="occurred_at must carry its timezone")
+        # BUG-144: the naive check is the sync event's own, read from one place
+        # (ADR-014 §3 keeps the clock BOUNDS off POD: `pod_captured` never
+        # flips a stop, so the photo's timestamp orders nothing - and the
+        # exemption is pinned by a test, not left as a comment).
+        try:
+            require_aware_occurred_at("occurred_at", occurred_at)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
         self.occurred_at = occurred_at
         self.safe_place = safe_place
         self.event_id = event_id
@@ -592,7 +603,17 @@ def upload_pod(
     replayed = existing is not None
 
     if replayed and store.exists(run.id, resolved_id):
-        stored_bytes, digest = store.fingerprint(run.id, resolved_id)
+        try:
+            stored_bytes, digest = store.fingerprint(run.id, resolved_id)
+        except PodFingerprintError as error:
+            # The bytes are stored but cannot be read. Answer with the reason
+            # (BUG-119: it used to escape as a bare RuntimeError, a 500 with no
+            # explanation), and leave the event log untouched so the phone's
+            # retry is a replay rather than a second event.
+            logger.warning(
+                "the POD replay of %s cannot be fingerprinted: %s", resolved_id, error
+            )
+            raise HTTPException(status_code=500, detail=str(error)) from error
     else:
         # Not a replay: the upload is the record, and bytes that sit there
         # without their own event row (a crash orphan, or a planted file)
@@ -600,23 +621,44 @@ def upload_pod(
         digest = store.save(run.id, resolved_id, content)
         stored_bytes = len(content)
 
-    outcome = repo.append_events(
-        shift_id=run.shift_id,
-        events=[
-            DeliveryEventRow(
-                id=resolved_id,
-                shift_id=run.shift_id,
-                stop_id=paths.stop_id,
-                kind="pod_captured",
-                utterance=None,
-                safe_place=form.safe_place,
-                lat=None,
-                lon=None,
-                accuracy_m=None,
-                occurred_at=form.occurred_at,
-            )
-        ],
-    )
+    outcome: AppendResult | None = None
+    try:
+        outcome = repo.append_events(
+            shift_id=run.shift_id,
+            events=[
+                DeliveryEventRow(
+                    id=resolved_id,
+                    shift_id=run.shift_id,
+                    stop_id=paths.stop_id,
+                    kind="pod_captured",
+                    utterance=None,
+                    safe_place=form.safe_place,
+                    lat=None,
+                    lon=None,
+                    accuracy_m=None,
+                    occurred_at=form.occurred_at,
+                )
+            ],
+        )
+    except Exception as error:
+        # BUG-120: the bytes were written first, so a failed insert left an
+        # object under the run's prefix that no event row and no re-seed
+        # accounted for - and the answer was a 500 with no record of the event,
+        # so the courier's photo had landed nowhere he could find it. The bytes
+        # written here go with the row that failed, and the reason is logged.
+        if not replayed:
+            try:
+                store.delete(run.id, resolved_id)
+            except Exception as cleanup_error:  # the orphan is worse than the 500
+                logger.warning(
+                    "the POD bytes of %s could not be removed after a failed insert: %s",
+                    resolved_id,
+                    cleanup_error,
+                )
+        logger.warning("the POD insert of %s failed: %s", resolved_id, error)
+        raise HTTPException(
+            status_code=500, detail="the delivery event could not be recorded"
+        ) from error
     # The answer is the model, so a key rename is a construction error here
     # rather than a silently different answer on the phone (B3's response_model
     # slice). The status rides on the JSONResponse rather than an injected
@@ -1028,7 +1070,9 @@ def list_stops(
         {
             "id": str(row.id),
             "address": row.address,
-            "location_id": str(row.location_id or location_id_for(row.address or "", row.suburb)),
+            "location_id": str(
+                row.location_id or location_id_for_stop(row.id, row.address, row.suburb)
+            ),
             "seq": seq,
             "status": row.status,
             "lat": row.lat,

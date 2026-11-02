@@ -60,19 +60,24 @@ def a_token(
     issuer: str = ISSUER,
     expires_in: int = 60,
     subject: str = "driver-1",
+    issued_ago: int | None = 0,
 ) -> str:
-    """A token of the courier."""
-    return jwt.encode(
-        {
-            "sub": subject,
-            "aud": audience,
-            "iss": issuer,
-            "exp": int(time.time()) + expires_in,
-        },
-        private,
-        algorithm="ES256",
-        headers={"kid": kid},
-    )
+    """A token of the courier.
+
+    `issued_ago` sets how long ago the token was issued (`iat`); `None` builds
+    a token with no `iat` at all — PyJWT adds none on its own, so the default
+    is an issued-now token and `None` is the claim-less one.
+    """
+    now = int(time.time())
+    payload: dict[str, Any] = {
+        "sub": subject,
+        "aud": audience,
+        "iss": issuer,
+        "exp": now + expires_in,
+    }
+    if issued_ago is not None:
+        payload["iat"] = now - issued_ago
+    return jwt.encode(payload, private, algorithm="ES256", headers={"kid": kid})
 
 
 def a_verifier(jwk: dict[str, object]) -> JwksVerifier:
@@ -304,3 +309,63 @@ def test_a_url_whose_scheme_is_neither_http_nor_https_is_refused():
 def test_a_url_without_a_host_is_refused():
     with pytest.raises(ValueError, match="absolute URL"):
         _a_config(auth_jwks_url="https:///jwks")
+
+
+# ---------------------------------------------------------------------------
+# BUG-156: a token revoked at the auth service keeps full access here until it
+# expires, because the check is signature and expiry only. The resource server
+# now bounds the token's life by its `iat`: a token older than
+# AUTH_MAX_TOKEN_AGE_SECONDS (300 s, under the issuer's 15-minute lifetime) is
+# refused, so the revocation window shrinks from the issuer's lifetime to the
+# accepted age. The phone reads its token fresh on every call and refreshes it
+# silently, so a live courier is not signed out by the bound.
+# ---------------------------------------------------------------------------
+
+
+def test_a_token_older_than_the_accepted_age_is_refused_though_it_has_not_expired():
+    """BUG-156, red first: signature and expiry are valid and the token was
+    issued 20 minutes ago - exactly a revoked courier's token."""
+    private, jwk = a_key_pair()
+
+    with pytest.raises(InvalidTokenError, match="older than this service accepts"):
+        _a_verifier_of(jwk).verify(a_token(private, issued_ago=1200, expires_in=3600))
+
+
+def test_a_token_inside_the_accepted_age_is_accepted():
+    """The bound refuses old tokens, not fresh ones: issued 4 minutes ago."""
+    private, jwk = a_key_pair()
+
+    principal = _a_verifier_of(jwk).verify(a_token(private, issued_ago=240, expires_in=3600))
+
+    assert principal.user_id == "driver-1"
+
+
+def test_the_accepted_age_comes_from_the_config():
+    """An operator may widen the window; the default is 300 s."""
+    private, jwk = a_key_pair()
+
+    principal = _a_verifier_of(jwk, auth_max_token_age_seconds=1800).verify(
+        a_token(private, issued_ago=1200, expires_in=3600)
+    )
+
+    assert principal.user_id == "driver-1"
+
+
+def test_the_age_bound_carries_the_same_skew_as_the_expiry():
+    """BUG-123's 30 s tolerance applies to the age too: issued 5 minutes ago is
+    inside 300 s + 30 s of leeway, issued 10 minutes ago is not."""
+    private, jwk = a_key_pair()
+
+    principal = _a_verifier_of(jwk).verify(a_token(private, issued_ago=300, expires_in=3600))
+    assert principal.user_id == "driver-1"
+
+    with pytest.raises(InvalidTokenError, match="older than this service accepts"):
+        _a_verifier_of(jwk).verify(a_token(private, issued_ago=600, expires_in=3600))
+
+
+def test_a_token_with_no_issue_time_is_refused():
+    """No `iat` means no age to bound, so the token cannot be accepted."""
+    private, jwk = a_key_pair()
+
+    with pytest.raises(InvalidTokenError):
+        _a_verifier_of(jwk).verify(a_token(private, issued_ago=None, expires_in=3600))

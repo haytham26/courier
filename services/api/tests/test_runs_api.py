@@ -21,7 +21,8 @@ from fastapi.testclient import TestClient
 from app.auth.jwks import get_verifier
 from app.locations import location_id_for
 from app.main import _route_request, app
-from app.pod_store import LocalPodStore
+from app.pod import pod_settings
+from app.pod_store import LocalPodStore, pod_store
 from app.repo import DeliveryEventRow, InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from app.routing import schedule_plan
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
@@ -157,6 +158,7 @@ class TestCreatingARun:
 
 class TestThePodUrl:
     """ADR-011 §2: the owner gets a URL that dies; a foreign anything is 404."""
+
 
     def _upload(
         self,
@@ -412,6 +414,66 @@ def seed_run_with_stops(
     ]
     return run_id, shift_id
 
+
+
+
+class TestTheReplayWhoseBytesCannotBeRead:
+    """BUG-119's route half: the reason is an answer, not a bare raise.
+
+    A stored object the store cannot read (a 403, a 5xx) used to surface as a
+    bare `RuntimeError` - a 500 with no explanation, and the event log was
+    left with no record of the replay because the request died before
+    `append_events`. The route now answers 500 with the reason and leaves the
+    log alone, so the phone's retry is a replay rather than a second event.
+    """
+
+    def test_the_reason_is_answered_and_the_log_is_left_alone(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        payload = png_bytes()
+        happened_at = recent_iso()
+        first = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": happened_at},
+        )
+        assert first.status_code == 201, first.text
+        event_id = first.json()["event_id"]
+        events_before = len(repo.events)
+
+        # The new name, imported here so the red-first run proves the store
+        # half first (the route half's own red is the missing name).
+        from app.pod_store import PodFingerprintError
+
+        real_store = pod_store(pod_settings())
+
+        class UnreadableStore:
+            """The bytes are there, and no reader can reach them."""
+
+            def exists(self, *args: object, **kwargs: object) -> bool:
+                return real_store.exists(run_id, uuid.UUID(event_id))
+
+            def fingerprint(self, *args: object, **kwargs: object) -> tuple[int, str]:
+                raise PodFingerprintError("the stored POD object cannot be read: backend down")
+
+        monkeypatch.setattr("app.main.pod_store", lambda settings=None: UnreadableStore())
+
+        answered = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": happened_at, "event_id": event_id},
+        )
+
+        assert answered.status_code == 500
+        assert "backend down" in answered.json()["detail"]
+        assert len(repo.events) == events_before
 
 class TestListingTheStops:
     def test_the_stops_list_their_address_and_status(
@@ -1046,3 +1108,68 @@ class TestTheHardenedEdges:
         assert pod.status_code == 401
         assert reopt.status_code == 401
         assert stops.status_code == 401
+
+
+class TestABrokenInsertLeavesNoOrphanBytes:
+    """BUG-120: the bytes and the event row are written together, or neither is.
+
+    The POD route wrote the bytes before `append_events`, so a database failure
+    left an object under the run's prefix that no event row and no re-seed
+    accounted for - and the answer was a 500 with no record of the event, so
+    the courier's photo had landed nowhere he could find it.
+    """
+
+    def test_a_failed_insert_deletes_the_object_it_just_wrote(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        payload = png_bytes()
+
+        def broken_append(**kwargs: object) -> None:
+            raise RuntimeError("the event table is unreachable")
+
+        monkeypatch.setattr(repo, "append_events", broken_append)
+
+        answered = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": recent_iso()},
+        )
+
+        assert answered.status_code == 500
+        assert "could not be recorded" in answered.json()["detail"]
+        # Nothing is left under the run's prefix: no photo without a record.
+        directory = Path(str(tmp_path)) / str(run_id)
+        assert not directory.exists() or list(directory.glob("*.bin")) == []
+        assert repo.events == {}
+
+    def test_a_successful_upload_keeps_its_bytes(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The same route, with a store that works: the object stays, the row is
+        written, and the answer is the pair."""
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        payload = png_bytes()
+
+        stored = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": recent_iso()},
+        )
+
+        assert stored.status_code == 201, stored.text
+        event_id = stored.json()["event_id"]
+        assert (Path(str(tmp_path)) / str(run_id) / f"{event_id}.bin").read_bytes() == payload
+        assert len(repo.events) == 1
