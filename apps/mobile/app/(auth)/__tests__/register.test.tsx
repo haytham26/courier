@@ -82,5 +82,18 @@ describe('the create-account screen', () => {
     // layout the focus scroll needs (the email focus scrolled, the password
     // focus did not). The slots stay in the tree.
     expect(scrollView.props.removeClippedSubviews).toBe(false);
+
+    // Run 41385988136's dump: with the keyboard up the register form sat at
+    // y=3 and the ScrollView could not scroll at all, so the onFocus scroll
+    // above had nowhere to go and the confirm field stayed below the
+    // keyboard's clip (pruned from the a11y tree, "Element not found").
+    // Cause: `justifyContent: 'center'` on a flexGrow'd content container
+    // centers overflowing children, which clamps the scroll range to zero.
+    // The sign-in screen's content is top-aligned (login.tsx's `content` has
+    // no justifyContent); the register form is the same now.
+    const contentStyle = scrollView.props.contentContainerStyle as {
+      justifyContent?: string;
+    };
+    expect(contentStyle.justifyContent).not.toBe('center');
   });
 });

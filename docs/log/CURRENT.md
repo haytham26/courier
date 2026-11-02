@@ -98,6 +98,16 @@ target. (The api-34 leg's three `today-screen` failures that run were the known
 app-process infra flake — the dumps show an empty window, and those flows were green
 on 47e9eb5.)
 
+**Run 41385988136 (8bc6be6): the first failure was launcher ANR infra (re-run once per
+§17.4); the re-run failed for real — the scroll never landed.** The dump shows the
+password field FOCUSED but the form still at y=3, unscrollable: `justifyContent:
+'center'` on the flexGrow'd ScrollView content centers overflowing children and clamps
+the scroll range to zero, so the onFocus `scrollTo` had nowhere to go and the confirm
+field stayed below the keyboard's clip (pruned from the a11y tree). Fix: the register
+content is top-aligned now (as `login.tsx`'s is) with 96 pt bottom padding; red-first
+assertion added that `contentContainerStyle.justifyContent` is not `'center'`
+(615 tests, tsc/eslint clean).
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

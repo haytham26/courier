@@ -203,10 +203,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  // Top-aligned, never centered: run 41385988136's dump showed the form at
+  // y=3 with the keyboard up and the ScrollView unable to scroll at all -
+  // `justifyContent: 'center'` on a flexGrow'd content container centers
+  // overflowing children, which clamps the scroll range to zero, so the
+  // onFocus scroll had nowhere to go and the confirm field stayed below the
+  // keyboard's clip. The sign-in screen's content is top-aligned the same
+  // way (login.tsx's `content` has no justifyContent). The extra bottom
+  // padding lets the last field scroll fully clear the keyboard.
   content: {
     flexGrow: 1,
-    justifyContent: 'center',
     padding: 24,
+    paddingBottom: 96,
     gap: 16,
   },
   title: {
