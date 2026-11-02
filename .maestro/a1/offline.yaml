@@ -16,6 +16,13 @@ name: 'A1 offline: the delivery is recorded with no network'
     visible:
       id: "today-screen"
     timeout: 60000
+# The sheet opens at peek and the Go is below its fold (the repo's convention,
+# common/reveal-and-tap.yaml): raise the sheet so the Go is on it. If the
+# online half already raised it, the swipe is a no-op at the top.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
 - assertVisible:
     id: "today-go"
 # One more delivery, with no signal: the store records it (the mark and the

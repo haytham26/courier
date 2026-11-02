@@ -204,6 +204,17 @@ also answers a rejection as a named `server` failure with a warn (load never rej
 `useRunDay` catches and warns. 638 mobile tests (74 suites), tsc, eslint green.
 BUG-172 filed (fixed, PR #135); register 169 rows, fixed 113.
 
+**Run 41513128949 (31f17c8): the day LANDED on screen (To go 5) — the last failure was
+the flow, not the app (BUG-173).** The dump shows Delivered 0 / To go 5 / Finish 20:31,
+so BUG-172's reopen+never-reject fix worked end to end. But `today-go` still asserted
+invisible: the sheet sits at PEEK and the NEXT STOP row is below its fold (stats end
+y=535, dock y=552), pruned from the a11y tree. The app's design is intentional and the
+repo's convention is `common/reveal-and-tap.yaml` (swipe UP on today-sheet-grabber
+first — copilot.yaml learned it in run 40072959461) — the a1 flows just never adopted
+it. Fix: `.maestro/a1/online.yaml` and `offline.yaml` now swipe the grabber up before
+asserting `today-go`; the assert is unchanged. BUG-173 filed (fixed, PR #135);
+register 170 rows, fixed 114.
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

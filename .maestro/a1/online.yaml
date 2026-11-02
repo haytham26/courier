@@ -80,6 +80,14 @@ name: 'A1 online: the app signs up on the real server and delivers the seeded da
     visible:
       id: "today-screen"
     timeout: 120000
+# The sheet opens at peek (the morning glance) and the Go is below its fold -
+# the repo's own convention (common/reveal-and-tap.yaml; copilot.yaml's
+# today-go hit this in run 40072959461): the courier raises the sheet first,
+# and then the Go is on it. The assert itself is unchanged.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
 # The day is the seeded one: the sheet's own next stop is the run's own.
 - assertVisible:
     id: "today-go"
