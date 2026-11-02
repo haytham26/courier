@@ -57,6 +57,19 @@ container log (red); with the line → all four containers healthy, `/healthz` 2
 `courier-ci-api` image — `docker compose build api` first, or the old jwks.py boots fine
 and the repro lies.
 
+**The a1 flow's not-found rooted and fixed (same PR):** run 41362984260's a1 job got
+past the stack (BUG-164 confirmed on the runner) but the flow still sat on
+`not-found-screen` for its whole 60 s — the welcome effect's `router.replace` is
+enqueued in the same commit the Stack first mounts and never lands on device. Root
+cause in expo-router 58: the launch URL `/` seeds the protected `(tabs)` group, the
+signed-out guard strips that route from the navigation state
+(`useClearGuardedRoutes`), and with no anchor on the root layout the state collapses
+to `+not-found`. Fix: `export const unstable_settings = { anchor: 'welcome' }` on
+`app/_layout.tsx` — the anchor is seeded in front of the target, so the guard leaves
+the welcome focused (a signed-in phone still focuses the tabs; the effect stays for
+the sign-out-while-on-a-protected-route case). Red-first in routes.test.tsx
+(`unstable_settings` undefined → red; `{ anchor: 'welcome' }` → green, 614 tests).
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
