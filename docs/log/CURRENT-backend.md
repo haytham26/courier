@@ -1,6 +1,6 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-11-03 · main at `821cde4` (PR #177 merged) · **This
+Updated: 2026-11-03 · main at `1f596b1` (PRs #177 + #178 merged) · **This
 squad's handoff lives in THIS file only.** PR #174 had written it into the lead's `docs/log/CURRENT.md` and replaced the lead's
 header line with its own; the correction PR on `docs/currents-log-ownership` restores that
 header line exactly as it was at `960fc41^1` (the lead has not rewritten it since) and
@@ -48,8 +48,8 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   construction (`**__dict__` + keyword) — fixed with `dataclasses.replace` (a5f415c), and
   ruff's UP037 quote rule is why 783f8f6 exists; both pushed. Next server halves in order:
   stop types (D59), then the CSV/Excel import (D52) — each its own PR, number = highest BUG
-  across origin/main + open PR branches + 1 (BUG-168 went to #179; next free is
-  BUG-169; #135's branch carries BUG-164/165).
+  across origin/main + open PR branches + 1 (BUG-168 went to #179, BUG-169 to #180;
+  next free is BUG-170; #135's branch carries BUG-164/165).
 - **#178's db leg went red on run 41430267111**: `get_event`'s SELECT predated the
   `delivery_events.reason` column, so the Postgres leg raised
   `NoSuchColumnError: Could not locate column in row for column 'reason'` in
@@ -70,8 +70,22 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   filed+fixed, PARITY 310 updated, ADR-024, evidence `docs/evidence/trial-stop-types/`.
   Red-first on both legs (API: `KeyError: 'type'`, 2 failed; db vs postgis/postgis:17-3.5
   started locally: `column "type" does not exist`, 11 failed); green: 560 non-db passed,
-  32 db passed, ruff + mypy clean, client fresh. **#178's head is now `6a404c4`** —
-  merge order #178 → #179 once CI is green.
+  32 db passed, ruff + mypy clean, client fresh.
+- **PR #178 MERGED as `1f596b1` with the full ritual**: merge commit, archive tag
+  `archive/feat/trial-failed-reason` pushed at the PR head `6a404c4`, remote branch
+  deleted (`git ls-remote --heads origin feat/trial-failed-reason` prints nothing). Its
+  two CI reds were both fixed on the branch first: the db leg's missing `reason` in
+  `get_event`'s SELECT (`ad8690c`) and the Locust leg's failed events without a reason
+  (`b8bc724`, proven green locally: 142 requests, 0 fails, "SLOs met").
+- **PR #179 (`feat/trial-stop-types`) open at `d7c6fa4`** (stacked on the merged #178),
+  CI running; **PR #180 (`feat/trial-import`, the D52 server half, stacked on #179) open
+  at `3bf815f`**: `POST /shifts/{shift_id}/import`, capped .csv/.xlsx, all-or-nothing
+  validation, `put_imported_stops` on both repos, openpyxl 3.1.5 (MIT, in LICENSES.md),
+  client regenerated; BUG-169 filed+fixed, PARITY 1/247 updated, ADR-025, evidence
+  `docs/evidence/trial-import/`. Red-first both legs (12 API red + db ImportError on the
+  base); green 573 non-db + 33 db vs local postgis 17-3.5, ruff + mypy clean. Merge
+  order: #179 → #180 once green. **Item (a) is then complete** — all four server halves
+  (D55/D56 #177, D58 #178, D59 #179, D52 #180) land with contract-first PRs.
 - Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
   `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open
   data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from
