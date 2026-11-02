@@ -7,10 +7,11 @@ courier's own token and never keeps a list of stops of its own.
 
 from __future__ import annotations
 
-import httpx
-import pytest
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
+import httpx
+import pytest
 
 from app.cost import CostGuard
 from app.models import RunContext, Stop
@@ -55,7 +56,6 @@ def test_the_guard_starts_again_on_a_new_day():
 
 def _nz_epoch(year: int, month: int, day: int, hour: int, minute: int = 0) -> float:
     """The epoch seconds of a wall-clock moment in New Zealand."""
-    from zoneinfo import ZoneInfo
 
     return datetime(year, month, day, hour, minute, tzinfo=ZoneInfo("Pacific/Auckland")).timestamp()
 

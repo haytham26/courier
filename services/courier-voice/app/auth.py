@@ -133,7 +133,9 @@ class JwksVerifier:
                 # service over separate hops, so they carry the same small
                 # clock tolerance rather than disagreeing about a valid token.
                 leeway=self._config.auth_jwt_leeway_seconds,
-                options={"require": ["exp", "sub", "aud", "iss"]},
+                # BUG-156: `iat` is required because the age bound below reads
+                # it; PyJWT refuses a missing or non-numeric claim itself.
+                options={"require": ["exp", "iat", "sub", "aud", "iss"]},
             )
         except jwt.PyJWTError as exc:
             raise InvalidTokenError(str(exc)) from exc
@@ -141,6 +143,25 @@ class JwksVerifier:
             raise
         except (httpx.HTTPError, ValueError) as exc:
             raise InvalidTokenError(f"the JWKS endpoint cannot be reached: {exc}") from exc
+
+        # BUG-156: signature and expiry alone let a token revoked at the auth
+        # service keep full access here until it expired (the issuer's whole
+        # 15-minute lifetime). The accepted age bounds the revocation window:
+        # a token older than AUTH_MAX_TOKEN_AGE_SECONDS is refused, with the
+        # same skew the expiry carries. The HTTP layer answers the generic
+        # "Invalid or expired token", so this detail never reaches the caller.
+        issued_at = claims["iat"]
+        accepted_until = (
+            issued_at
+            + self._config.auth_max_token_age_seconds
+            + self._config.auth_jwt_leeway_seconds
+        )
+        if time.time() > accepted_until:
+            raise InvalidTokenError(
+                "the token is older than this service accepts "
+                f"(issued {int(time.time() - issued_at)} s ago, "
+                f"accepted for {self._config.auth_max_token_age_seconds} s)"
+            )
 
         return Principal(user_id=claims["sub"], claims=claims, token=token)
 
