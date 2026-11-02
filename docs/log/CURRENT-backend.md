@@ -55,7 +55,12 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   `NoSuchColumnError: Could not locate column in row for column 'reason'` in
   `TestTheEvents` (2 failed, 28 passed). Fixed in `ad8690c` — `reason` added to the
   `get_event` SELECT (the batch read path already had it); local non-db suite 559
-  passed + ruff clean before push. **#177 is fully green** (all 15 checks SUCCESS at
+  passed + ruff clean before push. **The Locust leg then went red on run 41436706706**
+  (fail ratio 0.3169 > 0.001, every failure a 422 on `events:batch`): the load profile
+  picked `kind=failed` without a reason, which the D58 rule refuses. Fixed in `b8bc724` —
+  the profile sends a reason on failed events; green locally against postgis/postgis:17-3.5
+  + uvicorn with the CI profile (60 s, 50 users, wait 3-8 s): 142 requests, 0 fails,
+  "SLOs met: the run is green". **#177 is fully green** (all 15 checks SUCCESS at
   `a5f415c`) and merges with the ritual next.
 - Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
   `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open

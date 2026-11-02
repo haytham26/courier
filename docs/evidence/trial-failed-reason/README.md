@@ -56,7 +56,19 @@ The db-marked suite (CI, `-m db`) covers the new column through the INSERT and b
 | floor / registers | `node scripts/ci/check-floor.mjs`, `check-parity.mjs` | clean (BUG-167 unique) |
 | CI | PR #178 runs (incl. the `-m db` Postgres leg) | see the PR |
 
+## The load-test leg (CI run 41436706706, fixed in b8bc724)
+
+The D58 rule turned the Locust profile red: `ERROR BUDGET BREACH: fail ratio 0.3169 >
+0.001`, every failure a `422` on `POST /events:batch` — the profile picked `kind=failed`
+without a `reason`. `loadtests/locustfile.py` now sends a reason on failed events. Green
+locally against `postgis/postgis:17-3.5` (started as `courier-test-pg`) + uvicorn, with
+the CI profile env (`LOADTEST_WAIT_MIN=3`, `LOADTEST_WAIT_MAX=8`, 60 s, 50 users):
+
+```
+Aggregated   142   0(0.00%) |  ...
+SLOs met: the run is green
+```
+
 ## Not verified here
 
-Postgres is capped at 3 GB on this machine, so the `-m db` leg runs on CI only. The app's
-reason picker is the lead's queue and is not claimed.
+The app's reason picker is the lead's queue and is not claimed.
