@@ -7,7 +7,7 @@ import logging
 import os
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import (
@@ -47,6 +47,7 @@ from .billing import WEBHOOK_MAX_BYTES, billing_sources
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
 from .locations import location_id_for_stop
+from .occurred_at import bound_occurred_at, require_aware_occurred_at
 from .pod import (
     POD_MAX_BYTES,
     pod_settings,
@@ -236,18 +237,14 @@ class DeliveryEvent(BaseModel):
     @classmethod
     def _aware_occurred_at(cls, value: datetime) -> datetime:
         """A naive timestamp would break the status ordering (and lie about
-        when it happened) - the phone always knows its zone."""
-        if value.tzinfo is None:
-            raise ValueError("occurred_at must carry its timezone")
-        now = datetime.now(UTC)
-        if value > now + timedelta(hours=1):
-            raise ValueError(
-                "occurred_at is more than an hour in the future: the phone's clock is wrong"
-            )
-        if value < now - timedelta(days=7):
-            raise ValueError(
-                "occurred_at is more than 7 days old: the log is stale or the clock is wrong"
-            )
+        when it happened) - the phone always knows its zone.
+
+        The check and the bounds are `app/occurred_at.py`'s (BUG-143/144), the
+        same one the POD path reads its naive check from, so the two paths
+        cannot disagree about what a timestamp is again.
+        """
+        require_aware_occurred_at("occurred_at", value)
+        bound_occurred_at("occurred_at", value)
         return value
 
     @field_validator("kind")
@@ -535,8 +532,14 @@ class PodForm:
         safe_place: str | None = Form(None, max_length=200),
         event_id: uuid.UUID | None = Form(None),
     ) -> None:
-        if occurred_at.tzinfo is None:
-            raise HTTPException(status_code=422, detail="occurred_at must carry its timezone")
+        # BUG-144: the naive check is the sync event's own, read from one place
+        # (ADR-014 §3 keeps the clock BOUNDS off POD: `pod_captured` never
+        # flips a stop, so the photo's timestamp orders nothing - and the
+        # exemption is pinned by a test, not left as a comment).
+        try:
+            require_aware_occurred_at("occurred_at", occurred_at)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
         self.occurred_at = occurred_at
         self.safe_place = safe_place
         self.event_id = event_id
