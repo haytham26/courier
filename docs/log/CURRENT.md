@@ -126,6 +126,17 @@ this AVD. The register ScrollView now carries it (plus `keyboardDismissMode="on-
 red-first: `automaticallyAdjustKeyboardInsets` undefined on aa214d4 → red, `true`
 here → green (615 tests, tsc/eslint clean).
 
+**Run 41407217039 (0b0e872): registration reached the server and was refused by the
+OS — BUG-166.** The submit tap worked (the insets fix landed), but the alert read
+"Registration Failed — fetch failed: CLEARTEXT communication to 10.0.2.2 not permitted
+by network security policy": the a1 APK dials `http://10.0.2.2:8000/:3001` and Android
+blocks cleartext by default; no `usesCleartextTraffic`/network security config existed.
+Fix: new config plugin `apps/mobile/plugins/withEmulatorCleartext.js` writes a network
+security config permitting cleartext to **10.0.2.2 only** (not a blanket flag — prod
+URLs are https) and points the manifest at it. Red-first in
+`plugins/__tests__/withEmulatorCleartext.test.js` (3 tests; BUG-166 filed, fixed in
+#135).
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

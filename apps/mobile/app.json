@@ -68,7 +68,8 @@
       ],
       "@maplibre/maplibre-react-native",
       "./plugins/withSqliteFramework",
-      "./plugins/withGwpAsanMode"
+      "./plugins/withGwpAsanMode",
+      "./plugins/withEmulatorCleartext"
     ],
     "experiments": {
       "typedRoutes": true
