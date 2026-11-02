@@ -108,6 +108,14 @@ content is top-aligned now (as `login.tsx`'s is) with 96 pt bottom padding; red-
 assertion added that `contentContainerStyle.justifyContent` is not `'center'`
 (615 tests, tsc/eslint clean).
 
+**Run 41394528001 (6486501): the scroll landed — confirm passed; the submit button
+was next** — the dump shows confirm focused and visible at y=333, but `register-submit`
+still pruned under the keyboard's clip, because the onFocus scroll only moves fields,
+and the button below the last field never got focus. Fix: focusing the last field now
+calls `scrollToEnd` (coordinate-free, cannot drift) so the submit clears the keyboard
+too. Red-first: on 6486501 the new assertion sees `scrollToEnd` with 0 calls; with the
+fix it is called with `{ animated: true }` (615 tests, tsc/eslint clean).
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

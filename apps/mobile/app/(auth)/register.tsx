@@ -43,6 +43,15 @@ export default function RegisterScreen() {
   const formTop = useRef(0);
   const fieldTops = useRef<Record<string, number>>({});
   const scrollToField = (key: string) => {
+    // The last field scrolls to the END, not to its own top: run 41394528001's
+    // dump shows the confirm field focused and visible, but the submit button
+    // below it still under the keyboard's clip (pruned from the a11y tree, so
+    // neither the courier's tap nor the flow's swipe could reach it). scrollToEnd
+    // is coordinate-free, so it cannot drift the way a computed offset did.
+    if (key === 'confirm') {
+      scrollRef.current?.scrollToEnd({ animated: true });
+      return;
+    }
     const top = fieldTops.current[key];
     if (top === undefined) return;
     scrollRef.current?.scrollTo({

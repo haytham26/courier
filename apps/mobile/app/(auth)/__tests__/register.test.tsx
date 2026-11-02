@@ -76,6 +76,15 @@ describe('the create-account screen', () => {
     fireEvent(screen.getByTestId('register-email'), 'focus');
     expect(scrollTo).not.toHaveBeenCalled();
 
+    // The LAST field scrolls to the end of the form, so the submit button
+    // under it clears the keyboard too (run 41394528001: confirm was focused
+    // and visible, the button was still pruned under the keyboard's clip).
+    const scrollToEnd = jest
+      .spyOn(scrollView.instance as unknown as { scrollToEnd: (o: unknown) => void }, 'scrollToEnd')
+      .mockImplementation(() => {});
+    fireEvent(screen.getByTestId('register-confirm-password'), 'focus');
+    expect(scrollToEnd).toHaveBeenCalledWith({ animated: true });
+
     // BUG-113's other half, proven on run 41380466474: with the default
     // removeClippedSubviews, Android drops a below-the-fold field from the
     // native hierarchy before it layouts, so its slot never reports the
