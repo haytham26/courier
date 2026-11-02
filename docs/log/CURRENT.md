@@ -135,7 +135,9 @@ Fix: new config plugin `apps/mobile/plugins/withEmulatorCleartext.js` writes a n
 security config permitting cleartext to **10.0.2.2 only** (not a blanket flag — prod
 URLs are https) and points the manifest at it. Red-first in
 `plugins/__tests__/withEmulatorCleartext.test.js` (3 tests; BUG-166 filed, fixed in
-#135).
+#135). Run 41418029987's build then failed lint's `NetworkSecurityConfig` check —
+`<domain>` needs `includeSubdomains` — so the config pins `includeSubdomains="false"`
+(exact host only), asserted in the test.
 
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that

@@ -17,7 +17,7 @@ const { withAndroidManifest, withDangerousMod } = require('expo/config-plugins')
 const NETWORK_SECURITY_CONFIG = `<?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
   <domain-config cleartextTrafficPermitted="true">
-    <domain>10.0.2.2</domain>
+    <domain includeSubdomains="false">10.0.2.2</domain>
   </domain-config>
 </network-security-config>
 `;

@@ -42,7 +42,10 @@ describe('withEmulatorCleartext', () => {
       path.join(projectRoot, 'android/app/src/main/res/xml/network_security_config.xml'),
       'utf8',
     );
-    expect(xml).toContain('<domain>10.0.2.2</domain>');
+    // includeSubdomains="false" is required by lint's NetworkSecurityConfig
+    // check (run 41418029987's lintVitalRelease failed without it) and keeps
+    // the permission on the exact host alias, not its subdomains.
+    expect(xml).toContain('<domain includeSubdomains="false">10.0.2.2</domain>');
     expect(xml).toContain('cleartextTrafficPermitted="true"');
     // The permission is scoped to the emulator's host alias: no base-config
     // (or debug-overrides) may permit cleartext for every host.
