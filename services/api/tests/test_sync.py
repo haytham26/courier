@@ -81,8 +81,9 @@ def event(
     event_id: uuid.UUID | None = None,
     kind: str = "delivered",
     occurred_at: str | None = None,
+    reason: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    body: dict[str, Any] = {
         "id": str(event_id or uuid.uuid4()),
         "stop_id": str(STOP_ID),
         "kind": kind,
@@ -93,6 +94,9 @@ def event(
         "accuracy_m": 8.5,
         "occurred_at": occurred_at or datetime.now(UTC).isoformat(),
     }
+    if reason is not None:
+        body["reason"] = reason
+    return body
 
 
 class TestEventSync:
@@ -196,6 +200,75 @@ class TestEventSync:
         assert repo.cursor(other_shift) == 0
 
 
+class TestTheFailedDeliveryReason:
+    """D58's server half (ADR-023, D63): a failed outcome carries its reason."""
+
+    def test_a_failed_event_carries_its_reason_and_it_is_stored(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        event_id = uuid.uuid4()
+        payload = event(event_id, kind="failed", reason="gate locked, no answer")
+
+        response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+
+        assert response.status_code == 200, response.text
+        assert seeded_run.events[event_id].reason == "gate locked, no answer"
+
+    def test_a_failed_event_without_a_reason_is_refused_and_nothing_is_stored(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        payload = event(uuid.uuid4(), kind="failed")
+
+        response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+
+        assert response.status_code == 422, response.text
+        assert not seeded_run.events
+
+    def test_a_blank_reason_is_refused_on_a_failed_event(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        payload = event(uuid.uuid4(), kind="failed", reason="   ")
+
+        response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+
+        assert response.status_code == 422, response.text
+        assert not seeded_run.events
+
+    def test_an_overlong_reason_is_refused(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        payload = event(uuid.uuid4(), kind="failed", reason="x" * 201)
+
+        response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+
+        assert response.status_code == 422, response.text
+        assert not seeded_run.events
+
+    def test_a_changed_reason_is_a_conflict_and_the_first_write_wins(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        event_id = uuid.uuid4()
+        first = event(event_id, kind="failed", reason="gate locked")
+        client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[first])
+        replay = event(event_id, kind="failed", reason="dog at the door")
+
+        second = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[replay])
+
+        assert second.json()["accepted"] == 0
+        assert second.json()["conflicts"] == [str(event_id)]
+        assert seeded_run.events[event_id].reason == "gate locked"
+
+    def test_a_non_failed_event_may_omit_the_reason(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        payload = event(uuid.uuid4(), kind="delivered")
+
+        response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+
+        assert response.status_code == 200, response.text
+        assert seeded_run.events[uuid.UUID(payload["id"])].reason is None
+
+
 class TestTheConflictRules:
     """ADR-014: the first write wins, divergence is reported, the clock is bounded."""
 
@@ -205,7 +278,7 @@ class TestTheConflictRules:
         event_id = uuid.uuid4()
         payload = event(event_id)
         first = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
-        changed = dict(payload, kind="failed")
+        changed = dict(payload, kind="failed", reason="gate locked")
         second = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[changed])
 
         assert first.json()["accepted"] == 1
@@ -231,7 +304,7 @@ class TestTheConflictRules:
         self, client: TestClient, seeded_run: InMemoryRepo
     ) -> None:
         event_id = uuid.uuid4()
-        payload = event(event_id, kind="failed")
+        payload = event(event_id, kind="failed", reason="gate locked")
         client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
         changed = dict(payload, kind="delivered")
 
@@ -247,7 +320,7 @@ class TestTheConflictRules:
         the phone is told (the SQL repo answers the same way)."""
         event_id = uuid.uuid4()
         first = event(event_id)
-        changed = dict(first, kind="failed")
+        changed = dict(first, kind="failed", reason="gate locked")
 
         response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[first, changed])
 
@@ -264,6 +337,7 @@ class TestTheConflictRules:
         first["occurred_at"] = (now - timedelta(minutes=10)).isoformat()
         second = event()
         second["kind"] = "failed"
+        second["reason"] = "no answer at the door"
         second["occurred_at"] = (now - timedelta(minutes=5)).isoformat()
 
         client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[first, second])

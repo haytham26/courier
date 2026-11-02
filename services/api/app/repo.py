@@ -104,6 +104,8 @@ class DeliveryEventRow:
     lon: float | None
     accuracy_m: float | None
     occurred_at: datetime
+    # The structured failed-delivery reason (ADR-023, D58's server half).
+    reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -137,6 +139,7 @@ def _same_event(stored: DeliveryEventRow, incoming: DeliveryEventRow) -> bool:
         and stored.lon == incoming.lon
         and stored.accuracy_m == incoming.accuracy_m
         and stored.occurred_at == incoming.occurred_at
+        and stored.reason == incoming.reason
     )
 
 
@@ -593,9 +596,9 @@ class SqlAlchemyRepo:
             """
             INSERT INTO delivery_events
                 (id, shift_id, stop_id, kind, utterance, safe_place,
-                 lat, lon, accuracy_m, occurred_at)
+                 lat, lon, accuracy_m, occurred_at, reason)
             VALUES (:id, :shift_id, :stop_id, :kind, :utterance, :safe_place,
-                    :lat, :lon, :accuracy_m, :occurred_at)
+                    :lat, :lon, :accuracy_m, :occurred_at, :reason)
             ON CONFLICT (id) DO NOTHING
             """
         )
@@ -611,6 +614,7 @@ class SqlAlchemyRepo:
                 "lon": event.lon,
                 "accuracy_m": event.accuracy_m,
                 "occurred_at": event.occurred_at,
+                "reason": event.reason,
             }
             for event in events
         ]
@@ -656,7 +660,7 @@ class SqlAlchemyRepo:
         statement = text(
             """
             SELECT id, shift_id, stop_id, kind, utterance, safe_place, lat, lon,
-                   accuracy_m, occurred_at
+                   accuracy_m, occurred_at, reason
             FROM delivery_events
             WHERE id IN :ids
             """
@@ -675,6 +679,7 @@ class SqlAlchemyRepo:
                 lon=row["lon"],
                 accuracy_m=row["accuracy_m"],
                 occurred_at=row["occurred_at"],
+                reason=row["reason"],
             )
             for row in rows
         }
@@ -703,6 +708,7 @@ class SqlAlchemyRepo:
             lon=row["lon"],
             accuracy_m=row["accuracy_m"],
             occurred_at=row["occurred_at"],
+            reason=row["reason"],
         )
 
     def cursor(self, shift_id: UUID) -> int:

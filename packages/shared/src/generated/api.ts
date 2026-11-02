@@ -57,6 +57,7 @@ export interface DeliveryEvent {
   kind: 'delivered' | 'left_at' | 'skipped' | 'failed';
   utterance?: string;
   safe_place?: string;
+  reason?: string;
   lat?: number;
   lon?: number;
   accuracy_m?: number;
