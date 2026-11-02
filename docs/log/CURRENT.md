@@ -215,6 +215,16 @@ it. Fix: `.maestro/a1/online.yaml` and `offline.yaml` now swipe the grabber up b
 asserting `today-go`; the assert is unchanged. BUG-173 filed (fixed, PR #135);
 register 170 rows, fixed 114.
 
+**Run 41520005366 (1fced6c): the swipe worked — today-go was visible and asserted — and
+the flow then failed the bare tap on `today-mark-delivered` (BUG-174).** The dump shows
+the sheet raised (today-go at y=463–527) but the Delivered button lives in the RUN
+ACTIONS row below the ghost buttons, clipped by the sheet's own ScrollView at y≈540,
+so it is pruned from the a11y tree — exactly what today-list.yaml already handles with
+`scrollUntilVisible` on the target. Fix: online.yaml scrolls `today-mark-delivered`
+into view before each of the three repeat taps (no-op once visible), offline.yaml
+before its tap; taps and asserts unchanged. BUG-174 filed (fixed, PR #135); register
+171 rows, fixed 115.
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

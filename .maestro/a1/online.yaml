@@ -93,9 +93,19 @@ name: 'A1 online: the app signs up on the real server and delivers the seeded da
     id: "today-go"
 # Three deliveries, each written through the store: the mark on the run and the
 # event in the outbox, which the store's flush sends while the network is up.
+# The Delivered action sits in the sheet's RUN ACTIONS row, below the fold even
+# when the sheet is raised (today-list.yaml's convention: scrollUntilVisible on
+# the target itself - run 41520005366 failed the bare tap with "Element not
+# found"). The scroll is a no-op once the row is on screen, so it is safe to
+# repeat before every tap; the tap itself is unchanged.
 - repeat:
     times: 3
     commands:
+      - scrollUntilVisible:
+          element:
+            id: "today-mark-delivered"
+          direction: DOWN
+          timeout: 20000
       - tapOn:
           id: "today-mark-delivered"
 # The three are the app's own answer, and the run's own numbers: the driven

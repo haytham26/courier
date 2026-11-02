@@ -29,6 +29,14 @@ name: 'A1 offline: the delivery is recorded with no network'
 # event) and the outbox cannot send it. The store's flush answers with the
 # network's own failure, the event stays in the log, and the courier is told -
 # ADR-014's answer, on the screen they are looking at (A1 slice 3).
+# The Delivered action is below the sheet's fold even when raised
+# (today-list.yaml's convention): scroll to it before the tap. The tap itself
+# is unchanged.
+- scrollUntilVisible:
+    element:
+      id: "today-mark-delivered"
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: "today-mark-delivered"
 - assertVisible:
