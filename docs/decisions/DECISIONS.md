@@ -488,3 +488,22 @@ in the repository - so a drive through a signal gap has its map, but not new til
 offline map pack is P3 (Courier Maps' weekly pack, D15/D26), and its absence is a P3
 dependency rather than a trial blocker. The trial's routing happens in Christchurch's
 coverage, and the pack's first delivery closes the gap.
+
+## D62 — The trial build IS the product, and every deferred day-one feature is in the trial (2026-11-02, founder decision; supersedes D52–D59)
+
+**The principle.** The trial build IS the product: production code that later work builds
+on. No throwaway prototypes, no trial-only shortcuts, no temporary code meant to be deleted,
+and no feature removed or reduced to make the trial easier. If something cannot be built
+properly now, it is scheduled, not faked.
+
+**The decision.** Every feature `docs/status/TRIAL_SCOPE.md` defers is in the trial. The
+deferrals D52–D59 recorded (spreadsheet import; the re-optimise, time-window and priority
+app surfaces; planned breaks; the end location / round trip; navigation hand-off to Google,
+Apple and Waze; the POD capture surface and the structured failed-delivery reason; stop
+types) are superseded: each is in the trial, scheduled on the lead's queue in this order —
+(1) the navigation hand-off as deep links with the destination, no API key and no cost;
+(2) the app surfaces for re-optimise mid-route, time windows and priority (the server
+already has them); (3) the app halves of the spreadsheet import, failed-delivery reasons,
+stop types, breaks and the finish point, as the backend's contract changes land. TRIAL_SCOPE
+and PARITY are updated in the same PR, as this one does. D60 (earnings) and D61 (the offline
+map pack) stand: they are not day-one deferrals, they are P5/P3 scheduled work.

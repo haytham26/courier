@@ -175,7 +175,22 @@ def create_app(
         body: CreateSession,
         principal: Annotated[Principal, Depends(get_principal)],
     ) -> SessionState:
-        """A shift starts."""
+        """A shift starts.
+
+        BUG-151: one courier may not open an unbounded number of shifts. The
+        cap is a refusal that names it, not a silent eviction of a working
+        day - the register's probe was 5,000 sessions with no `DELETE` leaving
+        5,000 sessions resident.
+        """
+        open_shifts = len(memory_store.sessions_of(principal.user_id))
+        if open_shifts >= memory_store.max_sessions_per_driver:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"this courier already holds {open_shifts} shifts: close one with "
+                    "DELETE /v1/sessions/{id} before starting another"
+                ),
+            )
         memory = new_session(principal.user_id, body.shift_id)
         if body.settings is not None:
             apply_settings(memory, body.settings)
@@ -221,14 +236,21 @@ def create_app(
                 detail="this session names a shift, so a turn reads it from the "
                 "Courier API and cannot carry its own snapshot of it",
             )
-        return _turn(
-            memory,
-            body,
-            principal,
-            brains=brains,
-            client=client,
-            memory_store=memory_store,
-        )
+        # BUG-154: the turns of one shift are serialised. The store hands out
+        # its live `SessionMemory` and the turn machine mutates it in place, so
+        # two concurrent turns interleaved their phase, history and context and
+        # the last write won - each caller could be answered with the other's
+        # turn recorded as its instruction. One lock per session keeps a turn
+        # whole; a different session's turns run in parallel.
+        with memory_store.lock_for(session_id):
+            return _turn(
+                memory,
+                body,
+                principal,
+                brains=brains,
+                client=client,
+                memory_store=memory_store,
+            )
 
     @service.post("/v1/sessions/{session_id}/proactive", response_model=ProactiveResponse)
     def proactive(
@@ -409,7 +431,10 @@ def _turn(
 
     machine.begin_speaking(outcome.speech)
     memory.turns += 1
-    memory.context = context
+    # BUG-149: with the memory off the context is not written back, so a turn
+    # cannot re-save the very thing the setting let go of.
+    if memory.settings.remember:
+        memory.context = context
     if reply.speech:
         memory.last_instruction = reply.speech
     if reply.question:

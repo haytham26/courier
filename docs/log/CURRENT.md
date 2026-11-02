@@ -1,6 +1,32 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `918f25d2` (C2's merge, PR #168). Lead session 12, 2026-11-01.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `0b083b9` (PR #170's handoff). Lead session 13, 2026-11-02.**
+
+## Lead session 13, started (2026-11-02): D62 recorded — the trial build IS the product
+
+Verified on origin (every branch, `scripts/ci`-style register scan): highest BUG = 162
+(main, c1-voice-mediums, fix/c1-lows-batch), highest D = 61 (main, c1-voice-mediums) —
+so the new decision is **D62** and the first new BUG row is **164** (163 stays reserved
+for the backend's BUG-113 renumber). D62 supersedes D52–D59: every TRIAL_SCOPE deferral
+is in the trial, scheduled queue steps 4.1 (nav hand-off deep links), 4.2 (reopt /
+time-window / priority app surfaces), 4.3 (import, reasons, stop types, breaks, finish).
+DECISIONS + TRIAL_SCOPE + PARITY update in one PR (`docs/d62-trial-is-the-product`).
+Open PRs verified: #135 (feat/a1-slice-3-run-store @ 4241000, both checks on the head
+red: CI lint `require-await` at sessionRestoreBounded.test.tsx:81 and the a1 E2E job —
+the device dump shows `not-found-screen`, root cause: the root Stack mounts only after
+the 8 s restore bound, so the router resolves the initial route against the empty stack;
+planned fix: `initialRouteName` on the root Stack), #166 (fix/c1-lows-batch @ 4eb353e).
+#164 (c1-voice-mediums) merged as 1c12d7b during session 13.
+
+**Step 0 done (PR on `fix/register-step0-reopen-guard`):** the six stale rows
+(BUG-080/#146, BUG-085/#147, BUG-100/101/162/#155, BUG-103/#161) are `fixed` with their
+PR links — verified merged on origin and the fixes read in the tree (stops.tsx:67-68,
+offlinePack.ts:518, ci.yml:133-134, linz-changeset.yml step env, check-licenses.mjs);
+BUG-104 checked against #155: its row already carries #155's correction and stays open
+for the vitest `all:` half. BUGS footer now 160 rows: open 33, fixed 88. The reopen
+guard is in: `check-parity.mjs --base <ref>` + `checkReopened`, five red-first tests
+(red output: `SyntaxError: ... does not provide an export named 'checkReopened'`,
+green: 29 pass), wired into quality-gates.yml's floor job.
 
 
 ## Lead session 12, the closing state (2026-11-02): the a1 job's blank first screen is rooted and fixed

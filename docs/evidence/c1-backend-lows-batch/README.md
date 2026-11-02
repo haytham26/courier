@@ -29,3 +29,24 @@ BUG-118, 119, 120, 135, 136, 138, 143, 144, 145, 155, 156, 157, 158, 159, and th
 | BUG-157 | the header carried transcript and every row its verbatim words | 2 green, 12 in the harness suite, and the tracked artifact regenerated with digests | services/courier-voice/app/eval_harness.py: the transcript column is a 16-hex-character digest of the words |
 | BUG-120 | a broken insert answered 500 with "an internal error occurred" and left the object in place | 2 green, and 538 in the API suite | services/api/app/main.py: the failed insert deletes the bytes it just wrote and names the reason, with PodStore.delete as the pairing half of save |
 | BUG-156 | a token issued 20 minutes ago with a valid signature and an unexpired `exp` was accepted (DID NOT RAISE), and so was a token with no `iat` at all | 5 green in `test_auth.py`, 219 in the voice suite | services/courier-voice/app/auth.py requires `iat` and refuses a token older than `AUTH_MAX_TOKEN_AGE_SECONDS` (300 s default plus the 30 s leeway), read from app/config.py; the HTTP layer's generic 401 keeps the age detail off the wire |
+
+## The merge of origin/main (943cd3f, #171 + #172) into this branch
+
+Both register gates survive and pass together: `node scripts/ci/check-parity.mjs` exits 0
+(310 parity rows; 160 bug rows — open 19 · doing 3 · testing 3 · fixed 103 · closed 2 ·
+moved to PARITY 30, the footer's counts) and `node scripts/ci/check-parity.mjs --base
+origin/main` exits 0 ("reopen guard vs origin/main: 90 fixed/closed rows compared, 0
+reopened without a stated reason"). The gate's own suite holds both sides' tests:
+`node --test scripts/ci/__tests__/check-parity.test.mjs` 32 passed, 0 failed, and the
+whole `node --test "scripts/*/__tests__/*.test.mjs"` run is 145 passed, 0 failed, 2
+skipped. The merge's seven conflicts and their resolutions are written up in
+`docs/log/2026-W44.md` (2026-11-02, the merge entry): per-row newest state in BUGS.md,
+both test sets in the parity suite, main's BUG-126 one-verifier rework kept minus the
+BUG-136-deleted getter, the BUG-135 adapter deletion kept, and cost.py carrying both
+BUG-152/153 (reserve under the lock) and BUG-155 (NZ calendar day under the same lock).
+
+Gates re-run on the merge commit: API 547 passed, 1 skipped · voice 228 passed · auth
+120 passed · shared vitest 29 passed · tsc clean (shared and auth) · eslint clean ·
+ruff and mypy clean in both Python services · check-floor, conflict-markers,
+control-chars, mojibake, doc-links, workflows, emulator-gpu, e2e-pins, auth-issuer and
+both eval checks exit 0 · no file deleted vs origin/main (§13.3).
