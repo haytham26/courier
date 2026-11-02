@@ -102,6 +102,15 @@ export default function RegisterScreen() {
         ref={scrollRef}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        // Run 41398593946's dump: the app window stays 640 tall and the
+        // keyboard overlays y=382..640, so a scroll range computed against
+        // the full window can never lift the submit button above the
+        // keyboard - the onFocus scrollToEnd had nothing to work with. This
+        // prop shrinks the scroll viewport to above the keyboard, which is
+        // exactly what the sign-in screen's ScrollView carries (login.tsx)
+        // and what makes its flows' scrolls work on this AVD.
+        automaticallyAdjustKeyboardInsets
         // BUG-113's lesson, applied to this screen: with the default true,
         // Android drops clipped children from the native view hierarchy
         // before they layout, so a field below the fold never reports its

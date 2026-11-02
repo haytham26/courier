@@ -104,5 +104,15 @@ describe('the create-account screen', () => {
       justifyContent?: string;
     };
     expect(contentStyle.justifyContent).not.toBe('center');
+
+    // Run 41398593946's dump: the app window stays 640 tall with the keyboard
+    // overlaying y=382..640, so the ScrollView's scroll range (computed
+    // against the full window) can never lift the submit button above the
+    // keyboard - the onFocus scrollToEnd had nothing to work with. The sign-in
+    // screen's ScrollView carries `automaticallyAdjustKeyboardInsets`, which
+    // shrinks the scroll viewport to above the keyboard and is what makes its
+    // own flows' scrolls work on this AVD; the register form carries it too.
+    expect(scrollView.props.automaticallyAdjustKeyboardInsets).toBe(true);
+    expect(scrollView.props.keyboardDismissMode).toBe('on-drag');
   });
 });

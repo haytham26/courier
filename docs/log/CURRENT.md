@@ -116,6 +116,16 @@ calls `scrollToEnd` (coordinate-free, cannot drift) so the submit clears the key
 too. Red-first: on 6486501 the new assertion sees `scrollToEnd` with 0 calls; with the
 fix it is called with `{ animated: true }` (615 tests, tsc/eslint clean).
 
+**Run 41398593946 (aa214d4): still register-submit — the decisive dump** — the app
+window stays 640 tall with the keyboard overlaying y=382..640, so the ScrollView's
+scroll range (computed against the full window) can never lift the submit above the
+keyboard; the onFocus scrollToEnd had nothing to work with. The sign-in screen's
+ScrollView carries `automaticallyAdjustKeyboardInsets`, which shrinks the scroll
+viewport to above the keyboard — that prop is what makes its flows' scrolls work on
+this AVD. The register ScrollView now carries it (plus `keyboardDismissMode="on-drag"`),
+red-first: `automaticallyAdjustKeyboardInsets` undefined on aa214d4 → red, `true`
+here → green (615 tests, tsc/eslint clean).
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
