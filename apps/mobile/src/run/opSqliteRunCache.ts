@@ -79,12 +79,24 @@ const MARK_TABLE: TableShape = {
 const CONNECTIONS = new Map<string, OpSqliteRunCache>();
 
 export class OpSqliteRunCache implements RunCache {
-  private readonly ready: Promise<void>;
+  private ready: Promise<void>;
 
   /** The shared handle, released when this cache closes (it does not own it). */
-  private readonly handle: SharedHandle;
+  private handle: SharedHandle;
 
-  private constructor(handle: SharedHandle) {
+  /** The name the database is opened under, so a closed cache can reopen it. */
+  private readonly name: string;
+
+  /**
+   * Set the moment close() starts, synchronously: BUG-172's remount hands the
+   * new session this very instance before the dying session's cleanup runs,
+   * and that cleanup closes the handle under it - so the next operation
+   * reopens instead of failing on the closed handle.
+   */
+  private closed = false;
+
+  private constructor(name: string, handle: SharedHandle) {
+    this.name = name;
     this.handle = handle;
     this.ready = this.prepare();
   }
@@ -92,16 +104,17 @@ export class OpSqliteRunCache implements RunCache {
   /** The cache of one name, opened once and cached by name. */
   static open(name = 'courier.db'): OpSqliteRunCache {
     const cached = CONNECTIONS.get(name);
-    if (cached !== undefined) {
+    if (cached !== undefined && !cached.closed) {
       return cached;
     }
-    const cache = new OpSqliteRunCache(sharedDatabase(name));
+    const cache = new OpSqliteRunCache(name, sharedDatabase(name));
     CONNECTIONS.set(name, cache);
     return cache;
   }
 
   /** Closes the handle and drops it, so the next open opens a new one. */
   async close(): Promise<void> {
+    this.closed = true;
     for (const [name, cache] of CONNECTIONS) {
       if (cache === this) {
         CONNECTIONS.delete(name);
@@ -115,8 +128,28 @@ export class OpSqliteRunCache implements RunCache {
     await this.handle.release();
   }
 
-  async read(): Promise<RunSnapshot | null> {
+  /**
+   * BUG-172: the one gate every operation passes: a cache whose handle was
+   * closed under it (the session remount racing the previous session's
+   * cleanup) reopens the database first, so the new session's first write
+   * lands instead of throwing on the closed handle.
+   */
+  private async ensureOpen(): Promise<void> {
+    if (!this.closed) {
+      await this.ready;
+      return;
+    }
+    this.handle = sharedDatabase(this.name);
+    this.closed = false;
+    this.ready = this.prepare();
+    if (!CONNECTIONS.has(this.name)) {
+      CONNECTIONS.set(this.name, this);
+    }
     await this.ready;
+  }
+
+  async read(): Promise<RunSnapshot | null> {
+    await this.ensureOpen();
     const run = await this.handle.database.execute(
       `SELECT run_id, shift_id, name, depot_lat, depot_lon, speed_kmh, start_at, capacity_parcels
          FROM ${RUN_TABLE.table} ORDER BY id ASC LIMIT 1`,
@@ -133,7 +166,7 @@ export class OpSqliteRunCache implements RunCache {
   }
 
   async write(snapshot: RunSnapshot): Promise<void> {
-    await this.ready;
+    await this.ensureOpen();
     // One day is one run: the previous row and its stops leave before the new
     // ones are written, so a stop that left the run does not linger.
     await this.handle.database.execute(`DELETE FROM ${RUN_TABLE.table}`);
@@ -180,7 +213,7 @@ export class OpSqliteRunCache implements RunCache {
   }
 
   async markDelivered(mark: DeliveredMark): Promise<void> {
-    await this.ready;
+    await this.ensureOpen();
     await this.handle.database.execute(
       `INSERT OR REPLACE INTO ${MARK_TABLE.table} (stop_id, sequence, at, event_id) VALUES (?, ?, ?, ?)`,
       [mark.stopId, mark.sequence, mark.at, mark.eventId],
@@ -188,12 +221,12 @@ export class OpSqliteRunCache implements RunCache {
   }
 
   async undoDelivered(stopId: string): Promise<void> {
-    await this.ready;
+    await this.ensureOpen();
     await this.handle.database.execute(`DELETE FROM ${MARK_TABLE.table} WHERE stop_id = ?`, [stopId]);
   }
 
   async markOf(stopId: string): Promise<DeliveredMark | null> {
-    await this.ready;
+    await this.ensureOpen();
     const result = await this.handle.database.execute(
       `SELECT stop_id, sequence, at, event_id FROM ${MARK_TABLE.table} WHERE stop_id = ? LIMIT 1`,
       [stopId],
@@ -203,7 +236,7 @@ export class OpSqliteRunCache implements RunCache {
   }
 
   async deliveredMarks(): Promise<DeliveredMark[]> {
-    await this.ready;
+    await this.ensureOpen();
     const result = await this.handle.database.execute(
       `SELECT stop_id, sequence, at, event_id FROM ${MARK_TABLE.table} ORDER BY at ASC, rowid ASC`,
     );
@@ -211,7 +244,7 @@ export class OpSqliteRunCache implements RunCache {
   }
 
   async clear(): Promise<void> {
-    await this.ready;
+    await this.ensureOpen();
     await this.handle.database.execute(`DELETE FROM ${RUN_TABLE.table}`);
     await this.handle.database.execute(`DELETE FROM ${STOP_TABLE.table}`);
     await this.handle.database.execute(`DELETE FROM ${MARK_TABLE.table}`);

@@ -67,12 +67,24 @@ const CONNECTIONS = new Map<string, OpSqliteEventStore>();
 
 export class OpSqliteEventStore implements EventStore {
   /** The first thing every operation waits for: the shape it runs against. */
-  private readonly ready: Promise<void>;
+  private ready: Promise<void>;
 
   /** The shared handle, returned when this store closes (it does not own it). */
-  private readonly handle: SharedHandle;
+  private handle: SharedHandle;
 
-  private constructor(handle: SharedHandle) {
+  /** The name the database is opened under, so a closed store can reopen it. */
+  private readonly name: string;
+
+  /**
+   * Set the moment close() starts, synchronously: BUG-172's remount hands the
+   * new session this very instance before the dying session's cleanup runs,
+   * and that cleanup closes the handle under it - so the next operation
+   * reopens instead of failing on the closed handle.
+   */
+  private closed = false;
+
+  private constructor(name: string, handle: SharedHandle) {
+    this.name = name;
     this.handle = handle;
     this.ready = this.prepare();
   }
@@ -87,22 +99,23 @@ export class OpSqliteEventStore implements EventStore {
 
   /** The store over a database the caller has already opened. */
   static over(database: DB): OpSqliteEventStore {
-    return new OpSqliteEventStore({ database, release: () => Promise.resolve() });
+    return new OpSqliteEventStore('over', { database, release: () => Promise.resolve() });
   }
 
   /** The store of one name, opened once and cached by name. */
   static open(name = 'courier.db'): OpSqliteEventStore {
     const cached = CONNECTIONS.get(name);
-    if (cached !== undefined) {
+    if (cached !== undefined && !cached.closed) {
       return cached;
     }
-    const store = new OpSqliteEventStore(sharedDatabase(name));
+    const store = new OpSqliteEventStore(name, sharedDatabase(name));
     CONNECTIONS.set(name, store);
     return store;
   }
 
   /** Drops this connection, so the next open opens a new one. */
   async close(): Promise<void> {
+    this.closed = true;
     for (const [name, store] of CONNECTIONS) {
       if (store === this) {
         CONNECTIONS.delete(name);
@@ -117,8 +130,28 @@ export class OpSqliteEventStore implements EventStore {
     await this.handle.release();
   }
 
-  async append(event: DeliveryEvent): Promise<void> {
+  /**
+   * BUG-172: the one gate every operation passes: a store whose handle was
+   * closed under it (the session remount racing the previous session's
+   * cleanup) reopens the database first, so the new session's first write
+   * lands instead of throwing on the closed handle.
+   */
+  private async ensureOpen(): Promise<void> {
+    if (!this.closed) {
+      await this.ready;
+      return;
+    }
+    this.handle = sharedDatabase(this.name);
+    this.closed = false;
+    this.ready = this.prepare();
+    if (this.name !== 'over' && !CONNECTIONS.has(this.name)) {
+      CONNECTIONS.set(this.name, this);
+    }
     await this.ready;
+  }
+
+  async append(event: DeliveryEvent): Promise<void> {
+    await this.ensureOpen();
     await this.handle.database.execute(
       `INSERT OR IGNORE INTO ${EVENT_TABLE.table}
          (id, stop_id, kind, utterance, safe_place, lat, lon, accuracy_m, occurred_at, synced, refused_at)
@@ -138,7 +171,7 @@ export class OpSqliteEventStore implements EventStore {
   }
 
   async pending(limit: number): Promise<DeliveryEvent[]> {
-    await this.ready;
+    await this.ensureOpen();
     const result = await this.handle.database.execute(
       `SELECT id, stop_id, kind, utterance, safe_place, lat, lon, accuracy_m, occurred_at
          FROM ${EVENT_TABLE.table}
@@ -154,7 +187,7 @@ export class OpSqliteEventStore implements EventStore {
     if (ids.length === 0) {
       return;
     }
-    await this.ready;
+    await this.ensureOpen();
     const placeholders = ids.map(() => '?').join(', ');
     await this.handle.database.execute(
       `UPDATE ${EVENT_TABLE.table} SET synced = 1 WHERE id IN (${placeholders})`,
@@ -166,7 +199,7 @@ export class OpSqliteEventStore implements EventStore {
     if (events.length === 0) {
       return;
     }
-    await this.ready;
+    await this.ensureOpen();
     const refusedAt = new Date().toISOString();
     for (const event of events) {
       await this.handle.database.execute(
@@ -177,7 +210,7 @@ export class OpSqliteEventStore implements EventStore {
   }
 
   async forget(id: string): Promise<void> {
-    await this.ready;
+    await this.ensureOpen();
     await this.handle.database.execute(
       `DELETE FROM ${EVENT_TABLE.table} WHERE id = ? AND synced = 0`,
       [id],
@@ -185,7 +218,7 @@ export class OpSqliteEventStore implements EventStore {
   }
 
   async pendingCount(): Promise<number> {
-    await this.ready;
+    await this.ensureOpen();
     const result = await this.handle.database.execute(
       `SELECT count(*) AS total FROM ${EVENT_TABLE.table}
         WHERE synced = 0 AND refused_at IS NULL`,

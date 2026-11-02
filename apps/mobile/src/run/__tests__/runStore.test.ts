@@ -398,6 +398,35 @@ describe('loading the run', () => {
       warn.mockRestore();
     }
   });
+
+  // BUG-172: run 41491440450 - the API answered the seed and both reads (200s
+  // in the stack logs) but the today screen never got the day and NOTHING
+  // warned: the cache write threw (the auth-keyed remount had closed the
+  // shared op-sqlite handle under the new session), load() REJECTED, and
+  // neither reported() nor the screen's effect caught a rejection. The
+  // contract now: load() never rejects - a throw is named and answered as a
+  // failure. Red on d92155e (the promise rejects and the warn never fires).
+  it('answers a failure instead of rejecting when the cache cannot keep the day', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const cache = new FakeCache();
+      cache.write = () => Promise.reject(new Error('database is locked'));
+      const { store, api } = aStore(new FakeApi(), { cache });
+      api.seedAnswer = SEEDED;
+
+      const load = await store.load();
+
+      expect(load.status).toBe('server');
+      if (load.status === 'server') {
+        expect(load.message).toContain('database is locked');
+      }
+      expect(warn).toHaveBeenCalledWith(
+        'run: the day did not load (server - the phone could not keep the day: database is locked)',
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
 
 describe('the write path of the run store', () => {

@@ -158,4 +158,29 @@ describe('the day the screens read (A1 slice 3)', () => {
     expect(getByTestId('stops').props.children).toBe('0');
     expect(getByTestId('next').props.children).toBe('none');
   });
+
+  // BUG-172: run 41491440450 - a store whose load() THROWS (the cache write
+  // threw on the closed handle) left the effect's promise unhandled and the
+  // day empty with no log line at all. The hook now catches and names it.
+  // Red on d92155e: no warn fires, and the rejection escapes the effect.
+  it('names a store that throws instead of leaving an unhandled rejection', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      mockLoad.mockRejectedValue(new Error('database is locked'));
+
+      const Probe = () => {
+        const day = useRunDay(storeSource);
+        return <Text testID="has-run">{String(day.hasRun)}</Text>;
+      };
+
+      const { getByTestId } = render(<Probe />);
+
+      await waitFor(() => expect(warn).toHaveBeenCalledWith(
+        'run: the day could not be read: database is locked',
+      ));
+      expect(getByTestId('has-run').props.children).toBe('false');
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });

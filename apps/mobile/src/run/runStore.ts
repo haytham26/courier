@@ -40,6 +40,7 @@
  * courier made are the record, and losing them is the one outcome that is
  * worse than sending them later.
  */
+import { errorMessage } from '@/lib/errors';
 import type { EventLog } from '@/sync/eventLog';
 
 import { e2eDay } from './dayForThisBuild';
@@ -123,26 +124,35 @@ export class RunStore implements MarkStore {
    * of Canterbury is told there is no day yet, not shown yesterday's.
    */
   async load(): Promise<RunLoad> {
-    const cached = await this.cache.read();
-    if (cached !== null) {
-      return { status: 'ok', source: 'cache', snapshot: cached };
-    }
-    // The E2E build has no server to ask, so it answers with its own day
-    // straight away instead of spending a network timeout discovering that.
-    // The order matters on the device: the flows walk the screen the moment it
-    // opens, and a day that arrives after a tap is a day the flow never saw
-    // (the api-35 leg of run 41172592416 lost `today-go` that way).
-    if (this.reason === 'e2e') {
-      const day = e2eDay();
-      await this.cache.write(day);
-      return { status: 'ok', source: 'cache', snapshot: day };
-    }
-    return this.reported(this.readThrough(cached));
+    // BUG-172: the WHOLE load goes through reported(), the cache read
+    // included - a handle closed under the session throws there too, and the
+    // wrapper turns it into a named failure instead of a rejection.
+    return this.reported(
+      (async () => {
+        const cached = await this.cache.read();
+        if (cached !== null) {
+          return { status: 'ok' as const, source: 'cache' as const, snapshot: cached };
+        }
+        // The E2E build has no server to ask, so it answers with its own day
+        // straight away instead of spending a network timeout discovering that.
+        // The order matters on the device: the flows walk the screen the moment it
+        // opens, and a day that arrives after a tap is a day the flow never saw
+        // (the api-35 leg of run 41172592416 lost `today-go` that way).
+        if (this.reason === 'e2e') {
+          const day = e2eDay();
+          await this.cache.write(day);
+          return { status: 'ok' as const, source: 'cache' as const, snapshot: day };
+        }
+        return this.readThrough(cached);
+      })(),
+    );
   }
 
   /** The day the courier works, fresh: the network is always asked. */
   async refresh(): Promise<RunLoad> {
-    return this.reported(this.readThrough(await this.cache.read()));
+    return this.reported(
+      (async () => this.readThrough(await this.cache.read()))(),
+    );
   }
 
   /**
@@ -152,15 +162,32 @@ export class RunStore implements MarkStore {
    * the phone or in the job said whether the seed was refused (unauthorized),
    * unreachable (offline) or refused by the server - the CI dump has to be
    * able to read it from the device's own log.
+   *
+   * BUG-172: this also answers a load that THREW, never a rejection. Run
+   * 41491440450's a1 run had the API answer the seed and both reads (200s in
+   * the stack logs) and the screen still got no day with no log line: the
+   * cache write threw after the auth-keyed remount had closed the shared
+   * op-sqlite handle under the new session, and neither this wrapper nor the
+   * screen's effect caught the rejection. load()/refresh() therefore never
+   * reject - a throw is named here and answered as a failure.
    */
   private reported(load: Promise<RunLoad>): Promise<RunLoad> {
-    return load.then((answer) => {
-      if (answer.status !== 'ok') {
-        const detail = 'message' in answer ? ` - ${answer.message}` : '';
-        console.warn(`run: the day did not load (${answer.status}${detail})`);
-      }
-      return answer;
-    });
+    return load.then(
+      (answer) => {
+        if (answer.status !== 'ok') {
+          const detail = 'message' in answer ? ` - ${answer.message}` : '';
+          console.warn(`run: the day did not load (${answer.status}${detail})`);
+        }
+        return answer;
+      },
+      (error: unknown) => {
+        const message = errorMessage(error);
+        console.warn(
+          `run: the day did not load (server - the phone could not keep the day: ${message})`,
+        );
+        return { status: 'server', message: `the phone could not keep the day: ${message}`, snapshot: null };
+      },
+    );
   }
 
   /**

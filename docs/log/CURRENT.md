@@ -185,6 +185,25 @@ answer the real envelope; a failed mint is named on the console
 (`auth: the token mint ...`). 634 mobile tests (74 suites), tsc, eslint green.
 BUG-171 filed (fixed, PR #135); register 168 rows, fixed 112.
 
+**Run 41491440450 (d92155e): the network path is fully green — the day was read but
+never kept (BUG-172).** stack-logs.txt: `POST /demo/runs 200`, `GET /runs/:id 200`,
+`GET /shifts/:id/stops 200` from the emulator; db-counts: runs=1, shifts=1, stops=5.
+But the today sheet still showed 0/0 with no `today-go`, and the logcat went silent
+after the session mount. Root cause: `RunSession` is keyed to the auth state, so the
+sign-in remount renders the new session — whose `runStoreForThisBuild()` reuses the
+module-cached op-sqlite wrappers — BEFORE the dying anon session's cleanup closes
+them; the shared handle is released and `courier.db` closed under the new session.
+The new `load()` raced that: `cache.read()` won (null), the three API calls went out,
+then `cache.write()` threw on the closed database — and the rejection vanished,
+because `reported()` only inspected resolved values and `useRunDay`'s effect has no
+catch. Fix (red-first, 3 tests red on d92155e): both op-sqlite stores reopen —
+`close()` sets a synchronous `closed` flag, `open()` never hands out a closed one,
+every operation passes `ensureOpen()` which reopens the database if the handle was
+closed under it; `load()`/`refresh()` wrap the whole load in `reported()`, which now
+also answers a rejection as a named `server` failure with a warn (load never rejects);
+`useRunDay` catches and warns. 638 mobile tests (74 suites), tsc, eslint green.
+BUG-172 filed (fixed, PR #135); register 169 rows, fixed 113.
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

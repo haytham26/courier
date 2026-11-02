@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { DeliveredMark } from './types';
 import type { RunStore } from './runStore';
 import type { Stop } from '@/maps/stops';
+import { errorMessage } from '@/lib/errors';
 
 /**
  * The store this hook reads: the app's run store, which is both the day's
@@ -148,12 +149,19 @@ export function useRunDay(source: StoreSource): RunDay {
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const loaded = await store.load();
-      if (!alive) {
-        return;
+      try {
+        const loaded = await store.load();
+        if (!alive) {
+          return;
+        }
+        setSnapshot(loaded);
+        await readMarks();
+      } catch (error) {
+        // BUG-172: run 41491440450 - a store that throws (the cache handle
+        // closed under the remounted session) left this promise unhandled and
+        // the day empty with no log line. The hook names it instead.
+        console.warn(`run: the day could not be read: ${errorMessage(error)}`);
       }
-      setSnapshot(loaded);
-      await readMarks();
     })();
     return () => {
       alive = false;
