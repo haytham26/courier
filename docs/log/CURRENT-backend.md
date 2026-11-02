@@ -40,13 +40,16 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   writes only to `CURRENT-backend.md` from now on.** Local `main` syncs with
   `git merge --ff-only origin/main` only — no `git reset --hard` (the founder's second
   directive; AGENTS.md bans it outright).
-- **Item (a), first server half — PR #177 open** (`feat/trial-run-break-finish`): the break
-  window and the finish point on `CreateRunRequest` with the `runs` table columns (D55/D56,
-  ADR-022, D63), typed client regenerated, red-first (2 of 6 new tests red on origin/main),
-  suite 553 passed, register row BUG-166 filed and closed in the same PR, PARITY rows 12/309
-  updated in the same PR. Next server halves in order: the failed-delivery reason (D58), stop
-  types (D59), the CSV/Excel import (D52) — each its own PR, number = highest BUG across
-  origin/main + open PR branches + 1 (now BUG-167+; #135's branch carries BUG-164/165).
+- **Item (a), server halves — PR #177 (`feat/trial-run-break-finish`) and PR #178
+  (`feat/trial-failed-reason`, stacked) open:** #177 is the break window + finish point on
+  `CreateRunRequest` with the `runs` columns (D55/D56, ADR-022, BUG-166, PARITY 12/309);
+  #178 is the failed-delivery reason field (D58, ADR-023, BUG-167, PARITY 25, suite 559
+  passed, red-first on both). CI lesson recorded: the db leg caught a bad fixture
+  construction (`**__dict__` + keyword) — fixed with `dataclasses.replace` (a5f415c), and
+  ruff's UP037 quote rule is why 783f8f6 exists; both pushed. Next server halves in order:
+  stop types (D59), then the CSV/Excel import (D52) — each its own PR, number = highest BUG
+  across origin/main + open PR branches + 1 (now BUG-168+; #135's branch carries
+  BUG-164/165).
 - Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
   `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open
   data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from
