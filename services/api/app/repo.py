@@ -153,6 +153,12 @@ class RunRecord:
     capacity_parcels: int | None
     speed_kmh: float
     start_at: datetime
+    # The day's planned break window and finish point (ADR-022, D63): stored on
+    # the run because they shape the plan (D55/D56's server half).
+    break_start_at: datetime | None = None
+    break_end_at: datetime | None = None
+    finish_lat: float | None = None
+    finish_lon: float | None = None
 
 
 @dataclass(frozen=True)
@@ -717,9 +723,11 @@ class SqlAlchemyRepo:
         statement = text(
             """
             INSERT INTO runs (id, shift_id, courier_id, name, depot_lat, depot_lon,
-                              capacity_parcels, speed_kmh, start_at)
+                              capacity_parcels, speed_kmh, start_at,
+                              break_start_at, break_end_at, finish_lat, finish_lon)
             VALUES (:id, :shift_id, :courier_id, :name, :depot_lat, :depot_lon,
-                    :capacity_parcels, :speed_kmh, :start_at)
+                    :capacity_parcels, :speed_kmh, :start_at,
+                    :break_start_at, :break_end_at, :finish_lat, :finish_lon)
             """
         )
         try:
@@ -736,6 +744,10 @@ class SqlAlchemyRepo:
                         "capacity_parcels": run.capacity_parcels,
                         "speed_kmh": run.speed_kmh,
                         "start_at": run.start_at,
+                        "break_start_at": run.break_start_at,
+                        "break_end_at": run.break_end_at,
+                        "finish_lat": run.finish_lat,
+                        "finish_lon": run.finish_lon,
                     },
                 )
         except IntegrityError as error:
@@ -758,7 +770,8 @@ class SqlAlchemyRepo:
         statement = text(
             """
             SELECT id, shift_id, courier_id, name, depot_lat, depot_lon,
-                   capacity_parcels, speed_kmh, start_at
+                   capacity_parcels, speed_kmh, start_at,
+                   break_start_at, break_end_at, finish_lat, finish_lon
             FROM runs
             WHERE courier_id = :courier_id
             ORDER BY start_at DESC
@@ -782,6 +795,10 @@ class SqlAlchemyRepo:
                 capacity_parcels=row["capacity_parcels"],
                 speed_kmh=row["speed_kmh"],
                 start_at=row["start_at"],
+                break_start_at=row["break_start_at"],
+                break_end_at=row["break_end_at"],
+                finish_lat=row["finish_lat"],
+                finish_lon=row["finish_lon"],
             )
             for row in rows
         ]
@@ -790,7 +807,8 @@ class SqlAlchemyRepo:
         statement = text(
             """
             SELECT id, shift_id, courier_id, name, depot_lat, depot_lon,
-                   capacity_parcels, speed_kmh, start_at
+                   capacity_parcels, speed_kmh, start_at,
+                   break_start_at, break_end_at, finish_lat, finish_lon
             FROM runs
             WHERE id = :run_id
             """
@@ -809,6 +827,10 @@ class SqlAlchemyRepo:
             capacity_parcels=row["capacity_parcels"],
             speed_kmh=row["speed_kmh"],
             start_at=row["start_at"],
+            break_start_at=row["break_start_at"],
+            break_end_at=row["break_end_at"],
+            finish_lat=row["finish_lat"],
+            finish_lon=row["finish_lon"],
         )
 
     def get_run_for_shift(self, shift_id: UUID, courier_id: str) -> RunRecord | None:
@@ -821,7 +843,8 @@ class SqlAlchemyRepo:
         statement = text(
             """
             SELECT id, shift_id, courier_id, name, depot_lat, depot_lon,
-                   capacity_parcels, speed_kmh, start_at
+                   capacity_parcels, speed_kmh, start_at,
+                   break_start_at, break_end_at, finish_lat, finish_lon
             FROM runs
             WHERE shift_id = :shift_id AND courier_id = :courier_id
             """
@@ -842,6 +865,10 @@ class SqlAlchemyRepo:
             capacity_parcels=row["capacity_parcels"],
             speed_kmh=row["speed_kmh"],
             start_at=row["start_at"],
+            break_start_at=row["break_start_at"],
+            break_end_at=row["break_end_at"],
+            finish_lat=row["finish_lat"],
+            finish_lon=row["finish_lon"],
         )
 
     def get_run_stops(self, run_id: UUID) -> list[RouteStopRow]:
