@@ -22,6 +22,7 @@ from __future__ import annotations
 import os
 import uuid
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -141,8 +142,8 @@ class TestTheRunLifecycle:
         self, repo: SqlAlchemyRepo, engine: Engine
     ) -> None:
         shift_id = a_shift(engine)
-        run = RunRecord(
-            **{**a_run(shift_id).__dict__, "id": uuid.uuid4(), "shift_id": shift_id},
+        run = replace(
+            a_run(shift_id),
             break_start_at=datetime(2026, 10, 25, 12, 0, tzinfo=UTC),
             break_end_at=datetime(2026, 10, 25, 12, 30, tzinfo=UTC),
             finish_lat=-43.5,
