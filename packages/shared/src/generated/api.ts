@@ -190,6 +190,7 @@ export interface RunResponse {
 export interface StopResponse {
   id: string;
   location_id: string;
+  type: 'delivery' | 'pickup';
   address?: string;
   seq: number;
   status: 'pending' | 'delivered' | 'skipped' | 'deferred' | 'failed';

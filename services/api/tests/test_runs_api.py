@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -553,6 +554,7 @@ class TestListingTheStops:
         assert listed.status_code == 200, listed.text
         stops = listed.json()
         assert [stop["status"] for stop in stops] == ["pending", "pending"]
+        assert [stop["type"] for stop in stops] == ["delivery", "delivery"]
         assert [stop["address"] for stop in stops] == [
             row.address for row in repo.run_stops[run_id]
         ]
@@ -560,6 +562,18 @@ class TestListingTheStops:
         assert [(stop["lat"], stop["lon"]) for stop in stops] == [
             (row.lat, row.lon) for row in repo.run_stops[run_id]
         ]
+
+    def test_a_pickup_stop_lists_its_type(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        run_id, shift_id = seed_run_with_stops(repo)
+        first, second = repo.run_stops[run_id]
+        repo.run_stops[run_id] = [first, replace(second, type="pickup")]
+
+        listed = client.get(f"/shifts/{shift_id}/stops")
+
+        assert listed.status_code == 200, listed.text
+        assert [stop["type"] for stop in listed.json()] == ["delivery", "pickup"]
 
     def test_a_delivery_event_flips_the_stop_status(
         self, client: TestClient, repo: InMemoryRepo

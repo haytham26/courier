@@ -29,6 +29,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 
 from app.entitlements import Plan, SubscriptionState
 from app.locations import location_id_for
@@ -96,19 +97,26 @@ def a_run(shift_id: uuid.UUID) -> RunRecord:
     )
 
 
-def seed_stop(engine: Engine, shift_id: uuid.UUID, stop_id: uuid.UUID, address: str) -> None:
+def seed_stop(
+    engine: Engine,
+    shift_id: uuid.UUID,
+    stop_id: uuid.UUID,
+    address: str,
+    stop_type: str = "delivery",
+) -> None:
     with engine.begin() as connection:
         connection.execute(
             text(
                 "INSERT INTO stops (id, shift_id, sequence, address, latitude, longitude, "
-                "status, priority, parcels, location_id) VALUES (:id, :shift, 1, :address, "
-                "-43.54, 172.60, 'pending', false, 1, :location)"
+                "status, priority, parcels, location_id, type) VALUES (:id, :shift, 1, "
+                ":address, -43.54, 172.60, 'pending', false, 1, :location, :type)"
             ),
             {
                 "id": stop_id,
                 "shift": shift_id,
                 "address": address,
                 "location": location_id_for(address, None),
+                "type": stop_type,
             },
         )
 
@@ -261,6 +269,29 @@ class TestTheStops:
         assert [row.address for row in rows] == ["45 Papanui Road", "12 Riccarton Road"]
         assert [row.status for row in rows] == ["pending", "pending"]
         assert [row.id for row in rows] == [first, second]
+
+    def test_a_stop_reads_back_with_its_type_and_the_default_is_delivery(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        seed_stop(engine, shift_id, uuid.uuid4(), "45 Papanui Road")
+        seed_stop(engine, shift_id, uuid.uuid4(), "1 Colombo Street", stop_type="pickup")
+
+        rows = repo.get_run_stops(run.id)
+
+        by_address = {row.address: row.type for row in rows}
+        assert by_address == {"45 Papanui Road": "delivery", "1 Colombo Street": "pickup"}
+
+    def test_a_stop_type_outside_the_vocabulary_is_refused(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        shift_id = a_shift(engine)
+        repo.put_run(a_run(shift_id))
+
+        with pytest.raises(IntegrityError):
+            seed_stop(engine, shift_id, uuid.uuid4(), "1 Colombo Street", stop_type="bogus")
 
 
 class TestTheEvents:

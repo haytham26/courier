@@ -160,6 +160,7 @@ class StopResponse(BaseModel):
     address: str | None
     seq: int
     status: StopStatus
+    type: Literal["delivery", "pickup"]
     lat: float | None
     lon: float | None
     priority: bool
