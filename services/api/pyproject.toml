@@ -25,6 +25,7 @@ dependencies = [
     # The production VRP solver (ADR-009): MIT, prebuilt wheels, seeded-deterministic.
     # PyVRP 0.14.1 supports >=3.11; 0.15+ moves to 3.12 (PyVRP #1206), so pin below it.
     "pyvrp>=0.14.1,<0.15",
+    "openpyxl>=3.1",
 ]
 
 [project.optional-dependencies]
