@@ -53,6 +53,14 @@ class VoiceConfig(BaseSettings):
     # share the contract: BUG-126 was the day they disagreed about a valid
     # token, and a leeway on one surface only would be the next such day.
     auth_jwt_leeway_seconds: float = 30.0
+    # BUG-156: the resource server accepts a token only for this long after it
+    # was issued (`iat`), so a token revoked at the auth service keeps at most
+    # this window here instead of the issuer's whole lifetime
+    # (`AUTH_JWT_EXPIRATION`, 15 minutes by default). The phone reads its token
+    # fresh on every call and refreshes it silently, and a refusal signs the
+    # courier out (BUG-071), so a live courier re-authenticates rather than
+    # losing the voice.
+    auth_max_token_age_seconds: int = 300
     # BUG-131: the plaintext-JWKS allow-list, the same one the API's
     # `AUTH_JWKS_INTERNAL_HOSTS` carries. The voice service and the API read
     # the same auth service; the setting is named the same so the compose tree
