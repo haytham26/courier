@@ -50,6 +50,13 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   stop types (D59), then the CSV/Excel import (D52) — each its own PR, number = highest BUG
   across origin/main + open PR branches + 1 (now BUG-168+; #135's branch carries
   BUG-164/165).
+- **#178's db leg went red on run 41430267111**: `get_event`'s SELECT predated the
+  `delivery_events.reason` column, so the Postgres leg raised
+  `NoSuchColumnError: Could not locate column in row for column 'reason'` in
+  `TestTheEvents` (2 failed, 28 passed). Fixed in `ad8690c` — `reason` added to the
+  `get_event` SELECT (the batch read path already had it); local non-db suite 559
+  passed + ruff clean before push. **#177 is fully green** (all 15 checks SUCCESS at
+  `a5f415c`) and merges with the ritual next.
 - Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
   `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open
   data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from
