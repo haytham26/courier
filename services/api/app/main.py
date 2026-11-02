@@ -54,6 +54,12 @@ from .auth.websocket import (
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
+from .import_stops import (
+    IMPORT_MAX_BYTES,
+    ImportFormatError,
+    parse_import,
+    sniff_import_kind,
+)
 from .locations import location_id_for_stop
 from .occurred_at import bound_occurred_at, require_aware_occurred_at
 from .pod import (
@@ -77,6 +83,7 @@ from .responses import (
     DemoRunResponse,
     EntitlementResponse,
     HealthResponse,
+    ImportResponse,
     IntakeAnswerResponse,
     LocationNoteResponse,
     PodResponse,
@@ -1051,6 +1058,50 @@ def intake_manifest(
         text=text,
         shift_id=shift_id,
     )
+
+
+@app.post("/shifts/{shift_id}/import", status_code=201, response_model=ImportResponse)
+def import_stops(
+    shift_id: uuid.UUID,
+    file: UploadFile,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Import stops from a CSV/Excel spreadsheet (D52's server half, ADR-025).
+
+    All-or-nothing: the whole file is validated before one row is stored, and
+    a row without an address refuses the import with the row named - a silent
+    mis-import is the failure this endpoint exists to avoid. The name and the
+    bytes of the file are both checked (.csv text or .xlsx zip), and the
+    upload is capped like the POD's. The shift must be the caller's own (the
+    404 discipline, BUG-140).
+    """
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="no run for this shift")
+    content = file.file.read(IMPORT_MAX_BYTES + 1)
+    if len(content) > IMPORT_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="the file is over the 5 MiB cap")
+    kind = sniff_import_kind(file.filename or "", content)
+    if kind is None:
+        raise HTTPException(
+            status_code=415,
+            detail="the file must be a .csv (UTF-8 text) or .xlsx (zip); the name and the bytes must agree",
+        )
+    try:
+        rows, ignored = parse_import(content, kind)
+    except ImportFormatError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    try:
+        ids = repo.put_imported_stops(shift_id, rows)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {
+        "shift_id": str(shift_id),
+        "imported": len(ids),
+        "stop_ids": [str(stop_id) for stop_id in ids],
+        "ignored_columns": ignored,
+    }
 
 
 @app.post(

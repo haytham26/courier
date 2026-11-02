@@ -1,6 +1,6 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-11-03 · main at `f5b0b9c` (PRs #177–#179 merged) · **This
+Updated: 2026-11-03 · main at `0d8431f` (PRs #177–#180 merged; item (a) complete) · **This
 squad's handoff lives in THIS file only.** PR #174 had written it into the lead's `docs/log/CURRENT.md` and replaced the lead's
 header line with its own; the correction PR on `docs/currents-log-ownership` restores that
 header line exactly as it was at `960fc41^1` (the lead has not rewritten it since) and
@@ -48,8 +48,8 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   construction (`**__dict__` + keyword) — fixed with `dataclasses.replace` (a5f415c), and
   ruff's UP037 quote rule is why 783f8f6 exists; both pushed. Next server halves in order:
   stop types (D59), then the CSV/Excel import (D52) — each its own PR, number = highest BUG
-  across origin/main + open PR branches + 1 (BUG-168 went to #179, now merged; BUG-169
-  is on #180; next free is BUG-170; #135's branch carries BUG-164/165).
+  across origin/main + open PR branches + 1 (BUG-168 went to #179, BUG-169 to #180, both
+  merged; next free is BUG-170; #135's branch carries BUG-164/165).
 - **#178's db leg went red on run 41430267111**: `get_event`'s SELECT predated the
   `delivery_events.reason` column, so the Postgres leg raised
   `NoSuchColumnError: Could not locate column in row for column 'reason'` in
@@ -64,6 +64,12 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
 - **PR #177 MERGED as `821cde4` with the full ritual**: merge commit, archive tag
   `archive/feat/trial-run-break-finish` pushed at the PR head `a5f415c`, remote branch
   deleted (`git ls-remote --heads origin feat/trial-run-break-finish` prints nothing).
+- **PR #178 MERGED as `1f596b1` with the full ritual**: merge commit, archive tag
+  `archive/feat/trial-failed-reason` pushed at the PR head `6a404c4`, remote branch
+  deleted (`git ls-remote --heads origin feat/trial-failed-reason` prints nothing). Its
+  two CI reds were both fixed on the branch first: the db leg's missing `reason` in
+  `get_event`'s SELECT (`ad8690c`) and the Locust leg's failed events without a reason
+  (`b8bc724`, proven green locally: 142 requests, 0 fails, "SLOs met").
 - **PR #179 MERGED as `f5b0b9c` with the full ritual** (all 22 checks green on head
   `126e6a9`): merge commit, archive tag `archive/feat/trial-stop-types` pushed at the PR
   head `126e6a9`, remote branch deleted (`git ls-remote --heads origin
@@ -76,11 +82,22 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   on-branch in `126e6a9`: the op-sqlite run cache carries the column (STOP_TABLE v2,
   `NOT NULL DEFAULT 'delivery'`, SELECT/INSERT/stopOf all pass it through) and both test
   fixtures build stops with `type: 'delivery'`.
-- **PR #180 (`feat/trial-import`, the D52 server half) now at `2a0e218`**: the branch
-  merged origin/main after #179 landed, so it carries the mobile fix; its earlier red was
-  the same 4× TS2741 on the pre-fix head. CI rerunning on `2a0e218`; merge it next with
-  the full ritual. **Item (a) then completes** — D55/D56 #177, D58 #178, D59 #179,
-  D52 #180, each its own contract-first PR.
+- **PR #180 MERGED as `0d8431f` with the full ritual** (all 22 checks green on head
+  `2a0e218`, after the branch merged origin/main to carry #179's mobile fix): merge
+  commit, archive tag `archive/feat/trial-import` pushed at the PR head `2a0e218`,
+  remote branch deleted (`git ls-remote --heads origin feat/trial-import` prints
+  nothing). The D52 server half: `POST /shifts/{shift_id}/import`, capped .csv/.xlsx
+  (5 MiB / 1000 rows, name+bytes must agree), all-or-nothing validation (a bad row is a
+  422 naming the file row, nothing stored; unknown columns answered in
+  `ignored_columns`), `put_imported_stops` on both repos (one transaction in SQL,
+  unlocated stops, sequence continues), openpyxl 3.1.5 (MIT, in LICENSES.md), client
+  regenerated; BUG-169 filed+fixed, PARITY 1/247 updated, ADR-025, evidence
+  `docs/evidence/trial-import/`. Red-first both legs (12 API red + db ImportError on the
+  base); green 573 non-db + 33 db vs local postgis 17-3.5, ruff + mypy clean. Its one CI
+  red was the same 4× TS2741 (fixed by carrying #179's head) plus one infra flake (the
+  api-35 Maestro job's `sdkmanager` download was a corrupt zip — rerun green).
+  **Item (a) is COMPLETE** — all four server halves (D55/D56 #177, D58 #178, D59 #179,
+  D52 #180) landed as contract-first PRs with the merge ritual and red-first evidence.
 - Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
   `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open
   data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from
