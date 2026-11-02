@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `d93e3ab` (PR #173, the backend squad's C1 lows batch, merged with the ritual). Lead session 13, 2026-11-02.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `0b083b9` (PR #170's handoff). Lead session 13, 2026-11-02.**
 
 ## Lead session 13, started (2026-11-02): D62 recorded — the trial build IS the product
 
@@ -27,20 +27,6 @@ for the vitest `all:` half. BUGS footer now 160 rows: open 33, fixed 88. The reo
 guard is in: `check-parity.mjs --base <ref>` + `checkReopened`, five red-first tests
 (red output: `SyntaxError: ... does not provide an export named 'checkReopened'`,
 green: 29 pass), wired into quality-gates.yml's floor job.
-
-**The backend squad's C1 lows batch merged this session: PR #173 (`c1-backend-lows-batch`
-@ `2e24b59`) merged as `d93e3ab`, with the full ritual — archive tag
-`archive/c1-backend-lows-batch` pushed at `2e24b59`, remote branch deleted,
-`git ls-remote --heads origin c1-backend-lows-batch` printing nothing.** The branch took
-origin/main in first (`2e24b59`, #171 + #172) and resolved all seven conflicts keeping
-BOTH register gates: the duplicate-number check and the `--base` reopen guard live in
-`check-parity.mjs` together, its suite is 32 green, and the floor job on the PR head
-(run 41398868377) is green — including "The registers did not silently reopen
-(check-parity --base)" against the PR's base sha. BUGS.md on main now reads 160 rows:
-open 19, doing 3, testing 3, fixed 103, closed 2, moved to PARITY 30. The rows the batch
-closed: BUG-118, 119, 120, 135, 136, 138, 143, 144, 145, 155, 156, 157, 158, 159, 163.
-Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
-`docs/log/2026-W44.md` (the 2026-11-02 merge entry).
 
 
 ## Lead session 12, the closing state (2026-11-02): the a1 job's blank first screen is rooted and fixed
