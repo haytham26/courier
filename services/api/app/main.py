@@ -211,7 +211,7 @@ class BreakWindow(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def _ordered(self) -> "BreakWindow":
+    def _ordered(self) -> BreakWindow:
         if self.end <= self.start:
             raise ValueError("break_window.end must be after break_window.start")
         return self
