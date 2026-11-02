@@ -688,7 +688,7 @@ class SqlAlchemyRepo:
         statement = text(
             """
             SELECT id, shift_id, stop_id, kind, utterance, safe_place,
-                   lat, lon, accuracy_m, occurred_at
+                   lat, lon, accuracy_m, occurred_at, reason
             FROM delivery_events
             WHERE id = :event_id
             """
