@@ -136,6 +136,21 @@ describe("the trusted origins are concrete hosts (BUG-134)", () => {
 
     expect(config.trustedOrigins).toEqual(["exp://", "https://staging.courier.local"]);
   });
+
+  // BUG-168: the app's expo client sends `expo-origin: courier://` (the
+  // app.json scheme), which the expo server plugin copies into the `origin`
+  // header, so the app's own scheme must be a trusted origin. It is a
+  // scheme-only value, and CONCRETE_ORIGIN accepts a scheme with no host -
+  // the a1 stack's exact value is pinned here so a future tightening of the
+  // validator cannot silently drop it.
+  it("takes the a1 stack's value, including the app's own scheme", () => {
+    const config = loadConfig({
+      ...VALID_ENV,
+      AUTH_TRUSTED_ORIGINS: "http://10.0.2.2:3001,courier://",
+    });
+
+    expect(config.trustedOrigins).toEqual(["http://10.0.2.2:3001", "courier://"]);
+  });
 });
 
 // BUG-133: the passkey origin is derived from the service's own URL, so a

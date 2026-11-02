@@ -125,7 +125,13 @@ services:
       BETTER_AUTH_SECRET: ci-only-better-auth-secret-0123456789abcdef
       BETTER_AUTH_URL: http://10.0.2.2:3001
       AUTH_DATABASE_URL: postgresql://courier:courier@postgres:5432/courier
-      AUTH_TRUSTED_ORIGINS: http://10.0.2.2:3001
+      # The app's expo client sends `expo-origin: courier://` (the app.json
+      # scheme), which the expo server plugin copies into the `origin` header
+      # (ADR-006), so the scheme itself must be trusted here - run
+      # 41422266958's register submit was refused with "Invalid origin"
+      # without it. `courier://` is a concrete scheme:// entry, so it passes
+      # the BUG-134 validator (no wildcard).
+      AUTH_TRUSTED_ORIGINS: http://10.0.2.2:3001,courier://
       AUTH_JWKS_PATH: /jwks
       AUTH_JWT_ISSUER: http://10.0.2.2:3001
       AUTH_JWT_AUDIENCE: courier-api

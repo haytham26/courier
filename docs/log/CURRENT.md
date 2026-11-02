@@ -139,6 +139,18 @@ URLs are https) and points the manifest at it. Red-first in
 `<domain>` needs `includeSubdomains` — so the config pins `includeSubdomains="false"`
 (exact host only), asserted in the test.
 
+**Run 41422266958 (4c44078): cleartext reached the server — BUG-168, "Invalid origin".**
+The submit tap worked and the request left the device, but the auth service answered
+403 "Invalid origin": the app's expo client sends `expo-origin: courier://` (the
+app.json scheme) on every request and the expo server plugin copies it into the
+`origin` header, which Better Auth checks against `trustedOrigins` — and
+`infra/compose.ci.yml` listed only `http://10.0.2.2:3001`. ADR-006 already required
+`courier://` in `AUTH_TRUSTED_ORIGINS`; the CI stack never carried it. Fix:
+`AUTH_TRUSTED_ORIGINS: http://10.0.2.2:3001,courier://` in compose.ci.yml — a concrete
+scheme:// entry, so the BUG-134 validator still refuses wildcards. Pinned by a new
+config test (the a1 stack's exact value loads to both entries; 121 auth tests green).
+BUG-168 filed (fixed, PR #135); register 165 rows, fixed 109.
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
