@@ -41,14 +41,35 @@ name: 'A1 online: the app signs up on the real server and delivers the seeded da
     id: "register-email"
 - inputText:
     text: "a1-courier@example.co.nz"
+# The form is taller than the screen once the keyboard is up (adjustResize
+# shrinks the ScrollView), so the password and everything under it are below
+# the fold - run 41371397919 failed the tap on register-password with
+# "Element not found". The courier scrolls for these; the flow does the same
+# (the idiom sign-in.yaml already uses), it does not make the app fit four
+# fields and a keyboard on one screen.
+- scrollUntilVisible:
+    element:
+      id: "register-password"
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: "register-password"
 - inputText:
     text: "correct-horse-battery"
+- scrollUntilVisible:
+    element:
+      id: "register-confirm-password"
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: "register-confirm-password"
 - inputText:
     text: "correct-horse-battery"
+- scrollUntilVisible:
+    element:
+      id: "register-submit"
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: "register-submit"
 # The session is settled, so the auth-guarded stack lets the run in and the

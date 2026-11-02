@@ -70,6 +70,14 @@ the welcome focused (a signed-in phone still focuses the tabs; the effect stays 
 the sign-out-while-on-a-protected-route case). Red-first in routes.test.tsx
 (`unstable_settings` undefined → red; `{ anchor: 'welcome' }` → green, 614 tests).
 
+**Run 41371397919 (077b976): the anchor worked on device** — the a1 flow passed
+welcome-screen in ~3 s and drove sign-in → register → name → email, then failed at
+`tapOn register-password` ("Element not found"): with the keyboard up, adjustResize
+shrinks the register ScrollView and the password field is below the fold (Maestro
+skips off-screen children). Flow fix in `.maestro/a1/online.yaml`: `scrollUntilVisible`
+before the password, confirm and submit taps — the same idiom `sign-in.yaml` uses;
+the courier scrolls for these too.
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
