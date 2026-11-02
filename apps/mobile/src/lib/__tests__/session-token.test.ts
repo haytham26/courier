@@ -25,6 +25,13 @@
  *
  * The emulator run has no auth service, so the E2E mock's `$fetch` answers a
  * token of its own - the app's API boundary is never reached in that mode.
+ *
+ * BUG-171: every `$fetch` mock here answers the ENVELOPE `@better-fetch/fetch`
+ * really resolves (`{ data, error, status }`), not the raw body. Run
+ * 41457437873's a1 failure was exactly the gap: the mocks answered
+ * `{ token }` while the real client resolves `{ data: { token }, ... }`, so
+ * `sessionToken()` read the token off the envelope, got undefined on the
+ * device, and the API was never dialed (its logs held only /healthz).
  */
 jest.mock('better-auth/react', () => ({ createAuthClient: jest.fn() }));
 jest.mock('@better-auth/expo/client', () => ({ expoClient: jest.fn(() => ({})) }));
@@ -68,7 +75,12 @@ function installClient(client: Partial<FakeClient>): void {
       data: { session: { token: SESSION_TOKEN } },
       error: null,
     }),
-    $fetch: client.$fetch ?? jest.fn().mockResolvedValue({ token: MINTED_TOKEN }),
+    // BUG-171: the real `$fetch` (@better-fetch/fetch's createFetch) resolves
+    // the envelope, so the mock answers the envelope - the document rides in
+    // `data`, exactly as on the device.
+    $fetch:
+      client.$fetch ??
+      jest.fn().mockResolvedValue({ data: { token: MINTED_TOKEN }, error: null, status: 200 }),
   });
 }
 
@@ -136,18 +148,92 @@ describe('the token the app sends to the API', () => {
     await expect(sessionToken()).resolves.toBeNull();
   });
 
-  it('answers null when the service answers without a token', async () => {
-    const sessionToken = loadSessionToken({ $fetch: jest.fn().mockResolvedValue({}) });
+  it('answers null when the mint is refused (the envelope carries a 401 error)', async () => {
+    const sessionToken = loadSessionToken({
+      $fetch: jest.fn().mockResolvedValue({
+        data: null,
+        error: { status: 401, statusText: 'Unauthorized', message: 'no session' },
+        status: 401,
+      }),
+    });
+
+    await expect(sessionToken()).resolves.toBeNull();
+  });
+
+  it('answers null when the service answers without a token in the document', async () => {
+    const sessionToken = loadSessionToken({
+      $fetch: jest.fn().mockResolvedValue({ data: {}, error: null, status: 200 }),
+    });
 
     await expect(sessionToken()).resolves.toBeNull();
   });
 
   it('answers null when the minted token is not a string', async () => {
     const sessionToken = loadSessionToken({
-      $fetch: jest.fn().mockResolvedValue({ token: 42 }),
+      $fetch: jest.fn().mockResolvedValue({ data: { token: 42 }, error: null, status: 200 }),
     });
 
     await expect(sessionToken()).resolves.toBeNull();
+  });
+
+  // BUG-171's pin: an answer WITHOUT a `data` field is not the client's
+  // envelope, and must not be read as a raw body - the raw-body mock is what
+  // hid the defect from this suite while the device got null on every mint.
+  it('answers null when the answer is not the envelope (a bare body is not believed)', async () => {
+    const sessionToken = loadSessionToken({
+      $fetch: jest.fn().mockResolvedValue({ token: MINTED_TOKEN }),
+    });
+
+    await expect(sessionToken()).resolves.toBeNull();
+  });
+
+  // The mint's own failure says why on the console, so the emulator's logcat
+  // names the hop when the API is never dialed (run 41457437873's evidence had
+  // only the run store's "unauthorized").
+  it('names a refused mint on the console, with its status and the service sentence', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const sessionToken = loadSessionToken({
+        $fetch: jest.fn().mockResolvedValue({
+          data: null,
+          error: { status: 401, statusText: 'Unauthorized', message: 'no session' },
+          status: 401,
+        }),
+      });
+
+      await expect(sessionToken()).resolves.toBeNull();
+      expect(warn).toHaveBeenCalledWith(
+        'auth: the token mint answered no token (status 401, no session)',
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('names a mint that never answered on the console', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const sessionToken = loadSessionToken({
+        $fetch: jest.fn().mockRejectedValue(new Error('no radio')),
+      });
+
+      await expect(sessionToken()).resolves.toBeNull();
+      expect(warn).toHaveBeenCalledWith('auth: the token mint did not answer (no radio)');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('stays quiet when the mint answers a token', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const sessionToken = loadSessionToken();
+
+      await expect(sessionToken()).resolves.toBe(MINTED_TOKEN);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   // The emulator run has no auth service, so the E2E mock answers a token of

@@ -165,6 +165,26 @@ failure path dumps `compose logs api auth` + DB counts to the evidence, and
 assert-a1-rows.sh prints runs/shifts/stops/delivery_events BEFORE asserting (asserts
 unchanged).
 
+**Run 41457437873 (ecade62): the new evidence named the hop — BUG-171, the token mint
+read the envelope, not the body.** db-counts.txt: users=1, sessions=1 (registration
+landed), runs/shifts/stops/delivery_events all 0. stack-logs.txt: the api container
+logged ONLY /healthz polls — the app never dialed the API. Device logcat:
+`run: the day did not load (unauthorized)` at 14:17:23 (anon mount, expected) and again
+at 14:18:07, after the session was established. So `sessionToken()` answered null on
+the device while sign-up and getSession worked. Root cause read from the installed
+`@better-fetch/fetch@1.3.2` dist: Better Auth's `$fetch` is its `createFetch`, which
+resolves the ENVELOPE `{ data, error, status }`, never the raw body — `sessionToken()`
+read `.token` off the envelope (always undefined there) → null → the API client
+answered unauthorized without sending a request. `fetchSignInMethods()` had the same
+gap (parsed the envelope, silently fell back to defaults). The unit tests never caught
+it: their `$fetch` mocks answered a raw `{ token }` body. Fix (red-first, 7 tests red
+on ecade62): new strict `fetchAnswerBody()` in `src/lib/fetch-answer.ts` (only an
+answer with a `data` field is an envelope; a bare body is not believed), used by
+`sessionToken()` and `fetchSignInMethods()`; the E2E mock and the test mocks now
+answer the real envelope; a failed mint is named on the console
+(`auth: the token mint ...`). 634 mobile tests (74 suites), tsc, eslint green.
+BUG-171 filed (fixed, PR #135); register 168 rows, fixed 112.
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
