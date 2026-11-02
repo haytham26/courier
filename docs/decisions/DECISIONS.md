@@ -507,3 +507,19 @@ already has them); (3) the app halves of the spreadsheet import, failed-delivery
 stop types, breaks and the finish point, as the backend's contract changes land. TRIAL_SCOPE
 and PARITY are updated in the same PR, as this one does. D60 (earnings) and D61 (the offline
 map pack) stand: they are not day-one deferrals, they are P5/P3 scheduled work.
+
+## D63 — The day-one deferrals' server halves land now, contract first (2026-11-02, backend squad decision, D62's queue step 4.3)
+
+- D62 puts every deferred day-one feature in the trial. This entry schedules the backend
+  halves, each in its own PR with the typed client regenerated
+  (`services/api/scripts/generate_api_client.py`, gated by the CI `check` mode): the break
+  window and the finish point on `CreateRunRequest` with the `runs` table columns (D55/D56,
+  ADR-022, landed in PR #177), the structured failed-delivery reason on the event (D58), stop
+  types on the stop (D59), and the CSV/Excel spreadsheet import endpoint (D52).
+- The contract changes only with this decision and an ADR (`packages/contracts/README.md`'s
+  rule): one ADR per server half, and every changed schema names its decision.
+- Each server half's PR closes its own register row (filed and fixed in the same PR, the
+  number taken from the highest across `origin/main` and every open PR branch at that moment
+  plus one) and updates its PARITY row in the same PR — honestly: the row is not `Have` until
+  the courier-facing feature works, so the row records "server half landed in PR #N; app half
+  is the lead's queue" while staying `Planned (task)`.

@@ -1,7 +1,7 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-11-02 · main at `960fc41` (PR #174) · **This squad's handoff lives in THIS file
-only.** PR #174 had written it into the lead's `docs/log/CURRENT.md` and replaced the lead's
+Updated: 2026-11-02 · main at `eee8b7e` (PR #176, the log-ownership correction) · **This
+squad's handoff lives in THIS file only.** PR #174 had written it into the lead's `docs/log/CURRENT.md` and replaced the lead's
 header line with its own; the correction PR on `docs/currents-log-ownership` restores that
 header line exactly as it was at `960fc41^1` (the lead has not rewritten it since) and
 moves the entry below, here, true at main `960fc41`. **From now on this squad writes only
@@ -28,6 +28,32 @@ BOTH register gates: the duplicate-number check and the `--base` reopen guard li
 closed: BUG-118, 119, 120, 135, 136, 138, 143, 144, 145, 155, 156, 157, 158, 159, 163.
 Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
 `docs/log/2026-W44.md` (the 2026-11-02 merge entry).
+
+## The founder's queue, this session (2026-11-02): log correction merged, item (a) started
+
+- **PR #176 MERGED as `eee8b7e` with the full ritual** (the log-ownership correction from the
+  founder's first directive): `docs/log/CURRENT.md` restored byte-identical to `960fc41^1`
+  (the lead's header line, `0b083b9` / PR #170's handoff — the lead has not rewritten it
+  since), the C1-lows-batch entry moved to THIS file (above), archive tag
+  `archive/docs/currents-log-ownership` at the PR head, remote branch deleted,
+  `git ls-remote --heads origin docs/currents-log-ownership` prints nothing. **This squad
+  writes only to `CURRENT-backend.md` from now on.** Local `main` syncs with
+  `git merge --ff-only origin/main` only — no `git reset --hard` (the founder's second
+  directive; AGENTS.md bans it outright).
+- **Item (a), first server half — PR #177 open** (`feat/trial-run-break-finish`): the break
+  window and the finish point on `CreateRunRequest` with the `runs` table columns (D55/D56,
+  ADR-022, D63), typed client regenerated, red-first (2 of 6 new tests red on origin/main),
+  suite 553 passed, register row BUG-166 filed and closed in the same PR, PARITY rows 12/309
+  updated in the same PR. Next server halves in order: the failed-delivery reason (D58), stop
+  types (D59), the CSV/Excel import (D52) — each its own PR, number = highest BUG across
+  origin/main + open PR branches + 1 (now BUG-167+; #135's branch carries BUG-164/165).
+- Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
+  `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open
+  data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from
+  `.worktrees/b1030c/data/linz/`, weekly import green; (e) the reference-repos clean-room
+  ideas + MASTER §22's three Courier Voice techniques; (f) LAST — Oracle staging and the
+  production OmniRoute (the OCI host/key and the gateway secrets are FOUNDER_TODO — written
+  there, not blocking).
 
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
