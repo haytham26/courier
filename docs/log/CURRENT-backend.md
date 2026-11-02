@@ -1,13 +1,33 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-11-02 (the same backend session, PR #164's final state) · main at `5392ea9` (PR
-#167, the lead's A6 slice) · **This branch is `c1-voice-mediums`, PR #164: the voice group
-(BUG-124/125/126/149/151/152/153/154) and BUG-128, all landed, all gates green locally. The
-only two red legs on the PR are (1) GitHub's default-setup CodeQL check, which reports two
-*false positives* on the k-anonymity SHA-1 and can be neither suppressed nor dismissed from
-here (below, with the three attempts and the founder row), and (2) `Build the release APK`
-from the `Screen recordings` workflow, which is the lead's path (§16 — reported, never
-investigated).**
+Updated: 2026-11-02 · main at `960fc41` (PR #174) · **This squad's handoff lives in THIS file
+only.** PR #174 had written it into the lead's `docs/log/CURRENT.md` and replaced the lead's
+header line with its own; the correction PR on `docs/currents-log-ownership` restores that
+header line exactly as it was at `960fc41^1` (the lead has not rewritten it since) and
+moves the entry below, here, true at main `960fc41`. **From now on this squad writes only
+to `CURRENT-backend.md`.** (The previous header recorded PR #164, `c1-voice-mediums`: the
+voice group BUG-124/125/126/149/151/152/153/154 and BUG-128, all landed, all gates green
+locally; its only two red legs were (1) GitHub's default-setup CodeQL check, which reports
+two *false positives* on the k-anonymity SHA-1 and can be neither suppressed nor dismissed
+from here (below, with the three attempts and the founder row), and (2) `Build the release
+APK` from the `Screen recordings` workflow, which is the lead's path (§16 — reported, never
+investigated).)
+
+## The entry moved out of the lead's CURRENT.md (true at main `960fc41`)
+
+**The backend squad's C1 lows batch merged this session: PR #173 (`c1-backend-lows-batch`
+@ `2e24b59`) merged as `d93e3ab`, with the full ritual — archive tag
+`archive/c1-backend-lows-batch` pushed at `2e24b59`, remote branch deleted,
+`git ls-remote --heads origin c1-backend-lows-batch` printing nothing.** The branch took
+origin/main in first (`2e24b59`, #171 + #172) and resolved all seven conflicts keeping
+BOTH register gates: the duplicate-number check and the `--base` reopen guard live in
+`check-parity.mjs` together, its suite is 32 green, and the floor job on the PR head
+(run 41398868377) is green — including "The registers did not silently reopen
+(check-parity --base)" against the PR's base sha. BUGS.md on main reads 160 rows
+(open 19, doing 3, testing 3, fixed 103, closed 2, moved to PARITY 30). The rows the batch
+closed: BUG-118, 119, 120, 135, 136, 138, 143, 144, 145, 155, 156, 157, 158, 159, 163.
+Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
+`docs/log/2026-W44.md` (the 2026-11-02 merge entry).
 
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
