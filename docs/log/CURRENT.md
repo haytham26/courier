@@ -26,7 +26,82 @@ BUG-104 checked against #155: its row already carries #155's correction and stay
 for the vitest `all:` half. BUGS footer now 160 rows: open 33, fixed 88. The reopen
 guard is in: `check-parity.mjs --base <ref>` + `checkReopened`, five red-first tests
 (red output: `SyntaxError: ... does not provide an export named 'checkReopened'`,
-green: 29 pass), wired into quality-gates.yml's floor job.
+green: 29 pass), wired into quality-gates.yml's floor job. Merged as PR #172 (`943cd3f`).
+
+**Step 1 in flight on `feat/a1-slice-3-run-store` (session 13):** both red checks on
+4241000 rooted and fixed on the branch — the CI lint (`require-await` at
+sessionRestoreBounded.test.tsx:81, now an explicit `await Promise.resolve()`) and the
+a1 job's `not-found-screen` (the signed-out stack mounts after the 8 s restore bound and
+'/' matches no screen of it, so the router landed on not-found; fix: AuthNavigator's
+effect sends the signed-out phone to `/welcome` via `router.replace`, red-first in
+routes.test.tsx: `Expected: "/welcome"` never called → green; the Stack-prop form does
+not typecheck in expo-router 58, whose layouts take the anchor via `unstable_settings`).
+BUG-081 proven
+fixed by slice 3 (new test in today.test.tsx: red against origin/main's screen, green
+here) and its row is `fixed`. main merged in (BUGS.md resolved from main's copy + the
+branch's own BUG-081/BUG-161 rows re-applied).
+
+**Step 1's a1 stack defect rooted and fixed (BUG-164, this PR):** run 41356105462's a1 job
+failed at its own stack step — `courier-ci-api-1 exited (1)` before any flow ran. Root
+cause: the merge of main (e04b5aa) brought in BUG-131's JWKS allow-list
+(`services/api/app/auth/jwks.py`), and `infra/compose.ci.yml` names the plaintext host
+`auth` in `AUTH_JWKS_URL` without listing it in `AUTH_JWKS_INTERNAL_HOSTS` (prod/staging/
+env.example got the line; the CI stack was missed), so `get_auth_settings()` at import
+raised and the container exited 1. Fixed: `AUTH_JWKS_INTERNAL_HOSTS: auth` in
+compose.ci.yml + the a1 stack step now dumps `docker compose logs api auth` when
+`up --wait` fails + `check-auth-issuer.mjs` gained the BUG-131 rule over every
+`infra/compose*.yml` (red on the pre-fix tree, 14/14 tests). Proven locally with the
+stack itself: rebuilt api image without the line → exit 1 with the RuntimeError in the
+container log (red); with the line → all four containers healthy, `/healthz` 200,
+`/api/auth/jwks` 200 (green). Local-repro trap: `docker compose up` reuses a cached
+`courier-ci-api` image — `docker compose build api` first, or the old jwks.py boots fine
+and the repro lies.
+
+**The a1 flow's not-found rooted and fixed (same PR):** run 41362984260's a1 job got
+past the stack (BUG-164 confirmed on the runner) but the flow still sat on
+`not-found-screen` for its whole 60 s — the welcome effect's `router.replace` is
+enqueued in the same commit the Stack first mounts and never lands on device. Root
+cause in expo-router 58: the launch URL `/` seeds the protected `(tabs)` group, the
+signed-out guard strips that route from the navigation state
+(`useClearGuardedRoutes`), and with no anchor on the root layout the state collapses
+to `+not-found`. Fix: `export const unstable_settings = { anchor: 'welcome' }` on
+`app/_layout.tsx` — the anchor is seeded in front of the target, so the guard leaves
+the welcome focused (a signed-in phone still focuses the tabs; the effect stays for
+the sign-out-while-on-a-protected-route case). Red-first in routes.test.tsx
+(`unstable_settings` undefined → red; `{ anchor: 'welcome' }` → green, 614 tests).
+
+**Run 41371397919 (077b976): the anchor worked on device** — the a1 flow passed
+welcome-screen in ~3 s and drove sign-in → register → name → email, then failed at
+`tapOn register-password` ("Element not found"): with the keyboard up, adjustResize
+shrinks the register ScrollView and the password field is below the fold (Maestro
+skips off-screen children). Flow fix in `.maestro/a1/online.yaml`: `scrollUntilVisible`
+before the password, confirm and submit taps — the same idiom `sign-in.yaml` uses;
+the courier scrolls for these too.
+
+**Run 41374393642 (47e9eb5): the password scroll worked, the confirm did not** —
+the device is 320x640 and the keyboard owns the bottom half, so Maestro's
+centre-swipe never reached the ScrollView and `register-confirm-password`
+stayed out of the a11y tree. The flow cannot scroll for the courier; the app
+must keep a focused field on screen (BUG-165, this PR): each register field's
+slot records its top at layout and `onFocus` scrolls it into view with 96 pt
+headroom, computed from the reported layout — never a timed scrollTo racing a
+reveal (run 41010537066's lesson). Red-first in
+`app/(auth)/__tests__/register.test.tsx` (615 mobile tests, tsc/eslint clean).
+
+**Run 41380466474 (f6de90a): the email focus scrolled, the password focus did not** —
+the failure dump shows the confirm field under the keyboard and the password slot's
+`onLayout` never reported, because Android's default `removeClippedSubviews` drops a
+below-the-fold slot from the native hierarchy before layout. Fix: the register
+ScrollView now carries `removeClippedSubviews={false}` (BUG-113's own lesson on the
+sign-in screen) so every slot reports its layout and the focus scroll always has a
+target. (The api-34 leg's three `today-screen` failures that run were the known
+app-process infra flake — the dumps show an empty window, and those flows were green
+on 47e9eb5.)
+
+Merge #135 only when CI + a1 + both E2E
+legs are green on the final head with no re-run (§17.4); then confirm on main that
+mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
+branch: both read `useRun()`).
 
 
 ## Lead session 12, the closing state (2026-11-02): the a1 job's blank first screen is rooted and fixed

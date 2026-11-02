@@ -15,7 +15,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { checkComposeFiles, environmentBlocks, findingsIn } from '../check-auth-issuer.mjs';
+import {
+  checkComposeFiles,
+  environmentBlocks,
+  findingsIn,
+  jwksFindings,
+} from '../check-auth-issuer.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
@@ -25,6 +30,7 @@ const ON_MAIN = `
     environment:
       AUTH_JWKS_URL: http://auth:3001/api/auth\${AUTH_JWKS_PATH:-/jwks}
       AUTH_JWT_ISSUER: \${AUTH_JWT_ISSUER:-https://\${COURIER_DOMAIN}}
+      AUTH_JWKS_INTERNAL_HOSTS: \${AUTH_JWKS_INTERNAL_HOSTS:-auth}
   auth:
     environment:
       BETTER_AUTH_SECRET: \${BETTER_AUTH_SECRET:?required}
@@ -106,6 +112,7 @@ test('one shared variable on both sides is clean', () => {
   api:
     environment:
       AUTH_JWKS_URL: http://auth:3001/api/auth/jwks
+      AUTH_JWKS_INTERNAL_HOSTS: auth
       AUTH_JWT_ISSUER: \${COURIER_AUTH_ISSUER}
   auth:
     environment:
@@ -133,6 +140,7 @@ test('only one of the two sides configured is flagged, by name', () => {
   api:
     environment:
       AUTH_JWKS_URL: http://auth:3001/api/auth/jwks
+      AUTH_JWKS_INTERNAL_HOSTS: auth
       AUTH_JWT_ISSUER: https://a.test
 `;
   const findings = findingsIn('compose.onlyapi.yml', text);
@@ -144,6 +152,75 @@ test('the whole repo passes: the gate is green on the tree it ships in', () => {
   const { findings, files } = checkComposeFiles(path.join(repoRoot, 'infra'));
   assert.ok(files.length >= 1, 'compose files were read');
   assert.deepEqual(findings, []);
+});
+
+// BUG-131's half of the gate: the API refuses to boot with a plaintext JWKS
+// host that is not listed in AUTH_JWKS_INTERNAL_HOSTS. On 2026-11-02 the a1
+// job's stack step hit exactly this in compose.ci.yml: the api container
+// exited 1 at import ("Invalid auth configuration") and no flow ran, and the
+// job log named only the exit code - `up -d --wait` does not print the
+// container's logs. This rule makes the gate say it from the compose file.
+
+test('a plaintext JWKS host that is not listed is flagged (the CI stack, 2026-11-02)', () => {
+  // The compose.ci.yml shape: the JWKS hop names the auth service on the
+  // compose network, and no AUTH_JWKS_INTERNAL_HOSTS anywhere in the block.
+  const ciStack = `
+  api:
+    environment:
+      AUTH_JWKS_URL: http://auth:3001/api/auth/jwks
+      AUTH_JWT_ISSUER: http://10.0.2.2:3001
+      AUTH_JWKS_INTERNAL_HOSTS: ''
+  auth:
+    environment:
+      BETTER_AUTH_SECRET: ci-only
+      BETTER_AUTH_URL: http://10.0.2.2:3001
+      AUTH_JWT_ISSUER: http://10.0.2.2:3001
+`;
+  const block = { AUTH_JWKS_URL: 'http://auth:3001/api/auth/jwks' };
+  const findings = jwksFindings('compose.ci.yml', block);
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].kind, 'jwks-plaintext-host');
+  assert.match(findings[0].message, /auth/);
+  assert.match(findings[0].message, /AUTH_JWKS_INTERNAL_HOSTS/);
+  // ...and it flows through findingsIn, so the CLI goes red on such a tree.
+  const all = findingsIn('compose.ci.yml', ciStack.replace("      AUTH_JWKS_INTERNAL_HOSTS: ''\n", ''));
+  assert.ok(all.some((f) => f.kind === 'jwks-plaintext-host'));
+});
+
+test('an override whose default names the host is clean, like compose.prod.yml', () => {
+  const block = {
+    AUTH_JWKS_URL: 'http://auth:3001/api/auth${AUTH_JWKS_PATH:-/jwks}',
+    AUTH_JWKS_INTERNAL_HOSTS: '${AUTH_JWKS_INTERNAL_HOSTS:-auth}',
+  };
+  assert.deepEqual(jwksFindings('compose.prod.yml', block), []);
+});
+
+test('https and loopback JWKS hops are exempt, and a listed literal host is clean', () => {
+  assert.deepEqual(
+    jwksFindings('a.yml', { AUTH_JWKS_URL: 'https://keys.example.com/jwks' }),
+    [],
+  );
+  assert.deepEqual(
+    jwksFindings('a.yml', { AUTH_JWKS_URL: 'http://127.0.0.1:9/api/auth/jwks' }),
+    [],
+  );
+  assert.deepEqual(
+    jwksFindings('a.yml', {
+      AUTH_JWKS_URL: 'http://auth:3001/api/auth/jwks',
+      AUTH_JWKS_INTERNAL_HOSTS: 'auth, internal-2',
+    }),
+    [],
+  );
+});
+
+test('a host that depends on the operator env is not guessed at', () => {
+  assert.deepEqual(
+    jwksFindings('a.yml', {
+      AUTH_JWKS_URL: 'http://auth:3001/api/auth/jwks',
+      AUTH_JWKS_INTERNAL_HOSTS: '${AUTH_JWKS_INTERNAL_HOSTS}',
+    }),
+    [],
+  );
 });
 
 test('a broken tree fails, and says the file and the two values', () => {

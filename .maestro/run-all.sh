@@ -162,6 +162,12 @@ status=0
 # flake. It is evidence, never a verdict: the run's status is decided below.
 FLOWS_RESULT="$EVIDENCE/flows.txt"
 : > "$FLOWS_RESULT"
+# The suite is the flows in THIS folder, and it is the E2E stack's own: no
+# Metro, no auth service, no API. The `a1/` subfolder is the no-mock job's own
+# (`.maestro/run-a1.sh` runs those three against the compose stack), and a glob
+# of one folder level is what keeps them out: the first run of that job had
+# them in this list, they failed on the E2E build against a server that is not
+# there, and they took four other flows of that leg down with them.
 for flow in .maestro/*.yaml; do
   name="$(basename "${flow}")"
   echo "::group::${flow}"
@@ -177,8 +183,42 @@ for flow in .maestro/*.yaml; do
     # exactly this dump, which is why the runner keeps it.
     newest="$(ls -1dt "$HOME"/.maestro/tests/*/ 2>/dev/null | head -1)"
     if [ -n "$newest" ]; then
-      dest="$EVIDENCE/maestro-failure-$(basename "$(dirname "$newest")")"
+      # The dump's directory is Maestro's own and it is named after the FLOW's
+      # `name:`, which can carry a character the artifact upload refuses - a
+      # colon, in "Copilot over the map: the surface, the session, and the
+      # honest empty state" - and that one character decided whether this run's
+      # evidence could be uploaded at all. Sanitise it here, so the name of a
+      # flow can never decide whether the evidence exists.
+      #
+      # Two details that cost a run each, and are why this is written the way it
+      # is. `ls` prints the directory WITH a trailing slash, so taking
+      # `basename` of `dirname` reads the parent directory's own name ("tests")
+      # rather than the dump's, which left the sanitised name empty and put the
+      # dump in a directory that carried the offending character itself. And the
+      # name is built with parameter expansion rather than a pipeline of
+      # `basename`/`dirname`/`tr`, which the runner's own `/bin/sh` also left
+      # empty. Every character that is not plainly safe becomes a dash, and the
+      # result is asserted non-empty so a silent collapse cannot happen again.
+      dump_path="${newest%/}"
+      dump_name="${dump_path##*/}"
+      safe_name=""
+      remainder="$dump_name"
+      while [ -n "$remainder" ]; do
+        character="${remainder%"${remainder#?}"}"
+        remainder="${remainder#?}"
+        case "$character" in
+          [A-Za-z0-9._-]) safe_name="$safe_name$character" ;;
+          *) safe_name="$safe_name-" ;;
+        esac
+      done
+      if [ -z "$safe_name" ]; then
+        safe_name="unnamed-dump"
+      fi
+      dest="$EVIDENCE/maestro-failure-${safe_name}"
+      rm -rf "$dest"
       mkdir -p "$dest"
+      # The dump's FILES are copied, not the dump directory itself: the
+      # directory's own name is the thing that must not reach the artifact.
       cp -r "$newest". "$dest/" 2>/dev/null || true
       echo "the failure's own dump is in $dest"
     fi

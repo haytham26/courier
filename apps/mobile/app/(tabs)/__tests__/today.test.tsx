@@ -9,10 +9,17 @@
  * tabs is an in-memory context value, so no service is called.
  */
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import * as Haptics from 'expo-haptics';
 
 import { ChosenProvider } from '@/components/chosen';
+import { RunProvider, useRun } from '@/maps/runState';
+import { e2eDay } from '@/run/dayForThisBuild';
+import { RunStore } from '@/run/runStore';
+import { EventLog } from '@/sync/eventLog';
+import type { DeliveredMark, RunCache } from '@/run/types';
+import type { DeliveryEvent, EventStore } from '@/sync/types';
+import { reportSyncAnswers, resetSyncAnswers } from '@/sync/syncAnswers';
 import { BriefContext } from '../briefContext';
 import { DEFAULT_VOICE_SETTINGS } from '@/voice/settings';
 import type { CourierVoiceApi } from '@/voice/useCourierVoice';
@@ -82,13 +89,72 @@ const makeBrief = (): CourierVoiceApi => ({
   error: null,
 });
 
+/**
+ * The day the phone holds in these tests.
+ *
+ * A1 slice 3: Today reads the day through the run store, so the screen's own
+ * test suite has to hand it one. The day is the E2E build's own - the mock
+ * run's stops, in the contract's shape - because that is the day the flows
+ * assert (`stop-2`, "45 Papanui Road"), and the marks are the store's own so a
+ * mark written by the screen is a mark the screen reads back.
+ */
+function makeDayStore() {
+  const marks: DeliveredMark[] = [];
+  return {
+    load: () =>
+      Promise.resolve({ status: 'ok' as const, source: 'network' as const, snapshot: e2eDay() }),
+    refresh: () =>
+      Promise.resolve({ status: 'ok' as const, source: 'network' as const, snapshot: e2eDay() }),
+    deliveredMarks: () => Promise.resolve([...marks]),
+    // The run state's own write path: a stop is marked, and the mark the
+    // screen reads back is the one the store kept.
+    markDelivered: (stop: { id: string; sequence: number }) => {
+      marks.push({
+        stopId: stop.id,
+        sequence: stop.sequence,
+        at: Date.now(),
+        eventId: `event-${stop.id}-${String(marks.length)}`,
+      });
+      return Promise.resolve();
+    },
+    undoDelivered: (stopId: string) => {
+      const at = marks.findIndex((mark) => mark.stopId === stopId);
+      if (at >= 0) {
+        marks.splice(at, 1);
+      }
+      return Promise.resolve();
+    },
+    close: () => Promise.resolve(),
+  };
+}
+
+/**
+ * An event log over an in-memory store, so no database is opened behind a
+ * screen's marks in these tests.
+ */
+function makeEventStore(): EventStore {
+  return {
+    append: () => Promise.resolve(),
+    pending: () => Promise.resolve([]),
+    markSynced: () => Promise.resolve(),
+    quarantine: () => Promise.resolve(),
+    forget: () => Promise.resolve(),
+    pendingCount: () => Promise.resolve(0),
+  };
+}
+
 const renderScreen = () => {
   const brief = makeBrief();
   const screenHandle = render(
     <ChosenProvider mode="light">
-      <BriefContext.Provider value={brief}>
-        <TodayScreen />
-      </BriefContext.Provider>
+      {/* The run state above the stack, which the root layout wraps every
+          screen in: Today reads the day and its marks through it (A1 slice
+          3), so the provider is handed a store that has a day. */}
+      <RunProvider store={makeDayStore()}>
+        <BriefContext.Provider value={brief}>
+          <TodayScreen />
+        </BriefContext.Provider>
+      </RunProvider>
     </ChosenProvider>,
   );
   return { brief, ...screenHandle };
@@ -97,16 +163,77 @@ const renderScreen = () => {
 describe('Today', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // The outbox's answers are the session's own: one suite's answer must not
+    // leak into the next test's screen.
+    resetSyncAnswers();
   });
 
-  it('renders the root, the greeting and the day exactly as the flows find them', () => {
+  // The E2E build's own composition, which the mock legs of the Android E2E run
+  // against: the root layout hands the run state the production store, and its
+  // `load` answers the E2E build's day (the mock run's stops). The run of
+  // e59aaaf (both legs) showed why this composition has to be pinned: the day
+  // the screen answered with was EMPTY - "Every stop is delivered." with no
+  // `today-go` and no `today-mark-delivered` in the tree - and five flows of
+  // the suite died on those two testIDs. A screen that reads the run store and
+  // answers no stops is a courier shown an empty shift.
+  it('answers the E2E build\'s own day through the run store the root layout hands it', async () => {
+    // The store the E2E build's production construction site builds: the same
+    // reason it passes (`EXPO_PUBLIC_E2E=1` seeds `e2e`), over the app's own
+    // day. The cache is in memory, so no database is opened behind it - this
+    // test is about the DAY reaching the screen, which is what the run of
+    // e59aaaf lost.
+    const cache: RunCache = {
+      read: () => Promise.resolve(null),
+      write: () => Promise.resolve(),
+      markDelivered: () => Promise.resolve(),
+      markOf: () => Promise.resolve(null),
+      undoDelivered: () => Promise.resolve(),
+      deliveredMarks: () => Promise.resolve([]),
+      clear: () => Promise.resolve(),
+      close: () => Promise.resolve(),
+    };
+
+    const store = new RunStore({
+      client: {
+        seedDemoRun: () => Promise.resolve({ status: 'offline' }),
+        getRun: () => Promise.resolve({ status: 'offline' }),
+        getStops: () => Promise.resolve({ status: 'offline' }),
+      },
+      cache,
+      events: new EventLog(makeEventStore()),
+      reason: 'e2e',
+    });
+
+    render(
+      <ChosenProvider mode="light">
+        <RunProvider store={store}>
+          <BriefContext.Provider value={makeBrief()}>
+            <TodayScreen />
+          </BriefContext.Provider>
+        </RunProvider>
+      </ChosenProvider>,
+    );
+
+    // The day is the E2E build's own: five stops, and the first is the next one
+    // the courier drives to.
+    await waitFor(() => {
+      expect(screen.getByTestId('today-go')).toBeTruthy();
+    });
+    expect(screen.getByTestId('today-mark-delivered')).toBeTruthy();
+    expect(screen.queryByText('Every stop is delivered.')).toBeNull();
+  });
+
+  it('renders the root, the greeting and the day exactly as the flows find them', async () => {
     renderScreen();
 
     expect(screen.getByTestId('today-screen')).toBeTruthy();
     expect(screen.getByText('Good morning')).toBeTruthy();
     expect(screen.getByTestId('today-map-style')).toBeTruthy();
     expect(screen.getByTestId('today-recentre')).toBeTruthy();
-    expect(screen.getByTestId('today-go')).toBeTruthy();
+    // The day is the phone's own read: it arrives after the store answers, so
+    // the stop rows the flows walk are waited for rather than assumed (A1
+    // slice 3 reads the day through the run store, not a module constant).
+    await waitFor(() => expect(screen.getByTestId('today-go')).toBeTruthy());
     expect(screen.getByTestId('today-scan')).toBeTruthy();
     expect(screen.getByTestId('today-add-by-voice')).toBeTruthy();
     expect(screen.getByTestId('today-end-of-day')).toBeTruthy();
@@ -140,27 +267,153 @@ describe('Today', () => {
     expect(brief.refreshBrief).toHaveBeenCalledTimes(1);
   });
 
-  it('a delivery is a success notification', () => {
+  it('a delivery is a success notification', async () => {
     renderScreen();
+    await waitFor(() => expect(screen.getByTestId('today-mark-delivered')).toBeTruthy());
 
     fireEvent.press(screen.getByTestId('today-mark-delivered'));
 
-    expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
+    expect(Haptics.notificationAsync).toHaveBeenCalledWith(
+      Haptics.NotificationFeedbackType.Success,
+    );
   });
 
-  it('a skip confirms with an impact', () => {
+  it('a skip confirms with an impact', async () => {
     renderScreen();
+    await waitFor(() => expect(screen.getByTestId('today-skip')).toBeTruthy());
 
     fireEvent.press(screen.getByTestId('today-skip'));
 
     expect(Haptics.impactAsync).toHaveBeenCalled();
   });
 
-  it('a failure is an error notification', () => {
+  it('a failure is an error notification', async () => {
     renderScreen();
+    await waitFor(() => expect(screen.getByTestId('today-fail')).toBeTruthy());
 
     fireEvent.press(screen.getByTestId('today-fail'));
 
     expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Error);
+  });
+
+  // ADR-014's answers are the courier's (A1 slice 3): a delivery the server
+  // refused is said on the screen the courier is looking at, not left in a log
+  // nobody reads. A courier told "all good" while three deliveries are
+  // quarantined is being lied to.
+  it('says out loud when a delivery could not be sent', async () => {
+    renderScreen();
+    await waitFor(() => expect(screen.getByTestId('today-go')).toBeTruthy());
+
+    act(() => {
+      reportSyncAnswers({
+        sent: 2,
+        accepted: 0,
+        cursor: 0,
+        failed: true,
+        conflicts: ['delivered-1'],
+        quarantined: ['delivered-1'],
+        retryAfterMs: 0,
+      });
+    });
+
+    expect(screen.getByTestId('today-sync-note')).toBeTruthy();
+    expect(screen.getByText(/1 delivery could not be sent and is kept on this phone/)).toBeTruthy();
+  });
+
+  it('says nothing about the send when there is nothing to say', async () => {
+    renderScreen();
+    await waitFor(() => expect(screen.getByTestId('today-go')).toBeTruthy());
+
+    act(() => {
+      reportSyncAnswers({
+        sent: 2,
+        accepted: 2,
+        cursor: 0,
+        failed: false,
+        conflicts: [],
+        quarantined: [],
+        retryAfterMs: 0,
+      });
+    });
+
+    expect(screen.queryByTestId('today-sync-note')).toBeNull();
+  });
+
+  // BUG-081's done-when, proven: a mark made on Today is ONE fact - it is
+  // written through the shared run state (so Driving, which reads the same
+  // provider, sees it) and it records an event in the outbox's log (so the
+  // delivery leaves the phone when there is signal). The old screen kept its
+  // own doneIds, so the two screens disagreed and no event was ever recorded.
+  it('a mark made on Today is one fact across screens and records an event (BUG-081)', async () => {
+    const marks: DeliveredMark[] = [];
+    const appended: DeliveryEvent[] = [];
+    const cache: RunCache = {
+      read: () => Promise.resolve(null),
+      write: () => Promise.resolve(),
+      markDelivered: (mark) => {
+        marks.push(mark);
+        return Promise.resolve();
+      },
+      markOf: (stopId) => Promise.resolve(marks.find((m) => m.stopId === stopId) ?? null),
+      undoDelivered: (stopId) => {
+        const at = marks.findIndex((m) => m.stopId === stopId);
+        if (at >= 0) marks.splice(at, 1);
+        return Promise.resolve();
+      },
+      deliveredMarks: () => Promise.resolve([...marks]),
+      clear: () => Promise.resolve(),
+      close: () => Promise.resolve(),
+    };
+    const eventStore: EventStore = {
+      append: (event) => {
+        appended.push(event);
+        return Promise.resolve();
+      },
+      pending: () => Promise.resolve([...appended]),
+      markSynced: () => Promise.resolve(),
+      quarantine: () => Promise.resolve(),
+      forget: () => Promise.resolve(),
+      pendingCount: () => Promise.resolve(appended.length),
+    };
+    const store = new RunStore({
+      client: {
+        seedDemoRun: () => Promise.resolve({ status: 'offline' }),
+        getRun: () => Promise.resolve({ status: 'offline' }),
+        getStops: () => Promise.resolve({ status: 'offline' }),
+      },
+      cache,
+      events: new EventLog(eventStore),
+      reason: 'e2e',
+    });
+
+    // A second reader of the SAME run state - the way Driving reads it: one
+    // provider, one fact.
+    let seenByTheOtherScreen: string[] = [];
+    const DrivingProbe = () => {
+      const run = useRun();
+      seenByTheOtherScreen = run.delivered.map((event) => event.stopId);
+      return null;
+    };
+
+    render(
+      <ChosenProvider mode="light">
+        <RunProvider store={store}>
+          <BriefContext.Provider value={makeBrief()}>
+            <TodayScreen />
+            <DrivingProbe />
+          </BriefContext.Provider>
+        </RunProvider>
+      </ChosenProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('today-mark-delivered')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('today-mark-delivered'));
+
+    // The event is in the log the outbox sends from...
+    await waitFor(() => expect(appended.some((event) => event.kind === 'delivered')).toBe(true));
+    // ...the mark is in the store (so it survives a cold start)...
+    expect(marks).toHaveLength(1);
+    // ...and the other screen reading the same run state sees the stop.
+    await waitFor(() => expect(seenByTheOtherScreen).toContain(marks[0].stopId));
   });
 });

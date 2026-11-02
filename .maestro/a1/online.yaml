@@ -1,0 +1,97 @@
+appId: com.courier.copilot
+name: 'A1 online: the app signs up on the real server and delivers the seeded day'
+---
+# A1's done-when, the online half. This APK is built with no E2E flag, so the
+# auth client and the run store are the real ones and they dial the API and the
+# auth service the job started in compose (infra/compose.ci.yml, with
+# DEMO_SEED_ENABLED=true). Nothing here is a mock: the account is created on
+# the real auth service, the day is seeded by the real API and the deliveries
+# are sent to the real events:batch endpoint.
+#
+# The runner (.maestro/run-a1.sh) calls the three flows in order with the
+# network toggled between them; this file is the first of the three.
+- launchApp:
+    clearState: true
+# A phone with no session opens on the welcome, and the welcome's own way in
+# reaches the front door (the E2E build with no mock has no draft session to
+# skip it, which is the difference between this job and every other leg).
+- extendedWaitUntil:
+    visible:
+      id: "welcome-screen"
+    timeout: 60000
+- tapOn:
+    id: "welcome-sign-in"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-screen"
+    timeout: 60000
+# The account is made on the auth service this run started: a fresh one per
+# run, so the day the app seeds belongs to it and to nobody else.
+- tapOn:
+    id: "sign-in-register"
+- extendedWaitUntil:
+    visible:
+      id: "register-screen"
+    timeout: 30000
+- tapOn:
+    id: "register-name"
+- inputText:
+    text: "A1 Courier"
+- tapOn:
+    id: "register-email"
+- inputText:
+    text: "a1-courier@example.co.nz"
+# The form is taller than the screen once the keyboard is up (adjustResize
+# shrinks the ScrollView), so the password and everything under it are below
+# the fold - run 41371397919 failed the tap on register-password with
+# "Element not found". The courier scrolls for these; the flow does the same
+# (the idiom sign-in.yaml already uses), it does not make the app fit four
+# fields and a keyboard on one screen.
+- scrollUntilVisible:
+    element:
+      id: "register-password"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "register-password"
+- inputText:
+    text: "correct-horse-battery"
+- scrollUntilVisible:
+    element:
+      id: "register-confirm-password"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "register-confirm-password"
+- inputText:
+    text: "correct-horse-battery"
+- scrollUntilVisible:
+    element:
+      id: "register-submit"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "register-submit"
+# The session is settled, so the auth-guarded stack lets the run in and the
+# store seeds the day from the API (a real POST /demo/runs, a real
+# GET /shifts/{id}/stops). The generous timeout is the seed's own: this run
+# asks a real server to write a real day.
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 120000
+# The day is the seeded one: the sheet's own next stop is the run's own.
+- assertVisible:
+    id: "today-go"
+# Three deliveries, each written through the store: the mark on the run and the
+# event in the outbox, which the store's flush sends while the network is up.
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          id: "today-mark-delivered"
+# The three are the app's own answer, and the run's own numbers: the driven
+# screen counts what the store holds.
+- assertVisible:
+    id: "today-screen"
+- takeScreenshot: "a1-online"

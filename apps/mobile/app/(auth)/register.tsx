@@ -4,8 +4,16 @@
  * The same rules as the sign-in screen: plain NZ English, one primary action
  * of 72 pt, every field with a label, and no emoji.
  */
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -21,6 +29,30 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // A field that is focused scrolls itself into view. Run 41374393642's
+  // device proved the flow cannot do this for the courier: on the 320x640 AVD
+  // the keyboard owns the bottom of the screen, so Maestro's centre swipe
+  // never reached the ScrollView and `register-confirm-password` stayed out
+  // of the accessibility tree ("Element not found"). The scroll is computed
+  // from the layout the field just reported - deterministic, never a timed
+  // scrollTo racing a reveal (the sign-in screen's wrong fix, run
+  // 41010537066). 96 pt of headroom keeps the next field on screen too, so
+  // the courier's next tap lands without another scroll.
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  const formTop = useRef(0);
+  const fieldTops = useRef<Record<string, number>>({});
+  const scrollToField = (key: string) => {
+    const top = fieldTops.current[key];
+    if (top === undefined) return;
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, formTop.current + top - 96),
+      animated: true,
+    });
+  };
+  const fieldLayout = (key: string) => (event: LayoutChangeEvent) => {
+    fieldTops.current[key] = event.nativeEvent.layout.y;
+  };
 
   const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {
@@ -57,7 +89,20 @@ export default function RegisterScreen() {
       testID="register-screen"
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        // BUG-113's lesson, applied to this screen: with the default true,
+        // Android drops clipped children from the native view hierarchy
+        // before they layout, so a field below the fold never reports its
+        // onLayout and the focus scroll above has nothing to scroll to (run
+        // 41380466474: the email focus scrolled, the password focus did
+        // not). Keeping the slots in the tree also keeps them reachable for
+        // TalkBack - a screen whose own fields vanish under a keyboard is
+        // not readable to the end.
+        removeClippedSubviews={false}
+      >
         <Text role="heading" style={[styles.title, { color: theme.colors.textPrimary }]}>
           Create an account
         </Text>
@@ -65,48 +110,66 @@ export default function RegisterScreen() {
           Join Courier Copilot
         </Text>
 
-        <View style={styles.form}>
-          <Input
-            testID="register-name"
-            label="Full name"
-            helperText="Optional"
-            placeholder="Your name"
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-            autoComplete="name"
-            editable={!isSubmitting}
-          />
-          <Input
-            testID="register-email"
-            label="Email"
-            placeholder="you@example.co.nz"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            editable={!isSubmitting}
-          />
-          <Input
-            testID="register-password"
-            label="Password"
-            helperText="At least 8 characters"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoComplete="new-password"
-            editable={!isSubmitting}
-          />
-          <Input
-            testID="register-confirm-password"
-            label="Confirm password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-            autoComplete="new-password"
-            editable={!isSubmitting}
-          />
+        <View
+          testID="register-form"
+          style={styles.form}
+          onLayout={(event) => {
+            formTop.current = event.nativeEvent.layout.y;
+          }}
+        >
+          <View testID="field-name" onLayout={fieldLayout('name')}>
+            <Input
+              testID="register-name"
+              label="Full name"
+              helperText="Optional"
+              placeholder="Your name"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+              autoComplete="name"
+              editable={!isSubmitting}
+              onFocus={() => scrollToField('name')}
+            />
+          </View>
+          <View testID="field-email" onLayout={fieldLayout('email')}>
+            <Input
+              testID="register-email"
+              label="Email"
+              placeholder="you@example.co.nz"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              editable={!isSubmitting}
+              onFocus={() => scrollToField('email')}
+            />
+          </View>
+          <View testID="field-password" onLayout={fieldLayout('password')}>
+            <Input
+              testID="register-password"
+              label="Password"
+              helperText="At least 8 characters"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoComplete="new-password"
+              editable={!isSubmitting}
+              onFocus={() => scrollToField('password')}
+            />
+          </View>
+          <View testID="field-confirm" onLayout={fieldLayout('confirm')}>
+            <Input
+              testID="register-confirm-password"
+              label="Confirm password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoComplete="new-password"
+              editable={!isSubmitting}
+              onFocus={() => scrollToField('confirm')}
+            />
+          </View>
           <Button
             size="lg"
             loading={isSubmitting}

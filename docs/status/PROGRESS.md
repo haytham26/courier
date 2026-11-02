@@ -18,8 +18,8 @@ words of the status key, on a PARITY row marked `Have` that carries no merged PR
 on a BUGS row whose status column is not one of the tracker's words. The gate is
 `scripts/ci/check-parity.mjs` with its test in `scripts/ci/__tests__/check-parity.test.mjs`.
 
-**The count at this merge (310 PARITY rows, 160 BUGS rows):**
-310 parity rows (Have 28 · Better 4 · Planned (task) 272 · Skip (reason) 6); 160 bug rows (open 33 · doing 4 · testing 3 · fixed 88 · closed 2 · moved to PARITY 30).
+**The count at this merge (310 PARITY rows, 163 BUGS rows):**
+310 parity rows (Have 28 · Better 4 · Planned (task) 272 · Skip (reason) 6); 163 bug rows (open 32 · doing 4 · testing 3 · fixed 92 · closed 2 · moved to PARITY 30).
 
 **This count is updated with every merge to main**: the merge that changes a row re-runs the command
 and pastes its line above. A `Have` is only a `Have` when its row names the merged PR or the CI run
