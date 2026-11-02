@@ -1,6 +1,6 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-11-03 · main at `821cde4` (PR #177 merged) · **This
+Updated: 2026-11-03 · main at `f5b0b9c` (PRs #177–#179 merged) · **This
 squad's handoff lives in THIS file only.** PR #174 had written it into the lead's `docs/log/CURRENT.md` and replaced the lead's
 header line with its own; the correction PR on `docs/currents-log-ownership` restores that
 header line exactly as it was at `960fc41^1` (the lead has not rewritten it since) and
@@ -48,8 +48,8 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   construction (`**__dict__` + keyword) — fixed with `dataclasses.replace` (a5f415c), and
   ruff's UP037 quote rule is why 783f8f6 exists; both pushed. Next server halves in order:
   stop types (D59), then the CSV/Excel import (D52) — each its own PR, number = highest BUG
-  across origin/main + open PR branches + 1 (BUG-168 went to #179; next free is
-  BUG-169; #135's branch carries BUG-164/165).
+  across origin/main + open PR branches + 1 (BUG-168 went to #179, now merged; BUG-169
+  is on #180; next free is BUG-170; #135's branch carries BUG-164/165).
 - **#178's db leg went red on run 41430267111**: `get_event`'s SELECT predated the
   `delivery_events.reason` column, so the Postgres leg raised
   `NoSuchColumnError: Could not locate column in row for column 'reason'` in
@@ -64,14 +64,23 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
 - **PR #177 MERGED as `821cde4` with the full ritual**: merge commit, archive tag
   `archive/feat/trial-run-break-finish` pushed at the PR head `a5f415c`, remote branch
   deleted (`git ls-remote --heads origin feat/trial-run-break-finish` prints nothing).
-- **PR #179 (`feat/trial-stop-types`, the D59 server half, stacked on #178) open at
-  `ad494b3`:** stops.type column (CHECK delivery/pickup, default delivery),
-  StopResponse.type required, both get_run_stops paths, client regenerated; BUG-168
-  filed+fixed, PARITY 310 updated, ADR-024, evidence `docs/evidence/trial-stop-types/`.
-  Red-first on both legs (API: `KeyError: 'type'`, 2 failed; db vs postgis/postgis:17-3.5
-  started locally: `column "type" does not exist`, 11 failed); green: 560 non-db passed,
-  32 db passed, ruff + mypy clean, client fresh. **#178's head is now `6a404c4`** —
-  merge order #178 → #179 once CI is green.
+- **PR #179 MERGED as `f5b0b9c` with the full ritual** (all 22 checks green on head
+  `126e6a9`): merge commit, archive tag `archive/feat/trial-stop-types` pushed at the PR
+  head `126e6a9`, remote branch deleted (`git ls-remote --heads origin
+  feat/trial-stop-types` prints nothing). The D59 server half: stops.type column (CHECK
+  delivery/pickup, default delivery), StopResponse.type required, both get_run_stops
+  paths, client regenerated; BUG-168 filed+fixed, PARITY 310 updated, ADR-024, evidence
+  `docs/evidence/trial-stop-types/`. Red-first on both legs (API: `KeyError: 'type'`,
+  2 failed; db: `column "type" does not exist`, 11 failed); green: 560 non-db + 32 db.
+  Its one CI red was the mobile typecheck (4× TS2741, StopResponse.type missing) — fixed
+  on-branch in `126e6a9`: the op-sqlite run cache carries the column (STOP_TABLE v2,
+  `NOT NULL DEFAULT 'delivery'`, SELECT/INSERT/stopOf all pass it through) and both test
+  fixtures build stops with `type: 'delivery'`.
+- **PR #180 (`feat/trial-import`, the D52 server half) now at `2a0e218`**: the branch
+  merged origin/main after #179 landed, so it carries the mobile fix; its earlier red was
+  the same 4× TS2741 on the pre-fix head. CI rerunning on `2a0e218`; merge it next with
+  the full ritual. **Item (a) then completes** — D55/D56 #177, D58 #178, D59 #179,
+  D52 #180, each its own contract-first PR.
 - Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
   `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open
   data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from
