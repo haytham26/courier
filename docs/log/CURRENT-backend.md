@@ -55,18 +55,23 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   `NoSuchColumnError: Could not locate column in row for column 'reason'` in
   `TestTheEvents` (2 failed, 28 passed). Fixed in `ad8690c` — `reason` added to the
   `get_event` SELECT (the batch read path already had it); local non-db suite 559
-  passed + ruff clean before push.
+  passed + ruff clean before push. **The Locust leg then went red on run 41436706706**
+  (fail ratio 0.3169 > 0.001, every failure a 422 on `events:batch`): the load profile
+  picked `kind=failed` without a reason, which the D58 rule refuses. Fixed in `b8bc724` —
+  the profile sends a reason on failed events; green locally against postgis/postgis:17-3.5
+  + uvicorn with the CI profile (60 s, 50 users, wait 3-8 s): 142 requests, 0 fails,
+  "SLOs met: the run is green".
 - **PR #177 MERGED as `821cde4` with the full ritual**: merge commit, archive tag
   `archive/feat/trial-run-break-finish` pushed at the PR head `a5f415c`, remote branch
   deleted (`git ls-remote --heads origin feat/trial-run-break-finish` prints nothing).
 - **PR #179 (`feat/trial-stop-types`, the D59 server half, stacked on #178) open at
-  `0c4c767`:** stops.type column (CHECK delivery/pickup, default delivery),
+  `ad494b3`:** stops.type column (CHECK delivery/pickup, default delivery),
   StopResponse.type required, both get_run_stops paths, client regenerated; BUG-168
   filed+fixed, PARITY 310 updated, ADR-024, evidence `docs/evidence/trial-stop-types/`.
   Red-first on both legs (API: `KeyError: 'type'`, 2 failed; db vs postgis/postgis:17-3.5
   started locally: `column "type" does not exist`, 11 failed); green: 560 non-db passed,
-  32 db passed, ruff + mypy clean, client fresh. #178's CI reruns on `05a4c7d` (the
-  get_event fix) — merge order #178 → #179 once green.
+  32 db passed, ruff + mypy clean, client fresh. **#178's head is now `6a404c4`** —
+  merge order #178 → #179 once CI is green.
 - Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
   `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open
   data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from
