@@ -28,11 +28,19 @@ query() {
 
 echo "::group::A1: the rows the flow left in Postgres"
 
+# The seed's own shape is reported FIRST, whatever the flow did: run
+# 41433310746's a1 run failed with delivery_events: 0 and the job exited before
+# saying whether the app's seed request ever landed, so the next run's log had
+# to say it from the start. The assertions below are unchanged.
+runs=$(query "SELECT count(*) FROM runs")
+shifts=$(query "SELECT count(*) FROM shifts")
+stops=$(query "SELECT count(*) FROM stops")
+delivered=$(query "SELECT count(*) FROM delivery_events")
+echo "runs: $runs, shifts: $shifts, stops: $stops, delivery_events: $delivered"
+
 # The four deliveries: the run's own stops, delivered once each. A stop
 # delivered twice is not the contract's shape (a divergent replay is refused
 # server-side), so the count is what the flow did.
-delivered=$(query "SELECT count(*) FROM delivery_events")
-echo "delivery_events: $delivered"
 if [ "$delivered" != "4" ]; then
   echo "::error::expected 4 delivery events (three sent online, one sent after the sync), found $delivered"
   exit 1
@@ -40,10 +48,6 @@ fi
 
 # The run the app seeded, and the day it read: one shift, one run, five stops,
 # which is the demo seed's own shape (ADR-019).
-runs=$(query "SELECT count(*) FROM runs")
-shifts=$(query "SELECT count(*) FROM shifts")
-stops=$(query "SELECT count(*) FROM stops")
-echo "runs: $runs, shifts: $shifts, stops: $stops"
 if [ "$runs" != "1" ] || [ "$shifts" != "1" ]; then
   echo "::error::expected exactly one seeded run and shift, found runs=$runs shifts=$shifts"
   exit 1

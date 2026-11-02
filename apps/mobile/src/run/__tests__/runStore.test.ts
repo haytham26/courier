@@ -349,6 +349,55 @@ describe('loading the run', () => {
 
     expect(load.status).toBe('unauthorized');
   });
+
+  // Run 41433310746's a1 failure: the today screen showed 0/0 and no today-go
+  // with a silent device log, so nothing said WHY the day did not load. The
+  // store now names the failure on the console (the emulator's logcat carries
+  // console.warn), red-first: this assertion fails before the report exists.
+  it('names a failed load on the console, with the status and the server sentence', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { store, api } = aStore();
+      api.seedAnswer = { status: 'server', code: 404, message: 'the demo seed is closed' };
+
+      const load = await store.load();
+
+      expect(load.status).toBe('server');
+      expect(warn).toHaveBeenCalledWith(
+        'run: the day did not load (server - the demo seed is closed)',
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('names an offline load without a server sentence', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { store, api } = aStore();
+      api.seedAnswer = { status: 'offline' };
+
+      await store.load();
+
+      expect(warn).toHaveBeenCalledWith('run: the day did not load (offline)');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('stays quiet when the day loads', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { store, api } = aStore();
+      api.seedAnswer = SEEDED;
+
+      await store.load();
+
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
 
 describe('the write path of the run store', () => {

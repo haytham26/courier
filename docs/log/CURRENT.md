@@ -151,6 +151,20 @@ scheme:// entry, so the BUG-134 validator still refuses wildcards. Pinned by a n
 config test (the a1 stack's exact value loads to both entries; 121 auth tests green).
 BUG-168 filed (fixed, PR #135); register 165 rows, fixed 109.
 
+**Run 41433310746 (425a8e5): registration SUCCEEDED — the day load failed silently
+(BUG-169).** The flow reached the today screen, but the sheet rendered Delivered 0 /
+To go 0 and no `today-go`: `RunStore.load()` failed on the device and nothing said
+which hop. A local replay of the exact chain against compose.ci.yml (sign-up with
+`expo-origin: courier://` → 200, `/api/auth/token` → JWT iss=http://10.0.2.2:3001,
+`POST /demo/runs` {reason:dev} → 200, `/runs/:id` → 200, `/shifts/:id/stops` → 5
+stops) proves the server side healthy with this branch's config, so the failure is
+the app's device path (token mint, API dial or cache write). Diagnostics filed as
+BUG-169: `load()`/`refresh()` now console.warn the failure status + server sentence
+(red-first in runStore.test.ts: 2 failed on 425a8e5, 17 pass after), run-a1.sh's
+failure path dumps `compose logs api auth` + DB counts to the evidence, and
+assert-a1-rows.sh prints runs/shifts/stops/delivery_events BEFORE asserting (asserts
+unchanged).
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

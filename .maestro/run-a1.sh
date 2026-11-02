@@ -51,6 +51,18 @@ dump_evidence() {
   adb logcat -d -t 3000 > "$EVIDENCE/logcat.txt" 2>/dev/null || true
   adb exec-out screencap -p > "$EVIDENCE/screen.png" 2>/dev/null || true
   echo "::endgroup::"
+  # The stack's own side of the same failure: run 41433310746's a1 run left the
+  # app's day load failing with a silent device log, and neither the job nor the
+  # database said whether the seed request arrived, what the API answered, or
+  # what the auth service logged. This runner shares the host with the compose
+  # project the job started, so the dump reads it directly.
+  echo "::group::A1: the stack's logs and the database"
+  docker compose -f infra/compose.ci.yml logs --no-color --tail 300 api auth > "$EVIDENCE/stack-logs.txt" 2>/dev/null || echo "stack logs unavailable" > "$EVIDENCE/stack-logs.txt"
+  docker compose -f infra/compose.ci.yml exec -T postgres psql -U courier -d courier -Atc \
+    "select 'runs=' || count(*) from runs; select 'shifts=' || count(*) from shifts; select 'stops=' || count(*) from stops; select 'delivery_events=' || count(*) from delivery_events; select 'users=' || count(*) from \"user\"; select 'sessions=' || count(*) from session;" \
+    > "$EVIDENCE/db-counts.txt" 2>/dev/null || echo "db counts unavailable" > "$EVIDENCE/db-counts.txt"
+  cat "$EVIDENCE/db-counts.txt" || true
+  echo "::endgroup::"
 }
 
 # Maestro's own dump of the moment a flow failed, kept under a name the artifact

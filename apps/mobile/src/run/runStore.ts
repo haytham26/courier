@@ -137,12 +137,30 @@ export class RunStore implements MarkStore {
       await this.cache.write(day);
       return { status: 'ok', source: 'cache', snapshot: day };
     }
-    return this.readThrough(cached);
+    return this.reported(this.readThrough(cached));
   }
 
   /** The day the courier works, fresh: the network is always asked. */
   async refresh(): Promise<RunLoad> {
-    return this.readThrough(await this.cache.read());
+    return this.reported(this.readThrough(await this.cache.read()));
+  }
+
+  /**
+   * Names a failed load on the console, so the emulator's logcat says WHY the
+   * screens show no day. Run 41433310746's a1 failure left the device log
+   * silent: the today screen rendered 0/0 with no `today-go`, and nothing on
+   * the phone or in the job said whether the seed was refused (unauthorized),
+   * unreachable (offline) or refused by the server - the CI dump has to be
+   * able to read it from the device's own log.
+   */
+  private reported(load: Promise<RunLoad>): Promise<RunLoad> {
+    return load.then((answer) => {
+      if (answer.status !== 'ok') {
+        const detail = 'message' in answer ? ` - ${answer.message}` : '';
+        console.warn(`run: the day did not load (${answer.status}${detail})`);
+      }
+      return answer;
+    });
   }
 
   /**
