@@ -40,13 +40,28 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   writes only to `CURRENT-backend.md` from now on.** Local `main` syncs with
   `git merge --ff-only origin/main` only — no `git reset --hard` (the founder's second
   directive; AGENTS.md bans it outright).
-- **Item (a), first server half — PR #177 open** (`feat/trial-run-break-finish`): the break
-  window and the finish point on `CreateRunRequest` with the `runs` table columns (D55/D56,
-  ADR-022, D63), typed client regenerated, red-first (2 of 6 new tests red on origin/main),
-  suite 553 passed, register row BUG-166 filed and closed in the same PR, PARITY rows 12/309
-  updated in the same PR. Next server halves in order: the failed-delivery reason (D58), stop
-  types (D59), the CSV/Excel import (D52) — each its own PR, number = highest BUG across
-  origin/main + open PR branches + 1 (now BUG-167+; #135's branch carries BUG-164/165).
+- **Item (a), server halves — PR #177 (`feat/trial-run-break-finish`) and PR #178
+  (`feat/trial-failed-reason`, stacked) open:** #177 is the break window + finish point on
+  `CreateRunRequest` with the `runs` columns (D55/D56, ADR-022, BUG-166, PARITY 12/309);
+  #178 is the failed-delivery reason field (D58, ADR-023, BUG-167, PARITY 25, suite 559
+  passed, red-first on both). CI lesson recorded: the db leg caught a bad fixture
+  construction (`**__dict__` + keyword) — fixed with `dataclasses.replace` (a5f415c), and
+  ruff's UP037 quote rule is why 783f8f6 exists; both pushed. Next server halves in order:
+  stop types (D59), then the CSV/Excel import (D52) — each its own PR, number = highest BUG
+  across origin/main + open PR branches + 1 (now BUG-168+; #135's branch carries
+  BUG-164/165).
+- **#178's db leg went red on run 41430267111**: `get_event`'s SELECT predated the
+  `delivery_events.reason` column, so the Postgres leg raised
+  `NoSuchColumnError: Could not locate column in row for column 'reason'` in
+  `TestTheEvents` (2 failed, 28 passed). Fixed in `ad8690c` — `reason` added to the
+  `get_event` SELECT (the batch read path already had it); local non-db suite 559
+  passed + ruff clean before push. **The Locust leg then went red on run 41436706706**
+  (fail ratio 0.3169 > 0.001, every failure a 422 on `events:batch`): the load profile
+  picked `kind=failed` without a reason, which the D58 rule refuses. Fixed in `b8bc724` —
+  the profile sends a reason on failed events; green locally against postgis/postgis:17-3.5
+  + uvicorn with the CI profile (60 s, 50 users, wait 3-8 s): 142 requests, 0 fails,
+  "SLOs met: the run is green". **#177 is fully green** (all 15 checks SUCCESS at
+  `a5f415c`) and merges with the ritual next.
 - Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
   `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open
   data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from

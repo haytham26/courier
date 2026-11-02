@@ -260,6 +260,10 @@ class DeliveryEvent(BaseModel):
     kind: str = Field(min_length=1, max_length=64)
     utterance: str | None = Field(default=None, max_length=2000)
     safe_place: str | None = Field(default=None, max_length=200)
+    # The structured failed-delivery reason (ADR-023, D63: D58's server half).
+    # The courier's own words stay in utterance; the reason is the bounded
+    # structured field, and a failed outcome must carry one.
+    reason: str | None = Field(default=None, max_length=200)
     lat: float | None = Field(default=None, ge=-90.0, le=90.0)
     lon: float | None = Field(default=None, ge=-180.0, le=180.0)
     accuracy_m: float | None = Field(default=None, ge=0.0)
@@ -287,6 +291,22 @@ class DeliveryEvent(BaseModel):
         if value not in allowed:
             raise ValueError(f"unknown event kind: {value}")
         return value
+
+    @field_validator("reason")
+    @classmethod
+    def _clean_reason(cls, value: str | None) -> str | None:
+        """Whitespace-only is no reason: stripped, blank becomes absent."""
+        if value is None:
+            return None
+        return value.strip() or None
+
+    @model_validator(mode="after")
+    def _failed_carries_a_reason(self) -> DeliveryEvent:
+        """D58: a failed outcome without its reason is the gap C2 named -
+        the status alone says "failed", never why."""
+        if self.kind == "failed" and not self.reason:
+            raise ValueError("a failed event carries its reason")
+        return self
 
 
 class CreateLocationNote(BaseModel):
@@ -1263,6 +1283,7 @@ def sync_events(
             kind=event.kind,
             utterance=event.utterance,
             safe_place=event.safe_place,
+            reason=event.reason,
             lat=event.lat,
             lon=event.lon,
             accuracy_m=event.accuracy_m,

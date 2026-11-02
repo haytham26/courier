@@ -827,6 +827,14 @@ components:
         safe_place:
           type: string
           description: "D9: Safe place if 'left at'"
+        reason:
+          type: string
+          maxLength: 200
+          description: >-
+            D58 (ADR-023): the structured failed-delivery reason, in the
+            courier's own words (a product-owned list, not a generic enum).
+            Required when kind is failed; carried through sync and compared on
+            replay conflicts.
         lat:
           type: number
           format: double

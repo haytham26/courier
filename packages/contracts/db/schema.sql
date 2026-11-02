@@ -186,3 +186,9 @@ ALTER TABLE runs
     ADD COLUMN IF NOT EXISTS finish_lat double precision;
 ALTER TABLE runs
     ADD COLUMN IF NOT EXISTS finish_lon double precision;
+
+-- The structured failed-delivery reason (ADR-023, D63: the server half of
+-- D58). The courier's own words stay in utterance; the reason is the bounded
+-- structured field, and a failed event must carry one.
+ALTER TABLE delivery_events
+    ADD COLUMN IF NOT EXISTS reason text;
