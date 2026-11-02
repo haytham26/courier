@@ -86,8 +86,18 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   base); green 573 non-db + 33 db vs local postgis 17-3.5, ruff + mypy clean. Merge
   order: #179 → #180 once green. **Item (a) is then complete** — all four server halves
   (D55/D56 #177, D58 #178, D59 #179, D52 #180) land with contract-first PRs.
-- Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
-  `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open
+- **Item (b) — B3's remainder — is PR #181 (`b3-remainder`, impl `bea622e` + docs), CI
+  running:** the shared API test fixtures hoisted to `services/api/tests/conftest.py`
+  once (pinned by `tests/test_fixture_hoist.py`, red-first: 38 redefinitions on the old
+  tree), the voice `driver_settings` store bounded at `MAX_DRIVER_SETTINGS = 1000`
+  (oldest-first eviction, red-first HTTP pin), the psycopg LGPL-3.0 linking note in
+  `docs/product/LICENSES.md`, and the OWASP MASVS L1 self-review at
+  `docs/security/MASVS-L1.md` (PARITY 311, L2 gaps tracked at PARITY 195/197). BUG-059
+  → fixed, BUG-170 filed+fixed, evidence `docs/evidence/b3-remainder/`. Green locally:
+  API 575 non-db + 33 db (postgis 17-3.5), voice 229, ruff + mypy clean both services.
+  B3's done-when is then met: BUG-059 closed with tests + the MASVS checklist in
+  `docs/security/`.
+- Then the queue continues: (c) A3 — ≥500 utterances from open
   data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from
   `.worktrees/b1030c/data/linz/`, weekly import green; (e) the reference-repos clean-room
   ideas + MASTER §22's three Courier Voice techniques; (f) LAST — Oracle staging and the
