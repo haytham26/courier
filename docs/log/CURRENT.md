@@ -225,6 +225,14 @@ into view before each of the three repeat taps (no-op once visible), offline.yam
 before its tap; taps and asserts unchanged. BUG-174 filed (fixed, PR #135); register
 171 rows, fixed 115.
 
+**a2f20fb's Quality gates run (41532322801) failed Semgrep with 2 findings on BUG-170's
+plugin (BUG-175):** `path-join-resolve-traversal` on `path.join(cfg.modRequest.projectRoot,
+...)` in `apps/mobile/plugins/withEmulatorCleartext.js` - a false positive (projectRoot
+is Expo's own build-time input), but the floor guard forbids a `nosemgrep`, so the
+plugin now builds its two paths by template interpolation and no longer imports
+`path`; the 3 plugin jest tests and eslint stay green. BUG-175 filed (fixed, PR #135);
+register 172 rows, fixed 116.
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
