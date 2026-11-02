@@ -88,6 +88,16 @@ headroom, computed from the reported layout — never a timed scrollTo racing a
 reveal (run 41010537066's lesson). Red-first in
 `app/(auth)/__tests__/register.test.tsx` (615 mobile tests, tsc/eslint clean).
 
+**Run 41380466474 (f6de90a): the email focus scrolled, the password focus did not** —
+the failure dump shows the confirm field under the keyboard and the password slot's
+`onLayout` never reported, because Android's default `removeClippedSubviews` drops a
+below-the-fold slot from the native hierarchy before layout. Fix: the register
+ScrollView now carries `removeClippedSubviews={false}` (BUG-113's own lesson on the
+sign-in screen) so every slot reports its layout and the focus scroll always has a
+target. (The api-34 leg's three `today-screen` failures that run were the known
+app-process infra flake — the dumps show an empty window, and those flows were green
+on 47e9eb5.)
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

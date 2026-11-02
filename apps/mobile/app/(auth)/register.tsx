@@ -93,6 +93,15 @@ export default function RegisterScreen() {
         ref={scrollRef}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        // BUG-113's lesson, applied to this screen: with the default true,
+        // Android drops clipped children from the native view hierarchy
+        // before they layout, so a field below the fold never reports its
+        // onLayout and the focus scroll above has nothing to scroll to (run
+        // 41380466474: the email focus scrolled, the password focus did
+        // not). Keeping the slots in the tree also keeps them reachable for
+        // TalkBack - a screen whose own fields vanish under a keyboard is
+        // not readable to the end.
+        removeClippedSubviews={false}
       >
         <Text role="heading" style={[styles.title, { color: theme.colors.textPrimary }]}>
           Create an account

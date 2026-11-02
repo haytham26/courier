@@ -75,5 +75,12 @@ describe('the create-account screen', () => {
     scrollTo.mockClear();
     fireEvent(screen.getByTestId('register-email'), 'focus');
     expect(scrollTo).not.toHaveBeenCalled();
+
+    // BUG-113's other half, proven on run 41380466474: with the default
+    // removeClippedSubviews, Android drops a below-the-fold field from the
+    // native hierarchy before it layouts, so its slot never reports the
+    // layout the focus scroll needs (the email focus scrolled, the password
+    // focus did not). The slots stay in the tree.
+    expect(scrollView.props.removeClippedSubviews).toBe(false);
   });
 });
