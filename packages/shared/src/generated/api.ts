@@ -100,6 +100,13 @@ export interface HealthResponse {
   engines: string[];
 }
 
+export interface ImportResponse {
+  shift_id: string;
+  imported: number;
+  stop_ids: string[];
+  ignored_columns: string[];
+}
+
 export interface IntakeText {
   source?: 'voice' | 'ocr' | 'scan' | 'manual';
   text: string;
@@ -242,6 +249,14 @@ export interface ApiPaths {
       body: null;
       responses: {
         200: BriefingResponse | InterruptQuestion;
+      };
+    };
+  };
+  '/shifts/{shift_id}/import': {
+    post: {
+      body: null;
+      responses: {
+        201: ImportResponse;
       };
     };
   };
