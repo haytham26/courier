@@ -22,6 +22,7 @@ from __future__ import annotations
 import os
 import uuid
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -136,6 +137,24 @@ class TestTheRunLifecycle:
 
         assert repo.get_run(run.id) == run
         assert repo.get_run_for_shift(shift_id, run.courier_id) == run
+
+    def test_the_break_window_and_the_finish_survive_the_sql_round_trip(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        shift_id = a_shift(engine)
+        run = replace(
+            a_run(shift_id),
+            break_start_at=datetime(2026, 10, 25, 12, 0, tzinfo=UTC),
+            break_end_at=datetime(2026, 10, 25, 12, 30, tzinfo=UTC),
+            finish_lat=-43.5,
+            finish_lon=172.6,
+        )
+
+        repo.put_run(run)
+
+        assert repo.get_run(run.id) == run
+        assert repo.get_run_for_shift(shift_id, run.courier_id) == run
+        assert repo.list_runs(run.courier_id)[0] == run
 
     def test_a_run_of_another_courier_is_not_found_by_the_query(
         self, repo: SqlAlchemyRepo, engine: Engine

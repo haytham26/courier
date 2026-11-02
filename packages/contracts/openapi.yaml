@@ -1031,8 +1031,10 @@ components:
       description: >-
         The narrowed request of ADR-010 §3: unknown fields are refused, never
         dropped silently. `territory` comes back 422 until the schema gains a
-        home for it; the finish point and the break window stay out until the
-        runs table gains columns for them.
+        home for it. The finish point and the break window are carried from
+        ADR-022 (D63): the runs table has their columns, so they are storable
+        and therefore accepted; the app halves ride the same features' later
+        slices (D55/D56).
       required: [name, shift_id, depot, start_at]
       additionalProperties: false
       properties:
@@ -1062,6 +1064,26 @@ components:
           minimum: 1
           maximum: 120
           default: 30
+        break_window:
+          type: object
+          nullable: true
+          description: >-
+            The planned break (D55): both bounds are required together and must
+            carry their timezone; the server refuses end <= start.
+          required: [start, end]
+          additionalProperties: false
+          properties:
+            start: { type: string, format: date-time }
+            end: { type: string, format: date-time }
+        finish:
+          type: object
+          nullable: true
+          description: The end location of the day (D56); a round trip is finish == depot.
+          required: [lat, lon]
+          additionalProperties: false
+          properties:
+            lat: { type: number, minimum: -90, maximum: 90 }
+            lon: { type: number, minimum: -180, maximum: 180 }
 
     RunResponse:
       type: object
@@ -1089,6 +1111,22 @@ components:
         start_at:
           type: string
           format: date-time
+        break_window:
+          type: object
+          nullable: true
+          required: [start, end]
+          additionalProperties: false
+          properties:
+            start: { type: string, format: date-time }
+            end: { type: string, format: date-time }
+        finish:
+          type: object
+          nullable: true
+          required: [lat, lon]
+          additionalProperties: false
+          properties:
+            lat: { type: number }
+            lon: { type: number }
 
     LocationNote:
       type: object

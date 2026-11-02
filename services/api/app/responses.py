@@ -41,6 +41,13 @@ class DepotResponse(BaseModel):
     lon: float
 
 
+class BreakWindowResponse(BaseModel):
+    """The planned break (the contract's `RunResponse.break_window`, ADR-022)."""
+
+    start: datetime
+    end: datetime
+
+
 class RunResponse(BaseModel):
     """The run as the phone sees it (`_run_body`)."""
 
@@ -51,6 +58,8 @@ class RunResponse(BaseModel):
     capacity_parcels: int | None
     speed_kmh: float
     start_at: datetime
+    break_window: BreakWindowResponse | None
+    finish: DepotResponse | None
 
 
 class DemoStopResponse(BaseModel):

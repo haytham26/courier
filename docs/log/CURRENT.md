@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `d93e3ab` (PR #173, the backend squad's C1 lows batch, merged with the ritual). Lead session 13, 2026-11-02.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `0b083b9` (PR #170's handoff). Lead session 13, 2026-11-02.**
 
 ## Lead session 13, started (2026-11-02): D62 recorded — the trial build IS the product
 
@@ -127,14 +127,14 @@ red-first: `automaticallyAdjustKeyboardInsets` undefined on aa214d4 → red, `tr
 here → green (615 tests, tsc/eslint clean).
 
 **Run 41407217039 (0b0e872): registration reached the server and was refused by the
-OS — BUG-166.** The submit tap worked (the insets fix landed), but the alert read
+OS — BUG-170.** The submit tap worked (the insets fix landed), but the alert read
 "Registration Failed — fetch failed: CLEARTEXT communication to 10.0.2.2 not permitted
 by network security policy": the a1 APK dials `http://10.0.2.2:8000/:3001` and Android
 blocks cleartext by default; no `usesCleartextTraffic`/network security config existed.
 Fix: new config plugin `apps/mobile/plugins/withEmulatorCleartext.js` writes a network
 security config permitting cleartext to **10.0.2.2 only** (not a blanket flag — prod
 URLs are https) and points the manifest at it. Red-first in
-`plugins/__tests__/withEmulatorCleartext.test.js` (3 tests; BUG-166 filed, fixed in
+`plugins/__tests__/withEmulatorCleartext.test.js` (3 tests; BUG-170 filed, fixed in
 #135). Run 41418029987's build then failed lint's `NetworkSecurityConfig` check —
 `<domain>` needs `includeSubdomains` — so the config pins `includeSubdomains="false"`
 (exact host only), asserted in the test.
@@ -169,20 +169,6 @@ Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
 branch: both read `useRun()`).
-
-**The backend squad's C1 lows batch merged this session: PR #173 (`c1-backend-lows-batch`
-@ `2e24b59`) merged as `d93e3ab`, with the full ritual — archive tag
-`archive/c1-backend-lows-batch` pushed at `2e24b59`, remote branch deleted,
-`git ls-remote --heads origin c1-backend-lows-batch` printing nothing.** The branch took
-origin/main in first (`2e24b59`, #171 + #172) and resolved all seven conflicts keeping
-BOTH register gates: the duplicate-number check and the `--base` reopen guard live in
-`check-parity.mjs` together, its suite is 32 green, and the floor job on the PR head
-(run 41398868377) is green — including "The registers did not silently reopen
-(check-parity --base)" against the PR's base sha. BUGS.md on main now reads 160 rows:
-open 19, doing 3, testing 3, fixed 103, closed 2, moved to PARITY 30. The rows the batch
-closed: BUG-118, 119, 120, 135, 136, 138, 143, 144, 145, 155, 156, 157, 158, 159, 163.
-Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
-`docs/log/2026-W44.md` (the 2026-11-02 merge entry).
 
 
 ## Lead session 12, the closing state (2026-11-02): the a1 job's blank first screen is rooted and fixed
