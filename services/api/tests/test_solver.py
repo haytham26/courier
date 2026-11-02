@@ -23,6 +23,7 @@ from __future__ import annotations
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
+from functools import partial
 
 import pytest
 
@@ -31,7 +32,6 @@ from app.routing import (
     RoutePlan,
     RouteRequest,
     RouteStop,
-    RunConstraints,
     TimeWindow,
     build_plan,
     build_reopt_plan,
@@ -40,60 +40,17 @@ from app.routing import (
     seed_plan,
 )
 from app.solver import PyVRPEngine
+from tests.conftest import make_request as _make_request
+from tests.conftest import make_stop
 
-DEPOT_LAT = -43.5330
-DEPOT_LON = 172.6300
 FINISH_LAT = -43.4884  # the airport, where the van of the day is left
 FINISH_LON = 172.5291
 START_AT = datetime(2026, 10, 22, 8, 0, tzinfo=UTC)
 
-
-def make_stop(
-    *,
-    lat: float,
-    lon: float,
-    priority: bool = False,
-    parcels: int = 1,
-    service_time_s: int | None = None,
-    window: TimeWindow | None = None,
-    stop_id: uuid.UUID | None = None,
-) -> RouteStop:
-    """One stop of the run."""
-    return RouteStop(
-        id=stop_id or uuid.uuid4(),
-        lat=lat,
-        lon=lon,
-        priority=priority,
-        parcels=parcels,
-        service_time_s=service_time_s,
-        window=window,
-    )
-
-
-def make_request(
-    stops: list[RouteStop],
-    *,
-    start_at: datetime = START_AT,
-    capacity_parcels: int | None = None,
-    speed_kmh: float = 30.0,
-    finish_lat: float | None = None,
-    finish_lon: float | None = None,
-    break_constraint: BreakConstraint | None = None,
-) -> RouteRequest:
-    """The run the engine is asked to plan."""
-    return RouteRequest(
-        stops=tuple(stops),
-        constraints=RunConstraints(
-            depot_lat=DEPOT_LAT,
-            depot_lon=DEPOT_LON,
-            start_at=start_at,
-            capacity_parcels=capacity_parcels,
-            speed_kmh=speed_kmh,
-            break_constraint=break_constraint,
-            finish_lat=finish_lat,
-            finish_lon=finish_lon,
-        ),
-    )
+# The shared helper (conftest, BUG-059's hoist) with this module's day as the
+# default start: the solver's days start on the 22nd, the routing tests' on
+# the 21st.
+make_request = partial(_make_request, start_at=START_AT)
 
 
 def order_of(plan: RoutePlan) -> list[uuid.UUID]:
