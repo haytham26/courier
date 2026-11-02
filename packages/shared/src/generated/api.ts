@@ -41,6 +41,14 @@ export interface CreateRunRequest {
   start_at: string;
   capacity_parcels?: number;
   speed_kmh?: number;
+  break_window?: {
+    start: string;
+    end: string;
+  };
+  finish?: {
+    lat: number;
+    lon: number;
+  };
 }
 
 export interface DeliveryEvent {
@@ -168,6 +176,14 @@ export interface RunResponse {
   capacity_parcels?: number;
   speed_kmh: number;
   start_at: string;
+  break_window?: {
+    start: string;
+    end: string;
+  };
+  finish?: {
+    lat: number;
+    lon: number;
+  };
 }
 
 export interface StopResponse {

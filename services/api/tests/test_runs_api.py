@@ -123,6 +123,73 @@ class TestCreatingARun:
         assert read.status_code == 200
         assert read.json() == run
 
+    def test_the_break_window_and_the_finish_are_stored_and_read_back(
+        self, client: TestClient
+    ) -> None:
+        body = run_body(
+            break_window={
+                "start": "2026-10-24T12:00:00+13:00",
+                "end": "2026-10-24T12:30:00+13:00",
+            },
+            finish={"lat": -43.5, "lon": 172.6},
+        )
+
+        created = client.post("/runs", json=body)
+
+        assert created.status_code == 201, created.text
+        run = created.json()
+        assert run["break_window"] == {
+            "start": "2026-10-24T12:00:00+13:00",
+            "end": "2026-10-24T12:30:00+13:00",
+        }
+        assert run["finish"] == {"lat": -43.5, "lon": 172.6}
+
+        read = client.get(f"/runs/{run['id']}")
+        assert read.status_code == 200
+        assert read.json() == run
+
+    def test_a_run_without_break_or_finish_answers_nulls(self, client: TestClient) -> None:
+        created = client.post("/runs", json=run_body())
+
+        assert created.status_code == 201, created.text
+        assert created.json()["break_window"] is None
+        assert created.json()["finish"] is None
+
+    def test_an_inverted_break_window_is_refused(self, client: TestClient) -> None:
+        body = run_body(
+            break_window={
+                "start": "2026-10-24T12:30:00+13:00",
+                "end": "2026-10-24T12:00:00+13:00",
+            }
+        )
+
+        refused = client.post("/runs", json=body)
+
+        assert refused.status_code == 422, refused.text
+
+    def test_a_naive_break_window_is_refused(self, client: TestClient) -> None:
+        body = run_body(
+            break_window={"start": "2026-10-24T12:00:00", "end": "2026-10-24T12:30:00"}
+        )
+
+        refused = client.post("/runs", json=body)
+
+        assert refused.status_code == 422, refused.text
+
+    def test_a_partial_break_window_is_refused(self, client: TestClient) -> None:
+        body = run_body(break_window={"start": "2026-10-24T12:00:00+13:00"})
+
+        refused = client.post("/runs", json=body)
+
+        assert refused.status_code == 422, refused.text
+
+    def test_an_out_of_bounds_finish_is_refused(self, client: TestClient) -> None:
+        body = run_body(finish={"lat": -91.0, "lon": 172.6})
+
+        refused = client.post("/runs", json=body)
+
+        assert refused.status_code == 422, refused.text
+
     def test_the_runs_list_holds_the_runs_the_courier_created(self, client: TestClient) -> None:
         first = client.post("/runs", json=run_body(name="First"))
         second = client.post("/runs", json=run_body(name="Second"))

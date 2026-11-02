@@ -23,7 +23,7 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 from langgraph.checkpoint.memory import MemorySaver
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .agents import copilot
 from .agents.copilot import COPILOT_MAX_RETRIES, COPILOT_TIMEOUT_SECONDS
@@ -196,14 +196,36 @@ class DepotPoint(BaseModel):
     lon: float = Field(ge=-180.0, le=180.0)
 
 
+class BreakWindow(BaseModel):
+    """The planned break of the day (D55, ADR-022): both bounds carry their
+    timezone, and the window is never empty or inverted."""
+
+    start: datetime
+    end: datetime
+
+    @field_validator("start", "end")
+    @classmethod
+    def _aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("the break window must carry its timezone")
+        return value
+
+    @model_validator(mode="after")
+    def _ordered(self) -> BreakWindow:
+        if self.end <= self.start:
+            raise ValueError("break_window.end must be after break_window.start")
+        return self
+
+
 class CreateRunRequest(BaseModel):
-    """The phone's first write of the day (ADR-010 §3).
+    """The phone's first write of the day (ADR-010 §3, ADR-022).
 
     Unknown fields are refused, never dropped silently: `territory` from the
     older contract sketch comes back as 422 until the schema has a home for
-    it, because accepting-and-ignoring input is a lie. The same rule keeps the
-    finish point and the break window out until the runs table gains columns
-    for them - they shape the plan, so they must be storable first.
+    it, because accepting-and-ignoring input is a lie. The finish point and
+    the break window are carried too (D63): the runs table has their columns,
+    so they are storable - they shape the plan, and the plan reads them back
+    from the run.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -214,6 +236,8 @@ class CreateRunRequest(BaseModel):
     start_at: datetime
     capacity_parcels: int | None = Field(default=None, ge=0, le=9999)
     speed_kmh: float = Field(default=30.0, ge=1.0, le=120.0)
+    break_window: BreakWindow | None = None
+    finish: DepotPoint | None = None
 
     @field_validator("start_at")
     @classmethod
@@ -309,6 +333,16 @@ def _run_body(run: RunRecord) -> dict[str, Any]:
         "capacity_parcels": run.capacity_parcels,
         "speed_kmh": run.speed_kmh,
         "start_at": run.start_at.isoformat(),
+        "break_window": (
+            {"start": run.break_start_at.isoformat(), "end": run.break_end_at.isoformat()}
+            if run.break_start_at is not None and run.break_end_at is not None
+            else None
+        ),
+        "finish": (
+            {"lat": run.finish_lat, "lon": run.finish_lon}
+            if run.finish_lat is not None and run.finish_lon is not None
+            else None
+        ),
     }
 
 
@@ -493,6 +527,10 @@ def create_run(
         capacity_parcels=body.capacity_parcels,
         speed_kmh=body.speed_kmh,
         start_at=body.start_at,
+        break_start_at=body.break_window.start if body.break_window else None,
+        break_end_at=body.break_window.end if body.break_window else None,
+        finish_lat=body.finish.lat if body.finish else None,
+        finish_lon=body.finish.lon if body.finish else None,
     )
     try:
         repo.put_run(record)
