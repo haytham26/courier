@@ -238,6 +238,33 @@ async def test_a_call_without_a_token_is_refused():
     assert response.status_code == 401
 
 
+async def test_the_driver_settings_store_is_bounded(client_app, client: AsyncClient):
+    """BUG-059: the settings dict was one entry per courier, forever.
+
+    The store is capped like the session store (BUG-151): past the cap the
+    oldest driver's settings are evicted, so a long-lived process cannot grow
+    without bound. The route's own write path is what the test drives.
+    """
+    from app.main import MAX_DRIVER_SETTINGS
+
+    current = {"user_id": "driver-0"}
+    client_app.dependency_overrides[get_principal] = lambda: Principal(
+        user_id=current["user_id"], claims={"sub": current["user_id"]}, token="test-token"
+    )
+    for index in range(MAX_DRIVER_SETTINGS + 1):
+        current["user_id"] = f"driver-{index}"
+        response = await client.put(
+            "/v1/settings", json={"settings": {"verbosity": "chatty"}}
+        )
+        assert response.status_code == 200
+
+    settings = client_app.state.driver_settings
+    assert len(settings) == MAX_DRIVER_SETTINGS
+    # The oldest went first; the newest is still there.
+    assert "driver-0" not in settings
+    assert f"driver-{MAX_DRIVER_SETTINGS}" in settings
+
+
 async def test_the_mode_of_the_turn_comes_back(client: AsyncClient):
     session_id = await a_session(client)
     response = await client.post(

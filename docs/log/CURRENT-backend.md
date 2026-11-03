@@ -1,6 +1,6 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-11-03 · main at `0d8431f` (PRs #177–#180 merged; item (a) complete) · **This
+Updated: 2026-11-03 · main at `e4e432c` (PRs #177–#181 merged; items (a) and (b) complete) · **This
 squad's handoff lives in THIS file only.** PR #174 had written it into the lead's `docs/log/CURRENT.md` and replaced the lead's
 header line with its own; the correction PR on `docs/currents-log-ownership` restores that
 header line exactly as it was at `960fc41^1` (the lead has not rewritten it since) and
@@ -49,7 +49,8 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   ruff's UP037 quote rule is why 783f8f6 exists; both pushed. Next server halves in order:
   stop types (D59), then the CSV/Excel import (D52) — each its own PR, number = highest BUG
   across origin/main + open PR branches + 1 (BUG-168 went to #179, BUG-169 to #180, both
-  merged; next free is BUG-170; #135's branch carries BUG-164/165).
+  merged; BUG-170 went to #181; next free is BUG-171; #135's branch carries
+  BUG-164/165).
 - **#178's db leg went red on run 41430267111**: `get_event`'s SELECT predated the
   `delivery_events.reason` column, so the Postgres leg raised
   `NoSuchColumnError: Could not locate column in row for column 'reason'` in
@@ -98,8 +99,20 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   api-35 Maestro job's `sdkmanager` download was a corrupt zip — rerun green).
   **Item (a) is COMPLETE** — all four server halves (D55/D56 #177, D58 #178, D59 #179,
   D52 #180) landed as contract-first PRs with the merge ritual and red-first evidence.
-- Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
-  `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open
+- **Item (b) — B3's remainder — MERGED as `e4e432c` (PR #181, `b3-remainder`, full
+  ritual: all 22 checks green on head `fce579c`, archive tag `archive/b3-remainder` at
+  the PR head, remote branch deleted):** the shared API test fixtures hoisted to
+  `services/api/tests/conftest.py` once (pinned by `tests/test_fixture_hoist.py`,
+  red-first: 38 redefinitions on the old tree), the voice `driver_settings` store
+  bounded at `MAX_DRIVER_SETTINGS = 1000` (oldest-first eviction, red-first HTTP pin),
+  the psycopg LGPL-3.0 linking note in `docs/product/LICENSES.md`, and the OWASP MASVS
+  L1 self-review at `docs/security/MASVS-L1.md` (PARITY 311, L2 gaps tracked at PARITY
+  195/197). BUG-059 → fixed, BUG-170 filed+fixed, evidence
+  `docs/evidence/b3-remainder/`. Green locally: API 575 non-db + 33 db (postgis 17-3.5),
+  voice 229, ruff + mypy clean both services. (Its two emulator reds were the same
+  corrupt-`sdkmanager`-zip infra flake as #180 — rerun green.) **B3's done-when is met:
+  BUG-059 closed with tests + the MASVS checklist in `docs/security/`.**
+- Then the queue continues: (c) A3 — ≥500 utterances from open
   data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from
   `.worktrees/b1030c/data/linz/`, weekly import green; (e) the reference-repos clean-room
   ideas + MASTER §22's three Courier Voice techniques; (f) LAST — Oracle staging and the

@@ -10,53 +10,14 @@ from __future__ import annotations
 
 import io
 import uuid
-from collections.abc import Iterator
 from datetime import UTC, datetime
 
-import pytest
 from fastapi.testclient import TestClient
 
-from app.auth.jwks import get_verifier
-from app.main import app
-from app.repo import InMemoryRepo, RunRecord, get_repo
-from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+from app.repo import InMemoryRepo, RunRecord
+from tests.conftest import COURIER
 
-COURIER = "driver-7"
-OTHER = "driver-8"
 START_AT = datetime(2026, 10, 25, 7, 30, tzinfo=UTC)
-
-
-@pytest.fixture()
-def repo() -> InMemoryRepo:
-    return InMemoryRepo()
-
-
-@pytest.fixture()
-def verifier_key(repo: InMemoryRepo) -> Iterator[object]:
-    key_pair = make_key_pair()
-    _, jwk = key_pair
-    app.dependency_overrides[get_repo] = lambda: repo
-    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
-    yield key_pair[0]
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture()
-def client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update(
-            {"Authorization": f"Bearer {sign(verifier_key, subject=COURIER)}"}
-        )
-        yield test_client
-
-
-@pytest.fixture()
-def other_client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update(
-            {"Authorization": f"Bearer {sign(verifier_key, subject=OTHER)}"}
-        )
-        yield test_client
 
 
 def seed_run(repo: InMemoryRepo, *, courier_id: str = COURIER) -> tuple[uuid.UUID, uuid.UUID]:
@@ -298,12 +259,11 @@ class TestTheOwnership:
         assert client.get(f"/shifts/{shift_id}/stops").json() == []
 
     def test_an_anonymous_caller_is_unauthorized(
-        self, verifier_key: object, repo: InMemoryRepo
+        self, anonymous_client: TestClient, repo: InMemoryRepo
     ) -> None:
         _, shift_id = seed_run(repo)
-        with TestClient(app) as anonymous:
-            refused = anonymous.post(
-                f"/shifts/{shift_id}/import",
-                files={"file": ("stops.csv", csv_bytes("address\n1 A Street\n"), "text/csv")},
-            )
+        refused = anonymous_client.post(
+            f"/shifts/{shift_id}/import",
+            files={"file": ("stops.csv", csv_bytes("address\n1 A Street\n"), "text/csv")},
+        )
         assert refused.status_code == 401, refused.text
