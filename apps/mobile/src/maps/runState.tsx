@@ -127,21 +127,35 @@ export const RunProvider = ({
           ? current
           : [...current, { stopId: stop.id, sequence: stop.sequence, at: Date.now() }],
       );
-      void marks.markDelivered(stop).catch((error: unknown) => {
-        console.warn(`run: the delivery of ${stop.id} could not be written: ${errorMessage(error)}`);
-      });
+      void (async () => {
+        try {
+          await marks.markDelivered(stop);
+          // BUG-178: the day's own marks are what the screens read, so the
+          // day is re-read after the write - run 41578697363's a1 taps went
+          // to the same stop three times because the sheet never advanced.
+          await day.refreshMarks();
+        } catch (error) {
+          console.warn(`run: the delivery of ${stop.id} could not be written: ${errorMessage(error)}`);
+        }
+      })();
     },
-    [marks],
+    [marks, day],
   );
 
   const undoDelivered = useCallback(
     (stopId: string) => {
       setDelivered((current) => current.filter((event) => event.stopId !== stopId));
-      void marks.undoDelivered(stopId).catch((error: unknown) => {
-        console.warn(`run: the delivery of ${stopId} could not be taken back: ${errorMessage(error)}`);
-      });
+      void (async () => {
+        try {
+          await marks.undoDelivered(stopId);
+          // The day's numbers follow the write, the same as a mark (BUG-178).
+          await day.refreshMarks();
+        } catch (error) {
+          console.warn(`run: the delivery of ${stopId} could not be taken back: ${errorMessage(error)}`);
+        }
+      })();
     },
-    [marks],
+    [marks, day],
   );
 
   const isDelivered = useCallback(

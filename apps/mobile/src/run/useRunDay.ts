@@ -80,6 +80,11 @@ export interface RunDay {
   nextStop: Stop | null;
   /** The stops the run still has to deliver. */
   remaining: number;
+  /**
+   * Re-reads the marks from the store, so a mark made through the run state
+   * is a mark the screens already show (BUG-178).
+   */
+  refreshMarks(): Promise<void>;
 }
 
 /**
@@ -146,6 +151,12 @@ export function useRunDay(source: StoreSource): RunDay {
     return carried;
   }, [store]);
 
+  // BUG-178: the same read, answered as nothing - the run state asks for it
+  // after every mark and undo, so the screens follow the write.
+  const refreshMarks = useCallback(async () => {
+    await readMarks();
+  }, [readMarks]);
+
   useEffect(() => {
     let alive = true;
     void (async () => {
@@ -193,6 +204,7 @@ export function useRunDay(source: StoreSource): RunDay {
       isDelivered,
       nextStop,
       remaining: stops.filter((stop) => !deliveredIds.has(stop.id)).length,
+      refreshMarks,
     }),
     [stops, marks, isDelivered, nextStop, deliveredIds],
   );

@@ -26,7 +26,18 @@ import { reportSyncAnswers } from '@/sync/syncAnswers';
 import { inMemoryMarkStore } from './inMemoryMarkStore';
 import { OpSqliteRunCache } from './opSqliteRunCache';
 import { RunStore, seedReasonForBuild } from './runStore';
+import { startOutboxRetry } from './outboxRetry';
 import type { MarkStore } from './types';
+
+/**
+ * How often the phone asks the outbox to send what it holds (BUG-179).
+ *
+ * Fifteen seconds: often enough that a courier whose signal comes back sees
+ * the delivery go within a quarter of a minute, slow enough that a phone in a
+ * dead zone does not spend its battery asking. The app's own backoff still
+ * governs the wire's side; this is the ask, not the pace of the network.
+ */
+const OUTBOX_RETRY_TICK_MS = 15_000;
 
 /** The one run store of this build, over the app's own databases. */
 export function productionRunStore(): RunStore {
@@ -34,24 +45,39 @@ export function productionRunStore(): RunStore {
   // the store records is the delivery the outbox sends (one fact, one log).
   const outbox = syncForThisSession();
   const cache = OpSqliteRunCache.open();
-  return new RunStore({
+
+  // The delivery leaves the phone when there is signal. The flush never
+  // throws: the events stay in the log, which is the one outcome the design
+  // must never lose, and the answers are reported either way.
+  const flushOutbox = async (shiftId: string): Promise<void> => {
+    for (const outcome of await outbox.service.syncAll(shiftId)) {
+      reportSyncAnswers(outcome);
+    }
+  };
+
+  const store = new RunStore({
     client: new CourierApiClient(),
     cache,
     events: outbox.events,
     reason: seedReasonForBuild(process.env.EXPO_PUBLIC_E2E),
-    // The delivery leaves the phone when there is signal. The flush never
-    // throws: the events stay in the log, which is the one outcome the design
-    // must never lose, and the answers are reported either way.
-    flush: async (shiftId) => {
-      for (const outcome of await outbox.service.syncAll(shiftId)) {
-        reportSyncAnswers(outcome);
-      }
-    },
+    flush: flushOutbox,
     release: async () => {
+      stopOutboxRetry();
       await outbox.release();
       await cache.close();
     },
   });
+
+  // BUG-179: the outbox is asked on its own too, not only after a mark - a
+  // delivery recorded while there was no signal sends when the signal comes
+  // back, and a courier at a standstill never marks again to make it go.
+  const stopOutboxRetry = startOutboxRetry({
+    shiftOf: () => store.shiftId(),
+    flush: flushOutbox,
+    everyMs: OUTBOX_RETRY_TICK_MS,
+  });
+
+  return store;
 }
 
 /**

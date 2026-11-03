@@ -263,6 +263,20 @@ api-34 mock leg failed this run
 too — `Error on ZipFile unknown archive` preparing the system image, then `could not
 connect to TCP port 5554`: runner infra flake (one re-run of that job allowed).
 
+**Run 41578697363 (90823d9, dispatch): BUG-177 fixed the writes — online and offline
+PASSED, and sync failed with delivery_events=1 — two more app defects (BUG-178, BUG-179).**
+The sheet never advanced after a mark: `useRunDay` read the marks once on mount and
+nothing re-read them, so the mark button kept naming the first stop and the second and
+third taps were store no-ops (`already !== null`) — the dump shows Delivered 2 and ONE
+`events:batch` in the api logs. And the outbox only ever flushed after a mark, so the
+delivery held offline never sent when the network came back (ADR-014's promise had no
+trigger). Fixes (red-first): `useRunDay` now exposes `refreshMarks()` and the run state
+asks for it after every mark and undo (Today's new test: the sheet advances to the run's
+own next stop), and new `src/run/outboxRetry.ts` asks the outbox to send what it holds on
+a fifteen-second timer while the session lives (shift read from the cached day; a failed
+ask is named and the next tick retries). 649 mobile tests (76 suites), tsc, eslint green.
+BUG-178 and BUG-179 filed (fixed, PR #135); register 176 rows, open 17, fixed 121.
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

@@ -223,6 +223,34 @@ describe('Today', () => {
     expect(screen.queryByText('Every stop is delivered.')).toBeNull();
   });
 
+  // BUG-178: run 41578697363's a1 online flow tapped today-mark-delivered
+  // three times and the sheet never advanced - the day's marks are read once
+  // on mount and never again, so the NEXT STOP row (and the Delivered number)
+  // stayed on the first stop and every further tap was a no-op on the same
+  // stop. The sheet has to advance to the run's own next stop after a mark.
+  // Red on 90823d9: the button still points at the first stop's address.
+  it('advances the sheet to the next stop after a mark', async () => {
+    renderScreen();
+    // The day is read through the store, so the screen answers once the
+    // load has landed - the same wait the flows run on.
+    await waitFor(() => {
+      expect(screen.getByTestId('today-mark-delivered')).toBeTruthy();
+    });
+
+    // The first delivery is on the run's own first stop.
+    fireEvent.press(screen.getByTestId('today-mark-delivered'));
+
+    await waitFor(() => {
+      // The sheet's row is the run's own next stop, and the mark button
+      // carries its street (the address the day answers with, before the
+      // comma - the one the sheet shows the courier).
+      expect(screen.getByLabelText('Mark 45 Papanui Road delivered')).toBeTruthy();
+    });
+    // The row the courier drives from follows the same next stop: the Go
+    // carries the second stop's address, not the first one's.
+    expect(screen.getByLabelText('Go to 45 Papanui Road')).toBeTruthy();
+  });
+
   it('renders the root, the greeting and the day exactly as the flows find them', async () => {
     renderScreen();
 

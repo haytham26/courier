@@ -18,7 +18,7 @@
  * these tests prove is the hook's own contract against a store that answers.
  */
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { act, render, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { useRunDay } from '../useRunDay';
@@ -157,6 +157,32 @@ describe('the day the screens read (A1 slice 3)', () => {
     await waitFor(() => expect(getByTestId('has-run').props.children).toBe('false'));
     expect(getByTestId('stops').props.children).toBe('0');
     expect(getByTestId('next').props.children).toBe('none');
+  });
+
+  // BUG-178: run 41578697363 - the day's marks were read once on mount and
+  // never again, so the sheet never advanced after a mark. The hook now
+  // re-reads them when the caller asks (the run state asks after every mark).
+  it('re-reads the marks when the caller asks it to', async () => {
+    mockDeliveredMarks.mockResolvedValue([]);
+    let readAgain: () => Promise<void> = () => Promise.resolve();
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      readAgain = () => day.refreshMarks();
+      return <Text testID="delivered-count">{String(day.delivered.length)}</Text>;
+    };
+
+    const { getByTestId } = render(<Probe />);
+    await waitFor(() => expect(getByTestId('delivered-count').props.children).toBe('0'));
+
+    // A mark has been written through the store: the caller asks the hook to
+    // read the marks back, and the numbers the screens show follow.
+    mockDeliveredMarks.mockResolvedValue([mockMark]);
+    await act(async () => {
+      await readAgain();
+    });
+
+    expect(getByTestId('delivered-count').props.children).toBe('1');
   });
 
   // BUG-172: run 41491440450 - a store whose load() THROWS (the cache write
