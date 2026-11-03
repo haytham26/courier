@@ -8,20 +8,16 @@ twice) and it must answer with the cursor the phone uses to know where it is.
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.auth.jwks import get_verifier
-from app.main import app
-from app.repo import DeliveryEventRow, InMemoryRepo, RouteStopRow, RunRecord, get_repo
-from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+from app.repo import DeliveryEventRow, InMemoryRepo, RouteStopRow, RunRecord
+from tests.conftest import COURIER
 from tests.test_runs_api import png_bytes, recent_iso, seed_run_with_stops
 
-COURIER = "driver-7"
 SHIFT_ID = uuid.uuid4()
 STOP_ID = uuid.uuid4()
 
@@ -56,25 +52,6 @@ def seeded_run(repo: InMemoryRepo) -> InMemoryRepo:
         )
     ]
     return repo
-
-
-@pytest.fixture()
-def repo() -> InMemoryRepo:
-    return InMemoryRepo()
-
-
-@pytest.fixture()
-def client(repo: InMemoryRepo) -> Iterator[TestClient]:
-    key_pair = make_key_pair()
-    _, jwk = key_pair
-    app.dependency_overrides[get_repo] = lambda: repo
-    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
-    with TestClient(app) as test_client:
-        test_client.headers.update(
-            {"Authorization": f"Bearer {sign(key_pair[0], subject='driver-7')}"}
-        )
-        yield test_client
-    app.dependency_overrides.clear()
 
 
 def event(

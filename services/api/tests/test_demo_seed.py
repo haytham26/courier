@@ -18,7 +18,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, text
 
-from app.auth.jwks import get_verifier
 from app.demo import (
     DEMO_REASONS,
     DEMO_STOPS,
@@ -29,53 +28,13 @@ from app.demo import (
     demo_stop_id,
     write_demo_day,
 )
-from app.main import app
-from app.repo import InMemoryRepo, RunRecord, SqlAlchemyRepo, get_repo
-from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+from app.repo import InMemoryRepo, RunRecord, SqlAlchemyRepo
+from tests.conftest import COURIER, OTHER
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
-COURIER = "driver-7"
-OTHER = "driver-8"
 STOPS = 5
 PATH = "/demo/runs"
-
-
-@pytest.fixture()
-def repo() -> InMemoryRepo:
-    return InMemoryRepo()
-
-
-@pytest.fixture()
-def verifier_key(repo: InMemoryRepo) -> Iterator[object]:
-    key_pair = make_key_pair()
-    _, jwk = key_pair
-    app.dependency_overrides[get_repo] = lambda: repo
-    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
-    yield key_pair[0]
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture()
-def client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update(
-            {"Authorization": f"Bearer {sign(verifier_key, subject=COURIER)}"}
-        )
-        yield test_client
-
-
-@pytest.fixture()
-def other_client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update({"Authorization": f"Bearer {sign(verifier_key, subject=OTHER)}"})
-        yield test_client
-
-
-@pytest.fixture()
-def anonymous_client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        yield test_client
 
 
 @pytest.fixture()
