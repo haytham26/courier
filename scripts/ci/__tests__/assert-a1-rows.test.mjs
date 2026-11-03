@@ -8,56 +8,85 @@
 // (15 s), which lands seconds after the sync flow's last screen - so the
 // runner's immediate count was a race it could lose. The assert now waits,
 // bounded, for the count the flow performed; these tests run it against a real
-// Postgres (the CI job's own compose database is reachable on 55432, and the
-// test creates its own schema so it disturbs nothing).
+// Postgres - its OWN container, started here from the contract's schema, so
+// the suite is self-contained wherever docker runs (the CI test job has no
+// compose stack and this must not depend on one).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/** A synchronous pause, so a wait needs no timer on any platform. */
+const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'ci', 'assert-a1-rows.sh');
-const DB = {
-  DB_HOST: '127.0.0.1',
-  DB_PORT: '55432',
-  DB_USER: 'courier',
-  DB_NAME: 'courier',
-};
+const SCHEMA = path.join(ROOT, 'packages', 'contracts', 'db', 'schema.sql');
+const CONTAINER = 'courier-a1-rows-assert';
+const PORT = '5544';
 
-function psql(sql) {
-  return execFileSync(
-    'docker',
-    [
-      'compose', '-f', 'infra/compose.ci.yml',
-      '-p', 'courier-ci-local',
-      'exec', '-T', 'postgres',
-      'psql', '-U', 'courier', '-d', 'courier', '-v', 'ON_ERROR_STOP=1', '-Atc', sql,
-    ],
-    { cwd: ROOT, encoding: 'utf8', env: process.env },
-  );
+function docker(args, options = {}) {
+  return execFileSync('docker', args, { encoding: 'utf8', env: process.env, ...options });
 }
 
-/** The seeded day the a1 flow starts from: one run, one shift, five stops. */
-function seedTheDay() {
-  psql('TRUNCATE delivery_events, stops, shifts, runs, "user", session CASCADE');
-  psql(`INSERT INTO shifts (id, courier_id, started_at)
-        VALUES ('00000000-0000-0000-0000-000000000002','courier-test',now())`);
-  psql(`INSERT INTO runs (id, shift_id, courier_id, name, depot_lat, depot_lon, speed_kmh, start_at, created_at, updated_at)
-        VALUES ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002','courier-test',
-        'Test run',-43.5,172.6,30,now(),now(),now())`);
-  for (let i = 1; i <= 5; i++) {
-    psql(`INSERT INTO stops (id, shift_id, sequence, location_id, status, address, priority, parcels)
-          VALUES ('00000000-0000-0000-0000-00000000000${String(i)}','00000000-0000-0000-0000-000000000002',
-          ${i},'00000000-0000-0000-0000-0000000000${String(i)}0','pending','stop ${i}',false,2)`);
+/** The test's own Postgres, started from the contract's schema. */
+test.before(() => {
+  try {
+    docker(['rm', '-f', CONTAINER], { stdio: 'ignore' });
+  } catch {
+    // No leftover container from an earlier run: nothing to remove.
   }
-  for (let i = 1; i <= 3; i++) {
-    psql(`INSERT INTO delivery_events (id, shift_id, stop_id, kind, occurred_at, received_at)
-          VALUES ('00000000-0000-0000-0000-00000000001${String(i)}','00000000-0000-0000-0000-000000000002',
-          '00000000-0000-0000-0000-00000000000${String(i)}','delivered',now(),now())`);
+  // No bind mount: the schema is applied over stdin once the server is up, so
+  // the suite does not depend on a host mount working on any machine.
+  docker([
+    'run', '-d', '--rm', '--name', CONTAINER,
+    '-e', 'POSTGRES_USER=courier',
+    '-e', 'POSTGRES_PASSWORD=courier',
+    '-e', 'POSTGRES_DB=courier',
+    'postgis/postgis:17-3.5',
+  ]);
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const running = docker(['inspect', '-f', '{{.State.Running}}', CONTAINER], { stdio: 'pipe' }).trim();
+    if (running !== 'true') {
+      throw new Error(`the test Postgres is not running (state ${running})`);
+    }
+    try {
+      docker(['exec', CONTAINER, 'pg_isready', '-U', 'courier']);
+      // The contract's own schema, the same file the CI stack applies at boot.
+      execFileSync(
+        'docker',
+        ['exec', '-i', CONTAINER, 'psql', '-U', 'courier', '-d', 'courier', '-v', 'ON_ERROR_STOP=1', '-f', '-'],
+        { input: readFileSync(SCHEMA, 'utf8'), encoding: 'utf8', env: process.env },
+      );
+      const tables = docker([
+        'exec', CONTAINER, 'psql', '-U', 'courier', '-d', 'courier', '-Atc',
+        "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'",
+      ]).trim();
+      if (Number(tables) > 5) {
+        return;
+      }
+    } catch {
+      // The database is still coming up (or the schema has not landed yet).
+    }
+    pause(1000);
   }
+  throw new Error('the test Postgres never applied the contract schema');
+});
+
+test.after(() => {
+  try {
+    docker(['rm', '-f', CONTAINER], { stdio: 'ignore' });
+  } catch {
+    // A container that is already gone needs no second goodbye.
+  }
+});
+
+function psql(sql) {
+  return docker(['exec', '-i', CONTAINER, 'psql', '-U', 'courier', '-d', 'courier', '-v', 'ON_ERROR_STOP=1', '-Atc', sql]);
 }
 
 /** The shell the script runs under: bash on the runners, Git's bash on Windows. */
@@ -70,10 +99,9 @@ function bashPath() {
 }
 
 /**
- * A `psql` that forwards to the compose Postgres, for a machine whose psql is
- * the container's own (the runners have psql on the PATH; this script only
- * needs it where the test runs). The host and port flags the script passes are
- * dropped: the container answers on its own socket.
+ * A `psql` that forwards to the test's own container: the runners have psql on
+ * the PATH and this suite must not need one. The host and port flags the
+ * script passes are dropped - the container answers on its own socket.
  */
 function psqlShim() {
   const dir = path.join(os.tmpdir(), 'a1-rows-assert-psql');
@@ -91,7 +119,7 @@ function psqlShim() {
       '    *) args+=("$1"); shift ;;',
       '  esac',
       'done',
-      'exec docker compose -f "$COURIER_REPO/infra/compose.ci.yml" -p courier-ci-local exec -T postgres psql "${args[@]}"',
+      'exec docker exec -i courier-a1-rows-assert psql "${args[@]}"',
       '',
     ].join('\n'),
   );
@@ -100,38 +128,73 @@ function psqlShim() {
 }
 
 function runAssert(extraEnv) {
-  const shimDir = psqlShim();
   return spawnSync(bashPath(), [SCRIPT], {
     cwd: ROOT,
     encoding: 'utf8',
     env: {
       ...process.env,
-      ...DB,
-      COURIER_REPO: ROOT,
-      PATH: `${shimDir}${path.delimiter}${process.env.PATH}`,
+      DB_HOST: '127.0.0.1',
+      DB_PORT: PORT,
+      DB_USER: 'courier',
+      DB_NAME: 'courier',
+      PATH: `${psqlShim()}${path.delimiter}${process.env.PATH}`,
       ...extraEnv,
     },
   });
 }
 
-test('waits for the held delivery the outbox sends on its own schedule (BUG-186)', () => {
+/** The seeded day the a1 flow starts from: one run, one shift, five stops. */
+function seedTheDay() {
+  psql('TRUNCATE delivery_events, stops, shifts, runs CASCADE');
+  psql(`INSERT INTO shifts (id, courier_id, started_at)
+        VALUES ('00000000-0000-0000-0000-000000000002','courier-test',now())`);
+  psql(`INSERT INTO runs (id, shift_id, courier_id, name, depot_lat, depot_lon, speed_kmh, start_at, created_at, updated_at)
+        VALUES ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002','courier-test',
+        'Test run',-43.5,172.6,30,now(),now(),now())`);
+  for (let i = 1; i <= 5; i++) {
+    psql(`INSERT INTO stops (id, shift_id, sequence, location_id, status, address, priority, parcels)
+          VALUES ('00000000-0000-0000-0000-00000000000${String(i)}','00000000-0000-0000-0000-000000000002',
+          ${i},'00000000-0000-0000-0000-0000000000${String(i)}0','pending','stop ${i}',false,2)`);
+  }
+  for (let i = 1; i <= 3; i++) {
+    psql(`INSERT INTO delivery_events (id, shift_id, stop_id, kind, occurred_at, received_at)
+          VALUES ('00000000-0000-0000-0000-00000000001${String(i)}','00000000-0000-0000-0000-000000000002',
+          '00000000-0000-0000-0000-00000000000${String(i)}','delivered',now(),now())`);
+  }
+}
+
+test('waits for the held delivery the outbox sends on its own schedule (BUG-186)', async () => {
   seedTheDay();
-  // The fourth delivery lands 8 seconds after the assert starts - the way the
-  // outbox's own retry does, seconds after the sync flow's last screen.
-  const child = spawnSync(
-    'docker',
-    [
-      'compose', '-f', 'infra/compose.ci.yml', '-p', 'courier-ci-local',
-      'exec', '-T', 'postgres', 'psql', '-U', 'courier', '-d', 'courier', '-Atc',
-      "SELECT pg_sleep(8); INSERT INTO delivery_events (id, shift_id, stop_id, kind, occurred_at, received_at) VALUES ('00000000-0000-0000-0000-000000000014','00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000005','delivered',now(),now());",
-    ],
-    { cwd: ROOT, encoding: 'utf8', env: process.env, detached: false },
-  );
-  void child;
-  const result = runAssert({});
-  assert.equal(result.status, 0, result.stdout + result.stderr);
-  assert.match(result.stdout, /the held delivery landed after \d+s of waiting/);
-  assert.match(result.stdout, /the seeded day and the four deliveries are in Postgres/);
+  // The assert starts against three rows, the way the a1 runner found them
+  // after the sync flow - and the fourth delivery lands 8 seconds later, the
+  // way the outbox's own retry sends it. The assert must wait for it.
+  const assertion = spawn(bashPath(), [SCRIPT], {
+    cwd: ROOT,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      DB_HOST: '127.0.0.1',
+      DB_PORT: PORT,
+      DB_USER: 'courier',
+      DB_NAME: 'courier',
+      PATH: `${psqlShim()}${path.delimiter}${process.env.PATH}`,
+    },
+  });
+  let output = '';
+  assertion.stdout.on('data', (chunk) => {
+    output += String(chunk);
+  });
+  assertion.stderr.on('data', (chunk) => {
+    output += String(chunk);
+  });
+  await pause(8000);
+  psql(`INSERT INTO delivery_events (id, shift_id, stop_id, kind, occurred_at, received_at)
+        VALUES ('00000000-0000-0000-0000-000000000014','00000000-0000-0000-0000-000000000002',
+        '00000000-0000-0000-0000-000000000005','delivered',now(),now())`);
+  const [code] = await once(assertion, 'exit');
+  assert.equal(code, 0, output);
+  assert.match(output, /the held delivery landed after \d+s of waiting/);
+  assert.match(output, /the seeded day and the four deliveries are in Postgres/);
 });
 
 test('still fails when the held delivery never lands, and says how long it waited', () => {
