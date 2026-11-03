@@ -1,7 +1,7 @@
 # Evidence — the voice eval set built from open data (A3)
 
 **Step:** AUDIT_2026-10-25 §A3 (voice squad) · **Branch:** `a3-voice-open-data` ·
-**Date:** 2026-11-03 · **Registers:** BUG-186 filed+fixed, PARITY 312 (the PR number is written here once it is opened)
+**PR:** #183 · **Date:** 2026-11-03 · **Registers:** BUG-186 filed+fixed, PARITY 312
 
 ## What landed
 
@@ -150,7 +150,7 @@ and neither the measured scores nor any threshold is changed to reach it.
 | set integrity | `check-voice-eval.mjs` | sound, 600 built |
 | registers | `check-parity.mjs` | 312 PARITY rows / 166 BUGS rows, BUG-186 unique |
 | floor + mojibake | `check-floor.mjs`, `check-mojibake.mjs` | clean |
-| CI | the PR's checks | see the PR |
+| CI | PR #183's checks | see the PR |
 
 ## Not claimed
 

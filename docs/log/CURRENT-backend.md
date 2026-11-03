@@ -98,7 +98,7 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   API 575 non-db + 33 db (postgis 17-3.5), voice 229, ruff + mypy clean both services.
   B3's done-when is then met: BUG-059 closed with tests + the MASVS checklist in
   `docs/security/`.
-- **Item (c) — A3 — is on `a3-voice-open-data` (PR number written once opened):** the voice eval set is
+- **Item (c) — A3 — is PR #183 (`a3-voice-open-data`):** the voice eval set is
   built from open data. 280 Common Voice 17 en clips (CC0-1.0, filtered by the
   dataset's accent metadata: 140 New Zealand English + 140 other English
   accents) and 8 MUSAN beds (CC-BY 4.0) are fetched by
