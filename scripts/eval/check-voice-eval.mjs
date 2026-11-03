@@ -25,6 +25,7 @@ const INTENTS = new Set([
 const SLICES = [
   { id: 'en_nz_quiet', min: 120 },
   { id: 'en_nz_van', min: 120 },
+  { id: 'en_mix', min: 120 },
   { id: 'mi_places', min: 60 },
   { id: 'ar', min: 40 },
   { id: 'hi_pa', min: 40 },
@@ -34,6 +35,13 @@ const SLICES = [
   { id: 'code_switch', min: 60 },
   { id: 'chatter', min: 40 },
 ];
+
+// A3: the open-data slices, whose audio comes from Common Voice (CC0) speakers
+// and the MUSAN noise beds. The audio itself lives outside git (data/voice/),
+// so what the checkers pin here is the manifest's integrity: the counts, the
+// files named and the checksums.
+const OPEN_SLICES = ['en_nz_quiet', 'en_nz_van', 'en_mix'];
+const MIN_BUILT = 500;
 
 // The commands of the app (`apps/mobile/src/voice/VoiceService.ts`). The shift
 // simulations are scored against the service, so their intents are the names
@@ -177,6 +185,38 @@ if (!existsSync(join(MANIFEST, SIMULATIONS))) {
   }
 }
 
+// A3: the built utterances carry their file and their checksum, and the open
+// slices are complete. The audio files live outside git (data/voice/, like
+// data/linz/), so the file itself is not opened here - the checksum is the
+// pin: a clip that changed is a different utterance.
+for (const utterance of utterances) {
+  if (utterance.status !== 'built') continue;
+  if (!utterance.file || typeof utterance.file !== 'string') {
+    problems.push(`${utterance.id}: a built utterance names no file`);
+  }
+  if (!utterance.sha256 || !/^[0-9a-f]{64}$/.test(utterance.sha256)) {
+    problems.push(`${utterance.id}: a built utterance carries no sha256`);
+  }
+  if (utterance.snr_db != null && !Number.isFinite(utterance.snr_db)) {
+    problems.push(`${utterance.id}: a mixed utterance has no snr_db number`);
+  }
+}
+
+const built = new Map();
+for (const utterance of utterances) {
+  built.set(utterance.slice, (built.get(utterance.slice) ?? 0) + 1);
+}
+const builtTotal = utterances.filter((utterance) => utterance.status === 'built').length;
+if (builtTotal < MIN_BUILT) {
+  problems.push(`A3 needs ${MIN_BUILT} utterances built from open data, it has ${builtTotal}`);
+}
+for (const slice of OPEN_SLICES) {
+  const planned = utterances.filter((utterance) => utterance.slice === slice.id).length;
+  if (planned > 0 && (built.get(slice.id) ?? 0) < planned) {
+    problems.push(`${slice.id}: ${planned - (built.get(slice.id) ?? 0)} utterances are not built yet`);
+  }
+}
+
 if (problems.length > 0) {
   console.error(`the voice evaluation set is broken (${problems.length} problems):`);
   for (const problem of problems.slice(0, 20)) {
@@ -186,5 +226,5 @@ if (problems.length > 0) {
 }
 
 console.log(
-  `the voice evaluation set is sound: ${scripts.length} scripts, ${utterances.length} planned files, ${addresses.length} addresses, ${simulations.length} shift simulations`,
+  `the voice evaluation set is sound: ${scripts.length} scripts, ${utterances.length} planned files (${builtTotal} built from open data), ${addresses.length} addresses, ${simulations.length} shift simulations`,
 );
