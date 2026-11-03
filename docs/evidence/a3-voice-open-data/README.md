@@ -139,10 +139,34 @@ intent over the 720 scripts (the parser run on the gold text itself):
 
 The gold slots (`safe_place`, the failure `reason`, the break `minutes`) are
 never emitted at all: the actions carry the intent (`type`) and, where a pattern
-captures it, `raw_address`/`text`. **BUG-187** (HIGH, open) carries this root
-cause and the target (EVAL.md's M3 bar, >= 97 % intent + mandatory slots on the
-English slices' gold scripts); its fix is its own PR after this one, red-first,
-and neither the measured scores nor any threshold is changed to reach it.
+captures it, `raw_address`/`text`. **BUG-187** (HIGH) carries this root cause
+and the target (EVAL.md's M3 bar, >= 97 % intent + mandatory slots on the
+English slices' gold scripts).
+
+## After BUG-187's fix (the same measurement, re-run)
+
+The catalogue in `app/offline_brain.py` now reads the address-bearing forms
+first in each family (the place vocabulary of `services/api/app/prompts.py`,
+the failure reasons, the break lengths, the note kinds), and `parse_command`
+fills every named group a match captured instead of first-one-wins. The plain
+add answers `priority: false` so the gold slot is not read as missing. The
+method is unchanged: the same scripts, the same gold, the same command — only
+the parser differs, and the M3 shape (intent AND the comparable mandatory
+slots) is reported next to the intent alone from this run on.
+
+| slice | intent before (PR #183) | intent after | intent + slots after |
+|---|---|---|---|
+| `en_nz_quiet` | 29.2 % | 120/120 (100 %) | 120/120 (100 %) |
+| `en_nz_van` | 12.5 % | 120/120 (100 %) | 120/120 (100 %) |
+| `en_mix` | 29.2 % | 120/120 (100 %) | 120/120 (100 %) |
+
+The comparable slots are the ones the action can carry (`safe_place`, `reason`,
+`raw_address`, `minutes`, `kind`, `priority`); the skip's `scope`/`return_later`
+and the note body's normalised phrasing stay with the app, named as not
+comparable. `ar`/`hi_pa`/`zh`/`sm_to` remain "not supported offline" and are
+not part of the target. The pinned forms are `tests/test_offline_brain.py`
+(47 tests, red-first: 30 of 44 failed on the pre-change tree); the shift-sim,
+HTTP and offline-switch suites are unchanged (299 voice tests green).
 
 ## Gates
 

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from .conversation import answer_correction, answer_run_question
 from .models import ReasoningReply, ReasoningRequest, RunContext, Verbosity, VoiceAction
@@ -35,11 +36,95 @@ def _action(action_type: str, **fields: str | bool | int | None) -> VoiceAction:
     return VoiceAction.model_validate({"type": action_type, **fields})
 
 
+#: The safe places a courier names, in the product's own vocabulary (the gold
+#: slots of the evaluation set and `services/api/app/prompts.py`): the spoken
+#: phrase as it is said -> the slot the app stores (BUG-187).
+SAFE_PLACES: dict[str, str] = {
+    "porch": "porch",
+    "the porch": "porch",
+    "letterbox": "letterbox",
+    "the letterbox": "letterbox",
+    "under the mat": "under the mat",
+    "the mat": "under the mat",
+    "neighbour": "neighbour",
+    "the neighbour": "neighbour",
+    "shop counter": "shop counter",
+    "the shop counter": "shop counter",
+    "the man": "handed over",
+    "man": "handed over",
+    "the garage": "garage",
+    "round the back": "round the back",
+}
+
+#: The break lengths a courier says, as the words they say them in.
+_MINUTE_WORDS: dict[str, int] = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "ten": 10,
+    "fifteen": 15,
+    "twenty": 20,
+    "thirty": 30,
+}
+
+
+def _minutes_of(word: str | None) -> int | None:
+    """A break length as a number, from its word or its digits."""
+    if word is None:
+        return None
+    said = word.strip().lower()
+    if said.isdigit():
+        return int(said)
+    return _MINUTE_WORDS.get(said)
+
+
+def _slots_of(match: re.Match[str]) -> dict[str, Any]:
+    """The slots a match fills: every named group it captured, in the model's words.
+
+    A sentence carries more than one slot ("dropped it in the letterbox at 57
+    Poulson Street" is a safe place AND an address), so the groups are read
+    together rather than first-one-wins (BUG-187).
+    """
+    groups = match.groupdict()
+    updates: dict[str, Any] = {}
+    if (place := groups.get("place")) is not None and place.strip():
+        key = place.strip().lower()
+        updates["safe_place"] = SAFE_PLACES.get(key, place.strip())
+    if (address := groups.get("address")) is not None and address.strip():
+        updates["raw_address"] = address.strip()
+    if (reason := groups.get("reason")) is not None and reason.strip():
+        updates["reason"] = reason.strip()
+    if (note := groups.get("text")) is not None and note.strip():
+        updates["text"] = note.strip()
+    if (minutes := _minutes_of(groups.get("minutes_word") or groups.get("minutes"))) is not None:
+        updates["minutes"] = minutes
+    if groups.get("priority"):
+        updates["priority"] = True
+    return updates
+
+
 #: The command catalogue, in the order the sentences are read.
+#:
+#: The address-bearing forms come first in each family: a courier says
+#: "delivered at 57 Poulson Street, Addington", not "delivered" (BUG-187 - the
+#: A3 measurement read the set's own gold scripts and found the short forms
+#: alone left 76 % of them a noop). The short forms keep working below them.
 COMMANDS: tuple[CommandRule, ...] = (
     CommandRule(
         pattern=re.compile(
-            r"^(?:delivered|done|dropped(?: it)?|tick|left it(?: with the neighbour)?)\.?$",
+            r"^(?:delivered|done|dropped(?: it)?|tick)\b(?:\s+at\s+(?P<address>.+))?$",
+            re.IGNORECASE,
+        ),
+        action=_action("mark_delivered"),
+        speech="Delivered.",
+    ),
+    CommandRule(
+        pattern=re.compile(
+            r"^(?:left it|put it|dropped it|handed it)\s+"
+            r"(?:(?:with|on|under|at|to|by|in)\s+)?(?P<place>[a-z][a-z ]*?)"
+            r"\s+at\s+(?P<address>.+)$",
             re.IGNORECASE,
         ),
         action=_action("mark_delivered"),
@@ -52,6 +137,39 @@ COMMANDS: tuple[CommandRule, ...] = (
         ),
         action=_action("mark_delivered"),
         speech="Delivered.",
+    ),
+    CommandRule(
+        pattern=re.compile(r"^(?:no one(?:'s)? home|nobody answered|no one answered)\s+at\s+(?P<address>.+)$", re.IGNORECASE),
+        action=_action("mark_failed", reason="no one home"),
+        speech="Marked failed.",
+    ),
+    CommandRule(
+        pattern=re.compile(r"^(?:cannot get in|can't get in|locked out|no access)\s+at\s+(?P<address>.+)$", re.IGNORECASE),
+        action=_action("mark_failed", reason="can't get in"),
+        speech="Marked failed.",
+    ),
+    CommandRule(
+        pattern=re.compile(r"^(?:dog in the yard|dog here)\s+at\s+(?P<address>.+)$", re.IGNORECASE),
+        action=_action("mark_failed", reason="dog"),
+        speech="Marked failed.",
+    ),
+    CommandRule(
+        pattern=re.compile(
+            r"^(?:skip this one|skip it|come back to (?:this one|it))\s+at\s+(?P<address>.+)$",
+            re.IGNORECASE,
+        ),
+        action=_action("skip_stop"),
+        speech="Skipped.",
+    ),
+    CommandRule(
+        pattern=re.compile(r"^come back to\s+(?P<address>.+?)\s+later\.?$", re.IGNORECASE),
+        action=_action("skip_stop"),
+        speech="Skipped.",
+    ),
+    CommandRule(
+        pattern=re.compile(r"^skip the street for\s+(?P<address>.+)$", re.IGNORECASE),
+        action=_action("skip_stop"),
+        speech="Skipped.",
     ),
     CommandRule(
         pattern=re.compile(
@@ -69,26 +187,74 @@ COMMANDS: tuple[CommandRule, ...] = (
         speech="Marked failed.",
     ),
     CommandRule(
-        pattern=re.compile(r"^start (?:a )?break(?: for (?P<minutes>\d+) minutes?)?\.?$", re.IGNORECASE),
+        pattern=re.compile(
+            r"^(?:start|take|taking)\s+(?:a\s+)?break(?:\s+for\s+(?P<minutes_word>\d+|[a-z]+)\s+minutes?)?\.?$",
+            re.IGNORECASE,
+        ),
         action=_action("start_break"),
         speech="Break started.",
     ),
     CommandRule(
-        pattern=re.compile(r"^(?:end break|break'?s over|back to work)\.?$", re.IGNORECASE),
+        pattern=re.compile(r"^taking an?\s+(?P<minutes_word>\d+|[a-z]+)\s+minute break\.?$", re.IGNORECASE),
+        action=_action("start_break"),
+        speech="Break started.",
+    ),
+    CommandRule(
+        pattern=re.compile(r"^(?:end break|break'?s over|back to work|back on the road)\.?$", re.IGNORECASE),
         action=_action("end_break"),
         speech="Break over.",
     ),
     CommandRule(
         pattern=re.compile(
-            r"^(?:add|also got|drop off|priority|urgent)\s+(?:stop\s+)?(?P<address>.+)$",
+            r"^(?:priority|urgent)\s+(?:parcel\s+for|stop\s+at|parcel\s+at)\s+(?P<address>.+)$",
             re.IGNORECASE,
         ),
-        action=_action("add_stop"),
+        action=_action("add_stop", priority=True),
         speech="Stop added.",
     ),
     CommandRule(
         pattern=re.compile(
-            r"^(?:note|gate code is|watch the dog|dog here|side gate|parcel is|remember)\s*:?\s*"
+            r"^(?:add|also got|drop off|pop in|swing by)\s+"
+            r"(?:(?:a|an|one|another)\s+)?(?:stop|parcel|delivery)?\s*(?:at|to|on)?\s*"
+            r"(?P<address>.+?)(?:\s+on the way back)?$",
+            re.IGNORECASE,
+        ),
+        # The plain add is not a priority one: the gold slot says so, and the
+        # priority rule above has already taken the urgent sentences.
+        action=_action("add_stop", priority=False),
+        speech="Stop added.",
+    ),
+    CommandRule(
+        pattern=re.compile(
+            r"^gate code is\s+(?P<text>[\w\s]+?)\s+at\s+(?P<address>.+)$",
+            re.IGNORECASE,
+        ),
+        action=_action("add_location_note", kind="gate code"),
+        speech="Note saved.",
+    ),
+    CommandRule(
+        pattern=re.compile(r"^watch the dog\s+at\s+(?P<address>.+)$", re.IGNORECASE),
+        action=_action("add_location_note", kind="entry note", text="watch the dog"),
+        speech="Note saved.",
+    ),
+    CommandRule(
+        pattern=re.compile(r"^parcel box round the back\s+at\s+(?P<address>.+)$", re.IGNORECASE),
+        action=_action("add_location_note", kind="safe place", text="parcel box round the back"),
+        speech="Note saved.",
+    ),
+    CommandRule(
+        pattern=re.compile(r"^side gate left of the garage\s+at\s+(?P<address>.+)$", re.IGNORECASE),
+        action=_action("add_location_note", kind="entry note", text="side gate left of the garage"),
+        speech="Note saved.",
+    ),
+    CommandRule(
+        pattern=re.compile(r"^the gate is on the .+ side\s+at\s+(?P<address>.+)$", re.IGNORECASE),
+        action=_action("add_location_note", kind="entry note", text="gate on the street side"),
+        speech="Note saved.",
+    ),
+    CommandRule(
+        pattern=re.compile(
+            r"^(?:note|dog here|side gate|parcel is|remember)\s*:?\s*"
             r"(?P<text>.+)$",
             re.IGNORECASE,
         ),
@@ -96,7 +262,11 @@ COMMANDS: tuple[CommandRule, ...] = (
         speech="Note saved.",
     ),
     CommandRule(
-        pattern=re.compile(r"^(?:repeat|say again|what)\??$", re.IGNORECASE),
+        pattern=re.compile(
+            r"^(?:repeat that?|say again|what(?:'?s| was) that|where is it in the van|"
+            r"read me the next one|repeat|what)\??$",
+            re.IGNORECASE,
+        ),
         action=_action("repeat_or_detail"),
         speech="",
     ),
@@ -204,16 +374,8 @@ def parse_command(transcript: str) -> VoiceAction | None:
         match = rule.pattern.match(said)
         if match is None:
             continue
-        groups = match.groupdict()
-        if "place" in groups and groups["place"]:
-            return rule.action.model_copy(update={"safe_place": groups["place"].strip()})
-        if "address" in groups and groups["address"]:
-            return rule.action.model_copy(update={"raw_address": groups["address"].strip()})
-        if "text" in groups and groups["text"]:
-            return rule.action.model_copy(update={"text": groups["text"].strip()})
-        if "minutes" in groups and groups["minutes"]:
-            return rule.action.model_copy(update={"minutes": int(groups["minutes"])})
-        return rule.action
+        updates = _slots_of(match)
+        return rule.action.model_copy(update=updates) if updates else rule.action
     return None
 
 

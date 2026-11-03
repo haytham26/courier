@@ -61,6 +61,12 @@ JUDGE_MODEL_URL = (
 #: The slices whose audio comes from the open speakers.
 OPEN_SLICES = ("en_nz_quiet", "en_nz_van", "en_mix")
 
+#: The gold slots the offline brain's action can carry, and so the ones the M3
+#: comparison reads. The skip's scope/return_later and the note body's
+#: normalised phrasing are the app's own and stay not comparable (EVAL.md
+#: section 5: a number that was not measured is never reported as a pass).
+COMPARABLE_SLOTS = ("safe_place", "reason", "raw_address", "minutes", "kind", "priority")
+
 #: The acceptance counts of EVAL.md section 1 (the slice floor for the intent
 #: leg; the WER targets are per condition and are checked per row in the checker).
 TARGET_INTENT = 0.97
@@ -507,15 +513,51 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
             false_actions += 1
     false_action_rate = false_actions / len(transcribed) if transcribed else 0.0
 
-    # The intent accuracy of the parser on the gold scripts (every slice).
+    # The intent accuracy of the parser on the gold scripts (every slice), and
+    # the EVAL.md M3 shape - intent AND the mandatory slots the action can
+    # carry. The skip's scope/return_later, which VoiceAction does not carry,
+    # and the note body's normalised phrasing stay with the app and are not
+    # compared.
     intent_rows: list[dict[str, Any]] = []
     for script in scripts:
         action = parse_command(script["text"])
         actual = intent_of(action)
         gold = str(script.get("gold_intent", "noop"))
         gold = "noop" if gold in ("chat", "noop") else gold
-        intent_rows.append({"slice": script["slice"], "expected": gold, "actual": actual})
+        comparable = {
+            key: value
+            for key, value in (script.get("gold_slots") or {}).items()
+            if key in COMPARABLE_SLOTS
+        }
+        got = {
+            key: getattr(action, key, None)
+            for key in comparable
+            if action is not None and getattr(action, key, None) is not None
+        } if action is not None else {}
+        intent_rows.append(
+            {
+                "slice": script["slice"],
+                "expected": gold,
+                "actual": actual,
+                "expected_slots": comparable,
+                "actual_slots": got,
+                "slots_ok": all(got.get(key) == value for key, value in comparable.items()),
+            }
+        )
     intents = score_intents(intent_rows)
+    # The M3 shape (EVAL.md section 1): the intent AND the mandatory slots the
+    # action can carry, both correct.
+    intents_with_slots: dict[str, dict[str, Any]] = {}
+    for slice_id, bucket in intents.items():
+        script_rows = [row for row in intent_rows if row["slice"] == slice_id]
+        correct = sum(
+            1 for row in script_rows if row["expected"] == row["actual"] and row["slots_ok"]
+        )
+        intents_with_slots[slice_id] = {
+            "correct": correct,
+            "total": bucket["total"],
+            "rate": correct / bucket["total"],
+        }
 
     slices: dict[str, dict[str, Any]] = {}
     for slice_id in OPEN_SLICES:
@@ -537,9 +579,9 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
         }
         by_snr: dict[str, Any] = {}
         for snr in sorted({row["snr_db"] for row in slice_rows}):
-            bucket = [row for row in slice_rows if row["snr_db"] == snr and row["wer"] is not None]
-            if bucket:
-                by_snr[str(snr)] = sum(row["wer"] for row in bucket) / len(bucket)
+            snr_bucket = [row for row in slice_rows if row["snr_db"] == snr and row["wer"] is not None]
+            if snr_bucket:
+                by_snr[str(snr)] = sum(row["wer"] for row in snr_bucket) / len(snr_bucket)
         slices[slice_id]["wer_by_snr"] = by_snr
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -612,9 +654,11 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
         "legs": {
             "wer": "the open speakers' own words read by the pinned judge, per slice and per SNR - the set's acoustic difficulty, not our pipeline",
             "false_action_rate": "the parser's share of the speakers' natural sentences it answered with a command - the M9 direction on open speech",
-            "intent_accuracy": "the service's OFFLINE brain (offline_brain, the dead-spot path) on the set's gold scripts; the short forms are its catalogue and the address-bearing long forms go to the server brain online, whose OmniRoute gateway is the founder item",
+            "intent_accuracy": "the service's OFFLINE brain (offline_brain, the dead-spot path) on the set's gold scripts; the address-bearing long forms have been its own since BUG-187's fix, and the server brain online answers the same sentences through its gateway",
+        "intent_accuracy_with_slots": "EVAL.md's M3 shape: the intent AND the comparable mandatory slots (`safe_place`, `reason`, `raw_address`, `minutes`, `kind`, `priority`) both correct",
         },
         "intent_accuracy_by_slice": intents,
+        "intent_with_slots_by_slice": intents_with_slots,
         "open_slices": slices,
         "false_action_rate_on_open_speech": false_action_rate,
         "not_measured": {
