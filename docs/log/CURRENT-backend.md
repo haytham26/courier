@@ -1,6 +1,6 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-11-02 · main at `eee8b7e` (PR #176, the log-ownership correction) · **This
+Updated: 2026-11-03 · main at `1f596b1` (PRs #177 + #178 merged) · **This
 squad's handoff lives in THIS file only.** PR #174 had written it into the lead's `docs/log/CURRENT.md` and replaced the lead's
 header line with its own; the correction PR on `docs/currents-log-ownership` restores that
 header line exactly as it was at `960fc41^1` (the lead has not rewritten it since) and
@@ -40,15 +40,64 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   writes only to `CURRENT-backend.md` from now on.** Local `main` syncs with
   `git merge --ff-only origin/main` only — no `git reset --hard` (the founder's second
   directive; AGENTS.md bans it outright).
-- **Item (a), first server half — PR #177 open** (`feat/trial-run-break-finish`): the break
-  window and the finish point on `CreateRunRequest` with the `runs` table columns (D55/D56,
-  ADR-022, D63), typed client regenerated, red-first (2 of 6 new tests red on origin/main),
-  suite 553 passed, register row BUG-166 filed and closed in the same PR, PARITY rows 12/309
-  updated in the same PR. Next server halves in order: the failed-delivery reason (D58), stop
-  types (D59), the CSV/Excel import (D52) — each its own PR, number = highest BUG across
-  origin/main + open PR branches + 1 (now BUG-167+; #135's branch carries BUG-164/165).
-- Then the queue continues: (b) B3's remainder — the MASVS L1 self-review into
-  `docs/security/` and the BUG-059 hoist if still open; (c) A3 — ≥500 utterances from open
+- **Item (a), server halves — PR #177 (`feat/trial-run-break-finish`) and PR #178
+  (`feat/trial-failed-reason`, stacked) open:** #177 is the break window + finish point on
+  `CreateRunRequest` with the `runs` columns (D55/D56, ADR-022, BUG-166, PARITY 12/309);
+  #178 is the failed-delivery reason field (D58, ADR-023, BUG-167, PARITY 25, suite 559
+  passed, red-first on both). CI lesson recorded: the db leg caught a bad fixture
+  construction (`**__dict__` + keyword) — fixed with `dataclasses.replace` (a5f415c), and
+  ruff's UP037 quote rule is why 783f8f6 exists; both pushed. Next server halves in order:
+  stop types (D59), then the CSV/Excel import (D52) — each its own PR, number = highest BUG
+  across origin/main + open PR branches + 1 (BUG-168 went to #179, BUG-169 to #180;
+  next free is BUG-170; #135's branch carries BUG-164/165).
+- **#178's db leg went red on run 41430267111**: `get_event`'s SELECT predated the
+  `delivery_events.reason` column, so the Postgres leg raised
+  `NoSuchColumnError: Could not locate column in row for column 'reason'` in
+  `TestTheEvents` (2 failed, 28 passed). Fixed in `ad8690c` — `reason` added to the
+  `get_event` SELECT (the batch read path already had it); local non-db suite 559
+  passed + ruff clean before push. **The Locust leg then went red on run 41436706706**
+  (fail ratio 0.3169 > 0.001, every failure a 422 on `events:batch`): the load profile
+  picked `kind=failed` without a reason, which the D58 rule refuses. Fixed in `b8bc724` —
+  the profile sends a reason on failed events; green locally against postgis/postgis:17-3.5
+  + uvicorn with the CI profile (60 s, 50 users, wait 3-8 s): 142 requests, 0 fails,
+  "SLOs met: the run is green".
+- **PR #177 MERGED as `821cde4` with the full ritual**: merge commit, archive tag
+  `archive/feat/trial-run-break-finish` pushed at the PR head `a5f415c`, remote branch
+  deleted (`git ls-remote --heads origin feat/trial-run-break-finish` prints nothing).
+- **PR #179 (`feat/trial-stop-types`, the D59 server half, stacked on #178) open at
+  `ad494b3`:** stops.type column (CHECK delivery/pickup, default delivery),
+  StopResponse.type required, both get_run_stops paths, client regenerated; BUG-168
+  filed+fixed, PARITY 310 updated, ADR-024, evidence `docs/evidence/trial-stop-types/`.
+  Red-first on both legs (API: `KeyError: 'type'`, 2 failed; db vs postgis/postgis:17-3.5
+  started locally: `column "type" does not exist`, 11 failed); green: 560 non-db passed,
+  32 db passed, ruff + mypy clean, client fresh.
+- **PR #178 MERGED as `1f596b1` with the full ritual**: merge commit, archive tag
+  `archive/feat/trial-failed-reason` pushed at the PR head `6a404c4`, remote branch
+  deleted (`git ls-remote --heads origin feat/trial-failed-reason` prints nothing). Its
+  two CI reds were both fixed on the branch first: the db leg's missing `reason` in
+  `get_event`'s SELECT (`ad8690c`) and the Locust leg's failed events without a reason
+  (`b8bc724`, proven green locally: 142 requests, 0 fails, "SLOs met").
+- **PR #179 (`feat/trial-stop-types`) open at `d7c6fa4`** (stacked on the merged #178),
+  CI running; **PR #180 (`feat/trial-import`, the D52 server half, stacked on #179) open
+  at `3bf815f`**: `POST /shifts/{shift_id}/import`, capped .csv/.xlsx, all-or-nothing
+  validation, `put_imported_stops` on both repos, openpyxl 3.1.5 (MIT, in LICENSES.md),
+  client regenerated; BUG-169 filed+fixed, PARITY 1/247 updated, ADR-025, evidence
+  `docs/evidence/trial-import/`. Red-first both legs (12 API red + db ImportError on the
+  base); green 573 non-db + 33 db vs local postgis 17-3.5, ruff + mypy clean. Merge
+  order: #179 → #180 once green. **Item (a) is then complete** — all four server halves
+  (D55/D56 #177, D58 #178, D59 #179, D52 #180) land with contract-first PRs.
+- **Item (b) — B3's remainder — is PR #181 (`b3-remainder`, impl `bea622e` + docs), CI
+  running:** the shared API test fixtures hoisted to `services/api/tests/conftest.py`
+  once (pinned by `tests/test_fixture_hoist.py`, red-first: 38 redefinitions on the old
+  tree), the voice `driver_settings` store bounded at `MAX_DRIVER_SETTINGS = 1000`
+  (oldest-first eviction, red-first HTTP pin), the psycopg LGPL-3.0 linking note in
+  `docs/product/LICENSES.md`, and the OWASP MASVS L1 self-review at
+  `docs/security/MASVS-L1.md` (PARITY 311, L2 gaps tracked at PARITY 195/197). BUG-059
+  → fixed, BUG-170 filed+fixed, evidence `docs/evidence/b3-remainder/`. Green locally:
+  API 575 non-db + 33 db (postgis 17-3.5), voice 229, ruff + mypy clean both services.
+  B3's done-when is then met: BUG-059 closed with tests + the MASVS checklist in
+  `docs/security/`.
+- Then the queue continues: (c) A3 — ≥500 utterances from open
   data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from
   `.worktrees/b1030c/data/linz/`, weekly import green; (e) the reference-repos clean-room
   ideas + MASTER §22's three Courier Voice techniques; (f) LAST — Oracle staging and the

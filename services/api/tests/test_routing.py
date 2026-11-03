@@ -11,23 +11,18 @@ from __future__ import annotations
 
 import time
 import uuid
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.auth.jwks import get_verifier
-from app.main import app
-from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
+from app.repo import InMemoryRepo, RouteStopRow, RunRecord
 from app.routing import (
     MAX_ROUTE_STOPS,
     BreakConstraint,
     HeuristicEngine,
-    RouteRequest,
     RouteStop,
     RouteTooLargeError,
-    RunConstraints,
     TimeWindow,
     _schedule,
     build_plan,
@@ -35,84 +30,9 @@ from app.routing import (
     seed_plan,
 )
 from app.solver import PyVRPEngine
-from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+from tests.conftest import COURIER, DEPOT_LAT, DEPOT_LON, make_request, make_stop
 
-COURIER = "driver-7"
-DEPOT_LAT = -43.5330
-DEPOT_LON = 172.6300
 START_AT = datetime(2026, 10, 21, 8, 0, tzinfo=UTC)
-
-
-def make_stop(
-    *,
-    lat: float,
-    lon: float,
-    priority: bool = False,
-    parcels: int = 1,
-    service_time_s: int | None = None,
-    window: TimeWindow | None = None,
-    stop_id: uuid.UUID | None = None,
-) -> RouteStop:
-    """One stop of the run."""
-    return RouteStop(
-        id=stop_id or uuid.uuid4(),
-        lat=lat,
-        lon=lon,
-        priority=priority,
-        parcels=parcels,
-        service_time_s=service_time_s,
-        window=window,
-    )
-
-
-def make_request(
-    stops: list[RouteStop],
-    *,
-    start_at: datetime = START_AT,
-    capacity_parcels: int | None = None,
-    speed_kmh: float = 30.0,
-    break_constraint: BreakConstraint | None = None,
-) -> RouteRequest:
-    """The run the engine is asked to plan."""
-    return RouteRequest(
-        stops=tuple(stops),
-        constraints=RunConstraints(
-            depot_lat=DEPOT_LAT,
-            depot_lon=DEPOT_LON,
-            start_at=start_at,
-            capacity_parcels=capacity_parcels,
-            speed_kmh=speed_kmh,
-            break_constraint=break_constraint,
-        ),
-    )
-
-
-@pytest.fixture()
-def repo() -> InMemoryRepo:
-    return InMemoryRepo()
-
-
-@pytest.fixture()
-def client(repo: InMemoryRepo) -> Iterator[TestClient]:
-    key_pair = make_key_pair()
-    _, jwk = key_pair
-    app.dependency_overrides[get_repo] = lambda: repo
-    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
-    with TestClient(app) as test_client:
-        test_client.headers.update({"Authorization": f"Bearer {sign(key_pair[0], subject=COURIER)}"})
-        yield test_client
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture()
-def anonymous_client(repo: InMemoryRepo) -> Iterator[TestClient]:
-    key_pair = make_key_pair()
-    _, jwk = key_pair
-    app.dependency_overrides[get_repo] = lambda: repo
-    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
 
 
 def seed_run(

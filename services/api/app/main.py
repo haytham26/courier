@@ -54,6 +54,12 @@ from .auth.websocket import (
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
+from .import_stops import (
+    IMPORT_MAX_BYTES,
+    ImportFormatError,
+    parse_import,
+    sniff_import_kind,
+)
 from .locations import location_id_for_stop
 from .occurred_at import bound_occurred_at, require_aware_occurred_at
 from .pod import (
@@ -77,6 +83,7 @@ from .responses import (
     DemoRunResponse,
     EntitlementResponse,
     HealthResponse,
+    ImportResponse,
     IntakeAnswerResponse,
     LocationNoteResponse,
     PodResponse,
@@ -260,6 +267,10 @@ class DeliveryEvent(BaseModel):
     kind: str = Field(min_length=1, max_length=64)
     utterance: str | None = Field(default=None, max_length=2000)
     safe_place: str | None = Field(default=None, max_length=200)
+    # The structured failed-delivery reason (ADR-023, D63: D58's server half).
+    # The courier's own words stay in utterance; the reason is the bounded
+    # structured field, and a failed outcome must carry one.
+    reason: str | None = Field(default=None, max_length=200)
     lat: float | None = Field(default=None, ge=-90.0, le=90.0)
     lon: float | None = Field(default=None, ge=-180.0, le=180.0)
     accuracy_m: float | None = Field(default=None, ge=0.0)
@@ -287,6 +298,22 @@ class DeliveryEvent(BaseModel):
         if value not in allowed:
             raise ValueError(f"unknown event kind: {value}")
         return value
+
+    @field_validator("reason")
+    @classmethod
+    def _clean_reason(cls, value: str | None) -> str | None:
+        """Whitespace-only is no reason: stripped, blank becomes absent."""
+        if value is None:
+            return None
+        return value.strip() or None
+
+    @model_validator(mode="after")
+    def _failed_carries_a_reason(self) -> DeliveryEvent:
+        """D58: a failed outcome without its reason is the gap C2 named -
+        the status alone says "failed", never why."""
+        if self.kind == "failed" and not self.reason:
+            raise ValueError("a failed event carries its reason")
+        return self
 
 
 class CreateLocationNote(BaseModel):
@@ -1033,6 +1060,50 @@ def intake_manifest(
     )
 
 
+@app.post("/shifts/{shift_id}/import", status_code=201, response_model=ImportResponse)
+def import_stops(
+    shift_id: uuid.UUID,
+    file: UploadFile,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Import stops from a CSV/Excel spreadsheet (D52's server half, ADR-025).
+
+    All-or-nothing: the whole file is validated before one row is stored, and
+    a row without an address refuses the import with the row named - a silent
+    mis-import is the failure this endpoint exists to avoid. The name and the
+    bytes of the file are both checked (.csv text or .xlsx zip), and the
+    upload is capped like the POD's. The shift must be the caller's own (the
+    404 discipline, BUG-140).
+    """
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="no run for this shift")
+    content = file.file.read(IMPORT_MAX_BYTES + 1)
+    if len(content) > IMPORT_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="the file is over the 5 MiB cap")
+    kind = sniff_import_kind(file.filename or "", content)
+    if kind is None:
+        raise HTTPException(
+            status_code=415,
+            detail="the file must be a .csv (UTF-8 text) or .xlsx (zip); the name and the bytes must agree",
+        )
+    try:
+        rows, ignored = parse_import(content, kind)
+    except ImportFormatError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    try:
+        ids = repo.put_imported_stops(shift_id, rows)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {
+        "shift_id": str(shift_id),
+        "imported": len(ids),
+        "stop_ids": [str(stop_id) for stop_id in ids],
+        "ignored_columns": ignored,
+    }
+
+
 @app.post(
     "/billing/webhooks/{source}",
     response_model=WebhookAcceptedResponse,
@@ -1113,6 +1184,7 @@ def list_stops(
             ),
             "seq": seq,
             "status": row.status,
+            "type": row.type,
             "lat": row.lat,
             "lon": row.lon,
             "priority": row.priority,
@@ -1263,6 +1335,7 @@ def sync_events(
             kind=event.kind,
             utterance=event.utterance,
             safe_place=event.safe_place,
+            reason=event.reason,
             lat=event.lat,
             lon=event.lon,
             accuracy_m=event.accuracy_m,

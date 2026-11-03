@@ -73,7 +73,7 @@ const DAY: RunSnapshot = {
     start_at: '2026-10-31T07:30:00.000Z',
   },
   stops: [
-    { id: 'stop-1', seq: 1, address: '12 Riccarton Road', status: 'pending', location_id: 'loc-1' },
+    { id: 'stop-1', seq: 1, address: '12 Riccarton Road', status: 'pending', location_id: 'loc-1', type: 'delivery' },
   ],
 };
 

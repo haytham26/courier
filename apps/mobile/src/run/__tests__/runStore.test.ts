@@ -40,6 +40,7 @@ class FakeApi implements RunApi {
         address: '12 Riccarton Road, Riccarton',
         seq: 1,
         status: 'pending',
+        type: 'delivery',
         lat: -43.532,
         lon: 172.599,
         parcels: 2,
@@ -50,6 +51,7 @@ class FakeApi implements RunApi {
         address: '45 Papanui Road, Merivale',
         seq: 2,
         status: 'pending',
+        type: 'delivery',
       },
     ],
   };

@@ -127,19 +127,19 @@ red-first: `automaticallyAdjustKeyboardInsets` undefined on aa214d4 → red, `tr
 here → green (615 tests, tsc/eslint clean).
 
 **Run 41407217039 (0b0e872): registration reached the server and was refused by the
-OS — BUG-170.** The submit tap worked (the insets fix landed), but the alert read
+OS — BUG-184.** The submit tap worked (the insets fix landed), but the alert read
 "Registration Failed — fetch failed: CLEARTEXT communication to 10.0.2.2 not permitted
 by network security policy": the a1 APK dials `http://10.0.2.2:8000/:3001` and Android
 blocks cleartext by default; no `usesCleartextTraffic`/network security config existed.
 Fix: new config plugin `apps/mobile/plugins/withEmulatorCleartext.js` writes a network
 security config permitting cleartext to **10.0.2.2 only** (not a blanket flag — prod
 URLs are https) and points the manifest at it. Red-first in
-`plugins/__tests__/withEmulatorCleartext.test.js` (3 tests; BUG-170 filed, fixed in
+`plugins/__tests__/withEmulatorCleartext.test.js` (3 tests; BUG-184 filed, fixed in
 #135). Run 41418029987's build then failed lint's `NetworkSecurityConfig` check —
 `<domain>` needs `includeSubdomains` — so the config pins `includeSubdomains="false"`
 (exact host only), asserted in the test.
 
-**Run 41422266958 (4c44078): cleartext reached the server — BUG-168, "Invalid origin".**
+**Run 41422266958 (4c44078): cleartext reached the server — BUG-182, "Invalid origin".**
 The submit tap worked and the request left the device, but the auth service answered
 403 "Invalid origin": the app's expo client sends `expo-origin: courier://` (the
 app.json scheme) on every request and the expo server plugin copies it into the
@@ -149,17 +149,17 @@ app.json scheme) on every request and the expo server plugin copies it into the
 `AUTH_TRUSTED_ORIGINS: http://10.0.2.2:3001,courier://` in compose.ci.yml — a concrete
 scheme:// entry, so the BUG-134 validator still refuses wildcards. Pinned by a new
 config test (the a1 stack's exact value loads to both entries; 121 auth tests green).
-BUG-168 filed (fixed, PR #135); register 165 rows, fixed 109.
+BUG-182 filed (fixed, PR #135); register 165 rows, fixed 109.
 
 **Run 41433310746 (425a8e5): registration SUCCEEDED — the day load failed silently
-(BUG-169).** The flow reached the today screen, but the sheet rendered Delivered 0 /
+(BUG-183).** The flow reached the today screen, but the sheet rendered Delivered 0 /
 To go 0 and no `today-go`: `RunStore.load()` failed on the device and nothing said
 which hop. A local replay of the exact chain against compose.ci.yml (sign-up with
 `expo-origin: courier://` → 200, `/api/auth/token` → JWT iss=http://10.0.2.2:3001,
 `POST /demo/runs` {reason:dev} → 200, `/runs/:id` → 200, `/shifts/:id/stops` → 5
 stops) proves the server side healthy with this branch's config, so the failure is
 the app's device path (token mint, API dial or cache write). Diagnostics filed as
-BUG-169: `load()`/`refresh()` now console.warn the failure status + server sentence
+BUG-183: `load()`/`refresh()` now console.warn the failure status + server sentence
 (red-first in runStore.test.ts: 2 failed on 425a8e5, 17 pass after), run-a1.sh's
 failure path dumps `compose logs api auth` + DB counts to the evidence, and
 assert-a1-rows.sh prints runs/shifts/stops/delivery_events BEFORE asserting (asserts
@@ -225,7 +225,7 @@ into view before each of the three repeat taps (no-op once visible), offline.yam
 before its tap; taps and asserts unchanged. BUG-174 filed (fixed, PR #135); register
 171 rows, fixed 115.
 
-**a2f20fb's Quality gates run (41532322801) failed Semgrep with 2 findings on BUG-170's
+**a2f20fb's Quality gates run (41532322801) failed Semgrep with 2 findings on BUG-184's
 plugin (BUG-175):** `path-join-resolve-traversal` on `path.join(cfg.modRequest.projectRoot,
 ...)` in `apps/mobile/plugins/withEmulatorCleartext.js` - a false positive (projectRoot
 is Expo's own build-time input), but the floor guard forbids a `nosemgrep`, so the
@@ -289,6 +289,31 @@ asks again. Flow fix (BUG-181): offline.yaml scrolls back UP to the note (it sit
 the action row the tap needed) before asserting it; the assert is unchanged. 651 mobile
 tests (76 suites), tsc, eslint green. BUG-180, BUG-181 filed (fixed, PR #135); register
 178 rows, open 17, fixed 123.
+
+**origin/main merged into the branch (e4e432c) and our register rows renumbered.** The
+merge carried main's trial/backend work (BUG-166/167, the trial ADRs, the new evidence
+dirs) and a `type` column on the run cache's stops (ADR-024) that both sides had touched.
+Our three rows collided with main's own BUG-168/169/170 (stop types, CSV import, B3's
+remainder — main's rows stay exactly as they are), so ours are now **BUG-182** (the a1
+stack refused the app's own origin `courier://`), **BUG-183** (the diagnostics that name
+the failing hop) and **BUG-184** (the release APK could not dial the a1 stack:
+cleartext). Every reference on the branch follows them (2026-W44.md's lead entries,
+CURRENT.md, the auth test's comment); `git grep BUG-(168|169|170)` answers only main's
+own references. Register: 183 rows (open 17, doing 3, testing 3, fixed 128, closed 2,
+moved 30); the PARITY count is 311 (Have 29).
+
+**BUG-185: run 41609308041's api-34 leg failed `summary.yaml` INSIDE the flow suite (11
+of 13 flows had passed) — a cold-start race, not the app.** The device log names it:
+`Destroy timeout of remove-task, attempt to kill Task #19` → `Killing 11550 (adj
+-10000): remove task` → `Process 11550 failed to attach`, so the app never rendered
+`today-screen` and the flow's 60 s wait timed out. `launchApp clearState: true`
+force-stops the running app while its task is still being removed, and the removal kills
+the fresh process (the am-start dump shows the cold start itself healthy: 903 ms, COLD,
+ok). The same APK passed the same flow on api-35 seconds later. Fix (red-first): every
+launch that clears state runs `- stopApp` first (13 top-level flows + a1/online.yaml),
+and the new gate `scripts/ci/__tests__/flows-cold-start.test.mjs` fails any
+`clearState: true` launch without a `stopApp` before it (it named all 14 on the old
+flows). BUG-185 filed (fixed, PR #135); register 183 rows, open 17, fixed 128.
 
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that

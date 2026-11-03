@@ -160,6 +160,7 @@ class StopResponse(BaseModel):
     address: str | None
     seq: int
     status: StopStatus
+    type: Literal["delivery", "pickup"]
     lat: float | None
     lon: float | None
     priority: bool
@@ -200,6 +201,19 @@ class InterruptQuestionResponse(BaseModel):
 
     speak: str
     index: int
+
+
+class ImportResponse(BaseModel):
+    """The answer of POST /shifts/{shift_id}/import (ADR-025, D52's server half).
+
+    `ignored_columns` names the header columns that matched no known field:
+    the import never drops a column silently.
+    """
+
+    shift_id: uuid.UUID
+    imported: int
+    stop_ids: list[uuid.UUID]
+    ignored_columns: list[str]
 
 
 IntakeAnswerResponse = Annotated[

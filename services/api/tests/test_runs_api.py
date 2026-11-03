@@ -11,27 +11,24 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.auth.jwks import get_verifier
 from app.locations import location_id_for
 from app.main import _route_request, app
 from app.pod import pod_settings
 from app.pod_store import LocalPodStore, pod_store
 from app.repo import DeliveryEventRow, InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from app.routing import schedule_plan
-from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+from tests.conftest import COURIER, OTHER
 
 POD_TEST_SECRET = "test-only-pod-url-signing-secret-0123456789"
 FORGED_SECRET = "not-the-server-key-0123456789abcdef"
 
-COURIER = "driver-7"
-OTHER = "driver-8"
 START_AT = datetime(2026, 10, 24, 7, 30, tzinfo=UTC)
 
 
@@ -53,49 +50,6 @@ def run_body(**overrides: object) -> dict[str, object]:
     }
     body.update(overrides)
     return body
-
-
-@pytest.fixture()
-def repo() -> InMemoryRepo:
-    return InMemoryRepo()
-
-
-@pytest.fixture()
-def verifier_key(repo: InMemoryRepo) -> Iterator[object]:
-    """The one key pair the whole module verifies against.
-
-    Every client in a test shares it (a second override would kill the first
-    client's tokens); the identity comes from the token's subject, so two
-    couriers are two subjects, not two verifiers.
-    """
-    key_pair = make_key_pair()
-    _, jwk = key_pair
-    app.dependency_overrides[get_repo] = lambda: repo
-    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
-    yield key_pair[0]
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture()
-def client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update(
-            {"Authorization": f"Bearer {sign(verifier_key, subject=COURIER)}"}
-        )
-        yield test_client
-
-
-@pytest.fixture()
-def other_client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update({"Authorization": f"Bearer {sign(verifier_key, subject=OTHER)}"})
-        yield test_client
-
-
-@pytest.fixture()
-def anonymous_client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        yield test_client
 
 
 class TestCreatingARun:
@@ -553,6 +507,7 @@ class TestListingTheStops:
         assert listed.status_code == 200, listed.text
         stops = listed.json()
         assert [stop["status"] for stop in stops] == ["pending", "pending"]
+        assert [stop["type"] for stop in stops] == ["delivery", "delivery"]
         assert [stop["address"] for stop in stops] == [
             row.address for row in repo.run_stops[run_id]
         ]
@@ -560,6 +515,18 @@ class TestListingTheStops:
         assert [(stop["lat"], stop["lon"]) for stop in stops] == [
             (row.lat, row.lon) for row in repo.run_stops[run_id]
         ]
+
+    def test_a_pickup_stop_lists_its_type(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        run_id, shift_id = seed_run_with_stops(repo)
+        first, second = repo.run_stops[run_id]
+        repo.run_stops[run_id] = [first, replace(second, type="pickup")]
+
+        listed = client.get(f"/shifts/{shift_id}/stops")
+
+        assert listed.status_code == 200, listed.text
+        assert [stop["type"] for stop in listed.json()] == ["delivery", "pickup"]
 
     def test_a_delivery_event_flips_the_stop_status(
         self, client: TestClient, repo: InMemoryRepo

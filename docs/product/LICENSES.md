@@ -78,3 +78,14 @@ unknown or not commercial.
 | certifi | https://github.com/certifi/python-certifi | MPL-2.0 | 2026-10-22 | the trust store of httpx; it does not reach the app bundle |
 
 The imagery providers that need a commercial licence are **not** adopted: Google Photorealistic 3D Tiles and Cesium ion are refused by `scripts/data/build-3d-buildings.mjs` (see `docs/decisions/adr/ADR-005-map-view-modes.md`).
+
+## The API service (services/api)
+
+The API's own dependency closure is audited by the CI `Dependency audits` gate (uv lock);
+this table records the libraries adopted for one feature each, read from upstream:
+
+| What | Upstream | Licence | Read on | Where it is used |
+| ---- | -------- | ------- | ------- | ---------------- |
+| openpyxl | https://github.com/flatronika/openpyxl (foss.heptapod.net) | MIT | 2026-11-03 | reading .xlsx stop imports in `POST /shifts/{shift_id}/import` (ADR-025) |
+| et-xmlfile | https://foss.heptapod.net/openpyxl/et-xmlfile | MIT | 2026-11-03 | openpyxl's XML writer dependency, same import path |
+| psycopg + psycopg-binary | https://www.psycopg.org/ | LGPL-3.0-only (PEP 503 expression, read from the installed 3.3.6 metadata on 2026-11-03) | 2026-11-03 | the Postgres driver SQLAlchemy loads at runtime. The linking note BUG-059 asked for: psycopg is a separate process library imported by the API process, never statically linked into nor distributed with our code, and no psycopg source is modified or shipped - LGPL-3.0 §4(d) permits this use; the full licence text ships in the package's own metadata. Recorded here so the LGPL library is a deliberate, reviewed entry, not an oversight |

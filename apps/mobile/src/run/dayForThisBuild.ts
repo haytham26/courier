@@ -70,6 +70,9 @@ export function e2eDay(): RunSnapshot {
       lon: stop.coordinates.lng,
       priority: false,
       parcels: 1,
+      // ADR-024: the stop's type is required by the contract, and the mock
+      // list's stops are all deliveries.
+      type: 'delivery',
     })),
   };
 }

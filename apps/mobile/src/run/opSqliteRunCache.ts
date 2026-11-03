@@ -59,8 +59,11 @@ const STOP_TABLE: TableShape = {
     ['service_time_s', 'INTEGER'],
     ['window_start', 'TEXT'],
     ['window_end', 'TEXT'],
+    // ADR-024: the stop's type rides the contract; older installed tables get
+    // the column with the default on migration (migrateTable adds + bumps).
+    ['type', 'TEXT', "NOT NULL DEFAULT 'delivery'"],
   ],
-  version: 1,
+  version: 2,
 };
 
 /** The marks of that run: what the courier has delivered, undoable. */
@@ -159,7 +162,7 @@ export class OpSqliteRunCache implements RunCache {
       return null;
     }
     const stops = await this.handle.database.execute(
-      `SELECT id, location_id, seq, status, address, lat, lon, priority, parcels, service_time_s, window_start, window_end
+      `SELECT id, location_id, seq, status, address, lat, lon, priority, parcels, service_time_s, window_start, window_end, type
          FROM ${STOP_TABLE.table} ORDER BY seq ASC`,
     );
     return { run: runOf(row), stops: stops.rows.map(stopOf) };
@@ -191,8 +194,8 @@ export class OpSqliteRunCache implements RunCache {
     for (const stop of snapshot.stops) {
       await this.handle.database.execute(
         `INSERT OR REPLACE INTO ${STOP_TABLE.table}
-           (id, run_id, location_id, seq, status, address, lat, lon, priority, parcels, service_time_s, window_start, window_end)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (id, run_id, location_id, seq, status, address, lat, lon, priority, parcels, service_time_s, window_start, window_end, type)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           stop.id,
           snapshot.run.id,
@@ -207,6 +210,7 @@ export class OpSqliteRunCache implements RunCache {
           stop.service_time_s ?? null,
           stop.window_start ?? null,
           stop.window_end ?? null,
+          stop.type,
         ],
       );
     }
@@ -285,6 +289,9 @@ function stopOf(row: Record<string, Scalar>): RunSnapshot['stops'][number] {
     ...(row.service_time_s === null ? {} : { service_time_s: Number(row.service_time_s) }),
     ...(row.window_start === null ? {} : { window_start: dbText(row, 'window_start') }),
     ...(row.window_end === null ? {} : { window_end: dbText(row, 'window_end') }),
+    // ADR-024: the type is required by the contract; a row migrated in from
+    // before the column existed carries the default.
+    type: (row.type === null ? 'delivery' : dbText(row, 'type')) as RunSnapshot['stops'][number]['type'],
   };
 }
 

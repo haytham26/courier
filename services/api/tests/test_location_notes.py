@@ -9,59 +9,17 @@ had a stop at is a 404 - existence is never disclosed cross-courier.
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterator
 from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.auth.jwks import get_verifier
 from app.locations import LOCATION_NAMESPACE, canonical_address, location_id_for
-from app.main import app
-from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
-from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+from app.repo import InMemoryRepo, RouteStopRow, RunRecord
+from tests.conftest import COURIER, OTHER
 
-COURIER = "driver-7"
-OTHER = "driver-8"
 START_AT = datetime(2026, 10, 25, 7, 30, tzinfo=UTC)
 GATE_CODE = "12 Riccarton Road"
-
-
-@pytest.fixture()
-def repo() -> InMemoryRepo:
-    return InMemoryRepo()
-
-
-@pytest.fixture()
-def verifier_key(repo: InMemoryRepo) -> Iterator[object]:
-    key_pair = make_key_pair()
-    _, jwk = key_pair
-    app.dependency_overrides[get_repo] = lambda: repo
-    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
-    yield key_pair[0]
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture()
-def client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update(
-            {"Authorization": f"Bearer {sign(verifier_key, subject=COURIER)}"}
-        )
-        yield test_client
-
-
-@pytest.fixture()
-def other_client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update({"Authorization": f"Bearer {sign(verifier_key, subject=OTHER)}"})
-        yield test_client
-
-
-@pytest.fixture()
-def anonymous_client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        yield test_client
 
 
 def seed_run_with_location(
