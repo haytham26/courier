@@ -98,4 +98,40 @@ describe("the outbox's transport on the wire (A1 slice 3)", () => {
       /no signal/i,
     );
   });
+
+  // BUG-180: run 41594259937's a1 offline flow - the phone with no network
+  // cannot reach the auth service to mint a token, so the client answers
+  // `unauthorized`, and the transport threw a SyncRefusal for it. The outbox
+  // then QUARANTINED the held delivery ("kept for review"), so it never sent
+  // when the signal came back and the run ended with 3 of the 4 events. An
+  // unauthorized answer with no radio is not the server refusing the batch:
+  // it must reject as a network failure so the events stay in the log.
+  it('rejects a no-radio unauthorized as a network failure, not a refusal', async () => {
+    const postDeliveryEvents = jest.fn(() => Promise.resolve({ status: 'unauthorized' }));
+
+    const transport = apiSyncTransport({
+      postDeliveryEvents,
+    } as unknown as Parameters<typeof apiSyncTransport>[0]);
+
+    const thrown = await transport.send('shift-1', [anEvent('e-1')]).catch((error: unknown) => error);
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).name).not.toBe('SyncRefusal');
+    expect((thrown as Error).message).toMatch(/sign in again/i);
+  });
+
+  // The one refusal the transport answers with is the server's own: the
+  // batch reached the API and the API refused it.
+  it('answers a refusal only for the server\u2019s own answer', async () => {
+    const postDeliveryEvents = jest.fn(() =>
+      Promise.resolve({ status: 'server', code: 422, message: 'unknown event kind' }),
+    );
+
+    const transport = apiSyncTransport({
+      postDeliveryEvents,
+    } as unknown as Parameters<typeof apiSyncTransport>[0]);
+
+    await expect(transport.send('shift-1', [anEvent('e-1')])).rejects.toMatchObject({
+      name: 'SyncRefusal',
+    });
+  });
 });

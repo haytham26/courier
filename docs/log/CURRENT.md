@@ -277,6 +277,19 @@ a fifteen-second timer while the session lives (shift read from the cached day; 
 ask is named and the next tick retries). 649 mobile tests (76 suites), tsc, eslint green.
 BUG-178 and BUG-179 filed (fixed, PR #135); register 176 rows, open 17, fixed 121.
 
+**Run 41594259937 (f586206, dispatch): BUG-178/179 landed — online PASSED and delivered
+all three stops (delivery_events=3) — and the offline flow failed on `today-sync-note`
+(BUG-180, BUG-181).** The logcat names it: with the radio off the client cannot reach the
+auth service to mint a token, so `postDeliveryEvents` answers `unauthorized` without
+dialing the API — and `apiSyncTransport` threw a `SyncRefusal` for it, so the outbox
+QUARANTINED the held delivery ("kept for review"), which would never send when the signal
+came back. App fix (BUG-180): only the server's own answer is a refusal — `unauthorized`
+and `offline` reject as a plain network failure, the batch stays pending and the retry
+asks again. Flow fix (BUG-181): offline.yaml scrolls back UP to the note (it sits above
+the action row the tap needed) before asserting it; the assert is unchanged. 651 mobile
+tests (76 suites), tsc, eslint green. BUG-180, BUG-181 filed (fixed, PR #135); register
+178 rows, open 17, fixed 123.
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

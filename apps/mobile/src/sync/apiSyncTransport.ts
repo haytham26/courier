@@ -59,13 +59,23 @@ export function apiSyncTransport(client: EventsPoster): SyncTransport {
       // refused, and the outbox has to know the difference between "no"
       // (this) and "nobody answered" (the transport's own throw, which the
       // caller's retry handles).
+      //
+      // BUG-180: only the SERVER's own answer is a refusal. `unauthorized`
+      // and `offline` are the phone's own failures - and `unauthorized` in
+      // particular is what a phone with no radio answers with (the session
+      // cookie is there, but the token cannot be minted without the auth
+      // service). Throwing a SyncRefusal for them made the outbox QUARANTINE
+      // the batch ("kept for review"), so run 41594259937's held delivery
+      // never sent and the run ended on 3 of 4 events. They reject as a
+      // network failure instead: the events stay in the log and the retry
+      // asks again.
       if (answer.status === 'server' || answer.status === 'unmappable') {
         throw new SyncRefusal(eventIds, answer.message);
       }
 
       // The session is gone, or the network is: nothing was sent, so the
       // outbox keeps the batch and tries again when there is signal.
-      throw new SyncRefusal(eventIds, sentenceFor(answer.status));
+      throw new Error(sentenceFor(answer.status));
     },
   };
 }

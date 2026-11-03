@@ -39,6 +39,15 @@ name: 'A1 offline: the delivery is recorded with no network'
     timeout: 20000
 - tapOn:
     id: "today-mark-delivered"
+# The note sits between the sheet's numbers and its next stop - ABOVE the
+# action row the tap needed - so the sheet is scrolled back up to it before
+# the assert (run 41594259937's dump had it scrolled out of the clip; BUG-181).
+# The assert itself is unchanged.
+- scrollUntilVisible:
+    element:
+      id: "today-sync-note"
+    direction: UP
+    timeout: 20000
 - assertVisible:
     id: "today-sync-note"
 - takeScreenshot: "a1-offline"
