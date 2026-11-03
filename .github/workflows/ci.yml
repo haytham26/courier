@@ -81,7 +81,9 @@ jobs:
         run: uv sync --directory services/api --extra dev --extra s3test
 
       - name: Install the voice service dependencies
-        run: uv sync --directory services/courier-voice --extra dev
+        # The `eval` extra (numpy, soundfile, sherpa-onnx) is what the A3
+        # utterance measurement (`app/eval_audio.py` and its suite) runs on.
+        run: uv sync --directory services/courier-voice --extra dev --extra eval
 
       - name: Lint
         run: pnpm lint

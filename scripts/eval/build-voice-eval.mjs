@@ -26,6 +26,11 @@ const LINZ = 'data/linz';
 const slices = [
   { id: 'en_nz_quiet', target: 120, files: 120, snrs: [null] },
   { id: 'en_nz_van', target: 120, files: 360, snrs: [0, 5, 10] },
+  // The courier mix (AUDIT §A3): the same NZ delivery language, spoken by the
+  // other English accents a Christchurch courier hears in the van - Australian,
+  // English, Scottish, Irish, Canadian, US. The words are the same words; the
+  // voice is the mix, and its audio comes from the open speakers too.
+  { id: 'en_mix', target: 120, files: 120, snrs: [null] },
   { id: 'mi_places', target: 60, files: 60, snrs: [null] },
   { id: 'ar', target: 40, files: 40, snrs: [null] },
   { id: 'hi_pa', target: 40, files: 40, snrs: [null] },
@@ -215,6 +220,10 @@ const pacificLines = [
   (a) => [`fale mo le ${a.number} ${a.street}`, 'add_stop', { raw_address: place(a), priority: false }, ['address', 'add', 'pacific']],
 ];
 
+// The courier mix speaks the NZ script: the voice differs, not the words, so
+// the slice shares the quiet templates rather than copying them.
+templates.en_mix = templates.en_nz_quiet;
+
 const scripts = [];
 let id = 0;
 for (const slice of slices) {
@@ -270,9 +279,31 @@ const summary = {
     scripts: scripts.filter((script) => script.slice === slice.id).length,
     target: slice.target,
     files: utterances.filter((utterance) => utterance.slice === slice.id).length,
-    status: 'scripts ready, audio to generate',
+    status: utterances.filter((utterance) => utterance.slice === slice.id).every((utterance) => utterance.status === 'built')
+      ? 'audio built from open data'
+      : 'scripts ready, audio to generate',
   })),
 };
+// The shift simulations are scored against the service, not by the slices
+// above: their counts come from their own manifest, so a regeneration of this
+// file keeps them.
+{
+  const simulationsPath = join(OUT, 'shift_sims.json');
+  if (existsSync(simulationsPath)) {
+    const document = JSON.parse(readFileSync(simulationsPath, 'utf8'));
+    const shiftSlice = (document.slices ?? []).find((entry) => entry.id === 'shift_sim');
+    const shifts = shiftSlice?.simulations ?? [];
+    const turns = shifts.reduce((total, simulation) => total + (simulation.turns ?? []).length, 0);
+    summary.slices.push({
+      id: 'shift_sim',
+      scripts: turns,
+      target: turns,
+      files: turns,
+      simulations: shifts.length,
+      status: 'the shifts run against the service; the audio is to generate',
+    });
+  }
+}
 writeFileSync(join(OUT, 'slices.json'), `${JSON.stringify(summary, null, 2)}\n`);
 
 console.log(

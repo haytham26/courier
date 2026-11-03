@@ -1,9 +1,9 @@
 {
-  "generated": "2026-10-21",
+  "generated": "2026-11-03",
   "generator": "scripts/eval/build-voice-eval.mjs",
   "address_source": "data/linz (LINZ layer 123113: Christchurch, Waimakariri, Selwyn)",
-  "scripts": 600,
-  "utterances": 840,
+  "scripts": 720,
+  "utterances": 960,
   "addresses": 240,
   "slices": [
     {
@@ -18,6 +18,13 @@
       "scripts": 120,
       "target": 120,
       "files": 360,
+      "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "en_mix",
+      "scripts": 120,
+      "target": 120,
+      "files": 120,
       "status": "scripts ready, audio to generate"
     },
     {

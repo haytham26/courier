@@ -30,6 +30,7 @@ manifest/
 |---|---|---|
 | `en_nz_quiet` | 120 | the plain NZ delivery language, with the real addresses |
 | `en_nz_van` | 120 | the same content at 0, 5 and 10 dB over the van beds (360 files) |
+| `en_mix` | 120 | the same words in the other English accents of the courier mix |
 | `mi_places` | 60 | te reo Māori place names inside English sentences |
 | `ar` | 40 | Modern Standard Arabic with the NZ diaspora accent |
 | `hi_pa` | 40 | Hindi, Punjabi and Hinglish |
@@ -77,6 +78,9 @@ never reported as a pass.
 ```
 node scripts/eval/build-voice-eval.mjs     # the text parts (the manifest)
 node scripts/eval/check-voice-eval.mjs     # the integrity of the set
+node scripts/eval/fetch-open-voice-data.mjs  # the open clips and the van beds
+uv run --directory services/courier-voice --extra eval python -m app.eval_audio
+                                           # builds the open audio and scores it
 ```
 
 The address bank is read from `data/linz/` (the LINZ layer 123113 data, the
@@ -84,15 +88,40 @@ three Canterbury districts). Nothing in the set is invented: the streets, the
 suburbs and the house numbers are the real ones, and the spoken words are the
 ones a courier says.
 
+## What is here (the open-data audio)
+
+The three English slices are **built from open data** (A3, AUDIT §A3): 600
+audio files in `data/voice/audio/` (git-ignored, like `data/linz/`) from 280
+Mozilla Common Voice clips (CC0-1.0, filtered by the dataset's accent
+metadata: New Zealand English first, then the other English accents of the
+courier mix) mixed with the MUSAN (CC-BY-4.0) van beds at the manifest's SNRs.
+
+```
+node scripts/eval/fetch-open-voice-data.mjs    # the clips and the beds, once
+uv run --directory services/courier-voice --extra eval python -m app.eval_audio
+```
+
+The results, the judge and the producing command are in
+`results/utterances/`; the manifest rows carry `status: built` with their file
+and their checksum. What the audio measures is published honestly: the WER is
+the open speakers' own words read by the pinned judge (sherpa-onnx Whisper
+tiny.en - the set's acoustic difficulty, not our pipeline), and the intent
+accuracy is the service's OFFLINE brain on the gold scripts.
+
 ## What is not here yet, and why
 
-- **The audio.** The audio needs the on-device TTS (sherpa-onnx) or the
-  private voice service, and every voice has to be in the licence ledger
-  before a sample is committed. The set is therefore complete on the text
-  side and the audio side is the next step of the voice squad.
+- **The audio of the TTS slices** (`mi_places`, `ar`, `hi_pa`, `zh`, `sm_to`,
+  `numbers_corrections`, `code_switch`, `chatter`): those need the project's
+  own TTS voices, and every voice must be in the licence ledger before a
+  sample is committed (D24). Their text side is complete.
+- **The on-device leg**: the product's own STT, the address extraction and the
+  wake word run on the phone, so M1 on our pipeline, M2, M4, M5 and M7 stay
+  with the device - a number that was not measured is never reported as a
+  pass.
 - **The non-speech corpus** (8 hours of road, rain, engine, indicator, horn
-  and radio, plus a passenger conversation) for M4 and M9. The noise beds
-  need their own licence check (`audio/noise/noise_manifest.jsonl`).
+  and radio, plus a passenger conversation) for M4 and M9. The beds we have
+  (MUSAN) are the van beds of the slice; the continuous corpus needs our own
+  van recordings (`audio/noise/noise_manifest.jsonl`).
 - **The 30 committed sample files** (5 MB) for the CI smoke test. The data
   hygiene rule applies: the voice samples and the label photos may hold
   personal data, so they are redacted before use and never committed raw.
