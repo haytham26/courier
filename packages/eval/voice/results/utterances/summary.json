@@ -1,12 +1,13 @@
 {
- "generated": "2026-11-03T22:59:27+1300",
+ "generated": "2026-11-04T09:41:35+1300",
  "target": "AUDIT_2026-10-25 §A3: >=500 utterances from open data, WER and intent accuracy per slice",
  "built": 600,
  "judge": "sherpa-onnx whisper tiny.en (Whisper weights MIT, sherpa-onnx runtime Apache-2.0)",
  "legs": {
   "wer": "the open speakers' own words read by the pinned judge, per slice and per SNR - the set's acoustic difficulty, not our pipeline",
   "false_action_rate": "the parser's share of the speakers' natural sentences it answered with a command - the M9 direction on open speech",
-  "intent_accuracy": "the service's OFFLINE brain (offline_brain, the dead-spot path) on the set's gold scripts; the short forms are its catalogue and the address-bearing long forms go to the server brain online, whose OmniRoute gateway is the founder item"
+  "intent_accuracy": "the service's OFFLINE brain (offline_brain, the dead-spot path) on the set's gold scripts; the address-bearing long forms have been its own since BUG-187's fix, and the server brain online answers the same sentences through its gateway",
+  "intent_accuracy_with_slots": "EVAL.md's M3 shape: the intent AND the comparable mandatory slots (`safe_place`, `reason`, `raw_address`, `minutes`, `kind`, `priority`) both correct"
  },
  "intent_accuracy_by_slice": {
   "ar": {
@@ -20,24 +21,24 @@
    "rate": 1.0
   },
   "code_switch": {
-   "correct": 15,
+   "correct": 45,
    "total": 60,
-   "rate": 0.25
+   "rate": 0.75
   },
   "en_mix": {
-   "correct": 35,
+   "correct": 120,
    "total": 120,
-   "rate": 0.2916666666666667
+   "rate": 1.0
   },
   "en_nz_quiet": {
-   "correct": 35,
+   "correct": 120,
    "total": 120,
-   "rate": 0.2916666666666667
+   "rate": 1.0
   },
   "en_nz_van": {
-   "correct": 15,
+   "correct": 120,
    "total": 120,
-   "rate": 0.125
+   "rate": 1.0
   },
   "hi_pa": {
    "correct": 0,
@@ -45,9 +46,66 @@
    "rate": 0.0
   },
   "mi_places": {
-   "correct": 12,
+   "correct": 60,
    "total": 60,
-   "rate": 0.2
+   "rate": 1.0
+  },
+  "numbers_corrections": {
+   "correct": 0,
+   "total": 40,
+   "rate": 0.0
+  },
+  "sm_to": {
+   "correct": 0,
+   "total": 40,
+   "rate": 0.0
+  },
+  "zh": {
+   "correct": 0,
+   "total": 40,
+   "rate": 0.0
+  }
+ },
+ "intent_with_slots_by_slice": {
+  "ar": {
+   "correct": 0,
+   "total": 40,
+   "rate": 0.0
+  },
+  "chatter": {
+   "correct": 40,
+   "total": 40,
+   "rate": 1.0
+  },
+  "code_switch": {
+   "correct": 30,
+   "total": 60,
+   "rate": 0.5
+  },
+  "en_mix": {
+   "correct": 120,
+   "total": 120,
+   "rate": 1.0
+  },
+  "en_nz_quiet": {
+   "correct": 120,
+   "total": 120,
+   "rate": 1.0
+  },
+  "en_nz_van": {
+   "correct": 120,
+   "total": 120,
+   "rate": 1.0
+  },
+  "hi_pa": {
+   "correct": 0,
+   "total": 40,
+   "rate": 0.0
+  },
+  "mi_places": {
+   "correct": 45,
+   "total": 60,
+   "rate": 0.75
   },
   "numbers_corrections": {
    "correct": 0,
