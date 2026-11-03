@@ -1,0 +1,4 @@
+dataset,url,licence,read_on,where
+Mozilla Common Voice 17.0 (en),https://commonvoice.mozilla.org/data (mirror: saeedzou/common-voice-17-en-age-gender-accent on the HF datasets-server),CC0-1.0 (the corpus is public domain; the accent and the sentence are the row metadata),2026-11-03,"the en_nz_quiet, en_nz_van and en_mix speaker clips (A3)"
+MUSAN,https://www.openslr.org/17 (mirror: corypaik/musan),CC-BY-4.0,2026-11-03,the van noise beds for the en_nz_van slice (A3)
+sherpa-onnx whisper tiny.en (the reference STT judge),https://github.com/k2-fsa/sherpa-onnx/releases (asr-models/sherpa-onnx-whisper-tiny.en),Apache-2.0 (the runtime) + MIT (the Whisper weights),2026-11-03,the reference recogniser of the WER pass only; never shipped in the app (A3)

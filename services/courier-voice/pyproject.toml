@@ -34,6 +34,11 @@ dev = [
     # API's sync/runs/auth modules run at.
     "mutmut>=3.3,<4",
 ]
+eval = [
+    "numpy>=2.4.6",
+    "sherpa-onnx>=2.0.1",
+    "soundfile>=0.14.0",
+]
 
 [tool.uv]
 # The security patch for a transitive dependency (the audits must stay clean):

@@ -1,6 +1,6 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-11-03 · main at `1f596b1` (PRs #177 + #178 merged) · **This
+Updated: 2026-11-03 · main at `e4e432c` (PRs #177–#181 merged; items (a) and (b) complete, (c) open on `a3-voice-open-data`) · **This
 squad's handoff lives in THIS file only.** PR #174 had written it into the lead's `docs/log/CURRENT.md` and replaced the lead's
 header line with its own; the correction PR on `docs/currents-log-ownership` restores that
 header line exactly as it was at `960fc41^1` (the lead has not rewritten it since) and
@@ -48,8 +48,9 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   construction (`**__dict__` + keyword) — fixed with `dataclasses.replace` (a5f415c), and
   ruff's UP037 quote rule is why 783f8f6 exists; both pushed. Next server halves in order:
   stop types (D59), then the CSV/Excel import (D52) — each its own PR, number = highest BUG
-  across origin/main + open PR branches + 1 (BUG-168 went to #179, BUG-169 to #180;
-  next free is BUG-170; #135's branch carries BUG-164/165).
+  across origin/main + open PR branches + 1 (BUG-168 to #179, BUG-169 to #180,
+  BUG-170 to #181, BUG-186 to this branch; next free is BUG-187; #135's branch carries
+  BUG-164/165).
 - **#178's db leg went red on run 41430267111**: `get_event`'s SELECT predated the
   `delivery_events.reason` column, so the Postgres leg raised
   `NoSuchColumnError: Could not locate column in row for column 'reason'` in
@@ -97,12 +98,25 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   API 575 non-db + 33 db (postgis 17-3.5), voice 229, ruff + mypy clean both services.
   B3's done-when is then met: BUG-059 closed with tests + the MASVS checklist in
   `docs/security/`.
-- Then the queue continues: (c) A3 — ≥500 utterances from open
-  data into `packages/eval/voice/results/`; (d) C3 toward 98 % — rebuild from
-  `.worktrees/b1030c/data/linz/`, weekly import green; (e) the reference-repos clean-room
-  ideas + MASTER §22's three Courier Voice techniques; (f) LAST — Oracle staging and the
-  production OmniRoute (the OCI host/key and the gateway secrets are FOUNDER_TODO — written
-  there, not blocking).
+- **Item (c) — A3 — is on `a3-voice-open-data` (PR number written once opened):** the voice eval set is
+  built from open data. 280 Common Voice 17 en clips (CC0-1.0, filtered by the
+  dataset's accent metadata: 140 New Zealand English + 140 other English
+  accents) and 8 MUSAN beds (CC-BY 4.0) are fetched by
+  `scripts/eval/fetch-open-voice-data.mjs` into `data/voice/` (git-ignored,
+  per-clip sha256, licence ledger in `manifest/licence.csv` + LICENSES.md);
+  `app/eval_audio.py` (the voice service's `eval` extra) builds the 600 open
+  utterances (120 quiet + 360 van at 0/5/10 dB + 120 courier mix —
+  the `en_mix` slice is new in the builder, sharing the quiet templates, so
+  the manifest regenerates deterministically) and scores three legs against
+  the pinned judge (sherpa-onnx Whisper tiny.en): WER per slice and per SNR,
+  the false-action rate on open speech (0.17 %), and the intent accuracy of
+  the service's OFFLINE brain on the gold scripts — each leg labelled with
+  what it measures, nothing reported as a pass that was not measured.
+  `check-voice-eval.mjs` now pins >=500 built rows with file+sha256. BUG-186
+  filed+fixed, PARITY 312, evidence `docs/evidence/a3-voice-open-data/`.
+  Red-first both legs (module absent at collection; checker red at 0 built);
+  green: 249 voice tests, 90.8 % coverage (floor 85 %), ruff+mypy clean.
+- Then the queue continues: (d) C3 toward 98 % — rebuild from `.worktrees/b1030c/data/linz/`; (e) the reference-repos clean-room ideas + MASTER §22's three Courier Voice techniques; and the founder-visible queue in the founder's order: BUG-187 (the offline brain's intent accuracy, HIGH — filed from this measurement), BUG-102, BUG-132, then billing (D44). LAST: Oracle staging and the production OmniRoute (the OCI host/key and the gateway secrets are FOUNDER_TODO — written there, not blocking).
 
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
