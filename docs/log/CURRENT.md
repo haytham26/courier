@@ -248,6 +248,21 @@ leg failed this run on `today-screen is visible` with `adb: device offline` — 
 emulator never booted (api-35 passed the same APK); runner infra flake, re-run
 candidate.
 
+**Run 41552164167 (ebbc0dc, manual workflow_dispatch): a1 online PASSED; offline failed on
+`today-sync-note` with delivery_events=0 and NO events:batch POST (BUG-177).** The device
+logcat names it: `Cannot read property 'getRandomValues' of undefined` — BUG-176's uuid
+fallback assumed Hermes has `crypto.getRandomValues`, but Hermes ships no `crypto` global
+at all, so the fallback itself threw and every mark died before its event was recorded.
+Fix: `newEventId()` reads its bytes from `getRandomValues` only when that function is
+really there, otherwise `Math.random` (the id only has to be unique on this phone — the
+log stores it — and uuid-shaped for the server); a new test deletes the `crypto` global
+and still expects a v4 uuid. 643 mobile tests (75 suites), tsc, eslint green. BUG-177
+filed (fixed, PR #135); register 174 rows, fixed 118 (BUG-059's row was also restored from
+origin/main, where it is `fixed`, so open 17 / fixed 119 — our copy had gone stale). The
+api-34 mock leg failed this run
+too — `Error on ZipFile unknown archive` preparing the system image, then `could not
+connect to TCP port 5554`: runner infra flake (one re-run of that job allowed).
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

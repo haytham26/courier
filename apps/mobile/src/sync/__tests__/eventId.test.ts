@@ -23,6 +23,29 @@ describe('the event id', () => {
     expect(first).not.toBe(second);
   });
 
+  // BUG-177: Hermes has no `crypto` global at all - run 41552164167's a1 run
+  // logged "Cannot read property 'getRandomValues' of undefined" on the first
+  // mark, so the delivery was never recorded. With no crypto global the id
+  // still has to come out a v4 uuid. Red before the fix: TypeError.
+  it('still answers a v4 uuid when there is no crypto global (Hermes)', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+    Object.defineProperty(globalThis, 'crypto', {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(newEventId()).toMatch(UUID_V4);
+      expect(newEventId()).not.toBe(newEventId());
+    } finally {
+      if (descriptor) {
+        Object.defineProperty(globalThis, 'crypto', descriptor);
+      } else {
+        Reflect.deleteProperty(globalThis, 'crypto');
+      }
+    }
+  });
+
   it('recognises any uuid and refuses the old readable id', () => {
     expect(isUuid('11111111-1111-1111-1111-111111111111')).toBe(true);
     expect(isUuid('11111111-1111-4111-8111-111111111111')).toBe(true);

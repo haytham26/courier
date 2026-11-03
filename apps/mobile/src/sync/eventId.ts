@@ -22,18 +22,30 @@ export function isUuid(value: string): boolean {
   return UUID.test(value);
 }
 
-/** One fresh event id: a random v4 uuid. */
+/**
+ * One fresh event id: a random v4 uuid.
+ *
+ * BUG-177: Hermes ships NO `crypto` global at all - run 41552164167's a1
+ * offline flow logged `Cannot read property 'getRandomValues' of undefined`
+ * the moment the first mark was written, so no delivery was recorded and no
+ * batch was ever dialed. The bytes come from `crypto.getRandomValues` when
+ * there is one (jest, browsers) and from `Math.random` otherwise; the id
+ * only has to be unique on this phone - the log STORES it, and the stored id
+ * is what makes an offline replay idempotent - and uuid-shaped for the
+ * server's parse.
+ */
 export function newEventId(): string {
-  const cryptoRef = globalThis.crypto;
-  if (cryptoRef && typeof cryptoRef.randomUUID === 'function') {
-    return cryptoRef.randomUUID();
-  }
-  // Hermes without randomUUID still has getRandomValues; the version and
-  // variant bits are set by hand so the id is still a v4 uuid.
   const bytes = new Uint8Array(16);
-  cryptoRef.getRandomValues(bytes);
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const cryptoRef = globalThis.crypto;
+  if (cryptoRef && typeof cryptoRef.getRandomValues === 'function') {
+    cryptoRef.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i++) {
+      bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10
   const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
