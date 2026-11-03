@@ -16,6 +16,10 @@
 //     levels. ESC-50 (CC BY-NC) and the DNS-challenge set are NOT used: a
 //     non-commercial licence is not allowed for a commercial product's eval
 //     set (the audit's rule).
+//   - The reference STT judge of the WER pass (sherpa-onnx Whisper tiny.en,
+//     MIT weights + Apache-2.0 runtime), so the whole set has ONE download
+//     path: the Python side only unpacks the local archive, it never
+//     downloads anything itself.
 //
 // WHERE it lands: data/voice/ (git-ignored, like data/linz/). The checksums
 // live with the clips, and the licences are recorded in
@@ -201,6 +205,36 @@ async function fetchBeds() {
   console.log(`noise beds: ${readJsonl(NOISE_JSONL).length} on disk`);
 }
 
+// -------------------------------------------------------------- the judge's model
+
+// The reference STT judge of the WER pass (sherpa-onnx Whisper tiny.en): the
+// same open-data download path as everything else, HTTPS from the GitHub
+// release. The Python side only unpacks the local archive (it never downloads
+// anything), so the whole set has one download path.
+const JUDGE_URL =
+  'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2';
+
+async function fetchJudge() {
+  const marker = join(DATA, 'stt', 'sherpa-onnx-whisper-tiny.en.tar.bz2');
+  if (existsSync(marker)) {
+    console.log('judge model: already fetched');
+    return;
+  }
+  mkdirSync(join(DATA, 'stt'), { recursive: true });
+  console.log(`judge model: fetching ${JUDGE_URL}`);
+  const bytes = await getBinary(JUDGE_URL, 8);
+  if (bytes.length < 1024 * 1024) {
+    throw new Error('the judge archive is suspiciously small');
+  }
+  writeFileSync(marker, bytes);
+  writeFileSync(
+    join(DATA, 'stt', 'checksums.txt'),
+    `${sha256(bytes)}  sherpa-onnx-whisper-tiny.en.tar.bz2\n`,
+    'utf8',
+  );
+  console.log(`judge model: ${bytes.length} bytes -> data/voice/stt/`);
+}
+
 // --------------------------------------------------------------- the speakers
 
 function classify(accent) {
@@ -304,4 +338,5 @@ writeLicences();
 if (!DOCS_ONLY) {
   await fetchBeds();
   await scanSpeakerClips();
+  await fetchJudge();
 }

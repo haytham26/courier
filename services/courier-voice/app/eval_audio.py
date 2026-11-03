@@ -39,7 +39,6 @@ import sys
 import tarfile
 import time
 import unicodedata
-import urllib.request
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -347,25 +346,39 @@ def build_audio(
 # ---------------------------------------------------------------- the recognizer
 
 
-def ensure_judge(target_dir: Path) -> Path:
-    """The judge's model on disk, downloaded and unpacked when it is missing.
+def ensure_judge(target_dir: Path) -> Path | None:
+    """The judge's model directory, unpacked when the archive is on disk.
 
-    The release unpacks to `sherpa-onnx-whisper-tiny.en/`, so the model is
-    found by the encoder file it holds, not by a hard-coded directory name.
+    The archive is fetched by `scripts/eval/fetch-open-voice-data.mjs` with the
+    rest of the open data (one download path for the whole set, HTTPS from the
+    GitHub release), so this module never downloads anything itself: it only
+    unpacks a local archive, member by member, refusing a member that would
+    escape the target directory (a tarball is untrusted input).
     """
     marker = target_dir / "sherpa-onnx-whisper-tiny.en.tar.bz2"
-    target_dir.mkdir(parents=True, exist_ok=True)
     if not marker.exists():
-        logger.info("the judge: fetching %s", JUDGE_MODEL_URL)
-        urllib.request.urlretrieve(JUDGE_MODEL_URL, marker)
+        logger.warning(
+            "the judge archive is not on disk: run node scripts/eval/fetch-open-voice-data.mjs first"
+        )
+        return None
     inner = _model_dirs(target_dir)
     if not inner:
-        with tarfile.open(marker, "r:bz2") as archive:
-            archive.extractall(target_dir)
+        _safe_unpack(marker, target_dir)
         inner = _model_dirs(target_dir)
     if not inner:
-        raise FileNotFoundError("the judge model did not unpack its encoder")
+        logger.warning("the judge archive did not unpack its encoder")
+        return None
     return sorted(inner)[0]
+
+
+def _safe_unpack(archive_path: Path, target_dir: Path) -> None:
+    """Unpack a tar archive, refusing a member that leaves the target."""
+    with tarfile.open(archive_path, "r:bz2") as archive:
+        for member in archive.getmembers():
+            parts = Path(member.name).parts
+            if member.name.startswith(("/", "\\")) or ".." in parts:
+                raise ValueError(f"the archive's member {member.name!r} escapes the target")
+            archive.extract(member, target_dir)
 
 
 def _model_dirs(target_dir: Path) -> list[Path]:
@@ -453,7 +466,8 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
     hypotheses: dict[str, str] = {}
     if not args.no_judge and recognizer is None:
         model_dir = ensure_judge(data / "stt")
-        recognizer = load_judge(model_dir)
+        if model_dir is not None:
+            recognizer = load_judge(model_dir)
         if recognizer is None:
             logger.warning("the judge could not be loaded: writing the set without WER")
     if recognizer is not None:

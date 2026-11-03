@@ -9,7 +9,9 @@ file on disk and a native library; it is not under test here.
 from __future__ import annotations
 
 import argparse
+import io
 import json
+import tarfile
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +20,7 @@ import pytest
 import soundfile as sf
 
 from app.eval_audio import (
+    _safe_unpack,
     assign_clips,
     intent_of,
     normalise,
@@ -303,6 +306,39 @@ class TestTheBuild:
         assert summary["open_slices"]["en_nz_quiet"]["wer_mean"] > 0
         assert (tmp_path / "results" / "per_utterance.csv").exists()
         assert (tmp_path / "results" / "environment.json").exists()
+
+
+class TestTheSafeUnpack:
+    """The judge archive is untrusted input: a member that escapes is refused."""
+
+    @staticmethod
+    def make_archive(path: Path, member_name: str, content: str = "payload") -> None:
+        with tarfile.open(path, "w:bz2") as archive:
+            data = content.encode("utf-8")
+            info = tarfile.TarInfo(member_name)
+            info.size = len(data)
+            archive.addfile(info, io.BytesIO(data))
+
+    def test_a_member_that_leaves_the_target_is_refused(self, tmp_path: Path) -> None:
+        archive = tmp_path / "model.tar.bz2"
+        self.make_archive(archive, "../escape.txt")
+        with pytest.raises(ValueError, match="escapes the target"):
+            _safe_unpack(archive, tmp_path / "out")
+
+    def test_an_absolute_member_is_refused(self, tmp_path: Path) -> None:
+        archive = tmp_path / "model.tar.bz2"
+        self.make_archive(archive, "/etc/passwd")
+        with pytest.raises(ValueError, match="escapes the target"):
+            _safe_unpack(archive, tmp_path / "out")
+
+    def test_a_named_member_lands_inside_the_target(self, tmp_path: Path) -> None:
+        archive = tmp_path / "model.tar.bz2"
+        self.make_archive(archive, "whisper-tiny.en/tiny.en-encoder.onnx")
+        target = tmp_path / "out"
+        _safe_unpack(archive, target)
+        assert (target / "whisper-tiny.en" / "tiny.en-encoder.onnx").read_text(
+            encoding="utf-8"
+        ) == "payload"
 
 
 class TestIntentScoring:

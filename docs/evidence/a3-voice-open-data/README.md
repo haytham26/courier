@@ -104,7 +104,11 @@ item).
   DNS-challenge set were refused for their non-commercial terms.
 - **The judge.** Whisper tiny.en weights (MIT) + the sherpa-onnx runtime
   (Apache-2.0), both already in the service's licence ledger (`licences.py`) or
-  in `docs/product/LICENSES.md`; the judge is eval-only and never shipped.
+  in `docs/product/LICENSES.md`; the judge is eval-only and never shipped. Its
+  archive is fetched by the same script as everything else (one download path
+  for the whole set, HTTPS from the GitHub release); the Python module never
+  downloads anything itself - it only unpacks the local archive member by
+  member, refusing a member that escapes the target directory.
 
 ## The languages the offline brain does not support
 
