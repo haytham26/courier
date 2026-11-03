@@ -315,6 +315,21 @@ and the new gate `scripts/ci/__tests__/flows-cold-start.test.mjs` fails any
 `clearState: true` launch without a `stopApp` before it (it named all 14 on the old
 flows). BUG-185 filed (fixed, PR #135); register 183 rows, open 17, fixed 128.
 
+**The merged head's first E2E run (41656905474) failed on the DB assert while all three
+a1 flows PASSED — BUG-186, a race in the runner, not the app.** The job read "expected 4
+delivery events ... found 3" seconds after the sync flow finished, while the app had the
+fourth delivery recorded on the phone and the outbox sent it on its own retry (BUG-179's
+15-second tick), which lands after the flow's last screen; the run before it won the same
+race by seconds, so the job was green by luck. Fix (red-first, proven against the pre-fix
+script, which exits 1 with the same message): `scripts/ci/assert-a1-rows.sh` waits —
+bounded (A1_SYNC_TIMEOUT_S, default 45 s, one query a second, printing how long it
+waited) — for the FOUR the flow performed. The assertion itself is unchanged, and if the
+row never lands the job still fails after the bound. The new suite
+`scripts/ci/__tests__/assert-a1-rows.test.mjs` runs the script against the compose
+Postgres (the fourth row landing 8 s in → passes, naming the wait; never landing → fails
+after 2 s, naming 3). Register: 184 rows (open 17, doing 3, testing 3, fixed 129, closed
+2, moved 30); PARITY 311 (Have 29).
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the

@@ -16,14 +16,42 @@
 # design must never produce.
 set -euo pipefail
 
-DB_HOST="127.0.0.1"
-DB_PORT="5432"
-DB_USER="courier"
-DB_NAME="courier"
+# The host and port are the job's own compose defaults; the environment
+# overrides them so the suite can point this script at its own database.
+DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_PORT="${DB_PORT:-5432}"
+DB_USER="${DB_USER:-courier}"
+DB_NAME="${DB_NAME:-courier}"
+# How long the runner waits for the delivery the app has to send: the outbox's
+# own retry asks again on its backoff (15 s at first), so the row the assert
+# wants can land a few seconds AFTER the flow's last screen. BUG-186: run
+# 41656905474 asserted immediately after the sync flow and found 3 of the 4
+# events - the app had the fourth on the phone and sent it seconds later. The
+# wait is bounded and says so, and the assertion itself is unchanged: if the
+# row never lands, the job still fails.
+A1_SYNC_TIMEOUT_S="${A1_SYNC_TIMEOUT_S:-45}"
 
 query() {
   PGPASSWORD=courier psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
     -v ON_ERROR_STOP=1 -Atc "$1"
+}
+
+# Waits, up to the bound, for a delivery count the assert needs: the number
+# the flow performed, not the number already landed when the flow ended.
+wait_for_delivered() {
+  local want="$1" waited=0 current
+  while :; do
+    current=$(query "SELECT count(*) FROM delivery_events" || echo 0)
+    if [ "$current" = "$want" ]; then
+      echo "the held delivery landed after ${waited}s of waiting"
+      return 0
+    fi
+    if [ "$waited" -ge "$A1_SYNC_TIMEOUT_S" ]; then
+      return 1
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
 }
 
 echo "::group::A1: the rows the flow left in Postgres"
@@ -35,14 +63,17 @@ echo "::group::A1: the rows the flow left in Postgres"
 runs=$(query "SELECT count(*) FROM runs")
 shifts=$(query "SELECT count(*) FROM shifts")
 stops=$(query "SELECT count(*) FROM stops")
-delivered=$(query "SELECT count(*) FROM delivery_events")
+delivered=$(query "SELECT count(*) FROM delivery_events" || echo 0)
 echo "runs: $runs, shifts: $shifts, stops: $stops, delivery_events: $delivered"
 
 # The four deliveries: the run's own stops, delivered once each. A stop
 # delivered twice is not the contract's shape (a divergent replay is refused
 # server-side), so the count is what the flow did.
-if [ "$delivered" != "4" ]; then
-  echo "::error::expected 4 delivery events (three sent online, one sent after the sync), found $delivered"
+# BUG-186: the count is waited for, not read once - the outbox's retry lands
+# the held delivery on its own schedule (15 s), which can be after the sync
+# flow's last screen. The wanted count is still four.
+if ! wait_for_delivered 4; then
+  echo "::error::expected 4 delivery events (three sent online, one sent after the sync), found $delivered after ${A1_SYNC_TIMEOUT_S}s"
   exit 1
 fi
 
