@@ -445,6 +445,21 @@ describe('the write path of the run store', () => {
     ]);
   });
 
+  // BUG-176: the contract's event id is `format: uuid` and the server parses
+  // it as one - the old `delivered-<stop>-<ms>` id made every batch answer
+  // 422 (run 41541777473). The recorded id must be a uuid the API accepts.
+  // Red before the fix: the id is the readable slug, not a uuid.
+  it('records the event with a contract-valid uuid id', async () => {
+    const { store, log } = aStore();
+
+    await store.markDelivered({ id: 'stop-1', sequence: 1 });
+
+    const pending = await log.nextBatch(10);
+    expect(pending[0]?.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+  });
+
   it('keeps one event for a stop that is marked twice', async () => {
     const { store, log } = aStore();
 

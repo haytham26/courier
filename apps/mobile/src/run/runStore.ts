@@ -42,6 +42,7 @@
  */
 import { errorMessage } from '@/lib/errors';
 import type { EventLog } from '@/sync/eventLog';
+import { newEventId } from '@/sync/eventId';
 
 import { e2eDay } from './dayForThisBuild';
 
@@ -201,7 +202,9 @@ export class RunStore implements MarkStore {
       return;
     }
     const at = this.clock();
-    const eventId = `delivered-${stop.id}-${String(at)}`;
+    // BUG-176: a contract-valid uuid - the API parses the id as one and
+    // refuses the whole batch with a 422 otherwise (run 41541777473).
+    const eventId = newEventId();
     await this.events.record({
       id: eventId,
       stopId: stop.id,
