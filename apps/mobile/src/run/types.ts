@@ -83,3 +83,19 @@ export interface MarkStore {
   /** The run is over: the marks leave the phone. */
   close(): Promise<void>;
 }
+
+/**
+ * The store's own read path (A1 slice 3): the marks, and the day behind them.
+ *
+ * The run store answers both, which is why one store answers every reader: a
+ * screen that reads the day's stops and the day's marks through the same store
+ * cannot disagree with another screen about the same stop. A build whose store
+ * is not a run store (the in-memory marks of a test) has no day to read, and
+ * the screens answer with an empty one rather than a second handle.
+ */
+export interface RunDayStore extends MarkStore {
+  /** The day the phone holds: the cache first, then the network. */
+  load(): Promise<RunLoad>;
+  /** The day, fresh: the network is always asked. */
+  refresh(): Promise<RunLoad>;
+}

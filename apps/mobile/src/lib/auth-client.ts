@@ -3,6 +3,8 @@ import { expoClient } from '@better-auth/expo/client';
 import { organizationClient, twoFactorClient } from 'better-auth/client/plugins';
 import Constants from 'expo-constants';
 
+import { errorMessage } from './errors';
+import { fetchAnswerBody } from './fetch-answer';
 import { deviceStore } from './session-storage';
 
 /**
@@ -154,7 +156,12 @@ export interface CourierAuthClient {
   signOut: (options?: unknown) => Promise<CourierAuthResult<unknown>>;
   getSession: (options?: unknown) => Promise<CourierAuthResult<CourierSessionData>>;
   useSession: () => CourierSessionHook;
-  /** The raw call of the service: the document it answers is checked before use. */
+  /**
+   * The raw call of the service. Better Auth's `$fetch` is
+   * `@better-fetch/fetch`'s `createFetch`: it resolves the ENVELOPE
+   * `{ data, error, status }`, never the raw body (BUG-171). Read the document
+   * with `fetchAnswerBody`, never off the envelope itself.
+   */
   $fetch: (path: string) => Promise<unknown>;
   twoFactor: {
     verifyTotp: (input: { code: string }) => Promise<CourierAuthResult<unknown>>;
@@ -260,7 +267,14 @@ function createMockAuthClient(): CourierAuthClient {
       moveMockSession(null);
       return Promise.resolve({ data: { success: true }, error: null });
     },
-    $fetch: () => Promise.reject(new Error('the emulator run has no auth service to ask')),
+    // The token the API would be sent: the emulator run has no auth service to
+    // mint one, so the mock answers a token of its own - in the envelope the
+    // real client resolves (BUG-171), with the document in `data`. The app's
+    // API boundary is never reached in this mode, so no request carries it.
+    $fetch: (path: string) =>
+      path === '/token'
+        ? Promise.resolve({ data: { token: mockSession.token }, error: null, status: 200 })
+        : Promise.reject(new Error('the emulator run has no auth service to ask')),
     getSession: () => Promise.resolve({ data: currentSession, error: null }),
     useSession: () => mockSessionAnswer,
     twoFactor: {
@@ -276,6 +290,33 @@ function createMockAuthClient(): CourierAuthClient {
 }
 
 const isE2E = process.env.EXPO_PUBLIC_E2E === '1';
+
+/** One line naming what the mint answered instead of a token. */
+function describeMintAnswer(answered: unknown): string {
+  if (typeof answered !== 'object' || answered === null) {
+    return 'no envelope';
+  }
+  const envelope = answered as {
+    status?: unknown;
+    error?: { status?: unknown; message?: unknown };
+  };
+  const status =
+    typeof envelope.status === 'number'
+      ? envelope.status
+      : typeof envelope.error?.status === 'number'
+        ? envelope.error.status
+        : undefined;
+  const message =
+    typeof envelope.error?.message === 'string' ? envelope.error.message : undefined;
+  const parts: string[] = [];
+  if (status !== undefined) {
+    parts.push(`status ${status}`);
+  }
+  if (message !== undefined) {
+    parts.push(message);
+  }
+  return parts.length > 0 ? parts.join(', ') : 'no data field';
+}
 
 export const authClient: CourierAuthClient = isE2E
   ? createMockAuthClient()
@@ -305,16 +346,62 @@ export const getSession = authClient.getSession;
 export const useSession = authClient.useSession;
 
 /**
- * The courier's access token.
+ * The courier's access token: the bearer token the API and the voice service
+ * verify, and never the session's own token.
  *
- * The token is the one the auth service signs with its JWKS key pair, so the
- * other services (the Courier API, the voice service) can check who is asking
- * without a session of their own. It is null when there is no session.
+ * The Courier API is a resource server. It verifies a JWT against the JWKS the
+ * auth service publishes, with the issuer and the audience that service signs
+ * (`services/api/app/auth/jwks.py`: a missing `AUTH_JWKS_URL` or
+ * `AUTH_JWT_ISSUER` stops the service from booting, precisely because the token
+ * is the whole authorization). Better Auth's session token is a different
+ * credential: it is the auth service's own session cookie value, and no other
+ * service can check it.
+ *
+ * That distinction is not theoretical. With the real stack in compose
+ * (infra/compose.ci.yml, DEMO_SEED_ENABLED=true) on 2026-10-31, against the
+ * auth service and the API this branch's own job starts:
+ *
+ *   POST /demo/runs  Bearer <the session token>  ->  401 Invalid or expired token
+ *   POST /demo/runs  Bearer <the minted token>   ->  200 the seeded run, five stops
+ *
+ * so the app mints its token at the auth service's own `/token` endpoint - the
+ * endpoint better-auth's JWT plugin answers with the signed bearer token - and
+ * sends that. The session cookie is what authorizes the mint, and it is the
+ * expo client's own storage, so nothing extra is stored on the phone.
+ *
+ * It is null when there is no session, when the mint fails (no radio), or when
+ * the service answers with anything that is not a non-empty string, so no
+ * request ever goes out carrying a token that is not one.
+ *
+ * BUG-171: the mint's answer is read through `fetchAnswerBody`, because
+ * `$fetch` resolves the better-fetch ENVELOPE - before this the token was
+ * read off the envelope itself, which is always undefined there, so on a real
+ * device every mint answered null and the API was never dialed (run
+ * 41457437873: the API's logs held only /healthz, the database held the
+ * registered user but no run, and the device logged "the day did not load
+ * (unauthorized)" while the unit tests - mocking a raw body - stayed green).
+ * A failed mint is named on the console, so the emulator's logcat says which
+ * hop failed.
  */
 export async function sessionToken(): Promise<string | null> {
-  const result = await authClient.getSession();
-  const token = result.data?.session?.token;
-  return typeof token === 'string' && token.length > 0 ? token : null;
+  let answered: unknown;
+  try {
+    answered = await authClient.$fetch('/token');
+  } catch (error) {
+    // No radio, or no session behind the cookie: the caller answers the
+    // courier with its own unauthorized rather than sending nothing sensible.
+    console.warn(`auth: the token mint did not answer (${errorMessage(error)})`);
+    return null;
+  }
+  const body = fetchAnswerBody(answered);
+  if (typeof body === 'object' && body !== null) {
+    const token = (body as { token?: unknown }).token;
+    if (typeof token === 'string' && token.length > 0) {
+      return token;
+    }
+  }
+  console.warn(`auth: the token mint answered no token (${describeMintAnswer(answered)})`);
+  return null;
 }
 
 /** True when the app runs against the local mocks (the CI emulator run). */

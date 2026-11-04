@@ -26,7 +26,349 @@ BUG-104 checked against #155: its row already carries #155's correction and stay
 for the vitest `all:` half. BUGS footer now 160 rows: open 33, fixed 88. The reopen
 guard is in: `check-parity.mjs --base <ref>` + `checkReopened`, five red-first tests
 (red output: `SyntaxError: ... does not provide an export named 'checkReopened'`,
-green: 29 pass), wired into quality-gates.yml's floor job.
+green: 29 pass), wired into quality-gates.yml's floor job. Merged as PR #172 (`943cd3f`).
+
+**Step 1 in flight on `feat/a1-slice-3-run-store` (session 13):** both red checks on
+4241000 rooted and fixed on the branch — the CI lint (`require-await` at
+sessionRestoreBounded.test.tsx:81, now an explicit `await Promise.resolve()`) and the
+a1 job's `not-found-screen` (the signed-out stack mounts after the 8 s restore bound and
+'/' matches no screen of it, so the router landed on not-found; fix: AuthNavigator's
+effect sends the signed-out phone to `/welcome` via `router.replace`, red-first in
+routes.test.tsx: `Expected: "/welcome"` never called → green; the Stack-prop form does
+not typecheck in expo-router 58, whose layouts take the anchor via `unstable_settings`).
+BUG-081 proven
+fixed by slice 3 (new test in today.test.tsx: red against origin/main's screen, green
+here) and its row is `fixed`. main merged in (BUGS.md resolved from main's copy + the
+branch's own BUG-081/BUG-161 rows re-applied).
+
+**Step 1's a1 stack defect rooted and fixed (BUG-164, this PR):** run 41356105462's a1 job
+failed at its own stack step — `courier-ci-api-1 exited (1)` before any flow ran. Root
+cause: the merge of main (e04b5aa) brought in BUG-131's JWKS allow-list
+(`services/api/app/auth/jwks.py`), and `infra/compose.ci.yml` names the plaintext host
+`auth` in `AUTH_JWKS_URL` without listing it in `AUTH_JWKS_INTERNAL_HOSTS` (prod/staging/
+env.example got the line; the CI stack was missed), so `get_auth_settings()` at import
+raised and the container exited 1. Fixed: `AUTH_JWKS_INTERNAL_HOSTS: auth` in
+compose.ci.yml + the a1 stack step now dumps `docker compose logs api auth` when
+`up --wait` fails + `check-auth-issuer.mjs` gained the BUG-131 rule over every
+`infra/compose*.yml` (red on the pre-fix tree, 14/14 tests). Proven locally with the
+stack itself: rebuilt api image without the line → exit 1 with the RuntimeError in the
+container log (red); with the line → all four containers healthy, `/healthz` 200,
+`/api/auth/jwks` 200 (green). Local-repro trap: `docker compose up` reuses a cached
+`courier-ci-api` image — `docker compose build api` first, or the old jwks.py boots fine
+and the repro lies.
+
+**The a1 flow's not-found rooted and fixed (same PR):** run 41362984260's a1 job got
+past the stack (BUG-164 confirmed on the runner) but the flow still sat on
+`not-found-screen` for its whole 60 s — the welcome effect's `router.replace` is
+enqueued in the same commit the Stack first mounts and never lands on device. Root
+cause in expo-router 58: the launch URL `/` seeds the protected `(tabs)` group, the
+signed-out guard strips that route from the navigation state
+(`useClearGuardedRoutes`), and with no anchor on the root layout the state collapses
+to `+not-found`. Fix: `export const unstable_settings = { anchor: 'welcome' }` on
+`app/_layout.tsx` — the anchor is seeded in front of the target, so the guard leaves
+the welcome focused (a signed-in phone still focuses the tabs; the effect stays for
+the sign-out-while-on-a-protected-route case). Red-first in routes.test.tsx
+(`unstable_settings` undefined → red; `{ anchor: 'welcome' }` → green, 614 tests).
+
+**Run 41371397919 (077b976): the anchor worked on device** — the a1 flow passed
+welcome-screen in ~3 s and drove sign-in → register → name → email, then failed at
+`tapOn register-password` ("Element not found"): with the keyboard up, adjustResize
+shrinks the register ScrollView and the password field is below the fold (Maestro
+skips off-screen children). Flow fix in `.maestro/a1/online.yaml`: `scrollUntilVisible`
+before the password, confirm and submit taps — the same idiom `sign-in.yaml` uses;
+the courier scrolls for these too.
+
+**Run 41374393642 (47e9eb5): the password scroll worked, the confirm did not** —
+the device is 320x640 and the keyboard owns the bottom half, so Maestro's
+centre-swipe never reached the ScrollView and `register-confirm-password`
+stayed out of the a11y tree. The flow cannot scroll for the courier; the app
+must keep a focused field on screen (BUG-165, this PR): each register field's
+slot records its top at layout and `onFocus` scrolls it into view with 96 pt
+headroom, computed from the reported layout — never a timed scrollTo racing a
+reveal (run 41010537066's lesson). Red-first in
+`app/(auth)/__tests__/register.test.tsx` (615 mobile tests, tsc/eslint clean).
+
+**Run 41380466474 (f6de90a): the email focus scrolled, the password focus did not** —
+the failure dump shows the confirm field under the keyboard and the password slot's
+`onLayout` never reported, because Android's default `removeClippedSubviews` drops a
+below-the-fold slot from the native hierarchy before layout. Fix: the register
+ScrollView now carries `removeClippedSubviews={false}` (BUG-113's own lesson on the
+sign-in screen) so every slot reports its layout and the focus scroll always has a
+target. (The api-34 leg's three `today-screen` failures that run were the known
+app-process infra flake — the dumps show an empty window, and those flows were green
+on 47e9eb5.)
+
+**Run 41385988136 (8bc6be6): the first failure was launcher ANR infra (re-run once per
+§17.4); the re-run failed for real — the scroll never landed.** The dump shows the
+password field FOCUSED but the form still at y=3, unscrollable: `justifyContent:
+'center'` on the flexGrow'd ScrollView content centers overflowing children and clamps
+the scroll range to zero, so the onFocus `scrollTo` had nowhere to go and the confirm
+field stayed below the keyboard's clip (pruned from the a11y tree). Fix: the register
+content is top-aligned now (as `login.tsx`'s is) with 96 pt bottom padding; red-first
+assertion added that `contentContainerStyle.justifyContent` is not `'center'`
+(615 tests, tsc/eslint clean).
+
+**Run 41394528001 (6486501): the scroll landed — confirm passed; the submit button
+was next** — the dump shows confirm focused and visible at y=333, but `register-submit`
+still pruned under the keyboard's clip, because the onFocus scroll only moves fields,
+and the button below the last field never got focus. Fix: focusing the last field now
+calls `scrollToEnd` (coordinate-free, cannot drift) so the submit clears the keyboard
+too. Red-first: on 6486501 the new assertion sees `scrollToEnd` with 0 calls; with the
+fix it is called with `{ animated: true }` (615 tests, tsc/eslint clean).
+
+**Run 41398593946 (aa214d4): still register-submit — the decisive dump** — the app
+window stays 640 tall with the keyboard overlaying y=382..640, so the ScrollView's
+scroll range (computed against the full window) can never lift the submit above the
+keyboard; the onFocus scrollToEnd had nothing to work with. The sign-in screen's
+ScrollView carries `automaticallyAdjustKeyboardInsets`, which shrinks the scroll
+viewport to above the keyboard — that prop is what makes its flows' scrolls work on
+this AVD. The register ScrollView now carries it (plus `keyboardDismissMode="on-drag"`),
+red-first: `automaticallyAdjustKeyboardInsets` undefined on aa214d4 → red, `true`
+here → green (615 tests, tsc/eslint clean).
+
+**Run 41407217039 (0b0e872): registration reached the server and was refused by the
+OS — BUG-184.** The submit tap worked (the insets fix landed), but the alert read
+"Registration Failed — fetch failed: CLEARTEXT communication to 10.0.2.2 not permitted
+by network security policy": the a1 APK dials `http://10.0.2.2:8000/:3001` and Android
+blocks cleartext by default; no `usesCleartextTraffic`/network security config existed.
+Fix: new config plugin `apps/mobile/plugins/withEmulatorCleartext.js` writes a network
+security config permitting cleartext to **10.0.2.2 only** (not a blanket flag — prod
+URLs are https) and points the manifest at it. Red-first in
+`plugins/__tests__/withEmulatorCleartext.test.js` (3 tests; BUG-184 filed, fixed in
+#135). Run 41418029987's build then failed lint's `NetworkSecurityConfig` check —
+`<domain>` needs `includeSubdomains` — so the config pins `includeSubdomains="false"`
+(exact host only), asserted in the test.
+
+**Run 41422266958 (4c44078): cleartext reached the server — BUG-182, "Invalid origin".**
+The submit tap worked and the request left the device, but the auth service answered
+403 "Invalid origin": the app's expo client sends `expo-origin: courier://` (the
+app.json scheme) on every request and the expo server plugin copies it into the
+`origin` header, which Better Auth checks against `trustedOrigins` — and
+`infra/compose.ci.yml` listed only `http://10.0.2.2:3001`. ADR-006 already required
+`courier://` in `AUTH_TRUSTED_ORIGINS`; the CI stack never carried it. Fix:
+`AUTH_TRUSTED_ORIGINS: http://10.0.2.2:3001,courier://` in compose.ci.yml — a concrete
+scheme:// entry, so the BUG-134 validator still refuses wildcards. Pinned by a new
+config test (the a1 stack's exact value loads to both entries; 121 auth tests green).
+BUG-182 filed (fixed, PR #135); register 165 rows, fixed 109.
+
+**Run 41433310746 (425a8e5): registration SUCCEEDED — the day load failed silently
+(BUG-183).** The flow reached the today screen, but the sheet rendered Delivered 0 /
+To go 0 and no `today-go`: `RunStore.load()` failed on the device and nothing said
+which hop. A local replay of the exact chain against compose.ci.yml (sign-up with
+`expo-origin: courier://` → 200, `/api/auth/token` → JWT iss=http://10.0.2.2:3001,
+`POST /demo/runs` {reason:dev} → 200, `/runs/:id` → 200, `/shifts/:id/stops` → 5
+stops) proves the server side healthy with this branch's config, so the failure is
+the app's device path (token mint, API dial or cache write). Diagnostics filed as
+BUG-183: `load()`/`refresh()` now console.warn the failure status + server sentence
+(red-first in runStore.test.ts: 2 failed on 425a8e5, 17 pass after), run-a1.sh's
+failure path dumps `compose logs api auth` + DB counts to the evidence, and
+assert-a1-rows.sh prints runs/shifts/stops/delivery_events BEFORE asserting (asserts
+unchanged).
+
+**Run 41457437873 (ecade62): the new evidence named the hop — BUG-171, the token mint
+read the envelope, not the body.** db-counts.txt: users=1, sessions=1 (registration
+landed), runs/shifts/stops/delivery_events all 0. stack-logs.txt: the api container
+logged ONLY /healthz polls — the app never dialed the API. Device logcat:
+`run: the day did not load (unauthorized)` at 14:17:23 (anon mount, expected) and again
+at 14:18:07, after the session was established. So `sessionToken()` answered null on
+the device while sign-up and getSession worked. Root cause read from the installed
+`@better-fetch/fetch@1.3.2` dist: Better Auth's `$fetch` is its `createFetch`, which
+resolves the ENVELOPE `{ data, error, status }`, never the raw body — `sessionToken()`
+read `.token` off the envelope (always undefined there) → null → the API client
+answered unauthorized without sending a request. `fetchSignInMethods()` had the same
+gap (parsed the envelope, silently fell back to defaults). The unit tests never caught
+it: their `$fetch` mocks answered a raw `{ token }` body. Fix (red-first, 7 tests red
+on ecade62): new strict `fetchAnswerBody()` in `src/lib/fetch-answer.ts` (only an
+answer with a `data` field is an envelope; a bare body is not believed), used by
+`sessionToken()` and `fetchSignInMethods()`; the E2E mock and the test mocks now
+answer the real envelope; a failed mint is named on the console
+(`auth: the token mint ...`). 634 mobile tests (74 suites), tsc, eslint green.
+BUG-171 filed (fixed, PR #135); register 168 rows, fixed 112.
+
+**Run 41491440450 (d92155e): the network path is fully green — the day was read but
+never kept (BUG-172).** stack-logs.txt: `POST /demo/runs 200`, `GET /runs/:id 200`,
+`GET /shifts/:id/stops 200` from the emulator; db-counts: runs=1, shifts=1, stops=5.
+But the today sheet still showed 0/0 with no `today-go`, and the logcat went silent
+after the session mount. Root cause: `RunSession` is keyed to the auth state, so the
+sign-in remount renders the new session — whose `runStoreForThisBuild()` reuses the
+module-cached op-sqlite wrappers — BEFORE the dying anon session's cleanup closes
+them; the shared handle is released and `courier.db` closed under the new session.
+The new `load()` raced that: `cache.read()` won (null), the three API calls went out,
+then `cache.write()` threw on the closed database — and the rejection vanished,
+because `reported()` only inspected resolved values and `useRunDay`'s effect has no
+catch. Fix (red-first, 3 tests red on d92155e): both op-sqlite stores reopen —
+`close()` sets a synchronous `closed` flag, `open()` never hands out a closed one,
+every operation passes `ensureOpen()` which reopens the database if the handle was
+closed under it; `load()`/`refresh()` wrap the whole load in `reported()`, which now
+also answers a rejection as a named `server` failure with a warn (load never rejects);
+`useRunDay` catches and warns. 638 mobile tests (74 suites), tsc, eslint green.
+BUG-172 filed (fixed, PR #135); register 169 rows, fixed 113.
+
+**Run 41513128949 (31f17c8): the day LANDED on screen (To go 5) — the last failure was
+the flow, not the app (BUG-173).** The dump shows Delivered 0 / To go 5 / Finish 20:31,
+so BUG-172's reopen+never-reject fix worked end to end. But `today-go` still asserted
+invisible: the sheet sits at PEEK and the NEXT STOP row is below its fold (stats end
+y=535, dock y=552), pruned from the a11y tree. The app's design is intentional and the
+repo's convention is `common/reveal-and-tap.yaml` (swipe UP on today-sheet-grabber
+first — copilot.yaml learned it in run 40072959461) — the a1 flows just never adopted
+it. Fix: `.maestro/a1/online.yaml` and `offline.yaml` now swipe the grabber up before
+asserting `today-go`; the assert is unchanged. BUG-173 filed (fixed, PR #135);
+register 170 rows, fixed 114.
+
+**Run 41520005366 (1fced6c): the swipe worked — today-go was visible and asserted — and
+the flow then failed the bare tap on `today-mark-delivered` (BUG-174).** The dump shows
+the sheet raised (today-go at y=463–527) but the Delivered button lives in the RUN
+ACTIONS row below the ghost buttons, clipped by the sheet's own ScrollView at y≈540,
+so it is pruned from the a11y tree — exactly what today-list.yaml already handles with
+`scrollUntilVisible` on the target. Fix: online.yaml scrolls `today-mark-delivered`
+into view before each of the three repeat taps (no-op once visible), offline.yaml
+before its tap; taps and asserts unchanged. BUG-174 filed (fixed, PR #135); register
+171 rows, fixed 115.
+
+**a2f20fb's Quality gates run (41532322801) failed Semgrep with 2 findings on BUG-184's
+plugin (BUG-175):** `path-join-resolve-traversal` on `path.join(cfg.modRequest.projectRoot,
+...)` in `apps/mobile/plugins/withEmulatorCleartext.js` - a false positive (projectRoot
+is Expo's own build-time input), but the floor guard forbids a `nosemgrep`, so the
+plugin now builds its two paths by template interpolation and no longer imports
+`path`; the 3 plugin jest tests and eslint stay green. BUG-175 filed (fixed, PR #135);
+register 172 rows, fixed 116.
+
+**Run 41541777473 (589059b, manual workflow_dispatch — the last two pushes'
+pull_request synchronize events never spawned E2E runs, only push-event CI/QG):
+online and offline flows PASSED, sync failed — every batch answered 422 (BUG-176).**
+stack-logs: `POST /shifts/:id/events:batch 422`; db-counts delivery_events=0 at the
+end. Proven against the local compose stack: the app's id shape `delivered-<stop>-<ms>`
+→ `422 uuid_parsing loc=[body,0,id]`; a uuid id → `200 {"accepted":1}`. The contract's
+`DeliveryEvent.id` is `format: uuid` and the API parses `uuid.UUID`, so the whole
+batch was refused. Fix (red-first): new `src/sync/eventId.ts` (`newEventId()` = v4
+uuid, `isUuid()`), used by both mark stores; `toContractEvent` refuses a non-uuid id
+before any request is built. 642 mobile tests (75 suites), tsc, eslint green.
+BUG-176 filed (fixed, PR #135); register 173 rows, fixed 117. Note: the api-34 mock
+leg failed this run on `today-screen is visible` with `adb: device offline` — the
+emulator never booted (api-35 passed the same APK); runner infra flake, re-run
+candidate.
+
+**Run 41552164167 (ebbc0dc, manual workflow_dispatch): a1 online PASSED; offline failed on
+`today-sync-note` with delivery_events=0 and NO events:batch POST (BUG-177).** The device
+logcat names it: `Cannot read property 'getRandomValues' of undefined` — BUG-176's uuid
+fallback assumed Hermes has `crypto.getRandomValues`, but Hermes ships no `crypto` global
+at all, so the fallback itself threw and every mark died before its event was recorded.
+Fix: `newEventId()` reads its bytes from `getRandomValues` only when that function is
+really there, otherwise `Math.random` (the id only has to be unique on this phone — the
+log stores it — and uuid-shaped for the server); a new test deletes the `crypto` global
+and still expects a v4 uuid. 643 mobile tests (75 suites), tsc, eslint green. BUG-177
+filed (fixed, PR #135); register 174 rows, fixed 118 (BUG-059's row was also restored from
+origin/main, where it is `fixed`, so open 17 / fixed 119 — our copy had gone stale). The
+api-34 mock leg failed this run
+too — `Error on ZipFile unknown archive` preparing the system image, then `could not
+connect to TCP port 5554`: runner infra flake (one re-run of that job allowed).
+
+**Run 41578697363 (90823d9, dispatch): BUG-177 fixed the writes — online and offline
+PASSED, and sync failed with delivery_events=1 — two more app defects (BUG-178, BUG-179).**
+The sheet never advanced after a mark: `useRunDay` read the marks once on mount and
+nothing re-read them, so the mark button kept naming the first stop and the second and
+third taps were store no-ops (`already !== null`) — the dump shows Delivered 2 and ONE
+`events:batch` in the api logs. And the outbox only ever flushed after a mark, so the
+delivery held offline never sent when the network came back (ADR-014's promise had no
+trigger). Fixes (red-first): `useRunDay` now exposes `refreshMarks()` and the run state
+asks for it after every mark and undo (Today's new test: the sheet advances to the run's
+own next stop), and new `src/run/outboxRetry.ts` asks the outbox to send what it holds on
+a fifteen-second timer while the session lives (shift read from the cached day; a failed
+ask is named and the next tick retries). 649 mobile tests (76 suites), tsc, eslint green.
+BUG-178 and BUG-179 filed (fixed, PR #135); register 176 rows, open 17, fixed 121.
+
+**Run 41594259937 (f586206, dispatch): BUG-178/179 landed — online PASSED and delivered
+all three stops (delivery_events=3) — and the offline flow failed on `today-sync-note`
+(BUG-180, BUG-181).** The logcat names it: with the radio off the client cannot reach the
+auth service to mint a token, so `postDeliveryEvents` answers `unauthorized` without
+dialing the API — and `apiSyncTransport` threw a `SyncRefusal` for it, so the outbox
+QUARANTINED the held delivery ("kept for review"), which would never send when the signal
+came back. App fix (BUG-180): only the server's own answer is a refusal — `unauthorized`
+and `offline` reject as a plain network failure, the batch stays pending and the retry
+asks again. Flow fix (BUG-181): offline.yaml scrolls back UP to the note (it sits above
+the action row the tap needed) before asserting it; the assert is unchanged. 651 mobile
+tests (76 suites), tsc, eslint green. BUG-180, BUG-181 filed (fixed, PR #135); register
+178 rows, open 17, fixed 123.
+
+**origin/main merged into the branch (e4e432c) and our register rows renumbered.** The
+merge carried main's trial/backend work (BUG-166/167, the trial ADRs, the new evidence
+dirs) and a `type` column on the run cache's stops (ADR-024) that both sides had touched.
+Our three rows collided with main's own BUG-168/169/170 (stop types, CSV import, B3's
+remainder — main's rows stay exactly as they are), so ours are now **BUG-182** (the a1
+stack refused the app's own origin `courier://`), **BUG-183** (the diagnostics that name
+the failing hop) and **BUG-184** (the release APK could not dial the a1 stack:
+cleartext). Every reference on the branch follows them (2026-W44.md's lead entries,
+CURRENT.md, the auth test's comment); `git grep BUG-(168|169|170)` answers only main's
+own references. Register: 183 rows (open 17, doing 3, testing 3, fixed 128, closed 2,
+moved 30); the PARITY count is 311 (Have 29).
+
+**BUG-185: run 41609308041's api-34 leg failed `summary.yaml` INSIDE the flow suite (11
+of 13 flows had passed) — a cold-start race, not the app.** The device log names it:
+`Destroy timeout of remove-task, attempt to kill Task #19` → `Killing 11550 (adj
+-10000): remove task` → `Process 11550 failed to attach`, so the app never rendered
+`today-screen` and the flow's 60 s wait timed out. `launchApp clearState: true`
+force-stops the running app while its task is still being removed, and the removal kills
+the fresh process (the am-start dump shows the cold start itself healthy: 903 ms, COLD,
+ok). The same APK passed the same flow on api-35 seconds later. Fix (red-first): every
+launch that clears state runs `- stopApp` first (13 top-level flows + a1/online.yaml),
+and the new gate `scripts/ci/__tests__/flows-cold-start.test.mjs` fails any
+`clearState: true` launch without a `stopApp` before it (it named all 14 on the old
+flows). BUG-185 filed (fixed, PR #135); register 183 rows, open 17, fixed 128.
+
+**The merged head's first E2E run (41656905474) failed on the DB assert while all three
+a1 flows PASSED — BUG-188, a race in the runner, not the app.** The job read "expected 4
+delivery events ... found 3" seconds after the sync flow finished, while the app had the
+fourth delivery recorded on the phone and the outbox sent it on its own retry (BUG-179's
+15-second tick), which lands after the flow's last screen; the run before it won the same
+race by seconds, so the job was green by luck. Fix (red-first, proven against the pre-fix
+script, which exits 1 with the same message): `scripts/ci/assert-a1-rows.sh` waits —
+bounded (A1_SYNC_TIMEOUT_S, default 45 s, one query a second, printing how long it
+waited) — for the FOUR the flow performed. The assertion itself is unchanged, and if the
+row never lands the job still fails after the bound. The new suite
+`scripts/ci/__tests__/assert-a1-rows.test.mjs` runs the script against the compose
+Postgres (the fourth row landing 8 s in → passes, naming the wait; never landing → fails
+after 2 s, naming 3). The suite has since moved to `scripts/ci/__tests__/a1/` (outside the
+standard script glob, on purpose) and runs against the live compose stack: the Android
+E2E workflow runs it in the a1 job, right after the rows assert it guards
+(`node --test scripts/ci/__tests__/a1/assert-a1-rows.test.mjs`). Register: 184 rows
+(open 16, doing 3, testing 3, fixed 130, closed 2, moved 30); PARITY 311 (Have 29).
+BUG-102's row was also restored from origin/main, where it is `fixed` (our copy had gone
+stale), which is why open is 16 and fixed 130.
+
+**origin/main merged again (af496d4), and our BUG-186 became BUG-188.** main's squads
+reached BUG-187 while this branch sat unmerged (verified across main and every open
+branch: the highest is 187), so the rows-assert race keeps **BUG-188** — the workflow's
+step name and comments, the script's comments, the a1 suite's title and this log's entry
+follow it. The register after the merge: 186 rows (open 15, doing 3, testing 3, fixed 133,
+closed 2, moved 30); PARITY 312 (Have 30).
+
+**#135 merged — the a1 slice 3 is on main. Ritual complete (2026-11-04).**
+- Merge commit on main: `2382f68` (Merge pull request #135 from
+  haytham26/feat/a1-slice-3-run-store), the final head `50ed121`.
+- Every check green on that head: CI, all Quality gates, CodeQL, the restore
+  drill, the screen recordings, and Android E2E run 41771642008 (the release
+  APK, the a1 job's three flows + rows assert + BUG-188 suite, and the Maestro
+  flows on api 35 and api 34). The a1 job's first attempt on that head lost its
+  emulator before any flow ran (`could not connect to TCP port 5554`, runs=0,
+  no flow started, the sibling legs passed the same flows) — the runner-infra
+  flake the playbook names, so the one allowed job re-run was used and it is
+  green.
+- `git ls-remote --heads origin` carries no `feat/a1-slice-3-run-store` (the
+  branch is deleted); `git ls-remote --tags origin` carries
+  `refs/tags/archive/feat-a1-slice-3-run-store^{}` = `50ed121` (the final
+  head, archived).
+- On main, `apps/mobile/app/(tabs)/index.tsx` and `apps/mobile/app/driving.tsx`
+  read the run through `useRun()` — `mockStops` is gone from both.
+- The queue resumes at A4: remove `mockStops` from the seven screens on main
+  (index, map, stops, copilot, delivered, driving, lock-screen) so they read the
+  real run through `useRunDay`, plus the build check that fails a release build
+  on a reachable mock (BUG-079). Then BUG-081, then #166, then the trial
+  features' app halves, then B5, A3, A2 and §22.
+
+Merge #135 only when CI + a1 + both E2E
+legs are green on the final head with no re-run (§17.4); then confirm on main that
+mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
+branch: both read `useRun()`).
 
 
 ## Lead session 12, the closing state (2026-11-02): the a1 job's blank first screen is rooted and fixed

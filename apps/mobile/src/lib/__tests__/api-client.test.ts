@@ -373,6 +373,26 @@ describe('the delivery events of the phone', () => {
     expect(outcome.message).toContain('note');
     expect(calls.length).toBe(0);
   });
+
+  // BUG-176: the contract's `id` is `format: uuid` and the server parses it as
+  // one, so a non-uuid id is refused with a 422 for the WHOLE batch - run
+  // 41541777473's a1 job lost every delivery that way, while the same payload
+  // with a uuid id answered 200 locally. The transport refuses it here,
+  // before a request is built. Red before the fix: the batch was sent.
+  it('refuses an event whose id is not a uuid, before any request is built', async () => {
+    const { impl, calls } = aFetch([{ body: { accepted: 1 } }]);
+
+    const outcome = await aClient(impl).postDeliveryEvents('shift-1', [
+      anEvent({ id: 'delivered-22222222-2222-2222-2222-222222222222-1772000000000' }),
+    ]);
+
+    expect(outcome.status).toBe('unmappable');
+    if (outcome.status !== 'unmappable') {
+      return;
+    }
+    expect(outcome.message).toContain('uuid');
+    expect(calls.length).toBe(0);
+  });
 });
 
 describe('the seeded day', () => {
