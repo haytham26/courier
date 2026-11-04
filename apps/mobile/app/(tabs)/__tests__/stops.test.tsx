@@ -17,9 +17,16 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import RouteTab from '../stops';
 import { RunProvider } from '@/maps/runState';
+import { e2eDay } from '@/run/dayForThisBuild';
 import type { DeliveredMark, MarkStore } from '@/run/types';
 
-/** A run store that already holds the deliveries it is given. */
+/**
+ * A run store that already holds the deliveries it is given, over the app's
+ * own day (A4: the route screen reads the run's stops, so the store answers
+ * with the same day the E2E build and the E2E legs answer with - the stops
+ * carry the same ids and sequences the mock list carried, so the assertions
+ * below keep their shape).
+ */
 function storeWithMarks(marks: DeliveredMark[]): MarkStore {
   const markDelivered = (stop: { id: string; sequence: number }): Promise<void> => {
     marks.push({ stopId: stop.id, sequence: stop.sequence, at: Date.now(), eventId: `e-${stop.id}` });
@@ -36,8 +43,15 @@ function storeWithMarks(marks: DeliveredMark[]): MarkStore {
 
   const deliveredMarks = (): Promise<DeliveredMark[]> => Promise.resolve(marks);
   const close = (): Promise<void> => Promise.resolve();
+  const theDay = {
+    status: 'ok' as const,
+    source: 'cache' as const,
+    snapshot: e2eDay(),
+  };
+  const load = (): Promise<typeof theDay> => Promise.resolve(theDay);
+  const refresh = (): Promise<typeof theDay> => Promise.resolve(theDay);
 
-  return { deliveredMarks, markDelivered, undoDelivered, close };
+  return { load, refresh, deliveredMarks, markDelivered, undoDelivered, close };
 }
 
 jest.mock('@maplibre/maplibre-react-native', () => {
