@@ -39,6 +39,15 @@ test('a debug build with the flag passes (the test artifact)', () => {
   assert.equal(code, 0);
 });
 
+// The legs' APK: a release build that declares itself a test artifact, because
+// the flows need the bundle embedded (a debug build waits for Metro and never
+// boots - run 41802746356's legs died with "no first screen appeared in 90s").
+test('a declared e2e build with the flag passes', () => {
+  const { code, out } = runWith({ EXPO_PUBLIC_E2E: '1' }, ['--variant', 'e2e']);
+  assert.equal(code, 0);
+  assert.match(out, /the E2E flag is set and the build is e2e/);
+});
+
 test('a dev build with the flag passes', () => {
   const { code } = runWith({ EXPO_PUBLIC_E2E: '1' }, ['--variant', 'dev']);
   assert.equal(code, 0);

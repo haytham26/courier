@@ -96,15 +96,15 @@ jobs:
           # BUG-079: from the repo root, before the cd into the android
           # project - the flag is legal in a debug build (a test artifact),
           # and the gate names the variant it is asked about.
-          node scripts/ci/check-e2e-flag.mjs --variant debug
+          node scripts/ci/check-e2e-flag.mjs --variant e2e
           cd apps/mobile/android
-          ./gradlew assembleDebug --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
+          ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
 
       - name: Upload the APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: recordings-app
-          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 7
 
