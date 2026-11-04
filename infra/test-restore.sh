@@ -105,7 +105,16 @@ db dropdb --username="${PGUSER}" --if-exists "${TARGET_DB}" >/dev/null 2>&1 || t
 db createdb --username="${PGUSER}" --template=template0 "${SOURCE_DB}" || die "cannot create ${SOURCE_DB}"
 
 log "filling the source database with three tables"
+# BUG-106: the drill exercises what production runs. The contract's schema is
+# PostgreSQL 16 + PostGIS (packages/contracts/db/schema.sql: CREATE EXTENSION
+# postgis, and production serves postgis/postgis:16-3.6 per
+# infra/postgres/Dockerfile), but the drill used to fill plain tables and run
+# against a plain postgres service, so a dump that carried PostGIS objects had
+# never been restored here. The source now carries the extension and a
+# geometry, and the assertions below prove they survive the round trip.
 db psql --no-psqlrc --username="${PGUSER}" --dbname="${SOURCE_DB}" --command="
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE TABLE geofence (id serial PRIMARY KEY, name text NOT NULL, area geometry(Point, 4326));
 CREATE TABLE stops (id serial PRIMARY KEY, address text NOT NULL, parcels integer NOT NULL);
 CREATE TABLE events (id serial PRIMARY KEY, kind text NOT NULL, note text);
 CREATE TABLE empty_table (id serial PRIMARY KEY);
@@ -119,12 +128,15 @@ INSERT INTO events (kind, note) VALUES
   ('arrival', 'at the gate'),
   ('delivered', 'left with the neighbour'),
   ('failed', 'the dog was out');
+INSERT INTO geofence (name, area) VALUES
+  ('depot', ST_SetSRID(ST_MakePoint(172.6363, -43.5321), 4326));
 " >/dev/null || die "cannot fill the source database"
 
 source_stops="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${SOURCE_DB}" --command="SELECT count(*) FROM stops" </dev/null)"
 source_events="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${SOURCE_DB}" --command="SELECT count(*) FROM events" </dev/null)"
 source_empty="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${SOURCE_DB}" --command="SELECT count(*) FROM empty_table" </dev/null)"
-log "the source holds ${source_stops} stops, ${source_events} events and ${source_empty} rows in the empty table"
+source_geofence="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${SOURCE_DB}" --command="SELECT count(*) FROM geofence" </dev/null)"
+log "the source holds ${source_stops} stops, ${source_events} events, ${source_empty} rows in the empty table and ${source_geofence} geofence"
 
 log "running the backup"
 PGDATABASE="${SOURCE_DB}" BACKUP_DIR="${WORK_DIR}" bash "${SCRIPT_DIR}/backup.sh" >/dev/null || die "the backup failed"
@@ -152,11 +164,23 @@ bash "${SCRIPT_DIR}/restore.sh" \
 target_stops="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${TARGET_DB}" --command="SELECT count(*) FROM stops" </dev/null)"
 target_events="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${TARGET_DB}" --command="SELECT count(*) FROM events" </dev/null)"
 target_empty="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${TARGET_DB}" --command="SELECT count(*) FROM empty_table" </dev/null)"
+target_geofence="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${TARGET_DB}" --command="SELECT count(*) FROM geofence" </dev/null)"
 
 [[ "${target_stops}" == "${source_stops}" ]] || die "the stops table has ${target_stops} rows, it had ${source_stops}"
 [[ "${target_events}" == "${source_events}" ]] || die "the events table has ${target_events} rows, it had ${source_events}"
 [[ "${target_empty}" == "${source_empty}" ]] || die "the empty table has ${target_empty} rows, it had ${source_empty}"
+[[ "${target_geofence}" == "${source_geofence}" ]] || die "the geofence table has ${target_geofence} rows, it had ${source_geofence}"
 log "the row counts are back"
+
+# BUG-106: the extension and the geometry survive the round trip. A restore
+# that lost PostGIS would still carry the plain tables, which is why this is
+# asserted on its own rather than folded into the row counts.
+target_extension="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${TARGET_DB}" --command="SELECT count(*) FROM pg_extension WHERE extname = 'postgis'" </dev/null)"
+[[ "${target_extension}" == "1" ]] || die "the postgis extension did not survive the restore"
+target_point="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${TARGET_DB}" --command="SELECT ST_AsText(area) FROM geofence ORDER BY id LIMIT 1" </dev/null)"
+source_point="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${SOURCE_DB}" --command="SELECT ST_AsText(area) FROM geofence ORDER BY id LIMIT 1" </dev/null)"
+[[ "${target_point}" == "${source_point}" ]] || die "the depot's point is not the same: ${source_point} before, ${target_point} after"
+log "the postgis extension and its geometry are back"
 
 # The data itself, not only the number of rows.
 source_sum="$(db psql --no-psqlrc --tuples-only --no-align --username="${PGUSER}" --dbname="${SOURCE_DB}" --command="SELECT sum(parcels) FROM stops" </dev/null)"
