@@ -907,3 +907,25 @@ Both backtraces end on the same Hermes frames (0x148aee, 0x293ba1, 0x1bf197, hoo
   connect to adb daemon", "device offline") and its one re-run is in flight.
 - Next in the queue after #189 and #191: B5 (Maestro video), A3 (the
   recorder), A2 (on-device voice) and §22's app half.
+
+**The queue's state for the next session (2026-11-05).**
+
+Merged on main this session: #135 (the a1 slice 3, commit 2382f68, archive
+tag archive/feat-a1-slice-3-run-store), #166 (the eight lows, commit 38db903,
+archive tag archive/fix-c1-lows-batch) and the ritual's docs PR #187
+(ab349db). BUG-081 is verified solved by #135 (its test is green on main).
+
+Open, awaiting green:
+- **#189 (A4)** on `feat/a4-no-mock-stops` (final head `b9c73c2`): every
+  check green on `033e71e` (run 41832854524) and again in flight on the
+  merged head (41839401508). The mock list is reachable only through the two
+  E2E seams; BUG-079 closed.
+- **#191 (queue 4.1, the navigation hand-off)** on `feat/nav-handoff`
+  (`1fcec93`): every check green except the api-35 leg, which twice hit the
+  runner's emulator boot flake (its one re-run is the playbook's allowance;
+  the same APK passes both legs on the A4 and #166 branches).
+
+Next in the queue: B5 (Maestro video), A3 (the recorder), A2 (on-device
+voice) and §22's app half, then the trial features' remaining app surfaces
+(re-optimise / time windows / priority, import, failed reasons, stop types,
+breaks and finish).
