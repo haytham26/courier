@@ -10,6 +10,8 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.."
 
+# BUG-079: the legs install the DEBUG build - the E2E APK is a test artifact
+# and a release build with the mocks in it is what the flag gate refuses.
 APK="apk/app-release.apk"
 EVIDENCE=".maestro/evidence"
 PKG="com.courier.copilot"

@@ -16,7 +16,27 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ChosenProvider } from '@/components/chosen';
 import { ThemeProvider } from '@/providers/ThemeProvider';
+import { RunProvider } from '@/maps/runState';
+import { e2eDay } from '@/run/dayForThisBuild';
+
 import MapScreen from '../map';
+
+/** The app's own day, as a store the run state reads: no marks, one day. */
+function aDayStore() {
+  const theDay = {
+    status: 'ok' as const,
+    source: 'cache' as const,
+    snapshot: e2eDay(),
+  };
+  return {
+    load: () => Promise.resolve(theDay),
+    refresh: () => Promise.resolve(theDay),
+    deliveredMarks: () => Promise.resolve([]),
+    markDelivered: () => Promise.resolve(),
+    undoDelivered: () => Promise.resolve(),
+    close: () => Promise.resolve(),
+  };
+}
 
 const mockMapProps: {
   mapStyle?: { version?: number; name?: string; sources?: Record<string, unknown> };
@@ -97,7 +117,12 @@ async function renderScreen(mode: 'light' | 'dark' = 'light') {
             provider carries it in production. The test gives it the same
             island until the legacy tokens go. */}
         <ThemeProvider>
-          <MapScreen />
+          {/* A4: the map's stops are the run's own, read through the run
+              state the root layout wraps the tabs in - the test hands it the
+              app's own day. */}
+          <RunProvider store={aDayStore()}>
+            <MapScreen />
+          </RunProvider>
         </ThemeProvider>
       </ChosenProvider>
     </GestureHandlerRootView>,

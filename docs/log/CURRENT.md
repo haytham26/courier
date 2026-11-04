@@ -359,7 +359,13 @@ closed 2, moved 30); PARITY 312 (Have 30).
   head, archived).
 - On main, `apps/mobile/app/(tabs)/index.tsx` and `apps/mobile/app/driving.tsx`
   read the run through `useRun()` — `mockStops` is gone from both.
-- The queue resumes at A4: remove `mockStops` from the seven screens on main
+- A4 has landed on `feat/a4-no-mock-stops` (PR to follow): `check-mock-reach.mjs`
+  proves the mock list is reachable only through the two E2E seams (lock-screen,
+  delivered, copilot, stops and map now read the run through the store; index and
+  driving already did) and `check-e2e-flag.mjs` refuses the E2E flag in a release
+  build (BUG-079 closed). The queue resumes at BUG-081, then #166, then the trial
+  features' app halves, then B5, A3, A2 and §22.
+  (was: remove `mockStops` from the seven screens on main
   (index, map, stops, copilot, delivered, driving, lock-screen) so they read the
   real run through `useRunDay`, plus the build check that fails a release build
   on a reachable mock (BUG-079). Then BUG-081, then #166, then the trial
@@ -880,3 +886,46 @@ Both backtraces end on the same Hermes frames (0x148aee, 0x293ba1, 0x1bf197, hoo
 4. Then the founder's queue: #49 (its final head 42b1519, two green runs, no re-run), #18, #40, #52 (each: main merged in, E2E green on both legs, merge with the ritual), #58, then the C1 filings as **BUG-069+** (the audit draft is on main via PR #74), then A1's app side, A4, A2, C2, A6, and the rest of the audit and MASTER to the §6 Definition of Done.
 
 **The traps of this session (2026-10-27/28):** the GWP-ASan report never appears when the crash is inside the recorder — change the detector, not the patience (bionic malloc_debug records with a real unwinder); a green run under forced sampling proves nothing; a run at the readiness gate that dies in 1-2 minutes is the harness or the build, not the sweep; a 320x640 device in a leg's `Maestro ... Got device info` line is BUG-068, never the app; the exp-branch `env` argument belongs at the step level or the runner action never sees it; a `git push` that prints an error here has often succeeded — `git ls-remote` is the witness; and the queue's "no waiting" rule survives a red gate only when the red's cause is written down first.
+
+**PR #189 (A4) and #166 (the lows batch) — the queue's state at this session (2026-11-05).**
+
+- **#166 merged** (commit 38db903 on main). Its ritual: archive tag
+  `archive/fix-c1-lows-batch` at `74cc10d` (the final head), the branch gone
+  from `git ls-remote --heads origin`, and every check green on that head
+  (run 41827408707: the release APK, the a1 job's three flows + rows assert +
+  the BUG-188 suite, and both emulator legs).
+- **#189 (A4)** is on its final head `033e71e` (origin/main folded in) awaiting
+  the last E2E round (41832854524). Its every check was green on `63dc705`
+  (run 41818329793: the release APK, the a1 job's three flows + rows assert +
+  the BUG-188 suite, and both emulator legs) with the a1 job's one infra
+  re-run the playbook allows.
+- **#191 (queue 4.1, the navigation hand-off)** is open off main: the nav
+  hand-off (`src/maps/navHandoff.ts`, `driving-nav-handoff`) hands the run's
+  own stop to the courier's nav app with the key-free Google Maps deep link.
+  Its a1 job, both builds, CodeQL, the restore drill and every Quality gate
+  are green; the api-35 leg failed on the runner's emulator ("Unable to
+  connect to adb daemon", "device offline") and its one re-run is in flight.
+- Next in the queue after #189 and #191: B5 (Maestro video), A3 (the
+  recorder), A2 (on-device voice) and §22's app half.
+
+**The queue's state for the next session (2026-11-05).**
+
+Merged on main this session: #135 (the a1 slice 3, commit 2382f68, archive
+tag archive/feat-a1-slice-3-run-store), #166 (the eight lows, commit 38db903,
+archive tag archive/fix-c1-lows-batch) and the ritual's docs PR #187
+(ab349db). BUG-081 is verified solved by #135 (its test is green on main).
+
+Open, awaiting green:
+- **#189 (A4)** on `feat/a4-no-mock-stops` (final head `b9c73c2`): every
+  check green on `033e71e` (run 41832854524) and again in flight on the
+  merged head (41839401508). The mock list is reachable only through the two
+  E2E seams; BUG-079 closed.
+- **#191 (queue 4.1, the navigation hand-off)** on `feat/nav-handoff`
+  (`1fcec93`): every check green except the api-35 leg, which twice hit the
+  runner's emulator boot flake (its one re-run is the playbook's allowance;
+  the same APK passes both legs on the A4 and #166 branches).
+
+Next in the queue: B5 (Maestro video), A3 (the recorder), A2 (on-device
+voice) and §22's app half, then the trial features' remaining app surfaces
+(re-optimise / time windows / priority, import, failed reasons, stop types,
+breaks and finish).

@@ -40,7 +40,6 @@ import {
 } from '@/components/chosen';
 import { colors, radii, spacing, typography } from '@courier/design-tokens/chosen';
 import { DRIVE_ORIGIN_LNGLAT } from '@/maps/drive';
-import { mockStops } from '@/maps/stops';
 import { useRun } from '@/maps/runState';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { getCourierStyle } from '@/maps/styles';
@@ -87,7 +86,8 @@ function CopilotSurface() {
           // Only the stop commands carry a stop; the rest do not, and the
           // reading stays null rather than guessing one.
           const stopId = 'stopId' in command ? command.stopId : null;
-          const stop = mockStops.find((entry) => entry.id === stopId) ?? null;
+          // A4: the stop is the run's own, from the day the store holds.
+          const stop = run.day.stops.find((entry) => entry.id === stopId) ?? null;
           // BUG-073: when the courier said where they left it, the line reads
           // back the place in their own words. Copilot's answer is computed
           // from what the app actually did (MASTER_EXECUTION 13.2), and what
@@ -100,7 +100,8 @@ function CopilotSurface() {
           const reply = copilotReplyFor(
             { type: command.type, stopId, transcript: said },
             {
-              total: mockStops.length,
+              // A4: the day's own count, the same one Today and the drive read.
+              total: run.day.stops.length,
               delivered: run.delivered.length + (command.type === 'mark_delivered' ? 1 : 0),
               address: stop?.address ?? null,
             },
@@ -198,7 +199,7 @@ function CopilotSurface() {
     <SafeAreaView testID="copilot-screen" style={styles.container}>
       <MapView testID="copilot-map" mapStyle={mapStyle} style={styles.map}>
         <Camera initialViewState={{ center: DRIVE_ORIGIN_LNGLAT, zoom: 13 }} minZoom={4} maxZoom={19} />
-        {mockStops.map((stop) => (
+        {run.day.stops.map((stop) => (
           <Marker
             key={stop.id}
             testID={`copilot-marker-${stop.sequence}`}

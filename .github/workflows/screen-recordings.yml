@@ -93,6 +93,10 @@ jobs:
           EXPO_PUBLIC_E2E: '1'
         run: |
           pnpm --filter mobile exec expo prebuild --platform android --no-install
+          # BUG-079: from the repo root, before the cd into the android
+          # project - the flag is legal in a debug build (a test artifact),
+          # and the gate names the variant it is asked about.
+          node scripts/ci/check-e2e-flag.mjs --variant e2e
           cd apps/mobile/android
           ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
 

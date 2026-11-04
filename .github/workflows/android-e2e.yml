@@ -151,6 +151,12 @@ jobs:
           EXPO_PUBLIC_E2E: '1'
         run: |
           pnpm --filter mobile exec expo prebuild --platform android --no-install
+          # BUG-079: the flag is legal only in a TEST build that says it is
+          # one. This APK needs the bundle embedded (a debug build waits for
+          # Metro and never boots - the legs died that way at 68c23eb), so the
+          # release artifact declares `--variant e2e`. The ship workflows build
+          # `--variant release`, where the flag is refused outright.
+          node scripts/ci/check-e2e-flag.mjs --variant e2e
           cd apps/mobile/android
           ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
 
@@ -390,6 +396,10 @@ jobs:
           EXPO_PUBLIC_AUTH_URL: http://10.0.2.2:3001
         run: |
           set -euo pipefail
+          # BUG-079: this is the a1 job's own RELEASE APK and it carries no
+          # E2E flag, so the gate that refuses a release build with the mocks
+          # in it has to pass here.
+          node scripts/ci/check-e2e-flag.mjs --variant release
           pnpm --filter mobile exec expo prebuild --platform android --no-install
           cd apps/mobile/android
           ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
