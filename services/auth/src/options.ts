@@ -73,6 +73,10 @@ export function buildAuthOptions(config: AuthConfig): BetterAuthOptions {
       enabled: config.rateLimit.enabled,
       window: config.rateLimit.window,
       max: config.rateLimit.max,
+      // BUG-132: the store the counters live in. `database` is the shared one
+      // (Better Auth's migration adds the `rateLimit` table when it is
+      // selected), and production takes it by default.
+      storage: config.rateLimit.storage,
       customRules: config.rateLimit.customRules,
     },
     telemetry: {
