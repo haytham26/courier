@@ -12,13 +12,19 @@ on:
   pull_request:
     branches:
       - main
-    # Only the app, the shared packages, the flows and the pipeline itself can
-    # break the emulator: a documentation-only push must not spend the minutes.
+    # Only the app, the shared packages, the flows, the a1 job's own scripts
+    # and the pipeline itself can break the emulator: a documentation-only push
+    # must not spend the minutes. `scripts/**` is on the list because the a1
+    # job's rows assert and its own suite live there - a change to them can
+    # turn the done-when red, and a PR check set that does not run for it is
+    # a check set that lies (BUG-186's suite was the first thing to sit on
+    # the wrong side of this filter).
     paths:
       - 'apps/**'
       - 'packages/**'
       - 'services/**'
       - '.maestro/**'
+      - 'scripts/**'
       - '.github/workflows/android-e2e.yml'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -33,6 +39,7 @@ on:
       - 'packages/**'
       - 'services/**'
       - '.maestro/**'
+      - 'scripts/**'
       - '.github/workflows/android-e2e.yml'
       - 'package.json'
       - 'pnpm-lock.yaml'
