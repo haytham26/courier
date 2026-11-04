@@ -5,7 +5,11 @@
  * Better Auth creates its tables (user, session, account, verification,
  * organization, team, teamMember, member, invitation, twoFactor, jwks) with its
  * own migration, and the contract's `schema.sql` does not carry them: the API's
- * tables and the auth service's tables are two migrations in one database.
+ * tables and the auth service's tables are two migrations in one database. The
+ * `rateLimit` table is created as well when the deployment runs the shared
+ * (database) limiter store, which production does since BUG-132, so the
+ * migration has to run with the production environment - it is the same module
+ * the service loads.
  * Without it the auth container comes up and then logs
  * `Database schema mismatch … Missing tables user, session, …` and goes
  * unhealthy — which is exactly where the first staging deploy stopped (the API
