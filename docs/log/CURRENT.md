@@ -884,3 +884,24 @@ Both backtraces end on the same Hermes frames (0x148aee, 0x293ba1, 0x1bf197, hoo
 4. Then the founder's queue: #49 (its final head 42b1519, two green runs, no re-run), #18, #40, #52 (each: main merged in, E2E green on both legs, merge with the ritual), #58, then the C1 filings as **BUG-069+** (the audit draft is on main via PR #74), then A1's app side, A4, A2, C2, A6, and the rest of the audit and MASTER to the §6 Definition of Done.
 
 **The traps of this session (2026-10-27/28):** the GWP-ASan report never appears when the crash is inside the recorder — change the detector, not the patience (bionic malloc_debug records with a real unwinder); a green run under forced sampling proves nothing; a run at the readiness gate that dies in 1-2 minutes is the harness or the build, not the sweep; a 320x640 device in a leg's `Maestro ... Got device info` line is BUG-068, never the app; the exp-branch `env` argument belongs at the step level or the runner action never sees it; a `git push` that prints an error here has often succeeded — `git ls-remote` is the witness; and the queue's "no waiting" rule survives a red gate only when the red's cause is written down first.
+
+**PR #189 (A4) and #166 (the lows batch) — the queue's state at this session (2026-11-05).**
+
+- **#166 merged** (commit 38db903 on main). Its ritual: archive tag
+  `archive/fix-c1-lows-batch` at `74cc10d` (the final head), the branch gone
+  from `git ls-remote --heads origin`, and every check green on that head
+  (run 41827408707: the release APK, the a1 job's three flows + rows assert +
+  the BUG-188 suite, and both emulator legs).
+- **#189 (A4)** is on its final head `033e71e` (origin/main folded in) awaiting
+  the last E2E round (41832854524). Its every check was green on `63dc705`
+  (run 41818329793: the release APK, the a1 job's three flows + rows assert +
+  the BUG-188 suite, and both emulator legs) with the a1 job's one infra
+  re-run the playbook allows.
+- **#191 (queue 4.1, the navigation hand-off)** is open off main: the nav
+  hand-off (`src/maps/navHandoff.ts`, `driving-nav-handoff`) hands the run's
+  own stop to the courier's nav app with the key-free Google Maps deep link.
+  Its a1 job, both builds, CodeQL, the restore drill and every Quality gate
+  are green; the api-35 leg failed on the runner's emulator ("Unable to
+  connect to adb daemon", "device offline") and its one re-run is in flight.
+- Next in the queue after #189 and #191: B5 (Maestro video), A3 (the
+  recorder), A2 (on-device voice) and §22's app half.
