@@ -22,7 +22,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import csv
+import hashlib
 import json
+import platform
 import sys
 import time
 from dataclasses import dataclass, field
@@ -392,7 +394,14 @@ def write_results(out_dir: Path, results: list[TurnResult], summary: dict[str, A
             [
                 "simulation",
                 "turn",
-                "transcript",
+                # BUG-157: the transcript is hashed, never written verbatim. The
+                # results directory is git-tracked, and the moment the
+                # real-courier slice is recorded a driver's own words and the
+                # addresses of his run would land in a tracked artifact. A
+                # 16-hex-character digest still lets a reader see that two runs
+                # scored the same words (and that a change in the engine moved
+                # a turn) without storing anybody's words.
+                "transcript_sha256",
                 "expected_intent",
                 "actual_intent",
                 "speech",
@@ -409,7 +418,7 @@ def write_results(out_dir: Path, results: list[TurnResult], summary: dict[str, A
                 [
                     row.simulation,
                     row.turn,
-                    row.transcript,
+                    hashlib.sha256(row.transcript.encode("utf-8")).hexdigest()[:16],
                     row.expected_intent,
                     row.actual_intent,
                     row.speech,
@@ -425,7 +434,11 @@ def write_results(out_dir: Path, results: list[TurnResult], summary: dict[str, A
         "service": "courier-voice",
         "engine": "on-device (the deterministic brain of the service)",
         "audio": "none: the simulations are scored on the text of the turns",
-        "python": "3.11",
+        # BUG-158: what actually ran, not what the harness was written on. An
+        # artifact that can lie about its own run is not evidence, and a
+        # hardcoded "3.11" was correct only by luck.
+        "python": platform.python_version(),
+        "platform": platform.platform(),
         "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     (out_dir / "environment.json").write_text(json.dumps(environment, indent=2), encoding="utf-8")

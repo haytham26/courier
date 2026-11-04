@@ -167,15 +167,22 @@ class DriverDay(HttpUser):
     def sync_a_batch(self) -> None:
         if self.run_id is None or not self.stop_ids:
             return  # no seeded day: nothing honest to sync
-        batch = [
-            {
+        batch = []
+        for _ in range(random.randint(2, 8)):
+            kind = random.choice(("delivered", "skipped", "failed"))
+            event: dict[str, str] = {
                 "id": str(uuid.uuid4()),
                 "stop_id": str(random.choice(self.stop_ids)),
-                "kind": random.choice(("delivered", "skipped", "failed")),
+                "kind": kind,
                 "occurred_at": datetime.now(UTC).isoformat(),
             }
-            for _ in range(random.randint(2, 8))
-        ]
+            # ADR-023 (D58): a failed event must carry its reason, or the
+            # batch is a 422 and the load test measures the refusal, not the SLO.
+            if kind == "failed":
+                event["reason"] = random.choice(
+                    ("no answer at the door", "address not found", "customer refused")
+                )
+            batch.append(event)
         with self.client.post(
             f"/shifts/{self.shift_id}/events:batch", json=batch, catch_response=True
         ) as response:

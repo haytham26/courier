@@ -15,6 +15,12 @@ dependencies = [
     "pydantic-settings>=2.1",
     "httpx>=0.28.1",
     "pyjwt[crypto]>=2.15.1",
+    # The cost guard's day is a New Zealand calendar day (BUG-155), so it reads
+    # `ZoneInfo("Pacific/Auckland")`. A Linux container carries the IANA
+    # database in the OS; a Windows box (the founder's, and CI's) does not, and
+    # `zoneinfo` raises ZoneInfoNotFoundError without this package. On Linux it
+    # is not installed at all - the marker says so.
+    "tzdata>=2024.1; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +33,11 @@ dev = [
     # B4: the mutation testing floor over the turn machine, the same one the
     # API's sync/runs/auth modules run at.
     "mutmut>=3.3,<4",
+]
+eval = [
+    "numpy>=2.4.6",
+    "sherpa-onnx>=2.0.1",
+    "soundfile>=0.14.0",
 ]
 
 [tool.uv]

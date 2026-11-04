@@ -40,6 +40,10 @@ Thumbs.db
 data/linz/
 # Drawn label images and the real label photos (personal data, never committed)
 data/labels/
+# The voice evaluation audio (Common Voice clips, MUSAN beds, the built
+# utterances and the STT judge model): large, downloadable by
+# scripts/eval/fetch-open-voice-data.mjs, never committed)
+data/voice/
 # Local scratch backups (never committed)
 .local-backup/
 # Scratch renders of the design lab (the working folder of the render scripts,

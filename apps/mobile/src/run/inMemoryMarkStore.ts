@@ -8,6 +8,8 @@
  * long as the session - so a phone that cannot persist falls back to exactly
  * what it had, and no other module has to handle a store that is not there.
  */
+import { newEventId } from '@/sync/eventId';
+
 import type { DeliveredMark, MarkStore } from './types';
 
 export function inMemoryMarkStore(): MarkStore {
@@ -19,7 +21,9 @@ export function inMemoryMarkStore(): MarkStore {
         stopId: stop.id,
         sequence: stop.sequence,
         at,
-        eventId: `delivered-${stop.id}-${String(at)}`,
+        // BUG-176: the contract's event id is a uuid (the API refuses the
+        // batch with a 422 otherwise), so the mark carries one too.
+        eventId: newEventId(),
       });
       return Promise.resolve();
     },

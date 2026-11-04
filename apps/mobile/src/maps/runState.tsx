@@ -26,7 +26,10 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 
 import { errorMessage } from '@/lib/errors';
 import { inMemoryMarkStore } from '@/run/inMemoryMarkStore';
-import type { MarkStore } from '@/run/types';
+import { noDayStore, useRunDay } from '@/run/useRunDay';
+import type { StoreSource } from '@/run/useRunDay';
+import type { RunDay } from '@/run/useRunDay';
+import type { MarkStore, RunDayStore } from '@/run/types';
 
 import type { Stop } from './stops';
 
@@ -47,6 +50,17 @@ export interface RunState {
   markDelivered(stop: Stop): void;
   /** Takes a stop back: the mark of it leaves the run. */
   undoDelivered(stopId: string): void;
+  /**
+   * The day itself, read through the same store the marks are written to.
+   *
+   * A1 slice 3: the screens read the run's own stops here, so a screen that
+   * shows the day shows the day the phone holds and not a mock's copy of it.
+   * `hasRun` is false on a first launch with no network, which is the honest
+   * answer: there is no day on the phone yet.
+   */
+  day: RunDay;
+  /** Re-reads the day from the network, when the courier asks for it. */
+  refreshDay(): Promise<void>;
 }
 
 const RunContext = createContext<RunState | undefined>(undefined);
@@ -63,6 +77,27 @@ export const RunProvider = ({
   // marks in memory (the behaviour this provider had before the store).
   const [marks] = useState<MarkStore>(() => store ?? inMemoryMarkStore());
   const [delivered, setDelivered] = useState<DeliveredEvent[]>([]);
+
+  /**
+   * The day behind the marks, read through the very same store.
+   *
+   * A store that carries a day (the app's own run store) answers the day and
+   * the marks with one handle; a store that carries only marks (the in-memory
+   * one a test hands over) has no day, and the screens read an empty one rather
+   * than a second store opening a second handle to look.
+   */
+  const dayStore = useMemo<RunDayStore | null>(
+    () => (typeof (marks as Partial<RunDayStore>).load === 'function' ? (marks as RunDayStore) : null),
+    [marks],
+  );
+  // The read path of a store with no day, made once: a fresh one each render
+  // would be a new store each render, and the hook would re-read forever.
+  const noDay = useMemo(noDayStore, []);
+  // The source is one function for the life of the store it reads: a fresh
+  // closure each render would do the same, which the run-state suite caught as
+  // a timeout.
+  const daySource = useCallback<StoreSource>(() => dayStore ?? noDay, [dayStore, noDay]);
+  const day = useRunDay(daySource);
 
   // The marks of the run come back from the store when the provider mounts.
   useEffect(() => {
@@ -92,21 +127,35 @@ export const RunProvider = ({
           ? current
           : [...current, { stopId: stop.id, sequence: stop.sequence, at: Date.now() }],
       );
-      void marks.markDelivered(stop).catch((error: unknown) => {
-        console.warn(`run: the delivery of ${stop.id} could not be written: ${errorMessage(error)}`);
-      });
+      void (async () => {
+        try {
+          await marks.markDelivered(stop);
+          // BUG-178: the day's own marks are what the screens read, so the
+          // day is re-read after the write - run 41578697363's a1 taps went
+          // to the same stop three times because the sheet never advanced.
+          await day.refreshMarks();
+        } catch (error) {
+          console.warn(`run: the delivery of ${stop.id} could not be written: ${errorMessage(error)}`);
+        }
+      })();
     },
-    [marks],
+    [marks, day],
   );
 
   const undoDelivered = useCallback(
     (stopId: string) => {
       setDelivered((current) => current.filter((event) => event.stopId !== stopId));
-      void marks.undoDelivered(stopId).catch((error: unknown) => {
-        console.warn(`run: the delivery of ${stopId} could not be taken back: ${errorMessage(error)}`);
-      });
+      void (async () => {
+        try {
+          await marks.undoDelivered(stopId);
+          // The day's numbers follow the write, the same as a mark (BUG-178).
+          await day.refreshMarks();
+        } catch (error) {
+          console.warn(`run: the delivery of ${stopId} could not be taken back: ${errorMessage(error)}`);
+        }
+      })();
     },
-    [marks],
+    [marks, day],
   );
 
   const isDelivered = useCallback(
@@ -114,9 +163,21 @@ export const RunProvider = ({
     [delivered],
   );
 
+  /** Re-reads the day from the network, so a courier's pull asks the server. */
+  const refreshDay = useCallback(async () => {
+    if (dayStore === null) {
+      return;
+    }
+    try {
+      await dayStore.refresh();
+    } catch (error) {
+      console.warn(`run: the day could not be refreshed: ${errorMessage(error)}`);
+    }
+  }, [dayStore]);
+
   const value = useMemo(
-    () => ({ delivered, isDelivered, markDelivered, undoDelivered }),
-    [delivered, isDelivered, markDelivered, undoDelivered],
+    () => ({ delivered, isDelivered, markDelivered, undoDelivered, day, refreshDay }),
+    [delivered, isDelivered, markDelivered, undoDelivered, day, refreshDay],
   );
 
   return <RunContext.Provider value={value}>{children}</RunContext.Provider>;

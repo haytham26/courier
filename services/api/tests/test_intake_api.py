@@ -9,7 +9,6 @@ shape: a briefing or the first interrupt question.
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterator
 from datetime import UTC, datetime
 
 import pytest
@@ -20,13 +19,10 @@ from app.agents.omniroute import (
     OmniRouteError,
     get_intake_provider,
 )
-from app.auth.jwks import get_verifier
 from app.main import app
-from app.repo import InMemoryRepo, RouteStopRow, RunRecord, get_repo
-from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+from app.repo import InMemoryRepo, RouteStopRow, RunRecord
+from tests.conftest import COURIER
 
-COURIER = "driver-7"
-OTHER = "driver-8"
 START_AT = datetime(2026, 10, 25, 7, 30, tzinfo=UTC)
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 HEIC = b"\x00\x00\x00\x20ftypheic" + b"\x00" * 16
@@ -38,43 +34,6 @@ def no_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
     """The default provider is the deterministic fake, never a real gateway."""
     monkeypatch.delenv("OMNIROUTE_BASE_URL", raising=False)
     monkeypatch.delenv("OMNIROUTE_API_KEY", raising=False)
-
-
-@pytest.fixture()
-def repo() -> InMemoryRepo:
-    return InMemoryRepo()
-
-
-@pytest.fixture()
-def verifier_key(repo: InMemoryRepo) -> Iterator[object]:
-    key_pair = make_key_pair()
-    _, jwk = key_pair
-    app.dependency_overrides[get_repo] = lambda: repo
-    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
-    yield key_pair[0]
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture()
-def client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update(
-            {"Authorization": f"Bearer {sign(verifier_key, subject=COURIER)}"}
-        )
-        yield test_client
-
-
-@pytest.fixture()
-def other_client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update({"Authorization": f"Bearer {sign(verifier_key, subject=OTHER)}"})
-        yield test_client
-
-
-@pytest.fixture()
-def anonymous_client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        yield test_client
 
 
 def seed_run(

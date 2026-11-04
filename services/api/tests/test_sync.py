@@ -8,19 +8,16 @@ twice) and it must answer with the cursor the phone uses to know where it is.
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.auth.jwks import get_verifier
-from app.main import app
-from app.repo import DeliveryEventRow, InMemoryRepo, RouteStopRow, RunRecord, get_repo
-from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+from app.repo import DeliveryEventRow, InMemoryRepo, RouteStopRow, RunRecord
+from tests.conftest import COURIER
+from tests.test_runs_api import png_bytes, recent_iso, seed_run_with_stops
 
-COURIER = "driver-7"
 SHIFT_ID = uuid.uuid4()
 STOP_ID = uuid.uuid4()
 
@@ -57,27 +54,13 @@ def seeded_run(repo: InMemoryRepo) -> InMemoryRepo:
     return repo
 
 
-@pytest.fixture()
-def repo() -> InMemoryRepo:
-    return InMemoryRepo()
-
-
-@pytest.fixture()
-def client(repo: InMemoryRepo) -> Iterator[TestClient]:
-    key_pair = make_key_pair()
-    _, jwk = key_pair
-    app.dependency_overrides[get_repo] = lambda: repo
-    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
-    with TestClient(app) as test_client:
-        test_client.headers.update(
-            {"Authorization": f"Bearer {sign(key_pair[0], subject='driver-7')}"}
-        )
-        yield test_client
-    app.dependency_overrides.clear()
-
-
-def event(event_id: uuid.UUID | None = None, kind: str = "delivered") -> dict[str, Any]:
-    return {
+def event(
+    event_id: uuid.UUID | None = None,
+    kind: str = "delivered",
+    occurred_at: str | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    body: dict[str, Any] = {
         "id": str(event_id or uuid.uuid4()),
         "stop_id": str(STOP_ID),
         "kind": kind,
@@ -86,8 +69,11 @@ def event(event_id: uuid.UUID | None = None, kind: str = "delivered") -> dict[st
         "lat": -43.535,
         "lon": 172.605,
         "accuracy_m": 8.5,
-        "occurred_at": datetime.now(UTC).isoformat(),
+        "occurred_at": occurred_at or datetime.now(UTC).isoformat(),
     }
+    if reason is not None:
+        body["reason"] = reason
+    return body
 
 
 class TestEventSync:
@@ -191,6 +177,75 @@ class TestEventSync:
         assert repo.cursor(other_shift) == 0
 
 
+class TestTheFailedDeliveryReason:
+    """D58's server half (ADR-023, D63): a failed outcome carries its reason."""
+
+    def test_a_failed_event_carries_its_reason_and_it_is_stored(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        event_id = uuid.uuid4()
+        payload = event(event_id, kind="failed", reason="gate locked, no answer")
+
+        response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+
+        assert response.status_code == 200, response.text
+        assert seeded_run.events[event_id].reason == "gate locked, no answer"
+
+    def test_a_failed_event_without_a_reason_is_refused_and_nothing_is_stored(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        payload = event(uuid.uuid4(), kind="failed")
+
+        response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+
+        assert response.status_code == 422, response.text
+        assert not seeded_run.events
+
+    def test_a_blank_reason_is_refused_on_a_failed_event(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        payload = event(uuid.uuid4(), kind="failed", reason="   ")
+
+        response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+
+        assert response.status_code == 422, response.text
+        assert not seeded_run.events
+
+    def test_an_overlong_reason_is_refused(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        payload = event(uuid.uuid4(), kind="failed", reason="x" * 201)
+
+        response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+
+        assert response.status_code == 422, response.text
+        assert not seeded_run.events
+
+    def test_a_changed_reason_is_a_conflict_and_the_first_write_wins(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        event_id = uuid.uuid4()
+        first = event(event_id, kind="failed", reason="gate locked")
+        client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[first])
+        replay = event(event_id, kind="failed", reason="dog at the door")
+
+        second = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[replay])
+
+        assert second.json()["accepted"] == 0
+        assert second.json()["conflicts"] == [str(event_id)]
+        assert seeded_run.events[event_id].reason == "gate locked"
+
+    def test_a_non_failed_event_may_omit_the_reason(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        payload = event(uuid.uuid4(), kind="delivered")
+
+        response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
+
+        assert response.status_code == 200, response.text
+        assert seeded_run.events[uuid.UUID(payload["id"])].reason is None
+
+
 class TestTheConflictRules:
     """ADR-014: the first write wins, divergence is reported, the clock is bounded."""
 
@@ -200,7 +255,7 @@ class TestTheConflictRules:
         event_id = uuid.uuid4()
         payload = event(event_id)
         first = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
-        changed = dict(payload, kind="failed")
+        changed = dict(payload, kind="failed", reason="gate locked")
         second = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[changed])
 
         assert first.json()["accepted"] == 1
@@ -226,7 +281,7 @@ class TestTheConflictRules:
         self, client: TestClient, seeded_run: InMemoryRepo
     ) -> None:
         event_id = uuid.uuid4()
-        payload = event(event_id, kind="failed")
+        payload = event(event_id, kind="failed", reason="gate locked")
         client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[payload])
         changed = dict(payload, kind="delivered")
 
@@ -242,7 +297,7 @@ class TestTheConflictRules:
         the phone is told (the SQL repo answers the same way)."""
         event_id = uuid.uuid4()
         first = event(event_id)
-        changed = dict(first, kind="failed")
+        changed = dict(first, kind="failed", reason="gate locked")
 
         response = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[first, changed])
 
@@ -259,6 +314,7 @@ class TestTheConflictRules:
         first["occurred_at"] = (now - timedelta(minutes=10)).isoformat()
         second = event()
         second["kind"] = "failed"
+        second["reason"] = "no answer at the door"
         second["occurred_at"] = (now - timedelta(minutes=5)).isoformat()
 
         client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[first, second])
@@ -429,3 +485,173 @@ def test_a_pod_row_does_not_bump_the_sync_cursor(
     )
 
     assert seeded_run.cursor(SHIFT_ID) == 1
+
+
+def an_event(stop_id: Any = STOP_ID, **overrides: Any) -> DeliveryEventRow:
+    """One delivery event row, as the sync endpoint would carry it."""
+    values: dict[str, Any] = {
+        "id": uuid.uuid4(),
+        "shift_id": SHIFT_ID,
+        "stop_id": stop_id,
+        "kind": "delivered",
+        "utterance": None,
+        "safe_place": None,
+        "lat": None,
+        "lon": None,
+        "accuracy_m": None,
+        "occurred_at": datetime.now(UTC),
+    }
+    values.update(overrides)
+    return DeliveryEventRow(**values)
+
+
+class TestTheInMemoryAppendIsAtomic:
+    """BUG-145: the double applies the batch as one decision, then one mutation.
+
+    Production wraps its whole batch in `engine.begin()`; the in-memory repo
+    wrote each row as it walked the batch, so a raise in the middle left half
+    the batch applied and `self.events` and `self.by_shift` could disagree. A
+    test double that answers non-atomically lets a test pass on an atomicity
+    production has and the double does not - which is exactly the shape that
+    hid BUG-115.
+    """
+
+    def test_a_failure_in_the_middle_of_a_batch_applies_nothing(
+        self, repo: InMemoryRepo, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        known = an_event()
+        repo.append_events(SHIFT_ID, [known])
+        fresh = an_event()
+        replay = an_event(id=known.id)
+
+        def explode(existing: Any, incoming: Any) -> bool:
+            if incoming is replay:
+                raise RuntimeError("the batch's last row")
+            return True
+
+        monkeypatch.setattr("app.repo._same_event", explode)
+
+        with pytest.raises(RuntimeError):
+            repo.append_events(SHIFT_ID, [fresh, replay])
+
+        # Only what the store held before the batch is there: the fresh row is
+        # not applied, and the shift's index did not grow.
+        assert list(repo.events) == [known.id]
+        assert repo.by_shift[SHIFT_ID] == [known.id]
+
+    def test_a_batch_that_succeeds_applies_all_of_it(self, repo: InMemoryRepo) -> None:
+        first = an_event()
+        second = an_event()
+
+        answer = repo.append_events(SHIFT_ID, [first, second])
+
+        assert answer.stored == 2
+        assert len(repo.events) == 2
+        assert len(repo.by_shift[SHIFT_ID]) == 2
+
+    def test_a_batch_carrying_the_same_id_twice_is_a_conflict(
+        self, repo: InMemoryRepo
+    ) -> None:
+        """The SQL repo answers an intra-batch divergence; so does this one."""
+        first = an_event()
+        again = an_event(id=first.id, safe_place="a different door")
+
+        answer = repo.append_events(SHIFT_ID, [first, again])
+
+        assert answer.stored == 1
+        assert answer.conflicts == (first.id,)
+        assert repo.by_shift[SHIFT_ID] == [first.id]
+
+
+class TestTheOccurredAtContract:
+    """BUG-143: the refusal names the field and the shape the phone sends.
+
+    The old texts said "occurred_at must carry its timezone" and "the phone's
+    clock is wrong", so a courier whose stamp was perfectly well formed was told
+    his clock was broken. The field is named and the expected shape is shown.
+    """
+
+    def test_a_naive_stamp_names_the_field_and_the_shape(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        naive = datetime.now(UTC).replace(tzinfo=None).isoformat()
+
+        answered = client.post(f"/shifts/{SHIFT_ID}/events:batch", json=[event(occurred_at=naive)])
+
+        assert answered.status_code == 422, answered.text
+        detail = answered.text
+        assert "occurred_at" in detail
+        assert "offset" in detail
+        assert "+13:00" in detail
+
+    def test_a_future_stamp_names_the_bound_rather_than_blaming_the_clock(
+        self, client: TestClient, seeded_run: InMemoryRepo
+    ) -> None:
+        far_future = (datetime.now(UTC) + timedelta(days=30)).isoformat()
+
+        answered = client.post(
+            f"/shifts/{SHIFT_ID}/events:batch", json=[event(occurred_at=far_future)]
+        )
+
+        assert answered.status_code == 422, answered.text
+        assert "occurred_at" in answered.text
+        assert "within an hour of now" in answered.text
+
+
+class TestOneRuleForBothPaths:
+    """BUG-144: the naive check has one source, and the POD exemption is pinned.
+
+    ADR-014 §3 keeps the clock *bounds* off the POD upload (`pod_captured` never
+    flips a stop), and that exemption is now a test rather than a comment, so
+    the next kind added to both paths cannot drift.
+    """
+
+    def test_the_pod_form_reads_the_same_naive_check(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        naive = recent_iso().replace("+00:00", "")
+
+        answered = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", png_bytes(), "image/png")},
+            data={"occurred_at": naive},
+        )
+
+        assert answered.status_code == 422, answered.text
+        assert "offset" in answered.text
+
+    def test_the_pod_upload_keeps_adr_014_clock_exemption(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Two years ahead is accepted on the POD path and refused on the sync
+        path - the same stamp, the same day, and the difference is ADR-014's."""
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        two_years_ahead = datetime.now(UTC) + timedelta(days=730)
+
+        stored = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", png_bytes(), "image/png")},
+            data={"occurred_at": two_years_ahead.isoformat()},
+        )
+
+        assert stored.status_code == 201, stored.text
+
+        answered = client.post(
+            f"/shifts/{SHIFT_ID}/events:batch",
+            json=[event(occurred_at=two_years_ahead.isoformat())],
+        )
+
+        assert answered.status_code == 422, answered.text

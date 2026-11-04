@@ -11,26 +11,24 @@ from __future__ import annotations
 
 import hashlib
 import uuid
-from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.auth.jwks import get_verifier
 from app.locations import location_id_for
 from app.main import _route_request, app
-from app.pod_store import LocalPodStore
+from app.pod import pod_settings
+from app.pod_store import LocalPodStore, pod_store
 from app.repo import DeliveryEventRow, InMemoryRepo, RouteStopRow, RunRecord, get_repo
 from app.routing import schedule_plan
-from tests.auth.test_jwks import make_key_pair, make_verifier, sign
+from tests.conftest import COURIER, OTHER
 
 POD_TEST_SECRET = "test-only-pod-url-signing-secret-0123456789"
 FORGED_SECRET = "not-the-server-key-0123456789abcdef"
 
-COURIER = "driver-7"
-OTHER = "driver-8"
 START_AT = datetime(2026, 10, 24, 7, 30, tzinfo=UTC)
 
 
@@ -52,49 +50,6 @@ def run_body(**overrides: object) -> dict[str, object]:
     }
     body.update(overrides)
     return body
-
-
-@pytest.fixture()
-def repo() -> InMemoryRepo:
-    return InMemoryRepo()
-
-
-@pytest.fixture()
-def verifier_key(repo: InMemoryRepo) -> Iterator[object]:
-    """The one key pair the whole module verifies against.
-
-    Every client in a test shares it (a second override would kill the first
-    client's tokens); the identity comes from the token's subject, so two
-    couriers are two subjects, not two verifiers.
-    """
-    key_pair = make_key_pair()
-    _, jwk = key_pair
-    app.dependency_overrides[get_repo] = lambda: repo
-    app.dependency_overrides[get_verifier] = lambda: make_verifier({"keys": [jwk]})
-    yield key_pair[0]
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture()
-def client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update(
-            {"Authorization": f"Bearer {sign(verifier_key, subject=COURIER)}"}
-        )
-        yield test_client
-
-
-@pytest.fixture()
-def other_client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        test_client.headers.update({"Authorization": f"Bearer {sign(verifier_key, subject=OTHER)}"})
-        yield test_client
-
-
-@pytest.fixture()
-def anonymous_client(verifier_key: object) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
-        yield test_client
 
 
 class TestCreatingARun:
@@ -121,6 +76,73 @@ class TestCreatingARun:
         read = client.get(f"/runs/{run['id']}")
         assert read.status_code == 200
         assert read.json() == run
+
+    def test_the_break_window_and_the_finish_are_stored_and_read_back(
+        self, client: TestClient
+    ) -> None:
+        body = run_body(
+            break_window={
+                "start": "2026-10-24T12:00:00+13:00",
+                "end": "2026-10-24T12:30:00+13:00",
+            },
+            finish={"lat": -43.5, "lon": 172.6},
+        )
+
+        created = client.post("/runs", json=body)
+
+        assert created.status_code == 201, created.text
+        run = created.json()
+        assert run["break_window"] == {
+            "start": "2026-10-24T12:00:00+13:00",
+            "end": "2026-10-24T12:30:00+13:00",
+        }
+        assert run["finish"] == {"lat": -43.5, "lon": 172.6}
+
+        read = client.get(f"/runs/{run['id']}")
+        assert read.status_code == 200
+        assert read.json() == run
+
+    def test_a_run_without_break_or_finish_answers_nulls(self, client: TestClient) -> None:
+        created = client.post("/runs", json=run_body())
+
+        assert created.status_code == 201, created.text
+        assert created.json()["break_window"] is None
+        assert created.json()["finish"] is None
+
+    def test_an_inverted_break_window_is_refused(self, client: TestClient) -> None:
+        body = run_body(
+            break_window={
+                "start": "2026-10-24T12:30:00+13:00",
+                "end": "2026-10-24T12:00:00+13:00",
+            }
+        )
+
+        refused = client.post("/runs", json=body)
+
+        assert refused.status_code == 422, refused.text
+
+    def test_a_naive_break_window_is_refused(self, client: TestClient) -> None:
+        body = run_body(
+            break_window={"start": "2026-10-24T12:00:00", "end": "2026-10-24T12:30:00"}
+        )
+
+        refused = client.post("/runs", json=body)
+
+        assert refused.status_code == 422, refused.text
+
+    def test_a_partial_break_window_is_refused(self, client: TestClient) -> None:
+        body = run_body(break_window={"start": "2026-10-24T12:00:00+13:00"})
+
+        refused = client.post("/runs", json=body)
+
+        assert refused.status_code == 422, refused.text
+
+    def test_an_out_of_bounds_finish_is_refused(self, client: TestClient) -> None:
+        body = run_body(finish={"lat": -91.0, "lon": 172.6})
+
+        refused = client.post("/runs", json=body)
+
+        assert refused.status_code == 422, refused.text
 
     def test_the_runs_list_holds_the_runs_the_courier_created(self, client: TestClient) -> None:
         first = client.post("/runs", json=run_body(name="First"))
@@ -157,6 +179,7 @@ class TestCreatingARun:
 
 class TestThePodUrl:
     """ADR-011 §2: the owner gets a URL that dies; a foreign anything is 404."""
+
 
     def _upload(
         self,
@@ -413,6 +436,66 @@ def seed_run_with_stops(
     return run_id, shift_id
 
 
+
+
+class TestTheReplayWhoseBytesCannotBeRead:
+    """BUG-119's route half: the reason is an answer, not a bare raise.
+
+    A stored object the store cannot read (a 403, a 5xx) used to surface as a
+    bare `RuntimeError` - a 500 with no explanation, and the event log was
+    left with no record of the replay because the request died before
+    `append_events`. The route now answers 500 with the reason and leaves the
+    log alone, so the phone's retry is a replay rather than a second event.
+    """
+
+    def test_the_reason_is_answered_and_the_log_is_left_alone(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        payload = png_bytes()
+        happened_at = recent_iso()
+        first = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": happened_at},
+        )
+        assert first.status_code == 201, first.text
+        event_id = first.json()["event_id"]
+        events_before = len(repo.events)
+
+        # The new name, imported here so the red-first run proves the store
+        # half first (the route half's own red is the missing name).
+        from app.pod_store import PodFingerprintError
+
+        real_store = pod_store(pod_settings())
+
+        class UnreadableStore:
+            """The bytes are there, and no reader can reach them."""
+
+            def exists(self, *args: object, **kwargs: object) -> bool:
+                return real_store.exists(run_id, uuid.UUID(event_id))
+
+            def fingerprint(self, *args: object, **kwargs: object) -> tuple[int, str]:
+                raise PodFingerprintError("the stored POD object cannot be read: backend down")
+
+        monkeypatch.setattr("app.main.pod_store", lambda settings=None: UnreadableStore())
+
+        answered = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": happened_at, "event_id": event_id},
+        )
+
+        assert answered.status_code == 500
+        assert "backend down" in answered.json()["detail"]
+        assert len(repo.events) == events_before
+
 class TestListingTheStops:
     def test_the_stops_list_their_address_and_status(
         self, client: TestClient, repo: InMemoryRepo
@@ -424,6 +507,7 @@ class TestListingTheStops:
         assert listed.status_code == 200, listed.text
         stops = listed.json()
         assert [stop["status"] for stop in stops] == ["pending", "pending"]
+        assert [stop["type"] for stop in stops] == ["delivery", "delivery"]
         assert [stop["address"] for stop in stops] == [
             row.address for row in repo.run_stops[run_id]
         ]
@@ -431,6 +515,18 @@ class TestListingTheStops:
         assert [(stop["lat"], stop["lon"]) for stop in stops] == [
             (row.lat, row.lon) for row in repo.run_stops[run_id]
         ]
+
+    def test_a_pickup_stop_lists_its_type(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        run_id, shift_id = seed_run_with_stops(repo)
+        first, second = repo.run_stops[run_id]
+        repo.run_stops[run_id] = [first, replace(second, type="pickup")]
+
+        listed = client.get(f"/shifts/{shift_id}/stops")
+
+        assert listed.status_code == 200, listed.text
+        assert [stop["type"] for stop in listed.json()] == ["delivery", "pickup"]
 
     def test_a_delivery_event_flips_the_stop_status(
         self, client: TestClient, repo: InMemoryRepo
@@ -1046,3 +1142,68 @@ class TestTheHardenedEdges:
         assert pod.status_code == 401
         assert reopt.status_code == 401
         assert stops.status_code == 401
+
+
+class TestABrokenInsertLeavesNoOrphanBytes:
+    """BUG-120: the bytes and the event row are written together, or neither is.
+
+    The POD route wrote the bytes before `append_events`, so a database failure
+    left an object under the run's prefix that no event row and no re-seed
+    accounted for - and the answer was a 500 with no record of the event, so
+    the courier's photo had landed nowhere he could find it.
+    """
+
+    def test_a_failed_insert_deletes_the_object_it_just_wrote(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        payload = png_bytes()
+
+        def broken_append(**kwargs: object) -> None:
+            raise RuntimeError("the event table is unreachable")
+
+        monkeypatch.setattr(repo, "append_events", broken_append)
+
+        answered = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": recent_iso()},
+        )
+
+        assert answered.status_code == 500
+        assert "could not be recorded" in answered.json()["detail"]
+        # Nothing is left under the run's prefix: no photo without a record.
+        directory = Path(str(tmp_path)) / str(run_id)
+        assert not directory.exists() or list(directory.glob("*.bin")) == []
+        assert repo.events == {}
+
+    def test_a_successful_upload_keeps_its_bytes(
+        self,
+        client: TestClient,
+        repo: InMemoryRepo,
+        tmp_path: object,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The same route, with a store that works: the object stays, the row is
+        written, and the answer is the pair."""
+        run_id, _ = seed_run_with_stops(repo)
+        stop_id = repo.run_stops[run_id][0].id
+        monkeypatch.setenv("POD_STORAGE_DIR", str(tmp_path))
+        payload = png_bytes()
+
+        stored = client.post(
+            f"/runs/{run_id}/stops/{stop_id}/pod",
+            files={"image": ("door.jpg", payload, "image/png")},
+            data={"occurred_at": recent_iso()},
+        )
+
+        assert stored.status_code == 201, stored.text
+        event_id = stored.json()["event_id"]
+        assert (Path(str(tmp_path)) / str(run_id) / f"{event_id}.bin").read_bytes() == payload
+        assert len(repo.events) == 1

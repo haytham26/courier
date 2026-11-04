@@ -48,6 +48,11 @@ from .run_client import RunClient, RunForbiddenError, checked_shift_id
 from .safety import apply_safety, is_moving, real_word_count, word_count
 from .turns import TurnMachine
 
+#: The settings store is bounded like the session store (BUG-151's shape,
+#: BUG-059's hoist): one process remembers at most this many drivers' voices,
+#: and the oldest entry is evicted past the cap.
+MAX_DRIVER_SETTINGS = 1000
+
 
 class CreateSession(BaseModel):
     """The body of a new shift."""
@@ -158,10 +163,21 @@ def create_app(
             raise HTTPException(status_code=404, detail="no session with this id")
         return memory
 
+    def remember_settings(driver_id: str, chosen: VoiceSettings) -> None:
+        """One driver's settings, bounded: past the cap the oldest goes first.
+
+        Re-inserting on an update keeps the entry the newest, so an active
+        courier is never the one evicted (BUG-059's hoist).
+        """
+        driver_settings.pop(driver_id, None)
+        driver_settings[driver_id] = chosen
+        while len(driver_settings) > MAX_DRIVER_SETTINGS:
+            del driver_settings[next(iter(driver_settings))]
+
     def settings_of(principal: Principal, chosen: VoiceSettings | None) -> VoiceSettings:
         """The settings of the courier: the ones sent with the turn win."""
         if chosen is not None:
-            driver_settings[principal.user_id] = chosen
+            remember_settings(principal.user_id, chosen)
             return chosen
         return driver_settings.get(principal.user_id, VoiceSettings())
 
@@ -175,11 +191,26 @@ def create_app(
         body: CreateSession,
         principal: Annotated[Principal, Depends(get_principal)],
     ) -> SessionState:
-        """A shift starts."""
+        """A shift starts.
+
+        BUG-151: one courier may not open an unbounded number of shifts. The
+        cap is a refusal that names it, not a silent eviction of a working
+        day - the register's probe was 5,000 sessions with no `DELETE` leaving
+        5,000 sessions resident.
+        """
+        open_shifts = len(memory_store.sessions_of(principal.user_id))
+        if open_shifts >= memory_store.max_sessions_per_driver:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"this courier already holds {open_shifts} shifts: close one with "
+                    "DELETE /v1/sessions/{id} before starting another"
+                ),
+            )
         memory = new_session(principal.user_id, body.shift_id)
         if body.settings is not None:
             apply_settings(memory, body.settings)
-            driver_settings[principal.user_id] = body.settings
+            remember_settings(principal.user_id, body.settings)
         if body.context is not None:
             memory.context = body.context
         memory_store.save(memory)
@@ -221,14 +252,21 @@ def create_app(
                 detail="this session names a shift, so a turn reads it from the "
                 "Courier API and cannot carry its own snapshot of it",
             )
-        return _turn(
-            memory,
-            body,
-            principal,
-            brains=brains,
-            client=client,
-            memory_store=memory_store,
-        )
+        # BUG-154: the turns of one shift are serialised. The store hands out
+        # its live `SessionMemory` and the turn machine mutates it in place, so
+        # two concurrent turns interleaved their phase, history and context and
+        # the last write won - each caller could be answered with the other's
+        # turn recorded as its instruction. One lock per session keeps a turn
+        # whole; a different session's turns run in parallel.
+        with memory_store.lock_for(session_id):
+            return _turn(
+                memory,
+                body,
+                principal,
+                brains=brains,
+                client=client,
+                memory_store=memory_store,
+            )
 
     @service.post("/v1/sessions/{session_id}/proactive", response_model=ProactiveResponse)
     def proactive(
@@ -274,7 +312,7 @@ def create_app(
         principal: Annotated[Principal, Depends(get_principal)],
     ) -> SettingsResponse:
         """The courier changes a setting."""
-        driver_settings[principal.user_id] = body.settings
+        remember_settings(principal.user_id, body.settings)
         return SettingsResponse(settings=body.settings)
 
     @service.get("/v1/engines", response_model=EngineList)
@@ -409,7 +447,10 @@ def _turn(
 
     machine.begin_speaking(outcome.speech)
     memory.turns += 1
-    memory.context = context
+    # BUG-149: with the memory off the context is not written back, so a turn
+    # cannot re-save the very thing the setting let go of.
+    if memory.settings.remember:
+        memory.context = context
     if reply.speech:
         memory.last_instruction = reply.speech
     if reply.question:

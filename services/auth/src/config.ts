@@ -52,12 +52,23 @@ export interface AuthConfig {
     /** ASVS V2.1.12: a bound, so a megabyte body is never hashed. */
     maxPasswordLength: number;
     /**
-     * ASVS V6.2.x / BUG-058: the breached-password check through the
-     * `haveIBeenPwned` plugin (k-anonymity; only the SHA-1's first five
-     * characters leave the server). On unless switched off for a deployment
+     * ASVS V6.2.x / BUG-058: the breached-password check (k-anonymity; only
+     * the SHA-1's first five characters leave the server). The check itself
+     * now lives in `src/http.ts`, bounded and fail-open, because Better
+     * Auth's own plugin carries no timeout (BUG-128); this flag is the switch
+     * the guarded check reads. On unless switched off for a deployment
      * without the service.
      */
     breachedPasswordCheck: boolean;
+    /** How long the corpus call may take before the request goes through (BUG-128). */
+    hibpTimeoutMs: number;
+    /**
+     * Whether Better Auth's OWN breached-password plugin runs as well
+     * (BUG-128). Off by default: its outbound call carries no timeout, and the
+     * guarded check in `src/http.ts` is the live one. `AUTH_HIBP_PLUGIN=true`
+     * adds it back for a deployment that wants both.
+     */
+    hibpPlugin: boolean;
     requireEmailVerification: boolean;
   };
   /**
@@ -97,6 +108,14 @@ export interface AuthConfig {
     enabled: boolean;
     window: number;
     max: number;
+    /**
+     * Where the counters live (BUG-132). `memory` is the library default - a
+     * module-level Map, per-process, lost on restart, so two replicas give two
+     * buckets. `database` is the shared store: Better Auth's own migration adds
+     * the `rateLimit` table when it is selected, and every replica counts into
+     * the same rows.
+     */
+    storage: "memory" | "database";
     /** Stricter limits for the credential endpoints (per path). */
     customRules: Record<string, { window: number; max: number }>;
   };
@@ -147,10 +166,22 @@ const envSchema = z.object({
   // fronts this service with its own edge needs to say so.
   AUTH_RATE_LIMIT_WINDOW: z.coerce.number().int().positive().optional(),
   AUTH_RATE_LIMIT_ENABLED: z.enum(['true', 'false']).optional(),
+  // BUG-132: where the limiter's counters live. The library default is a
+  // module-level Map, which is per-process: a restart resets it and two
+  // replicas give two buckets. `database` is the shared store (the migration
+  // adds its table), and production takes it by default.
+  AUTH_RATE_LIMIT_STORAGE: z.enum(['memory', 'database']).optional(),
   AUTH_SESSION_EXPIRES_IN: z.coerce.number().int().positive().optional(),
   AUTH_REQUIRE_EMAIL_VERIFICATION: z.enum(['true', 'false']).optional(),
   AUTH_MAX_PASSWORD_LENGTH: z.coerce.number().int().positive().optional(),
   AUTH_HIBP_ENABLED: z.enum(['true', 'false']).optional(),
+  // BUG-128: the deadline the guarded check gives the corpus call. A short
+  // timeout (2 s by default) turns a third-party outage into a log line and a
+  // request that goes through, rather than a failed sign-up.
+  AUTH_HIBP_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
+  // BUG-128: whether Better Auth's own (timeout-less) plugin runs as well. Off
+  // by default; the guarded check in http.ts is the live one.
+  AUTH_HIBP_PLUGIN: z.enum(['true', 'false']).optional(),
   AUTH_TRUSTED_IP_HEADERS: z.string().optional(),
   PORT: z.coerce.number().int().positive().optional(),
   AUTH_GOOGLE_CLIENT_ID: z.string().min(1).optional(),
@@ -352,7 +383,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
       enabled: true,
       minPasswordLength: 8,
       maxPasswordLength: values.AUTH_MAX_PASSWORD_LENGTH ?? 128,
+      // BUG-128: the switch reads the same variable the plugin used to, but
+      // the live check is the guarded one in `src/http.ts` (the plugin's
+      // outbound call carries no timeout, so an outage used to fail sign-up
+      // closed). Better Auth's own plugin is off by default; a deployment
+      // that wants it as well sets AUTH_HIBP_PLUGIN=true.
       breachedPasswordCheck: values.AUTH_HIBP_ENABLED !== "false",
+      hibpTimeoutMs: values.AUTH_HIBP_TIMEOUT_MS ?? 2_000,
+      hibpPlugin: values.AUTH_HIBP_PLUGIN === "true",
       requireEmailVerification:
         values.AUTH_REQUIRE_EMAIL_VERIFICATION === "true",
     },
@@ -378,6 +416,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
       enabled: values.AUTH_RATE_LIMIT_ENABLED !== "false",
       window: values.AUTH_RATE_LIMIT_WINDOW ?? 60,
       max: values.AUTH_RATE_LIMIT_MAX ?? 100,
+      // BUG-132: production shares the counters through the database - a
+      // per-process Map is what made two replicas give two buckets and a
+      // restart reset them. A deployment that prefers the in-process store
+      // (a single replica, or its own edge in front) says so.
+      storage: values.AUTH_RATE_LIMIT_STORAGE ?? (nodeEnv === "production" ? "database" : "memory"),
       // Credential endpoints get the strict treatment (OWASP: ~10 attempts
       // per 15 minutes); sign-up is even tighter because it is anonymous.
       // The OAuth start and the passkey ceremonies are limited as well: they

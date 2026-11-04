@@ -174,3 +174,28 @@ ALTER TABLE stops
     ADD COLUMN IF NOT EXISTS time_window_start timestamptz;
 ALTER TABLE stops
     ADD COLUMN IF NOT EXISTS time_window_end timestamptz;
+
+-- The day's planned break window and its finish point (ADR-022, D63: the
+-- server half of D55/D56). They shape the plan, so they are stored on the
+-- run itself; the app's break row and finish picker ride the app halves.
+ALTER TABLE runs
+    ADD COLUMN IF NOT EXISTS break_start_at timestamptz;
+ALTER TABLE runs
+    ADD COLUMN IF NOT EXISTS break_end_at timestamptz;
+ALTER TABLE runs
+    ADD COLUMN IF NOT EXISTS finish_lat double precision;
+ALTER TABLE runs
+    ADD COLUMN IF NOT EXISTS finish_lon double precision;
+
+-- The structured failed-delivery reason (ADR-023, D63: the server half of
+-- D58). The courier's own words stay in utterance; the reason is the bounded
+-- structured field, and a failed event must carry one.
+ALTER TABLE delivery_events
+    ADD COLUMN IF NOT EXISTS reason text;
+
+-- The stop's type (ADR-024, D63: the server half of D59). Spoke bundles
+-- delivery/pickup presets on an address; the type is the preset's core, and
+-- the rest of the preset rides the address squad's door memory.
+ALTER TABLE stops
+    ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'delivery'
+        CHECK (type IN ('delivery', 'pickup'));

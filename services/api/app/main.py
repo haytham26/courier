@@ -7,7 +7,7 @@ import logging
 import os
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import (
@@ -23,7 +23,7 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 from langgraph.checkpoint.memory import MemorySaver
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .agents import copilot
 from .agents.copilot import COPILOT_MAX_RETRIES, COPILOT_TIMEOUT_SECONDS
@@ -39,27 +39,51 @@ from .auth.jwks import (
     AuthPrincipal,
     get_auth_settings,
     get_current_principal,
+    get_verifier,
     get_websocket_verifier,
 )
 from .auth.routes import router as auth_router
-from .auth.websocket import UnauthenticatedError, identify, refuse
+from .auth.websocket import (
+    CLOSE_INVALID_TOKEN,
+    CLOSE_UNAUTHENTICATED,
+    INVALID_TOKEN_MESSAGE,
+    UnauthenticatedError,
+    identify,
+    refuse,
+)
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import entitlement_of
-from .locations import location_id_for
+from .import_stops import (
+    IMPORT_MAX_BYTES,
+    ImportFormatError,
+    parse_import,
+    sniff_import_kind,
+)
+from .locations import location_id_for_stop
+from .occurred_at import bound_occurred_at, require_aware_occurred_at
 from .pod import (
     POD_MAX_BYTES,
     pod_settings,
     sniff_image_kind,
     validate_pod_settings,
 )
-from .pod_store import LocalPodStore, pod_store
+from .pod_store import LocalPodStore, PodFingerprintError, pod_store
 from .providers import VERIFIERS, apply_facts, webhook_secret_for
-from .repo import DeliveryEventRow, LocationNoteRow, Repo, RouteStopRow, RunRecord, get_repo
+from .repo import (
+    AppendResult,
+    DeliveryEventRow,
+    LocationNoteRow,
+    Repo,
+    RouteStopRow,
+    RunRecord,
+    get_repo,
+)
 from .responses import (
     DemoRunResponse,
     EntitlementResponse,
     HealthResponse,
+    ImportResponse,
     IntakeAnswerResponse,
     LocationNoteResponse,
     PodResponse,
@@ -179,14 +203,36 @@ class DepotPoint(BaseModel):
     lon: float = Field(ge=-180.0, le=180.0)
 
 
+class BreakWindow(BaseModel):
+    """The planned break of the day (D55, ADR-022): both bounds carry their
+    timezone, and the window is never empty or inverted."""
+
+    start: datetime
+    end: datetime
+
+    @field_validator("start", "end")
+    @classmethod
+    def _aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("the break window must carry its timezone")
+        return value
+
+    @model_validator(mode="after")
+    def _ordered(self) -> BreakWindow:
+        if self.end <= self.start:
+            raise ValueError("break_window.end must be after break_window.start")
+        return self
+
+
 class CreateRunRequest(BaseModel):
-    """The phone's first write of the day (ADR-010 §3).
+    """The phone's first write of the day (ADR-010 §3, ADR-022).
 
     Unknown fields are refused, never dropped silently: `territory` from the
     older contract sketch comes back as 422 until the schema has a home for
-    it, because accepting-and-ignoring input is a lie. The same rule keeps the
-    finish point and the break window out until the runs table gains columns
-    for them - they shape the plan, so they must be storable first.
+    it, because accepting-and-ignoring input is a lie. The finish point and
+    the break window are carried too (D63): the runs table has their columns,
+    so they are storable - they shape the plan, and the plan reads them back
+    from the run.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -197,6 +243,8 @@ class CreateRunRequest(BaseModel):
     start_at: datetime
     capacity_parcels: int | None = Field(default=None, ge=0, le=9999)
     speed_kmh: float = Field(default=30.0, ge=1.0, le=120.0)
+    break_window: BreakWindow | None = None
+    finish: DepotPoint | None = None
 
     @field_validator("start_at")
     @classmethod
@@ -219,6 +267,10 @@ class DeliveryEvent(BaseModel):
     kind: str = Field(min_length=1, max_length=64)
     utterance: str | None = Field(default=None, max_length=2000)
     safe_place: str | None = Field(default=None, max_length=200)
+    # The structured failed-delivery reason (ADR-023, D63: D58's server half).
+    # The courier's own words stay in utterance; the reason is the bounded
+    # structured field, and a failed outcome must carry one.
+    reason: str | None = Field(default=None, max_length=200)
     lat: float | None = Field(default=None, ge=-90.0, le=90.0)
     lon: float | None = Field(default=None, ge=-180.0, le=180.0)
     accuracy_m: float | None = Field(default=None, ge=0.0)
@@ -228,18 +280,14 @@ class DeliveryEvent(BaseModel):
     @classmethod
     def _aware_occurred_at(cls, value: datetime) -> datetime:
         """A naive timestamp would break the status ordering (and lie about
-        when it happened) - the phone always knows its zone."""
-        if value.tzinfo is None:
-            raise ValueError("occurred_at must carry its timezone")
-        now = datetime.now(UTC)
-        if value > now + timedelta(hours=1):
-            raise ValueError(
-                "occurred_at is more than an hour in the future: the phone's clock is wrong"
-            )
-        if value < now - timedelta(days=7):
-            raise ValueError(
-                "occurred_at is more than 7 days old: the log is stale or the clock is wrong"
-            )
+        when it happened) - the phone always knows its zone.
+
+        The check and the bounds are `app/occurred_at.py`'s (BUG-143/144), the
+        same one the POD path reads its naive check from, so the two paths
+        cannot disagree about what a timestamp is again.
+        """
+        require_aware_occurred_at("occurred_at", value)
+        bound_occurred_at("occurred_at", value)
         return value
 
     @field_validator("kind")
@@ -250,6 +298,22 @@ class DeliveryEvent(BaseModel):
         if value not in allowed:
             raise ValueError(f"unknown event kind: {value}")
         return value
+
+    @field_validator("reason")
+    @classmethod
+    def _clean_reason(cls, value: str | None) -> str | None:
+        """Whitespace-only is no reason: stripped, blank becomes absent."""
+        if value is None:
+            return None
+        return value.strip() or None
+
+    @model_validator(mode="after")
+    def _failed_carries_a_reason(self) -> DeliveryEvent:
+        """D58: a failed outcome without its reason is the gap C2 named -
+        the status alone says "failed", never why."""
+        if self.kind == "failed" and not self.reason:
+            raise ValueError("a failed event carries its reason")
+        return self
 
 
 class CreateLocationNote(BaseModel):
@@ -296,6 +360,16 @@ def _run_body(run: RunRecord) -> dict[str, Any]:
         "capacity_parcels": run.capacity_parcels,
         "speed_kmh": run.speed_kmh,
         "start_at": run.start_at.isoformat(),
+        "break_window": (
+            {"start": run.break_start_at.isoformat(), "end": run.break_end_at.isoformat()}
+            if run.break_start_at is not None and run.break_end_at is not None
+            else None
+        ),
+        "finish": (
+            {"lat": run.finish_lat, "lon": run.finish_lon}
+            if run.finish_lat is not None and run.finish_lon is not None
+            else None
+        ),
     }
 
 
@@ -480,6 +554,10 @@ def create_run(
         capacity_parcels=body.capacity_parcels,
         speed_kmh=body.speed_kmh,
         start_at=body.start_at,
+        break_start_at=body.break_window.start if body.break_window else None,
+        break_end_at=body.break_window.end if body.break_window else None,
+        finish_lat=body.finish.lat if body.finish else None,
+        finish_lon=body.finish.lon if body.finish else None,
     )
     try:
         repo.put_run(record)
@@ -527,8 +605,14 @@ class PodForm:
         safe_place: str | None = Form(None, max_length=200),
         event_id: uuid.UUID | None = Form(None),
     ) -> None:
-        if occurred_at.tzinfo is None:
-            raise HTTPException(status_code=422, detail="occurred_at must carry its timezone")
+        # BUG-144: the naive check is the sync event's own, read from one place
+        # (ADR-014 §3 keeps the clock BOUNDS off POD: `pod_captured` never
+        # flips a stop, so the photo's timestamp orders nothing - and the
+        # exemption is pinned by a test, not left as a comment).
+        try:
+            require_aware_occurred_at("occurred_at", occurred_at)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
         self.occurred_at = occurred_at
         self.safe_place = safe_place
         self.event_id = event_id
@@ -584,7 +668,17 @@ def upload_pod(
     replayed = existing is not None
 
     if replayed and store.exists(run.id, resolved_id):
-        stored_bytes, digest = store.fingerprint(run.id, resolved_id)
+        try:
+            stored_bytes, digest = store.fingerprint(run.id, resolved_id)
+        except PodFingerprintError as error:
+            # The bytes are stored but cannot be read. Answer with the reason
+            # (BUG-119: it used to escape as a bare RuntimeError, a 500 with no
+            # explanation), and leave the event log untouched so the phone's
+            # retry is a replay rather than a second event.
+            logger.warning(
+                "the POD replay of %s cannot be fingerprinted: %s", resolved_id, error
+            )
+            raise HTTPException(status_code=500, detail=str(error)) from error
     else:
         # Not a replay: the upload is the record, and bytes that sit there
         # without their own event row (a crash orphan, or a planted file)
@@ -592,23 +686,44 @@ def upload_pod(
         digest = store.save(run.id, resolved_id, content)
         stored_bytes = len(content)
 
-    outcome = repo.append_events(
-        shift_id=run.shift_id,
-        events=[
-            DeliveryEventRow(
-                id=resolved_id,
-                shift_id=run.shift_id,
-                stop_id=paths.stop_id,
-                kind="pod_captured",
-                utterance=None,
-                safe_place=form.safe_place,
-                lat=None,
-                lon=None,
-                accuracy_m=None,
-                occurred_at=form.occurred_at,
-            )
-        ],
-    )
+    outcome: AppendResult | None = None
+    try:
+        outcome = repo.append_events(
+            shift_id=run.shift_id,
+            events=[
+                DeliveryEventRow(
+                    id=resolved_id,
+                    shift_id=run.shift_id,
+                    stop_id=paths.stop_id,
+                    kind="pod_captured",
+                    utterance=None,
+                    safe_place=form.safe_place,
+                    lat=None,
+                    lon=None,
+                    accuracy_m=None,
+                    occurred_at=form.occurred_at,
+                )
+            ],
+        )
+    except Exception as error:
+        # BUG-120: the bytes were written first, so a failed insert left an
+        # object under the run's prefix that no event row and no re-seed
+        # accounted for - and the answer was a 500 with no record of the event,
+        # so the courier's photo had landed nowhere he could find it. The bytes
+        # written here go with the row that failed, and the reason is logged.
+        if not replayed:
+            try:
+                store.delete(run.id, resolved_id)
+            except Exception as cleanup_error:  # the orphan is worse than the 500
+                logger.warning(
+                    "the POD bytes of %s could not be removed after a failed insert: %s",
+                    resolved_id,
+                    cleanup_error,
+                )
+        logger.warning("the POD insert of %s failed: %s", resolved_id, error)
+        raise HTTPException(
+            status_code=500, detail="the delivery event could not be recorded"
+        ) from error
     # The answer is the model, so a key rename is a construction error here
     # rather than a silently different answer on the phone (B3's response_model
     # slice). The status rides on the JSONResponse rather than an injected
@@ -945,6 +1060,50 @@ def intake_manifest(
     )
 
 
+@app.post("/shifts/{shift_id}/import", status_code=201, response_model=ImportResponse)
+def import_stops(
+    shift_id: uuid.UUID,
+    file: UploadFile,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """Import stops from a CSV/Excel spreadsheet (D52's server half, ADR-025).
+
+    All-or-nothing: the whole file is validated before one row is stored, and
+    a row without an address refuses the import with the row named - a silent
+    mis-import is the failure this endpoint exists to avoid. The name and the
+    bytes of the file are both checked (.csv text or .xlsx zip), and the
+    upload is capped like the POD's. The shift must be the caller's own (the
+    404 discipline, BUG-140).
+    """
+    run = repo.get_run_for_shift(shift_id, principal.user_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="no run for this shift")
+    content = file.file.read(IMPORT_MAX_BYTES + 1)
+    if len(content) > IMPORT_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="the file is over the 5 MiB cap")
+    kind = sniff_import_kind(file.filename or "", content)
+    if kind is None:
+        raise HTTPException(
+            status_code=415,
+            detail="the file must be a .csv (UTF-8 text) or .xlsx (zip); the name and the bytes must agree",
+        )
+    try:
+        rows, ignored = parse_import(content, kind)
+    except ImportFormatError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    try:
+        ids = repo.put_imported_stops(shift_id, rows)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return {
+        "shift_id": str(shift_id),
+        "imported": len(ids),
+        "stop_ids": [str(stop_id) for stop_id in ids],
+        "ignored_columns": ignored,
+    }
+
+
 @app.post(
     "/billing/webhooks/{source}",
     response_model=WebhookAcceptedResponse,
@@ -1020,9 +1179,12 @@ def list_stops(
         {
             "id": str(row.id),
             "address": row.address,
-            "location_id": str(row.location_id or location_id_for(row.address or "", row.suburb)),
+            "location_id": str(
+                row.location_id or location_id_for_stop(row.id, row.address, row.suburb)
+            ),
             "seq": seq,
             "status": row.status,
+            "type": row.type,
             "lat": row.lat,
             "lon": row.lon,
             "priority": row.priority,
@@ -1173,6 +1335,7 @@ def sync_events(
             kind=event.kind,
             utterance=event.utterance,
             safe_place=event.safe_place,
+            reason=event.reason,
             lat=event.lat,
             lon=event.lon,
             accuracy_m=event.accuracy_m,
@@ -1217,10 +1380,25 @@ async def voice(
         # would be solved before the socket is accepted, and a refusal would
         # then be an HTTP 403 on the handshake instead of an `error` frame and a
         # 4403 close on a socket the caller actually holds.
-        verifier = app.dependency_overrides.get(get_websocket_verifier) or get_websocket_verifier
+        # BUG-126: the HTTP surfaces' `get_verifier` is checked FIRST, so one
+        # override covers both surfaces (and, in production, both getters hand
+        # out the same cached instance - the surfaces cannot disagree about
+        # which keys are current).
+        verifier = (
+            app.dependency_overrides.get(get_verifier)
+            or app.dependency_overrides.get(get_websocket_verifier)
+            or get_websocket_verifier
+        )
         principal = await identify(ws, verifier())
     except UnauthenticatedError as exc:
-        await refuse(ws, exc.reason)
+        # BUG-125: the reason's category rides in the close code, so a
+        # half-closed socket still gets an answer (the frame may never land).
+        code = (
+            CLOSE_INVALID_TOKEN
+            if exc.reason == INVALID_TOKEN_MESSAGE
+            else CLOSE_UNAUTHENTICATED
+        )
+        await refuse(ws, exc.reason, code)
         return
     # BUG-140: the owner is part of the lookup, so the 404 is the store's
     # answer and not only a comparison this line makes afterwards.

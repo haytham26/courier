@@ -22,17 +22,20 @@ from __future__ import annotations
 import os
 import uuid
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import IntegrityError
 
 from app.entitlements import Plan, SubscriptionState
 from app.locations import location_id_for
 from app.repo import (
     DeliveryEventRow,
+    ImportedStopRow,
     LocationNoteRow,
     RunRecord,
     RunTemplate,
@@ -95,19 +98,26 @@ def a_run(shift_id: uuid.UUID) -> RunRecord:
     )
 
 
-def seed_stop(engine: Engine, shift_id: uuid.UUID, stop_id: uuid.UUID, address: str) -> None:
+def seed_stop(
+    engine: Engine,
+    shift_id: uuid.UUID,
+    stop_id: uuid.UUID,
+    address: str,
+    stop_type: str = "delivery",
+) -> None:
     with engine.begin() as connection:
         connection.execute(
             text(
                 "INSERT INTO stops (id, shift_id, sequence, address, latitude, longitude, "
-                "status, priority, parcels, location_id) VALUES (:id, :shift, 1, :address, "
-                "-43.54, 172.60, 'pending', false, 1, :location)"
+                "status, priority, parcels, location_id, type) VALUES (:id, :shift, 1, "
+                ":address, -43.54, 172.60, 'pending', false, 1, :location, :type)"
             ),
             {
                 "id": stop_id,
                 "shift": shift_id,
                 "address": address,
                 "location": location_id_for(address, None),
+                "type": stop_type,
             },
         )
 
@@ -136,6 +146,24 @@ class TestTheRunLifecycle:
 
         assert repo.get_run(run.id) == run
         assert repo.get_run_for_shift(shift_id, run.courier_id) == run
+
+    def test_the_break_window_and_the_finish_survive_the_sql_round_trip(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        shift_id = a_shift(engine)
+        run = replace(
+            a_run(shift_id),
+            break_start_at=datetime(2026, 10, 25, 12, 0, tzinfo=UTC),
+            break_end_at=datetime(2026, 10, 25, 12, 30, tzinfo=UTC),
+            finish_lat=-43.5,
+            finish_lon=172.6,
+        )
+
+        repo.put_run(run)
+
+        assert repo.get_run(run.id) == run
+        assert repo.get_run_for_shift(shift_id, run.courier_id) == run
+        assert repo.list_runs(run.courier_id)[0] == run
 
     def test_a_run_of_another_courier_is_not_found_by_the_query(
         self, repo: SqlAlchemyRepo, engine: Engine
@@ -242,6 +270,76 @@ class TestTheStops:
         assert [row.address for row in rows] == ["45 Papanui Road", "12 Riccarton Road"]
         assert [row.status for row in rows] == ["pending", "pending"]
         assert [row.id for row in rows] == [first, second]
+
+    def test_a_stop_reads_back_with_its_type_and_the_default_is_delivery(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        seed_stop(engine, shift_id, uuid.uuid4(), "45 Papanui Road")
+        seed_stop(engine, shift_id, uuid.uuid4(), "1 Colombo Street", stop_type="pickup")
+
+        rows = repo.get_run_stops(run.id)
+
+        by_address = {row.address: row.type for row in rows}
+        assert by_address == {"45 Papanui Road": "delivery", "1 Colombo Street": "pickup"}
+
+    def test_a_stop_type_outside_the_vocabulary_is_refused(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        shift_id = a_shift(engine)
+        repo.put_run(a_run(shift_id))
+
+        with pytest.raises(IntegrityError):
+            seed_stop(engine, shift_id, uuid.uuid4(), "1 Colombo Street", stop_type="bogus")
+
+    def test_imported_stops_round_trip_and_the_sequence_continues(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        shift_id = a_shift(engine)
+        run = a_run(shift_id)
+        repo.put_run(run)
+        seed_stop(engine, shift_id, uuid.uuid4(), "45 Papanui Road")  # sequence 1
+        rows = [
+            ImportedStopRow(
+                address="1 Colombo Street",
+                suburb="Christchurch Central",
+                location_id=location_id_for("1 Colombo Street", "Christchurch Central"),
+                type="pickup",
+                priority=True,
+                parcels=3,
+            ),
+            ImportedStopRow(
+                address="9 Riccarton Road",
+                suburb="Riccarton",
+                location_id=location_id_for("9 Riccarton Road", "Riccarton"),
+            ),
+        ]
+
+        ids = repo.put_imported_stops(shift_id, rows)
+
+        assert len(ids) == 2
+        back = repo.get_run_stops(run.id)
+        by_address = {row.address: row for row in back}
+        pickup = by_address["1 Colombo Street"]
+        assert pickup.id == ids[0]
+        assert pickup.type == "pickup"
+        assert pickup.priority is True
+        assert pickup.parcels == 3
+        assert pickup.lat is None and pickup.lon is None  # unlocated until the geocoder lands
+        assert pickup.suburb == "Christchurch Central"
+        assert pickup.location_id == location_id_for("1 Colombo Street", "Christchurch Central")
+        delivery = by_address["9 Riccarton Road"]
+        assert delivery.type == "delivery"
+        assert delivery.priority is False
+        assert delivery.parcels == 1
+        with engine.connect() as connection:
+            sequences = connection.execute(
+                text("SELECT sequence FROM stops WHERE shift_id = :s ORDER BY sequence"),
+                {"s": shift_id},
+            ).scalars().all()
+        assert list(sequences) == [1, 2, 3]
 
 
 class TestTheEvents:

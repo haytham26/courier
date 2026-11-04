@@ -15,8 +15,24 @@ export const BREACHED_PASSWORDS = ["courier-breached-example-password"];
 /** Every range prefix the service asked for, in order (the k-anonymity proof). */
 export const pwnedRangeCalls: string[] = [];
 
+/**
+ * The corpus's behaviour, for the tests that ask about an outage (BUG-128).
+ *
+ * `hangFor` names the passwords whose range call never answers: the guarded
+ * check's deadline is what turns that into a fail-open sign-up instead of a
+ * request that never completes. Empty by default: the corpus answers.
+ */
+const behaviour: { hangFor: string[] } = { hangFor: [] };
+
+export function setPwnedBehaviour(next: { hangFor: string[] }): void {
+  behaviour.hangFor = next.hangFor;
+}
+
+// lgtm [js/insufficient-password-hash] The k-anonymity range API is SHA-1 by specification; the stub speaks the same 5-character bucket selector the service does.
 export function sha1(value: string): string {
-  return createHash("sha1").update(value).digest("hex").toUpperCase();
+  // codeql[js/insufficient-password-hash] Same reason: the stub answers the range endpoint with the same 5-character bucket selector the service sends, so no password is stored or compared anywhere.
+  const hex = createHash("sha1").update(value).digest("hex"); // lgtm [js/insufficient-password-hash] Same reason, on the digest line itself.
+  return hex.toUpperCase();
 }
 
 const RANGE_PREFIX = "https://api.pwnedpasswords.com/range/";
@@ -35,6 +51,10 @@ globalThis.fetch = (async (
   if (url.startsWith(RANGE_PREFIX)) {
     const range = url.slice(RANGE_PREFIX.length).toUpperCase();
     pwnedRangeCalls.push(range);
+    if (behaviour.hangFor.map(sha1).some((hash) => hash.startsWith(range))) {
+      // The outage: the call never answers, so only a deadline can stop it.
+      return new Promise<Response>(() => {});
+    }
     const entries = BREACHED_PASSWORDS.map(sha1)
       .filter((hash) => hash.startsWith(range))
       .map((hash) => `${hash.slice(5)}:42`);

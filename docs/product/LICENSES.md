@@ -49,6 +49,22 @@ here with its URL and the date it was read.
 | NZ Building Outlines | https://data.linz.govt.nz/layer/101290-nz-building-outlines/ | Creative Commons Attribution 4.0 International (CC BY 4.0) | 2026-10-22 | the footprints of the 3D buildings, baked into the offline pack |
 | OpenStreetMap | https://www.openstreetmap.org/copyright | Open Database License (ODbL) | 2026-10-21 | the roads, the building levels and the attribution of the offline pack |
 
+## The voice evaluation data (packages/eval/voice)
+
+The audio of the evaluation set is **eval data only**: it is never shipped in
+the app, it never reaches a driver, and it lives outside git in `data/voice/`
+(git-ignored, like `data/linz/`) with its per-clip checksums. The licences
+below are read from each dataset's own statement on 2026-11-03 and are repeated
+in `packages/eval/voice/manifest/licence.csv`. ESC-50 (CC BY-NC) and the
+DNS-challenge noise set are deliberately NOT used: the audit's rule forbids a
+non-commercial licence for a commercial product's eval set.
+
+| What | Upstream | Licence | Read on | Where it is used |
+| ---- | -------- | ------- | ------- | ---------------- |
+| Mozilla Common Voice 17.0 (en) | https://commonvoice.mozilla.org/data (read through the HF datasets-server mirror `saeedzou/common-voice-17-en-age-gender-accent`) | CC0-1.0 | 2026-11-03 | the speaker clips of the `en_nz_quiet`, `en_nz_van` and `en_mix` slices (140 New Zealand English + 140 other English accents), fetched by `scripts/eval/fetch-open-voice-data.mjs` |
+| MUSAN | https://www.openslr.org/17 (mirror `corypaik/musan`) | CC-BY-4.0 | 2026-11-03 | the van noise beds the `en_nz_van` slice is mixed with at the manifest's SNR levels |
+| Whisper tiny.en weights | https://github.com/k2-fsa/sherpa-onnx/releases (asr-models) | MIT (the weights); the sherpa-onnx runtime is Apache-2.0 | 2026-11-03 | the reference STT judge of the WER pass, eval only - never shipped |
+
 ## The voice service (services/courier-voice)
 
 The models and the libraries Courier Voice uses. The licences of the weights are
@@ -78,3 +94,14 @@ unknown or not commercial.
 | certifi | https://github.com/certifi/python-certifi | MPL-2.0 | 2026-10-22 | the trust store of httpx; it does not reach the app bundle |
 
 The imagery providers that need a commercial licence are **not** adopted: Google Photorealistic 3D Tiles and Cesium ion are refused by `scripts/data/build-3d-buildings.mjs` (see `docs/decisions/adr/ADR-005-map-view-modes.md`).
+
+## The API service (services/api)
+
+The API's own dependency closure is audited by the CI `Dependency audits` gate (uv lock);
+this table records the libraries adopted for one feature each, read from upstream:
+
+| What | Upstream | Licence | Read on | Where it is used |
+| ---- | -------- | ------- | ------- | ---------------- |
+| openpyxl | https://github.com/flatronika/openpyxl (foss.heptapod.net) | MIT | 2026-11-03 | reading .xlsx stop imports in `POST /shifts/{shift_id}/import` (ADR-025) |
+| et-xmlfile | https://foss.heptapod.net/openpyxl/et-xmlfile | MIT | 2026-11-03 | openpyxl's XML writer dependency, same import path |
+| psycopg + psycopg-binary | https://www.psycopg.org/ | LGPL-3.0-only (PEP 503 expression, read from the installed 3.3.6 metadata on 2026-11-03) | 2026-11-03 | the Postgres driver SQLAlchemy loads at runtime. The linking note BUG-059 asked for: psycopg is a separate process library imported by the API process, never statically linked into nor distributed with our code, and no psycopg source is modified or shipped - LGPL-3.0 §4(d) permits this use; the full licence text ships in the package's own metadata. Recorded here so the LGPL library is a deliberate, reviewed entry, not an oversight |

@@ -8,6 +8,7 @@
  * buttons with a plain sentence.
  */
 import { authClient } from './auth-client';
+import { fetchAnswerBody } from './fetch-answer';
 
 /** The sign-in methods the app can offer. */
 export const SIGN_IN_METHODS = ['email', 'google', 'apple', 'passkey'] as const;
@@ -57,8 +58,10 @@ function isMethodState(value: unknown): value is SignInMethodState {
 /**
  * Reads the answer of the service.
  *
- * The client hands back either the document or an error, so the shape is
- * checked before anything is believed.
+ * The client resolves the better-fetch ENVELOPE (`{ data, error, status }`),
+ * so the document is the envelope's `data` (BUG-171 - reading the envelope
+ * itself silently yielded the defaults on every real device); whatever the
+ * document holds is still shape-checked before anything is believed.
  */
 function parseMethods(payload: unknown): SignInMethods {
   if (typeof payload !== 'object' || payload === null) {
@@ -93,7 +96,7 @@ function parseMethods(payload: unknown): SignInMethods {
 export async function fetchSignInMethods(): Promise<SignInMethods> {
   try {
     const response: unknown = await authClient.$fetch('/sign-in-methods');
-    return parseMethods(response);
+    return parseMethods(fetchAnswerBody(response));
   } catch {
     return DEFAULT_SIGN_IN_METHODS;
   }

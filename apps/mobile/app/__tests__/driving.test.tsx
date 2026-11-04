@@ -9,12 +9,14 @@
  * and the voice are mocked the way Today's tests mock them.
  */
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import * as Haptics from 'expo-haptics';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import DrivingRoute from '../driving';
 import { RunProvider } from '@/maps/runState';
+import { e2eDay } from '@/run/dayForThisBuild';
+import type { DeliveredMark } from '@/run/types';
 
 jest.mock('@maplibre/maplibre-react-native', () => {
   const ReactActual = jest.requireActual<typeof import('react')>('react');
@@ -84,11 +86,44 @@ const theMic = (): jest.Mock => {
   return mockMic;
 };
 
+/**
+ * The day the drive moves on.
+ *
+ * A1 slice 3: the drive reads the run's own stops through the run store, so the
+ * suite hands it one - the E2E build's own day, in the contract's shape, which
+ * is the day the flows walk.
+ */
+function makeDayStore() {
+  const marks: DeliveredMark[] = [];
+  return {
+    load: () =>
+      Promise.resolve({ status: 'ok' as const, source: 'network' as const, snapshot: e2eDay() }),
+    deliveredMarks: () => Promise.resolve([...marks]),
+    markDelivered: (stop: { id: string; sequence: number }) => {
+      marks.push({
+        stopId: stop.id,
+        sequence: stop.sequence,
+        at: Date.now(),
+        eventId: `event-${stop.id}-${String(marks.length)}`,
+      });
+      return Promise.resolve();
+    },
+    undoDelivered: (stopId: string) => {
+      const at = marks.findIndex((mark) => mark.stopId === stopId);
+      if (at >= 0) {
+        marks.splice(at, 1);
+      }
+      return Promise.resolve();
+    },
+    close: () => Promise.resolve(),
+  };
+}
+
 /** The render helper: the slide's gestures need the root handler above them,
  * and the run state sits above the route the way the root layout holds it. */
 const renderDrive = () =>
   render(
-    <RunProvider>
+    <RunProvider store={makeDayStore()}>
       <GestureHandlerRootView>
         <DrivingRoute />
       </GestureHandlerRootView>
@@ -100,7 +135,7 @@ describe('Driving', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the glance blocks exactly as the flows find them', () => {
+  it('renders the glance blocks exactly as the flows find them', async () => {
     renderDrive();
 
     expect(screen.getByTestId('driving-screen')).toBeTruthy();
@@ -109,13 +144,15 @@ describe('Driving', () => {
     expect(screen.getByTestId('driving-slide')).toBeTruthy();
     expect(screen.getByTestId('driving-map-style')).toBeTruthy();
     expect(screen.getByTestId('driving-copilot')).toBeTruthy();
-    expect(screen.getByTestId('stop-pin-2')).toBeTruthy();
+    // The day is the run store's own read: it arrives after the store answers,
+    // so the pins the flows walk are waited for rather than assumed.
+    await waitFor(() => expect(screen.getByTestId('stop-pin-2')).toBeTruthy());
   });
 
-  it('reads the run the same one Today reads, with the real numbers', () => {
+  it('reads the run the same one Today reads, with the real numbers', async () => {
     renderDrive();
+    await waitFor(() => expect(screen.getByText('STOP 2 OF 5')).toBeTruthy());
 
-    expect(screen.getByText('STOP 2 OF 5')).toBeTruthy();
     // The street runs twice on purpose: on the turn card and on the panel.
     expect(screen.getAllByText('Papanui Road')).toHaveLength(2);
     expect(screen.getByText('Merivale')).toBeTruthy();
@@ -126,8 +163,10 @@ describe('Driving', () => {
     expect(screen.getByText('Then Blenheim Road')).toBeTruthy();
   });
 
-  it('hands the run to the next stop through the two-step activation', () => {
+  it('hands the run to the next stop through the two-step activation', async () => {
     renderDrive();
+    // The run has to be on the phone before a slide can deliver it.
+    await waitFor(() => expect(screen.getByText('STOP 2 OF 5')).toBeTruthy());
 
     const slide = screen.getByTestId('driving-slide');
 
@@ -141,7 +180,9 @@ describe('Driving', () => {
     fireEvent(slide, 'onAccessibilityAction', {
       nativeEvent: { actionName: 'activate' },
     });
-    expect(Haptics.notificationAsync).toHaveBeenCalledWith(Haptics.NotificationFeedbackType.Success);
+    expect(Haptics.notificationAsync).toHaveBeenCalledWith(
+      Haptics.NotificationFeedbackType.Success,
+    );
     expect(screen.getByText('STOP 3 OF 5')).toBeTruthy();
   });
 

@@ -148,6 +148,59 @@ paths:
         '503':
           description: No OCR provider is configured yet (the OmniRoute gateway is a founder item)
 
+  /shifts/{shift_id}/import:
+    post:
+      tags: [intake]
+      summary: Import stops from a CSV or Excel spreadsheet
+      description: |
+        The spreadsheet import's server half (D52, ADR-025). A header row is
+        required; `address` is the only required column (aliases: street,
+        delivery_address, addr), and `type` (delivery/pickup), `priority`
+        (true/false/yes/no/1/0), `parcels`, `service_time_s`, `window_start`
+        and `window_end` are optional (headers matched case- and
+        punctuation-insensitively). The import is all-or-nothing: the whole
+        file is validated before one row is stored, and a row without an
+        address refuses the import with the row named - a silent mis-import is
+        the failure this endpoint exists to avoid. Columns that match no known
+        field are answered in `ignored_columns`, never dropped silently. Stops
+        are stored unlocated (the API has no geocoder yet) and the routing layer
+        reports them through `unroutable_stop_ids` until the address slice
+        lands. The file is capped at 5 MiB and 1000 rows; the name and the
+        bytes must agree (.csv = UTF-8 text, .xlsx = zip).
+      operationId: import_stops
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: shift_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The .csv or .xlsx file of stops
+      responses:
+        '201':
+          description: The stops imported, all-or-nothing, in file order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413': { description: The file is over the 5 MiB cap }
+        '415': { description: Not a .csv (UTF-8) or .xlsx (zip), or the name and bytes disagree }
+        '422': { description: A row is invalid (no address, bad type/priority/parcels/window, over the 1000-row cap) - nothing was stored }
+
   /billing/webhooks/{source}:
     post:
       tags: [account]
@@ -806,6 +859,33 @@ components:
           type: integer
           description: Parcel index requiring clarification
 
+    ImportResponse:
+      type: object
+      description: >-
+        The answer of the spreadsheet import (ADR-025): the stops landed
+        all-or-nothing, in file order. `ignored_columns` names the header
+        columns that matched no known field - the import never drops a
+        column silently.
+      required: [shift_id, imported, stop_ids, ignored_columns]
+      properties:
+        shift_id:
+          type: string
+          format: uuid
+        imported:
+          type: integer
+          description: How many stops the file added
+        stop_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: The new stop ids, in file order
+        ignored_columns:
+          type: array
+          items:
+            type: string
+          description: Header columns that matched no known field
+
     DeliveryEvent:
       type: object
       required: [id, stop_id, kind, occurred_at]
@@ -827,6 +907,14 @@ components:
         safe_place:
           type: string
           description: "D9: Safe place if 'left at'"
+        reason:
+          type: string
+          maxLength: 200
+          description: >-
+            D58 (ADR-023): the structured failed-delivery reason, in the
+            courier's own words (a product-owned list, not a generic enum).
+            Required when kind is failed; carried through sync and compared on
+            replay conflicts.
         lat:
           type: number
           format: double
@@ -987,7 +1075,7 @@ components:
         shape. `location_id` (ADR-012) is the door's stable id the notes
         endpoints take; `van_zone` and `tip` return when the van-loading
         lands.
-      required: [id, seq, status, location_id]
+      required: [id, seq, status, location_id, type]
       properties:
         id:
           type: string
@@ -996,6 +1084,13 @@ components:
           type: string
           format: uuid
           description: The stable door id (ADR-012) the notes endpoints take
+        type:
+          type: string
+          enum: [delivery, pickup]
+          description: >-
+            The stop's type (D59, ADR-024): the core of the reusable preset
+            Spoke bundles on an address; the preset's other fields ride the
+            address squad's door memory.
         address:
           type: string
           nullable: true
@@ -1031,8 +1126,10 @@ components:
       description: >-
         The narrowed request of ADR-010 §3: unknown fields are refused, never
         dropped silently. `territory` comes back 422 until the schema gains a
-        home for it; the finish point and the break window stay out until the
-        runs table gains columns for them.
+        home for it. The finish point and the break window are carried from
+        ADR-022 (D63): the runs table has their columns, so they are storable
+        and therefore accepted; the app halves ride the same features' later
+        slices (D55/D56).
       required: [name, shift_id, depot, start_at]
       additionalProperties: false
       properties:
@@ -1062,6 +1159,26 @@ components:
           minimum: 1
           maximum: 120
           default: 30
+        break_window:
+          type: object
+          nullable: true
+          description: >-
+            The planned break (D55): both bounds are required together and must
+            carry their timezone; the server refuses end <= start.
+          required: [start, end]
+          additionalProperties: false
+          properties:
+            start: { type: string, format: date-time }
+            end: { type: string, format: date-time }
+        finish:
+          type: object
+          nullable: true
+          description: The end location of the day (D56); a round trip is finish == depot.
+          required: [lat, lon]
+          additionalProperties: false
+          properties:
+            lat: { type: number, minimum: -90, maximum: 90 }
+            lon: { type: number, minimum: -180, maximum: 180 }
 
     RunResponse:
       type: object
@@ -1089,6 +1206,22 @@ components:
         start_at:
           type: string
           format: date-time
+        break_window:
+          type: object
+          nullable: true
+          required: [start, end]
+          additionalProperties: false
+          properties:
+            start: { type: string, format: date-time }
+            end: { type: string, format: date-time }
+        finish:
+          type: object
+          nullable: true
+          required: [lat, lon]
+          additionalProperties: false
+          properties:
+            lat: { type: number }
+            lon: { type: number }
 
     LocationNote:
       type: object

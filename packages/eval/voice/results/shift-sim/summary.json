@@ -4,7 +4,7 @@
     "intent_accuracy": 1.0,
     "false_action_rate": 0.0,
     "word_rule_rate": 1.0,
-    "service_latency_p95_ms": 15.0
+    "service_latency_p95_ms": 0.0
   },
   "checks": {
     "intent_accuracy": {
@@ -32,7 +32,7 @@
       "metric": "M6",
       "target": 700.0,
       "direction": "at_most",
-      "measured": 15.0,
+      "measured": 0.0,
       "passed": true
     }
   },

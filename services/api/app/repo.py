@@ -17,14 +17,14 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime
 from functools import lru_cache
 from typing import Any, Protocol
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import bindparam, create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 
 from .entitlements import Plan, SubscriptionState, SubscriptionView
-from .locations import canonical_address, location_id_for
+from .locations import canonical_address, location_id_for_stop
 from .routing import PlannedStop, RoutePlan, RunTemplate
 from .sequencing import Segment
 
@@ -104,6 +104,8 @@ class DeliveryEventRow:
     lon: float | None
     accuracy_m: float | None
     occurred_at: datetime
+    # The structured failed-delivery reason (ADR-023, D58's server half).
+    reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -137,6 +139,7 @@ def _same_event(stored: DeliveryEventRow, incoming: DeliveryEventRow) -> bool:
         and stored.lon == incoming.lon
         and stored.accuracy_m == incoming.accuracy_m
         and stored.occurred_at == incoming.occurred_at
+        and stored.reason == incoming.reason
     )
 
 
@@ -153,6 +156,12 @@ class RunRecord:
     capacity_parcels: int | None
     speed_kmh: float
     start_at: datetime
+    # The day's planned break window and finish point (ADR-022, D63): stored on
+    # the run because they shape the plan (D55/D56's server half).
+    break_start_at: datetime | None = None
+    break_end_at: datetime | None = None
+    finish_lat: float | None = None
+    finish_lon: float | None = None
 
 
 @dataclass(frozen=True)
@@ -185,6 +194,28 @@ class RouteStopRow:
     status: str = "pending"
     suburb: str | None = None
     location_id: UUID | None = None
+    # The stop's type (ADR-024, D59's server half): the preset's core.
+    type: str = "delivery"
+
+
+@dataclass(frozen=True)
+class ImportedStopRow:
+    """One row of a spreadsheet import, parsed and validated (ADR-025).
+
+    The stop is stored unlocated: the API has no geocoder yet, so latitude
+    and longitude stay NULL and the routing layer reports the stop through
+    `unroutable_stop_ids` until the address-intelligence slice lands.
+    """
+
+    address: str
+    suburb: str | None
+    location_id: UUID
+    type: str = "delivery"
+    priority: bool = False
+    parcels: int = 1
+    service_time_s: int | None = None
+    window_start: datetime | None = None
+    window_end: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -238,6 +269,15 @@ class Repo(Protocol):
 
     def get_run_stops(self, run_id: UUID) -> list[RouteStopRow]:
         """The stops of the run, in the order the manifest gave them."""
+
+    def put_imported_stops(self, shift_id: UUID, rows: list[ImportedStopRow]) -> list[UUID]:
+        """Append the imported stops to the shift, in file order (ADR-025).
+
+        Returns the new stop ids in order. The sequence continues from the
+        shift's existing stops. The caller has validated the whole file
+        first, so the import lands all-or-nothing.
+        """
+        ...
 
     def courier_location_key(self, courier_id: str, location_id: UUID) -> str | None:
         """The canonical address key when the courier has a stop there, else
@@ -318,17 +358,39 @@ class InMemoryRepo:
     location_notes: dict[tuple[str, UUID, str], LocationNoteRow] = field(default_factory=dict)
 
     def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
+        """The batch applied as one decision, then one mutation.
+
+        BUG-145: this used to write each row into `self.events` (and its id into
+        `self.by_shift`) as it walked the batch, so a raise in the middle left
+        half the batch applied and the two dicts could disagree. The SQL repo
+        wraps its whole batch in `engine.begin()`, and a test double that answers
+        non-atomically lets a test pass on an atomicity production has and the
+        double does not - the shape that hid BUG-115.
+
+        The decision (what is new, what conflicts, what a batch's own second
+        copy of an id does) is made against the store *and* the batch first; the
+        mutations are applied once, after it. The SQL repo's intra-batch rule
+        travels with it: a batch carrying the same id twice with different
+        content is a conflict, not a second row.
+        """
         stored = 0
         conflicts: list[UUID] = []
+        fresh: list[tuple[UUID, DeliveryEventRow]] = []
+        decided: dict[UUID, DeliveryEventRow] = {}
         for event in events:
             existing = self.events.get(event.id)
-            if existing is not None:
-                if not _same_event(existing, event):
-                    conflicts.append(event.id)
+            if existing is None:
+                existing = decided.get(event.id)
+            if existing is None:
+                decided[event.id] = event
+                fresh.append((shift_id, event))
+                stored += 1
                 continue
+            if not _same_event(existing, event):
+                conflicts.append(event.id)
+        for row_shift, event in fresh:
             self.events[event.id] = event
-            self.by_shift.setdefault(shift_id, []).append(event.id)
-            stored += 1
+            self.by_shift.setdefault(row_shift, []).append(event.id)
         return AppendResult(
             stored=stored, conflicts=tuple(conflicts), cursor=self.cursor(shift_id)
         )
@@ -421,18 +483,59 @@ class InMemoryRepo:
                 status=latest.get(row.id, ("", 0, "pending"))[2],
                 suburb=row.suburb,
                 location_id=row.location_id,
+                type=row.type,
             )
             for row in self.run_stops.get(run_id, [])
         ]
 
+    def put_imported_stops(self, shift_id: UUID, rows: list[ImportedStopRow]) -> list[UUID]:
+        run = next((r for r in self.runs.values() if r.shift_id == shift_id), None)
+        if run is None:
+            raise ValueError("no run for this shift")
+        existing = self.run_stops.setdefault(run.id, [])
+        ids: list[UUID] = []
+        for row in rows:
+            stop_id = uuid4()
+            existing.append(
+                RouteStopRow(
+                    id=stop_id,
+                    lat=None,
+                    lon=None,
+                    priority=row.priority,
+                    parcels=row.parcels,
+                    service_time_s=row.service_time_s,
+                    window_start=row.window_start,
+                    window_end=row.window_end,
+                    address=row.address,
+                    suburb=row.suburb,
+                    location_id=row.location_id,
+                    type=row.type,
+                )
+            )
+            ids.append(stop_id)
+        return ids
+
     def courier_location_key(self, courier_id: str, location_id: UUID) -> str | None:
+        """The canonical address key when the courier has a stop there, else
+        `None` (ADR-012 §3: the one authz + audit lookup).
+
+        A stop with no address text has nothing to canonicalise, so the key
+        answers with the derived id's own seed rather than raising: the lookup
+        is an authorisation, and an authorisation that raises is a 500 rather
+        than a 404 (BUG-118's second half).
+        """
         for run_id, stops in self.run_stops.items():
             run = self.runs.get(run_id)
             if run is None or run.courier_id != courier_id:
                 continue
             for stop in stops:
-                derived = stop.location_id or location_id_for(stop.address or "", stop.suburb)
+                derived = stop.location_id or location_id_for_stop(
+                    stop.id, stop.address, stop.suburb
+                )
                 if derived == location_id:
+                    text = (stop.address or "").strip()
+                    if not text:
+                        return f"stop/{stop.id}"
                     return canonical_address(stop.address or "", stop.suburb)
         return None
 
@@ -552,9 +655,9 @@ class SqlAlchemyRepo:
             """
             INSERT INTO delivery_events
                 (id, shift_id, stop_id, kind, utterance, safe_place,
-                 lat, lon, accuracy_m, occurred_at)
+                 lat, lon, accuracy_m, occurred_at, reason)
             VALUES (:id, :shift_id, :stop_id, :kind, :utterance, :safe_place,
-                    :lat, :lon, :accuracy_m, :occurred_at)
+                    :lat, :lon, :accuracy_m, :occurred_at, :reason)
             ON CONFLICT (id) DO NOTHING
             """
         )
@@ -570,6 +673,7 @@ class SqlAlchemyRepo:
                 "lon": event.lon,
                 "accuracy_m": event.accuracy_m,
                 "occurred_at": event.occurred_at,
+                "reason": event.reason,
             }
             for event in events
         ]
@@ -615,7 +719,7 @@ class SqlAlchemyRepo:
         statement = text(
             """
             SELECT id, shift_id, stop_id, kind, utterance, safe_place, lat, lon,
-                   accuracy_m, occurred_at
+                   accuracy_m, occurred_at, reason
             FROM delivery_events
             WHERE id IN :ids
             """
@@ -634,6 +738,7 @@ class SqlAlchemyRepo:
                 lon=row["lon"],
                 accuracy_m=row["accuracy_m"],
                 occurred_at=row["occurred_at"],
+                reason=row["reason"],
             )
             for row in rows
         }
@@ -642,7 +747,7 @@ class SqlAlchemyRepo:
         statement = text(
             """
             SELECT id, shift_id, stop_id, kind, utterance, safe_place,
-                   lat, lon, accuracy_m, occurred_at
+                   lat, lon, accuracy_m, occurred_at, reason
             FROM delivery_events
             WHERE id = :event_id
             """
@@ -662,6 +767,7 @@ class SqlAlchemyRepo:
             lon=row["lon"],
             accuracy_m=row["accuracy_m"],
             occurred_at=row["occurred_at"],
+            reason=row["reason"],
         )
 
     def cursor(self, shift_id: UUID) -> int:
@@ -682,9 +788,11 @@ class SqlAlchemyRepo:
         statement = text(
             """
             INSERT INTO runs (id, shift_id, courier_id, name, depot_lat, depot_lon,
-                              capacity_parcels, speed_kmh, start_at)
+                              capacity_parcels, speed_kmh, start_at,
+                              break_start_at, break_end_at, finish_lat, finish_lon)
             VALUES (:id, :shift_id, :courier_id, :name, :depot_lat, :depot_lon,
-                    :capacity_parcels, :speed_kmh, :start_at)
+                    :capacity_parcels, :speed_kmh, :start_at,
+                    :break_start_at, :break_end_at, :finish_lat, :finish_lon)
             """
         )
         try:
@@ -701,6 +809,10 @@ class SqlAlchemyRepo:
                         "capacity_parcels": run.capacity_parcels,
                         "speed_kmh": run.speed_kmh,
                         "start_at": run.start_at,
+                        "break_start_at": run.break_start_at,
+                        "break_end_at": run.break_end_at,
+                        "finish_lat": run.finish_lat,
+                        "finish_lon": run.finish_lon,
                     },
                 )
         except IntegrityError as error:
@@ -723,7 +835,8 @@ class SqlAlchemyRepo:
         statement = text(
             """
             SELECT id, shift_id, courier_id, name, depot_lat, depot_lon,
-                   capacity_parcels, speed_kmh, start_at
+                   capacity_parcels, speed_kmh, start_at,
+                   break_start_at, break_end_at, finish_lat, finish_lon
             FROM runs
             WHERE courier_id = :courier_id
             ORDER BY start_at DESC
@@ -747,6 +860,10 @@ class SqlAlchemyRepo:
                 capacity_parcels=row["capacity_parcels"],
                 speed_kmh=row["speed_kmh"],
                 start_at=row["start_at"],
+                break_start_at=row["break_start_at"],
+                break_end_at=row["break_end_at"],
+                finish_lat=row["finish_lat"],
+                finish_lon=row["finish_lon"],
             )
             for row in rows
         ]
@@ -755,7 +872,8 @@ class SqlAlchemyRepo:
         statement = text(
             """
             SELECT id, shift_id, courier_id, name, depot_lat, depot_lon,
-                   capacity_parcels, speed_kmh, start_at
+                   capacity_parcels, speed_kmh, start_at,
+                   break_start_at, break_end_at, finish_lat, finish_lon
             FROM runs
             WHERE id = :run_id
             """
@@ -774,6 +892,10 @@ class SqlAlchemyRepo:
             capacity_parcels=row["capacity_parcels"],
             speed_kmh=row["speed_kmh"],
             start_at=row["start_at"],
+            break_start_at=row["break_start_at"],
+            break_end_at=row["break_end_at"],
+            finish_lat=row["finish_lat"],
+            finish_lon=row["finish_lon"],
         )
 
     def get_run_for_shift(self, shift_id: UUID, courier_id: str) -> RunRecord | None:
@@ -786,7 +908,8 @@ class SqlAlchemyRepo:
         statement = text(
             """
             SELECT id, shift_id, courier_id, name, depot_lat, depot_lon,
-                   capacity_parcels, speed_kmh, start_at
+                   capacity_parcels, speed_kmh, start_at,
+                   break_start_at, break_end_at, finish_lat, finish_lon
             FROM runs
             WHERE shift_id = :shift_id AND courier_id = :courier_id
             """
@@ -807,6 +930,10 @@ class SqlAlchemyRepo:
             capacity_parcels=row["capacity_parcels"],
             speed_kmh=row["speed_kmh"],
             start_at=row["start_at"],
+            break_start_at=row["break_start_at"],
+            break_end_at=row["break_end_at"],
+            finish_lat=row["finish_lat"],
+            finish_lon=row["finish_lon"],
         )
 
     def get_run_stops(self, run_id: UUID) -> list[RouteStopRow]:
@@ -828,7 +955,7 @@ class SqlAlchemyRepo:
             """
             SELECT s.id, s.latitude, s.longitude, s.priority, s.parcels,
                    s.service_time_s, s.time_window_start, s.time_window_end,
-                   s.address, s.suburb, s.location_id,
+                   s.address, s.suburb, s.location_id, s.type,
                    COALESCE(
                        (
                            SELECT e.kind
@@ -866,9 +993,52 @@ class SqlAlchemyRepo:
                 status=row["status"],
                 suburb=row["suburb"],
                 location_id=row["location_id"],
+                type=row["type"],
             )
             for row in rows
         ]
+
+    def put_imported_stops(self, shift_id: UUID, rows: list[ImportedStopRow]) -> list[UUID]:
+        # One transaction for the whole import: the file was validated before
+        # this call, so a partial import is never visible (ADR-025).
+        with self._engine.begin() as connection:
+            base = connection.execute(
+                text("SELECT COALESCE(MAX(sequence), 0) FROM stops WHERE shift_id = :shift"),
+                {"shift": shift_id},
+            ).scalar()
+            ids: list[UUID] = []
+            for offset, row in enumerate(rows, start=1):
+                stop_id = uuid4()
+                connection.execute(
+                    text(
+                        """
+                        INSERT INTO stops (id, shift_id, sequence, address, suburb,
+                                           location_id, latitude, longitude, status,
+                                           priority, parcels, service_time_s,
+                                           time_window_start, time_window_end, type)
+                        VALUES (:id, :shift, :seq, :address, :suburb,
+                                :location, NULL, NULL, 'pending',
+                                :priority, :parcels, :service,
+                                :window_start, :window_end, :type)
+                        """
+                    ),
+                    {
+                        "id": stop_id,
+                        "shift": shift_id,
+                        "seq": (base or 0) + offset,
+                        "address": row.address,
+                        "suburb": row.suburb,
+                        "location": row.location_id,
+                        "priority": row.priority,
+                        "parcels": row.parcels,
+                        "service": row.service_time_s,
+                        "window_start": row.window_start,
+                        "window_end": row.window_end,
+                        "type": row.type,
+                    },
+                )
+                ids.append(stop_id)
+        return ids
 
     def courier_location_key(self, courier_id: str, location_id: UUID) -> str | None:
         statement = text(
@@ -890,6 +1060,11 @@ class SqlAlchemyRepo:
                 .first()
             )
         if row is None:
+            return None
+        # BUG-118: an empty address has no canonical form, and this lookup is an
+        # authorisation - it answers `None` (a 404 for the caller) rather than
+        # raising a 500 nobody asked for.
+        if not (row["address"] or "").strip():
             return None
         return canonical_address(row["address"], row["suburb"])
 

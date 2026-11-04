@@ -17,14 +17,30 @@ read `websocket.query_params.get("token")`, and this file is what makes it green
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Iterator
-from typing import Any
+from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from fastapi import WebSocketDisconnect
 
-from app.auth.jwks import AuthPrincipal, JwksVerifier, get_verifier
-from app.auth.websocket import UnauthenticatedError, identify, refuse
+from app.auth.jwks import (
+    AuthPrincipal,
+    JwksVerifier,
+    get_verifier,
+    get_websocket_verifier,
+)
+from app.auth.websocket import (
+    CLOSE_INVALID_TOKEN,
+    CLOSE_UNAUTHENTICATED,
+    IDENTIFY_TIMEOUT_SECONDS,
+    INVALID_TOKEN_MESSAGE,
+    UnauthenticatedError,
+    _token_from_first_message,
+    identify,
+    refuse,
+)
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 
 COURIER = "driver-7"
@@ -174,3 +190,137 @@ class TestWhereTheTokenMayComeFrom:
 
         with pytest.raises(UnauthenticatedError):
             await _identify(websocket, verifier)
+
+
+# --- BUG-124: the first-message handshake has a deadline --------------------
+
+
+class ASilentSocket:
+    """A caller that connected and never sends: the frame never arrives."""
+
+    headers: dict[str, str] = {}
+    query_params: dict[str, str] = {}
+
+    async def receive_json(self) -> object:
+        await asyncio.sleep(IDENTIFY_TIMEOUT_SECONDS + 2)
+        return {"type": "auth", "token": "late"}
+
+
+class TestTheHandshakeDeadline:
+    """A client that connects and sends nothing parked the coroutine - and the
+    accepted socket - for the life of the process (BUG-124)."""
+
+    async def test_a_silent_client_is_refused_after_the_deadline(self) -> None:
+        loop = asyncio.get_event_loop()
+        started = loop.time()
+
+        with pytest.raises(UnauthenticatedError) as refused:
+            # The helper reads one frame off a socket; the silent one is the
+            # caller that never sends it, which is what the timeout is for.
+            await _token_from_first_message(cast(Any, ASilentSocket()))
+
+        assert "no credential within" in refused.value.reason
+        assert loop.time() - started < IDENTIFY_TIMEOUT_SECONDS + 1
+
+    async def test_a_prompt_client_still_authenticates(
+        self, verifier_pair: tuple[JwksVerifier, object]
+    ) -> None:
+        private_key = verifier_pair[1]
+        verifier = verifier_pair[0]
+        from tests.auth.test_jwks import sign as sign_a_token
+
+        token = sign_a_token(private_key)
+        socket = FakeWebSocket(messages=[{"type": "auth", "token": token}])
+
+        principal = await identify(socket, verifier)
+
+        assert principal.user_id == "user-123"
+
+
+# --- BUG-125: the refusal is not a token-state oracle ------------------------
+
+
+class TestTheRefusalIsNotAnOracle:
+    """The caller hears one stable sentence; the reason travels to the log."""
+
+    async def test_an_invalid_token_answers_the_stable_sentence(
+        self, verifier_pair: tuple[JwksVerifier, object]
+    ) -> None:
+        verifier = verifier_pair[0]
+        socket = FakeWebSocket(messages=[{"type": "auth", "token": "not-a-token"}])
+
+        with pytest.raises(UnauthenticatedError) as refused:
+            await identify(socket, verifier)
+
+        assert refused.value.reason == INVALID_TOKEN_MESSAGE
+        # None of PyJWT's vocabulary survives to the caller.
+        for secret in ("expired", "audience", "not yet valid", "signature"):
+            assert secret not in refused.value.reason.lower()
+
+    async def test_the_two_close_codes_are_distinct(self) -> None:
+        assert CLOSE_UNAUTHENTICATED == 4403
+        assert CLOSE_INVALID_TOKEN == 4405
+
+
+# --- BUG-126: one verifier object for both surfaces --------------------------
+
+
+class TestOneVerifierForBothSurfaces:
+    """Two cached getters gave the HTTP surface and the voice socket their own
+    key caches, so a rotation was picked up at different moments (BUG-126)."""
+
+    def test_the_two_getters_hand_out_the_same_object(self) -> None:
+        if hasattr(get_verifier, "cache_clear"):
+            get_verifier.cache_clear()
+        if hasattr(get_websocket_verifier, "cache_clear"):
+            get_websocket_verifier.cache_clear()
+
+        assert get_verifier() is get_websocket_verifier()
+
+
+def app_sources() -> list[Path]:
+    """Every Python file of the service's own application code."""
+    app_dir = Path(__file__).resolve().parents[2] / "app"
+    return sorted(app_dir.rglob("*.py"))
+
+
+class TestTheDeletedDependency:
+    """BUG-135: the token-in-the-URL dependency is gone for good.
+
+    `get_websocket_principal` was dead code with exactly one grep hit - its own
+    definition - that still read `websocket.query_params.get("token")`: the
+    exact pattern BUG-059 removed from the live route. One future import would
+    put a token in a URL again, and a URL lands in every access log. The
+    deletion is only a deletion while nothing can import it, so this is what
+    the suite pins.
+    """
+
+    def test_the_module_does_not_define_it_any_more(self) -> None:
+        import app.auth.websocket as module
+
+        assert not hasattr(module, "get_websocket_principal")
+
+    def test_no_module_of_the_service_imports_it(self) -> None:
+        for source in app_sources():
+            text = source.read_text(encoding="utf-8")
+            assert "get_websocket_principal" not in text, f"{source} still names the dead dependency"
+
+    def test_the_query_string_is_read_only_to_explain_the_refusal(self) -> None:
+        """The pattern itself, not only the function.
+
+        `query_params.get("token")` may appear once, and only as the
+        explanation `_reason_for` gives a caller who sent his token in the URL
+        - a read that *accepts* the token as a credential is what BUG-059
+        removed, and this is what keeps it removed.
+        """
+        readers = [
+            (source, line)
+            for source in app_sources()
+            for line, text in enumerate(source.read_text(encoding="utf-8").splitlines(), start=1)
+            if 'query_params.get("token")' in text
+        ]
+
+        assert len(readers) == 1, readers
+        source, line = readers[0]
+        head = "\n".join(source.read_text(encoding="utf-8").splitlines()[:line])
+        assert "def _reason_for" in head, f"{source}:{line} reads a token outside the refusal's reason"

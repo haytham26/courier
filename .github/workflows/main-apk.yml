@@ -1,0 +1,170 @@
+name: Main APK
+
+# A6: the release APK of every merge to main, downloadable from one stable
+# link, so the founder's acceptance run
+# (docs/operations/ACCEPTANCE_TEST.md) installs the build the CI just made and
+# reports what it found.
+#
+# The link is stable because the artefact is attached to a FIXED release tag
+# (`latest`) that this workflow rewrites on every merge:
+#
+#   https://github.com/haytham26/courier/releases/download/latest/courier.apk
+#
+# The APK is signed when the keystore secrets are configured and unsigned
+# otherwise (`courier-unsigned.apk` on the same release) - an unsigned APK
+# installs on a phone the founder controls, which is what the acceptance run
+# is.
+#
+# The auth URL: a build that names no auth server builds an APK that cannot
+# sign anyone in (BUG-072). On the tag path (release-apk.yml) that fails the
+# job, because a release must be whole. Here the job SKIPS with a notice
+# instead: the repository variable is a founder-configurable value, and a merge
+# must not go red over a variable nobody has set yet - the LINZ weekly's skip
+# is the same pattern (BUG-162). Set EXPO_PUBLIC_AUTH_URL and the next merge
+# publishes the APK.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: main-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: Build the APK of this merge and attach it to the stable link
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 12.14.0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up Java 17
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Whether the auth URL is configured
+        # The value is reported without being read into the environment of
+        # every later step: a repository VARIABLE is not a secret, but the
+        # presence check is the one the steps after it need, and exporting the
+        # value everywhere to find out is the shape BUG-100 removed.
+        id: auth-url
+        env:
+          EXPO_PUBLIC_AUTH_URL: ${{ vars.EXPO_PUBLIC_AUTH_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${EXPO_PUBLIC_AUTH_URL}" ]; then
+            echo "configured=no" >> "$GITHUB_OUTPUT"
+            echo "::notice::EXPO_PUBLIC_AUTH_URL is not set, so this merge publishes no APK: a build that names no auth server cannot sign anyone in (BUG-072). Set the repository variable (Settings > Secrets and variables > Actions > Variables); the next merge publishes the stable link (A6)."
+          else
+            echo "configured=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install the dependencies
+        if: steps.auth-url.outputs.configured == 'yes'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the design tokens
+        if: steps.auth-url.outputs.configured == 'yes'
+        # The app imports @courier/design-tokens/tokens; Metro resolves it from
+        # the built dist, so the package is built before the bundle.
+        run: pnpm --filter @courier/design-tokens build
+
+      - name: Read the signing secrets
+        if: steps.auth-url.outputs.configured == 'yes'
+        id: keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/courier.keystore"
+            echo "keystore_path=$RUNNER_TEMP/courier.keystore" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No ANDROID_KEYSTORE_BASE64 in the GitHub Secrets: this APK is unsigned (it installs on a phone you control, which is what the acceptance run is). The names are in docs/status/FOUNDER_TODO.md."
+          fi
+
+      - name: Build the APK
+        if: steps.auth-url.outputs.configured == 'yes'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # BUG-072: the auth base URL is a build-time literal. Without this
+          # the release bundle carries a localhost literal that no phone can
+          # reach, and nothing downstream can tell.
+          EXPO_PUBLIC_AUTH_URL: ${{ vars.EXPO_PUBLIC_AUTH_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${EXPO_PUBLIC_AUTH_URL}" ]; then
+            echo "::error::EXPO_PUBLIC_AUTH_URL is not set: this APK could not sign anyone in."
+            exit 1
+          fi
+          pnpm --filter mobile exec expo prebuild --platform android --no-install
+          cd apps/mobile/android
+          if [ "${{ steps.keystore.outputs.signed }}" = "true" ]; then
+            ./gradlew assembleRelease --no-daemon --stacktrace \
+              -Pandroid.injected.signing.store.file="${{ steps.keystore.outputs.keystore_path }}" \
+              -Pandroid.injected.signing.store.password="${ANDROID_KEYSTORE_PASSWORD}" \
+              -Pandroid.injected.signing.key.alias="${ANDROID_KEY_ALIAS}" \
+              -Pandroid.injected.signing.key.password="${ANDROID_KEY_PASSWORD}"
+          else
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          fi
+
+      - name: Collect the APK
+        if: steps.auth-url.outputs.configured == 'yes'
+        id: apk
+        working-directory: apps/mobile/android
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          # The build writes under apps/mobile/android, and each step gets a
+          # fresh shell, so this step's cwd is there (BUG-095's lesson).
+          if [ "${{ steps.keystore.outputs.signed }}" = "true" ]; then
+            cp app/build/outputs/apk/release/app-release.apk artifacts/courier.apk
+          else
+            cp app/build/outputs/apk/debug/app-debug.apk artifacts/courier-unsigned.apk
+          fi
+          echo "file=$(ls artifacts)" >> "$GITHUB_OUTPUT"
+
+      - name: Check the APK against the store budget
+        if: steps.auth-url.outputs.configured == 'yes'
+        # The 80 MB budget and the 64-bit requirement, on the very bytes this
+        # run produced (BUG-099's release mode).
+        run: |
+          node scripts/ci/check-store-readiness.mjs \
+            --repo . --app apps/mobile \
+            --apk "apps/mobile/android/artifacts/${{ steps.apk.outputs.file }}"
+
+      - name: Attach the APK to the stable link
+        if: steps.auth-url.outputs.configured == 'yes'
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          # The fixed tag: the same URL after every merge.
+          tag_name: latest
+          name: The latest APK of main
+          files: apps/mobile/android/artifacts/${{ steps.apk.outputs.file }}
+          prerelease: true
+          generate_release_notes: true

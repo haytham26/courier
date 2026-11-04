@@ -40,6 +40,7 @@ class FakeApi implements RunApi {
         address: '12 Riccarton Road, Riccarton',
         seq: 1,
         status: 'pending',
+        type: 'delivery',
         lat: -43.532,
         lon: 172.599,
         parcels: 2,
@@ -50,6 +51,7 @@ class FakeApi implements RunApi {
         address: '45 Papanui Road, Merivale',
         seq: 2,
         status: 'pending',
+        type: 'delivery',
       },
     ],
   };
@@ -349,6 +351,84 @@ describe('loading the run', () => {
 
     expect(load.status).toBe('unauthorized');
   });
+
+  // Run 41433310746's a1 failure: the today screen showed 0/0 and no today-go
+  // with a silent device log, so nothing said WHY the day did not load. The
+  // store now names the failure on the console (the emulator's logcat carries
+  // console.warn), red-first: this assertion fails before the report exists.
+  it('names a failed load on the console, with the status and the server sentence', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { store, api } = aStore();
+      api.seedAnswer = { status: 'server', code: 404, message: 'the demo seed is closed' };
+
+      const load = await store.load();
+
+      expect(load.status).toBe('server');
+      expect(warn).toHaveBeenCalledWith(
+        'run: the day did not load (server - the demo seed is closed)',
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('names an offline load without a server sentence', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { store, api } = aStore();
+      api.seedAnswer = { status: 'offline' };
+
+      await store.load();
+
+      expect(warn).toHaveBeenCalledWith('run: the day did not load (offline)');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('stays quiet when the day loads', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { store, api } = aStore();
+      api.seedAnswer = SEEDED;
+
+      await store.load();
+
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  // BUG-172: run 41491440450 - the API answered the seed and both reads (200s
+  // in the stack logs) but the today screen never got the day and NOTHING
+  // warned: the cache write threw (the auth-keyed remount had closed the
+  // shared op-sqlite handle under the new session), load() REJECTED, and
+  // neither reported() nor the screen's effect caught a rejection. The
+  // contract now: load() never rejects - a throw is named and answered as a
+  // failure. Red on d92155e (the promise rejects and the warn never fires).
+  it('answers a failure instead of rejecting when the cache cannot keep the day', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const cache = new FakeCache();
+      cache.write = () => Promise.reject(new Error('database is locked'));
+      const { store, api } = aStore(new FakeApi(), { cache });
+      api.seedAnswer = SEEDED;
+
+      const load = await store.load();
+
+      expect(load.status).toBe('server');
+      if (load.status === 'server') {
+        expect(load.message).toContain('database is locked');
+      }
+      expect(warn).toHaveBeenCalledWith(
+        'run: the day did not load (server - the phone could not keep the day: database is locked)',
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
 
 describe('the write path of the run store', () => {
@@ -365,6 +445,21 @@ describe('the write path of the run store', () => {
     expect(cache.marks).toEqual([
       { stopId: 'stop-1', sequence: 1, at, eventId: pending[0]?.id },
     ]);
+  });
+
+  // BUG-176: the contract's event id is `format: uuid` and the server parses
+  // it as one - the old `delivered-<stop>-<ms>` id made every batch answer
+  // 422 (run 41541777473). The recorded id must be a uuid the API accepts.
+  // Red before the fix: the id is the readable slug, not a uuid.
+  it('records the event with a contract-valid uuid id', async () => {
+    const { store, log } = aStore();
+
+    await store.markDelivered({ id: 'stop-1', sequence: 1 });
+
+    const pending = await log.nextBatch(10);
+    expect(pending[0]?.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
   });
 
   it('keeps one event for a stop that is marked twice', async () => {

@@ -41,6 +41,14 @@ export interface CreateRunRequest {
   start_at: string;
   capacity_parcels?: number;
   speed_kmh?: number;
+  break_window?: {
+    start: string;
+    end: string;
+  };
+  finish?: {
+    lat: number;
+    lon: number;
+  };
 }
 
 export interface DeliveryEvent {
@@ -49,6 +57,7 @@ export interface DeliveryEvent {
   kind: 'delivered' | 'left_at' | 'skipped' | 'failed';
   utterance?: string;
   safe_place?: string;
+  reason?: string;
   lat?: number;
   lon?: number;
   accuracy_m?: number;
@@ -89,6 +98,13 @@ export interface HealthResponse {
   status: 'ok';
   version: string;
   engines: string[];
+}
+
+export interface ImportResponse {
+  shift_id: string;
+  imported: number;
+  stop_ids: string[];
+  ignored_columns: string[];
 }
 
 export interface IntakeText {
@@ -168,11 +184,20 @@ export interface RunResponse {
   capacity_parcels?: number;
   speed_kmh: number;
   start_at: string;
+  break_window?: {
+    start: string;
+    end: string;
+  };
+  finish?: {
+    lat: number;
+    lon: number;
+  };
 }
 
 export interface StopResponse {
   id: string;
   location_id: string;
+  type: 'delivery' | 'pickup';
   address?: string;
   seq: number;
   status: 'pending' | 'delivered' | 'skipped' | 'deferred' | 'failed';
@@ -224,6 +249,14 @@ export interface ApiPaths {
       body: null;
       responses: {
         200: BriefingResponse | InterruptQuestion;
+      };
+    };
+  };
+  '/shifts/{shift_id}/import': {
+    post: {
+      body: null;
+      responses: {
+        201: ImportResponse;
       };
     };
   };

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Stack } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Stack, useRouter } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Providers } from '@/providers/Providers';
 import { useAuth } from '@/providers/AuthProvider';
@@ -9,6 +9,23 @@ import type { MarkStore } from '@/run/types';
 import { ScanLoadProvider } from '@/scans/scanLoad';
 import { DEV_SCREENS_IN_BUNDLE } from '@/config/buildFlags';
 import '@/unistyles';
+
+// The root layout's anchor: the route expo-router seeds IN FRONT OF whatever
+// the launch URL matches (createSeededNavigationState's getRoutesToCreate).
+// Run 41362984260's device dump proved what happens without it: the launch URL
+// '/' seeds the protected (tabs) group, the signed-out guard strips that route
+// from the navigation state (useClearGuardedRoutes), and the state collapses to
+// +not-found - the a1 flow waited its whole 60 s for welcome-screen and the
+// welcome effect's router.replace, enqueued in the same commit the Stack first
+// mounts, never landed. With the anchor, the seeded state is [welcome, (tabs)]:
+// the guard removes the tabs and the welcome is what stays focused, while a
+// signed-in phone still focuses the tabs (the anchor sits behind the target,
+// and the signed-in guard strips the welcome the same way). The (auth) and
+// (tabs) layouts carry the same setting under its older `initialRouteName`
+// spelling; `anchor` is the non-deprecated key (layoutAnchor.readAnchor).
+export const unstable_settings = {
+  anchor: 'welcome',
+};
 
 export default function RootLayout() {
   return (
@@ -36,6 +53,21 @@ function RunSession({ children }: { children: React.ReactNode }) {
 
 function AuthNavigator() {
   const { isLoading, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // The signed-out COLD START is the anchor's job (unstable_settings above:
+  // run 41362984260 showed the imperative replace alone does not land on
+  // device). This effect covers the other signed-out landing: a sign-out while
+  // a protected screen is focused strips that route from the state without
+  // re-seeding the anchor, so the phone is sent to the welcome explicitly. A
+  // signed-in phone needs nothing - '/' is the tabs' index. The loading phase
+  // still renders nothing, so the run state's key never flips while the
+  // restore is pending (the reverted 483a5ef/aa2672e attempts are why this is
+  // an effect, not a render of the stack).
+  useEffect(() => {
+    if (isLoading || isAuthenticated) return;
+    router.replace('/welcome');
+  }, [isLoading, isAuthenticated, router]);
 
   if (isLoading) {
     return null; // Or show a loading screen

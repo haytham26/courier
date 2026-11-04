@@ -114,6 +114,7 @@ class RecordingEngine:
                                     "lon": None,
                                     "accuracy_m": None,
                                     "occurred_at": datetime(2026, 10, 25, 8, 0, tzinfo=UTC),
+                                    "reason": None,
                                 }
                                 for event_id, kind in engine.stored_rows
                             ]

@@ -136,6 +136,21 @@ describe("the trusted origins are concrete hosts (BUG-134)", () => {
 
     expect(config.trustedOrigins).toEqual(["exp://", "https://staging.courier.local"]);
   });
+
+  // BUG-182: the app's expo client sends `expo-origin: courier://` (the
+  // app.json scheme), which the expo server plugin copies into the `origin`
+  // header, so the app's own scheme must be a trusted origin. It is a
+  // scheme-only value, and CONCRETE_ORIGIN accepts a scheme with no host -
+  // the a1 stack's exact value is pinned here so a future tightening of the
+  // validator cannot silently drop it.
+  it("takes the a1 stack's value, including the app's own scheme", () => {
+    const config = loadConfig({
+      ...VALID_ENV,
+      AUTH_TRUSTED_ORIGINS: "http://10.0.2.2:3001,courier://",
+    });
+
+    expect(config.trustedOrigins).toEqual(["http://10.0.2.2:3001", "courier://"]);
+  });
 });
 
 // BUG-133: the passkey origin is derived from the service's own URL, so a
@@ -200,6 +215,35 @@ describe("the rate limit is the deployment's own (BUG-132)", () => {
     const config = loadConfig(VALID_ENV);
 
     expect(config.rateLimit.enabled).toBe(true);
+  });
+
+  // BUG-132's second half: the limiter's STORE is the deployment's to state
+  // too. The library default is a module-level Map - per-process, lost on
+  // restart, and two replicas give two buckets. The database store is the one
+  // that shares the counters between the replicas (and the migration adds its
+  // table when it is selected).
+  it("shares its counters through the database in production", () => {
+    const config = loadConfig({ ...VALID_ENV, NODE_ENV: "production" });
+
+    expect(config.rateLimit.storage).toBe("database");
+  });
+
+  it("keeps the in-memory store outside production", () => {
+    const config = loadConfig({ ...VALID_ENV, NODE_ENV: "development" });
+
+    expect(config.rateLimit.storage).toBe("memory");
+  });
+
+  it("takes the store from the environment when it says so", () => {
+    const config = loadConfig({ ...VALID_ENV, AUTH_RATE_LIMIT_STORAGE: "memory" });
+
+    expect(config.rateLimit.storage).toBe("memory");
+  });
+
+  it("refuses a store that is not one of the two", () => {
+    expect(() => loadConfig({ ...VALID_ENV, AUTH_RATE_LIMIT_STORAGE: "valkey" })).toThrow(
+      /AUTH_RATE_LIMIT_STORAGE/,
+    );
   });
 });
 

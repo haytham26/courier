@@ -328,7 +328,16 @@ class JwksVerifier:
         except (httpx.HTTPError, ValueError) as exc:
             raise InvalidTokenError(f"cannot reach the JWKS endpoint: {exc}") from exc
 
-        return AuthPrincipal(user_id=claims["sub"], claims=claims)
+        subject = claims.get("sub")
+        if not isinstance(subject, str) or not subject.strip():
+            # BUG-138: PyJWT's `options.require` asserts the claim's *presence*,
+            # not its truthiness, so a token carrying `sub: ""` verified and the
+            # verifier answered a principal with an empty `user_id`. Every row
+            # lookup compares a courier id, and the identity behind a request is
+            # not something a claim may leave blank: it is refused like an
+            # expired one, and the reason names the claim.
+            raise InvalidTokenError("the token's subject (sub) is not a usable identity")
+        return AuthPrincipal(user_id=subject, claims=claims)
 
 
 security = HTTPBearer(auto_error=False)
@@ -355,38 +364,41 @@ def get_auth_settings() -> AuthSettings:
 
 
 @lru_cache(maxsize=1)
-def get_verifier() -> JwksVerifier:
-    """The production verifier, shared by every route.
+def _the_verifier() -> JwksVerifier:
+    """The one verifier this process ever builds (BUG-126).
 
-    It is NOT what a WebSocket route may call directly: a direct call bypasses
-    `dependency_overrides`, so a test that overrides `get_verifier` would still
-    be verified against the configured JWKS URL. The voice route uses
-    `get_websocket_verifier`, which is a separate cached getter the WebSocket
-    surface owns.
+    It was two cached getters, each constructing its own `JwksVerifier` with
+    its own `httpx.Client` and its own 300 s key cache, so a key rotation was
+    picked up at a different moment on the HTTP surface and the voice socket:
+    for up to five minutes a valid token was accepted on `/auth/me` and refused
+    on the voice channel. One object, one cache, one moment.
     """
     return JwksVerifier(get_auth_settings())
 
 
 @lru_cache(maxsize=1)
+def get_verifier() -> JwksVerifier:
+    """The production verifier, shared by every route.
+
+    A WebSocket route's direct call bypasses `dependency_overrides`, so the
+    voice route resolves its verifier through the override table itself (it
+    checks `get_verifier`'s override first, then `get_websocket_verifier`'s,
+    then this getter - one override now covers both surfaces, and in production
+    both getters hand out the same cached instance).
+    """
+    return _the_verifier()
+
+
 def get_websocket_verifier() -> JwksVerifier:
-    """The verifier the voice socket uses.
+    """The verifier the voice socket uses: the same object as the routes' (BUG-126).
 
-    A separate getter from `get_verifier` on purpose: the voice route accepts
-    the socket first and then parses the credential itself, so it calls this
-    getter directly. `dependency_overrides` cannot reach a direct call, so the
-    route's suite overrides THIS getter and the object it builds is the one the
-    route verifies with. Calling `get_verifier` directly instead would verify
-    the route's tests against the configured JWKS URL - the first red run of
-    this slice proved it (`cannot reach the JWKS endpoint`).
+    It stays a separate name because the voice route's suite overrides THIS
+    symbol - a direct call cannot see `dependency_overrides`, so the route
+    reads the override table for either name. Both getters return the one
+    cached instance, so the surfaces cannot disagree about which keys are
+    current.
     """
-    return JwksVerifier(get_auth_settings())
-def get_verifier_override() -> JwksVerifier:
-    """The single point the tests override for the WebSocket surface.
-
-    Both getters route through here, so one `dependency_overrides` entry covers
-    the voice route's direct call and the HTTP routes' `Depends`.
-    """
-    return JwksVerifier(get_auth_settings())
+    return get_verifier()
 
 
 def get_current_principal(
