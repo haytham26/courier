@@ -17,6 +17,7 @@ import type {
   DemoRun,
   RunResponse,
   StopResponse,
+  ReoptResponse,
   SyncResponse,
 } from '@courier/shared/src/generated/api';
 
@@ -110,6 +111,24 @@ export class CourierApiClient {
       `/shifts/${this.escape(shiftId)}/stops${query}`,
       { method: 'GET' },
       isStopList,
+    );
+  }
+
+  /**
+   * Re-places the affected stops with the server's solver:
+   * `POST /runs/{run_id}/route:reopt` (the trial's queue 4.2).
+   *
+   * The courier asks for the stops they touched, and the server answers with
+   * the day's new order and the finish-time delta - the phone never invents an
+   * order of its own, and the answer is the server's.
+   */
+  async reoptRoute(
+    runId: string,
+    affectedStopIds: readonly string[],
+  ): Promise<ApiOutcome<ReoptResponse>> {
+    return this.request<ReoptResponse>(
+      `/runs/${this.escape(runId)}/route:reopt`,
+      { method: 'POST', body: { affected_stop_ids: [...affectedStopIds] } },
     );
   }
 

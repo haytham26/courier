@@ -107,6 +107,17 @@ jest.mock('@/sync/preferenceFiles', () => {
   };
 });
 
+// Queue 4.2: Optimise asks the SERVER's solver. The reopt call is mocked
+// here; what is proven is the screen's own half - the stops it names are the
+// run's own, and the answer is spelled in the server's words.
+jest.mock('@/lib/api-client', () => ({
+  CourierApiClient: jest.fn(() => ({
+    reoptRoute: jest.fn(() =>
+      Promise.resolve({ status: 'ok', data: { run_id: 'run-1', engine: 'vrplib', finish_delta_s: -180, stops: [] } }),
+    ),
+  })),
+}));
+
 /** Renders the screen with a run whose marks are the ones given. */
 async function renderWithRun(marks: DeliveredMark[]): Promise<void> {
   const store = storeWithMarks(marks);

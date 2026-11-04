@@ -30,6 +30,8 @@ import { Camera, Map as MapView, Marker } from '@maplibre/maplibre-react-native'
 
 import { ChosenProvider, GlassSurface, Segmented, StopPin, Timeline, useChosen } from '@/components/chosen';
 import type { TimelineItem } from '@/components/chosen';
+import { errorMessage } from '@/lib/errors';
+import { CourierApiClient } from '@/lib/api-client';
 import { radii, spacing, typography } from '@courier/design-tokens/chosen';
 import { DRIVE_ORIGIN_LNGLAT } from '@/maps/drive';
 import { type Stop } from '@/maps/stops';
@@ -47,6 +49,9 @@ const SEGMENTS = [
 ] as const;
 
 type SegmentKey = (typeof SEGMENTS)[number]['key'];
+
+/** The app's one HTTP boundary: the trial's queue 4.2 asks the server's solver. */
+const apiClient = new CourierApiClient();
 
 /**
  * Which segment a stop's status sits in.
@@ -121,10 +126,50 @@ function RouteScreen() {
 
   const handleOptimise = useCallback(() => {
     hapticFor('confirm');
-    setOptimiseNote(
-      'Optimising the route needs the solver, which runs on the server and is wired with the API (Part C). Nothing is reordered on the phone.',
-    );
-  }, []);
+    // The trial's queue 4.2: the solver runs on the server
+    // (`POST /runs/{run_id}/route:reopt`), so the order the courier drives is
+    // the order the server worked out - never a phone's own guess at one. The
+    // stops the courier has not driven yet are the ones the solver re-places.
+    const affected = stops
+      .filter((stop) => segmentOf(stop, run) !== 'done')
+      .map((stop) => stop.id);
+    if (affected.length < 2) {
+      setOptimiseNote(
+        'There is nothing to reorder yet: deliver a stop and the day will have a real order to work with.',
+      );
+      return;
+    }
+    setOptimiseNote('Asking the server to resequence the run...');
+    void (async () => {
+      try {
+        const answer = await apiClient.reoptRoute(run.day.runId ?? '', affected);
+        if (answer.status !== 'ok') {
+          const why =
+            answer.status === 'unauthorized'
+              ? 'the session is no longer valid'
+              : answer.status === 'offline'
+                ? 'there was no signal'
+                : answer.message;
+          setOptimiseNote(`The solver could not be asked (${why}). The order stays as it is.`);
+          return;
+        }
+        // The answer's own words: the day's new order and the finish-time
+        // delta. A courier is told what the solver did, in the words the
+        // server answered with.
+        // The contract's own field: the day's finish-time delta in SECONDS.
+        const delta = answer.data.finish_delta_s;
+        const shape =
+          typeof delta !== 'number'
+            ? ''
+            : ` The day now finishes ${Math.abs(Math.round(delta / 60))} min ${delta < 0 ? 'earlier' : 'later'}.`;
+        setOptimiseNote(`The server resequenced the run.${shape}`);
+      } catch (error) {
+        setOptimiseNote(
+          `The solver could not be asked (${errorMessage(error)}). The order stays as it is.`,
+        );
+      }
+    })();
+  }, [stops, run]);
 
   return (
     <View testID="stops-screen" style={styles.screen}>

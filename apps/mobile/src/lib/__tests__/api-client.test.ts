@@ -395,6 +395,33 @@ describe('the delivery events of the phone', () => {
   });
 });
 
+// Queue 4.2: the reopt call carries the stops the courier touched and answers
+// with the server's own new order and finish-time delta.
+describe('the reopt route call', () => {
+  it('posts the affected stops the caller names', async () => {
+    const { impl, calls } = aFetch([{ body: { finish_time_delta_minutes: -3 } }]);
+
+    const outcome = await aClient(impl).reoptRoute('run-1', ['stop-1', 'stop-2']);
+
+    expect(outcome.status).toBe('ok');
+    expect(calls[0]?.method).toBe('POST');
+    expect(calls[0]?.url).toBe('http://api.test/runs/run-1/route:reopt');
+    expect(calls[0]?.body).toEqual({ affected_stop_ids: ['stop-1', 'stop-2'] });
+    expect(calls[0]?.headers['Content-Type']).toBe('application/json');
+  });
+
+  it('answers the caller\u2019s unauthorized without dialing the server', async () => {
+    const { impl, calls } = aFetch([{ body: {} }]);
+
+    const outcome = await aClient(impl, {
+      getToken: () => Promise.resolve(null),
+    }).reoptRoute('run-1', ['stop-1']);
+
+    expect(outcome.status).toBe('unauthorized');
+    expect(calls.length).toBe(0);
+  });
+});
+
 describe('the seeded day', () => {
   it('seeds the day with the reason the app asks for', async () => {
     const { impl, calls } = aFetch([{ body: { run_id: 'run-1', shift_id: 'shift-1', stops: [] } }]);

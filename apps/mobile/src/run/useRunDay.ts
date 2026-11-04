@@ -70,6 +70,8 @@ export function noDayStore(): Pick<
 export interface RunDay {
   /** Whether a run has been loaded: false on a first launch with no network. */
   hasRun: boolean;
+  /** The run's own id, or null before the day has been read (queue 4.2). */
+  runId: string | null;
   /** The stops of the run, in the run's own order. Empty while loading. */
   stops: Stop[];
   /** The deliveries this run carries, in delivery order. */
@@ -199,6 +201,9 @@ export function useRunDay(source: StoreSource): RunDay {
   return useMemo(
     () => ({
       hasRun: stops.length > 0,
+      // Queue 4.2: the run's own id, so a screen can ask the server's solver
+      // about THIS run and not a phone's guess at one.
+      runId: snapshot?.status === 'ok' ? snapshot.snapshot.run.id : null,
       stops,
       delivered: marks,
       isDelivered,
@@ -206,6 +211,6 @@ export function useRunDay(source: StoreSource): RunDay {
       remaining: stops.filter((stop) => !deliveredIds.has(stop.id)).length,
       refreshMarks,
     }),
-    [stops, marks, isDelivered, nextStop, deliveredIds],
+    [stops, marks, isDelivered, nextStop, deliveredIds, snapshot],
   );
 }
