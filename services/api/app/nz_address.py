@@ -323,13 +323,16 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
         if m2:
             suffix, number = m2.group(2).upper(), m2.group(1)
     if unit and suffix is None and re.match(r"^\d+[a-z]$", unit) and not unit_is_a_slash_unit:
-        # "unit 255C" is unit 255 with suffix C.
-        # A unit that came from the left of a slash keeps its letter: "4D/87" is
-        # flat 4D at 87, and splitting it into unit 4 + suffix D answers "4/87",
-        # which is the failure the LINZ accuracy report names.
-        m_unit = re.match(r"^(\d+)([a-z])$", unit)
-        if m_unit:
-            unit, suffix = m_unit.group(1), m_unit.group(2).upper()
+        # A SPOKEN unit keeps its letter, exactly as a unit written before a
+        # slash already does: "unit 287C 28" is flat 287C at 28. This block used
+        # to split it into unit 287 + suffix C, and the LINZ accuracy report
+        # named what that cost: the suffix matched the PLAIN 28C row in the
+        # store, so the answer came back "28C Cathedral Square" with an invented
+        # "unit 287 added" change - 22 of the 56 failures in the 1800-check
+        # sample, the largest family of them all. A letter belongs to the
+        # unit's NAME; a letter on a house number is a suffix (R23's "42B",
+        # handled above, where the token is not the unit).
+        pass
     if number and suffix is None:
         # "20 B McBratneys Road" -> number 20, suffix B. The letter must be a
         # token of its own: a `\b` also holds between a letter and an
