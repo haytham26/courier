@@ -29,8 +29,10 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'ci', 'assert-a1-rows.sh');
 const SCHEMA = path.join(ROOT, 'packages', 'contracts', 'db', 'schema.sql');
-// The compose project the a1 job starts from the repository root.
-const PROJECT = process.env.COMPOSE_PROJECT_NAME || 'courier';
+// The compose project the a1 job starts - the name the compose file itself
+// carries (infra/compose.ci.yml), so the suite needs no hardcoded guess. A
+// local replay under its own project sets COMPOSE_PROJECT_NAME.
+const PROJECT = process.env.COMPOSE_PROJECT_NAME || 'courier-ci';
 
 /** A synchronous pause, so a wait needs no timer on any platform. */
 const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
