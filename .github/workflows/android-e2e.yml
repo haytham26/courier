@@ -138,7 +138,7 @@ jobs:
         id: apk-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
-          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
           key: apk-${{ steps.hash.outputs.sha }}
 
       - name: Build the release APK
@@ -151,8 +151,13 @@ jobs:
           EXPO_PUBLIC_E2E: '1'
         run: |
           pnpm --filter mobile exec expo prebuild --platform android --no-install
+          # BUG-079: the flag is legal in a DEBUG build only - this APK is a
+          # test artifact, and a release build with the mocks in it is what the
+          # gate refuses (the app's own A4 check keeps the mock list reachable
+          # from the E2E seams alone).
+          node scripts/ci/check-e2e-flag.mjs --variant debug
           cd apps/mobile/android
-          ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
+          ./gradlew assembleDebug --no-daemon --stacktrace -PreactNativeArchitectures=x86_64
 
       - name: Upload the APK
         # A restored APK from this run's own key is a valid artifact; a restored
@@ -162,7 +167,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: courier-release-apk
-          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
 
@@ -390,6 +395,10 @@ jobs:
           EXPO_PUBLIC_AUTH_URL: http://10.0.2.2:3001
         run: |
           set -euo pipefail
+          # BUG-079: this is the a1 job's own RELEASE APK and it carries no
+          # E2E flag, so the gate that refuses a release build with the mocks
+          # in it has to pass here.
+          node scripts/ci/check-e2e-flag.mjs --variant release
           pnpm --filter mobile exec expo prebuild --platform android --no-install
           cd apps/mobile/android
           ./gradlew assembleRelease --no-daemon --stacktrace -PreactNativeArchitectures=x86_64

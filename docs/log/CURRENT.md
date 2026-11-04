@@ -359,7 +359,13 @@ closed 2, moved 30); PARITY 312 (Have 30).
   head, archived).
 - On main, `apps/mobile/app/(tabs)/index.tsx` and `apps/mobile/app/driving.tsx`
   read the run through `useRun()` — `mockStops` is gone from both.
-- The queue resumes at A4: remove `mockStops` from the seven screens on main
+- A4 has landed on `feat/a4-no-mock-stops` (PR to follow): `check-mock-reach.mjs`
+  proves the mock list is reachable only through the two E2E seams (lock-screen,
+  delivered, copilot, stops and map now read the run through the store; index and
+  driving already did) and `check-e2e-flag.mjs` refuses the E2E flag in a release
+  build (BUG-079 closed). The queue resumes at BUG-081, then #166, then the trial
+  features' app halves, then B5, A3, A2 and §22.
+  (was: remove `mockStops` from the seven screens on main
   (index, map, stops, copilot, delivered, driving, lock-screen) so they read the
   real run through `useRunDay`, plus the build check that fails a release build
   on a reachable mock (BUG-079). Then BUG-081, then #166, then the trial

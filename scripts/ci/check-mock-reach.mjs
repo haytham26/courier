@@ -25,7 +25,10 @@ const SEAMS = [
   'apps/mobile/src/scans/labelReader.ts',
 ];
 
-const ROOT = path.resolve(import.meta.dirname, '..', '..');
+// The tree it guards is the working directory's, so the suite can point it at
+// a temp tree of its own; the CI job and a developer's shell both run it from
+// the repo root.
+const ROOT = process.cwd();
 const APP = path.join(ROOT, 'apps', 'mobile');
 
 function walk(dir) {
@@ -45,8 +48,17 @@ function walk(dir) {
   return out;
 }
 
+const files = walk(path.join(APP, 'src')).concat(walk(path.join(APP, 'app')));
+if (files.length === 0) {
+  console.error(
+    `audit item A4: nothing was scanned - ${APP} holds no sources, which is not a ` +
+      'clean tree. Point the gate at the app it guards.',
+  );
+  process.exit(1);
+}
+
 const offenders = [];
-for (const file of walk(path.join(APP, 'src')).concat(walk(path.join(APP, 'app')))) {
+for (const file of files) {
   const relative = path.relative(ROOT, file).split(path.sep).join('/');
   if (SEAMS.includes(relative)) {
     continue;

@@ -81,6 +81,9 @@ jobs:
             exit 1
           fi
           pnpm --filter mobile exec expo prebuild --platform android --no-install
+          # BUG-079: the shipped artifact must never carry the E2E flag (the
+          # mocks would be inlined); the build fails rather than ship them.
+          node scripts/ci/check-e2e-flag.mjs --variant release
           cd apps/mobile/android
           if [ "${{ steps.keystore.outputs.signed }}" = "true" ]; then
             ./gradlew assembleRelease --no-daemon --stacktrace \

@@ -73,7 +73,9 @@ test('a screen reading the run store is not flagged (the E2E day rides the store
 test('a tree with no files fails rather than passing vacuously', () => {
   const { code, out } = over({});
   assert.notEqual(code, 0);
-  assert.match(out, /apps\/mobile/);
+  // The message names the tree it could not scan, with the platform's own
+  // separator (windows `\`, the runners `/`).
+  assert.match(out, /apps[\\/]mobile/);
 });
 
 test('the gate is clean over the repository itself once A4 lands', () => {

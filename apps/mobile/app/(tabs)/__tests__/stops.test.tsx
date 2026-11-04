@@ -51,7 +51,11 @@ function storeWithMarks(marks: DeliveredMark[]): MarkStore {
   const load = (): Promise<typeof theDay> => Promise.resolve(theDay);
   const refresh = (): Promise<typeof theDay> => Promise.resolve(theDay);
 
-  return { load, refresh, deliveredMarks, markDelivered, undoDelivered, close };
+  // The day rides the same store, the way the app's own store carries both.
+  return { load, refresh, deliveredMarks, markDelivered, undoDelivered, close } as MarkStore & {
+    load: () => Promise<typeof theDay>;
+    refresh: () => Promise<typeof theDay>;
+  };
 }
 
 jest.mock('@maplibre/maplibre-react-native', () => {
