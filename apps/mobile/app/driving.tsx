@@ -21,7 +21,7 @@
  * icon and the label flip with it.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, Pressable, View, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import {
@@ -30,6 +30,8 @@ import {
   Marker,
   NativeUserLocation,
 } from '@maplibre/maplibre-react-native';
+
+import { handOffToNavApp } from '@/maps/navHandoff';
 
 import {
   ChosenProvider,
@@ -41,7 +43,7 @@ import {
   TurnCard,
   useChosen,
 } from '@/components/chosen';
-import { spacing, typography } from '@courier/design-tokens/chosen';
+import { radii, spacing, touch, typography } from '@courier/design-tokens/chosen';
 import { hapticFor } from '@/motion/haptics';
 import { TILTED_PITCH } from '@/maps/cameraCommands';
 import {
@@ -70,6 +72,18 @@ const GRABBER_RADIUS = 3;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  navButton: {
+    marginTop: spacing.space12,
+    minHeight: touch.minimum,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.space16,
+  },
+  navLabel: {
+    fontSize: typography.label.size,
+    fontWeight: typography.label.weight,
   },
   map: {
     flex: 1,
@@ -199,6 +213,27 @@ export function DrivingScreen() {
     };
   }, []);
 
+  // Queue 4.1: the navigation hand-off. The destination is the run's own
+  // stop, and the hand-off answers what happened - a phone with no nav app
+  // is told, rather than left in a silence.
+  const handleNavHandoff = useCallback(() => {
+    if (!active) {
+      return;
+    }
+    hapticFor('confirm');
+    void handOffToNavApp({
+      lat: active.coordinates.lat,
+      lng: active.coordinates.lng,
+      // The whole address: the street and the suburb, the way the courier
+      // would say it out loud.
+      label: active.suburb.length > 0 ? `${active.address}, ${active.suburb}` : active.address,
+    }).then((answer) => {
+      if (answer.status === 'failed') {
+        console.warn(`driving: the nav hand-off did not open (${answer.message})`);
+      }
+    });
+  }, [active]);
+
   const handleDeliver = useCallback(() => {
     // The slide carries the success haptic; here the mark moves the run and
     // the confirm panel (05) takes over: the courier undoes it, or takes
@@ -299,6 +334,25 @@ export function DrivingScreen() {
               the position stream: no model, no invented minute. */}
         </View>
         <SlideToDeliver testID="driving-slide" onDeliver={handleDeliver} />
+        {/* Queue 4.1: the navigation hand-off. The drive's own map is not a
+            nav engine, and a courier mid-shift needs turn-by-turn, so the
+            stop is handed to the nav app the courier already has with the
+            key-free Google Maps deep link. The destination is the run's own
+            stop, so the hand-off carries the run and not an invented one. */}
+        {active ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${streetLine(active.address)} in the nav app`}
+            accessibilityHint="Opens the stop in the phone's navigation app"
+            onPress={handleNavHandoff}
+            testID="driving-nav-handoff"
+            style={[styles.navButton, { backgroundColor: t.colors.accent }]}
+          >
+            <Text style={[styles.navLabel, { color: t.colors.accentText }]} maxFontSizeMultiplier={1.4}>
+              Open in nav app
+            </Text>
+          </Pressable>
+        ) : null}
       </GlassSurface>
     </SafeAreaView>
   );

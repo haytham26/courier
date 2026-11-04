@@ -33,6 +33,11 @@ jest.mock('@maplibre/maplibre-react-native', () => {
   };
 });
 
+// Queue 4.1: the nav hand-off's deep link opens the phone's nav app through
+// expo-linking, which the test answers rather than the phone.
+const mockOpenURL = jest.fn((_url: string) => Promise.resolve());
+jest.mock('expo-linking', () => ({ openURL: (url: string) => mockOpenURL(url) }));
+
 jest.mock('@expo/vector-icons', () => {
   const ReactActual = jest.requireActual<typeof import('react')>('react');
   const RN = jest.requireActual<typeof import('react-native')>('react-native');
@@ -147,6 +152,22 @@ describe('Driving', () => {
     // The day is the run store's own read: it arrives after the store answers,
     // so the pins the flows walk are waited for rather than assumed.
     await waitFor(() => expect(screen.getByTestId('stop-pin-2')).toBeTruthy());
+  });
+
+  // Queue 4.1: the navigation hand-off. The drive's own map is not a nav
+  // engine, so the run's own stop is handed to the courier's nav app with the
+  // key-free deep link.
+  it('hands the run\u2019s own stop to the nav app on the hand-off tap', async () => {
+    renderDrive();
+    const handoff = await screen.findByTestId('driving-nav-handoff');
+
+    fireEvent.press(handoff);
+
+    await waitFor(() =>
+      expect(mockOpenURL).toHaveBeenCalledWith(
+        'https://www.google.com/maps/dir/?api=1&destination=-43.518,172.625&query=45%20Papanui%20Road%2C%20Merivale',
+      ),
+    );
   });
 
   it('reads the run the same one Today reads, with the real numbers', async () => {
