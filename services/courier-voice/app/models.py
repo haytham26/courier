@@ -367,6 +367,9 @@ class TurnResponse(Frozen):
     words: int = 0
     latency_ms: int = 0
     proactive: ProactiveType | None = None
+    # MASTER §22 technique A: how the pre-classifier routed this turn, and why.
+    # The routing decision is reviewable after the fact rather than assumed.
+    gate: str | None = None
 
 
 class SessionState(Frozen):

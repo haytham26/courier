@@ -42,10 +42,11 @@ from .models import (
     TurnResponse,
     VoiceSettings,
 )
-from .offline_brain import parse_command
+from .offline_brain import offline_reason, parse_command
 from .proactive import ProactiveEvent, for_event
 from .run_client import RunClient, RunForbiddenError, checked_shift_id
 from .safety import apply_safety, is_moving, real_word_count, word_count
+from .turn_gate import RoutedTurn, TurnRoute, route_turn
 from .turns import TurnMachine
 
 #: The settings store is bounded like the session store (BUG-151's shape,
@@ -416,6 +417,25 @@ def _turn(
             latency_ms=int((time.monotonic() - started) * 1000),
         )
 
+    # MASTER §22 technique A: the pre-classifier runs BEFORE the day is
+    # assembled. The paid path's first act is `_context_of` - an HTTP call to
+    # the API - and its second is a model call; a command the offline brain
+    # knows, whose answer does not read the day, is answered with neither.
+    gate = route_turn(body.transcript)
+    if gate.route is TurnRoute.FREE and gate.command is not None:
+        reply = _free_reply(gate, memory, body, chosen, moving)
+        return _finished(
+            memory,
+            memory_store,
+            reply,
+            moving=moving,
+            chosen=chosen,
+            body=body,
+            barge_in=barge_in,
+            started=started,
+            gate=gate,
+        )
+
     context = _context_of(memory, body, principal, client)
 
     reply = brains.reason(
@@ -469,6 +489,82 @@ def _turn(
         notice=reply.notice if outcome.speech else None,
         words=word_count(outcome.speech),
         latency_ms=int((time.monotonic() - started) * 1000),
+        gate=f"{gate.route.value}: {gate.reason}",
+    )
+
+
+def _free_reply(
+    gate: RoutedTurn,
+    memory: SessionMemory,
+    body: TurnRequest,
+    chosen: VoiceSettings,
+    moving: bool,
+) -> ReasoningReply:
+    """The gate's answer: the offline brain, with no day and no model call.
+
+    A routed command is answered from the catalogue's own rules, which is what
+    paid for neither the run fetch nor the gateway. The shift memory is still
+    read for the correction path (the last question), so a "no, sorry" after a
+    routed command still lands.
+    """
+    command = gate.command
+    assert command is not None  # the FREE route always carries one
+    return offline_reason(
+        ReasoningRequest(
+            transcript=body.transcript,
+            context=memory.context,
+            settings=chosen,
+            language=body.language or chosen.language,
+            moving=moving,
+            last_instruction=memory.last_instruction,
+            last_question=memory.last_question,
+            learned=body.learned or memory.learned,
+        )
+    )
+
+
+def _finished(
+    memory: SessionMemory,
+    memory_store: MemoryStore,
+    reply: ReasoningReply,
+    *,
+    moving: bool,
+    chosen: VoiceSettings,
+    body: TurnRequest,
+    barge_in: bool,
+    started: float,
+    gate: RoutedTurn,
+) -> TurnResponse:
+    """The tail of a turn, shared by the gate's path and the paid path."""
+    outcome = apply_safety(
+        reply.speech or (reply.notice or ""),
+        moving=moving,
+        quiet_mode=chosen.quiet_mode,
+        essentials_only=chosen.essentials_only,
+        audio_focus=body.audio_focus,
+        verbosity=chosen.verbosity,
+        essential=reply.action is not None,
+    )
+    memory.turn_machine.begin_speaking(outcome.speech)
+    memory.turns += 1
+    if reply.speech:
+        memory.last_instruction = reply.speech
+    if reply.question:
+        memory.last_question = reply.question
+    memory_store.save(memory)
+    return TurnResponse(
+        speech=outcome.speech,
+        action=reply.action,
+        engine=reply.engine or "on-device",
+        source=reply.source,
+        mode=body.mode,
+        barge_in=barge_in,
+        ended_turn=True,
+        priority=outcome.priority,
+        notice=reply.notice if outcome.speech else None,
+        words=word_count(outcome.speech),
+        latency_ms=int((time.monotonic() - started) * 1000),
+        gate=f"{gate.route.value}: {gate.reason}",
     )
 
 
