@@ -166,6 +166,20 @@ function toAuthUser(user: OfflineSessionUser): AuthUser {
  * the phone kept, and the app says it is offline. That fallback is bounded
  * (a shift) and it never pretends the server confirmed it.
  */
+/**
+ * How long the app waits for the server's answer about the session before it
+ * goes on without it.
+ *
+ * The a1 job's first real run proved the need: the flow launched the app and
+ * waited 60 s for `welcome-screen`, and the device's own dump showed
+ * `not-found-screen` - the router's unmatched fallback - because the session
+ * restore never answered and the root stack never mounted. A restore that
+ * takes longer than this is a restore the app goes on without: the front door
+ * shows, the courier signs in, and the session is read again behind them
+ * (the same answer a transport failure gets, which the code below already
+ * handles).
+ */
+const SESSION_RESTORE_TIMEOUT_MS = 8_000;
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data, error, isPending, refetch } = authClient.useSession();
 
@@ -203,6 +217,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // The session itself: the server first, the phone second.
   useEffect(() => {
+    // A restore that has not answered by the deadline is a restore the app
+    // goes on without: the phone's own session, or the front door. The
+    // server's answer, when it finally comes, still lands through the same
+    // effect (its dependencies move) and moves the stack then.
+    const bounded = setTimeout(() => {
+      void readOfflineSession().then((offline) => {
+        if (offline) {
+          setUser(toAuthUser(offline.user));
+          setStatus('offline');
+        } else {
+          setUser(null);
+          setStatus('signed-out');
+        }
+      });
+    }, SESSION_RESTORE_TIMEOUT_MS);
+
     if (isPending) {
       return;
     }
@@ -269,6 +299,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(null);
     setStatus('signed-out');
+    return () => {
+      clearTimeout(bounded);
+    };
   }, [data, error, isPending]);
 
   // BUG-092 (the C1 audit squad 1's finding): the signed-in driver is

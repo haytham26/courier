@@ -91,6 +91,11 @@ class FakeSqlite {
   private answer(sql: string, params: (string | number | null)[]): Answer {
     this.executed.push(sql);
 
+    // BUG-172: a statement on a closed handle fails, the way op-sqlite's does.
+    if (this.closed) {
+      throw new Error('[op-sqlite] statement execution error: database is closed');
+    }
+
     if (/^PRAGMA user_version$/.test(sql)) {
       return { rows: [{ user_version: this.version }], rowsAffected: 0 };
     }
@@ -298,5 +303,46 @@ describe('the op-sqlite run cache', () => {
 
     expect(await cache.read()).toBeNull();
     expect(await cache.deliveredMarks()).toEqual([]);
+  });
+
+  // BUG-172: run 41491440450 - the auth-keyed remount renders the new session
+  // BEFORE the dying session's cleanup runs, so `open()` hands the new session
+  // the SAME cached cache the cleanup then closes: the handle is released and
+  // the database closed under the new session, and its first write threw
+  // (silently - load() rejected). The contract now: a cache whose handle was
+  // closed under it REOPENS the database on its next operation. Red on
+  // d92155e (the write throws on the closed stand-in).
+  it('reopens the database when its handle is closed under it (the session remount)', async () => {
+    const firstDb = new FakeSqlite();
+    opSqlite.open.mockReturnValue(firstDb);
+    const cache = OpSqliteRunCache.open('remount.db');
+    const secondDb = new FakeSqlite();
+    opSqlite.open.mockReturnValue(secondDb);
+    // The remount reuses the cached instance - that sharing is the race.
+    const sessionStore = OpSqliteRunCache.open('remount.db');
+    expect(sessionStore).toBe(cache);
+    const opensBefore = opSqlite.open.mock.calls.length;
+
+    await cache.close(); // the dying session's cleanup releases the handle
+    expect(firstDb.closed).toBe(true);
+
+    await sessionStore.write(aDay); // old code: throws - the handle is closed
+
+    const snapshot = await sessionStore.read();
+    expect(snapshot?.run.id).toBe('run-1');
+    expect(snapshot?.stops.map((item) => item.id)).toEqual(['stop-1', 'stop-2']);
+    expect(opSqlite.open.mock.calls.length).toBe(opensBefore + 1); // reopened
+    expect(secondDb.closed).toBe(false);
+  });
+
+  it('does not hand a closed cache to the next open', async () => {
+    opSqlite.open.mockReturnValue(new FakeSqlite());
+    const cache = OpSqliteRunCache.open('closed.db');
+    await cache.close();
+
+    opSqlite.open.mockReturnValue(new FakeSqlite());
+    const next = OpSqliteRunCache.open('closed.db');
+
+    expect(next).not.toBe(cache);
   });
 });

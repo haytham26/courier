@@ -15,7 +15,14 @@
  *      are the same expression;
  *   2. the auth service's `BETTER_AUTH_URL` and the API's `AUTH_JWT_ISSUER`
  *      resolve to the same value when the API's is an override with a default
- *      ( `${AUTH_JWT_ISSUER:-X}` against `X` ).
+ *      ( `${AUTH_JWT_ISSUER:-X}` against `X` );
+ *   3. every API block's `AUTH_JWKS_URL` obeys the API's own boot rule
+ *      (BUG-131, app/auth/jwks.py): a plaintext `http://` hop is allowed only
+ *      from loopback or a host named in that block's `AUTH_JWKS_INTERNAL_HOSTS`
+ *      (an override's default counts as the value). The a1 job's stack step
+ *      ran exactly this failure on 2026-11-02: compose.ci.yml named `auth`
+ *      as the JWKS host but never listed it, so the API container exited 1
+ *      at import and no flow ran.
  *
  *   node scripts/ci/check-auth-issuer.mjs
  */
@@ -65,6 +72,56 @@ function overrideDefault(value) {
   return match ? { name: match[1], fallback: match[2] } : null;
 }
 
+/** The loopback hosts the API's JWKS rule exempts (jwks.py's LOOPBACK_HOSTS). */
+const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
+
+/**
+ * The host list `AUTH_JWKS_INTERNAL_HOSTS` resolves to statically: a literal
+ * list, or an override's default. `null` when the value is a bare `${VAR}`
+ * the gate cannot resolve here - the API would resolve it from the
+ * operator's env, so the gate stays silent rather than guess.
+ */
+function resolveHostList(value) {
+  if (value === undefined) return [];
+  const override = overrideDefault(value);
+  if (override) value = override.fallback;
+  if (/^\$\{/.test(value)) return null;
+  return value
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * The BUG-131 findings for one API environment block: the API refuses to
+ * boot when its plaintext JWKS host is not listed on purpose, and the
+ * container's exit-1 is the only place that refusal is visible - until this
+ * gate reads the compose file and says it before the job runs.
+ */
+export function jwksFindings(file, block) {
+  const url = block.AUTH_JWKS_URL;
+  if (!url) return [];
+  const parts = /^([a-z][a-z0-9+.-]*):\/\/([^/?#]+)/i.exec(url);
+  if (!parts) return []; // not absolute: the API's own validator names that at boot
+  const scheme = parts[1].toLowerCase();
+  const authority = parts[2];
+  if (authority.includes('${')) return []; // depends on the operator's env
+  const host = authority.split('@').pop().split(':')[0].toLowerCase();
+  if (scheme === 'https' || LOOPBACK_HOSTS.has(host)) return [];
+  const listed = resolveHostList(block.AUTH_JWKS_INTERNAL_HOSTS);
+  if (listed === null || listed.includes(host)) return [];
+  return [
+    {
+      file,
+      kind: 'jwks-plaintext-host',
+      message:
+        `the API refuses to boot with AUTH_JWKS_URL ${url}: plaintext http and host ` +
+        `'${host}' is not listed in AUTH_JWKS_INTERNAL_HOSTS (BUG-131) - the a1 stack's ` +
+        `container would exit 1 at import`,
+    },
+  ];
+}
+
 /** `https://${COURIER_DOMAIN:?a message}` as `https://${COURIER_DOMAIN}`. */
 function withoutComposeMessage(value) {
   return value.replace(/\$\{([A-Z0-9_]+):\?[^}]*\}/g, '${$1}');
@@ -80,19 +137,29 @@ export function findingsIn(file, text) {
     (block) => 'AUTH_JWT_ISSUER' in block && 'BETTER_AUTH_SECRET' in block,
   );
 
+  // BUG-131 applies to any block that configures the API's JWKS hop, pair or
+  // no pair - compose.ci.yml deploys both, but a half-configured file still
+  // has to boot.
+  const findings = [];
+  for (const block of blocks.filter((b) => 'AUTH_JWKS_URL' in b)) {
+    findings.push(...jwksFindings(file, block));
+  }
+
   if (api.length === 0 && auth.length === 0) {
-    return []; // a compose file that does not deploy the pair
+    return findings; // a compose file that does not deploy the pair
   }
   if (api.length === 0 || auth.length === 0) {
-    return [
-      { file, kind: 'half', message: 'only one of the API and the auth service is configured' },
-    ];
+    findings.push({
+      file,
+      kind: 'half',
+      message: 'only one of the API and the auth service is configured',
+    });
+    return findings;
   }
 
   const apiIssuer = api[0].AUTH_JWT_ISSUER;
   const authIssuer = auth[0].AUTH_JWT_ISSUER;
   const authBaseUrl = withoutComposeMessage(auth[0].BETTER_AUTH_URL ?? '');
-  const findings = [];
 
   if (apiIssuer !== authIssuer) {
     findings.push({
@@ -139,11 +206,13 @@ function main() {
   }
   if (findings.length > 0) {
     console.error(
-      `check-auth-issuer: the API and the auth service disagree about the issuer (BUG-122)`,
+      `check-auth-issuer: a compose file breaks the API's boot rules (BUG-122 issuer, BUG-131 JWKS host)`,
     );
     process.exit(1);
   }
-  console.log(`check-auth-issuer: one issuer across ${files.length} compose files`);
+  console.log(
+    `check-auth-issuer: one issuer and a listed JWKS host across ${files.length} compose files`,
+  );
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === here) {

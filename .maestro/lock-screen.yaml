@@ -1,6 +1,11 @@
 appId: com.courier.copilot
 name: "The lock screen's glance - the run's Live Activity (screen 13)"
 ---
+# BUG-185: stop the app FIRST, then clear its state. A launch that clears state
+# force-stops the running app, and the old task removal then killed the freshly
+# started process (run 41609308041's api-34 leg: "remove task" killed the new pid
+# and the flow's 60s wait timed out) - stopping first lets the task be gone.
+- stopApp
 - launchApp:
     clearState: true
 - extendedWaitUntil:

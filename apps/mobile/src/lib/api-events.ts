@@ -13,6 +13,7 @@
  */
 import type { DeliveryEvent as ContractDeliveryEvent } from '@courier/shared/src/generated/api';
 
+import { isUuid } from '@/sync/eventId';
 import type { DeliveryEvent, DeliveryEventKind } from '@/sync/types';
 
 /** The kinds the contract's `DeliveryEvent` accepts. */
@@ -30,6 +31,17 @@ export type EventMapping =
  * refused rather than invented.
  */
 export function toContractEvent(event: DeliveryEvent): EventMapping {
+  // BUG-176: the contract's `id` is `format: uuid` and the server parses it as
+  // one - a non-uuid id gets the WHOLE batch refused with a 422 (run
+  // 41541777473's a1 job). The event is refused here, before a request is
+  // built, exactly like an unknown kind.
+  if (!isUuid(event.id)) {
+    return {
+      status: 'unmappable',
+      reason: `the API's event id must be a uuid, and this one is not: ${event.id}`,
+    };
+  }
+
   const kind: ContractDeliveryEvent['kind'] | null =
     event.kind === 'delivered'
       ? 'delivered'
