@@ -486,6 +486,14 @@ jobs:
         if: always()
         run: bash scripts/ci/assert-a1-rows.sh
 
+      # BUG-186's own suite: it proves the assert above waits for the delivery
+      # the outbox sends on its own schedule, against the very database this
+      # job started. It lives outside the repo's standard script glob on
+      # purpose (it needs the compose stack), and it runs here, where it is.
+      - name: The rows assert's own suite (BUG-186)
+        if: always()
+        run: node --test scripts/ci/__tests__/a1/assert-a1-rows.test.mjs
+
       - name: Upload the evidence
         if: always() || cancelled()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

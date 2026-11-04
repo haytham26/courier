@@ -327,8 +327,13 @@ waited) — for the FOUR the flow performed. The assertion itself is unchanged, 
 row never lands the job still fails after the bound. The new suite
 `scripts/ci/__tests__/assert-a1-rows.test.mjs` runs the script against the compose
 Postgres (the fourth row landing 8 s in → passes, naming the wait; never landing → fails
-after 2 s, naming 3). Register: 184 rows (open 17, doing 3, testing 3, fixed 129, closed
-2, moved 30); PARITY 311 (Have 29).
+after 2 s, naming 3). The suite has since moved to `scripts/ci/__tests__/a1/` (outside the
+standard script glob, on purpose) and runs against the live compose stack: the Android
+E2E workflow runs it in the a1 job, right after the rows assert it guards
+(`node --test scripts/ci/__tests__/a1/assert-a1-rows.test.mjs`). Register: 184 rows
+(open 16, doing 3, testing 3, fixed 130, closed 2, moved 30); PARITY 311 (Have 29).
+BUG-102's row was also restored from origin/main, where it is `fixed` (our copy had gone
+stale), which is why open is 16 and fixed 130.
 
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
