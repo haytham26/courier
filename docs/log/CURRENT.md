@@ -342,6 +342,29 @@ step name and comments, the script's comments, the a1 suite's title and this log
 follow it. The register after the merge: 186 rows (open 15, doing 3, testing 3, fixed 133,
 closed 2, moved 30); PARITY 312 (Have 30).
 
+**#135 merged — the a1 slice 3 is on main. Ritual complete (2026-11-04).**
+- Merge commit on main: `2382f68` (Merge pull request #135 from
+  haytham26/feat/a1-slice-3-run-store), the final head `50ed121`.
+- Every check green on that head: CI, all Quality gates, CodeQL, the restore
+  drill, the screen recordings, and Android E2E run 41771642008 (the release
+  APK, the a1 job's three flows + rows assert + BUG-188 suite, and the Maestro
+  flows on api 35 and api 34). The a1 job's first attempt on that head lost its
+  emulator before any flow ran (`could not connect to TCP port 5554`, runs=0,
+  no flow started, the sibling legs passed the same flows) — the runner-infra
+  flake the playbook names, so the one allowed job re-run was used and it is
+  green.
+- `git ls-remote --heads origin` carries no `feat/a1-slice-3-run-store` (the
+  branch is deleted); `git ls-remote --tags origin` carries
+  `refs/tags/archive/feat-a1-slice-3-run-store^{}` = `50ed121` (the final
+  head, archived).
+- On main, `apps/mobile/app/(tabs)/index.tsx` and `apps/mobile/app/driving.tsx`
+  read the run through `useRun()` — `mockStops` is gone from both.
+- The queue resumes at A4: remove `mockStops` from the seven screens on main
+  (index, map, stops, copilot, delivered, driving, lock-screen) so they read the
+  real run through `useRunDay`, plus the build check that fails a release build
+  on a reachable mock (BUG-079). Then BUG-081, then #166, then the trial
+  features' app halves, then B5, A3, A2 and §22.
+
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that
 mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
