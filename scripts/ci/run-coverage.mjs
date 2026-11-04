@@ -97,6 +97,10 @@ const voiceStatus =
       'services/courier-voice',
       '--extra',
       'dev',
+      // The `eval` extra (numpy, soundfile, sherpa-onnx) is what the A3
+      // utterance measurement and its suite run on (app/eval_audio.py).
+      '--extra',
+      'eval',
       'pytest',
       '--cov=app',
       '--cov-report=json:coverage.json',

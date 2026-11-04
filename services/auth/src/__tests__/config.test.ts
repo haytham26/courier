@@ -216,6 +216,35 @@ describe("the rate limit is the deployment's own (BUG-132)", () => {
 
     expect(config.rateLimit.enabled).toBe(true);
   });
+
+  // BUG-132's second half: the limiter's STORE is the deployment's to state
+  // too. The library default is a module-level Map - per-process, lost on
+  // restart, and two replicas give two buckets. The database store is the one
+  // that shares the counters between the replicas (and the migration adds its
+  // table when it is selected).
+  it("shares its counters through the database in production", () => {
+    const config = loadConfig({ ...VALID_ENV, NODE_ENV: "production" });
+
+    expect(config.rateLimit.storage).toBe("database");
+  });
+
+  it("keeps the in-memory store outside production", () => {
+    const config = loadConfig({ ...VALID_ENV, NODE_ENV: "development" });
+
+    expect(config.rateLimit.storage).toBe("memory");
+  });
+
+  it("takes the store from the environment when it says so", () => {
+    const config = loadConfig({ ...VALID_ENV, AUTH_RATE_LIMIT_STORAGE: "memory" });
+
+    expect(config.rateLimit.storage).toBe("memory");
+  });
+
+  it("refuses a store that is not one of the two", () => {
+    expect(() => loadConfig({ ...VALID_ENV, AUTH_RATE_LIMIT_STORAGE: "valkey" })).toThrow(
+      /AUTH_RATE_LIMIT_STORAGE/,
+    );
+  });
 });
 
 // BUG-137: a variable that is set but empty is a misconfiguration, not a

@@ -17,7 +17,7 @@ on:
     # must not spend the minutes. `scripts/**` is on the list because the a1
     # job's rows assert and its own suite live there - a change to them can
     # turn the done-when red, and a PR check set that does not run for it is
-    # a check set that lies (BUG-186's suite was the first thing to sit on
+    # a check set that lies (BUG-188's suite was the first thing to sit on
     # the wrong side of this filter).
     paths:
       - 'apps/**'
@@ -493,11 +493,11 @@ jobs:
         if: always()
         run: bash scripts/ci/assert-a1-rows.sh
 
-      # BUG-186's own suite: it proves the assert above waits for the delivery
+      # BUG-188's own suite: it proves the assert above waits for the delivery
       # the outbox sends on its own schedule, against the very database this
       # job started. It lives outside the repo's standard script glob on
       # purpose (it needs the compose stack), and it runs here, where it is.
-      - name: The rows assert's own suite (BUG-186)
+      - name: The rows assert's own suite (BUG-188)
         if: always()
         run: node --test scripts/ci/__tests__/a1/assert-a1-rows.test.mjs
 

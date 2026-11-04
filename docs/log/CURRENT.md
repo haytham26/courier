@@ -316,7 +316,7 @@ and the new gate `scripts/ci/__tests__/flows-cold-start.test.mjs` fails any
 flows). BUG-185 filed (fixed, PR #135); register 183 rows, open 17, fixed 128.
 
 **The merged head's first E2E run (41656905474) failed on the DB assert while all three
-a1 flows PASSED — BUG-186, a race in the runner, not the app.** The job read "expected 4
+a1 flows PASSED — BUG-188, a race in the runner, not the app.** The job read "expected 4
 delivery events ... found 3" seconds after the sync flow finished, while the app had the
 fourth delivery recorded on the phone and the outbox sent it on its own retry (BUG-179's
 15-second tick), which lands after the flow's last screen; the run before it won the same
@@ -334,6 +334,13 @@ E2E workflow runs it in the a1 job, right after the rows assert it guards
 (open 16, doing 3, testing 3, fixed 130, closed 2, moved 30); PARITY 311 (Have 29).
 BUG-102's row was also restored from origin/main, where it is `fixed` (our copy had gone
 stale), which is why open is 16 and fixed 130.
+
+**origin/main merged again (af496d4), and our BUG-186 became BUG-188.** main's squads
+reached BUG-187 while this branch sat unmerged (verified across main and every open
+branch: the highest is 187), so the rows-assert race keeps **BUG-188** — the workflow's
+step name and comments, the script's comments, the a1 suite's title and this log's entry
+follow it. The register after the merge: 186 rows (open 15, doing 3, testing 3, fixed 133,
+closed 2, moved 30); PARITY 312 (Have 30).
 
 Merge #135 only when CI + a1 + both E2E
 legs are green on the final head with no re-run (§17.4); then confirm on main that

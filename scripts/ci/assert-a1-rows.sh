@@ -24,7 +24,7 @@ DB_USER="${DB_USER:-courier}"
 DB_NAME="${DB_NAME:-courier}"
 # How long the runner waits for the delivery the app has to send: the outbox's
 # own retry asks again on its backoff (15 s at first), so the row the assert
-# wants can land a few seconds AFTER the flow's last screen. BUG-186: run
+# wants can land a few seconds AFTER the flow's last screen. BUG-188: run
 # 41656905474 asserted immediately after the sync flow and found 3 of the 4
 # events - the app had the fourth on the phone and sent it seconds later. The
 # wait is bounded and says so, and the assertion itself is unchanged: if the
@@ -69,7 +69,7 @@ echo "runs: $runs, shifts: $shifts, stops: $stops, delivery_events: $delivered"
 # The four deliveries: the run's own stops, delivered once each. A stop
 # delivered twice is not the contract's shape (a divergent replay is refused
 # server-side), so the count is what the flow did.
-# BUG-186: the count is waited for, not read once - the outbox's retry lands
+# BUG-188: the count is waited for, not read once - the outbox's retry lands
 # the held delivery on its own schedule (15 s), which can be after the sync
 # flow's last screen. The wanted count is still four.
 if ! wait_for_delivered 4; then

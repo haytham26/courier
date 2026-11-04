@@ -2,7 +2,7 @@
 //
 //   node --test scripts/ci/__tests__/a1/assert-a1-rows.test.mjs
 //
-// BUG-186: run 41656905474's a1 job failed "expected 4 delivery events ...
+// BUG-188: run 41656905474's a1 job failed "expected 4 delivery events ...
 // found 3" while every one of the three flows had PASSED. The app had recorded
 // the fourth delivery on the phone and the outbox sent it on its own retry
 // (15 s), which lands seconds after the sync flow's last screen - so the
@@ -165,7 +165,7 @@ test.after(() => {
   }
 });
 
-test('waits for the held delivery the outbox sends on its own schedule (BUG-186)', async () => {
+test('waits for the held delivery the outbox sends on its own schedule (BUG-188)', async () => {
   seedTheDay();
   // The assert starts against three rows, the way the a1 runner found them
   // after the sync flow - and the fourth delivery lands 8 seconds later, the

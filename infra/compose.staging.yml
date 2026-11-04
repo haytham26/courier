@@ -178,6 +178,9 @@ services:
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
       AUTH_JWT_EXPIRATION: ${AUTH_JWT_EXPIRATION:-15m}
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-100}
+      # BUG-132: the shared (database-backed) limiter store, so the two auth
+      # replicas count into one bucket and a restart no longer resets them.
+      AUTH_RATE_LIMIT_STORAGE: ${AUTH_RATE_LIMIT_STORAGE:-database}
     depends_on:
       postgres:
         condition: service_healthy
