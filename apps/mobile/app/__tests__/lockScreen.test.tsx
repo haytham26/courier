@@ -60,14 +60,6 @@ function renderLockScreen(_marks: DeliveredMark[] = []) {
   );
 }
 
-/** A mark on the run's own first stop. */
-const firstStopMarked: DeliveredMark = {
-  stopId: '1',
-  sequence: 1,
-  at: 1_800_000_000_000,
-  eventId: 'e-1',
-};
-
 describe('the lock screen', () => {
   it('answers inside the run state the root layout gives it', () => {
     renderLockScreen();
@@ -94,25 +86,25 @@ describe('the lock screen', () => {
     expect(within(pill).getByText('2 min')).toBeTruthy();
   });
 
-  // A4: the glance is the RUN's own day. The run store answers with the
-  // seeded stops, and the lock screen shows the next stop the run holds -
-  // not the mock list's second stop. The day is read through the store, so
-  // the wait is the store's.
+  // A4: the glance is the RUN's own day. The day's first stop is delivered,
+  // so the next stop the lock screen names is the day's own second stop -
+  // the same one the count points at.
   it('shows the run\u2019s next stop with its notes and its ETA', async () => {
     renderLockScreen();
     const activity = screen.getByTestId('lock-activity');
     expect(activity).toBeTruthy();
-    await waitFor(() => expect(screen.getByText('2/14 Riccarton Road')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('45 Papanui Road')).toBeTruthy());
     expect(screen.getByText('Side gate, shelf B3')).toBeTruthy();
     expect(screen.getByText('12 min ahead')).toBeTruthy();
   });
 
-  // The count and the progress follow the marks the run carries, so a stop
-  // the courier already delivered is the number the lock screen shows.
+  // The count and the progress follow the run's own stops: a stop the run
+  // carries as delivered (the API's own status, which is what the Live
+  // Activity shows) is the number the lock screen counts.
   it('counts the run\u2019s own deliveries in its progress', async () => {
-    renderLockScreen([firstStopMarked]);
-    // The run's own day, read back: the first stop is delivered, so the
-    // lock screen counts from the run's marks and not from the mock list.
+    renderLockScreen();
+    // The run's own day: its first stop is delivered, so the lock screen
+    // shows the second of five with a fifth of the day behind it.
     await waitFor(() => expect(screen.getByText('Stop 2 of 5')).toBeTruthy());
     const fill = screen.getByTestId('lock-progress').props as { style?: unknown };
     const parts = Array.isArray(fill.style)

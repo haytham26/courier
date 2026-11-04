@@ -75,11 +75,15 @@ function runPosition(day: ReturnType<typeof useRun>['day']): {
   total: number;
   next: Stop | null;
 } {
-  return {
-    delivered: day.delivered.length,
-    total: day.stops.length,
-    next: day.nextStop ?? day.stops[0] ?? null,
-  };
+  // The run's own truth about a delivered stop is the stop's status - the
+  // same status the API flips when an event lands - so the glance counts the
+  // run's stops rather than the phone's marks alone: the Live Activity is
+  // the run's surface, and the stop statuses are what the run holds. The
+  // next stop is the same source's first stop that is not delivered, so the
+  // count and the address name one stop.
+  const delivered = day.stops.filter((stop) => stop.status === 'delivered').length;
+  const next = day.stops.find((stop) => stop.status !== 'delivered') ?? day.stops[0] ?? null;
+  return { delivered, total: day.stops.length, next };
 }
 
 const timeOfDay = (at: Date): string =>
