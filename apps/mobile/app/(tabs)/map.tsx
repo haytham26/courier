@@ -52,7 +52,8 @@ import { getSatelliteSource } from '@/maps/config';
 import { describe } from '@/maps/offlinePack';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { ATTRIBUTION_LINES, getCourierStyle } from '@/maps/styles';
-import { mockStops, stopsBounds, stopsForMap, type Stop } from '@/maps/stops';
+import { useRun } from '@/maps/runState';
+import { stopsBounds, stopsForMap, type Stop } from '@/maps/stops';
 import { LOOK_BACK_BEARING, TILTED_PITCH, cameraForMode } from '@/maps/cameraCommands';
 import { isInTown, isMoving, type MapPosition } from '@/maps/driving';
 import { MapSettingsSheet } from '@/maps/MapSettingsSheet';
@@ -303,12 +304,20 @@ export default function MapScreen() {
   // provider and its licence.
   const satelliteSource = useMemo(() => getSatelliteSource(), []);
 
+  // The run above this screen (A4): its own day is where the map's stops come
+  // from now, the same day Today and the route read.
+  const run = useRun();
+
   // The pack says whether it carries the building outlines that make the 3D
   // buildings possible.
   const packHasBuildings =
     pack?.state.status === 'ready' && pack.state.manifest.buildings?.present === true;
 
-  const townBounds = useMemo(() => stopsBounds(mockStops), []);
+  // A4: the map's own stops are the run's, read through the day the store
+  // holds, so the bounds the town check uses and the pins it draws are the
+  // run's own and not the mock list's.
+  const runStops = run.day.stops;
+  const townBounds = useMemo(() => stopsBounds(runStops), [runStops]);
   const inTown = useMemo(() => isInTown(position, townBounds), [position, townBounds]);
 
   const { mode: viewMode, decision, setMode } = useMapViewMode({
@@ -343,9 +352,11 @@ export default function MapScreen() {
     ],
   );
 
-  const visibleStops = useMemo(() => stopsForMap(mockStops, bounds), [bounds]);
+  const visibleStops = useMemo(() => stopsForMap(runStops, bounds), [runStops, bounds]);
 
-  const activeStop = useMemo(() => mockStops.find((stop) => stop.status === 'active'), []);
+  // The stop the courier is driving to is the run's own next stop; the mock
+  // list's "active" status was its fiction.
+  const activeStop = useMemo(() => run.day.nextStop ?? null, [run.day]);
 
   const handleRegionDidChange = useCallback(() => {
     const map = mapRef.current;
@@ -372,11 +383,13 @@ export default function MapScreen() {
   }, []);
 
   const zoomToNextStop = useCallback(() => {
-    const stop = activeStop ?? mockStops[0];
+    // The run's own next stop first, and the run's own first stop when the
+    // day has not been read yet (A4).
+    const stop = activeStop ?? run.day.stops[0];
     if (stop) {
       zoomTo(stop.coordinates);
     }
-  }, [activeStop, zoomTo]);
+  }, [activeStop, run.day.stops, zoomTo]);
 
   const handleMarkerPress = useCallback(
     (stop: Stop) => {

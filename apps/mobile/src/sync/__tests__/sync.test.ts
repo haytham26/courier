@@ -228,6 +228,45 @@ describe('SyncService', () => {
     expect(await log.pendingCount()).toBe(1);
   });
 
+  it('bounds the run on a batch the server takes nothing from (BUG-093)', async () => {
+    // A transport that answers a batch with nothing accepted and no refusal:
+    // the events stay pending, so the next read hands back the same batch. The
+    // old loop offered it forever; this one offers it a bounded number of
+    // times, with the service's backoff between, and stops.
+    //
+    // RED first: against the unbounded loop the transport's guard (a rejection
+    // past the third offer) fired, so the run answered a failed outcome and
+    // four calls, and every assertion below failed.
+    jest.useFakeTimers();
+    try {
+      const store = new FakeStore();
+      const log = new EventLog(store);
+      await log.record(event('a'));
+      let calls = 0;
+      const silent: SyncTransport = {
+        send() {
+          calls += 1;
+          if (calls > 3) {
+            return Promise.reject(new Error('the run should have stopped by now'));
+          }
+          return Promise.resolve({ accepted: 0, cursor: 0, conflicts: [] });
+        },
+      };
+      const service = new SyncService(log, silent);
+
+      const run = service.syncAll('shift-1');
+      await jest.advanceTimersByTimeAsync(10_000);
+      const outcomes = await run;
+
+      expect(calls).toBe(3);
+      expect(outcomes).toHaveLength(3);
+      expect(outcomes.every((outcome) => !outcome.failed)).toBe(true);
+      expect(await log.pendingCount()).toBe(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('does nothing when there is nothing to send', async () => {
     const service = new SyncService(new EventLog(new FakeStore()), new FakeTransport());
 

@@ -30,6 +30,19 @@ const BACKOFF_BASE_MS = 1000;
 
 const BACKOFF_CEILING_MS = 60_000;
 
+/**
+ * Attempts one run makes on a batch the server has taken nothing from.
+ *
+ * BUG-093: such a batch leaves its events pending, so the next read hands the
+ * same batch back. Without a bound the loop re-offers it without limit.
+ */
+const MAX_UNACCEPTED_ATTEMPTS = 3;
+
+/** The pause the service itself takes between two attempts. */
+function pause(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export interface SyncOutcome {
   sent: number;
   accepted: number;
@@ -123,14 +136,38 @@ export class SyncService {
     });
   }
 
-  /** Sends every waiting batch. Stops at the first failure. */
+  /**
+   * Sends every waiting batch. Stops at the first failure, at an empty batch,
+   * or at the run's bound on a batch the server takes nothing from.
+   *
+   * BUG-093: the loop had no attempt bound and no backoff. Its hazard is not a
+   * tight spin - one `syncAll()` over a dead transport makes exactly one POST
+   * and returns (the audit's own probe: six calls make six POSTs, so the
+   * cadence is the caller's) - it is the SILENT transport: a batch answered
+   * with nothing accepted and no refusal leaves its events pending, so the
+   * next read hands the same batch back and the run offers it forever. The
+   * run now offers such a batch at most `MAX_UNACCEPTED_ATTEMPTS` times, with
+   * the service's own backoff (`retryBackoffMs`, the same curve the caller is
+   * answered) between the offers, and then hands the cadence back to the
+   * caller, which is where it was measured to be.
+   */
   async syncAll(shiftId: string): Promise<SyncOutcome[]> {
     const outcomes: SyncOutcome[] = [];
+    let unaccepted = 0;
     for (;;) {
       const outcome = await this.sync(shiftId);
       outcomes.push(outcome);
       if (outcome.failed || outcome.sent === 0) {
         return outcomes;
+      }
+      if (outcome.accepted === 0) {
+        unaccepted += 1;
+        if (unaccepted >= MAX_UNACCEPTED_ATTEMPTS) {
+          return outcomes;
+        }
+        await pause(retryBackoffMs(unaccepted));
+      } else {
+        unaccepted = 0;
       }
     }
   }
