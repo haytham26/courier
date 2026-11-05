@@ -312,6 +312,39 @@ jobs:
         with:
           persist-credentials: false
 
+      # PLAYBOOK 17.1's rule, enforced by the pipeline instead of by memory
+      # (audit item 3h, 2026-11-05): a re-run is not a diagnosis. The same APK
+      # that is green on api-35 has been red on api-34 four times with the code
+      # byte-identical (BUG-065), and each of those was a harness change that a
+      # re-run hid. One re-run is the budget; the second is allowed only if the
+      # reason is written into the job summary; a third fails before it spends a
+      # minute.
+      - name: The retry budget
+        run: |
+          set -euo pipefail
+          attempt="${{ github.run_attempt }}"
+          if [ "$attempt" -gt 2 ]; then
+            echo "::error::this is attempt $attempt and the flake budget is spent: the job fails now, before it boots an emulator."
+            echo "PLAYBOOK 17.1: a re-run is not a diagnosis. Write down what changed since the last attempt, or fix the root cause."
+            exit 1
+          fi
+          if [ "$attempt" -eq 2 ]; then
+            {
+              echo "## This is run attempt 2 - the budget is one more"
+              echo
+              echo "Attempt 1 failed. This attempt is allowed because a red can be the harness rather than the"
+              echo "code, and one retry catches that: the recurring case in this workflow is the emulator's first"
+              echo "screen never appearing, which is the system image and the AVD the audit's 3e and 3f now pin."
+              echo
+              echo "**Attempt 3 will fail immediately**, by design (\`github.run_attempt > 2\` in this"
+              echo "workflow), so this run has to be the one that says WHY:"
+              echo
+              echo "- what changed since attempt 1 (a pin, a flow, the app, or nothing at all);"
+              echo "- what the root cause is, in the words of the failure the attempt printed;"
+              echo "- and if the answer is "a re-run", then the answer is not an answer."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::attempt 2: the job summary asks for the justification, and attempt 3 will fail by design."
+          fi
       - name: Download the APK
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
@@ -560,6 +593,39 @@ jobs:
         with:
           persist-credentials: false
 
+      # PLAYBOOK 17.1's rule, enforced by the pipeline instead of by memory
+      # (audit item 3h, 2026-11-05): a re-run is not a diagnosis. The same APK
+      # that is green on api-35 has been red on api-34 four times with the code
+      # byte-identical (BUG-065), and each of those was a harness change that a
+      # re-run hid. One re-run is the budget; the second is allowed only if the
+      # reason is written into the job summary; a third fails before it spends a
+      # minute.
+      - name: The retry budget
+        run: |
+          set -euo pipefail
+          attempt="${{ github.run_attempt }}"
+          if [ "$attempt" -gt 2 ]; then
+            echo "::error::this is attempt $attempt and the flake budget is spent: the job fails now, before it boots an emulator."
+            echo "PLAYBOOK 17.1: a re-run is not a diagnosis. Write down what changed since the last attempt, or fix the root cause."
+            exit 1
+          fi
+          if [ "$attempt" -eq 2 ]; then
+            {
+              echo "## This is run attempt 2 - the budget is one more"
+              echo
+              echo "Attempt 1 failed. This attempt is allowed because a red can be the harness rather than the"
+              echo "code, and one retry catches that: the recurring case in this workflow is the emulator's first"
+              echo "screen never appearing, which is the system image and the AVD the audit's 3e and 3f now pin."
+              echo
+              echo "**Attempt 3 will fail immediately**, by design (\`github.run_attempt > 2\` in this"
+              echo "workflow), so this run has to be the one that says WHY:"
+              echo
+              echo "- what changed since attempt 1 (a pin, a flow, the app, or nothing at all);"
+              echo "- what the root cause is, in the words of the failure the attempt printed;"
+              echo "- and if the answer is "a re-run", then the answer is not an answer."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::attempt 2: the job summary asks for the justification, and attempt 3 will fail by design."
+          fi
       - name: Set up pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
         with:

@@ -143,6 +143,16 @@ jobs:
       # report `skipped` instead of not existing.
       - name: The emulator jobs report skipped, not missing (audit 3g)
         run: node scripts/ci/check-e2e-trigger-conditions.mjs
+      # The 2026-11-05 audit's item 3h: PLAYBOOK 17.1 says a re-run is not a
+      # diagnosis, and the recurring case here is the harness (the same APK
+      # green on api-35 and red on api-34 with the code byte-identical,
+      # BUG-065). One re-run is the budget: the e2e and a1 jobs fail when
+      # github.run_attempt > 2, and the second attempt writes the
+      # justification request into the job summary. The gate holds the budget
+      # as the FIRST step of each job, so a third attempt fails before it
+      # boots an emulator.
+      - name: The emulator jobs have a retry budget of one (audit 3h)
+        run: node scripts/ci/check-e2e-retry-budget.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers
