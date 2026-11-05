@@ -929,3 +929,5 @@ Open PR on origin: **#193** (`feat/reopt-surface`, queue 4.2). The register's
 truth for the next session is in the header above: 312 PARITY rows, 187 BUGS
 rows, and the item-2 corrections (BUG-058 filed, BUG-065's renumber recorded,
 BUG-079/082/083/084/093/105..108/109/060 marked fixed with their PRs).
+
+**#194 merged — the register's lost history is back and its rows tell the truth.** Merge commit `4bc7f31`; archive tag `archive/docs-register-truth` at `dff8884` (the PR head), the branch gone from `git ls-remote --heads origin`. BUGS.md is 417 lines again (all 186 rows are main's own byte for byte — the diff shows zero row-line changes), the section headers and the BUG-060/061/066 histories are restored, BUG-079/082/083/084/093/105..108/109/060 are `fixed` with their PRs, BUG-058 is filed as PR #39 fixed it and BUG-065 names its own renumber. TRIAL_SCOPE's day-one rows now match the tree. Register: 187 BUGS rows.
