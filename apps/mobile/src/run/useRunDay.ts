@@ -120,6 +120,8 @@ function toStop(api: {
   lon?: number;
   priority?: boolean;
   parcels?: number;
+  window_start?: string;
+  window_end?: string;
 }): Stop {
   const whole = api.address ?? '';
   // The contract answers one address string; the app's own view of a stop has
@@ -135,6 +137,16 @@ function toStop(api: {
   const suburb = hasSuburb ? parts[parts.length - 1] : '';
   const street = hasSuburb ? parts.slice(0, -1).join(', ') : whole.trim();
 
+  // Queue 4a: the run's own priority and the run's own window, read from the
+  // contract's fields. A window is only there when the server said both ends
+  // of it: half a window is not a window to tell a courier.
+  const start = api.window_start;
+  const end = api.window_end;
+  const window =
+    typeof start === 'string' && start.length > 0 && typeof end === 'string' && end.length > 0
+      ? { start, end }
+      : undefined;
+
   return {
     id: api.id,
     sequence: api.seq,
@@ -145,6 +157,8 @@ function toStop(api: {
       lat: typeof api.lat === 'number' ? api.lat : 0,
       lng: typeof api.lon === 'number' ? api.lon : 0,
     },
+    priority: api.priority === true,
+    ...(window === undefined ? {} : { window }),
   };
 }
 

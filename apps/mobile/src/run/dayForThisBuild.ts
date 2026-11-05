@@ -68,7 +68,15 @@ export function e2eDay(): RunSnapshot {
       location_id: `e2e-loc-${stop.id}`,
       lat: stop.coordinates.lat,
       lon: stop.coordinates.lng,
-      priority: false,
+      // Queue 4a (the trial's #11 and #13): the run's OWN priority and the
+      // run's OWN window, in the contract's own names. A stop the run gave no
+      // window has none to answer - the audit's finding was the hardcoded
+      // `false`, which threw the run's own word away before any screen could
+      // read it.
+      priority: stop.priority === true,
+      ...(stop.window === undefined
+        ? {}
+        : { window_start: stop.window.start, window_end: stop.window.end }),
       parcels: 1,
       // ADR-024: the stop's type is required by the contract, and the mock
       // list's stops are all deliveries.
