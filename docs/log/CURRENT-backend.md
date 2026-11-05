@@ -478,6 +478,24 @@ api-34 four times with the code byte-identical (BUG-065).
 C11 Node 20 -> 24, C10 pin every action by digest, C14 dependabot + a cron staging smoke), then 3j (the
 required-checks list, which is a FOUNDER_TODO row - the names are written down for the founder to set).
 
+## The 2026-11-05 audit's CI / INFRA item 3i, finding C12 (BUG-220): setup-uv pinned to ONE sha
+
+`astral-sh/setup-uv` was referenced by two different commit SHAs in the same tree (v5
+`d4b2f3b…` in ci/codeql/quality-gates, v10.3.3 `68559e9…` in linz-changeset/mutation), so the
+same tool ran as two versions depending on which workflow built you, and a bump PR that
+touched one list silently left the other.
+
+- The four v5 references moved to the v10.3.3 SHA (a bump of an action already in the tree: no
+  new licence-inventory row, no lockfile change). Behaviour of the new version is verified by
+  this PR's own CI run, since ci/codeql/quality-gates all install uv through the moved ref.
+- `scripts/ci/check-setup-uv-pin.mjs` (a step in the Floor guard job) holds the check-e2e-pins
+  rule for it: every ref is a full 40-hex SHA, all refs AGREE, both step spellings are read, and
+  an empty tree fails rather than passing vacuously. 5-case test.
+- Evidence: `docs/evidence/setup-uv-one-pin/README.md` (the red names both SHAs).
+
+**3i continues in order:** C11 (Node 24) next, then C10 (the every-action digest-pin gate), then
+C14 (dependabot + the cron staging smoke), then 3j.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
