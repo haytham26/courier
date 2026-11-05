@@ -55,8 +55,30 @@ jest.mock('@/maps/stops', () => ({
   ],
 }));
 
+// A4: the copilot screen reads the run's own day (the stops its reply names,
+// the count it reports), so the run-state mock answers a day - the same three
+// stops the app's own E2E build carries, in the app's own view of a stop.
 jest.mock('@/maps/runState', () => ({
-  useRun: () => ({ delivered: [], isDelivered: () => false, markDelivered: jest.fn(), undoDelivered: jest.fn() }),
+  useRun: () => ({
+    delivered: [],
+    day: {
+      hasRun: true,
+      stops: [
+        { id: 'stop-1', sequence: 1, address: '45 Papanui Road', suburb: 'St Albans', status: 'pending', coordinates: { lng: 172.6, lat: -43.5 } },
+        { id: 'stop-2', sequence: 2, address: '140 Harewood Road', suburb: 'Merivale', status: 'pending', coordinates: { lng: 172.6, lat: -43.5 } },
+        { id: 'stop-3', sequence: 3, address: '120 Blenheim Road', suburb: 'Riccarton', status: 'pending', coordinates: { lng: 172.6, lat: -43.5 } },
+      ],
+      delivered: [],
+      isDelivered: () => false,
+      nextStop: { id: 'stop-1', sequence: 1, address: '45 Papanui Road', suburb: 'St Albans', status: 'pending', coordinates: { lng: 172.6, lat: -43.5 } },
+      remaining: 3,
+      refreshMarks: () => Promise.resolve(),
+    },
+    isDelivered: () => false,
+    markDelivered: jest.fn(),
+    undoDelivered: jest.fn(),
+    refreshDay: () => Promise.resolve(),
+  }),
 }));
 
 let commandListener: ((command: { type: string; stopId?: string | null }) => void) | null = null;

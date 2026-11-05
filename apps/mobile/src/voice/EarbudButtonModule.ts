@@ -4,7 +4,7 @@
  * that handles earbud button events (Android/iOS)
  */
 
-import { NativeModules, Platform, NativeEventEmitter } from 'react-native';
+import { NativeModules, Platform, NativeEventEmitter, type EventSubscription } from 'react-native';
 
 export interface EarbudEvent {
   type: 'single' | 'double' | 'triple' | 'long';
@@ -44,6 +44,17 @@ if (EarbudButtonManager && Platform.OS !== 'web') {
   eventEmitter = new NativeEventEmitter(EarbudButtonManager);
 }
 
+/**
+ * The subscriptions this wrapper holds, newest last.
+ *
+ * BUG-082: `removeListeners(count)` used to call `removeAllListeners()`, so one
+ * unmounting subscriber detached EVERY earbud listener on the emitter - with
+ * one subscriber the effect is invisible, with two a screen closing silences
+ * the other. The subscriptions the emitter hands back are kept here, and
+ * `removeListeners(count)` removes exactly that many of them, newest first.
+ */
+const subscriptions: EventSubscription[] = [];
+
 export const EarbudButtonModule: EarbudButtonModuleInterface = {
   startListening(): Promise<void> {
     if (!EarbudButtonManager) {
@@ -75,12 +86,18 @@ export const EarbudButtonModule: EarbudButtonModuleInterface = {
     }
     // NativeEventEmitter expects (...args: any[]) => void, so we wrap the listener
     const wrappedListener = (event: unknown) => listener(event as EarbudEvent);
-    eventEmitter.addListener(eventName, wrappedListener);
+    subscriptions.push(eventEmitter.addListener(eventName, wrappedListener));
   },
 
-  removeListeners(_count: number): void {
-    if (!eventEmitter) return;
-    eventEmitter.removeAllListeners();
+  removeListeners(count: number): void {
+    // The count is honoured: this many subscriptions are removed, the newest
+    // first, and each one only detaches the listener it was created for -
+    // never another subscriber's (BUG-082).
+    let left = Math.max(0, Math.floor(count));
+    while (left > 0 && subscriptions.length > 0) {
+      subscriptions.pop()?.remove();
+      left -= 1;
+    }
   },
 };
 

@@ -31,7 +31,6 @@ import {
 } from '@/components/chosen';
 import { spacing, typography } from '@courier/design-tokens/chosen';
 import { DRIVE_ORIGIN_LNGLAT, hourMinuteOf } from '@/maps/drive';
-import { mockStops } from '@/maps/stops';
 import { useRun } from '@/maps/runState';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { getCourierStyle } from '@/maps/styles';
@@ -122,12 +121,14 @@ function DeliveredScreen() {
 
   // The stop of the confirm: the one the drive handed over ("?stop="), or
   // the run's last delivery when the screen opens without the handover.
+  // A4: the stop is the run's own, read through the day the store holds -
+  // the mock list never reaches a courier's screen.
   const params = useLocalSearchParams<{ stop?: string }>();
   const lastEvent = run.delivered[run.delivered.length - 1] ?? null;
   const targetId = params.stop ?? lastEvent?.stopId ?? null;
   const target = useMemo(
-    () => mockStops.find((stop) => stop.id === targetId) ?? null,
-    [targetId],
+    () => run.day.stops.find((stop) => stop.id === targetId) ?? null,
+    [run.day.stops, targetId],
   );
   const event = run.delivered.find((entry) => entry.stopId === targetId) ?? null;
 
@@ -181,7 +182,7 @@ function DeliveredScreen() {
           maxZoom={19}
           bearing={0}
         />
-        {mockStops.map((stop) => (
+        {run.day.stops.map((stop) => (
           <Marker
             key={stop.id}
             testID={`stop-marker-${stop.sequence}`}

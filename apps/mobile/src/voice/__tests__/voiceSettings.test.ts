@@ -44,6 +44,23 @@ describe('the voice settings', () => {
     expect(settings.speed).toBe(DEFAULT_VOICE_SETTINGS.speed);
   });
 
+  it('fall back on a language the service does not speak (BUG-084)', () => {
+    // RED first: the language was only checked for a non-empty string, so a
+    // corrupt stored value reached the engine while every sibling field fell
+    // back - the restore path validated at 129-131 (the speed clamp) and 133-149
+    // (this field) was the one gap.
+    expect(parseVoiceSettings({ language: 'klingon' }).language).toBe(
+      DEFAULT_VOICE_SETTINGS.language,
+    );
+    expect(parseVoiceSettings({ language: '' }).language).toBe(DEFAULT_VOICE_SETTINGS.language);
+    expect(parseVoiceSettings({ language: 42 }).language).toBe(DEFAULT_VOICE_SETTINGS.language);
+  });
+
+  it('keep a language the service speaks', () => {
+    expect(parseVoiceSettings({ language: 'mi-NZ' }).language).toBe('mi-NZ');
+    expect(parseVoiceSettings({ language: 'auto' }).language).toBe('auto');
+  });
+
   it('hold the speed between a half and twice the speed', () => {
     expect(parseVoiceSettings({ speed: 0.1 }).speed).toBe(0.5);
     expect(parseVoiceSettings({ speed: 9 }).speed).toBe(2);

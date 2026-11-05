@@ -48,7 +48,7 @@ export interface VoiceSettings {
   speed: number;
   quietMode: boolean;
   essentialsOnly: boolean;
-  language: string;
+  language: VoiceLanguage;
   remember: boolean;
   proactive: VoiceProactiveToggles;
 }
@@ -58,6 +58,22 @@ export const VOICE_IDS: readonly string[] = ['nz', 'en_au', 'en_gb', 'en_us'];
 
 /** The verbosities the courier can pick. */
 export const VOICE_VERBOSITIES: readonly VoiceVerbosity[] = ['minimal', 'normal', 'chatty'];
+
+/**
+ * The languages the voice service can speak.
+ *
+ * The service's own vocabulary (`VoiceConfig.language` in VoiceService.ts):
+ * New Zealand English, te reo, and `auto`, which lets the service pick. A
+ * stored value outside it is a corrupt file, not a preference.
+ */
+export const VOICE_LANGUAGES = ['en-NZ', 'mi-NZ', 'auto'] as const;
+
+/** One of the languages the voice service can speak. */
+export type VoiceLanguage = (typeof VOICE_LANGUAGES)[number];
+
+function isLanguage(value: unknown): value is VoiceLanguage {
+  return typeof value === 'string' && (VOICE_LANGUAGES as readonly string[]).includes(value);
+}
 
 /** The settings a courier starts with. */
 export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
@@ -143,10 +159,11 @@ export function parseVoiceSettings(raw: unknown): VoiceSettings {
     essentialsOnly: isBoolean(source.essentialsOnly)
       ? source.essentialsOnly
       : DEFAULT_VOICE_SETTINGS.essentialsOnly,
-    language:
-      typeof language === 'string' && language.trim().length > 0
-        ? language.trim()
-        : DEFAULT_VOICE_SETTINGS.language,
+    // BUG-084: the language is validated the way its sibling fields are -
+    // against the vocabulary the service actually speaks - instead of only
+    // being checked for a non-empty string, which let a corrupt stored value
+    // through to the engine while every other field fell back.
+    language: isLanguage(language) ? language : DEFAULT_VOICE_SETTINGS.language,
     remember: isBoolean(source.remember) ? source.remember : DEFAULT_VOICE_SETTINGS.remember,
     proactive: parseProactive(source.proactive),
   };

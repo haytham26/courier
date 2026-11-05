@@ -18,7 +18,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import DeliveredRoute from '../delivered';
 import { styleOf } from '../../src/components/chosen/test-support';
 import { hourMinuteOf } from '@/maps/drive';
-import { mockStops } from '@/maps/stops';
+import { e2eDay } from '@/run/dayForThisBuild';
+import type { DeliveredMark } from '@/run/types';
 import { RunProvider, useRun } from '@/maps/runState';
 import { tokens } from '@courier/design-tokens/chosen';
 
@@ -95,20 +96,73 @@ const thePublish = (): jest.Mock => {
 /**
  * The deliver's mark landed before the confirm opens, the way the slide to
  * deliver would have left it: a real RunProvider, a real mark, the clock
- * pinned when `at` is given.
+ * pinned when `at` is given. A4: the stop comes from the run's own day, so
+ * the mark is made on the day's stop and not on the mock list's.
  */
+/** One stop of the run's own day, as the app's own view of a stop. */
+function toAppStop(stop: { id: string; seq: number; address?: string; lat?: number; lon?: number }) {
+  const parts = (stop.address ?? '').split(',').map((part) => part.trim());
+  const hasSuburb = parts.length > 1;
+  return {
+    id: stop.id,
+    sequence: stop.seq,
+    address: hasSuburb ? parts.slice(0, -1).join(', ') : (stop.address ?? ''),
+    suburb: hasSuburb ? (parts[parts.length - 1] ?? '') : '',
+    status: 'pending' as const,
+    coordinates: { lat: stop.lat ?? -43.5, lng: stop.lon ?? 172.6 },
+  };
+}
+
 function Seed({ stopId, at }: { stopId?: string; at?: number }) {
   const run = useRun();
   useEffect(() => {
-    const stop = mockStops.find((entry) => entry.id === stopId);
+    // The run's own day (the app's E2E day the provider answers with), marked
+    // as the drive's slide would leave it - the day's asynchronous load is
+    // the screen's business, not the mark's.
+    const stop = e2eDay().stops.find((entry) => entry.id === stopId);
     if (!stop) {
       return;
     }
     const nowSpy = at === undefined ? null : jest.spyOn(Date, 'now').mockReturnValue(at);
-    run.markDelivered(stop);
+    run.markDelivered(toAppStop(stop));
     nowSpy?.mockRestore();
   }, [run, stopId, at]);
   return null;
+}
+
+/**
+ * The day the phone holds, as a store the run state can read and write: the
+ * app's own E2E day in the contract's shape (the same day the flows and the
+ * E2E legs assert), with the marks planted by the render.
+ */
+function aDayStore() {
+  const marks: DeliveredMark[] = [];
+  return {
+    load: () =>
+      Promise.resolve({ status: 'ok' as const, source: 'cache' as const, snapshot: e2eDay() }),
+    refresh: () =>
+      Promise.resolve({ status: 'ok' as const, source: 'cache' as const, snapshot: e2eDay() }),
+    deliveredMarks: () => Promise.resolve([...marks]),
+    markDelivered: (stop: { id: string; sequence: number }) => {
+      // The store's own clock: the same read the app's store makes, so a
+      // test's pinned `at` is what the confirm shows.
+      marks.push({
+        stopId: stop.id,
+        sequence: stop.sequence,
+        at: Date.now(),
+        eventId: `e-${stop.id}`,
+      });
+      return Promise.resolve();
+    },
+    undoDelivered: (stopId: string) => {
+      const at = marks.findIndex((mark) => mark.stopId === stopId);
+      if (at >= 0) {
+        marks.splice(at, 1);
+      }
+      return Promise.resolve();
+    },
+    close: () => Promise.resolve(),
+  };
 }
 
 /** The render helper: the layout's rule — the run above, the route inside. */
@@ -118,7 +172,7 @@ const renderConfirm = (options: { seed?: string; at?: number; params?: { stop?: 
     mockParams = params;
   }
   return render(
-    <RunProvider>
+    <RunProvider store={aDayStore() as unknown as never}>
       <GestureHandlerRootView>
         {seed ? <Seed stopId={seed} at={at} /> : null}
         <DeliveredRoute />
