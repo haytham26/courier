@@ -22,9 +22,10 @@ import { act, render, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { useRunDay } from '../useRunDay';
+import type { RunSnapshot } from '../types';
 
 /** The day the API would answer with: a seeded run, two stops, in its order. */
-const mockSeededDay = {
+const mockSeededDay: RunSnapshot = {
   run: {
     id: 'run-1',
     shift_id: 'shift-1',
@@ -78,6 +79,7 @@ const mockDeliveredMarks = jest.fn(() => Promise.resolve([mockMark]));
 const mockMarkDelivered = jest.fn(() => Promise.resolve());
 const mockUndoDelivered = jest.fn(() => Promise.resolve());
 const mockClose = jest.fn(() => Promise.resolve());
+const mockApplyRouteOrder = jest.fn(() => Promise.resolve(true));
 
 /**
  * The store the hook reads, as the run state above the screens hands it over.
@@ -93,6 +95,7 @@ const storeSource = () => ({
   markDelivered: mockMarkDelivered,
   undoDelivered: mockUndoDelivered,
   close: mockClose,
+  applyRouteOrder: mockApplyRouteOrder,
 });
 
 describe('the day the screens read (A1 slice 3)', () => {
@@ -100,6 +103,7 @@ describe('the day the screens read (A1 slice 3)', () => {
     jest.clearAllMocks();
     mockLoad.mockResolvedValue(okLoad);
     mockDeliveredMarks.mockResolvedValue([mockMark]);
+    mockApplyRouteOrder.mockResolvedValue(true);
   });
 
   it("gives the screens the run's stops, in the run's order", async () => {
@@ -210,5 +214,128 @@ describe('the day the screens read (A1 slice 3)', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+
+  // Queue 4.2: the solver's order is written through the store, and the day is
+  // re-read behind the write - otherwise the screen that asked shows the old
+  // order while every other screen shows the new one.
+  it('re-reads the day after the solver\u2019s order is written', async () => {
+    const reordered = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        ...mockSeededDay,
+        stops: [
+          { ...mockSeededDay.stops[1], seq: 1 },
+          { ...mockSeededDay.stops[0], seq: 2 },
+        ],
+      },
+    };
+    // The store answers the write, and the day behind it comes back reordered.
+    mockApplyRouteOrder.mockImplementation(() => Promise.resolve(true));
+    mockLoad.mockResolvedValueOnce(okLoad).mockResolvedValueOnce(reordered);
+
+    let apply: ((order: readonly { stopId: string; sequence: number }[]) => Promise<boolean>) | null = null;
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      apply = (order) => day.applyRouteOrder(order);
+      return <Text testID="order">{day.stops.map((stop) => stop.id).join(',')}</Text>;
+    };
+
+    const { getByTestId } = render(<Probe />);
+    await waitFor(() => expect(getByTestId('order').props.children).toBe('stop-1,stop-2'));
+
+    let applied = false;
+    await act(async () => {
+      applied = await apply([{ stopId: 'stop-2', sequence: 1 }, { stopId: 'stop-1', sequence: 2 }]);
+    });
+
+    expect(applied).toBe(true);
+    expect(mockApplyRouteOrder).toHaveBeenCalledWith([
+      { stopId: 'stop-2', sequence: 1 },
+      { stopId: 'stop-1', sequence: 2 },
+    ]);
+    expect(getByTestId('order').props.children).toBe('stop-2,stop-1');
+  });
+
+  it('answers false when the store could not keep the solver\u2019s order', async () => {
+    mockApplyRouteOrder.mockResolvedValue(false);
+    mockLoad.mockResolvedValue(okLoad);
+
+    let apply: ((order: readonly { stopId: string; sequence: number }[]) => Promise<boolean>) | null = null;
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      apply = (order) => day.applyRouteOrder(order);
+      return <Text testID="order">{day.stops.map((stop) => stop.id).join(',')}</Text>;
+    };
+
+    const { getByTestId } = render(<Probe />);
+    await waitFor(() => expect(getByTestId('order').props.children).toBe('stop-1,stop-2'));
+
+    let applied = true;
+    await act(async () => {
+      applied = await apply([{ stopId: 'stop-1', sequence: 1 }, { stopId: 'stop-2', sequence: 2 }]);
+    });
+
+    // The day is NOT re-read when the write was refused: the courier keeps
+    // looking at the very order the phone is certain of.
+    expect(applied).toBe(false);
+    expect(getByTestId('order').props.children).toBe('stop-1,stop-2');
+    expect(mockLoad).toHaveBeenCalledTimes(1);
+  });
+
+  // Queue 4c (the trial's #21, ADR-024): the stop's own type rides the day from
+  // the contract onto the stop the screens read. The contract requires the
+  // field, and a stop the contract left without one answers delivery - the
+  // schema's own default, which is the honest answer for an old row.
+  it('carries the contract\u2019s stop type onto the stop the screens read', async () => {
+    const withPickup = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        run: mockSeededDay.run,
+        stops: [
+          { ...mockSeededDay.stops[0], type: 'pickup' as const },
+          mockSeededDay.stops[1],
+        ],
+      },
+    };
+    mockLoad.mockResolvedValue(withPickup);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <Text testID="types">
+          {day.stops.map((stop) => `${stop.id}:${stop.type}`).join(',')}
+        </Text>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() =>
+      expect(getByTestId('types').props.children).toBe('stop-1:pickup,stop-2:delivery'),
+    );
+  });
+
+  it('answers delivery for a stop the contract left without a type', async () => {
+    const withoutType = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        run: mockSeededDay.run,
+        stops: [{ ...mockSeededDay.stops[0], type: undefined }],
+      },
+    };
+    mockLoad.mockResolvedValue(withoutType);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return <Text testID="types">{day.stops.map((stop) => `${stop.id}:${stop.type}`).join(',')}</Text>;
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('types').props.children).toBe('stop-1:delivery'));
   });
 });

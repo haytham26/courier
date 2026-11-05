@@ -73,6 +73,17 @@ export function apiSyncTransport(client: EventsPoster): SyncTransport {
         throw new SyncRefusal(eventIds, answer.message);
       }
 
+      // A call the client refused never reached the server, so there is no
+      // answer to read and nothing to quarantine: the defect that refused it
+      // is named on the console (the same discipline BUG-183 asked of the
+      // device log), and the batch stays in the log for the next flush.
+      if (answer.status === 'refused') {
+        console.warn(`sync: the batch was not sent at all - the request was refused: ${answer.message}`);
+        throw new Error(
+          `This delivery was not sent, because the request itself was incomplete: ${answer.message}`,
+        );
+      }
+
       // The session is gone, or the network is: nothing was sent, so the
       // outbox keeps the batch and tries again when there is signal.
       throw new Error(sentenceFor(answer.status));

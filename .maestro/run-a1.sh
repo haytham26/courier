@@ -132,6 +132,13 @@ run_flow() {
 # run stops: there is nothing afterwards to prove.
 run_flow "online"
 
+# Queue 4.2's device half: the solver is asked about the run the API seeded,
+# while the network is still up (the solver is a server call, and this is the
+# one moment in the job when it can be reached without disturbing the offline
+# and sync halves). It runs before the network goes away: two stops of the
+# seeded day are left to re-place, which is what the solver re-places.
+run_flow "optimise"
+
 echo "::group::A1: take the network away"
 # Both halves of the emulator's connectivity, so the app cannot reach the API
 # by either path. The commands are allowed to fail quietly only where the
@@ -159,7 +166,7 @@ run_flow "sync"
 echo "::group::A1: the flow's own record"
 {
   echo "apk=$APK"
-  echo "flows=a1/online,a1/offline,a1/sync"
-  echo "note=the network was taken away between the online and offline halves, and given back between the offline and sync halves"
+  echo "flows=a1/online,a1/optimise,a1/offline,a1/sync"
+  echo "note=the network was taken away between the online and offline halves, and given back between the offline and sync halves; the solver's ask runs between the online half and the network going away"
 } | tee "$EVIDENCE/a1-run.txt"
 echo "::endgroup::"
