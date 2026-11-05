@@ -231,6 +231,28 @@ The relabelling and its guards:
   (BUG-151's leak's second half - fixed with tests), and the manifest generator clobbered the
   audio build state on every regeneration (both writers now agree on the byte format).
 
+## The 2026-11-05 audit's IMPORT SAFETY item (BUG-211), one PR
+
+- **Announcement for the lead (a contract-visible change):** the import's row cap is now the
+  ROUTING layer's own (`MAX_ROUTE_STOPS`, 500) instead of 1000. The typed client is byte-identical
+  (the contract's changes are description-only), but an app that pastes a 501-1000-row sheet now
+  gets a 422 naming the cap instead of a 201 followed by route failures, and a repeated import that
+  would pass the cap is a new 409. Both are on the route of `POST /shifts/{id}/import`.
+- **The import counts the shift's total** inside the write in all three repo implementations and
+  refuses (409, naming the totals) rather than growing a shift the planner cannot route.
+- **The sequence is the database's**: the SQL repo takes the shift row's lock
+  (`SELECT … FOR UPDATE`) before reading `MAX(sequence)`, and `schema.sql` dedupes and replaces
+  the index with `UNIQUE(shift_id, sequence)` (an idempotent migration block; a fresh CI leg
+  applies it, a production database is deduped by the same block).
+- **A spreadsheet is untrusted bytes**: the zip's inflatable total is read from its own index
+  (≤ 50 MiB) before the workbook opens; openpyxl's exceptions (BadZipFile, KeyError,
+  InvalidFileException, `etree.ParseError`, ValueError, OSError) map to a 422 naming the file
+  (the broken-sheet case is what proved the first mapping incomplete); rows and columns are
+  capped while they stream.
+- **The trial scope's D8-correction claim is now a decision** (ADR-026): the import stores what
+  it parsed, the correction lands with the address-intelligence slice, and TRIAL_SCOPE row 6 is
+  corrected to say so.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
