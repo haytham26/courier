@@ -515,6 +515,27 @@ apart one edit at a time - the same split the setup-uv pin had (BUG-220).
 **3i continues in order:** C10 (the every-action digest-pin gate) next, then C14 (dependabot + the cron
 staging smoke), then 3j.
 
+## The 2026-11-05 audit's CI / INFRA item 3i, finding C10 (BUG-222): every action pinned by commit sha, held by a gate
+
+The tree already pinned all 116 `uses:` refs to full 40-hex commit SHAs, but NOTHING ASSERTED IT -
+the next action added as `actions/checkout@v4` would have been green, and a tag can be re-pointed to
+run new code with no commit in this repository.
+
+- `scripts/ci/check-action-pins.mjs` (a step in the Floor guard job) holds the rule: every `uses:` ref
+  is `owner/repo@<40-hex sha>` (tag/branch/short-sha all fail, named with file:line), a `docker://`
+  image needs a `@sha256:` digest, a local `./` action passes (reviewed with the code), both step
+  spellings are read, and an empty tree fails rather than passing vacuously. 8-case test. Evidence:
+  `docs/evidence/action-digest-pins/README.md` (the red is a fabricated tag-ref workflow, exit 1).
+- No workflow file changed - the tree was compliant; the PR's value is that the next ref cannot be
+  added unpinned.
+- Boundary, said out loud: a SHA pin means the code a workflow runs is the code a commit in THIS repo
+  pointed at, reviewable in the introducing diff. It does not make an upstream compromise impossible -
+  that is what dependabot (C14, next) and review are for.
+
+**3i's last PR:** C14 (`.github/dependabot.yml` for npm + github-actions, and a cron workflow that runs
+`infra/smoke.sh` against staging on a schedule), then 3j (the required-checks list into
+FOUNDER_TODO.md).
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:

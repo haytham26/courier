@@ -168,6 +168,14 @@ jobs:
       # constant, every line and the floor together.
       - name: Node is one pinned major everywhere (audit 3i / C11)
         run: node scripts/ci/check-node-pin.mjs
+      # The 2026-11-05 audit's item 3i, finding C10: every `uses:` ref must be
+      # pinned to a full 40-hex commit sha. The tree already is (116 refs), but
+      # nothing asserted it, so the next action added with a tag would have been
+      # green - and a tag can be re-pointed to run new code with no commit in
+      # this repository. Local ./ actions pass (reviewed with the code);
+      # docker:// images need a @sha256: digest.
+      - name: Every action is pinned by commit sha (audit 3i / C10)
+        run: node scripts/ci/check-action-pins.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers
