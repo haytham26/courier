@@ -50,6 +50,7 @@ import type {
   ApiFailure,
   DeliveredMark,
   MarkStore,
+  RouteOrderEntry,
   RunApi,
   RunCache,
   RunLoad,
@@ -243,6 +244,47 @@ export class RunStore implements MarkStore {
   /** The marks this run carries, in delivery order. */
   async deliveredMarks(): Promise<DeliveredMark[]> {
     return this.cache.deliveredMarks();
+  }
+
+  /**
+   * Applies the order the server's solver worked out to the day the phone
+   * holds (queue 4.2), and answers whether the phone now carries it.
+   *
+   * The server stores the re-planned ROUTE, not the stops' own `seq`, so a
+   * later `getRun`/`getStops` answers the very order the phone already had:
+   * the reopt's answer is the only place a new order exists, and this store is
+   * the only write path the day has (A1). Applying it is therefore the phone's
+   * own act on its own copy - the stops the courier already delivered are still
+   * delivered, and nothing is added or dropped.
+   *
+   * An order that does not cover the day's own stops exactly is refused: a
+   * half order would silently take a stop off a courier's day, which is the
+   * one outcome the design must never produce.
+   */
+  async applyRouteOrder(order: readonly RouteOrderEntry[]): Promise<boolean> {
+    const cached = await this.cache.read();
+    if (cached === null) {
+      console.warn('run: the solver\u2019s order could not be applied - there is no day on the phone');
+      return false;
+    }
+    const place = new Map(order.map((entry) => [entry.stopId, entry.sequence]));
+    if (place.size !== order.length || order.length !== cached.stops.length) {
+      console.warn('run: the solver\u2019s order was refused - it does not cover this run\u2019s own stops');
+      return false;
+    }
+    if (cached.stops.some((stop) => !place.has(stop.id))) {
+      console.warn('run: the solver\u2019s order was refused - it names a stop this run does not have');
+      return false;
+    }
+    // The order and the sequence are one fact: a pin numbered in the order the
+    // courier now drives. A gap or a zero from a server quirk would make the
+    // day contradict its own list, so the places are the answer's own.
+    const reordered = cached.stops
+      .map((stop) => ({ stop, place: place.get(stop.id) ?? 0 }))
+      .sort((left, right) => left.place - right.place)
+      .map((entry, index) => ({ ...entry.stop, seq: index + 1 }));
+    await this.cache.write({ run: cached.run, stops: reordered });
+    return true;
   }
 
   /**
