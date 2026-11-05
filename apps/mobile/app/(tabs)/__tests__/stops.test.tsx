@@ -132,6 +132,25 @@ jest.mock('@/lib/api-client', () => ({
   })),
 }));
 
+// Queue 4e: the import seam is replaced the same way the scanner's reader is
+// (scan.test.tsx): what is proven here is the screen's own half - the sheet,
+// the pasted file, the note the answer spells - against an importer that
+// answers.
+const mockImportStops = jest.fn(
+  (_shiftId: string, _file: unknown): Promise<unknown> =>
+    Promise.resolve({
+      status: 'ok',
+      data: { shift_id: 'shift-e2e', imported: 2, stop_ids: ['imported-1', 'imported-2'], ignored_columns: ['notes'] },
+    }),
+);
+const mockWriteImportFile = jest.fn((_text: string): Promise<unknown> =>
+  Promise.resolve({ name: 'stops-import.csv', type: 'text/csv', uri: 'file:///cache/stops-import.csv' }),
+);
+jest.mock('@/run/importForThisBuild', () => ({
+  importerForThisBuild: () => ({ importStops: mockImportStops }),
+  writeImportFile: (text: string) => mockWriteImportFile(text),
+}));
+
 /** Puts the answer the mocked boundary gives, and when it gives it. */
 function reoptAnswer(answer: unknown, gate: () => Promise<void> = () => Promise.resolve()): void {
   mockReoptRoute.mockReset();
@@ -584,5 +603,108 @@ describe("the route screen's stop types (queue 4c)", () => {
       expect(screen.getByTestId('stop-detail-sheet')).toBeTruthy();
     });
     expect(screen.queryByText('Pickup stop')).toBeNull();
+  });
+});
+
+/**
+ * Queue 4e (the trial's #6, ADR-025's app half): the spreadsheet import's
+ * courier-facing surface on the route screen.
+ *
+ * There is no document picker in this build (expo-document-picker is not a
+ * dependency and the trial's scope is the paste surface), so the courier
+ * pastes the CSV: the sheet writes it to the cache as the .csv the contract
+ * names, asks the importer about the shift the day carries, and spells the
+ * answer - the count, the ignored columns, or the refusal with the server's
+ * own sentence and code.
+ */
+describe("the route screen's import sheet (queue 4e)", () => {
+  beforeEach(() => {
+    mockImportStops.mockClear();
+    mockWriteImportFile.mockClear();
+    mockImportStops.mockResolvedValue({
+      status: 'ok',
+      data: { shift_id: 'shift-e2e', imported: 2, stop_ids: ['imported-1', 'imported-2'], ignored_columns: ['notes'] },
+    });
+  });
+
+  /** Opens the import sheet and pastes the given text. */
+  async function openAndPaste(text: string): Promise<void> {
+    await renderWithRun([]);
+    fireEvent.press(screen.getByTestId('stops-import'));
+    await waitFor(() => {
+      expect(screen.getByTestId('stops-import-sheet')).toBeTruthy();
+    });
+    fireEvent.changeText(screen.getByTestId('stops-import-text'), text);
+  }
+
+  it('imports the pasted file into the shift the day carries and spells the answer', async () => {
+    await openAndPaste('address,type,notes\n1 Import Lane, delivery, leave at door\n2 Pickup Ave, pickup, ring bell');
+
+    fireEvent.press(screen.getByTestId('stops-import-go'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Imported 2 stops.')).toBeTruthy();
+    });
+    // The ignored columns are their own node, the way the count is, because
+    // the contract answers them and never drops them silently (ADR-025).
+    expect(screen.getByText('Ignored columns: notes')).toBeTruthy();
+    // The file was written to the cache first, and the ask named the shift
+    // the run carries - not the run's id, which would be a URL about no
+    // shift (BUG-189's rule).
+    expect(mockWriteImportFile).toHaveBeenCalledWith(
+      'address,type,notes\n1 Import Lane, delivery, leave at door\n2 Pickup Ave, pickup, ring bell',
+    );
+    expect(mockImportStops).toHaveBeenCalledWith('shift-e2e', {
+      name: 'stops-import.csv',
+      type: 'text/csv',
+      uri: 'file:///cache/stops-import.csv',
+    });
+  });
+
+  it('spells a 422 refusal with the server\u2019s own sentence and code', async () => {
+    mockImportStops.mockResolvedValue({
+      status: 'server',
+      code: 422,
+      message: 'row 2 has no address - nothing was stored',
+    });
+    await openAndPaste('address,type\n, delivery');
+
+    fireEvent.press(screen.getByTestId('stops-import-go'));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('The import was refused (422): row 2 has no address - nothing was stored'),
+      ).toBeTruthy();
+    });
+  });
+
+  it('refuses an empty paste before any ask is made', async () => {
+    await renderWithRun([]);
+    fireEvent.press(screen.getByTestId('stops-import'));
+    await waitFor(() => {
+      expect(screen.getByTestId('stops-import-sheet')).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId('stops-import-go'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Paste the spreadsheet first.')).toBeTruthy();
+    });
+    expect(mockImportStops).not.toHaveBeenCalled();
+    expect(mockWriteImportFile).not.toHaveBeenCalled();
+  });
+
+  it('closes the sheet with the dismiss control and clears the note', async () => {
+    await openAndPaste('address\n1 Import Lane');
+    fireEvent.press(screen.getByTestId('stops-import-go'));
+    await waitFor(() => {
+      expect(screen.getByText('Imported 2 stops.')).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId('stops-import-dismiss'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('stops-import-sheet')).toBeNull();
+    });
   });
 });

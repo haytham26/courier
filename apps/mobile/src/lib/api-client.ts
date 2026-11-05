@@ -15,6 +15,7 @@
  */
 import type {
   DemoRun,
+  ImportResponse,
   RunResponse,
   StopResponse,
   ReoptResponse,
@@ -147,6 +148,37 @@ export class CourierApiClient {
     );
   }
 
+  /**
+   * The spreadsheet import: `POST /shifts/{shift_id}/import` with the file as
+   * the one multipart part (queue 4e, the trial's #6, ADR-025's app half).
+   *
+   * The import is all-or-nothing on the server, so this call never invents an
+   * answer: the 201 is shape-checked against the contract, and every refusal
+   * the contract declares (404/413/415/422) rides through as the server's own
+   * code and sentence. Like the reopt (BUG-189), the shift's own id comes
+   * first, and a call without it is refused here rather than dialed as
+   * `/shifts//import` - a URL about no shift at all.
+   */
+  async importStops(
+    shiftId: string,
+    file: { name: string; type?: string; uri: string },
+  ): Promise<ApiOutcome<ImportResponse>> {
+    const shift = shiftId.trim();
+    if (shift.length === 0) {
+      return { status: 'refused', message: "the import needs the shift's own id, and none was given" };
+    }
+    const form = new FormData();
+    // React Native's FormData takes the file as a {uri, name, type} triple and
+    // turns it into the multipart part itself, setting the boundary on the
+    // Content-Type - which is why the request below sends no Content-Type.
+    form.append('file', {
+      uri: file.uri,
+      name: file.name,
+      type: file.type ?? 'application/octet-stream',
+    } as unknown as Blob);
+    return this.request<ImportResponse>(`/shifts/${this.escape(shift)}/import`, { method: 'POST', form }, isImport);
+  }
+
   /** The outbox: `POST /shifts/{shift_id}/events:batch`. */
   async postDeliveryEvents(
     shiftId: string,
@@ -174,7 +206,7 @@ export class CourierApiClient {
 
   private async request<TData>(
     path: string,
-    options: { method: 'GET' | 'POST'; body?: unknown },
+    options: { method: 'GET' | 'POST'; body?: unknown; form?: FormData },
     shape?: (data: unknown) => boolean,
   ): Promise<ApiOutcome<TData>> {
     const token = await this.getToken();
@@ -183,6 +215,7 @@ export class CourierApiClient {
     }
 
     const hasBody = options.body !== undefined;
+    const hasForm = options.form !== undefined;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
 
@@ -193,9 +226,16 @@ export class CourierApiClient {
         headers: {
           Accept: 'application/json',
           Authorization: `Bearer ${token}`,
+          // A JSON body declares itself. A multipart body does NOT: the
+          // platform sets the Content-Type with the boundary, and a header
+          // set here would strip it and leave the server no part to read.
           ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
         },
-        ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
+        ...(hasForm
+          ? { body: options.form }
+          : hasBody
+            ? { body: JSON.stringify(options.body) }
+            : {}),
         signal: controller.signal,
       });
     } catch {
@@ -262,6 +302,23 @@ function isRun(data: unknown): boolean {
 /** The stops the contract declares: a list. */
 function isStopList(data: unknown): boolean {
   return Array.isArray(data);
+}
+
+/**
+ * The import answer the contract declares (`ImportResponse`): the shift it
+ * landed on, how many stops, their ids in file order, and the columns that
+ * matched no known field - answered, never dropped silently (ADR-025).
+ */
+function isImport(data: unknown): boolean {
+  const body = data as Partial<ImportResponse> | undefined;
+  return (
+    typeof body?.shift_id === 'string' &&
+    typeof body?.imported === 'number' &&
+    Array.isArray(body?.stop_ids) &&
+    body.stop_ids.every((id: unknown) => typeof id === 'string') &&
+    Array.isArray(body?.ignored_columns) &&
+    body.ignored_columns.every((column: unknown) => typeof column === 'string')
+  );
 }
 
 /**
