@@ -11,8 +11,12 @@
 //      api-level the e2e job runs;
 //   2. the pins fingerprint READS that value (so a pin change is a cache miss
 //      and a key change by construction);
-//   3. a pre-step that installs the image with three attempts, wiping the image
-//      directory between them, and ASSERTS Pkg.Revision == the pin;
+//   3. a pre-step that resolves the newest $sdk/cmdline-tools/*/bin onto PATH
+//      with a failing existence check that names the path (BUG-225: the
+//      runner image does not put sdkmanager on PATH, so a bare `sdkmanager`
+//      is "command not found"), then installs the image with three attempts,
+//      wiping the image directory between them, and ASSERTS
+//      Pkg.Revision == the pin;
 //   4. a cache of the image keyed BY the revision;
 //   5. the record step re-asserting the revision after the emulator ran, so the
 //      action cannot quietly move it.
@@ -118,6 +122,25 @@ if (install === '') {
   }
   if (!/Pkg\.Revision/.test(install) || !/!= "\$want"/.test(install)) {
     problems.push("the install pre-step does not assert Pkg.Revision equals the pin");
+  }
+  // BUG-225: sdkmanager must be resolved from the SDK's cmdline-tools, not
+  // called bare (the runner's PATH does not include it).
+  if (!/cmdline-tools\/\*\/bin/.test(install)) {
+    problems.push(
+      'the install pre-step does not resolve $sdk/cmdline-tools/*/bin (BUG-225: the runner image does not ' +
+        'put sdkmanager on PATH, so a bare `sdkmanager` is "command not found")',
+    );
+  }
+  if (!/GITHUB_PATH/.test(install) || !/export PATH=/.test(install)) {
+    problems.push(
+      'the install pre-step does not put the resolved cmdline-tools bin onto PATH for this and later steps (BUG-225)',
+    );
+  }
+  if (!/!\s*-x\s+"\$tools_bin\/sdkmanager"/.test(install) || !/::error::/.test(install)) {
+    problems.push(
+      'the install pre-step has no failing existence check that names the path when no ' +
+        'cmdline-tools/sdkmanager exists under the SDK (BUG-225)',
+    );
   }
 }
 

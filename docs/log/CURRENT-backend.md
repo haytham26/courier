@@ -415,6 +415,23 @@ a flake - and the alternative is the state this item fixed (the emulator's bytes
 names the pins fingerprint, which the legs carry; extending the pin to a1 is a follow-up, not something
 smuggled into this PR.
 
+## 2026-11-06: BUG-225 — the 3f install step now resolves sdkmanager from cmdline-tools (PR #204's red cause)
+
+Root cause of the emulator-leg reds on PRs #204-#211 (run 42058337877, jobs 127363544216/127363543972):
+the "Install the pinned system image" step called a bare `sdkmanager`, and the runner image does not put
+`$ANDROID_HOME/cmdline-tools/latest/bin` on PATH — `sdkmanager: command not found`, then the revision
+assert read a directory that was never installed (`Pkg.Revision=unknown, SYSIMG_REV_35=9`). The assert
+was right; the install never ran.
+
+Fix on `e2e-sysimg-pinned` (pushed; updates PR #204): the step resolves the NEWEST
+`$sdk/cmdline-tools/*/bin` (`ls -d … | sort -V | tail -n 1` — `latest` wins when present, else the
+highest numbered), fails with a `::error::` NAMING THE PATH when no sdkmanager exists under it, and
+exports the bin via `$GITHUB_PATH` + `export PATH` before the install loop. `check-e2e-sysimg-pin.mjs`
+now fails when any of the three pieces is missing (2 new test cases, 8 total). Red first: the extended
+gate against the pre-fix workflow names all three, exit 1. Green after: gate passes, 8/8 tests,
+check-workflows clean, parity 0 reopened. Evidence: `docs/evidence/e2e-sysimg-path-225/README.md`.
+BUG-225 filed. NOT claimed: the emulator legs themselves are green — that is the next CI run's evidence.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:

@@ -271,6 +271,20 @@ jobs:
           image="system-images;android-${{ matrix.api }};google_apis;x86_64"
           sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           dir="$sdk/system-images/android-${{ matrix.api }}/google_apis/x86_64"
+          # BUG-225: the runner image ships the cmdline-tools but does NOT put
+          # them on PATH, so a bare `sdkmanager` is "command not found" and
+          # every emulator leg died in this step (run 42058337877). Resolve
+          # the newest cmdline-tools bin directory onto PATH here - `sort -V`
+          # picks `latest` when it is there, else the highest numbered one -
+          # and fail loudly, naming the path, when the SDK carries none.
+          tools_bin="$(ls -d "$sdk"/cmdline-tools/*/bin 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -z "$tools_bin" ] || [ ! -x "$tools_bin/sdkmanager" ]; then
+            echo "::error::no sdkmanager under $sdk/cmdline-tools/*/bin (resolved: ${tools_bin:-nothing}) - the runner image changed, or ANDROID_SDK_ROOT points at the wrong SDK"
+            exit 1
+          fi
+          echo "::notice::sdkmanager resolved from $tools_bin"
+          echo "$tools_bin" >> "$GITHUB_PATH"
+          export PATH="$tools_bin:$PATH"
           # Three attempts, cleaning the image directory between them: a failed
           # sdkmanager can leave a half-unpacked image, and installing ON TOP of
           # one is how a run ends up asserting a revision from a directory that
