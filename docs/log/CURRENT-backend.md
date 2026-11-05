@@ -1,6 +1,6 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-11-04 · main at \af496d4\ (PRs #177–186 merged; items (a), (b), (c), BUG-187, BUG-102 and BUG-132 complete) · **This
+Updated: 2026-11-05 · main at `f9781fb` (backend PRs #177–186, #188 and #190 merged; #189 and #191 are the lead's; #182 is not merged yet) · **This
 squad's handoff lives in THIS file only.** PR #174 had written it into the lead's `docs/log/CURRENT.md` and replaced the lead's
 header line with its own; the correction PR on `docs/currents-log-ownership` restores that
 header line exactly as it was at `960fc41^1` (the lead has not rewritten it since) and
@@ -197,12 +197,39 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   filed+fixed, PARITY 312, evidence `docs/evidence/a3-voice-open-data/`.
   Red-first both legs (module absent at collection; checker red at 0 built);
   green: 249 voice tests, 90.8 % coverage (floor 85 %), ruff+mypy clean.
-- **BUG-187 (the offline brain's intent accuracy, HIGH) — MERGED as `3c32059` (PR #184, `bug-187-offline-brain`, full ritual: all 22 checks green on head `853fab4`, archive tag `archive/bug-187-offline-brain` at the PR head, remote branch deleted; its one red was the screen-recording emulator that never booted — the E2E leg on the same head was green and the rerun was green too):** the A3 measurement read the set's own gold scripts through the service's offline brain and found 29.2 % (`en_nz_quiet`) and 12.5 % (`en_nz_van`). Fixed: the address-bearing forms come first in each family with the product's own vocabularies, `parse_command` fills every captured group instead of first-one-wins, and the plain add answers `priority: false`. Measured after, by the same command: intent 120/120 and intent + mandatory slots 120/120 on each of the three English slices (EVAL.md's M3 bar is 97 %).
+- **BUG-187 (the offline brain's intent accuracy, HIGH) — MERGED as `3c32059` (PR #184, `bug-187-offline-brain`, full ritual: all 22 checks green on head `853fab4`, archive tag `archive/bug-187-offline-brain` at the PR head, remote branch deleted; its one red was the screen-recording emulator that never booted — the E2E leg on the same head was green and the rerun was green too):** the A3 measurement read the set's own gold scripts through the service's offline brain and found 29.2 % (`en_nz_quiet`) and 12.5 % (`en_nz_van`). Fixed: the address-bearing forms come first in each family with the product's own vocabularies, `parse_command` fills every captured group instead of first-one-wins, and the plain add answers `priority: false`. Measured after, by the same command: the parser parses every script of the three English slices (120/120 each) - which the 2026-11-05 audit showed is a CEILING, not an accuracy (BUG-210): the parser's regexes spell out the generator's templates word for word, so the number is published as the parser ceiling on its own templates until the held-out set the founder owes lands (FOUNDER_TODO).
 - **BUG-102 (the map-pack extract URL) — MERGED as `77a3323` (PR #185, `bug-102-map-pack-allowlist`, full ritual: all 17 checks green on head `5a92a22`, archive tag `archive/bug-102-map-pack-allowlist`, remote branch deleted):** `map-pack.yml`'s extract step curled `EXTRACT_URL` as given, with no scheme/host allow-list and no link to the licence-authority `source_id`. `checkExtractUrl` now requires https and the host the registry registers for that source (geofabrik-nz → download.geofabrik.de), refusing an unregistered source, a foreign host or cleartext by name, fail closed; the workflow calls it before the curl.
 - **BUG-132 (the shared rate-limiter store) — MERGED as `af496d4` (PR #186, `bug-132-shared-limiter-store`, full ritual: all 23 checks green on head `e2ae2e9`, archive tag `archive/bug-132-shared-limiter-store`, remote branch deleted):** the env-exposure half had landed; this is the store half. `AUTH_RATE_LIMIT_STORAGE` (memory or database, anything else refused) defaults to database in production and is handed to Better Auth as `rateLimit.storage` (its migration adds the `rateLimit` table when it is selected), and both auth replicas in the compose stacks carry it. The counters live in the database the replicas share: one bucket per key, a restart no longer resets them, and the credential endpoints' strict `customRules` are enforced across the fleet.
 - **Item (d) — C3's loop, the unit family — MERGED as `1167f29` (PR #188, `c3-spoken-unit-keeps-its-letter`, full ritual: all 23 checks green on head `310ca18`, archive tag `archive/c3-spoken-unit-keeps-its-letter`, remote branch deleted; its one red was the api-34 leg's cold-launch flake — the lock-screen flow's first launch did not render in 60 s while the very next flow launched in 1 s and the api-35 leg on the same APK was green — the rerun was green too):** the failure dump over the seeded 1,800-check sample grouped the 56 failures, and the largest family (22) was the unit: `nz_address.parse` split a spoken lettered unit and `_prefer_plain_address` compared units case-sensitively, so the selector answered the PLAIN row beside the unit row. Both fixed; measured by the same seeded command: **96.9 % (1744/1800) → 98.2 % (1767/1800)** — the founder's >= 98 % bar is met. PROGRESS.md's stale 98.3 % (the older 600-check measure) is corrected to the sample that produced it. The weekly changeset lane is on main with its key set; the loop's next rounds (17 misses, the road aliases) are named in the evidence.
-- **Item (e), first half — MASTER §22 technique A, the pre-classifier — on `voice-pre-classifier` — MERGED as `c485a3c` (PR #190, full ritual: all 23 checks green on head `6558ede`, archive tag `archive/voice-pre-classifier`, remote branch deleted):** `app/turn_gate.py` routes a turn before anything is assembled: a command the offline brain knows and whose answer does not read the day is answered with no model call and no run fetch, silence routes with its reason, and the decision rides the answer's `gate` field. Measured over the eval set's 720 scripts through the service's own route: **415 free (57.6 %), engine calls 720 → 305, 0 wrong against the gold intents, free 1.35 ms vs full 1.97 ms**; the gateway round trip and the token counts stay not measured until an OmniRoute deployment exists (FOUNDER_TODO). Techniques B and C are the lane's next steps, recorded as such in the evidence.
+- **Item (e), first half — MASTER §22 technique A, the pre-classifier — on `voice-pre-classifier` — MERGED as `c485a3c` (PR #190, full ritual: all 23 checks green on head `6558ede`, archive tag `archive/voice-pre-classifier`, remote branch deleted):** `app/turn_gate.py` routes a turn before anything is assembled: a command the offline brain knows and whose answer does not read the day is answered with no model call and no run fetch, silence routes with its reason, and the decision rides the answer's `gate` field. Measured over the eval set's 720 scripts through the service's own route: **415 free (57.6 %), engine calls 720 → 305, 0 wrong against the gold intents, free 1.35 ms vs full 1.97 ms**; over the shift sims' 24 turns: **7 free (29.2 %), 0 wrong**. The gateway round trip and the token counts stay NOT MEASURED until an OmniRoute deployment exists (FOUNDER_TODO) - and because the eval set it is measured on is the generator's own scripts (BUG-210), the 57.6 % is a ceiling-shaped number too. Techniques B and C are the lane's next steps, recorded as such in the evidence.
 - Then the queue continues in the founder's order: (e)'s second half — the reference-repos clean-room ideas — then billing (D44). LAST: Oracle staging and the production OmniRoute (the OCI host/key and the gateway secrets are FOUNDER_TODO — written there, not blocking).
+
+## The 2026-11-05 audit's EVAL-HONESTY item (BUG-210), landed on main
+
+The audit found the BUG-187 "100%" figure circular: `offline_brain.py`'s regexes spell out the eval
+generator's templates word for word (11 standing overlaps - `watch the dog\s+at` vs
+`watch the dog at ...` and ten more), and intent was scored on the gold TEXT, not on STT output.
+The relabelling and its guards:
+
+- **The number is withdrawn as an accuracy** everywhere it was claimed (the results summary,
+  PROGRESS.md, this log): it is published as "the parser ceiling on its own templates", and the
+  eval module says so in its own `legs` output (`app/eval_audio.py`).
+- **The circularity is now a CI gate**: `scripts/ci/check-parser-circularity.mjs` names every
+  standing overlap (recorded in `packages/eval/voice/manifest/circularity-baseline.json`) and
+  fails the build on a NEW one - a parser learned from the templates is not extended in silence.
+- **The held-out set is the founder's to give** (FOUNDER_TODO: ~100 real courier sentences): no
+  external open source of real courier utterances with a compatible licence exists, and the
+  sentences may not be written by the agent.
+- **Per slice, with the unsupported named**: `ar`, `hi_pa`, `zh` and `sm_to` are reported as
+  "not supported offline" (an English catalogue) and `numbers_corrections` as a named parser gap,
+  never averaged into a headline. Each slice now carries its DISTINCT template count (the
+  builder's `slices.json`), so `en_mix`'s 24 shared templates are visibly not independent evidence.
+- **The gate's numbers re-measured**: 415 of the 720 eval-set turns free (57.6 %, 0 routing
+  errors) and 7 of the shift sims' 24 turns free (29.2 %, 0 errors) - both ceiling-shaped, and
+  §22's token and latency numbers stay UNMET until OmniRoute exists.
+- **Two real bugs found on the way**: the memory store never removed a session's lock
+  (BUG-151's leak's second half - fixed with tests), and the manifest generator clobbered the
+  audio build state on every regeneration (both writers now agree on the byte format).
 
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 

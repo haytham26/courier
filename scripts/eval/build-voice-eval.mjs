@@ -20,6 +20,15 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 
+/** The JSONL rows of a file that is not there yet: none, not an error. */
+function readJsonlIfExists(file) {
+  if (!existsSync(file)) return [];
+  return readFileSync(file, 'utf8')
+    .split('\n')
+    .filter((line) => line.trim())
+    .map((line) => JSON.parse(line));
+}
+
 const OUT = 'packages/eval/voice/manifest';
 const LINZ = 'data/linz';
 
@@ -248,18 +257,38 @@ for (const slice of slices) {
 }
 
 // The utterances: one line per planned audio file (the noise variants).
+// The build state is carried over from the manifest that is already on disk:
+// a regeneration must not wipe the rows the audio builder marked `built` (the
+// BUG-210 loop found the generator clobbering them, which made the set's own
+// checker fail with 0 built after an innocent re-run).
+const previousBuild = new Map();
+for (const row of readJsonlIfExists(join(OUT, 'utterances.jsonl'))) {
+  previousBuild.set(row.id, row);
+}
 const utterances = [];
 for (const script of scripts) {
   const slice = slices.find((entry) => entry.id === script.slice);
   for (const snr of slice.snrs) {
+    const utteranceId = `U${String(utterances.length + 1).padStart(5, '0')}`;
+    const builtBefore = previousBuild.get(utteranceId);
     utterances.push({
-      id: `U${String(utterances.length + 1).padStart(5, '0')}`,
+      id: utteranceId,
       script_id: script.id,
       slice: script.slice,
       speaker: script.speaker,
       snr_db: snr,
       bed: snr === null ? 'quiet' : 'van',
       status: 'planned',
+      // What the audio builder recorded for this id, if it already built it:
+      // the build state rides at the end, the shape `update_utterances` writes,
+      // so the file is byte-stable whichever of the two built it last.
+      ...(builtBefore?.["status"] === "built"
+        ? Object.fromEntries(
+            Object.entries(builtBefore).filter(
+              ([key]) => ["status", "file", "sha256", "clip_id", "accent", "gold_text"].includes(key)
+            )
+          )
+        : {}),
     });
   }
 }
@@ -279,6 +308,12 @@ const summary = {
     scripts: scripts.filter((script) => script.slice === slice.id).length,
     target: slice.target,
     files: utterances.filter((utterance) => utterance.slice === slice.id).length,
+    // BUG-210: the DISTINCT templates the slice's scripts are generated from.
+    // A slice that reuses another's templates (en_mix reuses en_nz_quiet's) is
+    // not independent evidence for a parser score: its ceiling is the same
+    // ceiling, so the honest number counts the templates, not the scripts.
+    distinctTemplates: (slice.id === 'sm_to' ? pacificLines : templates[slice.id]).length,
+    sharedTemplatesWith: slice.id === 'en_mix' ? 'en_nz_quiet' : null,
     status: utterances.filter((utterance) => utterance.slice === slice.id).every((utterance) => utterance.status === 'built')
       ? 'audio built from open data'
       : 'scripts ready, audio to generate',

@@ -155,6 +155,47 @@ class TestTheBoundedStore:
         assert store.get(first.id) is None
 
 
+class TestTheLocksAreReclaimed:
+    """A session's lock outlives its session (the BUG-151 leak's second half).
+
+    `_evict_while_over_the_cap` and `delete` remove the session but not its
+    lock, so a process that serves one shift after another grows one lock per
+    shift it has ever served - the same shape BUG-151 fixed for the sessions
+    themselves. The lock count is asserted directly because it IS the leak's
+    own witness: there is no other way to see the growth.
+    """
+
+    def test_an_evicted_session_leaves_no_lock_behind(self) -> None:
+        store = InMemoryStore()
+        for index in range(store.MAX_SESSIONS + 5):
+            shift = new_session("driver-1", f"shift-{index}")
+            store.save(shift)
+            store.lock_for(shift.id)  # a turn ran on it
+
+        assert len(store._sessions) == store.MAX_SESSIONS
+        assert len(store._locks) == store.MAX_SESSIONS
+
+    def test_a_deleted_session_leaves_no_lock_behind(self) -> None:
+        store = InMemoryStore()
+        shift = new_session("driver-1", "shift-1")
+        store.save(shift)
+        store.lock_for(shift.id)
+
+        assert store.delete(shift.id) is True
+        assert len(store._locks) == 0
+
+    def test_a_later_session_of_the_same_shift_id_is_not_handed_the_old_lock(self) -> None:
+        store = InMemoryStore()
+        first = new_session("driver-1", "shift-1")
+        store.save(first)
+        first_lock = store.lock_for(first.id)
+        store.delete(first.id)
+
+        second = new_session("driver-1", "shift-1")
+        store.save(second)
+        assert store.lock_for(second.id) is not first_lock
+
+
 # --- BUG-154: one shift's turns are serialised --------------------------------
 
 
