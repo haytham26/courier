@@ -160,6 +160,51 @@ const SOURCES = {
   },
 };
 
+/**
+ * The answer of the extract-URL check (BUG-102).
+ *
+ * A dispatch may name its own `extract_url`, and the workflow used to curl it
+ * as given: any scheme, any host, and no link to the source whose terms the
+ * licence gates check. The check closes that: a URL for a source must arrive
+ * from that source's own registered download host, over https. The registry is
+ * the licence authority, so an unregistered source has no checked terms and is
+ * refused by name - fail closed, before a single byte is fetched.
+ *
+ * Returns `{ ok: true, host, source }` or `{ ok: false, reason }`.
+ */
+export function checkExtractUrl(sourceId, url) {
+  const source = SOURCES[sourceId];
+  if (!source) {
+    return {
+      ok: false,
+      reason: `the source "${sourceId}" is not in the registry: the licence terms are the registry's, so an unregistered source has no checked terms`,
+    };
+  }
+  if (!source.downloadUrl) {
+    return {
+      ok: false,
+      reason: `the source "${sourceId}" has no download URL registered, so there is no host to allow-list`,
+    };
+  }
+  let parsed;
+  try {
+    parsed = new URL(String(url ?? ''));
+  } catch {
+    return { ok: false, reason: `"${url}" is not a URL at all` };
+  }
+  if (parsed.protocol !== 'https:') {
+    return { ok: false, reason: `the scheme "${parsed.protocol}" is refused; the extract travels over https` };
+  }
+  const allowed = new URL(source.downloadUrl);
+  if (parsed.host !== allowed.host) {
+    return {
+      ok: false,
+      reason: `the host "${parsed.host}" is not the registered host "${allowed.host}" of source "${sourceId}"`,
+    };
+  }
+  return { ok: true, host: parsed.host, source: sourceId };
+}
+
 function parseArgs(argv) {
   const args = {
     source: null,
@@ -174,6 +219,7 @@ function parseArgs(argv) {
     sourceLicenceUrl: null,
     sourceAttribution: null,
     sourceTitle: null,
+    checkUrl: null,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -221,6 +267,9 @@ function parseArgs(argv) {
       case '--source-title':
         args.sourceTitle = next();
         break;
+      case '--check-url':
+        args.checkUrl = next();
+        break;
       case '--help':
       case '-h':
         printUsage();
@@ -241,6 +290,9 @@ function printUsage() {
 
   --source <id>              one of: ${Object.keys(SOURCES).join(', ')}, or "local"
                              for a source the founder supplies
+  --check-url <url>          BUG-102: refuse the URL unless it arrives over
+                             https from this source's own registered download
+                             host (the workflow calls it before it curls)
   --input <file>             the extract the tiles are built from
   --output <file>            the pack to write (default ${PACK_DIRECTORY}/${PACK_FILE})
   --min-zoom <n>             the lowest zoom in the pack (default 6)
@@ -614,6 +666,20 @@ function executePlan(plan) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+
+  // BUG-102: the URL check runs before anything else - the registry is the
+  // licence authority, and the fetch is the first thing that could go
+  // wrong with an unlisted host.
+  if (args.checkUrl !== null) {
+    const answer = checkExtractUrl(args.source, args.checkUrl);
+    if (!answer.ok) {
+      console.error(`build-pmtiles: the extract URL is refused (${answer.reason})`);
+      process.exit(1);
+    }
+    console.log(`build-pmtiles: the extract URL is allowed (${answer.host}, source ${answer.source})`);
+    process.exit(0);
+  }
+
   const source = resolveSource(args);
   checkTerms(source, args);
   const plan = buildPlan(source, args);

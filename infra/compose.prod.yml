@@ -183,6 +183,11 @@ services:
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
       AUTH_JWT_EXPIRATION: ${AUTH_JWT_EXPIRATION:-15m}
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-100}
+      # BUG-132: the limiter's counters live in the database, so `auth_a` and
+      # `auth_b` share one bucket per key instead of counting into two
+      # in-process Maps (and a restart no longer resets them). Better Auth's
+      # migration adds the `rateLimit` table when this store is selected.
+      AUTH_RATE_LIMIT_STORAGE: ${AUTH_RATE_LIMIT_STORAGE:-database}
     depends_on:
       postgres:
         condition: service_healthy

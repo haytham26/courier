@@ -1,0 +1,53 @@
+appId: com.courier.copilot
+name: 'A1 offline: the delivery is recorded with no network'
+---
+# A1's done-when, the offline half. The runner has just taken the network away
+# (adb shell svc wifi disable and svc data disable), and the app has to behave
+# the way a courier in a dead zone needs: the day answers from the phone's own
+# cache, the delivery is recorded locally, and the outbox holds it instead of
+# losing it.
+#
+# The app is NOT relaunched here: this is the same session, the same phone, the
+# same day, with no signal - which is the condition the audit's A1 names.
+- launchApp:
+    clearState: false
+# The cache answers first, so the day is there without the network.
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The sheet opens at peek and the Go is below its fold (the repo's convention,
+# common/reveal-and-tap.yaml): raise the sheet so the Go is on it. If the
+# online half already raised it, the swipe is a no-op at the top.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- assertVisible:
+    id: "today-go"
+# One more delivery, with no signal: the store records it (the mark and the
+# event) and the outbox cannot send it. The store's flush answers with the
+# network's own failure, the event stays in the log, and the courier is told -
+# ADR-014's answer, on the screen they are looking at (A1 slice 3).
+# The Delivered action is below the sheet's fold even when raised
+# (today-list.yaml's convention): scroll to it before the tap. The tap itself
+# is unchanged.
+- scrollUntilVisible:
+    element:
+      id: "today-mark-delivered"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "today-mark-delivered"
+# The note sits between the sheet's numbers and its next stop - ABOVE the
+# action row the tap needed - so the sheet is scrolled back up to it before
+# the assert (run 41594259937's dump had it scrolled out of the clip; BUG-181).
+# The assert itself is unchanged.
+- scrollUntilVisible:
+    element:
+      id: "today-sync-note"
+    direction: UP
+    timeout: 20000
+- assertVisible:
+    id: "today-sync-note"
+- takeScreenshot: "a1-offline"

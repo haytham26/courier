@@ -108,6 +108,14 @@ export interface AuthConfig {
     enabled: boolean;
     window: number;
     max: number;
+    /**
+     * Where the counters live (BUG-132). `memory` is the library default - a
+     * module-level Map, per-process, lost on restart, so two replicas give two
+     * buckets. `database` is the shared store: Better Auth's own migration adds
+     * the `rateLimit` table when it is selected, and every replica counts into
+     * the same rows.
+     */
+    storage: "memory" | "database";
     /** Stricter limits for the credential endpoints (per path). */
     customRules: Record<string, { window: number; max: number }>;
   };
@@ -158,6 +166,11 @@ const envSchema = z.object({
   // fronts this service with its own edge needs to say so.
   AUTH_RATE_LIMIT_WINDOW: z.coerce.number().int().positive().optional(),
   AUTH_RATE_LIMIT_ENABLED: z.enum(['true', 'false']).optional(),
+  // BUG-132: where the limiter's counters live. The library default is a
+  // module-level Map, which is per-process: a restart resets it and two
+  // replicas give two buckets. `database` is the shared store (the migration
+  // adds its table), and production takes it by default.
+  AUTH_RATE_LIMIT_STORAGE: z.enum(['memory', 'database']).optional(),
   AUTH_SESSION_EXPIRES_IN: z.coerce.number().int().positive().optional(),
   AUTH_REQUIRE_EMAIL_VERIFICATION: z.enum(['true', 'false']).optional(),
   AUTH_MAX_PASSWORD_LENGTH: z.coerce.number().int().positive().optional(),
@@ -403,6 +416,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
       enabled: values.AUTH_RATE_LIMIT_ENABLED !== "false",
       window: values.AUTH_RATE_LIMIT_WINDOW ?? 60,
       max: values.AUTH_RATE_LIMIT_MAX ?? 100,
+      // BUG-132: production shares the counters through the database - a
+      // per-process Map is what made two replicas give two buckets and a
+      // restart reset them. A deployment that prefers the in-process store
+      // (a single replica, or its own edge in front) says so.
+      storage: values.AUTH_RATE_LIMIT_STORAGE ?? (nodeEnv === "production" ? "database" : "memory"),
       // Credential endpoints get the strict treatment (OWASP: ~10 attempts
       // per 15 minutes); sign-up is even tighter because it is anonymous.
       // The OAuth start and the passkey ceremonies are limited as well: they

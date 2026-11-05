@@ -21,7 +21,7 @@
  * icon and the label flip with it.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, Pressable, View, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import {
@@ -30,6 +30,8 @@ import {
   Marker,
   NativeUserLocation,
 } from '@maplibre/maplibre-react-native';
+
+import { handOffToNavApp } from '@/maps/navHandoff';
 
 import {
   ChosenProvider,
@@ -41,7 +43,7 @@ import {
   TurnCard,
   useChosen,
 } from '@/components/chosen';
-import { spacing, typography } from '@courier/design-tokens/chosen';
+import { radii, spacing, touch, typography } from '@courier/design-tokens/chosen';
 import { hapticFor } from '@/motion/haptics';
 import { TILTED_PITCH } from '@/maps/cameraCommands';
 import {
@@ -55,7 +57,6 @@ import {
   streetLine,
 } from '@/maps/drive';
 import { getCourierStyle } from '@/maps/styles';
-import { mockStops } from '@/maps/stops';
 import { useRun } from '@/maps/runState';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { useVoice } from '@/voice/useVoice';
@@ -71,6 +72,18 @@ const GRABBER_RADIUS = 3;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  navButton: {
+    marginTop: spacing.space12,
+    minHeight: touch.minimum,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.space16,
+  },
+  navLabel: {
+    fontSize: typography.label.size,
+    fontWeight: typography.label.weight,
   },
   map: {
     flex: 1,
@@ -153,17 +166,17 @@ export function DrivingScreen() {
   // planner (08, later) read the same marks.
   const run = useRun();
   const router = useRouter();
-  const deliveredIds = useMemo(
-    () => run.delivered.map((event) => event.stopId),
-    [run.delivered],
-  );
+  const deliveredIds = useMemo(() => run.delivered.map((event) => event.stopId), [run.delivered]);
 
-  const active = activeOf(mockStops, deliveredIds);
-  const after = active ? nextOf(mockStops, active.sequence, deliveredIds) : null;
+  // A1 slice 3: the drive moves on the run's own stops, read through the same
+  // store the marks are written to. The list is the day's own order, so the
+  // drive, Today and the confirm panel all answer with the same next stop.
+  const dayStops = run.day.stops;
 
-  const distance = active
-    ? formatDistance(haversineMeters(DRIVE_ORIGIN, positionOf(active)))
-    : '—';
+  const active = activeOf(dayStops, deliveredIds);
+  const after = active ? nextOf(dayStops, active.sequence, deliveredIds) : null;
+
+  const distance = active ? formatDistance(haversineMeters(DRIVE_ORIGIN, positionOf(active))) : '—';
 
   const mapStyle = useMemo(
     () =>
@@ -199,6 +212,27 @@ export function DrivingScreen() {
       cancelled = true;
     };
   }, []);
+
+  // Queue 4.1: the navigation hand-off. The destination is the run's own
+  // stop, and the hand-off answers what happened - a phone with no nav app
+  // is told, rather than left in a silence.
+  const handleNavHandoff = useCallback(() => {
+    if (!active) {
+      return;
+    }
+    hapticFor('confirm');
+    void handOffToNavApp({
+      lat: active.coordinates.lat,
+      lng: active.coordinates.lng,
+      // The whole address: the street and the suburb, the way the courier
+      // would say it out loud.
+      label: active.suburb.length > 0 ? `${active.address}, ${active.suburb}` : active.address,
+    }).then((answer) => {
+      if (answer.status === 'failed') {
+        console.warn(`driving: the nav hand-off did not open (${answer.message})`);
+      }
+    });
+  }, [active]);
 
   const handleDeliver = useCallback(() => {
     // The slide carries the success haptic; here the mark moves the run and
@@ -237,7 +271,7 @@ export function DrivingScreen() {
           trackUserLocation={locationAllowed ? 'heading' : undefined}
         />
         {locationAllowed ? <NativeUserLocation /> : null}
-        {mockStops.map((stop) => (
+        {dayStops.map((stop) => (
           <Marker
             key={stop.id}
             testID={`stop-marker-${stop.sequence}`}
@@ -287,7 +321,7 @@ export function DrivingScreen() {
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
             <Text style={[styles.stopCount, { color: t.colors.secondaryLabel }]}>
-              {active ? `STOP ${active.sequence} OF ${mockStops.length}` : 'THE RUN IS DELIVERED'}
+              {active ? `STOP ${active.sequence} OF ${dayStops.length}` : 'THE RUN IS DELIVERED'}
             </Text>
             <Text style={[styles.street, { color: t.colors.label }]}>
               {active ? streetLine(active.address) : ''}
@@ -300,6 +334,25 @@ export function DrivingScreen() {
               the position stream: no model, no invented minute. */}
         </View>
         <SlideToDeliver testID="driving-slide" onDeliver={handleDeliver} />
+        {/* Queue 4.1: the navigation hand-off. The drive's own map is not a
+            nav engine, and a courier mid-shift needs turn-by-turn, so the
+            stop is handed to the nav app the courier already has with the
+            key-free Google Maps deep link. The destination is the run's own
+            stop, so the hand-off carries the run and not an invented one. */}
+        {active ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${streetLine(active.address)} in the nav app`}
+            accessibilityHint="Opens the stop in the phone's navigation app"
+            onPress={handleNavHandoff}
+            testID="driving-nav-handoff"
+            style={[styles.navButton, { backgroundColor: t.colors.accent }]}
+          >
+            <Text style={[styles.navLabel, { color: t.colors.accentText }]} maxFontSizeMultiplier={1.4}>
+              Open in nav app
+            </Text>
+          </Pressable>
+        ) : null}
       </GlassSurface>
     </SafeAreaView>
   );

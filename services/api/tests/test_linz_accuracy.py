@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import random
 import re
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -230,7 +231,10 @@ def test_d8_accuracy_on_real_linz_addresses() -> None:
     lines = [
         "# D8 accuracy on the real LINZ data (Canterbury)",
         "",
-        "- Date: 2026-10-20",
+        # The date of THIS run, never a copy of an earlier one: the report is
+        # the number the command produced today, and a stale date reads as
+        # "measured then" when it was measured now.
+        f"- Date: {time.strftime('%Y-%m-%d')}",
         "- Data: LINZ `NZ Addresses` (`data.linz.govt.nz:layer-123113`), the Christchurch, "
         "Waimakariri and Selwyn bounding boxes.",
         f"- **{indexed:,} real addresses indexed** across {len(areas)} area(s).",

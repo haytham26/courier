@@ -16,7 +16,8 @@
  *   design the OS surfaces carry, built and compared against the reference;
  * - the numbers come from the run's next stop and the delivered count, and the
  *   run's own numbers are what the notification will carry. The day's numbers
- *   here are the mock run's (the runs API is the backend session's slice).
+ *   are the RUN's own, read through the run store under the root layout's
+ *   RunSession (A4: a courier's lock screen shows the day the server holds).
  *
  * A root-stack route: the way in is the drive's own (the Live Activity is the
  * bus that shows on the lock screen), and it carries its own provider like
@@ -31,7 +32,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ChosenProvider, useChosen } from '@/components/chosen';
 import { hapticFor } from '@/motion/haptics';
-import { mockStops } from '@/maps/stops';
+import { useRun } from '@/maps/runState';
+import type { Stop } from '@/maps/stops';
 import { radii, spacing, typography } from '@courier/design-tokens/chosen';
 
 /**
@@ -67,11 +69,21 @@ const MONTHS = [
   'December',
 ] as const;
 
-/** The stop the run is on, and the run's own numbers. */
-function runPosition() {
-  const delivered = mockStops.filter((stop) => stop.status === 'delivered').length;
-  const next = mockStops.find((stop) => stop.status !== 'delivered') ?? mockStops[0];
-  return { delivered, total: mockStops.length, next };
+/** The stop the run is on, and the run's own numbers (A4). */
+function runPosition(day: ReturnType<typeof useRun>['day']): {
+  delivered: number;
+  total: number;
+  next: Stop | null;
+} {
+  // The run's own truth about a delivered stop is the stop's status - the
+  // same status the API flips when an event lands - so the glance counts the
+  // run's stops rather than the phone's marks alone: the Live Activity is
+  // the run's surface, and the stop statuses are what the run holds. The
+  // next stop is the same source's first stop that is not delivered, so the
+  // count and the address name one stop.
+  const delivered = day.stops.filter((stop) => stop.status === 'delivered').length;
+  const next = day.stops.find((stop) => stop.status !== 'delivered') ?? day.stops[0] ?? null;
+  return { delivered, total: day.stops.length, next };
 }
 
 const timeOfDay = (at: Date): string =>
@@ -94,7 +106,11 @@ export default function LockScreenRoute() {
 
 function LockScreen() {
   const { t } = useChosen();
-  const { delivered, next } = runPosition();
+  // The day the run holds (A4): the run store's own, through the provider the
+  // root layout wraps this route in.
+  const run = useRun();
+  const { delivered, next } = runPosition(run.day);
+  const total = run.day.stops.length;
 
   const handleDelivered = useCallback(() => {
     hapticFor('confirm');
@@ -104,7 +120,7 @@ function LockScreen() {
     hapticFor('confirm');
   }, []);
 
-  const progress = delivered / runPosition().total;
+  const progress = total === 0 ? 0 : delivered / total;
 
   return (
     <SafeAreaView testID="lock-screen" style={[styles.screen, { backgroundColor: t.colors.background }]}>
@@ -136,7 +152,7 @@ function LockScreen() {
             <Ionicons name="cube" size={14} color={t.colors.onAccent} />
           </View>
           <Text style={[styles.activityLabel, { color: t.colors.onTurnStrip }]} maxFontSizeMultiplier={1.4}>
-            {`Stop ${delivered + 1} of ${mockStops.length + 209}`}
+            {`Stop ${delivered + 1} of ${total}`}
           </Text>
           <Text style={[styles.ahead, { color: t.colors.success }]} maxFontSizeMultiplier={1.4}>
             12 min ahead
@@ -146,7 +162,7 @@ function LockScreen() {
         <View style={styles.activityRow}>
           <View style={styles.activityText}>
             <Text style={[styles.street, { color: t.colors.onTurnCard }]} maxFontSizeMultiplier={1.4}>
-              {next.address}
+              {next?.address ?? 'No stop yet'}
             </Text>
             <Text style={[styles.notes, { color: t.colors.onTurnStrip }]} maxFontSizeMultiplier={1.4}>
               Side gate, shelf B3

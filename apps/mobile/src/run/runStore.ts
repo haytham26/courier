@@ -10,7 +10,11 @@
  *   3. **caches what it read** in op-sqlite, so the phone answers the same way
  *      offline (the cache) and online (a refresh);
  *   4. **records every delivery mark** into the local event log, so the outbox
- *      can send it later - this store's write path is the only one.
+ *      can send it later - this store's write path is the only one;
+ *   5. **asks the outbox to send it now**, because a delivery the phone holds
+ *      and does not send is the audit's A1 in miniature. The flush is the
+ *      construction site's own (`apiSyncTransport` over the session's client),
+ *      and the answers it brings back are the courier's (`src/sync/syncAnswers`).
  *
  * **The seed reason.** The backend keeps three days apart - `e2e` (the CI
  * job's), `demo` (a founder's phone), `dev` (a developer's local run) - and
@@ -36,7 +40,11 @@
  * courier made are the record, and losing them is the one outcome that is
  * worse than sending them later.
  */
+import { errorMessage } from '@/lib/errors';
 import type { EventLog } from '@/sync/eventLog';
+import { newEventId } from '@/sync/eventId';
+
+import { e2eDay } from './dayForThisBuild';
 
 import type {
   ApiFailure,
@@ -58,6 +66,16 @@ export interface RunStoreDeps {
   events: EventLog;
   /** The reason this build seeds the day with. */
   reason: SeedReason;
+  /**
+   * Sends what the log holds, when the store has just recorded a delivery.
+   *
+   * The shift is the run's own, because the batch endpoint is the shift's: the
+   * store knows it after it has read the day, and a mark cannot exist before
+   * that. The flush is called after every mark, and it must not throw - a
+   * delivery that cannot send now stays in the log, which is the one outcome
+   * the design must never lose.
+   */
+  flush?: (shiftId: string) => Promise<void>;
   /** The connections the construction site holds, released when the run ends. */
   release?: () => Promise<void>;
   /** The clock, for the moment of a delivery. The phone's, by default. */
@@ -80,9 +98,13 @@ export class RunStore implements MarkStore {
 
   private readonly release: (() => Promise<void>) | undefined;
 
+  /** The seams this store takes its answers through, kept for the write path. */
+  private readonly deps: RunStoreDeps;
+
   private readonly clock: () => number;
 
   constructor(deps: RunStoreDeps) {
+    this.deps = deps;
     this.client = deps.client;
     this.cache = deps.cache;
     this.events = deps.events;
@@ -95,18 +117,78 @@ export class RunStore implements MarkStore {
    * The day the courier works: the cache answers first, so the phone has an
    * answer before the network does, and the network is only asked for what
    * the phone does not have (the first launch, when it seeds).
+   *
+   * The E2E build has no server to ask, so it answers with the mock run's own
+   * day once the network has said it cannot answer - the flows drive the real
+   * screens, and a screen with no stops is a flow with nothing to walk. Every
+   * other build answers with the failure it got: a courier on a dead stretch
+   * of Canterbury is told there is no day yet, not shown yesterday's.
    */
   async load(): Promise<RunLoad> {
-    const cached = await this.cache.read();
-    if (cached !== null) {
-      return { status: 'ok', source: 'cache', snapshot: cached };
-    }
-    return this.readThrough(cached);
+    // BUG-172: the WHOLE load goes through reported(), the cache read
+    // included - a handle closed under the session throws there too, and the
+    // wrapper turns it into a named failure instead of a rejection.
+    return this.reported(
+      (async () => {
+        const cached = await this.cache.read();
+        if (cached !== null) {
+          return { status: 'ok' as const, source: 'cache' as const, snapshot: cached };
+        }
+        // The E2E build has no server to ask, so it answers with its own day
+        // straight away instead of spending a network timeout discovering that.
+        // The order matters on the device: the flows walk the screen the moment it
+        // opens, and a day that arrives after a tap is a day the flow never saw
+        // (the api-35 leg of run 41172592416 lost `today-go` that way).
+        if (this.reason === 'e2e') {
+          const day = e2eDay();
+          await this.cache.write(day);
+          return { status: 'ok' as const, source: 'cache' as const, snapshot: day };
+        }
+        return this.readThrough(cached);
+      })(),
+    );
   }
 
   /** The day the courier works, fresh: the network is always asked. */
   async refresh(): Promise<RunLoad> {
-    return this.readThrough(await this.cache.read());
+    return this.reported(
+      (async () => this.readThrough(await this.cache.read()))(),
+    );
+  }
+
+  /**
+   * Names a failed load on the console, so the emulator's logcat says WHY the
+   * screens show no day. Run 41433310746's a1 failure left the device log
+   * silent: the today screen rendered 0/0 with no `today-go`, and nothing on
+   * the phone or in the job said whether the seed was refused (unauthorized),
+   * unreachable (offline) or refused by the server - the CI dump has to be
+   * able to read it from the device's own log.
+   *
+   * BUG-172: this also answers a load that THREW, never a rejection. Run
+   * 41491440450's a1 run had the API answer the seed and both reads (200s in
+   * the stack logs) and the screen still got no day with no log line: the
+   * cache write threw after the auth-keyed remount had closed the shared
+   * op-sqlite handle under the new session, and neither this wrapper nor the
+   * screen's effect caught the rejection. load()/refresh() therefore never
+   * reject - a throw is named here and answered as a failure.
+   */
+  private reported(load: Promise<RunLoad>): Promise<RunLoad> {
+    return load.then(
+      (answer) => {
+        if (answer.status !== 'ok') {
+          const detail = 'message' in answer ? ` - ${answer.message}` : '';
+          console.warn(`run: the day did not load (${answer.status}${detail})`);
+        }
+        return answer;
+      },
+      (error: unknown) => {
+        const message = errorMessage(error);
+        console.warn(
+          `run: the day did not load (server - the phone could not keep the day: ${message})`,
+        );
+        return { status: 'server', message: `the phone could not keep the day: ${message}`, snapshot: null };
+      },
+    );
   }
 
   /**
@@ -120,7 +202,9 @@ export class RunStore implements MarkStore {
       return;
     }
     const at = this.clock();
-    const eventId = `delivered-${stop.id}-${String(at)}`;
+    // BUG-176: a contract-valid uuid - the API parses the id as one and
+    // refuses the whole batch with a 422 otherwise (run 41541777473).
+    const eventId = newEventId();
     await this.events.record({
       id: eventId,
       stopId: stop.id,
@@ -128,6 +212,22 @@ export class RunStore implements MarkStore {
       occurredAt: new Date(at).toISOString(),
     });
     await this.cache.markDelivered({ stopId: stop.id, sequence: stop.sequence, at, eventId });
+
+    // The delivery is in the log, so the outbox is asked to send it now. This
+    // is what makes a courier's mark leave the phone rather than sitting in a
+    // log nobody flushes (the audit's A1: the app does not sync). The batch
+    // endpoint is the shift's, so the shift is the run's own - the one the
+    // phone has already read, because a mark cannot exist before the day does.
+    // A failure to send leaves the event in the log: the delivery is recorded
+    // and the phone carries it, which is the one outcome the design must never
+    // lose, so this call is not allowed to throw the mark away.
+    const flush = this.deps.flush;
+    if (flush) {
+      const shift = await this.shiftId();
+      if (shift !== null) {
+        await flush(shift);
+      }
+    }
   }
 
   /** Takes the stop back: the mark leaves the run, and the event leaves with it. */
@@ -143,6 +243,18 @@ export class RunStore implements MarkStore {
   /** The marks this run carries, in delivery order. */
   async deliveredMarks(): Promise<DeliveredMark[]> {
     return this.cache.deliveredMarks();
+  }
+
+  /**
+   * The shift this run belongs to, or null before the day has been read.
+   *
+   * The batch endpoint is the shift's own, so the outbox needs it to send: the
+   * store reads it from the day it already holds rather than from the network,
+   * because a courier's mark exists because the day does.
+   */
+  async shiftId(): Promise<string | null> {
+    const cached = await this.cache.read();
+    return cached?.run.shift_id ?? null;
   }
 
   /**

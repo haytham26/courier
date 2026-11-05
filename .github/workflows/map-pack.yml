@@ -118,6 +118,9 @@ jobs:
           # context exists for every event, so this form answers the same
           # question everywhere: the dispatch's input, or nothing.
           EXTRACT_URL: ${{ github.event.inputs.extract_url || '' }}
+          # The licence authority the URL is checked against (BUG-102). The
+          # same `github` context form, for the same reason.
+          SOURCE_ID: ${{ github.event.inputs.source_id || '' }}
         run: |
           set -euo pipefail
           mkdir -p data/maps
@@ -127,6 +130,14 @@ jobs:
             # data, so the OSMF tile servers and their policy are not involved).
             url="https://download.geofabrik.de/australia-oceania/new-zealand-latest.osm.pbf"
           fi
+          source="$SOURCE_ID"
+          [ -n "$source" ] || source=geofabrik-nz
+          # BUG-102: the URL is checked against the registry's own download
+          # host before a single byte is fetched. A dispatch may name its own
+          # extract, but it arrives from the source whose terms the licence
+          # gates check - an unregistered source, a foreign host or cleartext
+          # fails the job here, not somewhere after the fetch.
+          node scripts/data/build-pmtiles.mjs --source "$source" --check-url "$url"
           echo "extract: $url"
           curl -fsSL -o data/maps/newzealand-latest.osm.pbf "$url"
           ls -lh data/maps/newzealand-latest.osm.pbf

@@ -22,6 +22,9 @@ function limitedClient(env: Record<string, string> = {}): AuthTestClient {
         enabled: true,
         window: 60,
         max: 1000,
+        // The in-process store: this file pins the limiter's decisions, and
+        // BUG-132's storage switch is pinned by rate-limit-storage.test.ts.
+        storage: "memory",
         customRules,
       },
     },
@@ -36,6 +39,7 @@ describe("rate limiting of the credential endpoints", () => {
         enabled: true,
         window: 60,
         max: 1_000,
+        storage: "memory",
         customRules: {},
       },
     });

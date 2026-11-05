@@ -335,7 +335,13 @@ def _prefer_plain_address(candidates: list[Address], unit: str | None) -> list[A
     plain address is the right one; the order is then made deterministic.
     """
     if unit:
-        with_unit = [item for item in candidates if item.unit == unit]
+        # The register publishes its units as LINZ wrote them ("287C", "GB"),
+        # and the parser hands its own lower case; a unit address must not be
+        # missed because the two cases disagree (C3's accuracy report: the unit
+        # row sat right beside the plain row and the answer took the plain one
+        # because "287C" != "287c").
+        key = unit.lower()
+        with_unit = [item for item in candidates if (item.unit or "").lower() == key]
         if with_unit:
             return with_unit
         return candidates

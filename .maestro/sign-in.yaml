@@ -16,6 +16,11 @@ name: Sign in - the front door, the four ways in and the email form
 # actually carry it), and it ends signed in, on the day, so the flows that run
 # after it alphabetically (smoke, stops, today-list) still open on a signed-in
 # screen.
+# BUG-185: stop the app FIRST, then clear its state. A launch that clears state
+# force-stops the running app, and the old task removal then killed the freshly
+# started process (run 41609308041's api-34 leg: "remove task" killed the new pid
+# and the flow's 60s wait timed out) - stopping first lets the task be gone.
+- stopApp
 - launchApp:
     clearState: true
 - extendedWaitUntil:

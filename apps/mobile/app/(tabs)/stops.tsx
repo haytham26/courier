@@ -32,7 +32,7 @@ import { ChosenProvider, GlassSurface, Segmented, StopPin, Timeline, useChosen }
 import type { TimelineItem } from '@/components/chosen';
 import { radii, spacing, typography } from '@courier/design-tokens/chosen';
 import { DRIVE_ORIGIN_LNGLAT } from '@/maps/drive';
-import { mockStops, type Stop } from '@/maps/stops';
+import { type Stop } from '@/maps/stops';
 import { useRun, type RunState } from '@/maps/runState';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { getCourierStyle } from '@/maps/styles';
@@ -93,17 +93,19 @@ function RouteScreen() {
   // The run's marks are the dependency: `isDelivered` is a callback the run
   // rebuilds whenever its marks move, so the length of the marks is what the
   // memo reads - and it is what this screen already keyed its minutes on.
+  // A4: the stops are the run's own, from the day the store holds.
   const marksCount = run.delivered.length;
+  const stops = run.day.stops;
 
   const counts = useMemo(() => {
     const tally: Record<SegmentKey, number> = { 'to-go': 0, later: 0, done: 0 };
-    for (const stop of mockStops) tally[segmentOf(stop, run)] += 1;
+    for (const stop of stops) tally[segmentOf(stop, run)] += 1;
     return tally;
-  }, [marksCount, run]);
+  }, [marksCount, run, stops]);
 
   const shown = useMemo(
-    () => mockStops.filter((stop) => segmentOf(stop, run) === segment),
-    [segment, marksCount, run],
+    () => stops.filter((stop) => segmentOf(stop, run) === segment),
+    [segment, marksCount, run, stops],
   );
 
   const mapStyle = useMemo(
@@ -128,7 +130,7 @@ function RouteScreen() {
     <View testID="stops-screen" style={styles.screen}>
       <MapView testID="stops-map" mapStyle={mapStyle} style={styles.map}>
         <Camera initialViewState={{ center: DRIVE_ORIGIN_LNGLAT, zoom: 12 }} minZoom={4} maxZoom={19} />
-        {mockStops.map((stop) => (
+        {stops.map((stop) => (
           <Marker
             key={stop.id}
             testID={`stops-marker-${stop.sequence}`}
