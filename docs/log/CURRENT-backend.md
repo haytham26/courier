@@ -388,6 +388,33 @@ test's title.
 filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt
 2), then the four 3i PRs in order and 3j.
 
+## The 2026-11-05 audit's CI / INFRA item 3f (BUG-217): the emulator's system image is pinned by revision
+
+The emulator-runner action installs `system-images;android-<api>;google_apis;x86_64` from the stable
+channel by api-level, so the emulator's bytes change whenever Google publishes a revision with no commit.
+The pins fingerprint's own comment claimed it covered "the system image's revision" while the fingerprint
+string carried no revision at all - a documentation lie, and BUG-065's class.
+
+- The pins are read from the last green run's OWN evidence, not from memory:
+  `SYSIMG_REV_34: '14'` and `SYSIMG_REV_35: '9'` (run 42019215529 on b81ad239,
+  `.maestro/evidence/e2e-pins.txt`).
+- The pins step reads the pin through an indirect variable (a matrix step cannot name a per-api env key in
+  an expression) and outputs the revision; the pins fingerprint carries it; the image is cached BY revision.
+- A pre-step installs the image with three attempts, wiping the image directory between them (a failed
+  install leaves a half-unpacked image, and installing on top of one is how a run asserts a revision from a
+  directory that is not the image), then ASSERTS `Pkg.Revision` equals the pin.
+- The record step now FAILS when the action moved the image under the pin.
+- `scripts/ci/check-e2e-sysimg-pin.mjs` (a step in the Floor guard job) holds every half; evidence in
+  `docs/evidence/e2e-sysimg-pinned/README.md`.
+
+**The cost, said out loud:** when Google publishes a system-image revision, the e2e legs go RED with a
+message naming both numbers, and the fix is a one-line pin bump in its own PR. That is the pin working, not
+a flake - and the alternative is the state this item fixed (the emulator's bytes changing silently).
+
+**Left for the next crew item:** the `a1` job still boots api-34 without this machinery. The audit's 3f
+names the pins fingerprint, which the legs carry; extending the pin to a1 is a follow-up, not something
+smuggled into this PR.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
