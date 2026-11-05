@@ -81,9 +81,17 @@ const styles = StyleSheet.create({
   },
   failSheet: {
     width: '100%',
+    // Bounded to the screen, not the content: the picker is a full-screen
+    // overlay (a sibling of the bottom sheet), and its own ScrollView takes
+    // whatever height is left, so a short screen scrolls the list instead of
+    // clipping the title off the top (run 42098860803's api-34/api-35 legs).
+    maxHeight: '92%',
     backgroundColor: 'rgba(28,28,30,0.98)',
     borderRadius: radii.button,
     padding: spacing.space20,
+    gap: spacing.space12,
+  },
+  failScrollContent: {
     gap: spacing.space12,
   },
   failTitle: {
@@ -568,15 +576,31 @@ export default function TodayScreen() {
             </View>
           ) : null}
 
-          {/* Queue 4b (ADR-023): the failed delivery's reason. The courier's
-              own list first, then their own sentence for the case the list
-              does not carry, and a record that is only armed when there is a
-              reason - the server refuses a failed outcome without one, and the
-              phone must not send it. */}
-          {failing === null ? null : (
-            <View style={styles.failScrim} testID="today-fail-scrim">
-              <View style={styles.failSheet} testID="today-fail-sheet">
-                <Text style={[styles.failTitle, { color: t.colors.label }]}>Why did it fail?</Text>
+        </ScrollView>
+      </BottomSheet>
+
+      {/* Queue 4b (ADR-023): the failed delivery's reason. The courier's
+          own list first, then their own sentence for the case the list
+          does not carry, and a record that is only armed when there is a
+          reason - the server refuses a failed outcome without one, and the
+          phone must not send it.
+
+          The picker is a full-screen overlay, a SIBLING of the bottom sheet
+          and not a child of its ScrollView: rendered inside the scroll it
+          centred itself in the scrolled content, so after the courier raised
+          the sheet to the Fail button the picker's title clipped off the top
+          of a short screen and its first reasons were unreachable (run
+          42098860803's api-34 and api-35 legs failed exactly there). Its own
+          content scrolls within a bounded height, so every reason stays
+          reachable on the smallest screen the emulator runs. */}
+      {failing === null ? null : (
+        <View style={styles.failScrim} testID="today-fail-scrim">
+          <View style={styles.failSheet} testID="today-fail-sheet">
+            <ScrollView
+              testID="today-fail-scroll"
+              contentContainerStyle={styles.failScrollContent}
+            >
+              <Text style={[styles.failTitle, { color: t.colors.label }]}>Why did it fail?</Text>
                 <Text style={[styles.failStop, { color: t.colors.secondaryLabel }]}>
                   {`${failing.address}, ${failing.suburb}`}
                 </Text>
@@ -646,11 +670,10 @@ export default function TodayScreen() {
                     </Text>
                   </Pressable>
                 </View>
-              </View>
-            </View>
-          )}
-        </ScrollView>
-      </BottomSheet>
+            </ScrollView>
+          </View>
+        </View>
+        )}
     </SafeAreaView>
   );
 }

@@ -128,6 +128,7 @@ jest.mock('@/maps/runState', () => {
 });
 
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -204,5 +205,32 @@ describe('the failed delivery\u2019s reason on Today', () => {
     fireEvent.press(within(sheet).getByTestId('today-fail-confirm'));
 
     expect(mockMarkFailed).not.toHaveBeenCalled();
+  });
+
+  it('keeps the picker a full-screen overlay whose own content scrolls on a short screen', async () => {
+    theScreen();
+
+    const sheet = await thePicker();
+
+    // Run 42098860803's api-34/api-35 legs failed at "Why did it fail?" being
+    // invisible: the picker was a child of the bottom sheet's ScrollView, so
+    // once the flow scrolled down to the Fail button the picker centred
+    // itself in the SCROLLED content and its title clipped off the top of the
+    // screen. The scrim is a sibling of the sheet now - it covers the whole
+    // screen - and the sheet's own content scrolls within a bounded height,
+    // so every reason stays reachable on the smallest screen the emulator
+    // runs.
+    expect(
+      within(screen.getByTestId('today-sheet')).queryByTestId('today-fail-scrim'),
+    ).toBeNull();
+    const scrimStyle = StyleSheet.flatten(
+      screen.getByTestId('today-fail-scrim').props.style,
+    ) as { position?: string; top?: number; bottom?: number };
+    expect(scrimStyle.position).toBe('absolute');
+    expect(scrimStyle.top).toBe(0);
+    expect(scrimStyle.bottom).toBe(0);
+    const sheetStyle = StyleSheet.flatten(sheet.props.style) as { maxHeight?: string };
+    expect(sheetStyle.maxHeight).toBe('92%');
+    expect(within(sheet).getByTestId('today-fail-scroll')).toBeTruthy();
   });
 });
