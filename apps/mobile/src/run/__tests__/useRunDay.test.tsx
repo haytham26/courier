@@ -436,4 +436,41 @@ describe("the run's own break window and finish point on the day (queue 4d)", ()
     await waitFor(() => expect(getByTestId('break').props.children).toBe('none'));
     expect(getByTestId('finish').props.children).toBe('none');
   });
+
+  // The A1 leg of run 42118823224 crashed exactly here: the real API
+  // serializes an absent break_window/finish as JSON null, not by leaving the
+  // field out, and the guard checked only `undefined` - so `null.start`
+  // threw inside RunProvider and the app never reached today-screen. Null and
+  // absent are the same answer from the server, and the hook must read them
+  // the same way.
+  it('reads a JSON null the same as an absent field - the real API\u2019s own answer (run 42118823224\u2019s A1 crash)', async () => {
+    const withNulls = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        ...mockSeededDay,
+        run: {
+          ...mockSeededDay.run,
+          break_window: null,
+          finish: null,
+        } as unknown as RunSnapshot['run'],
+      },
+    };
+    mockLoad.mockResolvedValue(withNulls);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <>
+          <Text testID="break">{day.breakWindow === null ? 'none' : 'some'}</Text>
+          <Text testID="finish">{day.finish === null ? 'none' : 'some'}</Text>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('break').props.children).toBe('none'));
+    expect(getByTestId('finish').props.children).toBe('none');
+  });
 });

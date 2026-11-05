@@ -302,14 +302,22 @@ export function useRunDay(source: StoreSource): RunDay {
     const breakWindow = apiRun.break_window;
     const finish = apiRun.finish;
     return {
+      // The real API serializes an absent optional as JSON null, not by
+      // leaving the field out (run 42118823224's A1 leg crashed on exactly
+      // this: `null.start` inside RunProvider), so null and undefined are
+      // read the same way - both mean the run has none to name.
       breakWindow:
+        breakWindow !== null &&
         breakWindow !== undefined &&
         typeof breakWindow.start === 'string' &&
         typeof breakWindow.end === 'string'
           ? { start: breakWindow.start, end: breakWindow.end }
           : null,
       finish:
-        finish !== undefined && typeof finish.lat === 'number' && typeof finish.lon === 'number'
+        finish !== null &&
+        finish !== undefined &&
+        typeof finish.lat === 'number' &&
+        typeof finish.lon === 'number'
           ? { lat: finish.lat, lon: finish.lon }
           : null,
       depot: { lat: apiRun.depot.lat, lon: apiRun.depot.lon },
