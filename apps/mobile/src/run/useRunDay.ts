@@ -137,6 +137,7 @@ function toStop(api: {
   parcels?: number;
   window_start?: string;
   window_end?: string;
+  type?: string;
 }): Stop {
   const whole = api.address ?? '';
   // The contract answers one address string; the app's own view of a stop has
@@ -174,6 +175,10 @@ function toStop(api: {
     },
     priority: api.priority === true,
     ...(window === undefined ? {} : { window }),
+    // Queue 4c (the trial's #21, ADR-024): the stop's own type. The contract
+    // requires it, and a stop left without one is a delivery - the schema's
+    // own default, honest for every row seeded before the column existed.
+    type: api.type === 'pickup' ? 'pickup' : 'delivery',
   };
 }
 

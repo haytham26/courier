@@ -85,9 +85,11 @@ export function e2eDay(): RunSnapshot {
         ? {}
         : { window_start: stop.window.start, window_end: stop.window.end }),
       parcels: 1,
-      // ADR-024: the stop's type is required by the contract, and the mock
-      // list's stops are all deliveries.
-      type: 'delivery',
+      // ADR-024 / queue 4c (the trial's #21): the stop's own type, in the
+      // contract's own word. The mock list carries one pickup, so the E2E
+      // day answers a pickup the screens can read - the type was hardcoded
+      // 'delivery' before, which threw the run's own word away.
+      type: stop.type === 'pickup' ? 'pickup' : 'delivery',
     })),
   };
 }

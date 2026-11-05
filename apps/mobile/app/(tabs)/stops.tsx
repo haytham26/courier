@@ -140,22 +140,24 @@ function RouteScreen() {
   );
 
   /**
-   * The run's own words for a stop, under its street (queue 4a).
+   * The run's own words for a stop, under its street (queue 4a and 4c).
    *
-   * The run owns the priority and it owns the time window, and they are two
-   * facts: a stop the run calls a priority one shows "Priority", and a stop the
-   * run gave a window shows the times. The times are the device's own clock,
+   * The run owns the priority, it owns the time window, and it owns the type,
+   * and they are three facts: a stop the run calls a priority one shows
+   * "Priority", a stop the run gave a window shows the times, and a stop the
+   * run calls a pickup shows "Pickup". The times are the device's own clock,
    * because the run's window is stamped in UTC and "09:00 - 11:00" is what the
    * courier hears.
    */
   const noteOf = useCallback(
-    (stop: Stop): { note?: string; window?: string } => {
+    (stop: Stop): { note?: string; window?: string; kind?: string } => {
       const window = stop.window;
       return {
         ...(stop.priority ? { note: 'Priority' } : {}),
         ...(window === undefined
           ? {}
           : { window: `${clockOf(window.start)} - ${clockOf(window.end)}` }),
+        ...(stop.type === 'pickup' ? { kind: 'Pickup' } : {}),
       };
     },
     [],
@@ -452,6 +454,12 @@ function RouteScreen() {
               )}
               {selected.priority ? (
                 <Text style={[styles.detailPriority, { color: t.colors.accent }]}>Priority stop</Text>
+              ) : null}
+              {/* Queue 4c (the trial's #21, ADR-024): the stop's own type on
+                  the card - a pickup says the word, its own node, and a
+                  delivery says nothing. */}
+              {selected.type === 'pickup' ? (
+                <Text style={[styles.detailPriority, { color: t.colors.accent }]}>Pickup stop</Text>
               ) : null}
             </View>
             <Pressable

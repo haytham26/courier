@@ -109,6 +109,7 @@ function toAppStop(stop: {
   priority?: boolean;
   window_start?: string;
   window_end?: string;
+  type?: string;
 }) {
   const parts = (stop.address ?? '').split(',').map((part) => part.trim());
   const hasSuburb = parts.length > 1;
@@ -129,6 +130,8 @@ function toAppStop(stop: {
     // Queue 4a: the run's own priority and the run's own window ride the stop.
     priority: stop.priority === true,
     ...(window === undefined ? {} : { window }),
+    // Queue 4c (ADR-024): the stop's own type rides it too.
+    type: stop.type === 'pickup' ? ('pickup' as const) : ('delivery' as const),
   };
 }
 
