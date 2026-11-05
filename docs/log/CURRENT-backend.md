@@ -277,6 +277,32 @@ the OCI secrets, FOUNDER_TODO), which is exactly why this survived.
 the OmniRoute gateway, the held-out courier sentences. Item 3b (APP_VERSION
 reaching the remote smoke.sh) is next.
 
+## The 2026-11-05 audit's CI / INFRA item 3b (BUG-213): the deployed version reaches the smoke test
+
+`deploy.yml` carried `APP_VERSION: ${{ github.sha }}` in its step environment, but the remote
+`bash smoke.sh` invocation never forwarded it, and `infra/smoke.sh` treated an unset version as
+"skipping the version check" rather than a failure. The staging deploy's smoke test therefore
+reported green while proving only that something answered - a deployment serving the previous
+image, the exact failure the check exists to catch, passed.
+
+- The deploy forwards `APP_VERSION='$APP_VERSION'` into the remote command (the sha is not a secret;
+  the domain and the token are the audit's next item, 3c, which moves them out of the command line).
+- `infra/smoke.sh` DIES without the version now, with `--no-version` as the only skip (documented
+  for a local run, and the report says which shape ran), and the `/openapi.json` fetch is wrapped in
+  a failing `if` instead of `|| true`, so a document that cannot be fetched is a failed check rather
+  than a check that reports the wrong cause.
+- `scripts/ci/check-smoke-version.mjs` (a step in the Floor guard job) holds all three halves, and
+  its five test cases run with the rest of `scripts/*/__tests__`.
+- Evidence: `docs/evidence/smoke-version-213/README.md` (the red is the gate's own five findings
+  against the tree as it was).
+
+**State of the queue after 3a and 3b:** items 1, 2, 3a and 3b are on branches with their own PRs
+(#192, #195, #199 and this one). Still ahead in item 3: 3c (the staging domain and the smoke token
+through env/stdin instead of inlined secrets), 3d (deploy only after CI + Quality gates succeed,
+through `workflow_run`), 3e (the E2E restore-keys block), 3f (pin the Android system image), 3g
+(drop the paths filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt 2),
+then the four 3i PRs in order and 3j.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:

@@ -203,8 +203,14 @@ jobs:
           # 3b): smoke.sh requires it and now dies without it, because a smoke
           # test whose version check silently does not run says "green" about a
           # deployment it never identified.
+          # The version is forwarded into the remote environment (audit item
+          # 3b): smoke.sh requires it and now dies without it, because a smoke
+          # test whose version check silently does not run says "green" about a
+          # deployment it never identified. APP_VERSION is the commit sha - not
+          # a secret - so it is spelled in the remote command on purpose; the
+          # staging domain and the smoke token are the item after this one (3c).
           ssh -i ~/.ssh/id_ed25519 "${USER}@${HOST}" \
-            "cd /opt/courier/infra && bash smoke.sh --domain \"${{ secrets.COURIER_STAGING_DOMAIN }}\" --token \"${{ secrets.COURIER_SMOKE_TOKEN }}\""
+            "cd /opt/courier/infra && APP_VERSION='$APP_VERSION' bash smoke.sh --domain \"${{ secrets.COURIER_STAGING_DOMAIN }}\" --token \"${{ secrets.COURIER_SMOKE_TOKEN }}\""
 
       - name: Roll back on a failed smoke test
         if: failure() && steps.host.outputs.configured == 'true'
