@@ -9,6 +9,7 @@
 | Item | Provider / URL | Env Var | Where It Goes | Affected Feature & Current Workaround | Blocks? |
 |------|----------------|---------|---------------|----------------------------------------|---------|
 | **The `protect-main` ruleset** (founder directive 2026-10-28) | github.com → haytham26/courier → Settings → Rules → Rulesets | — (the ruleset itself, not a value) | the repository's branch protection | **Direct pushes to `main` are still possible**, and the last session pushed to main directly three times (`045185b`, `dbc7004`, and the handover's own commit). The ruleset JSON was written and posted exactly as directed on 2026-10-28; GitHub answered `403 Resource not accessible by personal access token`, so the token in `.env.local` does not carry **Administration: write**. **Workaround:** none available to the agent — every commit of this session goes through a branch and a PR, and the discipline is recorded in `docs/log/CURRENT-backend.md`. **Fix either by** creating the ruleset in Settings → Rules → Rulesets (branch target `~DEFAULT_BRANCH`, rules: deletion, non-fast-forward, pull request, 0 required approvals, no bypass actors) **or** by giving the token Administration: write. | No — the ritual is enforced by habit until it is not |
+| **The required status checks for the `protect-main` ruleset** (audit item 3j, 2026-11-06) | github.com → haytham26/courier → Settings → Rules → Rulesets → `protect-main` → "Require status checks to pass" → the check picker | — | the ruleset's required-checks list | The ruleset exists (founder directive 2026-10-28) but requires **0 status checks**, so today a PR can merge with any gate red or missing — the ritual is enforced by habit only. The exact check names GitHub reports on a PR are written out in the section below this table ("The required status checks for `protect-main`"). **Workaround:** none needed — the list below is the whole fix, set it once in the ruleset UI. | No — but every PR's merge is ungated until it is set |
 | **GitHub's default-setup CodeQL check (a second, app-run configuration)** (backend squad, 2026-11-01) | github.com → haytham26/courier → Settings → Code security → Code scanning | — (the configuration and the token scope, not a value) | the repository's code-scanning configuration | The repository carries **two** code-scanning configurations: the repo's own `.github/workflows/codeql.yml` (which CONSTRAINTS.md names as the code-scanning gate, and whose `CodeQL (javascript-typescript)` and `CodeQL (python)` legs are green), and GitHub's **default setup** run by the `github-advanced-security` app, which reports a plain `CodeQL` check on pull requests. On `main`'s head the default setup produces no check at all (it runs on pull requests), so the leg is invisible on main and appears the moment a PR touches the code. It reports two `js/insufficient-password-hash` alerts on PR #164's head `09c2ade`: `services/auth/src/http.ts:62` and `services/auth/src/__tests__/setup.ts:34`. Both are **documented false positives** — the Have I Been Pwned range API is *specified* in SHA-1 and only the first five hex characters (20 bits) leave the process, so the digest is a bucket selector, not password storage; there is no SHA-256 variant of the range endpoint. Three attempts did not silence the default-setup leg: the `// lgtm [query-id]` comment, the `// codeql[query-id]` comment, and the same two spellings placed *on* the digest line the annotation names. The token in `.env.local` answers **403 Resource not accessible by personal access token** on `/code-scanning/alerts` and `/code-scanning/default-setup`, so the alerts can be neither read nor dismissed from here (the `security_events` scope is missing). **Workaround:** the merge is not blocked — the `protect-main` ruleset requires no status checks, and the repo's own CodeQL legs are green. **Fix either by** dismissing the two alerts as false positives in the security view (or after the merge, on `main`), **or** by giving the token the `security_events` scope so the dismissal can be scripted. | No — recorded in `docs/log/CURRENT-backend.md` |
 | **One backend session at a time** | the agent harness (the session list) | — | — | On 2026-10-28 a second backend session was still running in the main working tree while this one started: it switched branches underneath, so this session's first commit landed on its branch and its next checkout rewrote the files this session had just edited. Nothing was lost (the commit was pushed within minutes), but two backend sessions editing the same tree and the same `CURRENT-backend.md` will eventually produce a lost change or a duplicated slice. **Workaround:** this session works in the worktree `.worktrees/b1028`, commits immediately after each edit batch and pushes before the next one, and does not redo what the other session already has in flight. | No |
 | **100 held-out courier sentences for the voice eval set** | the founder, a beta courier, or a real NZ dispatch log (with consent and the PIA's rules) | — (the sentences, not a value) | `packages/eval/voice/manifest/held_out.jsonl` | **BUG-210's headline number is unmeasured until this exists.** The offline brain's regexes spell out the eval generator's templates word for word (11 standing overlaps, `scripts/ci/check-parser-circularity.mjs` names every one and fails on a new one), so the intent number on the generator's own scripts is a *ceiling*, not an accuracy. No external open source of real courier utterances with a compatible licence was found (Common Voice is conversational prose, not dispatch commands), and the sentences may not be written by the agent — that is circular again. **Workaround:** the number is published as the parser ceiling on its own templates (default in `app/eval_audio.py`), the intent on STT hypotheses is unmeasured for the same reason, and the intent leg on the script text stays per-slice with the unsupported slices named. **Give us:** ~100 sentences as real couriers say them (any of the delivery/failure/skip/break/repeat shapes, in NZ English, in a `{"text": ..., "gold_intent": ...}` jsonl), and the held-out set becomes the headline number. | No — the ceiling is reported honestly meanwhile |
@@ -37,6 +38,51 @@
 | **The first acceptance pass on a phone** (the audit's A6, its done-when) | your own Android phone | — | — | Run `docs/operations/ACCEPTANCE_TEST.md` (30 minutes: sign in, load the run, scan, voice, drive, deliver, the offline stretch, sync, end of day, lock screen) and record the result in this row. **The APK:** the stable link `https://github.com/haytham26/courier/releases/download/latest/courier.apk` is republished on every merge to main by the Main APK workflow (unsigned until the keystore secrets exist — it installs on a phone you control, which is what the run is). If the link 404s, the job skipped: set the repository variable `EXPO_PUBLIC_AUTH_URL` to the auth server the app should dial (Settings -> Secrets and variables -> Actions -> Variables) and re-run the workflow. **Workaround:** none — the run is the proof. Anything that fails becomes a BUGS row with the step it failed on. | Yes, for A6's done-when |
 
 ---
+
+## The required status checks for `protect-main` (audit item 3j, 2026-11-06)
+
+The exact check names GitHub reports on a pull request (workflow `name:` + `/` + job name — copy them
+verbatim from the ruleset's required-checks picker, which lists the same strings):
+
+**Run on every PR (recommended required list):**
+
+```
+CI / quality
+CI / secrets
+Quality gates / floor
+Quality gates / coverage
+Quality gates / licences
+Quality gates / audits
+Quality gates / sast
+CodeQL / analyse
+android-e2e / changes
+android-e2e / build
+android-e2e / e2e
+android-e2e / a1
+```
+
+Notes on the list:
+
+- `android-e2e / build`, `/ e2e`, `/ a1` report **skipped** on PRs that touch neither the app nor the
+  flows (the `changes` job's outputs, audit item 3g) — a skipped check does not block a merge, so
+  listing them is safe and makes every app-touching PR gate on the emulator. `android-e2e / changes`
+  itself always runs.
+- `Restore test / restore` (paths: `infra/**`) and
+  `Screen recordings (13 reference screens) / build`, `/ record` (paths: the screens and flows) are
+  path-limited: they report skipped on most PRs and gate only their own paths. Include them or not —
+  either is safe.
+- The workflows that do **not** run on `pull_request` cannot be required PR checks:
+  `Deploy staging / verify`, `Deploy staging / deploy`, `Staging smoke / smoke`, `Main APK / apk`,
+  `Release APK / apk`, `Store readiness / store-ready`, `Mutation floor / api`, `Mutation floor / voice`,
+  `LINZ weekly changeset / weekly-import`, `Map pack (the Canterbury offline pack, D26) / build`,
+  `android-e2e-health / build|measure|report`. They stay scheduled/dispatch-only.
+- The deploy leg already self-gates on `CI` + `Quality gates` concluding `success` on the same sha
+  (audit item 3d), so requiring those two workflows above is what makes a deploy impossible on an
+  untested tree.
+
+Derived from the workflow files on 2026-11-06 (`.github/workflows/*.yml`: the `name:` line and the
+`jobs:` keys; the `pull_request` triggers of `ci.yml`, `quality-gates.yml`, `codeql.yml` (branches
+`[main]` — every PR targets main), `android-e2e.yml`, `restore-test.yml`, `screen-recordings.yml`).
 
 ## Design Studio — Maps First was CHOSEN on 2026-10-22 (D27); no pick remains
 
@@ -120,7 +166,7 @@ still runs.
 
 ---
 
-**Last Updated:** 2026-10-28 (backend squad): two rows added - (1) the `protect-main` ruleset row, because the founder directive to make GitHub refuse a direct push to `main` was run exactly as given and the token was refused with 403 (no Administration: write), and (2) the one-backend-session row, because a second backend session was found working in the main working tree while this one started. 2026-10-24 (the Design Studio section is closed - Maps First was chosen on 2026-10-22 under D27 and is being built, so it no longer asks for a pick; the Apple Developer account row now names the iOS build lane it blocks, which is what keeps screen 13's Live Activity and the iOS half of every recording at PARTIAL). 2026-10-24 (backend squad): the OmniRoute row added - the voice server brain is built and fake-gateway-tested, the real gateway + keys + provider allow-list are the founder item (D25).
+**Last Updated:** 2026-10-28 (backend squad): 2026-11-06 (backend squad, audit item 3j): the exact required-status-checks list for the `protect-main` ruleset is written down in the section above this line, so the founder can set the ruleset's required checks in one paste. two rows added - (1) the `protect-main` ruleset row, because the founder directive to make GitHub refuse a direct push to `main` was run exactly as given and the token was refused with 403 (no Administration: write), and (2) the one-backend-session row, because a second backend session was found working in the main working tree while this one started. 2026-10-24 (the Design Studio section is closed - Maps First was chosen on 2026-10-22 under D27 and is being built, so it no longer asks for a pick; the Apple Developer account row now names the iOS build lane it blocks, which is what keeps screen 13's Live Activity and the iOS half of every recording at PARTIAL). 2026-10-24 (backend squad): the OmniRoute row added - the voice server brain is built and fake-gateway-tested, the real gateway + keys + provider allow-list are the founder item (D25).
 **Next Action:** Paste the free keys into `.env.local`, then run `scripts/ci/check-secrets.js`. The design direction is decided (D27, Maps First) and needs nothing further.
 
 ---

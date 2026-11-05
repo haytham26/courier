@@ -586,6 +586,24 @@ other crews' work, not mine to drop. Lesson recorded: never pair a `git stash pu
 files with a `git stash pop` in one command; for untracked files use `Move-Item` aside/back
 instead (that is what the C14 red proof ended up using).
 
+## The 2026-11-05 audit's CI / INFRA item 3j (BUG-224): the exact required status checks for `protect-main` are written down
+
+The `protect-main` ruleset (founder directive 2026-10-28) requires 0 status checks, so nothing at the
+repository level forces a PR through the gates, and the check names GitHub reports were written down
+nowhere. Now `docs/status/FOUNDER_TODO.md` has a section ("The required status checks for
+`protect-main`") with the exact list, derived from every workflow's `name:` + jobs + `pull_request`
+trigger: every-PR checks `CI / quality|secrets`, `Quality gates / floor|coverage|licences|audits|sast`,
+`CodeQL / analyse`, `android-e2e / changes|build|e2e|a1` (the last three skip on non-app PRs, which
+does not block); path-limited `Restore test / restore` and `Screen recordings (…) / build|record`;
+and the explicit note that the schedule/dispatch-only workflows (Deploy staging, Staging smoke, APK
+lanes, Store readiness, Mutation floor, LINZ changeset, Map pack, android-e2e-health) cannot be
+required PR checks. The founder sets the list in the ruleset UI in one paste - that setting is a
+FOUNDER_TODO row, not an agent action. Evidence: `docs/evidence/required-checks-224/README.md`
+(the derivation table). No code changed, so no red/green; BUG-224 filed.
+
+**Item 3 is now fully on branches with PRs: 3a-3h (#199-#207), 3i C12/C11/C10/C14 (#208-#211), 3j
+this one.** Next in the queue: item 4 (API hardening a-g), then item 5, then item 7's chain.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
