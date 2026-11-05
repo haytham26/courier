@@ -20,6 +20,22 @@ name: 'A failed delivery carries its reason (queue 4b, ADR-023)'
       id: "today-screen"
     timeout: 60000
 
+# The sheet opens at peek (BUG-050), and the actions row sits below the fold of
+# the peek: the courier raises the sheet with its grabber first, the way
+# today-list.yaml does, and a scroll inside the sheet reaches the Fail button.
+# Asserting it straight from the peek fails on an element that is rendered but
+# not on screen - the BUG-181 shape: run 42090425951's api-34 and api-35 legs
+# both failed exactly here (step 006, "id: today-fail is visible").
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- scrollUntilVisible:
+    element:
+      id: "today-fail"
+    direction: DOWN
+    timeout: 20000
+
 # The run's own next stop is the one a failure is recorded against, and the
 # Fail button names it (the accessibility label carries the address).
 - assertVisible:
