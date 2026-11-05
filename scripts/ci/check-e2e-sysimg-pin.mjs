@@ -108,8 +108,18 @@ const install = (() => {
 if (install === '') {
   problems.push('the e2e job has no "Install the pinned system image" step with its revision assertion');
 } else {
-  if (!/until\s+yes\s*\|\s*sdkmanager/.test(install)) {
-    problems.push('the install pre-step does not run sdkmanager until it succeeds');
+  if (!/until\s+sdkmanager\s+--install/.test(install) || /until\s+yes\s*\|/.test(install)) {
+    problems.push(
+      'the install pre-step does not run `sdkmanager --install` until it succeeds WITHOUT piping `yes` into it ' +
+        '(BUG-227: under pipefail the SIGPIPE from `yes` reads as a failure, the wipe deletes the good install, ' +
+        'and the loop retries until the budget runs out)',
+    );
+  }
+  if (!/sdkmanager\s+--licenses/.test(install) || !/\|\|\s*true/.test(install)) {
+    problems.push(
+      'the install pre-step does not accept the SDK licenses once first (`yes | sdkmanager --licenses … || true`) ' +
+        'before installing with stdin from /dev/null (BUG-227)',
+    );
   }
   if (!/-ge\s*3/.test(install) || !/3\s*attempts/.test(install)) {
     problems.push('the install pre-step does not bound itself at three attempts');

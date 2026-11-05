@@ -432,6 +432,25 @@ gate against the pre-fix workflow names all three, exit 1. Green after: gate pas
 check-workflows clean, parity 0 reopened. Evidence: `docs/evidence/e2e-sysimg-path-225/README.md`.
 BUG-225 filed. NOT claimed: the emulator legs themselves are green — that is the next CI run's evidence.
 
+## 2026-11-06: BUG-227 — the 3f install loop's `yes | sdkmanager` under pipefail wiped every good install (PR #204's second red cause)
+
+After the BUG-225 PATH fix, run 42118045102 (head b49aa64) showed sdkmanager resolving correctly
+(`…/cmdline-tools/latest/bin`) yet all 3 install attempts "failing" — each attempt's sdkmanager.log tail
+ended at 100% unzip of the LAST zip file, with `yes: standard output: Broken pipe` just before. Root
+cause: `set -euo pipefail` + `until yes | sdkmanager …` — sdkmanager exits 0 on a complete install,
+`yes` dies of SIGPIPE (141), pipefail makes the pipeline 141, the loop reads the good install as a
+failure and `rm -rf "$dir"` deletes it before retrying. Latent since 3f (the step died earlier at
+`command not found` until BUG-225). The emulator-runner action's own sdk-installer.ts does it safely:
+`yes | sdkmanager --licenses` once, then `sdkmanager --install …` with no yes in the pipeline.
+
+Fix on `e2e-sysimg-pinned` (pushed; updates PR #204): licenses accepted once with `|| true` guarding
+the same SIGPIPE, then `until sdkmanager --install "$image" … </dev/null; do … done`; the final-failure
+dump now greps the log for error lines too. `check-e2e-sysimg-pin.mjs` extended: fails if the loop pipes
+`yes` into sdkmanager or skips the `--licenses` step (2 new tests, 10 total). Red first: gate vs
+b49aa64's workflow names both, exit 1. Green after: gate passes, 10/10 tests, check-workflows clean.
+Evidence: `docs/evidence/e2e-sysimg-pipefail-227/README.md`. BUG-227 filed. NOT claimed: emulator legs
+green — that is the next CI run's evidence on this head.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:

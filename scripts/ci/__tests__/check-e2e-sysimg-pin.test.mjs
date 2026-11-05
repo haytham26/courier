@@ -50,7 +50,8 @@ jobs:
           if [ -z "$tools_bin" ] || [ ! -x "$tools_bin/sdkmanager" ]; then echo "::error::no sdkmanager under $sdk"; exit 1; fi
           echo "$tools_bin" >> "$GITHUB_PATH"
           export PATH="$tools_bin:$PATH"
-          until yes | sdkmanager "$image"; do
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          until sdkmanager --install "$image" >/dev/null 2>&1 </dev/null; do
             if [ "$attempt" -ge 3 ]; then echo "::error::no install in 3 attempts"; exit 1; fi
             rm -rf "$dir"
           done
@@ -128,4 +129,21 @@ test('an install step with no failing existence check for sdkmanager fails (BUG-
   const answer = run(READY.replace(' || [ ! -x "$tools_bin/sdkmanager" ]', ''));
   assert.notEqual(answer.code, 0);
   assert.match(answer.out, /existence check/);
+});
+
+test('an install step that pipes yes into sdkmanager fails (BUG-227, pipefail+SIGPIPE)', () => {
+  const answer = run(
+    READY.replace(
+      'until sdkmanager --install "$image" >/dev/null 2>&1 </dev/null; do',
+      'until yes | sdkmanager "$image"; do',
+    ),
+  );
+  assert.notEqual(answer.code, 0);
+  assert.match(answer.out, /BUG-227/);
+});
+
+test('an install step with no licenses acceptance first fails (BUG-227)', () => {
+  const answer = run(READY.replace('          yes | sdkmanager --licenses >/dev/null 2>&1 || true\n', ''));
+  assert.notEqual(answer.code, 0);
+  assert.match(answer.out, /--licenses/);
 });

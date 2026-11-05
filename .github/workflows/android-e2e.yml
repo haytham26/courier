@@ -285,14 +285,25 @@ jobs:
           echo "::notice::sdkmanager resolved from $tools_bin"
           echo "$tools_bin" >> "$GITHUB_PATH"
           export PATH="$tools_bin:$PATH"
+          # BUG-227: do NOT pipe `yes` into the install. Under `set -o pipefail`
+          # the pipeline's status is 141 when `yes` dies of SIGPIPE after
+          # sdkmanager exits 0, so the `until` loop read every SUCCESSFUL
+          # install as a failure, wiped the just-installed image with
+          # `rm -rf "$dir"`, and retried until the budget ran out (run
+          # 42118045102: three attempts, each unzip completing 100%, each
+          # "failing"). The emulator-runner action does it the safe way, and so
+          # do we: accept the licenses once (the `|| true` is for the same
+          # SIGPIPE), then install with stdin from /dev/null.
+          yes | sdkmanager --licenses >"$RUNNER_TEMP/sdkmanager-licenses.log" 2>&1 || true
           # Three attempts, cleaning the image directory between them: a failed
           # sdkmanager can leave a half-unpacked image, and installing ON TOP of
           # one is how a run ends up asserting a revision from a directory that
           # is not the image.
           attempt=1
-          until yes | sdkmanager "$image" >"$RUNNER_TEMP/sdkmanager.log" 2>&1; do
+          until sdkmanager --install "$image" >"$RUNNER_TEMP/sdkmanager.log" 2>&1 </dev/null; do
             if [ "$attempt" -ge 3 ]; then
               echo "::error::the system image $image did not install in 3 attempts"
+              grep -inE 'exception|error|no space|failed|cannot|denied' "$RUNNER_TEMP/sdkmanager.log" | tail -n 20 || true
               tail -c 2000 "$RUNNER_TEMP/sdkmanager.log"
               exit 1
             fi
