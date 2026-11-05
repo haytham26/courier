@@ -80,6 +80,14 @@ jobs:
       # `node --test scripts/*/__tests__/*.test.mjs`.
       - name: Every emulator boot carries the same pins
         run: node scripts/ci/check-e2e-pins.mjs
+      # The 2026-11-05 audit's item 3a: `rsync infra/ services/ packages/`
+      # (trailing slashes) copied the CONTENTS of each flat into /opt/courier
+      # and --delete removed what was there, so the deploy's own next command -
+      # `cd /opt/courier/infra` - failed on a directory that never arrived. The
+      # gate asserts the command's shape everywhere and runs both shapes against
+      # a scratch directory where rsync exists (here, on the runner).
+      - name: The deploy's rsync keeps the tree (audit 3a)
+        run: node scripts/ci/check-deploy-rsync.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers

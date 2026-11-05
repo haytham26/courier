@@ -186,10 +186,23 @@ jobs:
           # The deployment runs as the deploy user on the host, in the checked
           # out tree. The compose files, the Dockerfiles and the two scripts
           # are copied by rsync, so the host runs this commit's infra/ exactly.
-          rsync -az --delete -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" \
-            infra/ services/ packages/ "${USER}@${HOST}:/opt/courier/"
+          #
+          # --relative, and NO trailing slashes on the three sources (audit item
+          # 3a): `infra/ services/ packages/` with slashes copies the CONTENTS of
+          # each flat into /opt/courier, so /opt/courier/api/ ends up where
+          # /opt/courier/services/api/ belongs, and `--delete` then removes
+          # whatever the host already had there. The very next command - `cd
+          # /opt/courier/infra` - fails on a directory that never arrived.
+          # `--relative` recreates the tree: infra/, services/ and packages/
+          # each keep their own level, and --delete trims inside them.
+          rsync -az --delete --relative -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" \
+            infra services packages "${USER}@${HOST}:/opt/courier/"
           ssh -i ~/.ssh/id_ed25519 "${USER}@${HOST}" \
             "cd /opt/courier/infra && bash deploy.sh apply --from staging.env"
+          # The version is forwarded into the remote environment (audit item
+          # 3b): smoke.sh requires it and now dies without it, because a smoke
+          # test whose version check silently does not run says "green" about a
+          # deployment it never identified.
           ssh -i ~/.ssh/id_ed25519 "${USER}@${HOST}" \
             "cd /opt/courier/infra && bash smoke.sh --domain \"${{ secrets.COURIER_STAGING_DOMAIN }}\" --token \"${{ secrets.COURIER_SMOKE_TOKEN }}\""
 

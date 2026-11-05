@@ -253,6 +253,30 @@ The relabelling and its guards:
   it parsed, the correction lands with the address-intelligence slice, and TRIAL_SCOPE row 6 is
   corrected to say so.
 
+## The 2026-11-05 audit's CI / INFRA item 3a (BUG-212): the deploy's rsync keeps the tree
+
+`deploy.yml`'s deploy step ran `rsync -az --delete infra/ services/ packages/
+host:/opt/courier/` with TRAILING SLASHES, so rsync copied the CONTENTS of each
+flat into /opt/courier (and `--delete` removed what was there), and the next
+command in the same step - `cd /opt/courier/infra` - failed on a directory that
+never arrived. The leg has never run against a real host (it is skipped without
+the OCI secrets, FOUNDER_TODO), which is exactly why this survived.
+
+- The rsync is now `-az --delete --relative` with the three sources named
+  WITHOUT trailing slashes: the tree the deploy steps into is the tree that
+  arrives, and --delete trims inside it.
+- `scripts/ci/check-deploy-rsync.mjs` (a step in the Floor guard job) asserts the
+  command's shape, asserts the deploy still cds the directory it sends, and runs
+  BOTH shapes against a scratch target directory - the real rsync where it is
+  installed (CI's runner), a named simulation of rsync's documented semantics
+  where it is not. The proof refuses to go vacuous: if the old shape ever
+  produces a correct layout the gate fails.
+- Its test (5 cases) runs with `node --test scripts/*/__tests__/*.test.mjs`.
+
+**Still founder-blocked, unchanged:** the OCI host and key (A5's deploy leg),
+the OmniRoute gateway, the held-out courier sentences. Item 3b (APP_VERSION
+reaching the remote smoke.sh) is next.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
