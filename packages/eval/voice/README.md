@@ -22,7 +22,37 @@ manifest/
   shift_sims.json   the scripted full-shift simulations: three shifts with
                     the voice and the noise of a real day
   slices.json       the slice ids, the counts and the status
+  licence.csv       the licence ledger of the audio the set is built from
 ```
+
+## The open data the audio comes from, and its attribution
+
+The three English slices are built from open speakers, fetched by
+`scripts/eval/fetch-open-voice-data.mjs` into `data/voice/` (git-ignored, like
+`data/linz/`), each clip with its sha256:
+
+- **Mozilla Common Voice 17.0 (en)** — CC0-1.0. 280 clips filtered by the
+  dataset's own accent metadata (140 New Zealand English, 140 other English
+  accents), fetched through the Hugging Face datasets-server mirror
+  `saeedzou/common-voice-17-en-age-gender-accent` (Mozilla's own release at
+  `commonvoice.mozilla.org/data` is a ~40 GB tarball for the whole corpus, so
+  the mirror is the practical fetch). Every clip's sha256 is recorded in
+  `data/voice/common-voice/clips.jsonl` and **re-verified against the file on
+  disk on every run of the fetcher** — a tampered or truncated clip is refused,
+  not silently reused. A comparison of those checksums against the official
+  Mozilla release is a named follow-up (it needs the official tarball or an
+  authenticated download); until then the mirror's own row metadata and the
+  per-clip digests are what stands. CC0 needs no attribution, and the corpus is
+  credited as "Mozilla Common Voice" in `licence.csv` regardless.
+- **MUSAN** — CC-BY-4.0. 8 noise clips (road, rain, engine and street sources)
+  from the `noise` split of the mirror `corypaik/musan` — the corpus's OpenSLR
+  page is `openslr.org/17`. **CC-BY-4.0 requires attribution: "MUSAN, Snyder
+  et al." appears in `licence.csv`, in the eval results and wherever the noise
+  beds are used.** ESC-50 (CC BY-NC) and the DNS-challenge set are not used:
+  a non-commercial licence is barred for a commercial product's eval set.
+
+The judge (sherpa-onnx Whisper tiny.en, MIT weights + Apache-2.0 runtime) is
+eval-only and never shipped; its own row is in `licence.csv` too.
 
 ## The slices
 

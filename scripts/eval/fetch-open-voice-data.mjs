@@ -120,6 +120,11 @@ function appendJsonl(path, row) {
   appendFileSync(path, `${JSON.stringify(row)}\n`, 'utf8');
 }
 
+function writeJsonl(path, rows) {
+  mkdirSync(join(path, '..'), { recursive: true });
+  writeFileSync(path, rows.map((row) => `${JSON.stringify(row)}\n`).join(''), 'utf8');
+}
+
 const textOf = (value) => (typeof value === 'string' ? value : (value?.name ?? String(value)));
 const words = (sentence) => sentence.trim().split(/\s+/).filter(Boolean).length;
 
@@ -244,7 +249,35 @@ function classify(accent) {
   return null;
 }
 
+async function verifyRecordedClips() {
+// Re-verify every recorded clip against the file on disk.
+//
+// A checksum that is never re-read is a claim, not a check: on a restart the
+// fetcher proves the audio it is about to build from is the audio it recorded,
+// and refuses (rather than reuses) a clip that no longer hashes to its value.
+// A clip that failed is dropped from the ledger so the scan fetches it again.
+  const rows = readJsonl(CLIPS_JSONL);
+  if (rows.length === 0) return;
+  const kept = [];
+  let bad = 0;
+  for (const row of rows) {
+    const path = join(ROOT, row.file);
+    if (!existsSync(path)) continue;
+    const digest = sha256(readFileSync(path));
+    if (digest === row.sha256) {
+      kept.push(row);
+    } else {
+      bad += 1;
+    }
+  }
+  writeJsonl(CLIPS_JSONL, kept);
+  console.log(
+    `clips: ${kept.length} verified on disk` + (bad > 0 ? `, ${bad} refused and re-fetched` : ''),
+  );
+}
+
 async function scanSpeakerClips() {
+  await verifyRecordedClips();
   const already = readJsonl(CLIPS_JSONL);
   const have = already.reduce((totals, row) => ({ ...totals, [row.kind]: (totals[row.kind] ?? 0) + 1 }), {});
   const wantNZ = NZ_TARGET + SPARES - (have.nz ?? 0);

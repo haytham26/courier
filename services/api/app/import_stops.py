@@ -21,21 +21,43 @@ import csv
 import io
 import re
 import uuid
+import zipfile
 from datetime import datetime
+from xml.etree.ElementTree import ParseError
 
 import openpyxl
+from openpyxl.utils.exceptions import InvalidFileException
 
 from . import nz_address
 from .locations import location_id_for
 from .repo import ImportedStopRow
+from .routing import MAX_ROUTE_STOPS
 
 #: The upload cap, the same shape as the POD's: the declared name is never
 #: trusted, so the bytes are counted before anything parses them.
 IMPORT_MAX_BYTES = 5 * 1024 * 1024
 
-#: The row cap: a spreadsheet that big is not one courier's day (the routing
-#: layer's own cap is MAX_ROUTE_STOPS), and the answer must stay bounded.
-MAX_IMPORT_ROWS = 1000
+#: The row cap IS the routing layer's own cap (BUG-211): a file of 501 to 1000
+#: rows used to be accepted and stored, and then every route call for that
+#: shift failed with a 422 - the import had accepted a day the planner cannot
+#: route. One cap, one number, no window between them.
+MAX_IMPORT_ROWS = MAX_ROUTE_STOPS
+
+#: The cap on a shift's stops in total: the import is not the only writer (the
+#: demo seed, the intake manifests), so repeated imports must not push a shift
+#: past what the planner can route (BUG-211).
+MAX_STOPS_PER_SHIFT = MAX_ROUTE_STOPS
+
+#: The cap on what an .xlsx may UNPACK to (BUG-211): the upload is capped at
+#: 5 MiB, but a zip bomb unpacks those bytes into gigabytes of sheet XML, and
+#: the workbook is opened over the unpacked bytes. The archive's own index
+#: names the total before anything is inflated.
+MAX_XLSX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
+
+#: The column cap read from a sheet while it streams: the parser's own header
+#: lookup uses the first row's names, and a sheet with a million columns must
+#: not be materialised to reach them.
+_MAX_SHEET_COLUMNS = 512
 
 ADDRESS_HEADERS = ("address", "street", "delivery_address", "addr")
 TYPE_HEADERS = ("type", "stop_type", "kind")
@@ -105,12 +127,57 @@ def _rows_csv(content: bytes) -> list[list[str]]:
 
 
 def _rows_xlsx(content: bytes) -> list[list[str]]:
-    workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    """The sheet's rows as text, streamed and bounded (BUG-211).
+
+    Three defences, because the declared 5 MiB upload cap is not one:
+
+    - the archive's own inflatable total is read from the zip's index BEFORE
+      the workbook is opened, so a zip bomb (megabytes of XML) is refused with
+      its name rather than unpacked;
+    - a file whose bytes are not a readable spreadsheet (renamed, corrupt, or
+      a zip that is not a workbook) is refused as a 422, not a 500 - openpyxl's
+      own exceptions are mapped here;
+    - the rows and columns are capped while they stream, so a sheet with a
+      billion empty rows cannot be materialised before the parse's own caps
+      refuse it.
+    """
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(content))
+    except zipfile.BadZipFile as error:
+        raise ImportFormatError(f"the .xlsx is not a readable zip archive ({error})") from None
+    with archive:
+        uncompressed = sum(info.file_size for info in archive.infolist())
+    if uncompressed > MAX_XLSX_UNCOMPRESSED_BYTES:
+        raise ImportFormatError(
+            f"the .xlsx unpacks to {uncompressed} bytes, past the "
+            f"{MAX_XLSX_UNCOMPRESSED_BYTES} byte ceiling"
+        )
+    try:
+        workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    except (
+        zipfile.BadZipFile,
+        InvalidFileException,
+        KeyError,
+        ParseError,
+        ValueError,
+        OSError,
+    ) as error:
+        # BUG-211: whatever openpyxl raises on untrusted bytes - a missing entry
+        # (KeyError), a truncated archive (BadZipFile), a broken sheet
+        # (ParseError) - is the FILE's problem, answered as a 422 naming it. A
+        # parser on untrusted bytes never turns the file's defect into the
+        # server's 500.
+        raise ImportFormatError(f"the .xlsx is not a readable spreadsheet ({error})") from None
     try:
         sheet = workbook.active
         if sheet is None:
             return []
-        return [[_cell_text(cell) for cell in row] for row in sheet.iter_rows(values_only=True)]
+        rows: list[list[str]] = []
+        for values in sheet.iter_rows(values_only=True):
+            rows.append([_cell_text(cell) for cell in values[:_MAX_SHEET_COLUMNS]])
+            if len(rows) > MAX_IMPORT_ROWS:
+                break
+        return rows
     finally:
         workbook.close()
 

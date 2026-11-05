@@ -120,14 +120,29 @@ class InMemoryStore:
         self._sessions[memory.id] = memory
         self._evict_while_over_the_cap()
 
+    def _forget_lock(self, session_id: str) -> None:
+        """Let the session's lock go with the session.
+
+        The lock outlives its shift otherwise (BUG-151's leak's second half):
+        the sessions are bounded, the locks were not, so a long-lived process
+        grew one lock per shift it had ever served. The guard is the same one
+        `lock_for` takes, so a turn holding the lock and an eviction cannot
+        interleave the pop with the get.
+        """
+        with self._locks_guard:
+            self._locks.pop(session_id, None)
+
     def _evict_while_over_the_cap(self) -> None:
         """Drop the oldest untouched session while the global bound is exceeded."""
         while len(self._sessions) > self.MAX_SESSIONS:
             oldest = next(iter(self._sessions))
             del self._sessions[oldest]
+            self._forget_lock(oldest)
 
     def delete(self, session_id: str) -> bool:
-        return self._sessions.pop(session_id, None) is not None
+        found = self._sessions.pop(session_id, None) is not None
+        self._forget_lock(session_id)
+        return found
 
     def sessions_of(self, driver_id: str) -> list[SessionMemory]:
         """Every shift of one courier, oldest first."""

@@ -25,7 +25,7 @@ from sqlalchemy.exc import IntegrityError
 
 from .entitlements import Plan, SubscriptionState, SubscriptionView
 from .locations import canonical_address, location_id_for_stop
-from .routing import PlannedStop, RoutePlan, RunTemplate
+from .routing import MAX_ROUTE_STOPS, PlannedStop, RoutePlan, RunTemplate
 from .sequencing import Segment
 
 
@@ -275,7 +275,10 @@ class Repo(Protocol):
 
         Returns the new stop ids in order. The sequence continues from the
         shift's existing stops. The caller has validated the whole file
-        first, so the import lands all-or-nothing.
+        first, so the import lands all-or-nothing. The shift's total is
+        capped inside the write (BUG-211): a repeated import may not push a
+        shift past what the planner can route, and the shift's row is locked
+        before its sequence is read so two concurrent imports cannot collide.
         """
         ...
 
@@ -493,6 +496,13 @@ class InMemoryRepo:
         if run is None:
             raise ValueError("no run for this shift")
         existing = self.run_stops.setdefault(run.id, [])
+        # BUG-211: the cap is the planner's own, checked on the shift's TOTAL,
+        # so repeated imports cannot grow a shift past what routing accepts.
+        if len(existing) + len(rows) > MAX_ROUTE_STOPS:
+            raise ValueError(
+                f"this shift already holds {len(existing)} stops: the import would take it to "
+                f"{len(existing) + len(rows)}, past the {MAX_ROUTE_STOPS} the planner can route"
+            )
         ids: list[UUID] = []
         for row in rows:
             stop_id = uuid4()
@@ -1002,6 +1012,25 @@ class SqlAlchemyRepo:
         # One transaction for the whole import: the file was validated before
         # this call, so a partial import is never visible (ADR-025).
         with self._engine.begin() as connection:
+            # BUG-211: the cap is checked inside the transaction that writes,
+            # against the shift's total, so a repeated import cannot push it
+            # past what the planner can route.
+            present = connection.execute(
+                text("SELECT COUNT(*) FROM stops WHERE shift_id = :shift"),
+                {"shift": shift_id},
+            ).scalar()
+            if int(present or 0) + len(rows) > MAX_ROUTE_STOPS:
+                raise ValueError(
+                    f"this shift already holds {present} stops: the import would take it to "
+                    f"{int(present or 0) + len(rows)}, past the {MAX_ROUTE_STOPS} the planner can route"
+                )
+            # BUG-211: the shift's row is locked before its sequence is read, so
+            # two concurrent imports cannot read the same base and collide on
+            # the (shift_id, sequence) pair.
+            connection.execute(
+                text("SELECT id FROM shifts WHERE id = :shift FOR UPDATE"),
+                {"shift": shift_id},
+            )
             base = connection.execute(
                 text("SELECT COALESCE(MAX(sequence), 0) FROM stops WHERE shift_id = :shift"),
                 {"shift": shift_id},
