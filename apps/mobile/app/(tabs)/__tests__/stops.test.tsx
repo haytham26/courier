@@ -195,13 +195,14 @@ describe("the route screen's priority and windows (queue 4a)", () => {
     await renderWithRun([]);
 
     // The run's own day: stop 2 is the priority one, so its row says so and
-    // the rows of the stops the run did not call priority do not.
+    // the rows of the stops the run did not call priority do not. The priority
+    // is its own node, because it is its own fact.
     fireEvent.press(screen.getByTestId('stops-segment-to-go'));
     await waitFor(() => {
       expect(screen.getByTestId('stop-2')).toBeTruthy();
     });
-    expect(within(screen.getByTestId('stop-2')).getByText(/^Priority ·/)).toBeTruthy();
-    expect(within(screen.getByTestId('stop-4')).queryByText(/^Priority/)).toBeNull();
+    expect(within(screen.getByTestId('stop-2')).getByText('Priority')).toBeTruthy();
+    expect(within(screen.getByTestId('stop-4')).queryByText('Priority')).toBeNull();
   });
 
   it('shows the time window the run itself gives the stop', async () => {
@@ -209,9 +210,8 @@ describe("the route screen's priority and windows (queue 4a)", () => {
 
     // Stop 2's own window, read on the device's own clock: a window is a local
     // time, so the test derives the times the same way the row does rather than
-    // pinning a UTC stamp. The row carries the priority and the window on one
-    // line ("Priority · 22:00 - 00:00"), so the window is the suffix.
-    const expected = new RegExp(`${clock(theWindow.start)} - ${clock(theWindow.end)}$`);
+    // pinning a UTC stamp. The window is its own node, beside the priority.
+    const expected = `${clock(theWindow.start)} - ${clock(theWindow.end)}`;
     fireEvent.press(screen.getByTestId('stops-segment-to-go'));
     await waitFor(() => {
       expect(screen.getByTestId('stop-2')).toBeTruthy();

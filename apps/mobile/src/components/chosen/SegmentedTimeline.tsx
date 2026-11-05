@@ -80,11 +80,17 @@ export interface TimelineItem {
   state?: 'done' | 'later' | 'next';
   icon?: React.ComponentProps<typeof Ionicons>['name'];
   /**
-   * The run's own word for this stop, under the street: a priority, or the
-   * time window the run gave it (queue 4a). The row names what the run owns,
-   * and a stop the run says nothing extra about carries nothing.
+   * The run's own word for this stop, under the street: the priority the run
+   * gives it (queue 4a). Its own node, because it is its own fact - a stop the
+   * run does not call a priority one shows nothing.
    */
   note?: string;
+  /**
+   * The stop's time window, as the courier reads it: the device's own clock,
+   * because a window is a local time (queue 4a). Its own node, so the run's
+   * two facts are read apart and each is itself.
+   */
+  window?: string;
   /** Opens the stop, when the screen gives the row a control. */
   onPress?: () => void;
   /** The row's own testID, when a flow names it exactly. */
@@ -155,6 +161,20 @@ export const Timeline = ({ items, testID }: TimelineProps) => {
                   {item.note}
                 </Text>
               ) : null}
+              {item.window ? (
+                <Text
+                  style={{
+                    fontSize: t.typography.secondary.size,
+                    lineHeight: t.typography.secondary.lineHeight,
+                    fontWeight: t.typography.secondary.weight,
+                    color: t.colors.secondaryLabel,
+                    fontVariant: ['tabular-nums'],
+                  }}
+                  maxFontSizeMultiplier={1.5}
+                >
+                  {item.window}
+                </Text>
+              ) : null}
             </View>
           </>
         );
@@ -163,7 +183,7 @@ export const Timeline = ({ items, testID }: TimelineProps) => {
           <View
             key={item.id}
             accessible
-            accessibilityLabel={`${item.street}${item.note ? `, ${item.note}` : ''}${item.time ? `, ${item.time}` : ''}${item.state ? `, ${item.state}` : ''}`}
+            accessibilityLabel={`${item.street}${item.note ? `, ${item.note}` : ''}${item.window ? `, ${item.window}` : ''}${item.time ? `, ${item.time}` : ''}${item.state ? `, ${item.state}` : ''}`}
             testID={rowTestID}
             style={rowStyle}
           >
@@ -174,7 +194,7 @@ export const Timeline = ({ items, testID }: TimelineProps) => {
             key={item.id}
             accessible
             role="button"
-            accessibilityLabel={`${item.street}${item.note ? `, ${item.note}` : ''}${item.time ? `, ${item.time}` : ''}${item.state ? `, ${item.state}` : ''}`}
+            accessibilityLabel={`${item.street}${item.note ? `, ${item.note}` : ''}${item.window ? `, ${item.window}` : ''}${item.time ? `, ${item.time}` : ''}${item.state ? `, ${item.state}` : ''}`}
             accessibilityHint="Opens the stop"
             onPress={item.onPress}
             testID={rowTestID}

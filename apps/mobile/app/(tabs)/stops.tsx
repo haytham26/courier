@@ -122,23 +122,23 @@ function RouteScreen() {
   );
 
   /**
-   * The run's own word for a stop, under its street (queue 4a).
+   * The run's own words for a stop, under its street (queue 4a).
    *
-   * The run owns the priority and it owns the time window: a courier reads
-   * both, and a stop the run says nothing extra about shows nothing. The times
-   * are the device's own clock, because the run's window is stamped in UTC and
-   * "09:00 - 11:00" is what the courier hears.
+   * The run owns the priority and it owns the time window, and they are two
+   * facts: a stop the run calls a priority one shows "Priority", and a stop the
+   * run gave a window shows the times. The times are the device's own clock,
+   * because the run's window is stamped in UTC and "09:00 - 11:00" is what the
+   * courier hears.
    */
   const noteOf = useCallback(
-    (stop: Stop): string | undefined => {
+    (stop: Stop): { note?: string; window?: string } => {
       const window = stop.window;
-      if (stop.priority && window !== undefined) {
-        return `Priority · ${clockOf(window.start)} - ${clockOf(window.end)}`;
-      }
-      if (stop.priority) {
-        return 'Priority';
-      }
-      return window === undefined ? undefined : `${clockOf(window.start)} - ${clockOf(window.end)}`;
+      return {
+        ...(stop.priority ? { note: 'Priority' } : {}),
+        ...(window === undefined
+          ? {}
+          : { window: `${clockOf(window.start)} - ${clockOf(window.end)}` }),
+      };
     },
     [],
   );
@@ -230,9 +230,9 @@ function RouteScreen() {
                   time: inDone ? minuteOf(stop.id) : undefined,
                   state,
                   icon: inDone ? 'checkmark-circle' : 'ellipse-outline',
-                  // Queue 4a: the run's own word for the stop — the priority
-                  // and the window the run gave it.
-                  note: inDone ? undefined : noteOf(stop),
+                  // Queue 4a: the run's own words for the stop — the priority
+                  // and the window the run gave it, each its own fact.
+                  ...(inDone ? {} : noteOf(stop)),
                   onPress: () => setSelected(stop),
                   // The Maestro contract: a row is `stop-<id>`.
                   testID: `stop-${stop.id}`,
