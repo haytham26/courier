@@ -45,13 +45,17 @@ name: 'A1 optimise: the solver resequences the run the server holds'
     id: "stops-list"
 
 # The ask: one press, and the screen says the server is being asked. The answer
-# is the server's own, so the wait is a real server's.
+# is the server's own, so the wait is a real server's. The assertion is a
+# SUBSTRING (a Maestro regex), because the courier reads the sentence AND the
+# delta the server answered with ("...The day now finishes 29 min later.") - an
+# exact text match would have to know the delta, which is the solver's own
+# business and not the flow's.
 - tapOn:
     id: "stops-optimise"
 - extendedWaitUntil:
     visible:
-      text: "The server resequenced the run"
-    timeout: 120000
+      text: "/The server resequenced the run/"
+    timeout: 180000
 
 # The courier is told what the solver did, in the words the server answered
 # with, and the run's own list is the order the solver worked out.
