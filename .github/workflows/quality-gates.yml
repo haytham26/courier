@@ -105,6 +105,15 @@ jobs:
       # piped over stdin, read by the remote shell into variables.
       - name: The deploy's secrets never reach a command line (audit 3c)
         run: node scripts/ci/check-deploy-secrets-inline.mjs
+      # The 2026-11-05 audit's item 3d: the deploy job used to run on the push
+      # to main, in parallel with the repository's own CI and Quality gates, so
+      # the staging host could be served a tree CI was about to call red. The
+      # gate holds the workflow_run shape: both required workflows named, the
+      # completed event, the deploy's `if:` off the push trigger, the checkout
+      # pinned to the sha the gates ran on, and the gate step that reads both
+      # conclusions from the API rather than assuming them.
+      - name: The deploy waits for CI and Quality gates (audit 3d)
+        run: node scripts/ci/check-deploy-gate.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers

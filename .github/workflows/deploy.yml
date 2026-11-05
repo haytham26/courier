@@ -1,20 +1,26 @@
 # The staging deploy (A5).
 #
-# A push to main deploys to staging: the images are built, the migrations run,
-# the stack comes up behind the edge, the smoke test drives a real round trip
-# through it, and a failing smoke test returns the previous images.
+# A push to main builds and smoke-tests the staging stack on the runner itself
+# (the `verify` leg: the local VM the audit names). The deploy to the staging
+# host waits for the repository's own gates - CI and Quality gates - to conclude
+# on the SAME sha, which is what `workflow_run` gives us (audit item 3d): a
+# deploy that runs while CI is still red, or on a sha that was never tested, is
+# a deploy of whatever happened to be on the branch at that moment. The
+# `workflow_run` trigger also means this file's own push-triggered run no longer
+# deploys: the deploy job runs on the gates' completion, or on a human's
+# explicit `workflow_dispatch`.
 #
 # The audit's founder input is the OCI host and key (FOUNDER_TODO). Until they
 # exist, the `verify` leg runs on every push - it builds the images and brings
-# the whole staging stack up on the runner itself, which is the local VM the
-# audit names - and the `deploy` leg is skipped, not quietly: it prints the
-# exact secrets it is waiting for. A deploy that silently did nothing would be
-# worse than one that says it has nowhere to go.
+# the whole staging stack up on the runner itself - and the `deploy` leg is
+# skipped, not quietly: it prints the exact secrets it is waiting for. A deploy
+# that silently did nothing would be worse than one that says it has nowhere to
+# go.
 #
-# Both legs use the same two scripts (`infra/deploy.sh`, `infra/smoke.sh`), so
-# the procedure the workflow runs and the procedure a developer runs by hand on
-# the host are one procedure. That is the whole point of testing against a local
-# VM first: when the host arrives, what is new is a hostname, not a script.
+# All three legs use the same two scripts (`infra/deploy.sh`, `infra/smoke.sh`),
+# so the procedure the workflow runs and the procedure a developer runs by hand
+# on the host are one procedure. That is the whole point of testing against a
+# local VM first: when the host arrives, what is new is a hostname, not a script.
 
 name: Deploy staging
 
@@ -29,9 +35,19 @@ on:
         default: verify
         type: choice
         options: [verify, deploy]
+  # The gates finishing is the deploy's starting gun (audit item 3d): the run
+  # carries the sha they ran on, and the deploy checks out THAT sha rather than
+  # the tip of the branch, which may have moved since.
+  workflow_run:
+    workflows: ["CI", "Quality gates"]
+    types: [completed]
 
 permissions:
   contents: read
+  # The gate below reads the runs of the two workflows, which is the only thing
+  # this workflow asks the API for. A `workflow_run` event's token is read-only
+  # by default; reading runs needs `actions: read`.
+  actions: read
 
 concurrency:
   # One deploy at a time: two pushes in a row would race on the same stack.
@@ -43,6 +59,10 @@ concurrency:
 jobs:
   verify:
     name: Build and smoke-test the staging stack (the local VM)
+    # The push that started CI already ran this leg; a `workflow_run` event
+    # runs the deploy leg only (audit item 3d), so building the stack twice
+    # would be cost with nothing proved.
+    if: github.event_name != 'workflow_run'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -141,12 +161,36 @@ jobs:
 
   deploy:
     name: Deploy to the staging host
-    # The audit's founder input: the OCI host, the key and the domain. Until
-    # they exist this leg says so, on every push, rather than doing nothing.
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
-    needs: verify
+    # The deploy runs when the repository's gates SAID YES about a sha, or when a
+    # human says yes themselves (audit item 3d). It does not run on the push that
+    # started those gates: a push fires before they finish, and a deploy on a
+    # push is a deploy of a tree nobody has tested yet.
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     steps:
+      # The gate: BOTH required workflows concluded `success` on the sha this
+      # run is about. `workflow_run` fires for either workflow finishing, so the
+      # other one is read from the API rather than assumed - a deploy that
+      # waited for CI alone while Quality gates was red is the same bug as no
+      # gate at all.
+      - name: The gates are green on this sha
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          runs="$(gh api "repos/$REPO/actions/runs?head_sha=$SHA" --paginate --jq '.workflow_runs[] | [.name, .status, .conclusion] | @tsv')"
+          printf 'the runs on %s:\n%s\n' "$SHA" "$runs"
+          for workflow in "CI" "Quality gates"; do
+            if ! awk -F'\t' -v want="$workflow" '$1 == want && $2 == "completed" && $3 == "success" { found = 1 } END { exit found ? 0 : 1 }' <<<"$runs"; then
+              echo "::error::$workflow has not passed on $SHA: the deploy waits for CI AND Quality gates"
+              exit 1
+            fi
+          done
+          echo "::notice::CI and Quality gates both passed on $SHA: the deploy may proceed"
+
       - name: The host the audit is waiting for
         id: host
         run: |
@@ -169,8 +213,14 @@ jobs:
           echo "  infra/deploy.sh apply --from infra/staging.env"
           echo "  infra/smoke.sh --domain <the staging domain> --token <a courier's JWT>"
 
+      # The sha the gates ran on, NOT the branch tip (audit item 3d): the tip
+      # may have moved since they finished, and a deploy of the tip is a deploy
+      # of a tree nobody tested. On a `workflow_dispatch` the event's own sha is
+      # what a human asked for.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         if: steps.host.outputs.configured == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Deploy to the host
         if: steps.host.outputs.configured == 'true'

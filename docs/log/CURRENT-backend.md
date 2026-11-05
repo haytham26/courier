@@ -330,6 +330,32 @@ host's `ps`.
 changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt 2), then the four 3i PRs in order
 and 3j.
 
+## The 2026-11-05 audit's CI / INFRA item 3d (BUG-215): the deploy waits for CI and Quality gates
+
+The deploy job used to run on the same push that started CI and Quality gates, with nothing waiting for
+the other two workflows, so the staging host could be deployed a tree CI was about to call red - and the
+checkout took the branch tip rather than the sha anything had tested. It has never run against a real host
+(the OCI host and key are FOUNDER_TODO), which is exactly why its trigger was never reviewable.
+
+- `workflow_run` on `["CI", "Quality gates"]`, `types: [completed]`. The dispatch trigger stays (a human
+  may always ask) and the push trigger stays (the verify leg builds the local-VM stack on every push, on
+  purpose - it now carries `if: github.event_name != 'workflow_run'` so a gates-completion run does not
+  build it twice).
+- The deploy job's `if:` is dispatch or workflow_run - never the push. The gate step reads the runs on
+  `github.event.workflow_run.head_sha` from the API and requires BOTH workflows `completed` AND
+  `success`: the trigger fires when EITHER finishes, and a deploy that waited for CI alone while Quality
+  gates was red is the same bug as no gate at all. The awk predicate is proven against four shapes (both
+  green passes; one running fails; one failed fails; neither run fails).
+- The checkout is pinned to that sha, and the deploy no longer `needs: verify` (a job that exists only on
+  the push event - the ordering guarantee is the gate step, not the job dependency).
+- `scripts/ci/check-deploy-gate.mjs` (a step in the Floor guard job) holds every half, with an 8-case
+  test. Evidence: `docs/evidence/deploy-gates-215/README.md`.
+
+**Next in item 3:** 3e (the android-e2e restore-keys block), 3f (pin the Android system image), 3g (drop
+the paths filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt 2), then the
+four 3i PRs in order (C12 setup-uv SHA, C11 Node-24, C10 digest pins, C14 dependabot + a cron staging
+smoke) and 3j (the required-checks list in FOUNDER_TODO).
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
