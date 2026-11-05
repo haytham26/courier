@@ -415,6 +415,44 @@ a flake - and the alternative is the state this item fixed (the emulator's bytes
 names the pins fingerprint, which the legs carry; extending the pin to a1 is a follow-up, not something
 smuggled into this PR.
 
+## The 2026-11-05 audit's CI / INFRA item 3g (BUG-218): the emulator jobs report `skipped`, not missing
+
+`android-e2e.yml`'s `pull_request` trigger carried a `paths:` filter, which keeps
+the whole WORKFLOW RUN from existing for a change it does not match. The check
+names it would report (`Build the release APK`, the two Maestro legs, `A1: the app
+against the real API (no mock)`) are then never reported at all - and a required
+check that is not reported is a PR that can never be merged, forever pending. The
+filter's own comment named the risk ("a PR check set that does not run for it is a
+check set that lies") without fixing it.
+
+- The trigger's `paths:` is gone from `pull_request`; the push trigger keeps it (a
+  post-merge check on main is not a merge gate).
+- A `changes` job diffs the paths with a plain `git diff --name-only` step - no new
+  action, so nothing to SHA-pin and nothing for the licence inventory - fetching
+  the whole history (a shallow clone's base sha is an unknown revision, and the
+  diff then reads as "nothing changed"), falling back to `HEAD~1` for a new branch's
+  forty-zero `before`, and giving a human's nightly or dispatch the whole set.
+- `if:` on build/e2e/a1, so each job names the paths it needs and reports `skipped`
+  instead of not existing. The build job also runs for a flow-only change (the legs
+  download the APK it uploads; the content-hash cache makes that a restore), and the
+  legs gate on the build job's success so they never run without an APK.
+- `scripts/ci/check-e2e-trigger-conditions.mjs` (a step in the Floor guard job)
+  holds every half, with an 8-case test; evidence in
+  `docs/evidence/e2e-job-level-filter/README.md`, which carries the classification
+  proven against ten fabricated path lists (docs only skips everything; the app,
+  a shared package, a manifest, a flow-only, a script-only and a workflow-only change
+  each classify as intended; the API service and the mobile CI are not this
+  workflow's to watch).
+
+**Where this becomes load-bearing:** item 3j, which writes the exact required-checks
+list in FOUNDER_TODO.md. Until the founder's ruleset requires those names, the
+filter was only a minutes question; after it, a check that does not report blocks
+every PR - which is what this item fixes.
+
+**Next in item 3:** 3h (fail the e2e/a1 jobs when `github.run_attempt > 2`, with a
+job-summary line on attempt 2 asking for the justification), then the four 3i PRs in
+order and 3j.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
