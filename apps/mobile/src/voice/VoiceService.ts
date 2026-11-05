@@ -24,6 +24,8 @@ import {
 
 import type { MapViewMode } from '@/maps/viewModes';
 import { publishVoiceCommand } from './commandChannel';
+import { parseVoiceCommand } from './commands';
+import { aLiveListener, type LiveListener } from './streamingStt';
 
 export interface VoiceConfig {
   sttModelPath: string;
@@ -109,6 +111,8 @@ class VoiceService {
   private static instance: VoiceService;
   private sttEngine: SttEngine | null = null;
   private ttsEngine: TtsEngine | null = null;
+  /** The streaming ear (A2): the mic and the recognizer while listening. */
+  private listener: LiveListener | null = null;
   private config: VoiceConfig | null = null;
   private callbacks: VoiceCallbacks | null = null;
   private state: VoiceState = 'idle';
@@ -225,7 +229,7 @@ class VoiceService {
     }
   }
 
-  startListening(): Promise<void> {
+  async startListening(): Promise<void> {
     // BUG-083: the machine is not moved into `listening` while it is speaking.
     // The long press used to be honoured in every state, so a courier pressing
     // the earbud during an answer flipped the state to `listening` while the
@@ -234,23 +238,73 @@ class VoiceService {
     // never true. Barge-in - stop the answer, then listen - is its own
     // feature, and this guard is not it: while speaking, the press is refused
     // and the answer finishes.
-    if (this.state === 'listening' || this.state === 'speaking') return Promise.resolve();
+    if (this.state === 'listening' || this.state === 'speaking') return;
 
+    // A2: `listening` is a claim that the phone is hearing. The streaming
+    // recognizer and the microphone are opened BEFORE the state moves, so the
+    // claim is a fact - and a phone with no model (or no streaming model) is
+    // answered with an error that names what is missing rather than a
+    // listening that captures nothing. That was the audit's own finding: the
+    // state moved first and the STT was a TODO.
+    if (!this.config) {
+      this.setState('error');
+      this.callbacks?.onError(new Error('the voice engine was never initialised'));
+      return;
+    }
+    if (this.listener !== null) {
+      await this.listener.stop();
+      this.listener = null;
+    }
+
+    const start = await aLiveListener({
+      model: { path: this.config.sttModelPath },
+      onTranscript: (transcript) => this.holdTranscript(transcript.text, transcript.final),
+    });
+    if (start.status !== 'ready') {
+      // No recognizer on this phone: the answer names it, and the courier is
+      // never shown a listening that would capture nothing.
+      this.setState('error');
+      this.callbacks?.onError(new Error(start.message));
+      return;
+    }
+    this.listener = start.listener;
     this.setState('listening');
-
-    // TODO: Start STT streaming when sherpa-onnx streaming API is available
-    return Promise.resolve();
   }
 
-  stopListening(): Promise<void> {
-    if (this.state !== 'listening') return Promise.resolve();
+  async stopListening(): Promise<void> {
+    if (this.state !== 'listening') return;
 
+    // The ear is closed first: a sentence that is still being spoken to has
+    // its words read out, and the mic is released before the state moves back
+    // (A2: the capture stops when the courier says so).
+    const listener = this.listener;
+    this.listener = null;
     try {
       this.setState('idle');
+      if (listener !== null) {
+        await listener.stop();
+      }
     } catch (error) {
       this.callbacks?.onError(error as Error);
     }
-    return Promise.resolve();
+  }
+
+  /**
+   * Holds what the recognizer heard, and hands a finished sentence to the app.
+   *
+   * A partial is reported so the courier sees the words as they are heard; a
+   * finished one is parsed into a command, which is the product's own promise
+   * - the assistant answers AND acts (`commands.parseVoiceCommand`).
+   */
+  private holdTranscript(text: string, final: boolean): void {
+    this.callbacks?.onTranscript(text, final);
+    if (!final || text.trim().length === 0) {
+      return;
+    }
+    const command = parseVoiceCommand(text);
+    if (command !== null) {
+      this.emitCommand(command);
+    }
   }
 
   async speak(text: string): Promise<void> {
@@ -349,6 +403,12 @@ class VoiceService {
       if (this.audioPlayer) {
         this.audioPlayer.release();
         this.audioPlayer = null;
+      }
+      // A2: the ear goes with the engines - a service that is shut down while
+      // it was listening must leave no microphone open behind it.
+      if (this.listener) {
+        await this.listener.stop().catch(() => undefined);
+        this.listener = null;
       }
       this.isInitialized = false;
     } catch (error) {
