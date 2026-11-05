@@ -496,6 +496,25 @@ touched one list silently left the other.
 **3i continues in order:** C11 (Node 24) next, then C10 (the every-action digest-pin gate), then
 C14 (dependabot + the cron staging smoke), then 3j.
 
+## The 2026-11-05 audit's CI / INFRA item 3i, finding C11 (BUG-221): Node 24, declared once
+
+The runner's Node was declared in thirteen places (`node-version: 22` across 8 workflows) and
+package.json's `engines.node` said `>=22.0.0` separately, so the runner and the floor could drift
+apart one edit at a time - the same split the setup-uv pin had (BUG-220).
+
+- All thirteen `node-version:` lines now say 24 (the current LTS, what the audit asked for) and
+  `engines.node` is `>=24.0.0`. package.json's diff is that one line; no dependency changed, so no
+  lockfile or licence-inventory change.
+- `scripts/ci/check-node-pin.mjs` (a step in the Floor guard job) holds the rule: one major declared
+  everywhere (the exported `NODE_MAJOR`), matching the engines floor; an empty tree fails rather than
+  passing vacuously. 5-case test. Evidence: `docs/evidence/node-24/README.md` (the red names all
+  thirteen old lines).
+- The bump's behaviour check is this PR's own CI: every job installs Node through a moved line, so a
+  dependency that breaks on 24 fails here, in the open.
+
+**3i continues in order:** C10 (the every-action digest-pin gate) next, then C14 (dependabot + the cron
+staging smoke), then 3j.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:

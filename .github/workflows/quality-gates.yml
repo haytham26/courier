@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: 24
       - name: Check the diff against the floor
         run: node scripts/ci/check-floor.mjs ${{ github.event.pull_request.base.sha || 'origin/main' }}
       # Step 0 (2026-11-02): a PR that turns a `fixed`/`closed` BUGS row back
@@ -160,6 +160,14 @@ jobs:
       # rule for it: every reference is a full 40-hex SHA and all of them AGREE.
       - name: setup-uv is pinned to one sha everywhere (audit 3i / C12)
         run: node scripts/ci/check-setup-uv-pin.mjs
+      # The 2026-11-05 audit's item 3i, finding C11: the workflows declared
+      # node-version in thirteen places and package.json's engines floor could
+      # drift from them one edit at a time. Everything now says Node 24 (the
+      # current LTS), and the gate holds one major declared everywhere plus an
+      # engines floor that matches it - a bump is one PR that moves the
+      # constant, every line and the floor together.
+      - name: Node is one pinned major everywhere (audit 3i / C11)
+        run: node scripts/ci/check-node-pin.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers
@@ -190,7 +198,7 @@ jobs:
           version: 12.14.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
@@ -222,7 +230,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: 24
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 12.14.0
@@ -241,7 +249,7 @@ jobs:
           version: 12.14.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
