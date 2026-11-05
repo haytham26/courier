@@ -54,3 +54,35 @@ describe("the mock day's own facts (queue 4a)", () => {
     expect(answered?.window_end).toBeUndefined();
   });
 });
+
+/**
+ * Queue 4c (the trial's #21, ADR-024): the mock list carries a pickup, so the
+ * E2E day answers the stop's own type - the courier-facing surface is proven
+ * on the emulator the same way queue 4a proved the priority, instead of the
+ * type being thrown away before any screen could read it.
+ */
+/** The stop of the mock list the run itself calls a pickup. */
+function thePickupStop() {
+  return mockStops.find((stop) => stop.type === 'pickup');
+}
+
+describe("the mock day's stop types (queue 4c)", () => {
+  it("answers the stop's own type for the stop the run calls a pickup", () => {
+    const run = e2eDay();
+    const pickup = thePickupStop();
+
+    expect(pickup).toBeDefined();
+    const answered = run.stops.find((stop) => stop.id === pickup?.id);
+    expect(answered?.type).toBe('pickup');
+  });
+
+  it('answers delivery for the stops the run calls deliveries', () => {
+    const run = e2eDay();
+    const deliveries = mockStops.filter((stop) => stop.type === 'delivery');
+
+    expect(deliveries.length).toBeGreaterThan(0);
+    for (const stop of deliveries) {
+      expect(run.stops.find((entry) => entry.id === stop.id)?.type).toBe('delivery');
+    }
+  });
+});

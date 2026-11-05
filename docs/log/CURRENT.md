@@ -1,7 +1,7 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `f9781fb` (PR #191, the navigation
-hand-off). Lead session 14, 2026-11-05.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `1fc952a` (PR #206, queue 4b —
+the failed delivery's reason). Lead session 14, 2026-11-05.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -936,3 +936,31 @@ is BUG-191, and it is fixed in this PR. The courier's own list (six reasons,
 `DeliveryEvent.reason` through the boundary both ways. `.maestro/today-fail.yaml`
 drives it on the emulator. Next in the queue: 4c (stop types), then 4d
 (breaks + the finish point), then the rest.
+
+**Queue 4b's merge ritual and its two E2E root causes (PR #206, merged
+`1fc952a`, head `1557f4d`, tag `archive/feat-trial-failed-reason`, branch
+deleted — ls-remote proof in the PR comments).** The first head failed both
+emulator legs at today-fail.yaml step 006 (`today-fail` below the peek fold —
+the BUG-181 shape; fixed in the flow, 8d60ba6). The second failed at
+"Why did it fail?" because the picker was a child of the bottom sheet's
+ScrollView and centred in the scrolled content on the 320x540 emulator
+(run 42098860803, step-011 hierarchy); fixed in the app — the picker is now a
+full-screen overlay sibling of the sheet with its own scrolling bounded
+content (1557f4d), red-first structural test in todayFailReason.test.tsx.
+Final head 1557f4d: run 42103695949 fully green (14/14 flows both legs,
+today-fail included); the parallel push-event run 42103640280's api-34 leg
+died to the documented BUG-185 remove-task race (the fresh process killed
+10 ms after launch, before any assertion — logcat quoted in the PR), not app
+code. Register after the merge: 190 BUGS rows (open 6 · doing 3 · testing 1
+· fixed 148 · closed 2 · moved 30), 312 PARITY rows.
+
+**Queue 4c in flight on `feat/trial-stop-types` (trial #21, ADR-024's app
+half, BUG-192):** the stop's own type rides the app — `Stop.type`, the
+contract-to-app mapping, the E2E day answering the mock list's own pickup, the
+route row's "Pickup" node, the stop card's "Pickup stop", Today's
+`today-notes-Pickup` chip, and `.maestro/stops.yaml` asserting the word. Main
+merged in (a6431ba, registers taken from main wholesale + BUG-192 re-applied;
+no file deleted, no register shrunk). Next after it: 4d (breaks #12 + finish
+#14, ADR-022's app halves), 4e (spreadsheet import #6, ADR-025), 4f (POD photo
+#16), 4g (the nav hand-off flow #15), then release hygiene and
+D1/B5/A3/§22/P4/P7 to the §6 Definition of Done.

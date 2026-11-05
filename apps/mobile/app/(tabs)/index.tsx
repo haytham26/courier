@@ -25,6 +25,7 @@ import {
   StopPin,
   TopPills,
   useChosen,
+  type NoteChip,
 } from '@/components/chosen';
 import { errorMessage } from '@/lib/errors';
 import { hapticFor } from '@/motion/haptics';
@@ -56,6 +57,13 @@ const TODAY_NOTE_CHIPS = [
   { icon: 'home' as const, tone: 'accent' as const, label: 'Side gate' },
   { icon: 'cube' as const, tone: 'info2' as const, label: 'Shelf B3' },
 ];
+
+/**
+ * Queue 4c (the trial's #21, ADR-024): the chip the next stop's own type adds
+ * when the run calls that stop a pickup. A delivery adds nothing - the run's
+ * own word is the only thing that names the stop.
+ */
+const PICKUP_CHIP: NoteChip = { icon: 'cube', tone: 'info2', label: 'Pickup' };
 
 /** The clock time the run finishes at, as an estimate the courier can trust. */
 const finishTime = (stopsLeft: number): string => {
@@ -477,7 +485,16 @@ export default function TodayScreen() {
                     {nextStop.address}
                   </Text>
                   <View style={styles.chips}>
-                    <NoteChips chips={TODAY_NOTE_CHIPS} testID="today-notes" />
+                    {/* Queue 4c: the next stop's own type rides its card - a
+                        pickup the run gave the stop is chipped as itself. */}
+                    <NoteChips
+                      chips={
+                        nextStop !== null && nextStop.type === 'pickup'
+                          ? [...TODAY_NOTE_CHIPS, PICKUP_CHIP]
+                          : TODAY_NOTE_CHIPS
+                      }
+                      testID="today-notes"
+                    />
                   </View>
                 </View>
                 <Pressable
