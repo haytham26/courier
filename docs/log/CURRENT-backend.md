@@ -253,6 +253,20 @@ The relabelling and its guards:
   it parsed, the correction lands with the address-intelligence slice, and TRIAL_SCOPE row 6 is
   corrected to say so.
 
+## 2026-11-06: the parked BUG-210 row is filed on `eval-honesty-210`, and origin/main is merged in
+
+- The BUG-210 register row (parked at the temp path when the eval-honesty fix landed, because the
+  register edit and the code landed across branches) is now inserted before BUG-211 in
+  `docs/status/BUGS.md` on this branch, commit `11a9e94`. PR #192's branch now carries its own row.
+- The branch predated PR #194's register fixes, so `check-parity --base origin/main` named 9
+  rows as reopened-without-reason (BUG-079, 082-084, 093, 105-108). Fixed the only allowed way:
+  `git merge origin/main` (no rebase, no -X) — one conflict in `docs/status/TRIAL_SCOPE.md` row 6,
+  resolved by hand as main's fuller row PLUS this branch's ADR-026/D8 clause (no theirs/ours).
+  After the merge: 0 reopened, nothing deleted vs origin/main (`--diff-filter=D`), and the
+  docs/status line counts match main except BUGS.md (+2: BUG-210 and BUG-211 rows) and
+  FOUNDER_TODO.md (+1, from main). Pushed as `6ade09d`.
+- Incident note from earlier today stands: a stray `git stash pop` applied another crew's stash and
+  conflicted four foreign files; all restored from HEAD, the two stash entries left in place.
 ## The 2026-11-05 audit's CI / INFRA item 3a (BUG-212): the deploy's rsync keeps the tree
 
 `deploy.yml`'s deploy step ran `rsync -az --delete infra/ services/ packages/
