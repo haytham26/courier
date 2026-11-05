@@ -356,6 +356,38 @@ the paths filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 aft
 four 3i PRs in order (C12 setup-uv SHA, C11 Node-24, C10 digest pins, C14 dependabot + a cron staging
 smoke) and 3j (the required-checks list in FOUNDER_TODO).
 
+## The 2026-11-05 audit's CI / INFRA item 3e (BUG-216): only an exact AVD cache key restores
+
+`android-e2e.yml`'s "Cache the AVD snapshot" step carried
+`restore-keys: avd-<os>-<api>-google-apis-x86_64-`, which restores the newest
+cache whose key starts with that prefix when the exact key misses - so a
+fingerprint miss handed the job an AVD built under a different Maestro version,
+emulator build, system-image revision or emulator-option set. That is BUG-068's
+tiny-device-profile failure again, one line below the comment explaining how
+BUG-068 was fixed.
+
+- The two restore-keys lines are gone (the exact key stays), with a comment
+  recording why, so nobody adds the prefix back for speed.
+- `scripts/ci/check-e2e-avd-restore-keys.mjs` (a step in the Floor guard job)
+  holds the line over every emulator workflow with an AVD cache -
+  `android-e2e-health.yml` included, which has none and is asserted rather than
+  assumed.
+- Evidence: `docs/evidence/e2e-avd-exact-key/README.md` (the red is the block
+  re-attached and the gate naming it).
+
+**The same class elsewhere, deliberately not touched:** `screen-recordings.yml`
+carries four `restore-keys` prefixes (a Playwright browser cache and an AVD
+cache). The audit's item 3e names `android-e2e.yml` only, and BUG-097's own test
+is titled "the recordings cache is content-hashed with a restore-keys", so that
+prefix is a recorded decision, not an oversight. It is logged here as the next
+crew item rather than silently overturned in a PR about a different file - and
+if the lead wants only-exact-keys there too, it is a one-line change plus that
+test's title.
+
+**Next in item 3:** 3f (pin the Android system image), 3g (drop the paths
+filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt
+2), then the four 3i PRs in order and 3j.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
