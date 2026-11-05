@@ -927,3 +927,12 @@ reads them from a server answer; and the route row and the stop's sheet name
 them (the window on the device's own clock). `.maestro/stops.yaml` asserts
 both. Next in the queue: #193's merge, then 4.3 (import, reasons, stop types,
 breaks, finish, POD), then B5/A3/§22.
+
+**Queue 4b landed (trial #17): a failed delivery says why.** The Fail button
+on Today answered the courier's hand with a haptic and wrote nothing — that
+is BUG-191, and it is fixed in this PR. The courier's own list (six reasons,
+`src/runs/failureReasons.ts`), the picker on Today (`today-fail-*`),
+`RunStore.markFailed` as the run store's own write path, and
+`DeliveryEvent.reason` through the boundary both ways. `.maestro/today-fail.yaml`
+drives it on the emulator. Next in the queue: 4c (stop types), then 4d
+(breaks + the finish point), then the rest.
