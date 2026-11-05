@@ -28,8 +28,6 @@ branch that has not been pushed yet, not an open PR.
 and the BUG-060/061/066 investigation histories. This PR restores them from
 `38db9035^1` and keeps every current row (all 186 rows are main's own, byte for byte).
 
-
-
 **Step 0 done (PR on `fix/register-step0-reopen-guard`):** the six stale rows
 (BUG-080/#146, BUG-085/#147, BUG-100/101/162/#155, BUG-103/#161) are `fixed` with their
 PR links — verified merged on origin and the fixes read in the tree (stops.tsx:67-68,
@@ -386,7 +384,6 @@ The queue resumed past all of that on 2026-11-05: #166 merged (38db903), #189
 merged (5d69fac), #191 merged (f9781fb), and #193 (queue 4.2, the reopt surface)
 is the open PR this session.
 
-
 ## Lead session 12, the closing state (2026-11-02): the a1 job's blank first screen is rooted and fixed
 
 **What the device's own dump proved (run 41293886729, the evidence artifact):** no crash
@@ -445,7 +442,6 @@ shared failure (its api-35 leg's five flows are the BUG-161 double-handle bug, w
 - **The numbering:** the highest BUG row across origin/main and every open PR branch is BUG-162; a NEW row starts at BUG-163. DECISIONS is at D61 (D52-D61 were written for C2), so a new decision is D62.
 - **The mutation floor's red on main** (run 41274033506) is the backend's B4 lane — one line per §16.3, not chased here.
 
-
 ## Lead session 12 (2026-11-01): the four open PRs triaged, both reds rooted, the numbering verified
 
 **State at the session's start, verified on origin (§13.1):** `origin/main` at `412d978`. The four open PRs from session 11's handoff, re-checked after main moved:
@@ -468,7 +464,6 @@ shared failure (its api-35 leg's five flows are the BUG-161 double-handle bug, w
 **Where it stands as this commit is pushed (session 12 continues):** #155 MERGED (`45132ef`, archive tag pushed, remote branch deleted — the ls-remote proof is on file). #135's KVM fix is pushed (`46341bd`), its E2E is running; **do not push to that branch while the run is in flight**. #146 (`1f053eb`) and #147 (`3e3c397`) have taken main and are re-running. **BUG-103 is fixed on `fix/c1-bug-103-licenses-gate`** (an unanswered `pnpm view` fails the gate instead of passing as a third state, red-first, and the 31-`unknown` inventory now carries the registry's real answers — all MIT), and the branch's E2E/gate run is next. The numbering still stands: the highest is **BUG-162**, so a NEW row starts at **BUG-163**.
 
 **Later in session 12, on `fix/c1-lows-batch` (the eight lows as one batch):** #146 and #147 MERGED (`5a83427`, `d264659`, both archived and deleted with the ls-remote proof). #161 (BUG-103) MERGED (`7e84b6a`). #135's a1 job got past the emulator on the KVM fix (`Boot completed in 45604 ms`, run 41261701192) and surfaced the next layer — the flow runner installed an APK path that exists nowhere (this job builds its own under `apps/mobile/android/`, unlike the legs, which install the build job's artifact at `apk/`) — fixed in `run-a1.sh` at `8f64c22`, its run is the next step. The eight lows (BUG-082, 083, 084, 093, 105, 106, 107, 108) are each fixed at the root with a red-first test on this branch, mobile 584/584 and the scripts suite 142 pass / 0 fail; BUG-106's drill was proven both ways against Docker (dead with `extension "postgis" is not available` on the old image, green on production's `postgis/postgis:16-3.6`). **BUG-081 is already fixed on #135's branch** — `app/(tabs)/index.tsx` no longer keeps `doneIds/skippedIds/failedIds`; the marks go through `run.markDelivered`, which records the delivery into the outbox — so its row closes with #135, not here.
-
 
 ## Lead session 11 (2026-11-01): the CI mediums, the gate that found a second one, and the app-side root cause of five red flows
 
@@ -509,9 +504,6 @@ shared failure (its api-35 leg's five flows are the BUG-161 double-handle bug, w
 - **An `eslint-disable-next-line` for a rule that is not configured is an error**, not a no-op — and a suppression would be a floor-guard finding anyway.
 
 **What is left, in order:** A1 slice 4's green run on the final head of #135 (watch the run, do not push while it is in flight); then A4 (the build check that fails a release build on a reachable mock — **BUG-079's row says its fix lands with that build check**, so it closes in that PR), A2, C2, A6, MASTER 22's app side, the remaining mediums (BUG-081 — but slice 3 already rewired Today to the run store on #135, so check the row against that branch before writing a red test), the lows as one batch, BUG-102 and BUG-096 left to the backend, and the rest of the audit and MASTER to the 6 Definition of Done.
-
-
-
 
 ## Lead session 9 (2026-10-31): step 0's register, #52's three device legs, and A1 slice 3's screens
 
@@ -557,7 +549,6 @@ shared failure (its api-35 leg's five flows are the BUG-161 double-handle bug, w
 - **A hook's default source must not import the production store.** The `better-auth` ESM chain breaks every screen suite that pulls it in transitively.
 - **The plural of "delivery" is "deliveries"**, and the app's own words are asserted by a test that caught the "deliverys" draft.
 
-
 ## Lead session 8 (2026-10-30): PR #49 merges, BUG-113/114 land, and C1 starts
 
 **Merged this session, with the full ritual (merge commit → archive tag `archive/<branch>` → remote branch deleted, `git ls-remote --heads origin <branch>` printing nothing):**
@@ -598,7 +589,6 @@ Main ends at **BUG-114** (BUG-113 is PR #52's, BUG-114 is #49's; DECISIONS ends 
 - **A gate that a PR adds can fail on the register that same PR just wrote.** #58's own `check-parity.mjs` rejected #58's own prose statuses. Run the new gate against the new register before pushing.
 - **A row whose Fix cell holds a pipe inside an inline code span splits into extra cells** and its status column moves out of count. `|` escapes it; `BUG-064` in BUGS.md is the worked example.
 - **A register split by a blank line stops being one table**: the gate then reads each run's first line as a header, and the rows in it stop being counted.
-
 
 ## Lead session 8b (2026-10-30/31): C1's five high findings land, A1 slice 3's seams land, and #52's last E2E leg
 

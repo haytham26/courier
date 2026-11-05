@@ -29,7 +29,7 @@ import { inMemoryMarkStore } from '@/run/inMemoryMarkStore';
 import { noDayStore, useRunDay } from '@/run/useRunDay';
 import type { StoreSource } from '@/run/useRunDay';
 import type { RunDay } from '@/run/useRunDay';
-import type { MarkStore, RunDayStore } from '@/run/types';
+import type { MarkStore, RouteOrderEntry, RunDayStore } from '@/run/types';
 
 import type { Stop } from './stops';
 
@@ -61,6 +61,11 @@ export interface RunState {
   day: RunDay;
   /** Re-reads the day from the network, when the courier asks for it. */
   refreshDay(): Promise<void>;
+  /**
+   * Applies the order the server's solver worked out to the day the run
+   * holds, and answers whether the run now carries it (queue 4.2).
+   */
+  applyRouteOrder(order: readonly RouteOrderEntry[]): Promise<boolean>;
 }
 
 const RunContext = createContext<RunState | undefined>(undefined);
@@ -175,9 +180,25 @@ export const RunProvider = ({
     }
   }, [dayStore]);
 
+  /**
+   * Applies the solver's order through the day's own write path, and the day
+   * is re-read behind it so every screen follows (queue 4.2).
+   */
+  const applyRouteOrder = useCallback(
+    async (order: readonly RouteOrderEntry[]) => {
+      try {
+        return await day.applyRouteOrder(order);
+      } catch (error) {
+        console.warn(`run: the solver\u2019s order could not be applied: ${errorMessage(error)}`);
+        return false;
+      }
+    },
+    [day],
+  );
+
   const value = useMemo(
-    () => ({ delivered, isDelivered, markDelivered, undoDelivered, day, refreshDay }),
-    [delivered, isDelivered, markDelivered, undoDelivered, day, refreshDay],
+    () => ({ delivered, isDelivered, markDelivered, undoDelivered, day, refreshDay, applyRouteOrder }),
+    [delivered, isDelivered, markDelivered, undoDelivered, day, refreshDay, applyRouteOrder],
   );
 
   return <RunContext.Provider value={value}>{children}</RunContext.Provider>;
