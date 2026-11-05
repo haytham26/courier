@@ -161,6 +161,46 @@ function RouteScreen() {
     [],
   );
 
+  /**
+   * Queue 4d (the trial's #12 and #14, ADR-022's app half): the run's own
+   * break window and finish point, as their own rows under the stops.
+   *
+   * Each is its own fact with its own node - "Break" with its device-clock
+   * times, and where the day finishes - so a flow asserts each as itself. A
+   * run that carries neither shows neither row: there is nothing to name.
+   */
+  const extras = useMemo((): TimelineItem[] => {
+    const items: TimelineItem[] = [];
+    const breakWindow = run.day.breakWindow;
+    if (breakWindow !== null) {
+      items.push({
+        id: 'break',
+        street: 'Break',
+        window: `${clockOf(breakWindow.start)} - ${clockOf(breakWindow.end)}`,
+        state: 'later',
+        icon: 'cafe-outline',
+        testID: 'stops-break',
+      });
+    }
+    const finish = run.day.finish;
+    const depot = run.day.depot;
+    if (finish !== null && depot !== null) {
+      // The finish point is the depot when the two are the same place (a
+      // round trip finishes where it started); anything else is the day's
+      // own drop-off point.
+      const atDepot =
+        Math.abs(finish.lat - depot.lat) < 0.002 && Math.abs(finish.lon - depot.lon) < 0.002;
+      items.push({
+        id: 'finish',
+        street: atDepot ? 'Finish at the depot' : 'Finish at the drop-off point',
+        state: 'later',
+        icon: 'flag-outline',
+        testID: 'stops-finish',
+      });
+    }
+    return items;
+  }, [run.day.breakWindow, run.day.finish, run.day.depot]);
+
   const mapStyle = useMemo(
     () =>
       getCourierStyle('day', tileSource.kind === 'none' ? null : tileSource.url, glyphsUrl, {
@@ -382,6 +422,10 @@ function RouteScreen() {
               })}
               testID="stops-timeline"
             />          )}
+          {/* Queue 4d (ADR-022's app half): the run's own break and finish,
+              as their own rows under the stops, in every segment - they are
+              the run's own facts, not a stop's. */}
+          {extras.length === 0 ? null : <Timeline items={extras} testID="stops-extras" />}
         </ScrollView>
       </GlassSurface>
 
