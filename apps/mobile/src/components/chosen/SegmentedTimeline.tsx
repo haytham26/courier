@@ -91,6 +91,12 @@ export interface TimelineItem {
    * two facts are read apart and each is itself.
    */
   window?: string;
+  /**
+   * What the stop is - the word "Pickup" for a stop the run calls a pickup
+   * (queue 4c, ADR-024). Its own node, because it is its own fact: a delivery
+   * shows nothing.
+   */
+  kind?: string;
   /** Opens the stop, when the screen gives the row a control. */
   onPress?: () => void;
   /** The row's own testID, when a flow names it exactly. */
@@ -173,6 +179,21 @@ export const Timeline = ({ items, testID }: TimelineProps) => {
                   maxFontSizeMultiplier={1.5}
                 >
                   {item.window}
+                </Text>
+              ) : null}
+              {/* Queue 4c: the stop's own type - a pickup says the word, a
+                  delivery says nothing. Its own node, like the priority. */}
+              {item.kind ? (
+                <Text
+                  style={{
+                    fontSize: t.typography.secondary.size,
+                    lineHeight: t.typography.secondary.lineHeight,
+                    fontWeight: t.typography.secondary.weight,
+                    color: t.colors.accent,
+                  }}
+                  maxFontSizeMultiplier={1.5}
+                >
+                  {item.kind}
                 </Text>
               ) : null}
             </View>

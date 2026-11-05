@@ -45,7 +45,7 @@ same pass (PR #168).
 | 18 | End-of-day summary | Built (mock numbers) | #30 (10 Summary) and `.maestro/summary.yaml`; the earnings ledger is **D60** (P5 slice 13) |
 | 19 | Offline: the shift carries on with no signal | Built (sync + event log) | PR #3 (the offline event log), #108 (the cached run store), #155's neighbours (the outbox's bounds, BUG-093); the offline **map** pack is **D61** (P3, Courier Maps) |
 | 20 | Dark mode | Built | `src/providers/ThemeProvider.tsx` + the tokens (D16); `.maestro/driving-night.yaml`; `packages/design-tokens/src/__tests__/contrast.test.ts` (all three themes) |
-| 21 | Built (server), app surface queued (4.3) | In the trial — scheduled | ADR-024 and the backend's D59 half put the stop's `type` on the contract as a required field (seeded on main); **D62** (supersedes D59): the courier-facing stop types ride the address squad's door memory as queue step 4.3c, one slice, not two. |
+| 21 | Built (server), app read-out queued (4.3) | Built (server), app read-out in the trial | ADR-024 and the backend's D59 half put the stop's `type` on the contract as a required field (PR #179, seeded on main); **D62** (supersedes D59): this PR on `feat/trial-stop-types` is queue step 4.3c — the app's own `Stop` carries the type, the contract-to-app mapping reads it (`useRunDay`'s `toStop`), the route row and the stop card name "Pickup" as their own node, Today chips the next stop's own type, and `.maestro/stops.yaml` proves the word on the emulator (BUG-192). The preset model per address (the door memory, ADR-012) stays the address squad's half. |
 
 ## What the trial deliberately leaves out, and why
 

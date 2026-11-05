@@ -22,9 +22,10 @@ import { act, render, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { useRunDay } from '../useRunDay';
+import type { RunSnapshot } from '../types';
 
 /** The day the API would answer with: a seeded run, two stops, in its order. */
-const mockSeededDay = {
+const mockSeededDay: RunSnapshot = {
   run: {
     id: 'run-1',
     shift_id: 'shift-1',
@@ -281,5 +282,60 @@ describe('the day the screens read (A1 slice 3)', () => {
     expect(applied).toBe(false);
     expect(getByTestId('order').props.children).toBe('stop-1,stop-2');
     expect(mockLoad).toHaveBeenCalledTimes(1);
+  });
+
+  // Queue 4c (the trial's #21, ADR-024): the stop's own type rides the day from
+  // the contract onto the stop the screens read. The contract requires the
+  // field, and a stop the contract left without one answers delivery - the
+  // schema's own default, which is the honest answer for an old row.
+  it('carries the contract\u2019s stop type onto the stop the screens read', async () => {
+    const withPickup = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        run: mockSeededDay.run,
+        stops: [
+          { ...mockSeededDay.stops[0], type: 'pickup' as const },
+          mockSeededDay.stops[1],
+        ],
+      },
+    };
+    mockLoad.mockResolvedValue(withPickup);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <Text testID="types">
+          {day.stops.map((stop) => `${stop.id}:${stop.type}`).join(',')}
+        </Text>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() =>
+      expect(getByTestId('types').props.children).toBe('stop-1:pickup,stop-2:delivery'),
+    );
+  });
+
+  it('answers delivery for a stop the contract left without a type', async () => {
+    const withoutType = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        run: mockSeededDay.run,
+        stops: [{ ...mockSeededDay.stops[0], type: undefined }],
+      },
+    };
+    mockLoad.mockResolvedValue(withoutType);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return <Text testID="types">{day.stops.map((stop) => `${stop.id}:${stop.type}`).join(',')}</Text>;
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('types').props.children).toBe('stop-1:delivery'));
   });
 });

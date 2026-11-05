@@ -543,3 +543,46 @@ describe("the route screen's priority and windows (queue 4a)", () => {
     expect(screen.getByText('Priority stop')).toBeTruthy();
   });
 });
+
+/**
+ * Queue 4c (the trial's #21, ADR-024): the stop's own type on the courier's
+ * screen. The E2E day carries one pickup (the mock list's stop 3), so its row
+ * and its sheet say the word, and a delivery's row and sheet do not.
+ */
+describe("the route screen's stop types (queue 4c)", () => {
+  it('shows the type the run itself gives the stop, as its own node on the row', async () => {
+    await renderWithRun([]);
+
+    // Stop 3 is the run's own pickup: its row says so, and the rows of the
+    // deliveries the run did not call pickups do not. The type is its own
+    // node, because it is its own fact.
+    fireEvent.press(screen.getByTestId('stops-segment-to-go'));
+    await waitFor(() => {
+      expect(screen.getByTestId('stop-3')).toBeTruthy();
+    });
+    expect(within(screen.getByTestId('stop-3')).getByText('Pickup')).toBeTruthy();
+    expect(within(screen.getByTestId('stop-2')).queryByText('Pickup')).toBeNull();
+  });
+
+  it('names the stop\u2019s type when the detail opens', async () => {
+    await renderWithRun([]);
+
+    fireEvent.press(screen.getByTestId('stop-3'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('stop-detail-sheet')).toBeTruthy();
+    });
+    expect(screen.getByText('Pickup stop')).toBeTruthy();
+  });
+
+  it('leaves a delivery stop without the pickup word on its sheet', async () => {
+    await renderWithRun([]);
+
+    fireEvent.press(screen.getByTestId('stop-2'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('stop-detail-sheet')).toBeTruthy();
+    });
+    expect(screen.queryByText('Pickup stop')).toBeNull();
+  });
+});
