@@ -12,7 +12,7 @@
  * the run's marks and the segments, and none of that needs a device.
  */
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import RouteTab from '../stops';
@@ -168,5 +168,81 @@ describe('the route screen\'s segments (BUG-080)', () => {
     await waitFor(() => {
       expect(screen.getByText(expected)).toBeTruthy();
     });
+  });
+});
+
+/**
+ * Queue 4a: the run's own priority and the run's own time window, on the
+ * courier's screen.
+ *
+ * The audit's finding: the E2E day threw the run's own priority away (it was
+ * hardcoded `false` in `dayForThisBuild`), so a courier-facing priority
+ * surface could not be proven on the emulator. The day now reads the run's own
+ * word, and the route row shows it: the priority a stop carries and the window
+ * the run gave it - the times a courier reads, not the contract's own stamps.
+ */
+/** The run's own window for stop 2, as the app's screens read it. */
+const theWindow = { start: '2026-10-31T09:00:00.000Z', end: '2026-10-31T11:00:00.000Z' };
+
+/** One of the window's moments as the courier's own clock reads it. */
+const clock = (stamp: string): string => {
+  const at = new Date(stamp);
+  return `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+};
+
+describe("the route screen's priority and windows (queue 4a)", () => {
+  it('shows the priority the run itself gives the stop', async () => {
+    await renderWithRun([]);
+
+    // The run's own day: stop 2 is the priority one, so its row says so and
+    // the rows of the stops the run did not call priority do not.
+    fireEvent.press(screen.getByTestId('stops-segment-to-go'));
+    await waitFor(() => {
+      expect(screen.getByTestId('stop-2')).toBeTruthy();
+    });
+    expect(within(screen.getByTestId('stop-2')).getByText(/^Priority ·/)).toBeTruthy();
+    expect(within(screen.getByTestId('stop-4')).queryByText(/^Priority/)).toBeNull();
+  });
+
+  it('shows the time window the run itself gives the stop', async () => {
+    await renderWithRun([]);
+
+    // Stop 2's own window, read on the device's own clock: a window is a local
+    // time, so the test derives the times the same way the row does rather than
+    // pinning a UTC stamp. The row carries the priority and the window on one
+    // line ("Priority · 22:00 - 00:00"), so the window is the suffix.
+    const expected = new RegExp(`${clock(theWindow.start)} - ${clock(theWindow.end)}$`);
+    fireEvent.press(screen.getByTestId('stops-segment-to-go'));
+    await waitFor(() => {
+      expect(screen.getByTestId('stop-2')).toBeTruthy();
+    });
+    expect(within(screen.getByTestId('stop-2')).getByText(expected)).toBeTruthy();
+  });
+
+  it('leaves a stop the run gave no window without one', async () => {
+    await renderWithRun([]);
+
+    fireEvent.press(screen.getByTestId('stops-segment-to-go'));
+    await waitFor(() => {
+      expect(screen.getByTestId('stop-4')).toBeTruthy();
+    });
+    expect(within(screen.getByTestId('stop-4')).queryByText(/\d{2}:\d{2} - \d{2}:\d{2}/)).toBeNull();
+    expect(within(screen.getByTestId('stop-4')).queryByText(/^Priority/)).toBeNull();
+  });
+
+  it('names the stop\u2019s own window and priority when the detail opens', async () => {
+    await renderWithRun([]);
+
+    fireEvent.press(screen.getByTestId('stop-2'));
+
+    // The sheet the row opens carries the run's own words for that stop: the
+    // window as a sentence, and the priority as a noun a courier reads.
+    const opens = clock(theWindow.start);
+    const closes = clock(theWindow.end);
+    await waitFor(() => {
+      expect(screen.getByTestId('stop-detail-sheet')).toBeTruthy();
+    });
+    expect(screen.getByText(`Its window opens at ${opens} and closes at ${closes}`)).toBeTruthy();
+    expect(screen.getByText('Priority stop')).toBeTruthy();
   });
 });

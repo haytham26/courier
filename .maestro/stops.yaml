@@ -29,4 +29,17 @@ name: The stops list opens a stop
 # Maestro matches the text exactly, so the assertion is the whole address.
 - assertVisible: "45 Papanui Road"
 - assertVisible: "Merivale"
+# Queue 4a: the run's own word for this stop (trial #11 and #13). The E2E
+# build's day is the run's own, so the priority and the time window the run
+# gave stop 2 are on the row and on the sheet. The times are the device's own
+# clock, so the assertions are regexes over the two HH:mm's (the optimise flow
+# proved a regex is matched whole, hence the .*).
+- assertVisible: "Priority stop"
+- assertVisible: "/.*Its window opens at \\d{2}:\\d{2} and closes at \\d{2}:\\d{2}.*/"
 - takeScreenshot: "stop-detail"
+# And the row itself carries the run's own word before the sheet opens, so the
+# courier reads the priority and the window on the list and not only here.
+- tapOn:
+    id: "stops-scrim"
+- assertVisible: "/.*Priority · \\d{2}:\\d{2} - \\d{2}:\\d{2}.*/"
+- takeScreenshot: "stop-detail-priority"

@@ -79,6 +79,12 @@ export interface TimelineItem {
   time?: string;
   state?: 'done' | 'later' | 'next';
   icon?: React.ComponentProps<typeof Ionicons>['name'];
+  /**
+   * The run's own word for this stop, under the street: a priority, or the
+   * time window the run gave it (queue 4a). The row names what the run owns,
+   * and a stop the run says nothing extra about carries nothing.
+   */
+  note?: string;
   /** Opens the stop, when the screen gives the row a control. */
   onPress?: () => void;
   /** The row's own testID, when a flow names it exactly. */
@@ -132,6 +138,23 @@ export const Timeline = ({ items, testID }: TimelineProps) => {
                   {item.time}
                 </Text>
               ) : null}
+              {/* Queue 4a: the run's own word for this stop - the priority, or
+                  the time window the run gave it. The row names what the run
+                  owns, and a stop the run says nothing extra about shows
+                  nothing. */}
+              {item.note ? (
+                <Text
+                  style={{
+                    fontSize: t.typography.secondary.size,
+                    lineHeight: t.typography.secondary.lineHeight,
+                    fontWeight: t.typography.secondary.weight,
+                    color: t.colors.accent,
+                  }}
+                  maxFontSizeMultiplier={1.5}
+                >
+                  {item.note}
+                </Text>
+              ) : null}
             </View>
           </>
         );
@@ -140,7 +163,7 @@ export const Timeline = ({ items, testID }: TimelineProps) => {
           <View
             key={item.id}
             accessible
-            accessibilityLabel={`${item.street}${item.time ? `, ${item.time}` : ''}${item.state ? `, ${item.state}` : ''}`}
+            accessibilityLabel={`${item.street}${item.note ? `, ${item.note}` : ''}${item.time ? `, ${item.time}` : ''}${item.state ? `, ${item.state}` : ''}`}
             testID={rowTestID}
             style={rowStyle}
           >
@@ -151,7 +174,7 @@ export const Timeline = ({ items, testID }: TimelineProps) => {
             key={item.id}
             accessible
             role="button"
-            accessibilityLabel={`${item.street}${item.time ? `, ${item.time}` : ''}${item.state ? `, ${item.state}` : ''}`}
+            accessibilityLabel={`${item.street}${item.note ? `, ${item.note}` : ''}${item.time ? `, ${item.time}` : ''}${item.state ? `, ${item.state}` : ''}`}
             accessibilityHint="Opens the stop"
             onPress={item.onPress}
             testID={rowTestID}

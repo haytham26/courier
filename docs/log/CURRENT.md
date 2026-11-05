@@ -929,3 +929,11 @@ Open PR on origin: **#193** (`feat/reopt-surface`, queue 4.2). The register's
 truth for the next session is in the header above: 312 PARITY rows, 187 BUGS
 rows, and the item-2 corrections (BUG-058 filed, BUG-065's renumber recorded,
 BUG-079/082/083/084/093/105..108/109/060 marked fixed with their PRs).
+
+**Queue 4a landed (trial #11 and #13): the run's own priority and time window
+reach the courier's screen.** The app's `Stop` carries `priority` and a
+`window`; the E2E day answers them in the contract's own fields; `toStop`
+reads them from a server answer; and the route row and the stop's sheet name
+them (the window on the device's own clock). `.maestro/stops.yaml` asserts
+both. Next in the queue: #193's merge, then 4.3 (import, reasons, stop types,
+breaks, finish, POD), then B5/A3/§22.

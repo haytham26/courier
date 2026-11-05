@@ -49,6 +49,19 @@ const SEGMENTS = [
 type SegmentKey = (typeof SEGMENTS)[number]['key'];
 
 /**
+ * One moment the run stamped, as the courier reads it: the device's own clock,
+ * because a window "09:00 to 11:00" is a local time and the contract's stamps
+ * are UTC.
+ */
+const clockOf = (stamp: string): string => {
+  const at = new Date(stamp);
+  if (Number.isNaN(at.getTime())) {
+    return stamp;
+  }
+  return `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+};
+
+/**
  * Which segment a stop's status sits in.
  *
  * The run decides, not the list (BUG-080, the C1 audit's medium finding): a
@@ -106,6 +119,28 @@ function RouteScreen() {
   const shown = useMemo(
     () => stops.filter((stop) => segmentOf(stop, run) === segment),
     [segment, marksCount, run, stops],
+  );
+
+  /**
+   * The run's own word for a stop, under its street (queue 4a).
+   *
+   * The run owns the priority and it owns the time window: a courier reads
+   * both, and a stop the run says nothing extra about shows nothing. The times
+   * are the device's own clock, because the run's window is stamped in UTC and
+   * "09:00 - 11:00" is what the courier hears.
+   */
+  const noteOf = useCallback(
+    (stop: Stop): string | undefined => {
+      const window = stop.window;
+      if (stop.priority && window !== undefined) {
+        return `Priority · ${clockOf(window.start)} - ${clockOf(window.end)}`;
+      }
+      if (stop.priority) {
+        return 'Priority';
+      }
+      return window === undefined ? undefined : `${clockOf(window.start)} - ${clockOf(window.end)}`;
+    },
+    [],
   );
 
   const mapStyle = useMemo(
@@ -195,6 +230,9 @@ function RouteScreen() {
                   time: inDone ? minuteOf(stop.id) : undefined,
                   state,
                   icon: inDone ? 'checkmark-circle' : 'ellipse-outline',
+                  // Queue 4a: the run's own word for the stop — the priority
+                  // and the window the run gave it.
+                  note: inDone ? undefined : noteOf(stop),
                   onPress: () => setSelected(stop),
                   // The Maestro contract: a row is `stop-<id>`.
                   testID: `stop-${stop.id}`,
@@ -219,6 +257,16 @@ function RouteScreen() {
             <View style={styles.detailHeader}>
               <Text style={[styles.detailTitle, { color: t.colors.label }]}>{selected.address}</Text>
               <Text style={[styles.detailSuburb, { color: t.colors.secondaryLabel }]}>{selected.suburb}</Text>
+              {/* Queue 4a: the run's own words for this stop — the window it
+                  gave it, and whether the run calls it a priority one. */}
+              {selected.window === undefined ? null : (
+                <Text style={[styles.detailSuburb, { color: t.colors.secondaryLabel }]}>
+                  {`Its window opens at ${clockOf(selected.window.start)} and closes at ${clockOf(selected.window.end)}`}
+                </Text>
+              )}
+              {selected.priority ? (
+                <Text style={[styles.detailPriority, { color: t.colors.accent }]}>Priority stop</Text>
+              ) : null}
             </View>
             <Pressable
               accessible
@@ -330,6 +378,13 @@ const styles = StyleSheet.create({
   detailSuburb: {
     fontSize: typography.body.size,
     lineHeight: typography.body.lineHeight,
+  },
+  // Queue 4a: the run's own word, in the accent, so a priority stop reads as
+  // one wherever a courier sees it.
+  detailPriority: {
+    fontSize: typography.chipLabel?.size ?? typography.body.size,
+    lineHeight: typography.chipLabel?.lineHeight ?? typography.body.lineHeight,
+    fontWeight: '600',
   },
   detailAction: {
     height: spacing.space48,
