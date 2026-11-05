@@ -10,9 +10,9 @@
 //   3. the exceptions table of `docs/plan/CONSTRAINTS.md`, which must carry a
 //      row for every W-id the numbered comments cite.
 //
-// The floor's no-suppressions check (check-floor.mjs) only sees `nosemgrep`
-// comments, so without this gate an `--exclude-rule` with no written reason
-// would be a suppression by another name.
+// The floor's no-suppressions check (check-floor.mjs) only sees inline
+// Semgrep suppression comments, so without this gate an `--exclude-rule` with
+// no written reason would be a suppression by another name.
 //
 //   node scripts/ci/check-semgrep-exclusions.mjs [repo-root]
 import { existsSync, readFileSync } from 'node:fs';

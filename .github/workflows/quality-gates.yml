@@ -117,8 +117,8 @@ jobs:
       # BUG-226: every --exclude-rule of the Semgrep scan must be written down -
       # a rule id in .semgrepignore with a numbered reason, and a W-row in the
       # exceptions table of docs/plan/CONSTRAINTS.md. An accepted finding with no
-      # written reason is a suppression by another name, and the floor's
-      # no-suppressions check only sees nosemgrep comments.
+      # written reason is a suppression by another name (the floor's
+      # no-suppressions check only sees inline Semgrep suppression comments).
       - name: Every Semgrep exclusion is written down (BUG-226)
         run: node scripts/ci/check-semgrep-exclusions.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
