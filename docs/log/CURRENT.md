@@ -369,6 +369,12 @@ closed 2, moved 30); PARITY 312 (Have 30).
   branch is deleted); `git ls-remote --tags origin` carries
   `refs/tags/archive/feat-a1-slice-3-run-store^{}` = `50ed121` (the final
   head, archived).
+- On `feat/reopt-surface`, the courier's optimise note is now two nodes: the
+  sentence ("The server resequenced the run.") and the solver's own delta,
+  written apart so a courier reads the words first and the number after them,
+  and asserted exactly by `.maestro/a1/optimise.yaml`. Two runs (41968354368 and
+  41984026086) failed the earlier whole-line assert with the note on the
+  screen — the Maestro lesson that made the app split them.
 - On main, `apps/mobile/app/(tabs)/index.tsx` and `apps/mobile/app/driving.tsx`
   read the run through `useRun()` — `mockStops` is gone from both.
 - A4 has landed on main as PR #189 (5d69fac): `check-mock-reach.mjs`
@@ -925,7 +931,49 @@ Merged on main: #135 (2382f68), #166 (38db903), #189 (5d69fac), #191 (f9781fb)
 and the ritual docs PRs. BUG-081 is verified solved by #135 (its test is green
 on main).
 
+Open, awaiting green:
+- **#189 (A4)** on `feat/a4-no-mock-stops` (final head `b9c73c2`): every
+  check green on `033e71e` (run 41832854524) and again in flight on the
+  merged head (41839401508). The mock list is reachable only through the two
+  E2E seams; BUG-079 closed.
+- **#191 (queue 4.1, the navigation hand-off)** on `feat/nav-handoff`
+  (`1fcec93`): every check green except the api-35 leg, which twice hit the
+  runner's emulator boot flake (its one re-run is the playbook's allowance;
+  the same APK passes both legs on the A4 and #166 branches).
+
+Next in the queue: B5 (Maestro video), A3 (the recorder), A2 (on-device
+voice) and §22's app half, then the trial features' remaining app surfaces
+(re-optimise / time windows / priority, import, failed reasons, stop types,
+breaks and finish).
+
+**Queue 4.2 on `feat/reopt-surface` (the audit's findings all closed, 2026-11-05).**
+The reopt surface is complete on the device as well as in the boundary:
+
+- **The solver's answer is applied.** `RunStore.applyRouteOrder` writes the
+  server's own order through the run store's one write path (an order that does
+  not cover the day's own stops exactly is refused - a half order would take a
+  stop off a courier's day), the day is re-read behind the write so every screen
+  follows, and the courier is told the day changed only after the phone carries
+  it. Why the answer and not a refresh: the server stores the re-planned ROUTE,
+  not the stops' own `seq`, so `getRun`/`getStops` answers the order the phone
+  already had. (BUG-190.)
+- **BUG-189 is closed.** The run's own id is the request's subject:
+  `reoptRoute('')` refuses before any fetch, the control is not answerable
+  while there is no day behind it, and a refusal that never reached the server
+  is named by the outbox instead of retried in silence.
+- **The outbox's classification of a call that never reached the server** now
+  says so on the console, so a defect cannot be read as a radio problem.
+- **The boundary's shape guard** refuses a 200 that is not the contract's own
+  answer (`finish_delta_s` any finite number, the stops the solver's own order),
+  and its fixture is the contract's own shape.
+- **The a1 job runs `.maestro/a1/optimise.yaml`** between the online half and
+  the network going away, proving the run the server holds is the order the
+  phone then carries.
+
+Register: 188 bug rows (open 15, doing 3, testing 3, fixed 135, closed 2, moved
+30); PARITY 312 (Have 30).
+
 Open PR on origin: **#193** (`feat/reopt-surface`, queue 4.2). The register's
 truth for the next session is in the header above: 312 PARITY rows, 187 BUGS
 rows, and the item-2 corrections (BUG-058 filed, BUG-065's renumber recorded,
-BUG-079/082/083/084/093/105..108/109/060 marked fixed with their PRs).
+BUG-079/082/083/084/093/105..108/109/060 marked fixed with their PRs).

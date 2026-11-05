@@ -98,4 +98,23 @@ export interface RunDayStore extends MarkStore {
   load(): Promise<RunLoad>;
   /** The day, fresh: the network is always asked. */
   refresh(): Promise<RunLoad>;
+  /**
+   * Applies the order the server's solver worked out to the day the phone
+   * holds (queue 4.2), and answers whether it could.
+   *
+   * The server stores the plan and not the stops' own `seq`, so the reopt's
+   * answer is the only place a new order exists: the phone applies it to its
+   * own copy, through this store's own write path, so every screen that reads
+   * the day reads the order the courier now drives.
+   */
+  applyRouteOrder(order: readonly RouteOrderEntry[]): Promise<boolean>;
+}
+
+/**
+ * One stop of the order the server's solver worked out, in the app's own
+ * words: the stop the run knows, and its place in the new order.
+ */
+export interface RouteOrderEntry {
+  stopId: string;
+  sequence: number;
 }
