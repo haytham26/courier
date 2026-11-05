@@ -23,7 +23,7 @@
  * pressing Optimise says so in one line rather than reordering a route it
  * cannot. The record is in the evidence sheet; the button is never faked.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Camera, Map as MapView, Marker } from '@maplibre/maplibre-react-native';
@@ -32,6 +32,7 @@ import { ChosenProvider, GlassSurface, Segmented, StopPin, Timeline, useChosen }
 import type { TimelineItem } from '@/components/chosen';
 import { errorMessage } from '@/lib/errors';
 import { CourierApiClient } from '@/lib/api-client';
+import type { RouteOrderEntry } from '@/run/types';
 import { radii, spacing, typography } from '@courier/design-tokens/chosen';
 import { DRIVE_ORIGIN_LNGLAT } from '@/maps/drive';
 import { type Stop } from '@/maps/stops';
@@ -85,6 +86,15 @@ function RouteScreen() {
   const [segment, setSegment] = useState<SegmentKey>('to-go');
   const [selected, setSelected] = useState<Stop | null>(null);
   const [optimiseNote, setOptimiseNote] = useState<string | null>(null);
+  // One ask at a time: a second press while the solver is working would race
+  // two answers into one note.
+  const [optimising, setOptimising] = useState(false);
+  // The screen's own lifetime: a note the courier has already navigated away
+  // from must not be written, which React names as one.
+  const aliveRef = useRef(true);
+  useEffect(() => () => {
+    aliveRef.current = false;
+  }, []);
 
   // The minute a delivered stop landed: the run's own event, never a copy.
   const minuteOf = useCallback(
@@ -125,24 +135,49 @@ function RouteScreen() {
   );
 
   const handleOptimise = useCallback(() => {
-    hapticFor('confirm');
     // The trial's queue 4.2: the solver runs on the server
     // (`POST /runs/{run_id}/route:reopt`), so the order the courier drives is
     // the order the server worked out - never a phone's own guess at one. The
     // stops the courier has not driven yet are the ones the solver re-places.
+    //
+    // BUG-189: the run's own id is the request's subject, and a press before
+    // the day has been read is a press about no run. The boundary refuses such
+    // a call itself (see ApiOutcome 'refused'); the screen also answers here
+    // rather than asking a question with no subject.
+    const runId = run.day.runId;
+    if (runId === null || runId.trim().length === 0) {
+      setOptimiseNote(
+        'The day is still being read from the server, so there is no run to reorder yet.',
+      );
+      return;
+    }
+    // A second press while the first is in flight would ask the solver twice
+    // for the same day and race two answers into one note. One ask at a time.
+    if (optimising) {
+      return;
+    }
     const affected = stops
       .filter((stop) => segmentOf(stop, run) !== 'done')
       .map((stop) => stop.id);
     if (affected.length < 2) {
-      setOptimiseNote(
-        'There is nothing to reorder yet: deliver a stop and the day will have a real order to work with.',
-      );
+      setOptimiseNote('Fewer than two stops are left, so there is nothing to reorder.');
       return;
     }
+    hapticFor('confirm');
+    setOptimising(true);
     setOptimiseNote('Asking the server to resequence the run...');
     void (async () => {
       try {
-        const answer = await apiClient.reoptRoute(run.day.runId ?? '', affected);
+        const answer = await apiClient.reoptRoute(runId, affected);
+        // The screen may have moved on: a note written after the courier left
+        // is a state update on an unmounted tree, which React names as one.
+        if (!aliveRef.current) {
+          return;
+        }
+        if (answer.status === 'refused') {
+          setOptimiseNote(`${answer.message}. The order stays as it is.`);
+          return;
+        }
         if (answer.status !== 'ok') {
           const why =
             answer.status === 'unauthorized'
@@ -153,9 +188,41 @@ function RouteScreen() {
           setOptimiseNote(`The solver could not be asked (${why}). The order stays as it is.`);
           return;
         }
-        // The answer's own words: the day's new order and the finish-time
-        // delta. A courier is told what the solver did, in the words the
-        // server answered with.
+        // The answer's own order, applied to the day the phone holds: the
+        // server stores the plan and not the stops' own sequence, so its answer
+        // is the only place a new order exists. The courier is told the day
+        // changed only once the phone actually carries the change.
+        //
+        // The contract's answer carries its stops as free records, so the
+        // screen narrows each one the way it reads it: a stop the app cannot
+        // name cannot be reordered onto the courier's day.
+        const order: RouteOrderEntry[] = [];
+        let readable = true;
+        for (const stop of answer.data.stops) {
+          const stopId = stop.stop_id;
+          const sequence = stop.sequence;
+          if (typeof stopId !== 'string' || typeof sequence !== 'number') {
+            readable = false;
+            break;
+          }
+          order.push({ stopId, sequence });
+        }
+        if (!readable) {
+          setOptimiseNote(
+            'The server answered with an order the app could not read, so the route is unchanged.',
+          );
+          return;
+        }
+        const applied = await run.applyRouteOrder(order);
+        if (!aliveRef.current) {
+          return;
+        }
+        if (!applied) {
+          setOptimiseNote(
+            'The server resequenced the run, but the phone could not keep the new order, so the route is unchanged.',
+          );
+          return;
+        }
         // The contract's own field: the day's finish-time delta in SECONDS.
         const delta = answer.data.finish_delta_s;
         const shape =
@@ -164,12 +231,18 @@ function RouteScreen() {
             : ` The day now finishes ${Math.abs(Math.round(delta / 60))} min ${delta < 0 ? 'earlier' : 'later'}.`;
         setOptimiseNote(`The server resequenced the run.${shape}`);
       } catch (error) {
-        setOptimiseNote(
-          `The solver could not be asked (${errorMessage(error)}). The order stays as it is.`,
-        );
+        if (aliveRef.current) {
+          setOptimiseNote(
+            `The solver could not be asked (${errorMessage(error)}). The order stays as it is.`,
+          );
+        }
+      } finally {
+        if (aliveRef.current) {
+          setOptimising(false);
+        }
       }
     })();
-  }, [stops, run]);
+  }, [optimising, run, stops]);
 
   return (
     <View testID="stops-screen" style={styles.screen}>
@@ -200,13 +273,19 @@ function RouteScreen() {
             accessibilityLabel="Optimise the route"
             accessibilityHint="Resequences the run with the solver"
             onPress={handleOptimise}
+            // BUG-189: the request's subject is the run's own id, so the
+            // control is not answerable until the day has been read - and not
+            // answerable twice while one ask is in flight.
+            disabled={run.day.runId === null || optimising}
             testID="stops-optimise"
             style={({ pressed }) => [
               styles.optimise,
               { backgroundColor: t.colors.accent, opacity: pressed ? 0.85 : 1 },
             ]}
           >
-            <Text style={[styles.optimiseLabel, { color: t.colors.onAccent }]}>Optimise</Text>
+            <Text style={[styles.optimiseLabel, { color: t.colors.onAccent }]}>
+              {optimising ? 'Reordering\u2026' : 'Optimise'}
+            </Text>
           </Pressable>
         </View>
 

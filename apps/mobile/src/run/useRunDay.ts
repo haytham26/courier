@@ -18,7 +18,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { DeliveredMark } from './types';
+import type { DeliveredMark, RouteOrderEntry } from './types';
 import type { RunStore } from './runStore';
 import type { Stop } from '@/maps/stops';
 import { errorMessage } from '@/lib/errors';
@@ -36,7 +36,7 @@ type DayStore = RunStore;
 /** Where the hook gets its store: the caller's own, injected. */
 export type StoreSource = () => Pick<
   DayStore,
-  'load' | 'deliveredMarks' | 'markDelivered' | 'undoDelivered' | 'close'
+  'load' | 'deliveredMarks' | 'markDelivered' | 'undoDelivered' | 'close' | 'applyRouteOrder'
 >;
 
 /** Where the hook gets its store. Injectable, so a test can answer through. */
@@ -55,7 +55,7 @@ type RunLoad = Awaited<ReturnType<DayStore['load']>>;
  */
 export function noDayStore(): Pick<
   DayStore,
-  'load' | 'deliveredMarks' | 'markDelivered' | 'undoDelivered' | 'close'
+  'load' | 'deliveredMarks' | 'markDelivered' | 'undoDelivered' | 'close' | 'applyRouteOrder'
 > {
   return {
     load: () => Promise.resolve({ status: 'offline', snapshot: null }),
@@ -63,6 +63,7 @@ export function noDayStore(): Pick<
     markDelivered: () => Promise.resolve(),
     undoDelivered: () => Promise.resolve(),
     close: () => Promise.resolve(),
+    applyRouteOrder: () => Promise.resolve(false),
   };
 }
 
@@ -87,6 +88,21 @@ export interface RunDay {
    * is a mark the screens already show (BUG-178).
    */
   refreshMarks(): Promise<void>;
+  /**
+   * Re-reads the day from the store, so a write to the day (the solver's
+   * order, queue 4.2) is a day every screen reads.
+   */
+  refreshDay(): Promise<void>;
+  /**
+   * Applies the order the server's solver worked out and re-reads the day,
+   * answering whether the phone now carries that order.
+   *
+   * The answer is the only place a re-placed order exists (the server stores
+   * the plan, not the stops' own `seq`), so the write goes through the store
+   * this hook reads and the re-read follows it: every screen on the day shows
+   * the order the courier now drives, not one of them.
+   */
+  applyRouteOrder(order: readonly RouteOrderEntry[]): Promise<boolean>;
 }
 
 /**
@@ -159,6 +175,35 @@ export function useRunDay(source: StoreSource): RunDay {
     await readMarks();
   }, [readMarks]);
 
+  // The day is re-read the same way the mount effect reads it: through the
+  // store this hook was handed, so a write the store made (the solver's
+  // order) is the day every screen follows.
+  const readDay = useCallback(async () => {
+    const loaded = await store.load();
+    setSnapshot(loaded);
+    return loaded;
+  }, [store]);
+
+  const refreshDay = useCallback(async () => {
+    await readDay();
+  }, [readDay]);
+
+  const applyRouteOrder = useCallback(
+    async (order: readonly RouteOrderEntry[]) => {
+      // A store that answers with no day (the in-memory marks of a test) has
+      // nothing to reorder, and says so rather than pretending it did.
+      if (typeof store.applyRouteOrder !== 'function') {
+        return false;
+      }
+      if (!(await store.applyRouteOrder(order))) {
+        return false;
+      }
+      const loaded = await readDay();
+      return loaded.status === 'ok';
+    },
+    [store, readDay],
+  );
+
   useEffect(() => {
     let alive = true;
     void (async () => {
@@ -198,19 +243,27 @@ export function useRunDay(source: StoreSource): RunDay {
   // One object per answer, not one per render: the screens read this through
   // the run state above them, and an unstable identity would re-render every
   // screen on every frame for a day that has not changed.
+  // The run's own id, memoised on the id itself: the snapshot is a new object
+  // every time the day is read, and a fresh one per read would hand the
+  // screens a new runId for the very same run (queue 4.2).
+  const runId = useMemo(
+    () => (snapshot?.status === 'ok' ? snapshot.snapshot.run.id : null),
+    [snapshot],
+  );
+
   return useMemo(
     () => ({
       hasRun: stops.length > 0,
-      // Queue 4.2: the run's own id, so a screen can ask the server's solver
-      // about THIS run and not a phone's guess at one.
-      runId: snapshot?.status === 'ok' ? snapshot.snapshot.run.id : null,
+      runId,
       stops,
       delivered: marks,
       isDelivered,
       nextStop,
       remaining: stops.filter((stop) => !deliveredIds.has(stop.id)).length,
       refreshMarks,
+      refreshDay,
+      applyRouteOrder,
     }),
-    [stops, marks, isDelivered, nextStop, deliveredIds, snapshot],
+    [stops, marks, isDelivered, nextStop, deliveredIds, runId, refreshMarks, refreshDay, applyRouteOrder],
   );
 }

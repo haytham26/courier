@@ -929,3 +929,30 @@ Next in the queue: B5 (Maestro video), A3 (the recorder), A2 (on-device
 voice) and §22's app half, then the trial features' remaining app surfaces
 (re-optimise / time windows / priority, import, failed reasons, stop types,
 breaks and finish).
+
+**Queue 4.2 on `feat/reopt-surface` (the audit's findings all closed, 2026-11-05).**
+The reopt surface is complete on the device as well as in the boundary:
+
+- **The solver's answer is applied.** `RunStore.applyRouteOrder` writes the
+  server's own order through the run store's one write path (an order that does
+  not cover the day's own stops exactly is refused - a half order would take a
+  stop off a courier's day), the day is re-read behind the write so every screen
+  follows, and the courier is told the day changed only after the phone carries
+  it. Why the answer and not a refresh: the server stores the re-planned ROUTE,
+  not the stops' own `seq`, so `getRun`/`getStops` answers the order the phone
+  already had. (BUG-190.)
+- **BUG-189 is closed.** The run's own id is the request's subject:
+  `reoptRoute('')` refuses before any fetch, the control is not answerable
+  while there is no day behind it, and a refusal that never reached the server
+  is named by the outbox instead of retried in silence.
+- **The outbox's classification of a call that never reached the server** now
+  says so on the console, so a defect cannot be read as a radio problem.
+- **The boundary's shape guard** refuses a 200 that is not the contract's own
+  answer (`finish_delta_s` any finite number, the stops the solver's own order),
+  and its fixture is the contract's own shape.
+- **The a1 job runs `.maestro/a1/optimise.yaml`** between the online half and
+  the network going away, proving the run the server holds is the order the
+  phone then carries.
+
+Register: 188 bug rows (open 15, doing 3, testing 3, fixed 135, closed 2, moved
+30); PARITY 312 (Have 30).

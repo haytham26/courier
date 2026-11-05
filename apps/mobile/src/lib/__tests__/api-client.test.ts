@@ -98,6 +98,15 @@ function anEvent(overrides: Partial<DeliveryEvent> = {}): DeliveryEvent {
   };
 }
 
+/**
+ * The reopt answer as the contract declares it: `finish_delta_s` is a float on
+ * the server (a fraction of a second is legal), and the stops are the solver's
+ * own order - stop_id and sequence.
+ */
+function aReoptAnswer() {
+  return { run_id: 'run-1', engine: 'vrplib', finish_delta_s: -180, stops: [] };
+}
+
 describe('the base URL of the API', () => {
   it('builds every request on the base URL it is given', async () => {
     const { impl, calls } = aFetch([{ body: { id: 'run-1' } }]);
@@ -399,7 +408,7 @@ describe('the delivery events of the phone', () => {
 // with the server's own new order and finish-time delta.
 describe('the reopt route call', () => {
   it('posts the affected stops the caller names', async () => {
-    const { impl, calls } = aFetch([{ body: { finish_time_delta_minutes: -3 } }]);
+    const { impl, calls } = aFetch([{ body: aReoptAnswer() }]);
 
     const outcome = await aClient(impl).reoptRoute('run-1', ['stop-1', 'stop-2']);
 
@@ -419,6 +428,51 @@ describe('the reopt route call', () => {
 
     expect(outcome.status).toBe('unauthorized');
     expect(calls.length).toBe(0);
+  });
+
+  // BUG-189: the run's own id is missing, so the request could only be built
+  // as /runs//route:reopt - a URL that is not the run's, and a round trip
+  // that would answer a 404 the courier reads as "the run is gone". The
+  // client refuses before it dials, and the screen is told why.
+  it('refuses an empty run id without dialing the server (BUG-189)', async () => {
+    const { impl, calls } = aFetch([{ body: aReoptAnswer() }]);
+
+    const outcome = await aClient(impl).reoptRoute('', ['stop-1']);
+
+    expect(outcome.status).toBe('refused');
+    expect(calls.length).toBe(0);
+  });
+
+  it('refuses a run id that is only spaces, too', async () => {
+    const { impl, calls } = aFetch([{ body: aReoptAnswer() }]);
+
+    const outcome = await aClient(impl).reoptRoute('   ', ['stop-1']);
+
+    expect(outcome.status).toBe('refused');
+    expect(calls.length).toBe(0);
+  });
+
+  // The 200 that is not the contract's own answer: the boundary's shape guard
+  // exists precisely so a body the contract never declared (a proxy's page, a
+  // newer field, a truncated answer) cannot reach a screen as if it were one.
+  it('refuses a 200 answer that is not the contract\u2019s own shape', async () => {
+    const { impl } = aFetch([{ body: { finish_delta_s: 'three minutes', stops: 'none' } }]);
+
+    const outcome = await aClient(impl).reoptRoute('run-1', ['stop-1']);
+
+    expect(outcome.status).toBe('server');
+    if (outcome.status !== 'server') {
+      return;
+    }
+    expect(outcome.message).toMatch(/not the shape the contract declares/);
+  });
+
+  it('refuses a 200 answer whose stops are not the order the contract declares', async () => {
+    const { impl } = aFetch([{ body: { run_id: 'run-1', engine: 'vrplib', finish_delta_s: 12, stops: [{}] } }]);
+
+    const outcome = await aClient(impl).reoptRoute('run-1', ['stop-1']);
+
+    expect(outcome.status).toBe('server');
   });
 });
 

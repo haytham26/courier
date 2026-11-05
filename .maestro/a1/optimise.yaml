@@ -1,0 +1,62 @@
+appId: com.courier.copilot
+name: 'A1 optimise: the solver resequences the run the server holds'
+---
+# Queue 4.2's device half: the route screen's Optimise asks the SERVER's solver
+# (`POST /runs/{run_id}/route:reopt`) about the run the API seeded, and the day
+# the courier then sees is the order the server worked out - never a phone's own
+# guess at one.
+#
+# This APK is built with no E2E flag (the a1 job's own release build), so the
+# api-client, the run store and the tokens are the real ones and they dial the
+# compose stack (infra/compose.ci.yml, DEMO_SEED_ENABLED=true). The session and
+# the day are the ones the online half left behind: clearState is false, so this
+# flow does not sign up again and does not seed a second day on the server (the
+# job's own assertion counts one run and one shift).
+#
+# Where it runs: the runner (.maestro/run-a1.sh) runs it right after the online
+# half, while the network is still up - the solver is a server call, and this is
+# the one moment in the job it can be reached without disturbing the offline and
+# sync halves. The online half delivered three of the seeded day's five stops,
+# so two are left for the solver to re-place: the screen asks, and the server
+# answers with the order those two take.
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+
+# The way in: the route screen lives on the Route tab, and its own control is
+# the ask. The tab bar is the app's own, so the flow walks it the way a courier
+# does.
+- tapOn:
+    id: "tab-stops"
+- extendedWaitUntil:
+    visible:
+      id: "stops-screen"
+    timeout: 30000
+
+# The day is the run's own: the run has stops left to re-place, so the control
+# is answerable - the button the courier hears is what the flow finds by.
+- assertVisible:
+    id: "stops-optimise"
+- assertVisible:
+    id: "stops-list"
+
+# The ask: one press, and the screen says the server is being asked. The answer
+# is the server's own, so the wait is a real server's.
+- tapOn:
+    id: "stops-optimise"
+- extendedWaitUntil:
+    visible:
+      text: "The server resequenced the run"
+    timeout: 120000
+
+# The courier is told what the solver did, in the words the server answered
+# with, and the run's own list is the order the solver worked out.
+- assertVisible:
+    id: "stops-optimise-note"
+- assertVisible:
+    id: "stops-list"
+- takeScreenshot: "a1-optimise"
