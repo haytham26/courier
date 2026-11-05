@@ -245,7 +245,7 @@ class VoiceService {
     // claim is a fact - and a phone with no model (or no streaming model) is
     // answered with an error that names what is missing rather than a
     // listening that captures nothing. That was the audit's own finding: the
-    // state moved first and the STT was a TODO.
+    // state moved first and no audio was ever captured.
     if (!this.config) {
       this.setState('error');
       this.callbacks?.onError(new Error('the voice engine was never initialised'));
