@@ -29,4 +29,20 @@ name: The stops list opens a stop
 # Maestro matches the text exactly, so the assertion is the whole address.
 - assertVisible: "45 Papanui Road"
 - assertVisible: "Merivale"
+# Queue 4a: the run's own words for this stop (trial #11 and #13). The E2E
+# build's day is the run's own, so the priority and the time window the run
+# gave stop 2 are on the sheet. The priority is its own node ("Priority stop"),
+# and the window's sentence is its own node too - the app writes them apart so
+# each is asserted as itself (the whole-line lesson of the optimise flow).
+# The times are the device's own clock: the emulator runs in UTC, and the run's
+# window is stamped 09:00-11:00 UTC, so the sentence is exact here.
+- assertVisible: "Priority stop"
+- assertVisible: "Its window opens at 09:00 and closes at 11:00"
 - takeScreenshot: "stop-detail"
+# And the row itself carries the run's own words before the sheet opens, so the
+# courier reads the priority and the window on the list and not only here.
+- tapOn:
+    id: "stops-scrim"
+- assertVisible: "Priority"
+- assertVisible: "09:00 - 11:00"
+- takeScreenshot: "stop-detail-priority"

@@ -67,7 +67,46 @@ jest.mock('react-native', () => {
 jest.mock('expo-audio', () => ({ createAudioPlayer: jest.fn() }), { virtual: true });
 jest.mock(
   'react-native-sherpa-onnx/stt',
-  () => ({ createSTT: jest.fn(), detectSttModel: jest.fn() }),
+  () => ({
+    createSTT: jest.fn(),
+    detectSttModel: jest.fn(() => Promise.resolve({ success: true, modelType: 'transducer' })),
+    getOnlineTypeOrNull: jest.fn(() => 'transducer'),
+    createStreamingSTT: jest.fn(() =>
+      Promise.resolve({
+        createStream: jest.fn(() =>
+          Promise.resolve({
+            acceptWaveform: jest.fn(() => Promise.resolve()),
+            inputFinished: jest.fn(() => Promise.resolve()),
+            decode: jest.fn(() => Promise.resolve()),
+            isReady: jest.fn(() => Promise.resolve(false)),
+            getResult: jest.fn(() => Promise.resolve({ text: '', tokens: [], timestamps: [] })),
+            isEndpoint: jest.fn(() => Promise.resolve(false)),
+            processAudioChunk: jest.fn(() =>
+              Promise.resolve({ result: { text: '', tokens: [], timestamps: [] }, isEndpoint: false }),
+            ),
+            reset: jest.fn(() => Promise.resolve()),
+            release: jest.fn(() => Promise.resolve()),
+          }),
+        ),
+        destroy: jest.fn(() => Promise.resolve()),
+      }),
+    ),
+  }),
+  { virtual: true },
+);
+// The microphone answers with nothing rather than a crash from the native
+// registry (A2: the streaming ear's own seam).
+jest.mock(
+  'react-native-sherpa-onnx/audio',
+  () => ({
+    createPcmLiveStream: jest.fn(() => ({
+      start: jest.fn(() => Promise.resolve()),
+      stop: jest.fn(() => Promise.resolve()),
+      onData: jest.fn(() => () => undefined),
+      onError: jest.fn(() => () => undefined),
+    })),
+    decodeAudioFileToFloatSamples: jest.fn(() => Promise.resolve({ samples: [], sampleRate: 16000 })),
+  }),
   { virtual: true },
 );
 jest.mock(
