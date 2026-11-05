@@ -86,6 +86,9 @@ function RouteScreen() {
   const [segment, setSegment] = useState<SegmentKey>('to-go');
   const [selected, setSelected] = useState<Stop | null>(null);
   const [optimiseNote, setOptimiseNote] = useState<string | null>(null);
+  // The solver's own number, beside its sentence: the words the app writes are
+  // what the courier reads first, and the delta is the solver's own detail.
+  const [optimiseDelta, setOptimiseDelta] = useState<string | null>(null);
   // One ask at a time: a second press while the solver is working would race
   // two answers into one note.
   const [optimising, setOptimising] = useState(false);
@@ -166,6 +169,7 @@ function RouteScreen() {
     hapticFor('confirm');
     setOptimising(true);
     setOptimiseNote('Asking the server to resequence the run...');
+    setOptimiseDelta(null);
     void (async () => {
       try {
         const answer = await apiClient.reoptRoute(runId, affected);
@@ -224,12 +228,16 @@ function RouteScreen() {
           return;
         }
         // The contract's own field: the day's finish-time delta in SECONDS.
+        // The sentence and the delta are written as two nodes, so the courier
+        // reads the words first and the solver's own number after them, and a
+        // flow asserts the sentence exactly rather than matching a whole line.
         const delta = answer.data.finish_delta_s;
-        const shape =
+        setOptimiseNote('The server resequenced the run.');
+        setOptimiseDelta(
           typeof delta !== 'number'
-            ? ''
-            : ` The day now finishes ${Math.abs(Math.round(delta / 60))} min ${delta < 0 ? 'earlier' : 'later'}.`;
-        setOptimiseNote(`The server resequenced the run.${shape}`);
+            ? null
+            : `The day now finishes ${Math.abs(Math.round(delta / 60))} min ${delta < 0 ? 'earlier' : 'later'}.`,
+        );
       } catch (error) {
         if (aliveRef.current) {
           setOptimiseNote(
@@ -297,9 +305,19 @@ function RouteScreen() {
         />
 
         {optimiseNote === null ? null : (
-          <Text testID="stops-optimise-note" style={[styles.note, { color: t.colors.secondaryLabel }]}>
-            {optimiseNote}
-          </Text>
+          <View testID="stops-optimise-note">
+            {/* The sentence and the delta are two nodes, not one line: a
+                courier reads them apart, and a flow asserts the sentence
+                exactly rather than matching a whole line (the Maestro lesson
+                of runs 41968354368 and 41984026086, where the note was on the
+                screen and the assertion still read false). The delta's number
+                is the solver's own, so it rides beside the sentence rather
+                than being part of it. */}
+            <Text style={[styles.note, { color: t.colors.secondaryLabel }]}>{optimiseNote}</Text>
+            {optimiseDelta === null ? null : (
+              <Text style={[styles.noteDelta, { color: t.colors.secondaryLabel }]}>{optimiseDelta}</Text>
+            )}
+          </View>
         )}
 
         <ScrollView contentContainerStyle={styles.list} testID="stops-list">
@@ -419,6 +437,13 @@ const styles = StyleSheet.create({
   note: {
     fontSize: typography.body.size,
     lineHeight: typography.body.lineHeight,
+  },
+  // The solver's own number, beside its sentence and quieter than it: the
+  // words are the claim, the number is the detail.
+  noteDelta: {
+    fontSize: typography.secondary.size,
+    lineHeight: typography.secondary.lineHeight,
+    fontVariant: ['tabular-nums'],
   },
   list: {
     paddingBottom: spacing.space64,

@@ -357,6 +357,12 @@ closed 2, moved 30); PARITY 312 (Have 30).
   branch is deleted); `git ls-remote --tags origin` carries
   `refs/tags/archive/feat-a1-slice-3-run-store^{}` = `50ed121` (the final
   head, archived).
+- On `feat/reopt-surface`, the courier's optimise note is now two nodes: the
+  sentence ("The server resequenced the run.") and the solver's own delta,
+  written apart so a courier reads the words first and the number after them,
+  and asserted exactly by `.maestro/a1/optimise.yaml`. Two runs (41968354368 and
+  41984026086) failed the earlier whole-line assert with the note on the
+  screen — the Maestro lesson that made the app split them.
 - On main, `apps/mobile/app/(tabs)/index.tsx` and `apps/mobile/app/driving.tsx`
   read the run through `useRun()` — `mockStops` is gone from both.
 - A4 has landed on `feat/a4-no-mock-stops` (PR to follow): `check-mock-reach.mjs`

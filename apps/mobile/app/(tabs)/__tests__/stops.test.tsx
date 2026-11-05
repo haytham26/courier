@@ -12,6 +12,7 @@
  * the run's marks and the segments, and none of that needs a device.
  */
 import React from 'react';
+import { Text } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -187,6 +188,18 @@ function aMarksOnlyStore(): MarkStore {
   };
 }
 
+/**
+ * Everything the courier reads in the optimise note, as one sentence: the note
+ * is a View holding a Text per node, so the words are the join of them.
+ */
+function noteText(): string {
+  const note = screen.getByTestId('stops-optimise-note');
+  return note
+    .findAllByType(Text)
+    .map((line) => String(line.props.children))
+    .join('');
+}
+
 /** Renders the screen with a run whose marks are the ones given. */
 async function renderWithRun(
   marks: DeliveredMark[],
@@ -316,12 +329,14 @@ describe('the route screen\'s optimise', () => {
     fireEvent.press(screen.getByTestId('stops-optimise'));
 
     // -180 seconds is a day finishing three minutes earlier, and a courier is
-    // told in minutes rather than the contract's own seconds.
-    await waitFor(() =>
-      expect(screen.getByTestId('stops-optimise-note').props.children).toBe(
-        'The server resequenced the run. The day now finishes 3 min earlier.',
-      ),
-    );
+    // told in minutes rather than the contract's own seconds. The sentence and
+    // the delta are two nodes, so the courier reads the words first and the
+    // solver's own number after them (and the flow asserts the sentence).
+    await waitFor(() => {
+      expect(noteText()).toBe(
+        'The server resequenced the run.The day now finishes 3 min earlier.',
+      );
+    });
   });
 
   it('applies the solver\u2019s own order to the run the phone holds', async () => {
@@ -358,11 +373,11 @@ describe('the route screen\'s optimise', () => {
     await renderWithRun([], day.store);
     fireEvent.press(screen.getByTestId('stops-optimise'));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('stops-optimise-note').props.children).toMatch(
+    await waitFor(() => {
+      expect(noteText()).toMatch(
         /The server resequenced the run, but the phone could not keep the new order/,
-      ),
-    );
+      );
+    });
     // The order the phone is certain of is untouched.
     expect(day.appliedOrders.length).toBe(1);
     expect(day.stopIds()).toEqual(DAY.stops.map((stop) => stop.id));
@@ -374,11 +389,11 @@ describe('the route screen\'s optimise', () => {
     await renderWithRun([], aDayStore().store);
     fireEvent.press(screen.getByTestId('stops-optimise'));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('stops-optimise-note').props.children).toBe(
+    await waitFor(() => {
+      expect(noteText()).toBe(
         'The solver could not be asked (the session is no longer valid). The order stays as it is.',
-      ),
-    );
+      );
+    });
   });
 
   it('names the radio when the solver cannot be reached', async () => {
@@ -387,11 +402,11 @@ describe('the route screen\'s optimise', () => {
     await renderWithRun([], aDayStore().store);
     fireEvent.press(screen.getByTestId('stops-optimise'));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('stops-optimise-note').props.children).toBe(
+    await waitFor(() => {
+      expect(noteText()).toBe(
         'The solver could not be asked (there was no signal). The order stays as it is.',
-      ),
-    );
+      );
+    });
   });
 
   it('does not ask the solver while one ask is already in flight', async () => {

@@ -45,16 +45,20 @@ name: 'A1 optimise: the solver resequences the run the server holds'
     id: "stops-list"
 
 # The ask: one press, and the screen says the server is being asked. The answer
-# is the server's own, so the wait is a real server's. The assertion is a regex
-# that matches the WHOLE sentence the courier reads: it opens with the words the
-# app writes only after the phone carries the new order, and it ends with
-# whatever delta the solver answered with ("...The day now finishes 29 min
-# later."), which is the solver's own business and not the flow's.
+# is the server's own, so the wait is a real server's.
+#
+# The sentence and the delta are two nodes (the app writes them apart so a
+# courier reads the words first and the solver's number after them), so the
+# assertion is the sentence exactly - a whole node, not a line - and it is the
+# one the app writes only AFTER the phone carries the new order. Two runs
+# (41968354368 and 41984026086) failed this assert with the note on the screen,
+# because matching a whole line never matched a node: the Maestro lesson that
+# made the app split them.
 - tapOn:
     id: "stops-optimise"
 - extendedWaitUntil:
     visible:
-      text: "/The server resequenced the run.*/"
+      text: "The server resequenced the run."
     timeout: 180000
 
 # The courier is told what the solver did, in the words the server answered
