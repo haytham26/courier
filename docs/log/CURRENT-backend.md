@@ -303,6 +303,33 @@ through `workflow_run`), 3e (the E2E restore-keys block), 3f (pin the Android sy
 (drop the paths filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt 2),
 then the four 3i PRs in order and 3j.
 
+## The 2026-11-05 audit's CI / INFRA item 3c (BUG-214): the deploy's secrets never reach a command line
+
+`deploy.yml`'s deploy step interpolated `${{ secrets.COURIER_STAGING_DOMAIN }}` and
+`${{ secrets.COURIER_SMOKE_TOKEN }}` straight into the remote ssh command. A secret in an ssh ARGV is
+readable in the remote host's own process list by any process on that host for as long as the command
+runs, and one quoting mistake is a leak into a log; GitHub masks a secret in its own logs, not in the
+host's `ps`.
+
+- The two secrets moved into the step's `env:` (masked) and are piped to the remote shell over STDIN:
+  `printf '%s\n%s\n' "$STAGING_DOMAIN" "$SMOKE_TOKEN" | ssh … 'read -r domain && read -r token ||
+  exit 9; cd /opt/courier/infra && APP_VERSION='"$APP_VERSION"' bash smoke.sh --domain "$domain"
+  --token "$token"'`. The remote command's static half is single-quoted, and a failed read exits 9
+  loudly - a smoke test run with an empty token would prove nothing about an authenticated round trip.
+- `scripts/ci/check-deploy-secrets-inline.mjs` (a step in the Floor guard job) holds the line, with a
+  6-case test that runs with the rest of `scripts/*/__tests__`.
+- The proof is a stub `ssh` (transcript in the evidence README): the OLD shape hands both secret VALUES
+  in argv[1]; the new shape hands only `$domain`/`$token` placeholders and the sha, with the values
+  arriving on stdin.
+- One finding worth recording for the next agent: the first draft of the gate's parser failed to read
+  the step's env keys because the workflow files are CRLF and a `$`-anchored regex does not match past
+  a line terminator. The gate's own red found it.
+
+**Still ahead in item 3:** 3d (deploy only after CI + Quality gates succeed, through `workflow_run`),
+3e (the E2E restore-keys block), 3f (pin the Android system image), 3g (drop the paths filter, add a
+changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt 2), then the four 3i PRs in order
+and 3j.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:

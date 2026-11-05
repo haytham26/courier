@@ -178,6 +178,15 @@ jobs:
           HOST: ${{ secrets.COURIER_STAGING_HOST }}
           USER: ${{ secrets.COURIER_STAGING_USER }}
           KEY: ${{ secrets.COURIER_STAGING_KEY }}
+          # The domain and the smoke token live here, in the environment, and
+          # travel to the remote shell over STDIN (audit item 3c). They are
+          # never spelled into the ssh command line: a secret interpolated into
+          # an ssh argv is readable in the remote host's own `ps` by any process
+          # on that host for as long as the command runs, and a quoting mistake
+          # is a leak into a log. `scripts/ci/check-deploy-secrets-inline.mjs`
+          # holds the line.
+          STAGING_DOMAIN: ${{ secrets.COURIER_STAGING_DOMAIN }}
+          SMOKE_TOKEN: ${{ secrets.COURIER_SMOKE_TOKEN }}
           APP_VERSION: ${{ github.sha }}
         run: |
           set -euo pipefail
@@ -202,15 +211,17 @@ jobs:
           # The version is forwarded into the remote environment (audit item
           # 3b): smoke.sh requires it and now dies without it, because a smoke
           # test whose version check silently does not run says "green" about a
-          # deployment it never identified.
-          # The version is forwarded into the remote environment (audit item
-          # 3b): smoke.sh requires it and now dies without it, because a smoke
-          # test whose version check silently does not run says "green" about a
-          # deployment it never identified. APP_VERSION is the commit sha - not
-          # a secret - so it is spelled in the remote command on purpose; the
-          # staging domain and the smoke token are the item after this one (3c).
-          ssh -i ~/.ssh/id_ed25519 "${USER}@${HOST}" \
-            "cd /opt/courier/infra && APP_VERSION='$APP_VERSION' bash smoke.sh --domain \"${{ secrets.COURIER_STAGING_DOMAIN }}\" --token \"${{ secrets.COURIER_SMOKE_TOKEN }}\""
+          # deployment it never identified. The sha is not a secret, so it is
+          # spelled in the remote command on purpose - the quoting below keeps
+          # it local-expanded while the rest of the command stays single-quoted.
+          #
+          # The domain and the token are NOT spelled here (audit item 3c): they
+          # are piped over stdin and read by the remote shell into variables,
+          # so neither the runner's nor the host's process list ever carries
+          # them. A failed read exits 9 loudly - a smoke test that ran with an
+          # empty token would prove nothing about an authenticated round trip.
+          printf '%s\n%s\n' "$STAGING_DOMAIN" "$SMOKE_TOKEN" | ssh -i ~/.ssh/id_ed25519 "${USER}@${HOST}" \
+            'read -r domain && read -r token || exit 9; cd /opt/courier/infra && APP_VERSION='"$APP_VERSION"' bash smoke.sh --domain "$domain" --token "$token"'
 
       - name: Roll back on a failed smoke test
         if: failure() && steps.host.outputs.configured == 'true'
