@@ -356,6 +356,33 @@ the paths filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 aft
 four 3i PRs in order (C12 setup-uv SHA, C11 Node-24, C10 digest pins, C14 dependabot + a cron staging
 smoke) and 3j (the required-checks list in FOUNDER_TODO).
 
+## 2026-11-06: BUG-226 — the workflow_run Semgrep finding is excluded WITH a written record (PR #202's red cause)
+
+Root cause of the "Static analysis (Semgrep)" reds on PRs #202-#212 (run 42015970715 etc.):
+`yaml.github-actions.security.workflow-run-target-code-checkout` (Blocking) is a STATIC heuristic - any
+workflow_run + checkout of the incoming head is flagged. deploy.yml checks out
+`github.event.workflow_run.head_sha` (the sha the gates ran on, not the tip) and the deploy job's gate
+step requires BOTH CI and Quality gates completed+success on that sha BEFORE the checkout runs
+(BUG-215) - the dynamic gate exceeds the rule's assumption, so the finding is accepted, and the fix is a
+documented `--exclude-rule`, not a code change to deploy.yml.
+
+But the accepted finding had no written record: exclusions lived only in the scan's `--exclude-rule`
+list (the floor's no-suppressions check only sees `nosemgrep` comments), and two older W4 exclusions
+weren't even listed in `.semgrepignore`. Fixed on `deploy-gates-215` (pushed; updates PR #202):
+
+- `--exclude-rule "yaml…workflow-run-target-code-checkout…"` in the sast job + a W6 line in its
+  "Why the excluded rules are excluded" echo;
+- `.semgrepignore` entry 7 (the reason, W6), entry 8 (the two missing W4 rule ids), all ids listed;
+- a W6 row in CONSTRAINTS.md's exceptions table (owner lead executor, expires 2026-12-01);
+- `scripts/ci/check-semgrep-exclusions.mjs` (Floor guard step): every `--exclude-rule` must be a
+  `.semgrepignore` line under a numbered reason, and every cited W-id must have a CONSTRAINTS.md row;
+  6-case test.
+
+Red first: the gate against the new workflow + the OLD .semgrepignore/CONSTRAINTS names all three
+unrecorded exclusions, exit 1. Green after: gate passes, 6/6 tests, check-workflows clean, parity 0
+reopened. Evidence: `docs/evidence/semgrep-exclusion-226/README.md`. BUG-226 filed. NOT claimed: the
+Semgrep job green - that is the next CI run's evidence on this head.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
