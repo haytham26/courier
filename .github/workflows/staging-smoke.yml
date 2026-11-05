@@ -1,0 +1,89 @@
+name: Staging smoke
+
+# The cron smoke (the 2026-11-05 audit's item 3i, finding C14): every night the
+# staging deployment gets the same smoke test the deploy leg runs
+# (`infra/smoke.sh`), so a staging that rotted overnight - a disk, a cert, a
+# stale replica behind the edge - is found by a machine at 07:05 in
+# Christchurch, not by the first courier of the day.
+#
+# The domain and the token come from repository secrets and live ONLY in the
+# steps' own `env:` (audit items 3c and BUG-100/BUG-214): never at the job
+# level, never in a command line. Until the founder sets
+# COURIER_STAGING_DOMAIN and COURIER_SMOKE_TOKEN (FOUNDER_TODO - the same
+# secrets the deploy leg waits for) the run skips with a notice naming exactly
+# which secrets are missing. A smoke that silently did nothing would be worse
+# than no smoke.
+#
+# The version check is skipped ON PURPOSE here (`--no-version`): a cron run is
+# not a deploy, there is no just-deployed sha to prove, and smoke.sh's version
+# check exists to prove WHICH image a deploy served (audit item 3b). The deploy
+# leg's smoke still runs it.
+
+on:
+  schedule:
+    # Nightly, 18:05 UTC = 07:05 NZDT (November, UTC+13): after the night's
+    # batch jobs, before the first shift.
+    - cron: "5 18 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: staging-smoke
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke the staging deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # The secrets are read in THIS step's env only (BUG-100: a job-level env
+      # would put them in every step's environment, including any third-party
+      # action), and the step decides whether there is anything to smoke.
+      - name: The staging secrets
+        id: secrets
+        env:
+          COURIER_STAGING_DOMAIN: ${{ secrets.COURIER_STAGING_DOMAIN }}
+          COURIER_SMOKE_TOKEN: ${{ secrets.COURIER_SMOKE_TOKEN }}
+        run: |
+          set -euo pipefail
+          for secret in COURIER_STAGING_DOMAIN COURIER_SMOKE_TOKEN; do
+            if [ -z "${!secret:-}" ]; then
+              echo "::notice::the cron smoke is skipped: $secret is not set (FOUNDER_TODO - the same secrets the deploy leg waits for)"
+              echo "configured=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      - name: Nothing to smoke yet
+        if: steps.secrets.outputs.configured != 'true'
+        run: |
+          echo "::notice::the cron staging smoke is skipped: COURIER_STAGING_DOMAIN / COURIER_SMOKE_TOKEN are not configured (FOUNDER_TODO)"
+          echo "Until the staging host exists, the verify leg of deploy.yml runs this same smoke test against the stack it builds on the runner."
+
+      - name: Run the smoke test against staging
+        if: steps.secrets.outputs.configured == 'true'
+        env:
+          DOMAIN: ${{ secrets.COURIER_STAGING_DOMAIN }}
+          TOKEN: ${{ secrets.COURIER_SMOKE_TOKEN }}
+          COURIER_SMOKE_DIR: smoke-evidence
+        run: |
+          set -euo pipefail
+          # --no-version by design: this run is not a deploy (see the header).
+          # The domain and token stay in the environment; they are never
+          # spelled into a command line that a log could capture.
+          bash infra/smoke.sh --domain "$DOMAIN" --token "$TOKEN" --no-version --evidence "$COURIER_SMOKE_DIR"
+
+      - name: Publish the smoke report
+        if: always() && steps.secrets.outputs.configured == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staging-smoke-report
+          path: smoke-evidence/smoke.md
+          retention-days: 14
+          if-no-files-found: warn

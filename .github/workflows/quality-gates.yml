@@ -176,6 +176,14 @@ jobs:
       # docker:// images need a @sha256: digest.
       - name: Every action is pinned by commit sha (audit 3i / C10)
         run: node scripts/ci/check-action-pins.mjs
+      # The 2026-11-05 audit's item 3i, finding C14: dependabot watches the
+      # three ecosystems this repo has (github-actions and npm at /, uv for
+      # each service with a uv.lock) weekly, and a cron workflow smokes the
+      # staging deployment nightly with the same infra/smoke.sh the deploy leg
+      # runs. Secrets stay in step env only; without them the run skips with
+      # a notice, not silently.
+      - name: Dependabot is configured and the cron staging smoke exists (audit 3i / C14)
+        run: node scripts/ci/check-staging-smoke.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers
