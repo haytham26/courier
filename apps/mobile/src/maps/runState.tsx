@@ -33,6 +33,29 @@ import type { MarkStore, RouteOrderEntry, RunDayStore } from '@/run/types';
 
 import type { Stop } from './stops';
 
+/**
+ * The failed write, on the store that carries it.
+ *
+ * Only the app's own run store records the reason (an in-memory marks store
+ * has no event log), so this is the check: a build whose store is not the run
+ * store says so, rather than pretending a delivery was recorded.
+ */
+async function writeFailed(
+  store: MarkStore,
+  stop: Stop,
+  outcome: { reason: string; utterance?: string },
+): Promise<void> {
+  const writes = (store as Partial<MarkStore & { markFailed: unknown }>).markFailed;
+  if (typeof writes !== 'function') {
+    throw new Error('this build has no event log: the failed delivery cannot be recorded');
+  }
+  await (writes as (s: Stop, o: { reason: string; utterance?: string }) => Promise<void>).call(
+    store,
+    stop,
+    outcome,
+  );
+}
+
 /** One delivery the run made: the stop and the moment it landed. */
 export interface DeliveredEvent {
   stopId: string;
@@ -50,6 +73,11 @@ export interface RunState {
   markDelivered(stop: Stop): void;
   /** Takes a stop back: the mark of it leaves the run. */
   undoDelivered(stopId: string): void;
+  /**
+   * Records a delivery that failed, with the reason the courier chose (queue
+   * 4b, ADR-023).
+   */
+  markFailed(stop: Stop, outcome: { reason: string; utterance?: string }): void;
   /**
    * The day itself, read through the same store the marks are written to.
    *
@@ -163,6 +191,34 @@ export const RunProvider = ({
     [marks, day],
   );
 
+  /**
+   * The failed delivery, written through the store's own path (queue 4b).
+   *
+   * The reason is required: a failed outcome without it is refused by the
+   * server (ADR-023) and would take the whole outbox batch with it, so the
+   * phone refuses it here first and names why. The mark's own write is the
+   * day's number following it (BUG-178).
+   */
+  const markFailed = useCallback(
+    (stop: Stop, outcome: { reason: string; utterance?: string }) => {
+      setDelivered((current) =>
+        current.some((event) => event.stopId === stop.id)
+          ? current
+          : [...current, { stopId: stop.id, sequence: stop.sequence, at: Date.now() }],
+      );
+      void (async () => {
+        try {
+          await writeFailed(marks, stop, outcome);
+          await day.refreshMarks();
+        } catch (error) {
+          setDelivered((current) => current.filter((event) => event.stopId !== stop.id));
+          console.warn(`run: the failure of ${stop.id} could not be written: ${errorMessage(error)}`);
+        }
+      })();
+    },
+    [marks, day],
+  );
+
   const isDelivered = useCallback(
     (stopId: string) => delivered.some((event) => event.stopId === stopId),
     [delivered],
@@ -197,8 +253,17 @@ export const RunProvider = ({
   );
 
   const value = useMemo(
-    () => ({ delivered, isDelivered, markDelivered, undoDelivered, day, refreshDay, applyRouteOrder }),
-    [delivered, isDelivered, markDelivered, undoDelivered, day, refreshDay, applyRouteOrder],
+    () => ({
+      delivered,
+      isDelivered,
+      markDelivered,
+      undoDelivered,
+      markFailed,
+      day,
+      refreshDay,
+      applyRouteOrder,
+    }),
+    [delivered, isDelivered, markDelivered, undoDelivered, markFailed, day, refreshDay, applyRouteOrder],
   );
 
   return <RunContext.Provider value={value}>{children}</RunContext.Provider>;

@@ -247,6 +247,56 @@ export class RunStore implements MarkStore {
   }
 
   /**
+   * Records a delivery that failed, with the reason the courier chose (queue
+   * 4b, ADR-023).
+   *
+   * The event carries the reason so the outbox sends it and the office can ask
+   * why - the server's own rule refuses a `failed` event with no reason, and a
+   * refusal there takes the whole batch with it, so the phone refuses it here
+   * first and names why. A stop the run already holds delivered stays
+   * delivered: a delivery the courier made is a delivery the office will hear
+   * about, and the failed write does not take its place.
+   */
+  async markFailed(
+    stop: { id: string; sequence: number },
+    outcome: { reason: string; utterance?: string },
+  ): Promise<void> {
+    const reason = outcome.reason.trim();
+    if (reason.length === 0) {
+      throw new Error(`a failed delivery carries its reason, and stop ${stop.id} has none`);
+    }
+    const already = await this.cache.markOf(stop.id);
+    if (already !== null) {
+      return;
+    }
+    const at = this.clock();
+    // BUG-176: a contract-valid uuid - the API parses the id as one and
+    // refuses the whole batch with a 422 otherwise (run 41541777473).
+    const eventId = newEventId();
+    await this.events.record({
+      id: eventId,
+      stopId: stop.id,
+      kind: 'failed',
+      reason,
+      occurredAt: new Date(at).toISOString(),
+      ...(outcome.utterance === undefined ? {} : { utterance: outcome.utterance }),
+    });
+    await this.cache.markDelivered({ stopId: stop.id, sequence: stop.sequence, at, eventId });
+
+    // The delivery is in the log, so the outbox is asked to send it now - the
+    // same reason a mark is: a failed delivery the phone holds and does not
+    // send is the audit's A1 in miniature (the office never learns the
+    // parcel came back).
+    const flush = this.deps.flush;
+    if (flush) {
+      const shift = await this.shiftId();
+      if (shift !== null) {
+        await flush(shift);
+      }
+    }
+  }
+
+  /**
    * Applies the order the server's solver worked out to the day the phone
    * holds (queue 4.2), and answers whether the phone now carries it.
    *

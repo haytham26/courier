@@ -69,6 +69,10 @@ export function toContractEvent(event: DeliveryEvent): EventMapping {
       occurred_at: event.occurredAt,
       ...(event.utterance === undefined ? {} : { utterance: event.utterance }),
       ...(event.safePlace === undefined ? {} : { safe_place: event.safePlace }),
+      // Queue 4b (ADR-023): the reason the courier chose rides the event the
+      // API reads, and the read-back carries it too - a failed outcome the
+      // office cannot ask "why" about is the gap being closed.
+      ...(event.reason === undefined ? {} : { reason: event.reason }),
       ...(event.lat === undefined ? {} : { lat: event.lat }),
       ...(event.lon === undefined ? {} : { lon: event.lon }),
       ...(event.accuracyM === undefined ? {} : { accuracy_m: event.accuracyM }),
@@ -93,6 +97,8 @@ export function toAppEvent(event: ContractDeliveryEvent): DeliveryEvent {
     occurredAt: event.occurred_at,
     ...(event.utterance === undefined ? {} : { utterance: event.utterance }),
     ...(event.safe_place === undefined ? {} : { safePlace: event.safe_place }),
+    // Queue 4b (ADR-023): the reason reads back with everything else.
+    ...(event.reason === undefined ? {} : { reason: event.reason }),
     ...(event.lat === undefined ? {} : { lat: event.lat }),
     ...(event.lon === undefined ? {} : { lon: event.lon }),
     ...(event.accuracy_m === undefined ? {} : { accuracyM: event.accuracy_m }),
