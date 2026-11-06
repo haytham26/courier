@@ -1,8 +1,9 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `a6dffe7` (PR #214, queue 4d —
-the run's break window and finish point, incl. the BUG-195 null fix). Lead session 14,
-2026-11-05/06.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `3400082` (PR #218, release
+hygiene; ahead of it `8333043` = PR #208). Lead session 14, 2026-11-05/06.
+Queue 4f = PR #216 (ALL_GREEN on 4f24692d, run 42176913133, 16/16 flows incl.
+pod.yaml) and 4g = PR #217 (flow fixes in flight) next to merge.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -1011,3 +1012,62 @@ tests (86 suites), tsc, eslint, check-parity (0 reopened) green. Next after
 it: 4f (POD photo #16 via the existing POD endpoint; signature once the
 backend's signature contract lands), 4g (the nav hand-off flow #15), then
 release hygiene and D1/B5/A3/§22/P4/P7 to the §6 Definition of Done.
+
+**Queue 4f = PR #216 and 4g = PR #217, both re-dispatched after their first
+heads' E2E failures (root-caused, §12).** 4f's head e039376d: only the new
+`pod.yaml` failed — the job log showed `Unknown Property: point` (the deliver
+swipe's `point` was a sibling of `from:` instead of inside the selector), so
+the flow never loaded; fixed on 7d5716d (all 15 existing flows passed on the
+failing run). 4g's head 04ed2186: only `nav-handoff.yaml` failed, at the
+post-tap assert — the evidence screen showed Google Maps' own landing ("Make
+it your map"): the pinned emulator image ships Maps, so the key-free link IS
+answered and the nav app takes the foreground; the flow on d1e44db now asserts
+Maps' landing, screenshots it, presses back, and asserts the drive is still on
+"STOP 2 OF 5". Root-cause comments on the PRs (#6678133127, #6678133640).
+Also observed: PR #205's `changes` job sets only build/flows/scripts/pipeline
+on the human-dispatch path, so manual `workflow_dispatch` runs SKIP the
+e2e/a1 jobs (runs 42166994398, 42167332868) — filed as **BUG-198 (open,
+backend-owned .github)**; the `pull_request` runs are the E2E evidence.
+
+**Release hygiene on `feat/release-hygiene` (this branch):** verified the
+E2E-flag gate end to end — `check-e2e-flag.mjs --variant release` with
+`EXPO_PUBLIC_E2E=1` exits 1 (BUG-079's rule: a release build never inlines the
+mocks; the e2e legs declare `--variant e2e`, the a1/release legs `--variant
+release`), and `check-mock-reach.mjs` proves the mock list is reachable only
+through the E2E seams (labelReader's `readerForThisBuild` included). New
+`scripts/ci/check-design-gate.mjs` (+ 9 node --test cases) proves the design
+lab and compat screen are out of a release build: metro blockLists
+`app/design/**` + `app/compat.tsx` when neither flag is set (and the gate
+fails if the blockList also matches a product screen), `buildFlags.ts` inlines
+the same decision, `_layout.tsx` registers the design route only under it, and
+the gated files must exist (no vacuous pass). Verified `syncService.sync`
+confirms `batch.slice(0, accepted)` with the clamp (line 126-127). Register:
+BUG-040 and BUG-046 closed as fixed with evidence (tsc clean on this head;
+compat.yaml's `openLink: "courier:///compat"` → `compat-screen` green on runs
+42161172886/42166989624), BUG-198 filed open, BUG-197 stays open/queued
+(KeyboardAvoidingView on the import sheet). Counts re-pasted (209 rows).
+Next: merge #216 then #217 when their heads are green (ritual), then this
+branch, then D1, B5 + Play internal-testing prep, A3, §22's app side, P4
+baselines, P7 acceptance on two screen sizes — to the §6 Definition of Done.
+
+**Release hygiene MERGED: PR #218, merge commit 3400082 on head c51488cc.**
+ALL_GREEN on the final head: run 42179628305 (pull_request) — Maestro api-34
+and api-35 SUCCESS (16/16 flows), A1 SUCCESS, APK SUCCESS, all static gates;
+evidence comment #6680272556. New `scripts/ci/check-design-gate.mjs` + 9
+node --test cases (251 pass / 2 skip / 0 fail store-wide); BUG-040/BUG-046
+closed fixed with evidence; BUG-198 filed (backend-owned: manual dispatch
+skips e2e/a1); counts re-pasted (210 rows). Ritual: tag
+`archive/feat/release-hygiene` @ c51488cc, branch deleted (ls-remote proof).
+origin/main merged in twice along the way (ef46eac → 8333043) with `git merge
+origin/main` only; README conflict kept both rows; no file deleted, no
+register shrunk.
+
+**Queue 4g's three E2E root causes (all on `.maestro/nav-handoff.yaml`, §12):**
+(1) run 42167328086 — the pinned image ships Google Maps, so the hand-off IS
+answered (Maps landing "Make it your map" on screen): the flow now asserts
+that; (2) runs 42171396160/42175587894 — Maps' location dialog sits on top and
+`back` does not dismiss it: dismiss with its own button; (3) run 42181802892 —
+the dialog appears a beat after the landing, so the tap needs
+`waitUntilVisible: true`, and Maestro 2.11 treats tapOn's `text` as a REGEX
+(the `textRegex` YAML key is rejected — run 42179171405), so "Don.t allow"
+matches the image's U+2019 apostrophe. Head b1e6251+fix in flight.
