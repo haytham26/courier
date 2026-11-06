@@ -165,8 +165,10 @@ paths:
         field are answered in `ignored_columns`, never dropped silently. Stops
         are stored unlocated (the API has no geocoder yet) and the routing layer
         reports them through `unroutable_stop_ids` until the address slice
-        lands. The file is capped at 5 MiB and 1000 rows; the name and the
-        bytes must agree (.csv = UTF-8 text, .xlsx = zip).
+        lands. The file is capped at 5 MiB and at the routing layer's own row
+        cap (500); the name and the bytes must agree (.csv = UTF-8 text,
+        .xlsx = zip), and the shift's total is capped too (a repeated import
+        that would pass the planner's cap is a 409, not a silent append).
       operationId: import_stops
       security: [{ bearerAuth: [] }]
       parameters:
@@ -199,7 +201,8 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '413': { description: The file is over the 5 MiB cap }
         '415': { description: Not a .csv (UTF-8) or .xlsx (zip), or the name and bytes disagree }
-        '422': { description: A row is invalid (no address, bad type/priority/parcels/window, over the 1000-row cap) - nothing was stored }
+        '409': { description: The import would take the shift past the planner's own cap - nothing was stored }
+        '422': { description: A row is invalid (no address, bad type/priority/parcels/window, over the 500-row cap) or the .xlsx is not a readable spreadsheet or unpacks past 50 MiB - nothing was stored }
 
   /billing/webhooks/{source}:
     post:

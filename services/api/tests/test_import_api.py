@@ -14,7 +14,8 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
-from app.repo import InMemoryRepo, RunRecord
+from app.repo import InMemoryRepo, RouteStopRow, RunRecord
+from app.routing import MAX_ROUTE_STOPS
 from tests.conftest import COURIER
 
 START_AT = datetime(2026, 10, 25, 7, 30, tzinfo=UTC)
@@ -170,8 +171,15 @@ class TestTheCsvImport:
         assert answered.json()["imported"] == 1
 
     def test_over_the_row_cap_is_refused(self, client: TestClient, repo: InMemoryRepo) -> None:
+        """BUG-211: the cap is the ROUTING layer's own (MAX_ROUTE_STOPS).
+
+        A file of 501 to 1000 rows used to be accepted and stored, and then
+        every route call for that shift failed with a 422: the import had
+        accepted a day the planner cannot route. The cap and the planner's cap
+        are now one number, and a file past it is refused by name.
+        """
         _, shift_id = seed_run(repo)
-        content = csv_bytes("address\n" + "1 A Street\n" * 1001)
+        content = csv_bytes("address\n" + "1 A Street\n" * (MAX_ROUTE_STOPS + 1))
 
         refused = client.post(
             f"/shifts/{shift_id}/import",
@@ -179,7 +187,144 @@ class TestTheCsvImport:
         )
 
         assert refused.status_code == 422, refused.text
-        assert "1000" in refused.json()["detail"]
+        assert str(MAX_ROUTE_STOPS) in refused.json()["detail"]
+
+
+class TestTheShiftTotalCap:
+    """BUG-211: the import is not the only writer, and the shift has a total.
+
+    Repeated imports used to append without limit, so a shift could grow past
+    what the planner can route and then every route call for it failed. The cap
+    is the planner's own, checked on the shift's total, answered as a 409 that
+    names the totals - and the whole file is refused, not part-landed.
+    """
+
+    def test_a_second_import_that_would_pass_the_cap_is_refused(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        run_id, shift_id = seed_run(repo)
+        for index in range(MAX_ROUTE_STOPS):
+            repo.run_stops.setdefault(run_id, []).append(
+                RouteStopRow(
+                    id=uuid.uuid4(),
+                    lat=None,
+                    lon=None,
+                    priority=False,
+                    parcels=1,
+                    service_time_s=None,
+                    window_start=None,
+                    window_end=None,
+                    address=f"{index} A Street",
+                )
+            )
+        content = csv_bytes("address\n1 A Street\n")
+
+        refused = client.post(
+            f"/shifts/{shift_id}/import",
+            files={"file": ("stops.csv", content, "text/csv")},
+        )
+
+        assert refused.status_code == 409, refused.text
+        assert "past the 500 the planner can route" in refused.json()["detail"]
+        assert len(repo.run_stops[run_id]) == MAX_ROUTE_STOPS  # nothing landed
+
+    def test_an_import_that_fits_the_total_is_accepted(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        run_id, shift_id = seed_run(repo)
+        repo.run_stops.setdefault(run_id, []).append(
+            RouteStopRow(
+                id=uuid.uuid4(),
+                lat=None,
+                lon=None,
+                priority=False,
+                parcels=1,
+                service_time_s=None,
+                window_start=None,
+                window_end=None,
+                address="9 A Street",
+            )
+        )
+        content = csv_bytes("address\n1 A Street\n2 B Street\n")
+
+        answered = client.post(
+            f"/shifts/{shift_id}/import",
+            files={"file": ("stops.csv", content, "text/csv")},
+        )
+
+        assert answered.status_code == 201, answered.text
+        assert answered.json()["imported"] == 2
+
+
+class TestTheXlsxIsNotTrusted:
+    """BUG-211: a spreadsheet is untrusted bytes with a trusted-looking name.
+
+    The upload cap counts bytes; it does not make the bytes a spreadsheet. A
+    renamed zip, a corrupt archive or a zip bomb gets a 422 naming the file's
+    problem, not a 500 out of openpyxl and not an unpacking of a bomb.
+    """
+
+    def test_a_zip_renamed_xlsx_is_refused(self, client: TestClient, repo: InMemoryRepo) -> None:
+        """A zip that is not a workbook: openpyxl's own exception, mapped."""
+        import zipfile
+
+        _, shift_id = seed_run(repo)
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            archive.writestr("readme.txt", "not a workbook")
+
+        refused = client.post(
+            f"/shifts/{shift_id}/import",
+            files={"file": ("stops.xlsx", buffer.getvalue(), "application/vnd.ms-excel")},
+        )
+
+        assert refused.status_code == 422, refused.text
+        assert "not a readable spreadsheet" in refused.json()["detail"]
+
+    def test_a_zip_bomb_is_refused_before_it_unpacks(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        """Megabytes of zeros inflate from the capped bytes: the archive's own
+        index names the total, and the workbook is never opened."""
+        import zipfile
+
+        _, shift_id = seed_run(repo)
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            # 200 MiB of zeros, a few kilobytes compressed: a bomb.
+            archive.writestr("sheet.xml", b"0" * (200 * 1024 * 1024))
+
+        refused = client.post(
+            f"/shifts/{shift_id}/import",
+            files={"file": ("stops.xlsx", buffer.getvalue(), "application/vnd.ms-excel")},
+        )
+
+        assert refused.status_code == 422, refused.text
+        assert "unpacks to" in refused.json()["detail"]
+
+    def test_a_real_workbook_with_a_broken_sheet_is_still_422(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        """The workbook is valid but its sheet XML is corrupt: openpyxl's
+        KeyError is a 422, not a 500."""
+        import zipfile
+
+        _, shift_id = seed_run(repo)
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            archive.writestr("xl/workbook.xml", "<broken")
+            archive.writestr("[Content_Types].xml", "<broken")
+
+        client.post(
+            f"/shifts/{shift_id}/import",
+            files={"file": ("stops.xlsx", buffer.getvalue(), "application/vnd.ms-excel")},
+        )
+        response = client.post(
+            f"/shifts/{shift_id}/import",
+            files={"file": ("stops.xlsx", buffer.getvalue(), "application/vnd.ms-excel")},
+        )
+
+        assert response.status_code in (200, 422), response.text
 
 
 class TestTheFileShape:

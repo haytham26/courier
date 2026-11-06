@@ -1,0 +1,73 @@
+{
+ "what": "The standing overlaps between the offline brain's regexes and the eval generator's templates (BUG-210).",
+ "why": "The parser was written from the generator's own templates, so scoring intent on the gold text measures the parser's coverage of its own template set. The number is reported as a ceiling; the headline number stays unmeasured until the held-out set exists (FOUNDER_TODO).",
+ "created": "2026-11-05",
+ "overlaps": [
+  {
+   "words": "cannot get in",
+   "pattern": "^(?:cannot get in|can't get in|locked out|no access)\\s+at\\s+(?P<address>.+)$",
+   "template": "cannot get in at ",
+   "note": "the parser spells out the eval generator's template: the intent number on this shape is a ceiling, not a held-out accuracy"
+  },
+  {
+   "words": "come back to",
+   "pattern": "^come back to\\s+(?P<address>.+?)\\s+later\\.?$",
+   "template": "come back to ",
+   "note": "the parser spells out the eval generator's template: the intent number on this shape is a ceiling, not a held-out accuracy"
+  },
+  {
+   "words": "dog in the yard",
+   "pattern": "^(?:dog in the yard|dog here)\\s+at\\s+(?P<address>.+)$",
+   "template": "dog in the yard at ",
+   "note": "the parser spells out the eval generator's template: the intent number on this shape is a ceiling, not a held-out accuracy"
+  },
+  {
+   "words": "gate code is",
+   "pattern": "^gate code is\\s+(?P<text>[\\w\\s]+?)\\s+at\\s+(?P<address>.+)$",
+   "template": "gate code is one four two one at ",
+   "note": "the parser spells out the eval generator's template: the intent number on this shape is a ceiling, not a held-out accuracy"
+  },
+  {
+   "words": "parcel box round the back",
+   "pattern": "^parcel box round the back\\s+at\\s+(?P<address>.+)$",
+   "template": "parcel box round the back at ",
+   "note": "the parser spells out the eval generator's template: the intent number on this shape is a ceiling, not a held-out accuracy"
+  },
+  {
+   "words": "side gate left of the garage",
+   "pattern": "^side gate left of the garage\\s+at\\s+(?P<address>.+)$",
+   "template": "side gate left of the garage at ",
+   "note": "the parser spells out the eval generator's template: the intent number on this shape is a ceiling, not a held-out accuracy"
+  },
+  {
+   "words": "skip the street for",
+   "pattern": "^skip the street for\\s+(?P<address>.+)$",
+   "template": "skip the street for ",
+   "note": "the parser spells out the eval generator's template: the intent number on this shape is a ceiling, not a held-out accuracy"
+  },
+  {
+   "words": "skip this one",
+   "pattern": "^(?:skip this one|skip it|come back to (?:this one|it))\\s+at\\s+(?P<address>.+)$",
+   "template": "skip this one at ",
+   "note": "the parser spells out the eval generator's template: the intent number on this shape is a ceiling, not a held-out accuracy"
+  },
+  {
+   "words": "skip this one",
+   "pattern": "^(?:skip|come back(?: to it)?|skip this one)\\.?$",
+   "template": "skip this one at ",
+   "note": "the parser spells out the eval generator's template: the intent number on this shape is a ceiling, not a held-out accuracy"
+  },
+  {
+   "words": "the gate is on the",
+   "pattern": "^the gate is on the .+ side\\s+at\\s+(?P<address>.+)$",
+   "template": "the gate is on the ${a.street} side at ${a.number} ${a.street}, ",
+   "note": "the parser spells out the eval generator's template: the intent number on this shape is a ceiling, not a held-out accuracy"
+  },
+  {
+   "words": "watch the dog",
+   "pattern": "^watch the dog\\s+at\\s+(?P<address>.+)$",
+   "template": "watch the dog at ",
+   "note": "the parser spells out the eval generator's template: the intent number on this shape is a ceiling, not a held-out accuracy"
+  }
+ ]
+}

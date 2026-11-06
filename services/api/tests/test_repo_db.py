@@ -105,16 +105,29 @@ def seed_stop(
     address: str,
     stop_type: str = "delivery",
 ) -> None:
+    """One stop of the shift, at the sequence the real writers would give it.
+
+    The sequence is unique per shift (the 2026-11-05 UNIQUE index, BUG-211):
+    a helper that hardcoded 1 could not seed a second stop into a shift, which
+    is data production cannot hold. The next sequence is read the way the
+    import reads it.
+    """
     with engine.begin() as connection:
+        sequence = connection.execute(
+            text("SELECT COALESCE(MAX(sequence), 0) + 1 FROM stops WHERE shift_id = :shift"),
+            {"shift": shift_id},
+        ).scalar()
         connection.execute(
             text(
                 "INSERT INTO stops (id, shift_id, sequence, address, latitude, longitude, "
-                "status, priority, parcels, location_id, type) VALUES (:id, :shift, 1, "
-                ":address, -43.54, 172.60, 'pending', false, 1, :location, :type)"
+                "status, priority, parcels, location_id, type) VALUES (:id, :shift, "
+                ":sequence, :address, -43.54, 172.60, 'pending', false, 1, "
+                ":location, :type)"
             ),
             {
                 "id": stop_id,
                 "shift": shift_id,
+                "sequence": sequence,
                 "address": address,
                 "location": location_id_for(address, None),
                 "type": stop_type,
@@ -293,6 +306,46 @@ class TestTheStops:
 
         with pytest.raises(IntegrityError):
             seed_stop(engine, shift_id, uuid.uuid4(), "1 Colombo Street", stop_type="bogus")
+
+    def test_the_sequence_is_unique_per_shift(self, repo: SqlAlchemyRepo, engine: Engine) -> None:
+        """BUG-211: two concurrent imports used to read MAX(sequence) unlocked
+        and write the same value. The database now refuses the duplicate, so
+        the write path cannot silently lose a stop even if the lock is missed.
+        """
+        shift_id = a_shift(engine)
+        repo.put_run(a_run(shift_id))
+        seed_stop(engine, shift_id, uuid.uuid4(), "45 Papanui Road")
+
+        with engine.begin() as connection, pytest.raises(IntegrityError):
+            connection.execute(
+                text(
+                    "INSERT INTO stops (id, shift_id, sequence, address, latitude, "
+                    "longitude, status, priority, parcels, location_id, type) "
+                    "VALUES (:id, :shift, 1, :address, -43.54, 172.60, "
+                    "'pending', false, 1, :location, 'delivery')"
+                ),
+                {
+                    "id": uuid.uuid4(),
+                    "shift": shift_id,
+                    "address": "9 Riccarton Road",
+                    "location": location_id_for("9 Riccarton Road", None),
+                },
+            )
+
+    def test_a_shift_can_hold_two_stops_at_different_sequences(
+        self, repo: SqlAlchemyRepo, engine: Engine
+    ) -> None:
+        shift_id = a_shift(engine)
+        repo.put_run(a_run(shift_id))
+        seed_stop(engine, shift_id, uuid.uuid4(), "45 Papanui Road")
+        seed_stop(engine, shift_id, uuid.uuid4(), "9 Riccarton Road")
+
+        with engine.connect() as connection:
+            sequences = connection.execute(
+                text("SELECT sequence FROM stops WHERE shift_id = :s ORDER BY sequence"),
+                {"s": shift_id},
+            ).scalars().all()
+        assert list(sequences) == [1, 2]
 
     def test_imported_stops_round_trip_and_the_sequence_continues(
         self, repo: SqlAlchemyRepo, engine: Engine

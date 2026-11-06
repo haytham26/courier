@@ -1,15 +1,15 @@
 {
- "generated": "2026-11-04T09:41:35+1300",
- "target": "AUDIT_2026-10-25 §A3: >=500 utterances from open data, WER and intent accuracy per slice",
+ "generated": "2026-11-05T16:52:00+1300",
+ "target": "AUDIT_2026-10-25 §A3: >=500 utterances from open data, WER and the parser ceiling per slice",
  "built": 600,
  "judge": "sherpa-onnx whisper tiny.en (Whisper weights MIT, sherpa-onnx runtime Apache-2.0)",
  "legs": {
   "wer": "the open speakers' own words read by the pinned judge, per slice and per SNR - the set's acoustic difficulty, not our pipeline",
   "false_action_rate": "the parser's share of the speakers' natural sentences it answered with a command - the M9 direction on open speech",
-  "intent_accuracy": "the service's OFFLINE brain (offline_brain, the dead-spot path) on the set's gold scripts; the address-bearing long forms have been its own since BUG-187's fix, and the server brain online answers the same sentences through its gateway",
-  "intent_accuracy_with_slots": "EVAL.md's M3 shape: the intent AND the comparable mandatory slots (`safe_place`, `reason`, `raw_address`, `minutes`, `kind`, `priority`) both correct"
+  "parser_ceiling": "NOT AN ACCURACY (BUG-210): the offline brain's patterns spell out the eval generator's templates word for word (scripts/ci/check-parser-circularity.mjs names every standing overlap and fails on a new one), so this number measures the parser's coverage of its own template set, not a held-out accuracy. The held-out set does not exist yet (FOUNDER_TODO), and the intent on the STT hypothesis is unmeasured because the script audio is not synthesised.",
+  "parser_ceiling_with_slots": "EVAL.md's M3 shape: the intent AND the comparable mandatory slots (`safe_place`, `reason`, `raw_address`, `minutes`, `kind`, `priority`) both correct - a ceiling, the same caveat"
  },
- "intent_accuracy_by_slice": {
+ "parser_ceiling_by_slice": {
   "ar": {
    "correct": 0,
    "total": 40,
@@ -66,7 +66,7 @@
    "rate": 0.0
   }
  },
- "intent_with_slots_by_slice": {
+ "parser_ceiling_with_slots_by_slice": {
   "ar": {
    "correct": 0,
    "total": 40,
@@ -122,6 +122,62 @@
    "total": 40,
    "rate": 0.0
   }
+ },
+ "templates_per_slice": {
+  "en_nz_quiet": {
+   "distinct": 24,
+   "shared_with": null
+  },
+  "en_nz_van": {
+   "distinct": 8,
+   "shared_with": null
+  },
+  "en_mix": {
+   "distinct": 24,
+   "shared_with": "en_nz_quiet"
+  },
+  "mi_places": {
+   "distinct": 5,
+   "shared_with": null
+  },
+  "ar": {
+   "distinct": 4,
+   "shared_with": null
+  },
+  "hi_pa": {
+   "distinct": 4,
+   "shared_with": null
+  },
+  "zh": {
+   "distinct": 4,
+   "shared_with": null
+  },
+  "sm_to": {
+   "distinct": 4,
+   "shared_with": null
+  },
+  "numbers_corrections": {
+   "distinct": 8,
+   "shared_with": null
+  },
+  "code_switch": {
+   "distinct": 4,
+   "shared_with": null
+  },
+  "chatter": {
+   "distinct": 8,
+   "shared_with": null
+  },
+  "shift_sim": {
+   "distinct": 0,
+   "shared_with": null
+  }
+ },
+ "not_supported_offline": {
+  "ar": "the offline brain's catalogue is English; the slice's scripts are not routed through it",
+  "hi_pa": "the offline brain's catalogue is English; the slice's scripts are not routed through it",
+  "zh": "the offline brain's catalogue is English; the slice's scripts are not routed through it",
+  "sm_to": "the offline brain's catalogue is English; the slice's scripts are not routed through it"
  },
  "open_slices": {
   "en_nz_quiet": {
