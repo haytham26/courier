@@ -44,6 +44,11 @@ jobs:
       # scripts/*/__tests__ (test:store-readiness).
       - name: No string-built SQL in services/api (BUG-232)
         run: node scripts/ci/check-sql-parameterisation.mjs
+      # BUG-198 (audit item 5, the trial-server proof): a human dispatch of
+      # android-e2e.yml must run the emulator legs AND the A1 proof - the
+      # human branch echoes e2e=true/a1=true and the jobs gate on them.
+      - name: A human dispatch of android-e2e runs the whole set incl. A1 (BUG-198)
+        run: node scripts/ci/check-e2e-dispatch.mjs
       - name: Check the links of the documentation
         run: node scripts/ci/check-doc-links.mjs
       - name: No control characters in the tracked text
