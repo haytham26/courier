@@ -29,9 +29,12 @@ os.environ.setdefault(
 # pass their own client, and the socket's loop is tested with a fallback).
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-only-placeholder")
 
+import ipaddress
+
 import pytest
 from fastapi.testclient import TestClient
 
+import app.safe_fetch as _safe_fetch
 from app.auth.jwks import get_verifier
 from app.main import app
 from app.repo import InMemoryRepo, get_repo
@@ -42,6 +45,29 @@ from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 # unthrottled - tests/test_rate_limit.py re-enables it per test with fresh
 # tokens, so the module-level buckets start empty there.
 app.state.limiter.enabled = False
+
+
+@pytest.fixture(autouse=True)
+def _fake_dns_for_the_suite(monkeypatch: pytest.MonkeyPatch):
+    """The suite never fetches for real (verifiers and providers get mock
+    transports), so the SSRF guard's resolver is faked for the whole suite:
+    every fake host NAME resolves to a public address, while IP literals still
+    return themselves - so the guard's refusals of 127.0.0.1 & co. stay real.
+    tests/test_safe_fetch.py patches the resolver per test on top of this.
+    (BUG-231.)"""
+
+    def fake_resolve(host: str, port: int) -> set[str]:
+        bare = host.strip("[]").lower()
+        if bare == "localhost":
+            return {"127.0.0.1"}
+        try:
+            ipaddress.ip_address(bare)
+        except ValueError:
+            return {"93.184.216.34"}
+        return {bare}
+
+    monkeypatch.setattr(_safe_fetch, "_resolve", fake_resolve)
+    yield
 
 COURIER = "driver-7"
 OTHER = "driver-8"

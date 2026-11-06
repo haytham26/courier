@@ -63,6 +63,18 @@ are the `hardening_headers` middleware in `app/main.py`:
 | `API_ALLOWED_HOSTS` | `COURIER_DOMAIN` + the compose-internal names; `*` only when neither is set (local dev) | the only `Host` headers the API answers (trusted-host check; the port is not part of the match) |
 | `API_MAX_REQUEST_BYTES` | `11534336` (11 MiB) | the global request-size cap: a declared `Content-Length` over it is a 413 before the body is read (the 10 MiB POD photo plus its multipart framing); each route keeps its own tighter read cap |
 
+Every server-side fetch goes through `safe_fetch()` (`app/safe_fetch.py`,
+BUG-230's sibling 4c / BUG-231): the URL must be http/https and its host must
+resolve to PUBLIC addresses only — private, loopback, link-local, reserved,
+multicast and unspecified addresses are refused (IP literals included), and
+every redirect target is re-checked before it is followed. The one exception
+is an operator-listed host: `AUTH_JWKS_INTERNAL_HOSTS` for the JWKS hop
+(BUG-131's compose `auth` service) and `OMNIROUTE_INTERNAL_HOSTS` for the
+self-hosted gateway — a listed host is a named decision, not an accident. A
+refused fetch raises `UnsafeFetchError` (deliberately not a `ValueError`, so
+it is never flattened into a generic "cannot reach the endpoint" error) and
+fails closed.
+
 ## The gates
 
 ```

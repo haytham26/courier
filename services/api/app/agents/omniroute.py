@@ -21,6 +21,7 @@ import httpx
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ..prompts import ANOMALY_QUESTION, INGEST_EXTRACT
+from ..safe_fetch import safe_fetch
 
 OCR_PROMPT = """\
 Transcribe every delivery line of this paper manifest photo, one line per parcel.
@@ -47,6 +48,19 @@ class OmniRouteSettings(BaseSettings):
     omniroute_api_key: str = ""
     omniroute_model: str = "courier-intake"
     omniroute_timeout_seconds: float = 30.0
+    # BUG-231: the self-hosted gateway may live on the compose network, whose
+    # name resolves to a private IP. Name it here and the SSRF guard allows
+    # exactly that host - anything else must resolve to public addresses.
+    omniroute_internal_hosts: str = ""
+
+    @property
+    def internal_hosts(self) -> set[str]:
+        """The hosts the operator explicitly listed for the gateway hop."""
+        return {
+            item.strip().lower()
+            for item in self.omniroute_internal_hosts.split(",")
+            if item.strip()
+        }
 
 
 class IntakeProvider(Protocol):
@@ -93,8 +107,15 @@ class OmniRouteProvider:
     def _chat(self, content: str | list[dict[str, Any]]) -> str:
         url = f"{self._settings.omniroute_base_url.rstrip('/')}/v1/chat/completions"
         try:
-            response = self._client.post(
+            # BUG-231: through the SSRF guard - the gateway host must resolve
+            # to a public address unless the operator listed it above. The
+            # refusal (UnsafeFetchError) is not a ValueError, so it is NOT
+            # flattened into "the gateway did not answer": it propagates.
+            response = safe_fetch(
+                self._client,
+                "POST",
                 url,
+                allowed_hosts=self._settings.internal_hosts,
                 headers={"Authorization": f"Bearer {self._settings.omniroute_api_key}"},
                 json={
                     "model": self._settings.omniroute_model,
