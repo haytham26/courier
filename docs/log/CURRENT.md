@@ -1,19 +1,24 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `ffa60ba` (PR #249, audit item 5a, BUG-198 fixed — the backend's row). Behind it `161a844` = PR #248 (the #244 log PR), `cdc2e5b` = PR #247 (audit item
-4g, BUG-235 — the backend's row), `f8f8092` = PR #244 (D1's app side,
-BUG-199 — the live voice assistant now works in the shipped build, full
-conversation, all shift), `57676df` = PR #246 (item 4f, BUG-234 — the backend's
-row), `85606a0` = PR #242 (audit item 4c, BUG-231 — the backend's row; the lead's
-D1 row is filed **BUG-199**, the lead's reserved range BUG-189..209, because the
-backend's next number is 233 and a row there would collide with theirs),
-`c382c36` = PR #241 (item 4b), `a2ee7d3` = PR #240 (the log PR), `ef12d64` = PR
-#239 (item 4a), `4851380` = PR #217 (queue 4g), `938cf26` = PR #216 (queue 4f),
-`3400082` = PR #218 (release hygiene). Lead session 14, 2026-11-05/07. In flight:
-none. Queue next: **B5** (store review risk: the prominent background-location
-disclosure in-app + Play internal-testing prep; the Play account and the disclosure
-video stay founder-gated), then **A3's app side**, **§22's app side**, **P4**
-baselines, **P7** acceptance on two screen sizes — to the §6 Definition of Done.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `69ed37a` (PR #250, B5's app
+side, BUG-200 — the prominent background-location disclosure is shown in-app
+before the permission request, and the settings carry the Legal rows). Behind it
+`0f500fe` = PR #251 (BUG-236 — the backend's row), `ffa60ba` = PR #249 (item 5a,
+BUG-198 fixed — the backend's row), `161a844` = PR #248 (the #244 log PR),
+`cdc2e5b` = PR #247 (item 4g, BUG-235 — the backend's row), `f8f8092` = PR #244
+(D1's app side, BUG-199 — the live voice assistant works in the shipped build),
+`57676df` = PR #246 (item 4f, BUG-234 — the backend's row), `85606a0` = PR #242
+(item 4c, BUG-231 — the backend's row; the lead's rows are filed in the lead's
+reserved range BUG-189..209 because the backend's next number is 233 and a row
+there would collide with theirs), `c382c36` = PR #241 (item 4b), `a2ee7d3` = PR
+#240 (the log PR), `ef12d64` = PR #239 (item 4a), `4851380` = PR #217 (queue 4g),
+`938cf26` = PR #216 (queue 4f), `3400082` = PR #218 (release hygiene). Lead session
+14, 2026-11-05/07. In flight: none. Queue next: **A3's app side** (the voice eval
+set is built on the backend 2026-11-03; the app-side opt-in debug recorder if one
+remains), then **§22's app side** (D48 device-agent techniques in
+`apps/mobile/src/voice`: the settings `remember` toggle, forgetSession), **P4**
+baselines, **P7** acceptance on two screen sizes — to the §6 Definition of
+Done.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -1176,3 +1181,29 @@ floor/markers/mojibake/control-chars/doc-links clean. Skills:
 `constraint-driven-development` (floor guard clean),
 `git-workflow-and-versioning` (merge ritual), `documentation-and-adrs` (this log).
 Next: **B5's app side** on a new branch off origin/main.
+
+**B5's app side MERGED: PR #250, merge commit 69ed37a on head 3a43719.** Final
+head 3a43719: ALL_GREEN — run 42306049804 (suite 114629465161): Maestro api-34 AND
+api-35 SUCCESS (evidence flows.txt 19/19 pass on both legs, incl.
+`flow=disclosure.yaml status=pass` — the drive opened with `?disclose=1` shows the
+`location-disclosure` sheet (the ONE legal text, the privacy link, Continue)
+BEFORE any permission request; Continue leads to `driving-screen`/`driving-panel`;
+the settings carry the Legal group and open the same disclosure on demand), A1
+SUCCESS, APK SUCCESS; all static gates SUCCESS. Merge comment #6698495859. Two
+earlier reds were root-caused from the failure dumps and fixed, not re-run blind:
+run 42293603090 failed disclosure.yaml at `settings-location-privacy` (Legal below
+the 320x640 fold) → 7117218; run 42299860105 then failed sign-in.yaml at
+`settings-sign-out` (Legal had pushed the sign-out down) → 3a43719 orders profile →
+Legal → Session → Voice, pinned by a unit test (LEGAL < SESSION < VOICE). Ritual:
+tag `archive/feat/b5-location-disclosure` @ 3a43719 pushed, branch deleted
+(ls-remote: absent, tag present). Register: BUG-200 doing → fixed with run
+42306049804; footer re-pasted by counting. Local gates at merge: mobile suite
+820/820 (94 suites), tsc, eslint, store-readiness node tests, parity 0 reopened
+(225 bug rows at merge), floor/markers/mojibake/control-chars/doc-links/mock-
+reach/store-readiness clean; merged origin/main (ffa60ba, PR #249) with the
+register rule, no deletions. Skills: `test-driven-development` (red-first,
+three iterations each proven from evidence), `frontend-ui-engineering`,
+`constraint-driven-development` (floor clean; the new BLOCKER in check-store-
+readiness gates that the disclosure is shown, not only defined),
+`git-workflow-and-versioning`, `documentation-and-adrs`. Next: **A3's app side**
+on a new branch off origin/main.
