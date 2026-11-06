@@ -817,6 +817,10 @@ Research row 63: the test is the proof. New `tests/test_tenant_isolation.py` swe
 
 PR #245 (head `acdce3d`) green 23/23, merged. `tests/test_tenant_isolation.py` now proves the property across every owner-scoped route: foreign reads 404/empty, foreign writes 404 and provably did not land, POD bytes stay with the owner (grant route: OTHER cannot presign, bogus/foreign grants 404), notes private, entitlements per courier, anonymous 401/404. First CI run caught a floor violation (unlinked type-ignore) - fixed by removing the suppression. Full API suite 621 passed on the head; parity 0 reopened. Counts re-pasted: 312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 221 bug rows (open 7 · doing 2 · testing 1 · fixed 179 · closed 2 · moved to PARITY 30). Item 4f (BUG-234: bandit in the SAST job) is next on branch `api-bandit-sast-234`.
 
+## 2026-11-07: item 4f (BUG-234) - bandit joins the SAST job
+
+Research A4 adopted PyCQA/bandit (Apache-2.0, 8 326 stars, pushed 2026-10-19) because Semgrep's Python rules are not a substitute for its Python-specific checks. Added `uvx bandit==1.9.4 -r services/api/app -ll -ii --quiet` to the sast job of quality-gates.yml (job renamed "Static analysis (Semgrep + Bandit)"), pinned like semgrep; -ll -ii means medium+ severity and confidence fail (bar: zero high/critical). Red first: plain bandit exits 1 on 3 LOW false positives (2x B105 message strings, B405 on the ParseError import that only catches openpyxl errors - upload XML is never parsed with stdlib ET); a probe with dynamic shell=True/pickle/exec/eval fails even under -ll -ii. Green: tree exits 0 under -ll -ii; check-workflows clean; parity 0 reopened. CI tool via uvx, so no uv.lock/LICENSES change. BUG-234 filed; evidence in `docs/evidence/api-bandit-sast-234/`. Branch `api-bandit-sast-234`. Skills: security-and-hardening, ci-cd-and-automation, source-driven-development, constraint-driven-development.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
