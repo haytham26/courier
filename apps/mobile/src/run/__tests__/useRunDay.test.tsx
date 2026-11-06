@@ -22,9 +22,10 @@ import { act, render, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { useRunDay } from '../useRunDay';
+import type { RunSnapshot } from '../types';
 
 /** The day the API would answer with: a seeded run, two stops, in its order. */
-const mockSeededDay = {
+const mockSeededDay: RunSnapshot = {
   run: {
     id: 'run-1',
     shift_id: 'shift-1',
@@ -78,6 +79,7 @@ const mockDeliveredMarks = jest.fn(() => Promise.resolve([mockMark]));
 const mockMarkDelivered = jest.fn(() => Promise.resolve());
 const mockUndoDelivered = jest.fn(() => Promise.resolve());
 const mockClose = jest.fn(() => Promise.resolve());
+const mockApplyRouteOrder = jest.fn(() => Promise.resolve(true));
 
 /**
  * The store the hook reads, as the run state above the screens hands it over.
@@ -93,6 +95,7 @@ const storeSource = () => ({
   markDelivered: mockMarkDelivered,
   undoDelivered: mockUndoDelivered,
   close: mockClose,
+  applyRouteOrder: mockApplyRouteOrder,
 });
 
 describe('the day the screens read (A1 slice 3)', () => {
@@ -100,6 +103,7 @@ describe('the day the screens read (A1 slice 3)', () => {
     jest.clearAllMocks();
     mockLoad.mockResolvedValue(okLoad);
     mockDeliveredMarks.mockResolvedValue([mockMark]);
+    mockApplyRouteOrder.mockResolvedValue(true);
   });
 
   it("gives the screens the run's stops, in the run's order", async () => {
@@ -210,5 +214,263 @@ describe('the day the screens read (A1 slice 3)', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+
+  // Queue 4.2: the solver's order is written through the store, and the day is
+  // re-read behind the write - otherwise the screen that asked shows the old
+  // order while every other screen shows the new one.
+  it('re-reads the day after the solver\u2019s order is written', async () => {
+    const reordered = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        ...mockSeededDay,
+        stops: [
+          { ...mockSeededDay.stops[1], seq: 1 },
+          { ...mockSeededDay.stops[0], seq: 2 },
+        ],
+      },
+    };
+    // The store answers the write, and the day behind it comes back reordered.
+    mockApplyRouteOrder.mockImplementation(() => Promise.resolve(true));
+    mockLoad.mockResolvedValueOnce(okLoad).mockResolvedValueOnce(reordered);
+
+    let apply: ((order: readonly { stopId: string; sequence: number }[]) => Promise<boolean>) | null = null;
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      apply = (order) => day.applyRouteOrder(order);
+      return <Text testID="order">{day.stops.map((stop) => stop.id).join(',')}</Text>;
+    };
+
+    const { getByTestId } = render(<Probe />);
+    await waitFor(() => expect(getByTestId('order').props.children).toBe('stop-1,stop-2'));
+
+    let applied = false;
+    await act(async () => {
+      applied = await apply([{ stopId: 'stop-2', sequence: 1 }, { stopId: 'stop-1', sequence: 2 }]);
+    });
+
+    expect(applied).toBe(true);
+    expect(mockApplyRouteOrder).toHaveBeenCalledWith([
+      { stopId: 'stop-2', sequence: 1 },
+      { stopId: 'stop-1', sequence: 2 },
+    ]);
+    expect(getByTestId('order').props.children).toBe('stop-2,stop-1');
+  });
+
+  it('answers false when the store could not keep the solver\u2019s order', async () => {
+    mockApplyRouteOrder.mockResolvedValue(false);
+    mockLoad.mockResolvedValue(okLoad);
+
+    let apply: ((order: readonly { stopId: string; sequence: number }[]) => Promise<boolean>) | null = null;
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      apply = (order) => day.applyRouteOrder(order);
+      return <Text testID="order">{day.stops.map((stop) => stop.id).join(',')}</Text>;
+    };
+
+    const { getByTestId } = render(<Probe />);
+    await waitFor(() => expect(getByTestId('order').props.children).toBe('stop-1,stop-2'));
+
+    let applied = true;
+    await act(async () => {
+      applied = await apply([{ stopId: 'stop-1', sequence: 1 }, { stopId: 'stop-2', sequence: 2 }]);
+    });
+
+    // The day is NOT re-read when the write was refused: the courier keeps
+    // looking at the very order the phone is certain of.
+    expect(applied).toBe(false);
+    expect(getByTestId('order').props.children).toBe('stop-1,stop-2');
+    expect(mockLoad).toHaveBeenCalledTimes(1);
+  });
+
+  // Queue 4c (the trial's #21, ADR-024): the stop's own type rides the day from
+  // the contract onto the stop the screens read. The contract requires the
+  // field, and a stop the contract left without one answers delivery - the
+  // schema's own default, which is the honest answer for an old row.
+  it('carries the contract\u2019s stop type onto the stop the screens read', async () => {
+    const withPickup = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        run: mockSeededDay.run,
+        stops: [
+          { ...mockSeededDay.stops[0], type: 'pickup' as const },
+          mockSeededDay.stops[1],
+        ],
+      },
+    };
+    mockLoad.mockResolvedValue(withPickup);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <Text testID="types">
+          {day.stops.map((stop) => `${stop.id}:${stop.type}`).join(',')}
+        </Text>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() =>
+      expect(getByTestId('types').props.children).toBe('stop-1:pickup,stop-2:delivery'),
+    );
+  });
+
+  it('answers delivery for a stop the contract left without a type', async () => {
+    const withoutType = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        run: mockSeededDay.run,
+        stops: [{ ...mockSeededDay.stops[0], type: undefined }],
+      },
+    };
+    mockLoad.mockResolvedValue(withoutType);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return <Text testID="types">{day.stops.map((stop) => `${stop.id}:${stop.type}`).join(',')}</Text>;
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('types').props.children).toBe('stop-1:delivery'));
+  });
+});
+
+/**
+ * Queue 4d (the trial's #12 and #14, ADR-022's app half): the run's own break
+ * window and finish point reach the screens through the day. The contract
+ * carries both as optional fields on the run (`RunResponse.break_window`,
+ * `RunResponse.finish`, seeded on main by PR #177), so the hook exposes them
+ * from the snapshot's run - and answers null for a run that has neither,
+ * which is the honest answer for a day the solver did not place them on.
+ */
+describe("the run's own break window and finish point on the day (queue 4d)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockLoad.mockResolvedValue(okLoad);
+    mockDeliveredMarks.mockResolvedValue([]);
+  });
+
+  it('carries the break window and the finish point from the run the store answers with', async () => {
+    const withBreakAndFinish = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        ...mockSeededDay,
+        run: {
+          ...mockSeededDay.run,
+          break_window: { start: '2026-10-31T12:00:00.000Z', end: '2026-10-31T13:00:00.000Z' },
+          finish: { lat: -43.532, lon: 172.599 },
+        },
+      },
+    };
+    mockLoad.mockResolvedValue(withBreakAndFinish);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <>
+          <Text testID="break">
+            {day.breakWindow === null
+              ? 'none'
+              : `${day.breakWindow.start}..${day.breakWindow.end}`}
+          </Text>
+          <Text testID="finish">
+            {day.finish === null ? 'none' : `${day.finish.lat},${day.finish.lon}`}
+          </Text>
+          <Text testID="depot">
+            {day.depot === null ? 'none' : `${day.depot.lat},${day.depot.lon}`}
+          </Text>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() =>
+      expect(getByTestId('break').props.children).toBe('2026-10-31T12:00:00.000Z..2026-10-31T13:00:00.000Z'),
+    );
+    expect(getByTestId('finish').props.children).toBe('-43.532,172.599');
+    expect(getByTestId('depot').props.children).toBe('-43.532,172.599');
+  });
+
+  it('answers null for a run that carries neither a break window nor a finish point', async () => {
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <>
+          <Text testID="break">{day.breakWindow === null ? 'none' : 'some'}</Text>
+          <Text testID="finish">{day.finish === null ? 'none' : 'some'}</Text>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('break').props.children).toBe('none'));
+    expect(getByTestId('finish').props.children).toBe('none');
+  });
+
+  it('answers null for both when there is no day at all', async () => {
+    mockLoad.mockResolvedValue({
+      status: 'offline',
+      snapshot: null,
+    } as unknown as Awaited<ReturnType<typeof mockLoad>>);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <>
+          <Text testID="break">{day.breakWindow === null ? 'none' : 'some'}</Text>
+          <Text testID="finish">{day.finish === null ? 'none' : 'some'}</Text>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('break').props.children).toBe('none'));
+    expect(getByTestId('finish').props.children).toBe('none');
+  });
+
+  // The A1 leg of run 42118823224 crashed exactly here: the real API
+  // serializes an absent break_window/finish as JSON null, not by leaving the
+  // field out, and the guard checked only `undefined` - so `null.start`
+  // threw inside RunProvider and the app never reached today-screen. Null and
+  // absent are the same answer from the server, and the hook must read them
+  // the same way.
+  it('reads a JSON null the same as an absent field - the real API\u2019s own answer (run 42118823224\u2019s A1 crash)', async () => {
+    const withNulls = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        ...mockSeededDay,
+        run: {
+          ...mockSeededDay.run,
+          break_window: null,
+          finish: null,
+        } as unknown as RunSnapshot['run'],
+      },
+    };
+    mockLoad.mockResolvedValue(withNulls);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <>
+          <Text testID="break">{day.breakWindow === null ? 'none' : 'some'}</Text>
+          <Text testID="finish">{day.finish === null ? 'none' : 'some'}</Text>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('break').props.children).toBe('none'));
+    expect(getByTestId('finish').props.children).toBe('none');
   });
 });
