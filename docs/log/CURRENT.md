@@ -1,9 +1,8 @@
 # CURRENT — the handoff
 
 **Week:** 2026-W44. **Local `main` == `origin/main` == `938cf26` (PR #216, queue 4f — the POD photo on the delivered confirm);
-ahead of it `8333043` = PR #208). Queue 4f = PR #216 (ALL_GREEN on 4f24692d,
-run 42176913133, 16/16 flows incl. pod.yaml) merging next; 4g = PR #217 in
-flight. Lead session 14, 2026-11-05/06.**
+ahead of it `3400082` = PR #218 (release hygiene), `8333043` = PR #208).
+Queue 4g = PR #217 in flight. Lead session 14, 2026-11-05/06.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
