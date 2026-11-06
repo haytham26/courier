@@ -1,8 +1,12 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `938cf26` (PR #216, queue 4f — the POD photo on the delivered confirm);
-ahead of it `3400082` = PR #218 (release hygiene), `8333043` = PR #208).
-Queue 4g = PR #217 in flight. Lead session 14, 2026-11-05/06.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `ef12d64` (PR #239, audit item 4a);
+ahead of it `4851380` = PR #217 (queue 4g), `938cf26` = PR #216 (queue 4f),
+`3400082` = PR #218 (release hygiene), `8333043` = PR #208). Lead session 14,
+2026-11-05/07. Next: D1 (founder decision D1 — the live voice assistant in the
+shipped build, app side), B5 + Play internal-testing prep, A3's app side, §22's
+app side, P4 baselines, P7 acceptance on two screen sizes — to the §6 Definition
+of Done.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -1081,3 +1085,41 @@ the PR (#6681191561); the same code's A1 was green on run 42176913133
 valid 380-char base64, 284 bytes FFD8FF..FFD9 (4f24692d — run 42171314486 had
 answered "bad base-64"). Ritual: tag `archive/feat/trial-pod-photo` @
 58bb568c, branch deleted (ls-remote proof).
+
+**Queue 4g MERGED: PR #217, merge commit 4851380 on head 00e6e3ae.** Final head
+00e6e3ae (re-merged on 938cf26): run 42206533436 — Maestro api-34 AND api-35
+SUCCESS (flows.txt 16/16 pass incl. nav-handoff.yaml), A1 SUCCESS, APK SUCCESS,
+all static gates SUCCESS; the Record-screens job was cancelled twice by its
+concurrency group mid-emulator-boot ("The operation was canceled." while qemu
+started, before any flow assertion) — §17-excepted with quoted lines on the PR
+(#6685606272). Seven flow iterations, each root-caused from the evidence dumps
+and commented on the PR (#6678133640, #6678858411, #6679365073, #6679749019,
+#6682036154, #6682819961, #6683257830): the swipe `point` inside `from:`; the
+pinned image ships Google Maps so the key-free link IS answered (the flow now
+asserts Maps' landing "Make it your map"); Maps' location dialog appears only
+after `back` and ignores `back` (wait for "Don.t allow" — tapOn's `text` is a
+regex in Maestro 2.11, the `textRegex` KEY is rejected — then tap it);
+after dismissal Maps' main UI is still foreground, so `launchApp` (no
+clearState) re-foregrounds our app on its Today tab and the flow re-enters the
+drive (swipe, `today-go`) asserting `driving-screen` + "STOP 2 OF 5" — the app
+survived the hand-off with its run intact. Ritual: tag
+`archive/feat/trial-nav-handoff-flow` @ 00e6e3a, branch deleted (ls-remote
+proof). TRIAL_SCOPE row 15 re-applied on the merge; counts re-pasted by
+counting; no file deleted, no register shrunk.
+
+**Trial queue 4 is now fully on main; release hygiene is on main.** Remaining
+queue (pinned 2026-11-07): **D1** = founder decision D1 (FINAL_PROMPT §2.3 /
+DECISIONS): "the live voice assistant (full conversation) is essential in the
+shipped version and works throughout the shift" — the app-side remainder in
+`apps/mobile/src/voice` (A2's 296 MB model choice stays founder-gated in
+FOUNDER_TODO); then **B5** (store review risk: the prominent background-location
+disclosure the app must carry + Play internal-testing prep; the Play account
+and the disclosure video via the recording workflow stay founder/backend-gated);
+then **A3's app side** (the voice eval set is built on the backend
+2026-11-03; the app-side opt-in debug recorder if one remains); then **§22's
+app side** (D48 device-agent techniques in `apps/mobile/src/voice`:
+pre-classifier, ask-on-low-confidence, visible/clearable memory); then **P4**
+visual-regression baselines (design mockups + screenshots
+day/night/small/large/200%); then **P7** acceptance on the CI emulator at two
+screen sizes, scorecard ≥ 8/10, v1.0.0 (the release itself is founder-gated) —
+to the §6 Definition of Done.
