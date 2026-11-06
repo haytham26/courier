@@ -1,17 +1,19 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `85606a0` (PR #242, audit item 4c,
-BUG-231 — the backend's row). This branch's D1 row is filed **BUG-199** — the lead's
-reserved range (BUG-189..209; 199..209 free across main and all branches), because the
-backend's next number is 233 and a row there would collide with theirs; ahead of it
-`c382c36` = PR #241 (item 4b), `a2ee7d3` = PR #240 (the log PR),
-`ef12d64` = PR #239 (item 4a), `4851380` = PR #217 (queue 4g), `938cf26` = PR #216
-(queue 4f), `3400082` = PR #218 (release hygiene). Lead session 14, 2026-11-05/07.
-In flight: **D1's app side** on `feat/d1-voice-turn-flow` (BUG-199). Next: D1
-(founder decision D1 — the live voice assistant in the
-shipped build, app side), B5 + Play internal-testing prep, A3's app side, §22's
-app side, P4 baselines, P7 acceptance on two screen sizes — to the §6 Definition
-of Done.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `cdc2e5b` (PR #247, audit item
+4g, BUG-235 — the backend's row). Behind it `f8f8092` = PR #244 (D1's app side,
+BUG-199 — the live voice assistant now works in the shipped build, full
+conversation, all shift), `57676df` = PR #246 (item 4f, BUG-234 — the backend's
+row), `85606a0` = PR #242 (audit item 4c, BUG-231 — the backend's row; the lead's
+D1 row is filed **BUG-199**, the lead's reserved range BUG-189..209, because the
+backend's next number is 233 and a row there would collide with theirs),
+`c382c36` = PR #241 (item 4b), `a2ee7d3` = PR #240 (the log PR), `ef12d64` = PR
+#239 (item 4a), `4851380` = PR #217 (queue 4g), `938cf26` = PR #216 (queue 4f),
+`3400082` = PR #218 (release hygiene). Lead session 14, 2026-11-05/07. In flight:
+none. Queue next: **B5** (store review risk: the prominent background-location
+disclosure in-app + Play internal-testing prep; the Play account and the disclosure
+video stay founder-gated), then **A3's app side**, **§22's app side**, **P4**
+baselines, **P7** acceptance on two screen sizes — to the §6 Definition of Done.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -1153,3 +1155,24 @@ mojibake/markers/control-chars/doc-links/floor clean; `.maestro/voice-turn.yaml`
 drives the flow on the emulator (question answered in the dock's caption,
 spoken "delivered" lands the run's confirm). A2's on-device model choice
 stays founder-gated in FOUNDER_TODO.
+
+**D1's app side MERGED: PR #244, merge commit f8f8092 on head f057207f.** Final
+head f057207f: ALL_GREEN — run 42266243860 (suite 114522152335): Maestro api-34 AND
+api-35 SUCCESS (evidence flows.txt 18/18 pass on both legs, incl.
+`flow=voice-turn.yaml status=pass` — the canned question answered "Four stops left
+on the run." in `tab-caption`, the spoken "delivered" routed free (no HTTP) and
+landed `delivered-screen` + "Delivered" through the layout's voice→run bridge), A1
+SUCCESS, APK SUCCESS; all static gates SUCCESS (runs 42266243902 / 42266244002 /
+42266243842, CodeQL). Merge comment #6693273978. Register: BUG-199 doing → fixed
+with run 42266243860 as the evidence (the earlier red on the first filings, runs
+42257777511/42257777212, was the duplicate-number guard firing on the collision
+with the backend's range — root-caused to the numbering, fixed by the renumber to
+BUG-199 in commits 72d216f/f057207, not a code issue). Ritual: tag
+`archive/feat/d1-voice-turn-flow` @ f057207f pushed, branch deleted (ls-remote:
+absent, tag present). BUGS.md footer re-pasted by counting. Local gates at merge:
+mobile suite 808/808 (93 suites), tsc, eslint, parity 0 reopened,
+floor/markers/mojibake/control-chars/doc-links clean. Skills:
+`test-driven-development` (red-first, six new suites),
+`constraint-driven-development` (floor guard clean),
+`git-workflow-and-versioning` (merge ritual), `documentation-and-adrs` (this log).
+Next: **B5's app side** on a new branch off origin/main.
