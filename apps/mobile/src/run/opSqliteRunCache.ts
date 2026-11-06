@@ -37,9 +37,17 @@ const RUN_TABLE: TableShape = {
     ['speed_kmh', 'REAL', 'NOT NULL'],
     ['start_at', 'TEXT', 'NOT NULL'],
     ['capacity_parcels', 'REAL'],
+    // Queue 4d (the trial's #12 and #14, ADR-022's app half): the run's own
+    // break window and finish point ride the cache, so the offline answer is
+    // the same rows the API answers (A1's one-fact rule). Older installed
+    // tables get the columns on migration (migrateTable adds + bumps).
+    ['break_start_at', 'TEXT'],
+    ['break_end_at', 'TEXT'],
+    ['finish_lat', 'REAL'],
+    ['finish_lon', 'REAL'],
     ['updated_at', 'TEXT', 'NOT NULL'],
   ],
-  version: 1,
+  version: 2,
 };
 
 /** The stops of that run: the contract's `StopResponse`. */
@@ -154,7 +162,8 @@ export class OpSqliteRunCache implements RunCache {
   async read(): Promise<RunSnapshot | null> {
     await this.ensureOpen();
     const run = await this.handle.database.execute(
-      `SELECT run_id, shift_id, name, depot_lat, depot_lon, speed_kmh, start_at, capacity_parcels
+      `SELECT run_id, shift_id, name, depot_lat, depot_lon, speed_kmh, start_at, capacity_parcels,
+              break_start_at, break_end_at, finish_lat, finish_lon
          FROM ${RUN_TABLE.table} ORDER BY id ASC LIMIT 1`,
     );
     const row = run.rows[0];
@@ -176,8 +185,9 @@ export class OpSqliteRunCache implements RunCache {
     await this.handle.database.execute(`DELETE FROM ${STOP_TABLE.table}`);
     await this.handle.database.execute(
       `INSERT OR REPLACE INTO ${RUN_TABLE.table}
-         (id, run_id, shift_id, name, depot_lat, depot_lon, speed_kmh, start_at, capacity_parcels, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, run_id, shift_id, name, depot_lat, depot_lon, speed_kmh, start_at, capacity_parcels,
+          break_start_at, break_end_at, finish_lat, finish_lon, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         THE_ROW,
         snapshot.run.id,
@@ -188,6 +198,12 @@ export class OpSqliteRunCache implements RunCache {
         snapshot.run.speed_kmh,
         snapshot.run.start_at,
         snapshot.run.capacity_parcels ?? null,
+        // Queue 4d (ADR-022's app half): the run's own break window and finish
+        // point, written as their own columns - null when the run has none.
+        snapshot.run.break_window?.start ?? null,
+        snapshot.run.break_window?.end ?? null,
+        snapshot.run.finish?.lat ?? null,
+        snapshot.run.finish?.lon ?? null,
         new Date().toISOString(),
       ],
     );
@@ -263,6 +279,13 @@ export class OpSqliteRunCache implements RunCache {
 
 /** The run row, back as the contract answers it. */
 function runOf(row: Record<string, Scalar>): RunSnapshot['run'] {
+  // Queue 4d (ADR-022's app half): the break window and the finish point read
+  // back as the contract's optional fields - present only when the row
+  // carries both of their halves, because half a window is not a window.
+  const breakStart = row.break_start_at;
+  const breakEnd = row.break_end_at;
+  const finishLat = row.finish_lat;
+  const finishLon = row.finish_lon;
   return {
     id: dbText(row, 'run_id'),
     shift_id: dbText(row, 'shift_id'),
@@ -271,6 +294,12 @@ function runOf(row: Record<string, Scalar>): RunSnapshot['run'] {
     speed_kmh: Number(row.speed_kmh),
     start_at: dbText(row, 'start_at'),
     capacity_parcels: dbNumber(row, 'capacity_parcels'),
+    ...(breakStart === null || breakEnd === null
+      ? {}
+      : { break_window: { start: dbText(row, 'break_start_at'), end: dbText(row, 'break_end_at') } }),
+    ...(finishLat === null || finishLon === null
+      ? {}
+      : { finish: { lat: Number(finishLat), lon: Number(finishLon) } }),
   };
 }
 

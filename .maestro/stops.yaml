@@ -29,4 +29,59 @@ name: The stops list opens a stop
 # Maestro matches the text exactly, so the assertion is the whole address.
 - assertVisible: "45 Papanui Road"
 - assertVisible: "Merivale"
+# Queue 4a: the run's own words for this stop (trial #11 and #13). The E2E
+# build's day is the run's own, so the priority and the time window the run
+# gave stop 2 are on the sheet. The priority is its own node ("Priority stop"),
+# and the window's sentence is its own node too - the app writes them apart so
+# each is asserted as itself (the whole-line lesson of the optimise flow).
+# The times are the device's own clock: the emulator runs in UTC, and the run's
+# window is stamped 09:00-11:00 UTC, so the sentence is exact here.
+- assertVisible: "Priority stop"
+- assertVisible: "Its window opens at 09:00 and closes at 11:00"
 - takeScreenshot: "stop-detail"
+# And the row itself carries the run's own words before the sheet opens, so the
+# courier reads the priority and the window on the list and not only here.
+- tapOn:
+    id: "stops-scrim"
+- assertVisible: "Priority"
+- assertVisible: "09:00 - 11:00"
+- takeScreenshot: "stop-detail-priority"
+# Queue 4c (the trial's #21, ADR-024): the run's own pickup. Stop 3 of the E2E
+# day is a pickup, so its sheet names the type as its own node, and its row
+# carries the word before the sheet opens - each its own fact, asserted as
+# itself (the whole-line lesson of the optimise flow).
+- tapOn:
+    id: "stop-3"
+- extendedWaitUntil:
+    visible:
+      id: "stop-detail-sheet"
+    timeout: 30000
+- assertVisible: "120 Blenheim Road"
+- assertVisible: "Pickup stop"
+- takeScreenshot: "stop-detail-pickup"
+- tapOn:
+    id: "stops-scrim"
+- assertVisible: "Pickup"
+- takeScreenshot: "stop-row-pickup"
+# Queue 4d (the trial's #12 and #14, ADR-022's app half): the run's own break
+# window and finish point, as their own rows under the stops. The rows sit
+# below the stop rows in the panel's list, so the flow scrolls the list to
+# them first - asserting a row that is rendered but off-screen reads false
+# (the BUG-181 shape, the same lesson as today-fail.yaml). Each fact is its
+# own node, so each is asserted as itself: "Break" and its device-clock times
+# (the emulator runs in UTC; the run's break is stamped 12:00-13:00 UTC), and
+# "Finish at the depot" - the mock run's finish point is its depot.
+- scrollUntilVisible:
+    element:
+      id: "stops-break"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Break"
+- assertVisible: "12:00 - 13:00"
+- scrollUntilVisible:
+    element:
+      id: "stops-finish"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Finish at the depot"
+- takeScreenshot: "stops-break-finish"

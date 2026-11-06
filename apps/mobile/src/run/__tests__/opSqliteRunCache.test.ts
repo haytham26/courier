@@ -346,3 +346,84 @@ describe('the op-sqlite run cache', () => {
     expect(next).not.toBe(cache);
   });
 });
+
+/**
+ * Queue 4d (the trial's #12 and #14, ADR-022's app half): the run's own break
+ * window and finish point ride the cache. The contract carries both on the
+ * run (PR #177), and the offline answer has to be the same rows as the
+ * online one (A1's one-fact rule), so the run table gains the four columns -
+ * versioned, so an installed v1 table gains them by ALTER (BUG-087's lesson).
+ */
+describe('the run row\u2019s break and finish columns (queue 4d)', () => {
+  const withBreakAndFinish: RunSnapshot = {
+    run: {
+      ...run,
+      break_window: { start: '2026-10-31T12:00:00.000Z', end: '2026-10-31T13:00:00.000Z' },
+      finish: { lat: -43.55, lon: 172.603 },
+    },
+    stops: [stop('stop-1', 1)],
+  };
+
+  it('writes the break window and the finish point and reads them back', async () => {
+    opSqlite.open.mockReturnValue(new FakeSqlite());
+    const cache = OpSqliteRunCache.open('break-finish-roundtrip.db');
+
+    await cache.write(withBreakAndFinish);
+
+    const snapshot = await cache.read();
+    expect(snapshot?.run.break_window).toEqual({
+      start: '2026-10-31T12:00:00.000Z',
+      end: '2026-10-31T13:00:00.000Z',
+    });
+    expect(snapshot?.run.finish).toEqual({ lat: -43.55, lon: 172.603 });
+  });
+
+  it('leaves both absent when the run answers without them', async () => {
+    opSqlite.open.mockReturnValue(new FakeSqlite());
+    const cache = OpSqliteRunCache.open('break-finish-absent.db');
+
+    await cache.write(withBreakAndFinish);
+    expect((await cache.read())?.run.break_window).toBeDefined();
+
+    await cache.write(aDay);
+    const snapshot = await cache.read();
+    expect(snapshot?.run.break_window).toBeUndefined();
+    expect(snapshot?.run.finish).toBeUndefined();
+  });
+
+  it('adds the four columns to an installed version-1 run table (BUG-087)', async () => {
+    const installed = new FakeSqlite();
+    // An install that has the version-1 run table already: the old ten
+    // columns, and the database at version 1.
+    installed.version = 1;
+    installed.tables.set('run_state_run', [
+      'id', 'run_id', 'shift_id', 'name', 'depot_lat', 'depot_lon',
+      'speed_kmh', 'start_at', 'capacity_parcels', 'updated_at',
+    ]);
+    installed.rows.set('run_state_run', new Map());
+    opSqlite.open.mockReturnValue(installed);
+    const cache = OpSqliteRunCache.open('break-finish-migrate.db');
+
+    await cache.write(withBreakAndFinish);
+
+    const alters = installed.executed.filter((sql) => sql.startsWith('ALTER TABLE run_state_run ADD COLUMN'));
+    expect(alters).toEqual([
+      'ALTER TABLE run_state_run ADD COLUMN break_start_at TEXT',
+      'ALTER TABLE run_state_run ADD COLUMN break_end_at TEXT',
+      'ALTER TABLE run_state_run ADD COLUMN finish_lat REAL',
+      'ALTER TABLE run_state_run ADD COLUMN finish_lon REAL',
+    ]);
+    expect(installed.version).toBe(2);
+    expect(installed.columnsOf('run_state_run')).toEqual([
+      'id', 'run_id', 'shift_id', 'name', 'depot_lat', 'depot_lon',
+      'speed_kmh', 'start_at', 'capacity_parcels', 'updated_at',
+      'break_start_at', 'break_end_at', 'finish_lat', 'finish_lon',
+    ]);
+    // And the migrated table answers the new shape's write and read.
+    expect((await cache.read())?.run.break_window).toEqual({
+      start: '2026-10-31T12:00:00.000Z',
+      end: '2026-10-31T13:00:00.000Z',
+    });
+    expect((await cache.read())?.run.finish).toEqual({ lat: -43.55, lon: 172.603 });
+  });
+});
