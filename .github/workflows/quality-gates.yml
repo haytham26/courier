@@ -295,7 +295,7 @@ jobs:
           uvx pip-audit -r requirements.txt --strict
 
   sast:
-    name: Static analysis (Semgrep)
+    name: Static analysis (Semgrep + Bandit)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -322,6 +322,20 @@ jobs:
             --exclude-rule "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure" \
             --exclude-rule "yaml.github-actions.security.workflow-run-target-code-checkout.workflow-run-target-code-checkout" \
             --error --quiet .
+      - name: Bandit (Python SAST, pinned) - BUG-234
+        run: |
+          # Research A4: bandit complements Semgrep's Python rules - it catches
+          # the shell=True / pickle / exec classes Semgrep can miss. Pinned
+          # like semgrep. Medium+ severity AND medium+ confidence fail the
+          # build (the bar is zero high/critical). The three LOW findings the
+          # tree carries on 2026-11-07 are accepted, all false positives:
+          # two B105s on message strings (auth/websocket.py's "the token is
+          # not valid", nz_address.py's `== "and"`), and B405 on
+          # `from xml.etree.ElementTree import ParseError` in import_stops.py -
+          # that import only CATCHES openpyxl's parse errors; our code never
+          # parses upload XML with stdlib ET (the upload is magic-checked and
+          # zip-index-capped before openpyxl sees it, BUG-211).
+          uvx bandit==1.9.4 -r services/api/app -ll -ii --quiet
       - name: Why the excluded rules are excluded
         run: |
           echo "The pnpm/npm supply-chain rules expect the pnpm 10 settings; pnpm 12 verifies"
