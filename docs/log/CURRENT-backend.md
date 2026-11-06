@@ -813,6 +813,10 @@ PR #243 (head `ca166bd`) green 17/17, merged. The SQL-parameterisation gate now 
 
 Research row 63: the test is the proof. New `tests/test_tenant_isolation.py` sweeps every owner-scoped route with driver-7 vs driver-8 vs anonymous against a run seeded as driver-7's: foreign reads are 404/empty, foreign writes are 404 AND provably did not land, POD bytes stay with the owner (the bytes route's authority is the presigned HMAC per ADR-011 section 2 - OTHER cannot presign, bogus/foreign grants 404), location notes are private, entitlements per courier, anonymous gets 401 (404 on the grant route). Red first: 4 initial failures were test-shape bugs (payload/param shapes), NOT leaks - the code was already isolated; the sweep now pins the property so a future route can't forget the owner predicate. 10/10 green; ruff/mypy clean; parity 0 reopened. BUG-233 filed; evidence in `docs/evidence/api-tenant-isolation-233/`. Branch `api-tenant-isolation-233`. Skills: security-and-hardening, test-driven-development, constraint-driven-development.
 
+## 2026-11-07: item 4e (BUG-233) merged - #245; tag `archive/api-tenant-isolation-233`, branch deleted
+
+PR #245 (head `acdce3d`) green 23/23, merged. `tests/test_tenant_isolation.py` now proves the property across every owner-scoped route: foreign reads 404/empty, foreign writes 404 and provably did not land, POD bytes stay with the owner (grant route: OTHER cannot presign, bogus/foreign grants 404), notes private, entitlements per courier, anonymous 401/404. First CI run caught a floor violation (unlinked type-ignore) - fixed by removing the suppression. Full API suite 621 passed on the head; parity 0 reopened. Counts re-pasted: 312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 221 bug rows (open 7 · doing 2 · testing 1 · fixed 179 · closed 2 · moved to PARITY 30). Item 4f (BUG-234: bandit in the SAST job) is next on branch `api-bandit-sast-234`.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
