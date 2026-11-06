@@ -88,7 +88,9 @@ if (deployBlock.length === 0) {
   }
   // The gate step itself: it reads the runs and requires BOTH to be completed
   // and successful on the sha.
-  const gateStep = (/name:\s*The gates are green on this sha\n([\s\S]*?)(?=\n      - name:|\n      - uses:|\Z)/.exec(deployBlock) ?? [])[1] ?? '';
+  // NB: `$`, not `\Z` - JavaScript has no `\Z`; `\Z` is the literal letter Z,
+  // so a step that is the job's LAST step would never match.
+  const gateStep = (/name:\s*The gates are green on this sha\n([\s\S]*?)(?=\n      - name:|\n      - uses:|$)/.exec(deployBlock) ?? [])[1] ?? '';
   if (!/workflow_run\.head_sha/.test(gateStep)) {
     problems.push('the gate step does not read the sha the gates ran on');
   }

@@ -587,6 +587,37 @@ every PR - which is what this item fixes.
 job-summary line on attempt 2 asking for the justification), then the four 3i PRs in
 order and 3j.
 
+## The 2026-11-05 audit's CI / INFRA item 3h (BUG-219): the emulator jobs have a retry budget of one
+
+The `e2e` and `a1` jobs had no cap on `github.run_attempt`, so a flake could be "fixed" by pressing
+re-run until green. PLAYBOOK 17.1 (a re-run is not a diagnosis; a red is a root cause) was enforced by
+memory alone. The recurring case is the harness, not the code - the same APK green on api-35 and red on
+api-34 four times with the code byte-identical (BUG-065).
+
+- A `The retry budget` step is now the FIRST step of both jobs: it fails when
+  `github.run_attempt > 2` (before booting an emulator, so the budget saves the minutes), and on
+  attempt 2 it writes the justification request into `$GITHUB_STEP_SUMMARY` - what changed since
+  attempt 1, what the root cause is, and that "a re-run" is not an answer. The budget is one re-run,
+  which is what the recurring harness flake needs.
+- `scripts/ci/check-e2e-retry-budget.mjs` (a step in the Floor guard job) holds every half, with a
+  6-case test. Evidence: `docs/evidence/e2e-retry-budget/README.md`, including the budget step's real
+  body run with attempts 1/2/3 (pass, pass + summary, fail).
+- **A bug the test caught in the gate itself:** the first draft anchored its step regex with `\Z`,
+  which JavaScript does not have (it is the literal letter Z there), so a step that is the job's LAST
+  step never matched. The 3d gate's identical anchor was fixed in the same commit. `\Z` is a PCRE-ism;
+  JS uses `$`.
+
+**Item 3's letters are now all on branches with PRs:** 3a #199, 3b #200, 3c #201, 3d #202, 3e #203,
+3f #204, 3g #205, 3h this one. Remaining in item 3: the four 3i PRs IN ORDER (C12 pin setup-uv by SHA,
+C11 Node 20 -> 24, C10 pin every action by digest, C14 dependabot + a cron staging smoke), then 3j (the
+required-checks list, which is a FOUNDER_TODO row - the names are written down for the founder to set).
+
+## 2026-11-06: #205 merged as ef46eac; origin/main into `e2e-retry-budget` (5149434)
+
+- The previous stack PR merged as `ef46eac`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `e2e-retry-budget` (was `38d557e`) carries origin/main via `5149434` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 208 bug rows (open 7 · doing 3 · testing 1 · fixed 165 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+Also carrying the #205 bookkeeping (counts re-pasted one branch late to save a CI cycle): #205 merged as ef46eac, tag archive/e2e-job-level-filter @ 9a486f6, branch deleted.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
