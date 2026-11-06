@@ -685,6 +685,12 @@ run new code with no commit in this repository.
 `infra/smoke.sh` against staging on a schedule), then 3j (the required-checks list into
 FOUNDER_TODO.md).
 
+## 2026-11-06: #209 merged as 257cc6e; origin/main into `action-digest-pins` (2df79ef)
+
+- The previous stack PR merged as `257cc6e`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `action-digest-pins` (was `5f3aba4`) carries origin/main via `2df79ef` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 212 bug rows (open 7 · doing 2 · testing 1 · fixed 170 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#209 (C11, BUG-221) merged as 257cc6e; tag archive/node-24 @ d355555, branch deleted. Also: the screen-recordings 45-min timeout on d355555 was a runner stall (zero log lines 08:02-08:35), re-run green (PLAYBOOK 17 note).
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
