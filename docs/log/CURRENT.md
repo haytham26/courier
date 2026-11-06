@@ -1,9 +1,9 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `3400082` (PR #218, release
-hygiene; ahead of it `8333043` = PR #208). Lead session 14, 2026-11-05/06.
-Queue 4f = PR #216 (ALL_GREEN on 4f24692d, run 42176913133, 16/16 flows incl.
-pod.yaml) and 4g = PR #217 (flow fixes in flight) next to merge.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `938cf26` (PR #216, queue 4f — the POD photo on the delivered confirm);
+ahead of it `8333043` = PR #208). Queue 4f = PR #216 (ALL_GREEN on 4f24692d,
+run 42176913133, 16/16 flows incl. pod.yaml) merging next; 4g = PR #217 in
+flight. Lead session 14, 2026-11-05/06.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -1050,24 +1050,35 @@ Next: merge #216 then #217 when their heads are green (ritual), then this
 branch, then D1, B5 + Play internal-testing prep, A3, §22's app side, P4
 baselines, P7 acceptance on two screen sizes — to the §6 Definition of Done.
 
-**Release hygiene MERGED: PR #218, merge commit 3400082 on head c51488cc.**
-ALL_GREEN on the final head: run 42179628305 (pull_request) — Maestro api-34
-and api-35 SUCCESS (16/16 flows), A1 SUCCESS, APK SUCCESS, all static gates;
-evidence comment #6680272556. New `scripts/ci/check-design-gate.mjs` + 9
-node --test cases (251 pass / 2 skip / 0 fail store-wide); BUG-040/BUG-046
-closed fixed with evidence; BUG-198 filed (backend-owned: manual dispatch
-skips e2e/a1); counts re-pasted (210 rows). Ritual: tag
-`archive/feat/release-hygiene` @ c51488cc, branch deleted (ls-remote proof).
-origin/main merged in twice along the way (ef46eac → 8333043) with `git merge
-origin/main` only; README conflict kept both rows; no file deleted, no
-register shrunk.
+**Queue 4e MERGED: PR #215, merge commit 491af4d on head a14b98ba.** Two E2E
+root causes were found and fixed on the branch before the green run: (1) run
+42136053866's legs failed `import.yaml` with "Element not found:
+stops-import-go" — the evidence dump showed the paste had landed but the
+Go/Not-now row sat inside the sheet's clipped ScrollView on the 320x640
+emulator, so 0f1d5a4 pinned the sheet to a definite height and moved the notes
++ actions OUTSIDE the scroll view; (2) run 42155905246 failed the same step
+again — the layout fix was live ([8,64][312,576] sheet) but the screenshot
+showed the soft keyboard covering the sheet's bottom: with edge-to-edge the
+manifest's adjustResize does not shrink the window, so a14b98b made the flow
+do `hideKeyboard` after `inputText`, and the small-screen polish was filed
+honestly as BUG-197 (open, KeyboardAvoidingView on the sheet). `scan.yaml`'s
+first-head failure was the BUG-185 runner race (system-UI-only screen, empty
+crash log, "remove task" kill line) — §17-excepted with quoted lines on the PR.
+Final head a14b98ba: run 42161172886 ALL green — 15/15 flows on api-34
+(incl. import.yaml) and api-35, A1, APK, Record-screens, all static. Merged
+via the API with sha, evidence comment #issuecomment-6677182640; tag
+`archive/feat-trial-import-stops` @ a14b98ba; branch deleted (ls-remote
+proof). PR #205 (ef46eac, BUG-218) landed on main in between; the pod branch
+re-merged origin/main against it.
 
-**Queue 4g's three E2E root causes (all on `.maestro/nav-handoff.yaml`, §12):**
-(1) run 42167328086 — the pinned image ships Google Maps, so the hand-off IS
-answered (Maps landing "Make it your map" on screen): the flow now asserts
-that; (2) runs 42171396160/42175587894 — Maps' location dialog sits on top and
-`back` does not dismiss it: dismiss with its own button; (3) run 42181802892 —
-the dialog appears a beat after the landing, so the tap needs
-`waitUntilVisible: true`, and Maestro 2.11 treats tapOn's `text` as a REGEX
-(the `textRegex` YAML key is rejected — run 42179171405), so "Don.t allow"
-matches the image's U+2019 apostrophe. Head b1e6251+fix in flight.
+**Queue 4f MERGED: PR #216, merge commit 938cf26 on head 58bb568c.** Final head
+58bb568c (re-merged on 3400082): run 42187080042 — Maestro api-34 SUCCESS
+(flows.txt 16/16 pass incl. pod.yaml) and api-35 SUCCESS, APK + record + all
+static SUCCESS; A1 failed on a runner flake (gradle NDK install: "Archive is
+not a ZIP archive") before any app boot — §17-excepted with quoted lines on
+the PR (#6681191561); the same code's A1 was green on run 42176913133
+(4f24692d). Two flow/code root causes fixed along the way: the swipe's
+`point` inside the `from:` selector (7d5716d) and the canned JPEG as a whole
+valid 380-char base64, 284 bytes FFD8FF..FFD9 (4f24692d — run 42171314486 had
+answered "bad base-64"). Ritual: tag `archive/feat/trial-pod-photo` @
+58bb568c, branch deleted (ls-remote proof).
