@@ -38,6 +38,12 @@ jobs:
         run: node scripts/ci/check-parity.mjs --base ${{ github.event.pull_request.base.sha || 'origin/main' }}
       - name: No merge conflict markers in the tree
         run: node scripts/ci/check-conflict-markers.mjs
+      # BUG-232 (audit item 4d, research row 62): no string-built SQL in the
+      # API - every statement is a literal text()/execute() with parameters
+      # where placeholders exist. Its own test runs with the rest of
+      # scripts/*/__tests__ (test:store-readiness).
+      - name: No string-built SQL in services/api (BUG-232)
+        run: node scripts/ci/check-sql-parameterisation.mjs
       - name: Check the links of the documentation
         run: node scripts/ci/check-doc-links.mjs
       - name: No control characters in the tracked text
