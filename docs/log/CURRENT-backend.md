@@ -690,6 +690,65 @@ FOUNDER_TODO.md).
 - The previous stack PR merged as `257cc6e`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
 - `action-digest-pins` (was `5f3aba4`) carries origin/main via `2df79ef` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 212 bug rows (open 7 · doing 2 · testing 1 · fixed 170 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
 #209 (C11, BUG-221) merged as 257cc6e; tag archive/node-24 @ d355555, branch deleted. Also: the screen-recordings 45-min timeout on d355555 was a runner stall (zero log lines 08:02-08:35), re-run green (PLAYBOOK 17 note).
+## The 2026-11-05 audit's CI / INFRA item 3i, finding C14 (BUG-223): dependabot + the cron staging smoke
+
+Two standing gaps closed:
+
+1. **No `.github/dependabot.yml` existed** - no ecosystem was watched at all. Now version 2, all
+   weekly: `github-actions` and `npm` at `/` (pnpm workspace; the npm ecosystem reads
+   pnpm-lock.yaml), `uv` for `/services/api` and `/services/courier-voice`. Ecosystem support verified
+   against GitHub's own configuration reference on 2026-11-06 (`uv` is a supported
+   `package-ecosystem` value; npm reads pnpm v7-v12 lockfiles). The config's comments carry the PR
+   rules: action PRs re-pin to the new commit SHA (BUG-222), npm/uv PRs carry the lockfile and the
+   `docs/product/LICENSES.md` inventory in the same PR.
+2. **Nothing smoked staging on a schedule.** `.github/workflows/staging-smoke.yml`: nightly cron
+   18:05 UTC (07:05 NZDT) + `workflow_dispatch`; runs
+   `bash infra/smoke.sh --domain "$DOMAIN" --token "$TOKEN" --no-version` (`--no-version` BY DESIGN -
+   a cron run is not a deploy; the version check is the deploy leg's, item 3b). Secrets only in
+   step-level `env:` (3c/BUG-100); when COURIER_STAGING_DOMAIN / COURIER_SMOKE_TOKEN are unset
+   (FOUNDER_TODO) the run skips with a `::notice::` naming them. Report uploaded as an artifact.
+   `permissions: contents: read`; all `uses:` SHA-pinned.
+
+- `scripts/ci/check-staging-smoke.mjs` (a step in the Floor guard job) holds both halves; 14-case
+  test. Evidence: `docs/evidence/dependabot-cron-223/README.md` (the red names both missing halves).
+- The new workflow passes check-workflows (15 files now) and check-action-pins (118 refs).
+- NOT claimed: the cron smoke has not run green against a real staging - it skip-notices until the
+  founder sets the two staging secrets.
+
+**Item 3i is complete (C12, C11, C10, C14 in order). Item 3j remains:** the exact required-checks
+list goes into `docs/status/FOUNDER_TODO.md` for the founder to set as the branch ruleset.
+
+## Incident note (2026-11-06): a stray `git stash pop` conflicted four foreign files — resolved, stashes left alone
+
+While red-proving C14, a `git stash push` of two UNTRACKED files failed ("Did you forget to
+'git add'?"), and the `git stash pop` in the same command then applied an OLDER stash that was
+not mine (`stash@{0}: WIP on fix/mutmut-leaves-client-test-to-ci: 4f711e1`, another crew's WIP)
+onto this branch's working tree. That conflicted `docs/status/BUGS.md`, `infra/env.example`,
+`services/api/pyproject.toml`, `services/auth/src/config.ts` and
+`services/auth/src/__tests__/config.test.ts`, and mangled some em-dashes in the conflicted
+region of BUGS.md (caught by `check-mojibake` / `check-parity`'s B1 findings: 19 findings,
+duplicated BUG-128..145).
+
+Resolution, deliberate: the four foreign files were restored from HEAD with
+`git restore --source=HEAD --staged --worktree` (they are not this branch's files; the stray
+content was discarded, HEAD kept). `docs/status/BUGS.md` was restored from HEAD and my BUG-223
+row re-applied from its parked copy - the kept conflict side was NOT trusted because the pop had
+already mojibake'd it. After: `check-mojibake` clean, `check-parity` back to 0 reopened, 259
+scripted tests pass, no conflict markers anywhere. The two stash entries (`stash@{0}` the
+mutmut-branch WIP, `stash@{1}` `On c1-backend-fixes: bug-115`) were LEFT IN PLACE - they are
+other crews' work, not mine to drop. Lesson recorded: never pair a `git stash push` of untracked
+files with a `git stash pop` in one command; for untracked files use `Move-Item` aside/back
+instead (that is what the C14 red proof ended up using).
+
+## 2026-11-06: #210 merged as a0674da; origin/main into `dependabot-cron-223` (0a8a955)
+
+- The previous stack PR merged as `a0674da`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `dependabot-cron-223` (was `eb75e35`) carries origin/main via `0a8a955` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 214 bug rows (open 7 · doing 2 · testing 1 · fixed 172 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#210 (C10, BUG-222) merged as a0674da; tag archive/action-digest-pins @ 6a71ee9, branch deleted.
+
+## 2026-11-06: BUG-228 — the new dependabot.yml had no cooldown; Semgrep Blocking fired on #211 (fixed the config, not excluded)
+
+PR #211's head `80edbac` went red in the sast job (runs 42197669307/42197664922): Semgrep `package_managers.dependabot.dependabot-missing-cooldown` (Blocking), 4 findings — one per `updates` entry of the new `.github/dependabot.yml`. Decision: fix the CONFIG, not an exclusion — cooldown is the intended lever, and the pinned registry (semgrep==1.182.1) is the authority. Fix on the `dependabot-cron-223` branch: `cooldown: days: 7` on all four entries + header comment; `check-staging-smoke.mjs` extended to require a cooldown on every entry (names BUG-228); 1 new test case (15 total). Red-first proof: the extended gate against eb75e35's pre-fix dependabot.yml in a temp tree exits 1 naming all four missing cooldowns; green on the fixed tree. BUG-228 row filed (inserted before the BUG-187 anchor), evidence in `docs/evidence/dependabot-cooldown-228/`. The Semgrep red clearing is the next CI run's evidence. Pushed via the API workaround.
 
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
