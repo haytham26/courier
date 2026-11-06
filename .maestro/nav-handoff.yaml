@@ -57,27 +57,31 @@ name: 'The drive hands the stop to the nav app (queue 4g, trial #15)'
     timeout: 30000
 - takeScreenshot: "nav-app-answered"
 # Maps' own location prompt appears only AFTER `back` from its landing on a
-# fresh emulator - run 42192458574 waited 30 s for the dialog with the landing
-# still up and it never came; runs 42171396160 / 42175587894 / 42181802892 /
-# 42186483187 all had it up within seconds of the back (a system dialog also
-# ignores back, which is why the drive was never reached before). So: go back
-# FIRST, then WAIT for the dialog's own button (required - the image is pinned
-# by revision, PR #204, the runner grants permissions to OUR app only, and
-# Maps asked on every observed run), tap it, then back again to the drive,
-# which is still on the run's stop: the app did not crash, did not invent a
-# chooser, and kept its place in the stack. Note `text` in a selector is a
-# REGEX in Maestro 2.11 (it deserializes to the selector's textRegex field -
-# run 42181802892 - and the YAML key `textRegex` itself is rejected, run
-# 42179171405), so "Don.t allow" matches the pinned image's typographic
-# apostrophe (U+2019) and the ASCII one.
+# fresh emulator - run 42192458574 waited 30 s with the landing still up and
+# it never came; runs 42171396160 / 42175587894 / 42181802892 / 42186483187 /
+# 42197937390 all had it up within seconds of the back. So: go back FIRST,
+# then wait for the dialog's own button - OPTIONAL, because whether Maps asks
+# on a given runner is not guaranteed - and tap it if it came. Note `text` in
+# a selector is a REGEX in Maestro 2.11 (it deserializes to the selector's
+# textRegex field - run 42181802892 - and the YAML key `textRegex` itself is
+# rejected, run 42179171405), so "Don.t allow" matches the pinned image's
+# typographic apostrophe (U+2019) and the ASCII one. Then bring OUR app back
+# to the front with launchApp (no clearState, so the existing task and its
+# drive screen are preserved - run 42197937390 showed that after the dialog
+# is dismissed Maps' own main UI is still foreground, so `back` alone is not a
+# reliable way home), and assert the drive is still on the run's stop: the app
+# did not crash, did not invent a chooser, and kept its place in the stack.
 - back
 - extendedWaitUntil:
     visible:
       text: "Don.t allow"
-    timeout: 30000
+    timeout: 20000
+    optional: true
 - tapOn:
     text: "Don.t allow"
-- back
+    optional: true
+- launchApp:
+    appId: "com.courier.copilot"
 - extendedWaitUntil:
     visible:
       id: "driving-screen"
