@@ -84,6 +84,21 @@ export interface RunDay {
   /** The stops the run still has to deliver. */
   remaining: number;
   /**
+   * The run's own break window, or null when the run carries none (queue 4d,
+   * the trial's #12, ADR-022's app half). Half a window is not a window.
+   */
+  breakWindow: { start: string; end: string } | null;
+  /**
+   * The run's own finish point, or null when the run carries none (queue 4d,
+   * the trial's #14, ADR-022's app half).
+   */
+  finish: { lat: number; lon: number } | null;
+  /**
+   * The run's own depot, so a screen can say where the day finishes when the
+   * run's finish point is the depot itself.
+   */
+  depot: { lat: number; lon: number } | null;
+  /**
    * Re-reads the marks from the store, so a mark made through the run state
    * is a mark the screens already show (BUG-178).
    */
@@ -270,6 +285,45 @@ export function useRunDay(source: StoreSource): RunDay {
     [snapshot],
   );
 
+  // Queue 4d (the trial's #12 and #14, ADR-022's app half): the run's own
+  // break window, finish point and depot, read from the same snapshot as the
+  // id - one read, one source, so the offline answer and the online answer
+  // carry them the same way. A run that answers without them has none to
+  // name, which is the honest answer (null, not a guess).
+  const runFacts = useMemo(() => {
+    if (snapshot?.status !== 'ok') {
+      return {
+        breakWindow: null,
+        finish: null,
+        depot: null,
+      } as const;
+    }
+    const apiRun = snapshot.snapshot.run;
+    const breakWindow = apiRun.break_window;
+    const finish = apiRun.finish;
+    return {
+      // The real API serializes an absent optional as JSON null, not by
+      // leaving the field out (run 42118823224's A1 leg crashed on exactly
+      // this: `null.start` inside RunProvider), so null and undefined are
+      // read the same way - both mean the run has none to name.
+      breakWindow:
+        breakWindow !== null &&
+        breakWindow !== undefined &&
+        typeof breakWindow.start === 'string' &&
+        typeof breakWindow.end === 'string'
+          ? { start: breakWindow.start, end: breakWindow.end }
+          : null,
+      finish:
+        finish !== null &&
+        finish !== undefined &&
+        typeof finish.lat === 'number' &&
+        typeof finish.lon === 'number'
+          ? { lat: finish.lat, lon: finish.lon }
+          : null,
+      depot: { lat: apiRun.depot.lat, lon: apiRun.depot.lon },
+    } as const;
+  }, [snapshot]);
+
   return useMemo(
     () => ({
       hasRun: stops.length > 0,
@@ -279,10 +333,13 @@ export function useRunDay(source: StoreSource): RunDay {
       isDelivered,
       nextStop,
       remaining: stops.filter((stop) => !deliveredIds.has(stop.id)).length,
+      breakWindow: runFacts.breakWindow,
+      finish: runFacts.finish,
+      depot: runFacts.depot,
       refreshMarks,
       refreshDay,
       applyRouteOrder,
     }),
-    [stops, marks, isDelivered, nextStop, deliveredIds, runId, refreshMarks, refreshDay, applyRouteOrder],
+    [stops, marks, isDelivered, nextStop, deliveredIds, runId, runFacts, refreshMarks, refreshDay, applyRouteOrder],
   );
 }

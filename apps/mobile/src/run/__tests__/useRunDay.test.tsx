@@ -339,3 +339,138 @@ describe('the day the screens read (A1 slice 3)', () => {
     await waitFor(() => expect(getByTestId('types').props.children).toBe('stop-1:delivery'));
   });
 });
+
+/**
+ * Queue 4d (the trial's #12 and #14, ADR-022's app half): the run's own break
+ * window and finish point reach the screens through the day. The contract
+ * carries both as optional fields on the run (`RunResponse.break_window`,
+ * `RunResponse.finish`, seeded on main by PR #177), so the hook exposes them
+ * from the snapshot's run - and answers null for a run that has neither,
+ * which is the honest answer for a day the solver did not place them on.
+ */
+describe("the run's own break window and finish point on the day (queue 4d)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockLoad.mockResolvedValue(okLoad);
+    mockDeliveredMarks.mockResolvedValue([]);
+  });
+
+  it('carries the break window and the finish point from the run the store answers with', async () => {
+    const withBreakAndFinish = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        ...mockSeededDay,
+        run: {
+          ...mockSeededDay.run,
+          break_window: { start: '2026-10-31T12:00:00.000Z', end: '2026-10-31T13:00:00.000Z' },
+          finish: { lat: -43.532, lon: 172.599 },
+        },
+      },
+    };
+    mockLoad.mockResolvedValue(withBreakAndFinish);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <>
+          <Text testID="break">
+            {day.breakWindow === null
+              ? 'none'
+              : `${day.breakWindow.start}..${day.breakWindow.end}`}
+          </Text>
+          <Text testID="finish">
+            {day.finish === null ? 'none' : `${day.finish.lat},${day.finish.lon}`}
+          </Text>
+          <Text testID="depot">
+            {day.depot === null ? 'none' : `${day.depot.lat},${day.depot.lon}`}
+          </Text>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() =>
+      expect(getByTestId('break').props.children).toBe('2026-10-31T12:00:00.000Z..2026-10-31T13:00:00.000Z'),
+    );
+    expect(getByTestId('finish').props.children).toBe('-43.532,172.599');
+    expect(getByTestId('depot').props.children).toBe('-43.532,172.599');
+  });
+
+  it('answers null for a run that carries neither a break window nor a finish point', async () => {
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <>
+          <Text testID="break">{day.breakWindow === null ? 'none' : 'some'}</Text>
+          <Text testID="finish">{day.finish === null ? 'none' : 'some'}</Text>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('break').props.children).toBe('none'));
+    expect(getByTestId('finish').props.children).toBe('none');
+  });
+
+  it('answers null for both when there is no day at all', async () => {
+    mockLoad.mockResolvedValue({
+      status: 'offline',
+      snapshot: null,
+    } as unknown as Awaited<ReturnType<typeof mockLoad>>);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <>
+          <Text testID="break">{day.breakWindow === null ? 'none' : 'some'}</Text>
+          <Text testID="finish">{day.finish === null ? 'none' : 'some'}</Text>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('break').props.children).toBe('none'));
+    expect(getByTestId('finish').props.children).toBe('none');
+  });
+
+  // The A1 leg of run 42118823224 crashed exactly here: the real API
+  // serializes an absent break_window/finish as JSON null, not by leaving the
+  // field out, and the guard checked only `undefined` - so `null.start`
+  // threw inside RunProvider and the app never reached today-screen. Null and
+  // absent are the same answer from the server, and the hook must read them
+  // the same way.
+  it('reads a JSON null the same as an absent field - the real API\u2019s own answer (run 42118823224\u2019s A1 crash)', async () => {
+    const withNulls = {
+      status: 'ok' as const,
+      source: 'network' as const,
+      snapshot: {
+        ...mockSeededDay,
+        run: {
+          ...mockSeededDay.run,
+          break_window: null,
+          finish: null,
+        } as unknown as RunSnapshot['run'],
+      },
+    };
+    mockLoad.mockResolvedValue(withNulls);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return (
+        <>
+          <Text testID="break">{day.breakWindow === null ? 'none' : 'some'}</Text>
+          <Text testID="finish">{day.finish === null ? 'none' : 'some'}</Text>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('break').props.children).toBe('none'));
+    expect(getByTestId('finish').props.children).toBe('none');
+  });
+});

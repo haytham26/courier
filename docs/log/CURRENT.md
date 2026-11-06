@@ -1,7 +1,7 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `1fc952a` (PR #206, queue 4b —
-the failed delivery's reason). Lead session 14, 2026-11-05.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `c484353` (PR #213, queue 4c —
+the stop's own type). Lead session 14, 2026-11-05.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -954,13 +954,27 @@ died to the documented BUG-185 remove-task race (the fresh process killed
 code. Register after the merge: 190 BUGS rows (open 6 · doing 3 · testing 1
 · fixed 148 · closed 2 · moved 30), 312 PARITY rows.
 
-**Queue 4c in flight on `feat/trial-stop-types` (trial #21, ADR-024's app
-half, BUG-192):** the stop's own type rides the app — `Stop.type`, the
-contract-to-app mapping, the E2E day answering the mock list's own pickup, the
-route row's "Pickup" node, the stop card's "Pickup stop", Today's
-`today-notes-Pickup` chip, and `.maestro/stops.yaml` asserting the word. Main
-merged in (a6431ba, registers taken from main wholesale + BUG-192 re-applied;
-no file deleted, no register shrunk). Next after it: 4d (breaks #12 + finish
-#14, ADR-022's app halves), 4e (spreadsheet import #6, ADR-025), 4f (POD photo
-#16), 4g (the nav hand-off flow #15), then release hygiene and
-D1/B5/A3/§22/P4/P7 to the §6 Definition of Done.
+**Queue 4c merged (PR #213, `c484353`, head `8b04b05`, tag
+`archive/feat-trial-stop-types`, branch deleted — ls-remote proof in the PR).**
+E2E on the head: manual dispatch run 42111747844 and push-event run 42111750215
+both fully green (14/14 flows on api-34 and api-35, the new Pickup assertions
+in stops.yaml included); run 42111749992's "Record the screens" job died in
+runner setup before the emulator booted (`Error on ZipFile unknown archive`
+-> `could not connect to TCP port 5554: Connection refused`) — the playbook's
+runner-infra flake class, documented in PR #213#issuecomment-6670515977.
+Register after the merge: 191 BUGS rows on main (BUG-192 fixed), 312 PARITY.
+
+**Queue 4d built on `feat/trial-break-finish` (trial #12 + #14, ADR-022's app
+half, BUG-193):** the run's own break window and finish point reach the route
+screen — RUN_TABLE v2 with the four columns (ALTER on installed v1 tables),
+write/read/runOf round-tripping `break_window`/`finish`, `RunDay` exposing
+`breakWindow`/`finish`/`depot`, the E2E day carrying a 12:00-13:00 UTC break
+and its depot as the finish, `stops-break` ("Break" + device-clock times) and
+`stops-finish` ("Finish at the depot") rows, and `.maestro/stops.yaml`
+scrolling to them and asserting each node. Red-first: 10 tests failed on the
+pre-change tree. Main (c484353, queue 4c) merged in (b29ec3b; registers taken
+from main wholesale + BUG-193 re-applied; no file deleted, no register
+shrunk). 742 tests (85 suites), tsc, eslint, check-parity (0 reopened) green.
+Next after it: 4e (spreadsheet import #6, ADR-025), 4f (POD photo #16), 4g
+(the nav hand-off flow #15), then release hygiene and D1/B5/A3/§22/P4/P7 to
+the §6 Definition of Done.

@@ -55,6 +55,13 @@ export function e2eDay(): RunSnapshot {
       depot: { lat: -43.532, lon: 172.599 },
       speed_kmh: 40,
       start_at: '2026-10-31T07:30:00.000Z',
+      // Queue 4d (the trial's #12 and #14, ADR-022's app half): the mock run
+      // carries its own break window and its own finish point, the way the
+      // server's seeded day answers them - the finish is the depot, which is
+      // what a round trip is. The times are UTC stamps; the screens read them
+      // on the device's own clock.
+      break_window: { start: '2026-10-31T12:00:00.000Z', end: '2026-10-31T13:00:00.000Z' },
+      finish: { lat: -43.532, lon: 172.599 },
     },
     stops: mockStops.map((stop) => ({
       id: stop.id,

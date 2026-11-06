@@ -19,7 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import RouteTab from '../stops';
 import { RunProvider } from '@/maps/runState';
 import { e2eDay } from '@/run/dayForThisBuild';
-import type { DeliveredMark, MarkStore } from '@/run/types';
+import type { DeliveredMark, MarkStore, RunSnapshot } from '@/run/types';
 
 /**
  * A store that carries both the day and the marks, and writes the solver's
@@ -140,7 +140,7 @@ function reoptAnswer(answer: unknown, gate: () => Promise<void> = () => Promise.
 
 /** A store that carries the run's own day and the marks on one handle. */
 function aDayStore(
-  options: { applied?: boolean; marks?: DeliveredMark[] } = {},
+  options: { applied?: boolean; marks?: DeliveredMark[]; run?: RunSnapshot['run'] } = {},
 ): {
   store: AStoreWithDay;
   appliedOrders: { stopId: string; sequence: number }[][];
@@ -148,7 +148,8 @@ function aDayStore(
 } {
   const applied = options.applied ?? true;
   const marks = options.marks ?? [];
-  const snapshot = { run: e2eDay().run, stops: [...e2eDay().stops] };
+  const day = e2eDay();
+  const snapshot = { run: options.run ?? day.run, stops: [...day.stops] };
   const theLoad = { status: 'ok' as const, source: 'cache' as const, snapshot };
   const appliedOrders: { stopId: string; sequence: number }[][] = [];
 
@@ -584,5 +585,56 @@ describe("the route screen's stop types (queue 4c)", () => {
       expect(screen.getByTestId('stop-detail-sheet')).toBeTruthy();
     });
     expect(screen.queryByText('Pickup stop')).toBeNull();
+  });
+});
+
+/**
+ * Queue 4d: the run's own break window and finish point on the route screen
+ * (the trial's #12 and #14, ADR-022's app half).
+ *
+ * The contract carries both on the run (PR #177), and the E2E day answers
+ * them, so the courier can read the planned break and where the day finishes.
+ * Each is its own row with its own node - "Break" and its device-clock times,
+ * "Finish at the depot" - because each is its own fact, and a run that carries
+ * neither shows neither row.
+ */
+describe("the route screen's break window and finish point (queue 4d)", () => {
+  /** The mock run's own break window, as the E2E day answers it. */
+  const theBreak = { start: '2026-10-31T12:00:00.000Z', end: '2026-10-31T13:00:00.000Z' };
+
+  it('shows the break the run planned, with its times on the device\u2019s own clock', async () => {
+    await renderWithRun([]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('stops-break')).toBeTruthy();
+    });
+    const expected = `${clock(theBreak.start)} - ${clock(theBreak.end)}`;
+    expect(within(screen.getByTestId('stops-break')).getByText('Break')).toBeTruthy();
+    expect(within(screen.getByTestId('stops-break')).getByText(expected)).toBeTruthy();
+  });
+
+  it('names where the day finishes when the run\u2019s finish point is the depot', async () => {
+    await renderWithRun([]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('stops-finish')).toBeTruthy();
+    });
+    expect(within(screen.getByTestId('stops-finish')).getByText('Finish at the depot')).toBeTruthy();
+  });
+
+  it('shows neither row for a run that carries neither a break nor a finish point', async () => {
+    const day = e2eDay();
+    const plainRun = { ...day.run } as typeof day.run & { break_window?: unknown; finish?: unknown };
+    delete plainRun.break_window;
+    delete plainRun.finish;
+    const store = aDayStore({ run: plainRun });
+
+    await renderWithRun([], store.store);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('stops-screen')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('stops-break')).toBeNull();
+    expect(screen.queryByTestId('stops-finish')).toBeNull();
   });
 });
