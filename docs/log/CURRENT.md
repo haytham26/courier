@@ -1,8 +1,9 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `ef46eac` (PR #205, audit 3g —
-the emulator jobs report skipped, not missing; ahead of it `491af4d` = PR #215, queue 4e).
-Lead session 14, 2026-11-05/06.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `3400082` (PR #218, release hygiene;
+ahead of it `8333043` = PR #208). Queue 4f = PR #216 (ALL_GREEN on 4f24692d, run 42176913133, 16/16 flows incl. pod.yaml) merging next. Lead session 14, 2026-11-05/06.
+Queue 4f = PR #216 and 4g = PR #217 in flight; release hygiene on
+`feat/release-hygiene`.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -1012,6 +1013,43 @@ it: 4f (POD photo #16 via the existing POD endpoint; signature once the
 backend's signature contract lands), 4g (the nav hand-off flow #15), then
 release hygiene and D1/B5/A3/§22/P4/P7 to the §6 Definition of Done.
 
+**Queue 4f = PR #216 and 4g = PR #217, both re-dispatched after their first
+heads' E2E failures (root-caused, §12).** 4f's head e039376d: only the new
+`pod.yaml` failed — the job log showed `Unknown Property: point` (the deliver
+swipe's `point` was a sibling of `from:` instead of inside the selector), so
+the flow never loaded; fixed on 7d5716d (all 15 existing flows passed on the
+failing run). 4g's head 04ed2186: only `nav-handoff.yaml` failed, at the
+post-tap assert — the evidence screen showed Google Maps' own landing ("Make
+it your map"): the pinned emulator image ships Maps, so the key-free link IS
+answered and the nav app takes the foreground; the flow on d1e44db now asserts
+Maps' landing, screenshots it, presses back, and asserts the drive is still on
+"STOP 2 OF 5". Root-cause comments on the PRs (#6678133127, #6678133640).
+Also observed: PR #205's `changes` job sets only build/flows/scripts/pipeline
+on the human-dispatch path, so manual `workflow_dispatch` runs SKIP the
+e2e/a1 jobs (runs 42166994398, 42167332868) — filed as **BUG-198 (open,
+backend-owned .github)**; the `pull_request` runs are the E2E evidence.
+
+**Release hygiene on `feat/release-hygiene` (this branch):** verified the
+E2E-flag gate end to end — `check-e2e-flag.mjs --variant release` with
+`EXPO_PUBLIC_E2E=1` exits 1 (BUG-079's rule: a release build never inlines the
+mocks; the e2e legs declare `--variant e2e`, the a1/release legs `--variant
+release`), and `check-mock-reach.mjs` proves the mock list is reachable only
+through the E2E seams (labelReader's `readerForThisBuild` included). New
+`scripts/ci/check-design-gate.mjs` (+ 9 node --test cases) proves the design
+lab and compat screen are out of a release build: metro blockLists
+`app/design/**` + `app/compat.tsx` when neither flag is set (and the gate
+fails if the blockList also matches a product screen), `buildFlags.ts` inlines
+the same decision, `_layout.tsx` registers the design route only under it, and
+the gated files must exist (no vacuous pass). Verified `syncService.sync`
+confirms `batch.slice(0, accepted)` with the clamp (line 126-127). Register:
+BUG-040 and BUG-046 closed as fixed with evidence (tsc clean on this head;
+compat.yaml's `openLink: "courier:///compat"` → `compat-screen` green on runs
+42161172886/42166989624), BUG-198 filed open, BUG-197 stays open/queued
+(KeyboardAvoidingView on the import sheet). Counts re-pasted (209 rows).
+Next: merge #216 then #217 when their heads are green (ritual), then this
+branch, then D1, B5 + Play internal-testing prep, A3, §22's app side, P4
+baselines, P7 acceptance on two screen sizes — to the §6 Definition of Done.
+
 **Queue 4e MERGED: PR #215, merge commit 491af4d on head a14b98ba.** Two E2E
 root causes were found and fixed on the branch before the green run: (1) run
 42136053866's legs failed `import.yaml` with "Element not found:
@@ -1033,17 +1071,3 @@ via the API with sha, evidence comment #issuecomment-6677182640; tag
 proof). PR #205 (ef46eac, BUG-218) landed on main in between; the pod branch
 re-merged origin/main against it.
 
-**Queue 4f on `feat/trial-pod-photo` (trial #16, ADR-010's app half,
-BUG-196):** main (ef46eac) merged in; the code conflict resolution kept main's
-4e `form` arm + importStops and re-applied uploadPod/isPod + the queue-4f test
-describe; registers taken from main wholesale + BUG-196 re-applied after
-BUG-197, counts re-pasted by counting (208 rows, fixed 165, open 7). Pushing
-for PR + manual E2E dispatch on the head. **Queue 4g ready on
-`feat/trial-nav-handoff-flow`** (9026017, from origin/main ad92924): only
-`.maestro/nav-handoff.yaml` + TRIAL_SCOPE row 15 — asserts
-`driving-nav-handoff` on the drive panel, taps it, and asserts the drive is
-still the screen ("STOP 2 OF 5") since no nav app answers on the emulator.
-Next after 4f/4g merge: release hygiene (labelReader's EAS gate, design-lab
-gating, syncService's `batch.slice(0, accepted)`, close open/doing lead rows;
-BUG-197 queued), then D1, B5 + Play internal-testing prep, A3, §22's app side,
-P4 baselines, P7 acceptance on two screen sizes — to the §6 Definition of Done.
