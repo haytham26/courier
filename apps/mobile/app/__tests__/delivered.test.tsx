@@ -100,9 +100,26 @@ const thePublish = (): jest.Mock => {
  * the mark is made on the day's stop and not on the mock list's.
  */
 /** One stop of the run's own day, as the app's own view of a stop. */
-function toAppStop(stop: { id: string; seq: number; address?: string; lat?: number; lon?: number }) {
+function toAppStop(stop: {
+  id: string;
+  seq: number;
+  address?: string;
+  lat?: number;
+  lon?: number;
+  priority?: boolean;
+  window_start?: string;
+  window_end?: string;
+  type?: string;
+}) {
   const parts = (stop.address ?? '').split(',').map((part) => part.trim());
   const hasSuburb = parts.length > 1;
+  const window =
+    typeof stop.window_start === 'string' &&
+    stop.window_start.length > 0 &&
+    typeof stop.window_end === 'string' &&
+    stop.window_end.length > 0
+      ? { start: stop.window_start, end: stop.window_end }
+      : undefined;
   return {
     id: stop.id,
     sequence: stop.seq,
@@ -110,6 +127,11 @@ function toAppStop(stop: { id: string; seq: number; address?: string; lat?: numb
     suburb: hasSuburb ? (parts[parts.length - 1] ?? '') : '',
     status: 'pending' as const,
     coordinates: { lat: stop.lat ?? -43.5, lng: stop.lon ?? 172.6 },
+    // Queue 4a: the run's own priority and the run's own window ride the stop.
+    priority: stop.priority === true,
+    ...(window === undefined ? {} : { window }),
+    // Queue 4c (ADR-024): the stop's own type rides it too.
+    type: stop.type === 'pickup' ? ('pickup' as const) : ('delivery' as const),
   };
 }
 

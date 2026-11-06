@@ -114,6 +114,13 @@ jobs:
       # conclusions from the API rather than assuming them.
       - name: The deploy waits for CI and Quality gates (audit 3d)
         run: node scripts/ci/check-deploy-gate.mjs
+      # BUG-226: every --exclude-rule of the Semgrep scan must be written down -
+      # a rule id in .semgrepignore with a numbered reason, and a W-row in the
+      # exceptions table of docs/plan/CONSTRAINTS.md. An accepted finding with no
+      # written reason is a suppression by another name (the floor's
+      # no-suppressions check only sees inline Semgrep suppression comments).
+      - name: Every Semgrep exclusion is written down (BUG-226)
+        run: node scripts/ci/check-semgrep-exclusions.mjs
       # The 2026-11-05 audit's item 3e: the android-e2e AVD cache carried a
       # `restore-keys` prefix that stops short of the pins' fingerprint, so a
       # fingerprint miss restored an AVD built under a different Maestro version,
@@ -291,6 +298,7 @@ jobs:
             --exclude-rule "javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp" \
             --exclude-rule "javascript.audit.detect-replaceall-sanitization.detect-replaceall-sanitization" \
             --exclude-rule "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure" \
+            --exclude-rule "yaml.github-actions.security.workflow-run-target-code-checkout.workflow-run-target-code-checkout" \
             --error --quiet .
       - name: Why the excluded rules are excluded
         run: |
@@ -300,3 +308,5 @@ jobs:
           echo "test runner (W4). The read-only-filesystem rule would stop the databases (W3)."
           echo "The uv cooldown, the non-literal regexp of a test, the HTML escaper of the"
           echo "render script and the token counter of the voice service are W3 and W5."
+          echo "The workflow_run checkout rule is a static heuristic; our deploy checks out"
+          echo "the sha the gates ran on, after BOTH required workflows said success on it (W6)."
