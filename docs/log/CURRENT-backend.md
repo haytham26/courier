@@ -767,6 +767,12 @@ FOUNDER_TODO row, not an agent action. Evidence: `docs/evidence/required-checks-
 **Item 3 is now fully on branches with PRs: 3a-3h (#199-#207), 3i C12/C11/C10/C14 (#208-#211), 3j
 this one.** Next in the queue: item 4 (API hardening a-g), then item 5, then item 7's chain.
 
+## 2026-11-06: #211 merged as b524abe; origin/main into `required-checks-224` (26cda0a)
+
+- The previous stack PR merged as `b524abe`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `required-checks-224` (was `155e31c`) carries origin/main via `26cda0a` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 216 bug rows (open 7 · doing 2 · testing 1 · fixed 174 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#211 (C14, BUG-223 + BUG-228) merged as b524abe; tag archive/dependabot-cron-223 @ e6a1187, branch deleted. The BUG-228 Semgrep red on 80edbac was fixed by cooldown on all four dependabot entries (config fix, not exclusion; gate extended, 15/15 tests) and confirmed green in CI (Semgrep x2 success on e6a1187). This is the last sub-item of audit item 3 (3j).
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
