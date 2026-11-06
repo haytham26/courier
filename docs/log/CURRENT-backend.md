@@ -659,6 +659,12 @@ apart one edit at a time - the same split the setup-uv pin had (BUG-220).
 **3i continues in order:** C10 (the every-action digest-pin gate) next, then C14 (dependabot + the cron
 staging smoke), then 3j.
 
+## 2026-11-06: #208 merged as 8333043; origin/main into `node-24` (dbb2b9a)
+
+- The previous stack PR merged as `8333043`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `node-24` (was `2088ae6`) carries origin/main via `dbb2b9a` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 210 bug rows (open 7 · doing 3 · testing 1 · fixed 167 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#208 (C12, BUG-220) merged as 8333043; tag archive/setup-uv-one-pin @ 3c4ba27, branch deleted.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
