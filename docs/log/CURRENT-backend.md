@@ -379,8 +379,8 @@ and 3j.
 ## 2026-11-06: #199 (3a, BUG-212) merged as b0b89eb; origin/main merged into the 3b/3c branch (ad6047b)
 
 #199 went green on its merge-in head (1f60eb6, 21/21 incl. the emulator legs) and merged as
-\0b89eb\; tag \rchive/deploy-rsync-relative\ @ f60eb6\, branch deleted, ls-remote empty.
-The 3b/3c branch (was 5e91a06) now carries origin/main via \d6047b\ (one log conflict, both
+`b0b89eb`; tag `archive/deploy-rsync-relative` @ `1f60eb6`, branch deleted, ls-remote empty.
+The 3b/3c branch (was 5e91a06) now carries origin/main via `ad6047b` (one log conflict, both
 sections kept): parity 0 reopened, 198 bug rows, nothing deleted, counts re-pasted. Pushed to
 \smoke-version-213\ via the API workaround (git push still rejected server-side).
 
