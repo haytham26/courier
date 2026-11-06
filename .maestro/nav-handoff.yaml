@@ -56,14 +56,17 @@ name: 'The drive hands the stop to the nav app (queue 4g, trial #15)'
       text: "Make it your map"
     timeout: 30000
 - takeScreenshot: "nav-app-answered"
-# Maps' own location prompt sits on top on a fresh emulator (run 42171396160's
-# api-34 leg: after `back` the screen still showed "Allow Maps to access this
-# device's location?", so the drive never came back). Dismiss it - optional,
-# because a runner that pre-granted Maps' permission never shows it - then go
-# back to the drive, which is still on the run's stop: the app did not crash,
-# did not invent a chooser, and kept its place in the stack.
+# Maps' own location prompt sits on top on a fresh emulator (runs 42171396160
+# and 42175587894, both api legs: the dialog still showed "Allow Maps to access
+# this device's location?" when the drive was asserted, and `back` alone does
+# not dismiss a system permission dialog). Dismiss it - optional, because a
+# runner that pre-granted Maps' permission never shows it. The button's label
+# uses a typographic apostrophe on the pinned image ("Don't allow" with U+2019),
+# so match any character there: textRegex "Don.t allow". Then go back to the
+# drive, which is still on the run's stop: the app did not crash, did not
+# invent a chooser, and kept its place in the stack.
 - tapOn:
-    text: "Don't allow"
+    textRegex: "Don.t allow"
     optional: true
 - back
 - extendedWaitUntil:
