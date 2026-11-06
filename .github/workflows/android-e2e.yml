@@ -413,14 +413,39 @@ jobs:
           image="system-images;android-${{ matrix.api }};google_apis;x86_64"
           sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           dir="$sdk/system-images/android-${{ matrix.api }}/google_apis/x86_64"
+          # BUG-225: the runner image ships the cmdline-tools but does NOT put
+          # them on PATH, so a bare `sdkmanager` is "command not found" and
+          # every emulator leg died in this step (run 42058337877). Resolve
+          # the newest cmdline-tools bin directory onto PATH here - `sort -V`
+          # picks `latest` when it is there, else the highest numbered one -
+          # and fail loudly, naming the path, when the SDK carries none.
+          tools_bin="$(ls -d "$sdk"/cmdline-tools/*/bin 2>/dev/null | sort -V | tail -n 1 || true)"
+          if [ -z "$tools_bin" ] || [ ! -x "$tools_bin/sdkmanager" ]; then
+            echo "::error::no sdkmanager under $sdk/cmdline-tools/*/bin (resolved: ${tools_bin:-nothing}) - the runner image changed, or ANDROID_SDK_ROOT points at the wrong SDK"
+            exit 1
+          fi
+          echo "::notice::sdkmanager resolved from $tools_bin"
+          echo "$tools_bin" >> "$GITHUB_PATH"
+          export PATH="$tools_bin:$PATH"
+          # BUG-227: do NOT pipe `yes` into the install. Under `set -o pipefail`
+          # the pipeline's status is 141 when `yes` dies of SIGPIPE after
+          # sdkmanager exits 0, so the `until` loop read every SUCCESSFUL
+          # install as a failure, wiped the just-installed image with
+          # `rm -rf "$dir"`, and retried until the budget ran out (run
+          # 42118045102: three attempts, each unzip completing 100%, each
+          # "failing"). The emulator-runner action does it the safe way, and so
+          # do we: accept the licenses once (the `|| true` is for the same
+          # SIGPIPE), then install with stdin from /dev/null.
+          yes | sdkmanager --licenses >"$RUNNER_TEMP/sdkmanager-licenses.log" 2>&1 || true
           # Three attempts, cleaning the image directory between them: a failed
           # sdkmanager can leave a half-unpacked image, and installing ON TOP of
           # one is how a run ends up asserting a revision from a directory that
           # is not the image.
           attempt=1
-          until yes | sdkmanager "$image" >"$RUNNER_TEMP/sdkmanager.log" 2>&1; do
+          until sdkmanager --install "$image" >"$RUNNER_TEMP/sdkmanager.log" 2>&1 </dev/null; do
             if [ "$attempt" -ge 3 ]; then
               echo "::error::the system image $image did not install in 3 attempts"
+              grep -inE 'exception|error|no space|failed|cannot|denied' "$RUNNER_TEMP/sdkmanager.log" | tail -n 20 || true
               tail -c 2000 "$RUNNER_TEMP/sdkmanager.log"
               exit 1
             fi

@@ -18,6 +18,15 @@ export interface DeliveryEvent {
   kind: DeliveryEventKind;
   utterance?: string;
   safePlace?: string;
+  /**
+   * Why the delivery failed (queue 4b, ADR-023).
+   *
+   * The contract carries it as a bounded string and the server refuses a
+   * `failed` event without one, so the log carries the courier's own word
+   * wherever the event is written. The courier's own words stay in
+   * `utterance`; this is the structured reason.
+   */
+  reason?: string;
   lat?: number;
   lon?: number;
   accuracyM?: number;
