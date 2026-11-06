@@ -46,6 +46,11 @@ name: 'A pasted spreadsheet imports its stops (queue 4e, ADR-025)'
 - tapOn:
     id: "stops-import-text"
 - inputText: "address,type,notes\n1 Import Lane, delivery, leave at door\n2 Pickup Ave, pickup, ring bell"
+# The keyboard covers the sheet's bottom on the emulator (edge-to-edge, so
+# adjustResize does not shrink the window - BUG-197): the courier dismisses it
+# before pressing Import, and the flow does the same. The actions row is
+# pinned above the sheet's bottom edge, so with the keyboard down it is visible.
+- hideKeyboard
 
 # The ask: one press, and the sheet spells the answer. The count and the
 # ignored columns are two nodes - the app writes them apart so each is
