@@ -635,6 +635,12 @@ touched one list silently left the other.
 **3i continues in order:** C11 (Node 24) next, then C10 (the every-action digest-pin gate), then
 C14 (dependabot + the cron staging smoke), then 3j.
 
+## 2026-11-06: #207 merged as 39976e3; origin/main into `setup-uv-one-pin` (7c0180a)
+
+- The previous stack PR merged as `39976e3`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `setup-uv-one-pin` (was `788893e`) carries origin/main via `7c0180a` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 209 bug rows (open 7 · doing 3 · testing 1 · fixed 166 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#207 (3h, BUG-219) merged as 39976e3; tag archive/e2e-retry-budget @ c10179c, branch deleted.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
