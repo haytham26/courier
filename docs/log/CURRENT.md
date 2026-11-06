@@ -1,7 +1,8 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `c484353` (PR #213, queue 4c —
-the stop's own type). Lead session 14, 2026-11-05.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `a6dffe7` (PR #214, queue 4d —
+the run's break window and finish point, incl. the BUG-195 null fix). Lead session 14,
+2026-11-05/06.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -978,3 +979,35 @@ shrunk). 742 tests (85 suites), tsc, eslint, check-parity (0 reopened) green.
 Next after it: 4e (spreadsheet import #6, ADR-025), 4f (POD photo #16), 4g
 (the nav hand-off flow #15), then release hygiene and D1/B5/A3/§22/P4/P7 to
 the §6 Definition of Done.
+
+**Queue 4d merged (PR #214, `a6dffe7`, head `49f084b`, tag
+`archive/feat-trial-break-finish`, branch deleted — ls-remote proof in the PR).**
+The first head (9748630) had its A1 leg crash the release APK at launch:
+`TypeError: Cannot read property 'start' of null` in `RunProvider` — the real
+API serializes an absent `break_window`/`finish` as JSON null and the guard
+checked only `undefined` (BUG-195, root-caused from the evidence's
+logcat-crash.txt, fixed with a red test answering `null` exactly as the API
+does). On the fixed head 49f084b the manual dispatch run 42128052831 is fully
+green (A1 success, 14/14 flows on api-34 incl. the Break/Finish assertions,
+api-35 success, Record-screens success in run 42127895857); the push-event
+run 42127895761's A1 died in the runner — the launcher ANR "Pixel Launcher
+isn't responding" with an empty crash log and adb-daemon boot errors —
+documented in PR #214#issuecomment-6672783067.
+
+**Queue 4e built on `feat/trial-import-stops` (trial #6, ADR-025's app half,
+BUG-194):** paste-to-import on the route screen — no document picker exists in
+this build, so the courier pastes the CSV: `writeImportFile` writes it to the
+cache as `stops-import.csv`, `importStops` posts it as one multipart part (no
+Content-Type set — the platform sets the boundary), refuses an empty shift id,
+shape-checks the 201, and reads 409/413/415/422 as the server's own code and
+sentence; `RunDay` exposes `shiftId`; the E2E seam `importForThisBuild.ts`
+answers the canned import (labelReader's pattern); the import sheet spells
+"Imported N stops." / "Ignored columns: …" / the refusal as its own nodes and
+re-reads the day; `.maestro/import.yaml` drives the paste end to end.
+Red-first: 13 tests failed on the pre-change tree. Main (a6dffe7, queue 4d +
+the backend squad's BUG-211/ADR-026) merged in (00353a5; registers from main
+wholesale + BUG-194 re-applied; no file deleted, no register shrunk). 761
+tests (86 suites), tsc, eslint, check-parity (0 reopened) green. Next after
+it: 4f (POD photo #16 via the existing POD endpoint; signature once the
+backend's signature contract lands), 4g (the nav hand-off flow #15), then
+release hygiene and D1/B5/A3/§22/P4/P7 to the §6 Definition of Done.

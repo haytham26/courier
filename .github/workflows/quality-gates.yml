@@ -140,6 +140,16 @@ jobs:
       # action moved the image under the pin.
       - name: The system image is pinned by revision (audit 3f)
         run: node scripts/ci/check-e2e-sysimg-pin.mjs
+      # The 2026-11-05 audit's item 3g: the emulator workflow's pull_request
+      # trigger carried a `paths:` filter, which keeps the whole workflow from
+      # EXISTING for a documentation-only change - so its check names are never
+      # reported, and a required check that is not reported blocks every PR
+      # forever. The filter moved to a `changes` job (a plain
+      # `git diff --name-only` step: no new action, nothing to SHA-pin, nothing
+      # for the licence inventory) with `if:` on build/e2e/a1, so the jobs
+      # report `skipped` instead of not existing.
+      - name: The emulator jobs report skipped, not missing (audit 3g)
+        run: node scripts/ci/check-e2e-trigger-conditions.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers
