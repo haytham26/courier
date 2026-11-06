@@ -62,16 +62,26 @@ const POD_FILE_NAME = 'pod-photo.jpg';
  * The canned photo's bytes, base64: a 1x1 JPEG, so the file carries the real
  * magic (FFD8FF) the server sniffs - checked by bytes, not by name.
  */
+/**
+ * The canned photo's bytes, base64: a 1x1 JPEG, so the file carries the real
+ * magic (FFD8FF) the server sniffs - checked by bytes, not by name. The string
+ * is a whole, valid base64 (380 chars, a multiple of 4): run 42171314486's
+ * api-34 leg answered "bad base-64" from Android's decoder when the first
+ * hand-truncated copy was written, and the capture answered the error note.
+ */
+/**
+ * The canned photo's bytes, base64: a 1x1 JPEG, so the file carries the real
+ * magic (FFD8FF) the server sniffs - checked by bytes, not by name. The string
+ * is a whole, valid base64 (380 chars, a multiple of 4, decoding to 284 bytes
+ * FFD8FF..FFD9): run 42171314486's api-34 leg answered "bad base-64" from
+ * Android's decoder when a hand-truncated copy was written, and the capture
+ * answered the error note instead of the stored one.
+ */
 const CANNED_POD_JPEG_BASE64 =
-  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////' +
-  '////////////////////////////////////////////////////////2wBDAf//////////' +
-  '//////////////////////////////////////////////////////////////////////////' +
-  '////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAAAP/EABQQAQAA' +
-  'AAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAA' +
-  'AP/aAAwDAQACEQMRAD8AvwA//9k=';
+  '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAAAP/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AvwA//9k=';
 
 /** The canned photo's own size, in bytes (what the decoded base64 holds). */
-const CANNED_POD_BYTES = 107;
+const CANNED_POD_BYTES = 284;
 
 /** The canned store's own fingerprint (the seam answers a stable one). */
 const CANNED_POD_SHA256 = 'ab'.repeat(32);
