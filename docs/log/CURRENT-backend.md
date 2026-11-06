@@ -323,6 +323,66 @@ reaching the remote smoke.sh) is next.
 - **Next in stack order:** #199 (3a) is being merged with origin/main now (`8e05945`); then #200, #201,
   #202 (carries the BUG-226 Semgrep exclusion that clears the Semgrep reds on #203–#212), #203, #204
   (BUG-225+BUG-227 pushed at `3ec94a3`, both emulator legs green on it), #205, #207–#212.
+## The 2026-11-05 audit's CI / INFRA item 3b (BUG-213): the deployed version reaches the smoke test
+
+`deploy.yml` carried `APP_VERSION: ${{ github.sha }}` in its step environment, but the remote
+`bash smoke.sh` invocation never forwarded it, and `infra/smoke.sh` treated an unset version as
+"skipping the version check" rather than a failure. The staging deploy's smoke test therefore
+reported green while proving only that something answered - a deployment serving the previous
+image, the exact failure the check exists to catch, passed.
+
+- The deploy forwards `APP_VERSION='$APP_VERSION'` into the remote command (the sha is not a secret;
+  the domain and the token are the audit's next item, 3c, which moves them out of the command line).
+- `infra/smoke.sh` DIES without the version now, with `--no-version` as the only skip (documented
+  for a local run, and the report says which shape ran), and the `/openapi.json` fetch is wrapped in
+  a failing `if` instead of `|| true`, so a document that cannot be fetched is a failed check rather
+  than a check that reports the wrong cause.
+- `scripts/ci/check-smoke-version.mjs` (a step in the Floor guard job) holds all three halves, and
+  its five test cases run with the rest of `scripts/*/__tests__`.
+- Evidence: `docs/evidence/smoke-version-213/README.md` (the red is the gate's own five findings
+  against the tree as it was).
+
+**State of the queue after 3a and 3b:** items 1, 2, 3a and 3b are on branches with their own PRs
+(#192, #195, #199 and this one). Still ahead in item 3: 3c (the staging domain and the smoke token
+through env/stdin instead of inlined secrets), 3d (deploy only after CI + Quality gates succeed,
+through `workflow_run`), 3e (the E2E restore-keys block), 3f (pin the Android system image), 3g
+(drop the paths filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt 2),
+then the four 3i PRs in order and 3j.
+
+## The 2026-11-05 audit's CI / INFRA item 3c (BUG-214): the deploy's secrets never reach a command line
+
+`deploy.yml`'s deploy step interpolated `${{ secrets.COURIER_STAGING_DOMAIN }}` and
+`${{ secrets.COURIER_SMOKE_TOKEN }}` straight into the remote ssh command. A secret in an ssh ARGV is
+readable in the remote host's own process list by any process on that host for as long as the command
+runs, and one quoting mistake is a leak into a log; GitHub masks a secret in its own logs, not in the
+host's `ps`.
+
+- The two secrets moved into the step's `env:` (masked) and are piped to the remote shell over STDIN:
+  `printf '%s\n%s\n' "$STAGING_DOMAIN" "$SMOKE_TOKEN" | ssh … 'read -r domain && read -r token ||
+  exit 9; cd /opt/courier/infra && APP_VERSION='"$APP_VERSION"' bash smoke.sh --domain "$domain"
+  --token "$token"'`. The remote command's static half is single-quoted, and a failed read exits 9
+  loudly - a smoke test run with an empty token would prove nothing about an authenticated round trip.
+- `scripts/ci/check-deploy-secrets-inline.mjs` (a step in the Floor guard job) holds the line, with a
+  6-case test that runs with the rest of `scripts/*/__tests__`.
+- The proof is a stub `ssh` (transcript in the evidence README): the OLD shape hands both secret VALUES
+  in argv[1]; the new shape hands only `$domain`/`$token` placeholders and the sha, with the values
+  arriving on stdin.
+- One finding worth recording for the next agent: the first draft of the gate's parser failed to read
+  the step's env keys because the workflow files are CRLF and a `$`-anchored regex does not match past
+  a line terminator. The gate's own red found it.
+
+**Still ahead in item 3:** 3d (deploy only after CI + Quality gates succeed, through `workflow_run`),
+3e (the E2E restore-keys block), 3f (pin the Android system image), 3g (drop the paths filter, add a
+changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt 2), then the four 3i PRs in order
+and 3j.
+
+## 2026-11-06: #199 (3a, BUG-212) merged as b0b89eb; origin/main merged into the 3b/3c branch (ad6047b)
+
+#199 went green on its merge-in head (1f60eb6, 21/21 incl. the emulator legs) and merged as
+`b0b89eb`; tag `archive/deploy-rsync-relative` @ `1f60eb6`, branch deleted, ls-remote empty.
+The 3b/3c branch (was 5e91a06) now carries origin/main via `ad6047b` (one log conflict, both
+sections kept): parity 0 reopened, 198 bug rows, nothing deleted, counts re-pasted. Pushed to
+\smoke-version-213\ via the API workaround (git push still rejected server-side).
 
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 

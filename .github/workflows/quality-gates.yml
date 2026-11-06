@@ -88,6 +88,23 @@ jobs:
       # a scratch directory where rsync exists (here, on the runner).
       - name: The deploy's rsync keeps the tree (audit 3a)
         run: node scripts/ci/check-deploy-rsync.mjs
+      # The 2026-11-05 audit's item 3b: the deploy step has always carried
+      # APP_VERSION, but the remote smoke.sh invocation never forwarded it, so
+      # smoke.sh took its "APP_VERSION is not set: skipping the version check"
+      # branch and reported a green smoke test about a deployment it never
+      # identified. The gate holds all three halves: the version is forwarded,
+      # smoke.sh dies without it (--no-version is the only skip), and the
+      # version fetch cannot fail quietly.
+      - name: The deployed version reaches the smoke test (audit 3b)
+        run: node scripts/ci/check-smoke-version.mjs
+      # The 2026-11-05 audit's item 3c: the deploy used to interpolate
+      # COURIER_STAGING_DOMAIN and COURIER_SMOKE_TOKEN straight into the remote
+      # ssh command, which puts a secret in an argv - readable in the host's own
+      # process list, and one quoting mistake from a log. The gate holds the
+      # line: no secret in a command line, the two secrets in the step's env and
+      # piped over stdin, read by the remote shell into variables.
+      - name: The deploy's secrets never reach a command line (audit 3c)
+        run: node scripts/ci/check-deploy-secrets-inline.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers
