@@ -436,6 +436,12 @@ unrecorded exclusions, exit 1. Green after: gate passes, 6/6 tests, check-workfl
 reopened. Evidence: `docs/evidence/semgrep-exclusion-226/README.md`. BUG-226 filed. NOT claimed: the
 Semgrep job green - that is the next CI run's evidence on this head.
 
+## 2026-11-06: #200 merged as fb4708b; #201 auto-merged with it (shared head 5e91a06, BUG-214 row fixed in main); origin/main into the 3d branch (64de5c8)
+
+- #200 (3b, BUG-213) went green on 0f44e31 after one self-inflicted red: my log note written via an inline `python -c` mangled backticks into BEL/control chars and `check-control-chars` (a Floor-guard step I had not been running locally) failed run 42138822228. Fixed in 0f44e31; control-chars now run locally before every push. Merged as `fb4708b`; tag `archive/smoke-version-213` @ `0f44e31`; branch deleted, ls-remote empty.
+- #201 (3c, BUG-214) shared head 5e91a06 with #200: GitHub marked it merged when #200 landed (three-dot diff vs main empty; BUG-214 row `fixed` in main; 47/47 checks green). Comment left on the PR; tag `archive/deploy-secrets-inline-214` @ `5e91a06`; branch deleted.
+- The 3d branch (was 0169533, BUG-215 + BUG-226) now carries origin/main via `64de5c8` (one log conflict, both sections kept): parity 0 reopened, 200 bug rows, nothing deleted, counts re-pasted. Pushed to `deploy-gates-215` via the API workaround.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
