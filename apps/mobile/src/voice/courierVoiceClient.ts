@@ -99,6 +99,12 @@ export interface CourierVoiceTurn {
   notice: string | null;
   words: number;
   latency_ms: number;
+  /**
+   * How the service's pre-classifier routed this turn (MASTER §22 technique
+   * A, landed server-side 2026-11-04): 'free' | 'ignore' | 'full', or null on
+   * older services. The routing decision is reviewable after the fact.
+   */
+  gate?: string | null;
 }
 
 /** The shift, as the service holds it. */
