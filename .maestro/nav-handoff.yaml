@@ -1,0 +1,103 @@
+appId: com.courier.copilot
+name: 'The drive hands the stop to the nav app (queue 4g, trial #15)'
+---
+# Queue 4g's courier-facing half: the navigation hand-off (the trial's #15,
+# built in PR #191 as `driving-nav-handoff`). The drive's own map is not a nav
+# engine, so the panel's "Open in nav app" hands the run's own stop to the nav
+# app the courier already has, with the key-free Google Maps deep link.
+#
+# What this flow proves on the emulator: the control rides the drive panel
+# with the run's own stop, and the press takes the hand-off - the pinned
+# emulator image ships Google Maps, so the key-free link is answered and Maps
+# takes the foreground ("Make it your map"). Coming back, the app is alive and
+# its run is intact: after dismissing Maps' own location prompt (which appears
+# after `back` from its landing), re-entering the drive from the today screen
+# shows the same stop - "STOP 2 OF 5". On a phone with no nav app the link is
+# unanswered and the drive simply stays (the hand-off's 'failed' answer is a
+# console warning, by design).
+#
+# BUG-185: stop the app FIRST, then clear its state.
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The Go sits inside the run sheet, below the fold of the peek: raise the
+# sheet first (driving.yaml's convention).
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- tapOn:
+    id: "today-go"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 30000
+
+# The hand-off control: the accent pill under the slide, on the drive panel,
+# visible without scrolling on the emulator (driving.yaml asserts the slide
+# at the same depth).
+- assertVisible:
+    id: "driving-nav-handoff"
+- assertVisible: "Open in nav app"
+- tapOn:
+    id: "driving-nav-handoff"
+- waitForAnimationToEnd:
+    timeout: 2500
+# The hand-off was taken: the pinned emulator image ships Google Maps, so the
+# key-free link IS answered and the nav app takes the foreground (run
+# 42167328086's api-34 leg: after the tap the screen showed Maps' own landing
+# - "Make it your map" - and driving-screen was gone). That is exactly what
+# the hand-off is for. The image is pinned by revision (PR #204), so Maps'
+# landing text is deterministic on both api legs.
+- extendedWaitUntil:
+    visible:
+      text: "Make it your map"
+    timeout: 30000
+- takeScreenshot: "nav-app-answered"
+# Maps' own location prompt appears only AFTER `back` from its landing on a
+# fresh emulator - run 42192458574 waited 30 s with the landing still up and
+# it never came; runs 42171396160 / 42175587894 / 42181802892 / 42186483187 /
+# 42197937390 all had it up within seconds of the back. So: go back FIRST,
+# then wait for the dialog's own button - OPTIONAL, because whether Maps asks
+# on a given runner is not guaranteed - and tap it if it came. Note `text` in
+# a selector is a REGEX in Maestro 2.11 (it deserializes to the selector's
+# textRegex field - run 42181802892 - and the YAML key `textRegex` itself is
+# rejected, run 42179171405), so "Don.t allow" matches the pinned image's
+# typographic apostrophe (U+2019) and the ASCII one. Then bring OUR app back
+# to the front with launchApp (no clearState) and RE-ENTER the drive from the
+# today screen (run 42203476851: after the round trip the app came back on its
+# Today tab, not the drive - the drive is a pushed route, so the reliable proof
+# that the app survived the hand-off is driving again from the same run state):
+# the drive comes back and is still on the run's stop - "STOP 2 OF 5" - so the
+# app did not crash, did not invent a chooser, and kept its run.
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Don.t allow"
+    timeout: 20000
+    optional: true
+- tapOn:
+    text: "Don.t allow"
+    optional: true
+- launchApp:
+    appId: "com.courier.copilot"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 15000
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- tapOn:
+    id: "today-go"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 15000
+- assertVisible: "STOP 2 OF 5"
+- takeScreenshot: "nav-handoff-taken"

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-11-03",
+  "generated": "2026-11-05",
   "generator": "scripts/eval/build-voice-eval.mjs",
   "address_source": "data/linz (LINZ layer 123113: Christchurch, Waimakariri, Selwyn)",
   "scripts": 720,
@@ -11,27 +11,35 @@
       "scripts": 120,
       "target": 120,
       "files": 120,
-      "status": "scripts ready, audio to generate"
+      "distinctTemplates": 24,
+      "sharedTemplatesWith": null,
+      "status": "audio built from open data"
     },
     {
       "id": "en_nz_van",
       "scripts": 120,
       "target": 120,
       "files": 360,
-      "status": "scripts ready, audio to generate"
+      "distinctTemplates": 8,
+      "sharedTemplatesWith": null,
+      "status": "audio built from open data"
     },
     {
       "id": "en_mix",
       "scripts": 120,
       "target": 120,
       "files": 120,
-      "status": "scripts ready, audio to generate"
+      "distinctTemplates": 24,
+      "sharedTemplatesWith": "en_nz_quiet",
+      "status": "audio built from open data"
     },
     {
       "id": "mi_places",
       "scripts": 60,
       "target": 60,
       "files": 60,
+      "distinctTemplates": 5,
+      "sharedTemplatesWith": null,
       "status": "scripts ready, audio to generate"
     },
     {
@@ -39,6 +47,8 @@
       "scripts": 40,
       "target": 40,
       "files": 40,
+      "distinctTemplates": 4,
+      "sharedTemplatesWith": null,
       "status": "scripts ready, audio to generate"
     },
     {
@@ -46,6 +56,8 @@
       "scripts": 40,
       "target": 40,
       "files": 40,
+      "distinctTemplates": 4,
+      "sharedTemplatesWith": null,
       "status": "scripts ready, audio to generate"
     },
     {
@@ -53,6 +65,8 @@
       "scripts": 40,
       "target": 40,
       "files": 40,
+      "distinctTemplates": 4,
+      "sharedTemplatesWith": null,
       "status": "scripts ready, audio to generate"
     },
     {
@@ -60,6 +74,8 @@
       "scripts": 40,
       "target": 40,
       "files": 40,
+      "distinctTemplates": 4,
+      "sharedTemplatesWith": null,
       "status": "scripts ready, audio to generate"
     },
     {
@@ -67,6 +83,8 @@
       "scripts": 40,
       "target": 40,
       "files": 40,
+      "distinctTemplates": 8,
+      "sharedTemplatesWith": null,
       "status": "scripts ready, audio to generate"
     },
     {
@@ -74,6 +92,8 @@
       "scripts": 60,
       "target": 60,
       "files": 60,
+      "distinctTemplates": 4,
+      "sharedTemplatesWith": null,
       "status": "scripts ready, audio to generate"
     },
     {
@@ -81,6 +101,8 @@
       "scripts": 40,
       "target": 40,
       "files": 40,
+      "distinctTemplates": 8,
+      "sharedTemplatesWith": null,
       "status": "scripts ready, audio to generate"
     },
     {

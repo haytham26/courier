@@ -84,6 +84,10 @@ services:
       AUTH_JWKS_INTERNAL_HOSTS: auth
       AUTH_JWT_AUDIENCE: courier-api
       AUTH_JWT_ISSUER: http://10.0.2.2:3001
+      # BUG-230: the only Host headers the API answers in this stack - the
+      # emulator dials the API through 10.0.2.2:8000, the healthcheck uses the
+      # loopback. (The port is not part of the match.)
+      API_ALLOWED_HOSTS: 10.0.2.2,api,localhost,127.0.0.1
       # The POD store's signing grant (ADR-011): the API refuses to boot without
       # it. A throwaway CI value, because this stack's photos are disposable.
       POD_STORAGE_BACKEND: local

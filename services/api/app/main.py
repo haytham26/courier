@@ -70,6 +70,7 @@ from .pod import (
 )
 from .pod_store import LocalPodStore, PodFingerprintError, pod_store
 from .providers import VERIFIERS, apply_facts, webhook_secret_for
+from .rate_limit import UPLOAD_LIMIT, WEBHOOK_LIMIT, install_rate_limiter, limiter
 from .repo import (
     AppendResult,
     DeliveryEventRow,
@@ -79,6 +80,7 @@ from .repo import (
     RunRecord,
     get_repo,
 )
+from .request_guards import install_request_guards
 from .responses import (
     DemoRunResponse,
     EntitlementResponse,
@@ -123,6 +125,15 @@ validate_pod_settings()
 # test's version check could never see the swap and a stale replica behind the
 # edge looked identical to the new one.
 app = FastAPI(title="Courier Copilot", version=os.environ.get("APP_VERSION", "0.1.0"))
+
+# Per-caller rate limits (BUG-229): the middleware checks the default limit
+# on every http request, the decorated routes below check their own tighter
+# limits, and /healthz is exempt. The tests disable the limiter (conftest).
+install_rate_limiter(app)
+
+# The edge guards (BUG-230): CORS allow-list, trusted-host check and the
+# global request-size cap. The security headers are the middleware below.
+install_request_guards(app)
 
 # The unhandled-error trail the PLAYBOOK triage reads (RUNBOOK section 10).
 logger = logging.getLogger("courier_api")
@@ -483,6 +494,7 @@ def _route_body(
 
 
 @app.get("/healthz", response_model=HealthResponse)
+@limiter.exempt
 def healthz():
     """The uptime probe's target (RUNBOOK section 9): data-free by construction.
 
@@ -623,10 +635,13 @@ class PodForm:
     status_code=201,
     response_model=PodResponse,
 )
+@limiter.limit(UPLOAD_LIMIT)
 def upload_pod(
     paths: Annotated[StopPaths, Depends()],
     image: UploadFile,
     form: Annotated[PodForm, Depends()],
+    *,
+    request: Request,
     principal: AuthPrincipal = Depends(get_current_principal),
     repo: Repo = Depends(get_repo),
 ):
@@ -1015,9 +1030,12 @@ def intake_text(
     "/shifts/{shift_id}/intake/manifest",
     response_model=IntakeAnswerResponse,
 )
+@limiter.limit(UPLOAD_LIMIT)
 def intake_manifest(
     shift_id: uuid.UUID,
     image: UploadFile,
+    *,
+    request: Request,
     principal: AuthPrincipal = Depends(get_current_principal),
     repo: Repo = Depends(get_repo),
     provider: IntakeProvider = Depends(get_intake_provider),
@@ -1061,7 +1079,9 @@ def intake_manifest(
 
 
 @app.post("/shifts/{shift_id}/import", status_code=201, response_model=ImportResponse)
+@limiter.limit(UPLOAD_LIMIT)
 def import_stops(
+    request: Request,
     shift_id: uuid.UUID,
     file: UploadFile,
     principal: AuthPrincipal = Depends(get_current_principal),
@@ -1108,6 +1128,7 @@ def import_stops(
     "/billing/webhooks/{source}",
     response_model=WebhookAcceptedResponse,
 )
+@limiter.limit(WEBHOOK_LIMIT)
 async def billing_webhook(
     source: str,
     request: Request,

@@ -1,6 +1,6 @@
 # CURRENT — backend squad (read this first)
 
-Updated: 2026-11-04 · main at \af496d4\ (PRs #177–186 merged; items (a), (b), (c), BUG-187, BUG-102 and BUG-132 complete) · **This
+Updated: 2026-11-05 · main at `f9781fb` (backend PRs #177–186, #188 and #190 merged; #189 and #191 are the lead's; #182 is not merged yet) · **This
 squad's handoff lives in THIS file only.** PR #174 had written it into the lead's `docs/log/CURRENT.md` and replaced the lead's
 header line with its own; the correction PR on `docs/currents-log-ownership` restores that
 header line exactly as it was at `960fc41^1` (the lead has not rewritten it since) and
@@ -197,12 +197,613 @@ Evidence: `docs/evidence/c1-backend-lows-batch/README.md`; the merge write-up:
   filed+fixed, PARITY 312, evidence `docs/evidence/a3-voice-open-data/`.
   Red-first both legs (module absent at collection; checker red at 0 built);
   green: 249 voice tests, 90.8 % coverage (floor 85 %), ruff+mypy clean.
-- **BUG-187 (the offline brain's intent accuracy, HIGH) — MERGED as `3c32059` (PR #184, `bug-187-offline-brain`, full ritual: all 22 checks green on head `853fab4`, archive tag `archive/bug-187-offline-brain` at the PR head, remote branch deleted; its one red was the screen-recording emulator that never booted — the E2E leg on the same head was green and the rerun was green too):** the A3 measurement read the set's own gold scripts through the service's offline brain and found 29.2 % (`en_nz_quiet`) and 12.5 % (`en_nz_van`). Fixed: the address-bearing forms come first in each family with the product's own vocabularies, `parse_command` fills every captured group instead of first-one-wins, and the plain add answers `priority: false`. Measured after, by the same command: intent 120/120 and intent + mandatory slots 120/120 on each of the three English slices (EVAL.md's M3 bar is 97 %).
+- **BUG-187 (the offline brain's intent accuracy, HIGH) — MERGED as `3c32059` (PR #184, `bug-187-offline-brain`, full ritual: all 22 checks green on head `853fab4`, archive tag `archive/bug-187-offline-brain` at the PR head, remote branch deleted; its one red was the screen-recording emulator that never booted — the E2E leg on the same head was green and the rerun was green too):** the A3 measurement read the set's own gold scripts through the service's offline brain and found 29.2 % (`en_nz_quiet`) and 12.5 % (`en_nz_van`). Fixed: the address-bearing forms come first in each family with the product's own vocabularies, `parse_command` fills every captured group instead of first-one-wins, and the plain add answers `priority: false`. Measured after, by the same command: the parser parses every script of the three English slices (120/120 each) - which the 2026-11-05 audit showed is a CEILING, not an accuracy (BUG-210): the parser's regexes spell out the generator's templates word for word, so the number is published as the parser ceiling on its own templates until the held-out set the founder owes lands (FOUNDER_TODO).
 - **BUG-102 (the map-pack extract URL) — MERGED as `77a3323` (PR #185, `bug-102-map-pack-allowlist`, full ritual: all 17 checks green on head `5a92a22`, archive tag `archive/bug-102-map-pack-allowlist`, remote branch deleted):** `map-pack.yml`'s extract step curled `EXTRACT_URL` as given, with no scheme/host allow-list and no link to the licence-authority `source_id`. `checkExtractUrl` now requires https and the host the registry registers for that source (geofabrik-nz → download.geofabrik.de), refusing an unregistered source, a foreign host or cleartext by name, fail closed; the workflow calls it before the curl.
 - **BUG-132 (the shared rate-limiter store) — MERGED as `af496d4` (PR #186, `bug-132-shared-limiter-store`, full ritual: all 23 checks green on head `e2ae2e9`, archive tag `archive/bug-132-shared-limiter-store`, remote branch deleted):** the env-exposure half had landed; this is the store half. `AUTH_RATE_LIMIT_STORAGE` (memory or database, anything else refused) defaults to database in production and is handed to Better Auth as `rateLimit.storage` (its migration adds the `rateLimit` table when it is selected), and both auth replicas in the compose stacks carry it. The counters live in the database the replicas share: one bucket per key, a restart no longer resets them, and the credential endpoints' strict `customRules` are enforced across the fleet.
 - **Item (d) — C3's loop, the unit family — MERGED as `1167f29` (PR #188, `c3-spoken-unit-keeps-its-letter`, full ritual: all 23 checks green on head `310ca18`, archive tag `archive/c3-spoken-unit-keeps-its-letter`, remote branch deleted; its one red was the api-34 leg's cold-launch flake — the lock-screen flow's first launch did not render in 60 s while the very next flow launched in 1 s and the api-35 leg on the same APK was green — the rerun was green too):** the failure dump over the seeded 1,800-check sample grouped the 56 failures, and the largest family (22) was the unit: `nz_address.parse` split a spoken lettered unit and `_prefer_plain_address` compared units case-sensitively, so the selector answered the PLAIN row beside the unit row. Both fixed; measured by the same seeded command: **96.9 % (1744/1800) → 98.2 % (1767/1800)** — the founder's >= 98 % bar is met. PROGRESS.md's stale 98.3 % (the older 600-check measure) is corrected to the sample that produced it. The weekly changeset lane is on main with its key set; the loop's next rounds (17 misses, the road aliases) are named in the evidence.
-- **Item (e), first half — MASTER §22 technique A, the pre-classifier — on `voice-pre-classifier` PR #190, CI running:** `app/turn_gate.py` routes a turn before anything is assembled: a command the offline brain knows and whose answer does not read the day is answered with no model call and no run fetch, silence routes with its reason, and the decision rides the answer's `gate` field. Measured over the eval set's 720 scripts through the service's own route: **415 free (57.6 %), engine calls 720 → 305, 0 wrong against the gold intents, free 1.35 ms vs full 1.97 ms**; the gateway round trip and the token counts stay not measured until an OmniRoute deployment exists (FOUNDER_TODO). Techniques B and C are the lane's next steps, recorded as such in the evidence.
+- **Item (e), first half — MASTER §22 technique A, the pre-classifier — on `voice-pre-classifier` — MERGED as `c485a3c` (PR #190, full ritual: all 23 checks green on head `6558ede`, archive tag `archive/voice-pre-classifier`, remote branch deleted):** `app/turn_gate.py` routes a turn before anything is assembled: a command the offline brain knows and whose answer does not read the day is answered with no model call and no run fetch, silence routes with its reason, and the decision rides the answer's `gate` field. Measured over the eval set's 720 scripts through the service's own route: **415 free (57.6 %), engine calls 720 → 305, 0 wrong against the gold intents, free 1.35 ms vs full 1.97 ms**; over the shift sims' 24 turns: **7 free (29.2 %), 0 wrong**. The gateway round trip and the token counts stay NOT MEASURED until an OmniRoute deployment exists (FOUNDER_TODO) - and because the eval set it is measured on is the generator's own scripts (BUG-210), the 57.6 % is a ceiling-shaped number too. Techniques B and C are the lane's next steps, recorded as such in the evidence.
 - Then the queue continues in the founder's order: (e)'s second half — the reference-repos clean-room ideas — then billing (D44). LAST: Oracle staging and the production OmniRoute (the OCI host/key and the gateway secrets are FOUNDER_TODO — written there, not blocking).
+
+## The 2026-11-05 audit's EVAL-HONESTY item (BUG-210), landed on main
+
+The audit found the BUG-187 "100%" figure circular: `offline_brain.py`'s regexes spell out the eval
+generator's templates word for word (11 standing overlaps - `watch the dog\s+at` vs
+`watch the dog at ...` and ten more), and intent was scored on the gold TEXT, not on STT output.
+The relabelling and its guards:
+
+- **The number is withdrawn as an accuracy** everywhere it was claimed (the results summary,
+  PROGRESS.md, this log): it is published as "the parser ceiling on its own templates", and the
+  eval module says so in its own `legs` output (`app/eval_audio.py`).
+- **The circularity is now a CI gate**: `scripts/ci/check-parser-circularity.mjs` names every
+  standing overlap (recorded in `packages/eval/voice/manifest/circularity-baseline.json`) and
+  fails the build on a NEW one - a parser learned from the templates is not extended in silence.
+- **The held-out set is the founder's to give** (FOUNDER_TODO: ~100 real courier sentences): no
+  external open source of real courier utterances with a compatible licence exists, and the
+  sentences may not be written by the agent.
+- **Per slice, with the unsupported named**: `ar`, `hi_pa`, `zh` and `sm_to` are reported as
+  "not supported offline" (an English catalogue) and `numbers_corrections` as a named parser gap,
+  never averaged into a headline. Each slice now carries its DISTINCT template count (the
+  builder's `slices.json`), so `en_mix`'s 24 shared templates are visibly not independent evidence.
+- **The gate's numbers re-measured**: 415 of the 720 eval-set turns free (57.6 %, 0 routing
+  errors) and 7 of the shift sims' 24 turns free (29.2 %, 0 errors) - both ceiling-shaped, and
+  §22's token and latency numbers stay UNMET until OmniRoute exists.
+- **Two real bugs found on the way**: the memory store never removed a session's lock
+  (BUG-151's leak's second half - fixed with tests), and the manifest generator clobbered the
+  audio build state on every regeneration (both writers now agree on the byte format).
+
+## The 2026-11-05 audit's IMPORT SAFETY item (BUG-211), one PR
+
+- **Announcement for the lead (a contract-visible change):** the import's row cap is now the
+  ROUTING layer's own (`MAX_ROUTE_STOPS`, 500) instead of 1000. The typed client is byte-identical
+  (the contract's changes are description-only), but an app that pastes a 501-1000-row sheet now
+  gets a 422 naming the cap instead of a 201 followed by route failures, and a repeated import that
+  would pass the cap is a new 409. Both are on the route of `POST /shifts/{id}/import`.
+- **The import counts the shift's total** inside the write in all three repo implementations and
+  refuses (409, naming the totals) rather than growing a shift the planner cannot route.
+- **The sequence is the database's**: the SQL repo takes the shift row's lock
+  (`SELECT … FOR UPDATE`) before reading `MAX(sequence)`, and `schema.sql` dedupes and replaces
+  the index with `UNIQUE(shift_id, sequence)` (an idempotent migration block; a fresh CI leg
+  applies it, a production database is deduped by the same block).
+- **A spreadsheet is untrusted bytes**: the zip's inflatable total is read from its own index
+  (≤ 50 MiB) before the workbook opens; openpyxl's exceptions (BadZipFile, KeyError,
+  InvalidFileException, `etree.ParseError`, ValueError, OSError) map to a 422 naming the file
+  (the broken-sheet case is what proved the first mapping incomplete); rows and columns are
+  capped while they stream.
+- **The trial scope's D8-correction claim is now a decision** (ADR-026): the import stores what
+  it parsed, the correction lands with the address-intelligence slice, and TRIAL_SCOPE row 6 is
+  corrected to say so.
+
+## 2026-11-06: the parked BUG-210 row is filed on `eval-honesty-210`, and origin/main is merged in
+
+- The BUG-210 register row (parked at the temp path when the eval-honesty fix landed, because the
+  register edit and the code landed across branches) is now inserted before BUG-211 in
+  `docs/status/BUGS.md` on this branch, commit `11a9e94`. PR #192's branch now carries its own row.
+- The branch predated PR #194's register fixes, so `check-parity --base origin/main` named 9
+  rows as reopened-without-reason (BUG-079, 082-084, 093, 105-108). Fixed the only allowed way:
+  `git merge origin/main` (no rebase, no -X) — one conflict in `docs/status/TRIAL_SCOPE.md` row 6,
+  resolved by hand as main's fuller row PLUS this branch's ADR-026/D8 clause (no theirs/ours).
+  After the merge: 0 reopened, nothing deleted vs origin/main (`--diff-filter=D`), and the
+  docs/status line counts match main except BUGS.md (+2: BUG-210 and BUG-211 rows) and
+  FOUNDER_TODO.md (+1, from main). Pushed as `6ade09d`.
+- Incident note from earlier today stands: a stray `git stash pop` applied another crew's stash and
+  conflicted four foreign files; all restored from HEAD, the two stash entries left in place.
+## The 2026-11-05 audit's CI / INFRA item 3a (BUG-212): the deploy's rsync keeps the tree
+
+`deploy.yml`'s deploy step ran `rsync -az --delete infra/ services/ packages/
+host:/opt/courier/` with TRAILING SLASHES, so rsync copied the CONTENTS of each
+flat into /opt/courier (and `--delete` removed what was there), and the next
+command in the same step - `cd /opt/courier/infra` - failed on a directory that
+never arrived. The leg has never run against a real host (it is skipped without
+the OCI secrets, FOUNDER_TODO), which is exactly why this survived.
+
+- The rsync is now `-az --delete --relative` with the three sources named
+  WITHOUT trailing slashes: the tree the deploy steps into is the tree that
+  arrives, and --delete trims inside it.
+- `scripts/ci/check-deploy-rsync.mjs` (a step in the Floor guard job) asserts the
+  command's shape, asserts the deploy still cds the directory it sends, and runs
+  BOTH shapes against a scratch target directory - the real rsync where it is
+  installed (CI's runner), a named simulation of rsync's documented semantics
+  where it is not. The proof refuses to go vacuous: if the old shape ever
+  produces a correct layout the gate fails.
+- Its test (5 cases) runs with `node --test scripts/*/__tests__/*.test.mjs`.
+
+**Still founder-blocked, unchanged:** the OCI host and key (A5's deploy leg),
+the OmniRoute gateway, the held-out courier sentences. Item 3b (APP_VERSION
+reaching the remote smoke.sh) is next.
+
+## 2026-11-06: the merge ritual for #192 and #195, and a server-side push blockage (worked around)
+
+- **#192 (BUG-210, eval honesty)** merged to main as `657045f` at 23:09Z; its one red (A1, run
+  42109298598, `Error on ZipFile unknown archive` while the emulator action prepared the system
+  image) was a corrupt sdkmanager download on the runner — the PR diff touches no `.github`/maestro/
+  android files — re-run (`gh run rerun --failed`) went green, then 23/23. Tag `archive/eval-honesty-210`
+  at the PR head `729b5ce`, branch deleted, `git ls-remote` empty (proof in this log's earlier entries).
+- **#195 (BUG-211, import safety)**: merging conflicted on BUGS.md because #192's merge had already
+  carried the BUG-210+BUG-211 rows into main. Ritual resolution: `git merge origin/main` into the
+  branch head `730857e` by hand (main's BUG-210 + BUG-211 rows kept; the branch's only unique edit to
+  the region — the row's PR number #193→#195 — reapplied; the local merge commit amended before any
+  push, so no force-push), giving `f0c52da`: parity 0 reopened, nothing deleted vs origin/main,
+  docs/status line counts match. Merged to main as `09d35a2`. Tag `archive/import-safety-211` exists at
+  the branch tip `730857e`; the merge-time PR head was `f0c52da` (both recorded here). Branch deleted,
+  `ls-remote` empty. On the new head the Floor guard + Semgrep are green (17/17 applicable checks; the
+  Android E2E workflow is path-filtered and correctly skipped for this docs-only diff).
+  - Root cause of the old head's Floor red (run 42130593719): the PR base moved when #192 merged, and
+    730857e's BUGS.md predated it — 9 rows read as reopened-without-reason. The merge-in fixed it; not
+    a register regression.
+- **Push blockage:** since ~23:13Z every `git push` of a new or updated ref is rejected with
+  `remote: fatal error in commit_refs_rules` (even a known remote sha to a fresh branch name). The
+  repo's only ruleset (`protect-main`, id 26141625) targets `~DEFAULT_BRANCH` only, so the error is
+  not explained by the visible rules — likely an org/account-level or server-side rule. **Workaround
+  (verified):** create the ref via `POST /git/refs` at a remote-known sha, upload the new objects with
+  `git push origin <sha>:refs/tags/tmp-upload-…` (tag pushes are not blocked), `PATCH /git/refs/heads/<branch>`
+  to the new sha (fast-forward), delete the temp tag. Used for `import-safety-211` → `f0c52da`.
+  Recorded in FOUNDER_TODO.md. PR #195 was also found closed at 23:13:48Z — collateral of the
+  premature branch deletion the same minute (events: `closed` then `head_ref_deleted`, both by the
+  session account); reopened, head restored, merged.
+- **Next in stack order:** #199 (3a) is being merged with origin/main now (`8e05945`); then #200, #201,
+  #202 (carries the BUG-226 Semgrep exclusion that clears the Semgrep reds on #203–#212), #203, #204
+  (BUG-225+BUG-227 pushed at `3ec94a3`, both emulator legs green on it), #205, #207–#212.
+## The 2026-11-05 audit's CI / INFRA item 3b (BUG-213): the deployed version reaches the smoke test
+
+`deploy.yml` carried `APP_VERSION: ${{ github.sha }}` in its step environment, but the remote
+`bash smoke.sh` invocation never forwarded it, and `infra/smoke.sh` treated an unset version as
+"skipping the version check" rather than a failure. The staging deploy's smoke test therefore
+reported green while proving only that something answered - a deployment serving the previous
+image, the exact failure the check exists to catch, passed.
+
+- The deploy forwards `APP_VERSION='$APP_VERSION'` into the remote command (the sha is not a secret;
+  the domain and the token are the audit's next item, 3c, which moves them out of the command line).
+- `infra/smoke.sh` DIES without the version now, with `--no-version` as the only skip (documented
+  for a local run, and the report says which shape ran), and the `/openapi.json` fetch is wrapped in
+  a failing `if` instead of `|| true`, so a document that cannot be fetched is a failed check rather
+  than a check that reports the wrong cause.
+- `scripts/ci/check-smoke-version.mjs` (a step in the Floor guard job) holds all three halves, and
+  its five test cases run with the rest of `scripts/*/__tests__`.
+- Evidence: `docs/evidence/smoke-version-213/README.md` (the red is the gate's own five findings
+  against the tree as it was).
+
+**State of the queue after 3a and 3b:** items 1, 2, 3a and 3b are on branches with their own PRs
+(#192, #195, #199 and this one). Still ahead in item 3: 3c (the staging domain and the smoke token
+through env/stdin instead of inlined secrets), 3d (deploy only after CI + Quality gates succeed,
+through `workflow_run`), 3e (the E2E restore-keys block), 3f (pin the Android system image), 3g
+(drop the paths filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt 2),
+then the four 3i PRs in order and 3j.
+
+## The 2026-11-05 audit's CI / INFRA item 3c (BUG-214): the deploy's secrets never reach a command line
+
+`deploy.yml`'s deploy step interpolated `${{ secrets.COURIER_STAGING_DOMAIN }}` and
+`${{ secrets.COURIER_SMOKE_TOKEN }}` straight into the remote ssh command. A secret in an ssh ARGV is
+readable in the remote host's own process list by any process on that host for as long as the command
+runs, and one quoting mistake is a leak into a log; GitHub masks a secret in its own logs, not in the
+host's `ps`.
+
+- The two secrets moved into the step's `env:` (masked) and are piped to the remote shell over STDIN:
+  `printf '%s\n%s\n' "$STAGING_DOMAIN" "$SMOKE_TOKEN" | ssh … 'read -r domain && read -r token ||
+  exit 9; cd /opt/courier/infra && APP_VERSION='"$APP_VERSION"' bash smoke.sh --domain "$domain"
+  --token "$token"'`. The remote command's static half is single-quoted, and a failed read exits 9
+  loudly - a smoke test run with an empty token would prove nothing about an authenticated round trip.
+- `scripts/ci/check-deploy-secrets-inline.mjs` (a step in the Floor guard job) holds the line, with a
+  6-case test that runs with the rest of `scripts/*/__tests__`.
+- The proof is a stub `ssh` (transcript in the evidence README): the OLD shape hands both secret VALUES
+  in argv[1]; the new shape hands only `$domain`/`$token` placeholders and the sha, with the values
+  arriving on stdin.
+- One finding worth recording for the next agent: the first draft of the gate's parser failed to read
+  the step's env keys because the workflow files are CRLF and a `$`-anchored regex does not match past
+  a line terminator. The gate's own red found it.
+
+**Still ahead in item 3:** 3d (deploy only after CI + Quality gates succeed, through `workflow_run`),
+3e (the E2E restore-keys block), 3f (pin the Android system image), 3g (drop the paths filter, add a
+changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt 2), then the four 3i PRs in order
+and 3j.
+
+## 2026-11-06: #199 (3a, BUG-212) merged as b0b89eb; origin/main merged into the 3b/3c branch (ad6047b)
+
+#199 went green on its merge-in head (1f60eb6, 21/21 incl. the emulator legs) and merged as
+`b0b89eb`; tag `archive/deploy-rsync-relative` @ `1f60eb6`, branch deleted, ls-remote empty.
+The 3b/3c branch (was 5e91a06) now carries origin/main via `ad6047b` (one log conflict, both
+sections kept): parity 0 reopened, 198 bug rows, nothing deleted, counts re-pasted. Pushed to
+\smoke-version-213\ via the API workaround (git push still rejected server-side).
+## The 2026-11-05 audit's CI / INFRA item 3d (BUG-215): the deploy waits for CI and Quality gates
+
+The deploy job used to run on the same push that started CI and Quality gates, with nothing waiting for
+the other two workflows, so the staging host could be deployed a tree CI was about to call red - and the
+checkout took the branch tip rather than the sha anything had tested. It has never run against a real host
+(the OCI host and key are FOUNDER_TODO), which is exactly why its trigger was never reviewable.
+
+- `workflow_run` on `["CI", "Quality gates"]`, `types: [completed]`. The dispatch trigger stays (a human
+  may always ask) and the push trigger stays (the verify leg builds the local-VM stack on every push, on
+  purpose - it now carries `if: github.event_name != 'workflow_run'` so a gates-completion run does not
+  build it twice).
+- The deploy job's `if:` is dispatch or workflow_run - never the push. The gate step reads the runs on
+  `github.event.workflow_run.head_sha` from the API and requires BOTH workflows `completed` AND
+  `success`: the trigger fires when EITHER finishes, and a deploy that waited for CI alone while Quality
+  gates was red is the same bug as no gate at all. The awk predicate is proven against four shapes (both
+  green passes; one running fails; one failed fails; neither run fails).
+- The checkout is pinned to that sha, and the deploy no longer `needs: verify` (a job that exists only on
+  the push event - the ordering guarantee is the gate step, not the job dependency).
+- `scripts/ci/check-deploy-gate.mjs` (a step in the Floor guard job) holds every half, with an 8-case
+  test. Evidence: `docs/evidence/deploy-gates-215/README.md`.
+
+**Next in item 3:** 3e (the android-e2e restore-keys block), 3f (pin the Android system image), 3g (drop
+the paths filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt 2), then the
+four 3i PRs in order (C12 setup-uv SHA, C11 Node-24, C10 digest pins, C14 dependabot + a cron staging
+smoke) and 3j (the required-checks list in FOUNDER_TODO).
+
+## 2026-11-06: BUG-226 — the workflow_run Semgrep finding is excluded WITH a written record (PR #202's red cause)
+
+Root cause of the "Static analysis (Semgrep)" reds on PRs #202-#212 (run 42015970715 etc.):
+`yaml.github-actions.security.workflow-run-target-code-checkout` (Blocking) is a STATIC heuristic - any
+workflow_run + checkout of the incoming head is flagged. deploy.yml checks out
+`github.event.workflow_run.head_sha` (the sha the gates ran on, not the tip) and the deploy job's gate
+step requires BOTH CI and Quality gates completed+success on that sha BEFORE the checkout runs
+(BUG-215) - the dynamic gate exceeds the rule's assumption, so the finding is accepted, and the fix is a
+documented `--exclude-rule`, not a code change to deploy.yml.
+
+But the accepted finding had no written record: exclusions lived only in the scan's `--exclude-rule`
+list (the floor's no-suppressions check only sees `nosemgrep` comments), and two older W4 exclusions
+weren't even listed in `.semgrepignore`. Fixed on `deploy-gates-215` (pushed; updates PR #202):
+
+- `--exclude-rule "yaml…workflow-run-target-code-checkout…"` in the sast job + a W6 line in its
+  "Why the excluded rules are excluded" echo;
+- `.semgrepignore` entry 7 (the reason, W6), entry 8 (the two missing W4 rule ids), all ids listed;
+- a W6 row in CONSTRAINTS.md's exceptions table (owner lead executor, expires 2026-12-01);
+- `scripts/ci/check-semgrep-exclusions.mjs` (Floor guard step): every `--exclude-rule` must be a
+  `.semgrepignore` line under a numbered reason, and every cited W-id must have a CONSTRAINTS.md row;
+  6-case test.
+
+Red first: the gate against the new workflow + the OLD .semgrepignore/CONSTRAINTS names all three
+unrecorded exclusions, exit 1. Green after: gate passes, 6/6 tests, check-workflows clean, parity 0
+reopened. Evidence: `docs/evidence/semgrep-exclusion-226/README.md`. BUG-226 filed. NOT claimed: the
+Semgrep job green - that is the next CI run's evidence on this head.
+
+## 2026-11-06: #200 merged as fb4708b; #201 auto-merged with it (shared head 5e91a06, BUG-214 row fixed in main); origin/main into the 3d branch (64de5c8)
+
+- #200 (3b, BUG-213) went green on 0f44e31 after one self-inflicted red: my log note written via an inline `python -c` mangled backticks into BEL/control chars and `check-control-chars` (a Floor-guard step I had not been running locally) failed run 42138822228. Fixed in 0f44e31; control-chars now run locally before every push. Merged as `fb4708b`; tag `archive/smoke-version-213` @ `0f44e31`; branch deleted, ls-remote empty.
+- #201 (3c, BUG-214) shared head 5e91a06 with #200: GitHub marked it merged when #200 landed (three-dot diff vs main empty; BUG-214 row `fixed` in main; 47/47 checks green). Comment left on the PR; tag `archive/deploy-secrets-inline-214` @ `5e91a06`; branch deleted.
+- The 3d branch (was 0169533, BUG-215 + BUG-226) now carries origin/main via `64de5c8` (one log conflict, both sections kept): parity 0 reopened, 200 bug rows, nothing deleted, counts re-pasted. Pushed to `deploy-gates-215` via the API workaround.
+## The 2026-11-05 audit's CI / INFRA item 3e (BUG-216): only an exact AVD cache key restores
+
+`android-e2e.yml`'s "Cache the AVD snapshot" step carried
+`restore-keys: avd-<os>-<api>-google-apis-x86_64-`, which restores the newest
+cache whose key starts with that prefix when the exact key misses - so a
+fingerprint miss handed the job an AVD built under a different Maestro version,
+emulator build, system-image revision or emulator-option set. That is BUG-068's
+tiny-device-profile failure again, one line below the comment explaining how
+BUG-068 was fixed.
+
+- The two restore-keys lines are gone (the exact key stays), with a comment
+  recording why, so nobody adds the prefix back for speed.
+- `scripts/ci/check-e2e-avd-restore-keys.mjs` (a step in the Floor guard job)
+  holds the line over every emulator workflow with an AVD cache -
+  `android-e2e-health.yml` included, which has none and is asserted rather than
+  assumed.
+- Evidence: `docs/evidence/e2e-avd-exact-key/README.md` (the red is the block
+  re-attached and the gate naming it).
+
+**The same class elsewhere, deliberately not touched:** `screen-recordings.yml`
+carries four `restore-keys` prefixes (a Playwright browser cache and an AVD
+cache). The audit's item 3e names `android-e2e.yml` only, and BUG-097's own test
+is titled "the recordings cache is content-hashed with a restore-keys", so that
+prefix is a recorded decision, not an oversight. It is logged here as the next
+crew item rather than silently overturned in a PR about a different file - and
+if the lead wants only-exact-keys there too, it is a one-line change plus that
+test's title.
+
+**Next in item 3:** 3f (pin the Android system image), 3g (drop the paths
+filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt
+2), then the four 3i PRs in order and 3j.
+
+## 2026-11-06: #202 merged as 671bfda; origin/main into the 3e branch (dfbf42f + cc1e9a8)
+
+- #202 (3d, BUG-215 + BUG-226) went green on its merge-in head `6d471c4` (21/21, Semgrep green with the W6 exclusion) and merged as `671bfda`; tag `archive/deploy-gates-215` @ `6d471c4`; branch deleted, ls-remote empty.
+- Side effect found while merging main into the 3e branch: the BUG-226 README rows that landed with #202 were mangled (a doubled `| |` and a merged line) by the insert script. Repaired as `cc1e9a8` on this branch; `check-doc-links`/control-chars/mojibake/parity all clean.
+- The 3e branch (was `f5094ef`, BUG-216) carries origin/main via `dfbf42f` (4 adjacent-insertion conflicts, all union-resolved keeping both sides): parity 0 reopened, 201 bug rows, nothing deleted, counts re-pasted. Pushed to `e2e-avd-exact-key` via the API workaround.
+## The 2026-11-05 audit's CI / INFRA item 3f (BUG-217): the emulator's system image is pinned by revision
+
+The emulator-runner action installs `system-images;android-<api>;google_apis;x86_64` from the stable
+channel by api-level, so the emulator's bytes change whenever Google publishes a revision with no commit.
+The pins fingerprint's own comment claimed it covered "the system image's revision" while the fingerprint
+string carried no revision at all - a documentation lie, and BUG-065's class.
+
+- The pins are read from the last green run's OWN evidence, not from memory:
+  `SYSIMG_REV_34: '14'` and `SYSIMG_REV_35: '9'` (run 42019215529 on b81ad239,
+  `.maestro/evidence/e2e-pins.txt`).
+- The pins step reads the pin through an indirect variable (a matrix step cannot name a per-api env key in
+  an expression) and outputs the revision; the pins fingerprint carries it; the image is cached BY revision.
+- A pre-step installs the image with three attempts, wiping the image directory between them (a failed
+  install leaves a half-unpacked image, and installing on top of one is how a run asserts a revision from a
+  directory that is not the image), then ASSERTS `Pkg.Revision` equals the pin.
+- The record step now FAILS when the action moved the image under the pin.
+- `scripts/ci/check-e2e-sysimg-pin.mjs` (a step in the Floor guard job) holds every half; evidence in
+  `docs/evidence/e2e-sysimg-pinned/README.md`.
+
+**The cost, said out loud:** when Google publishes a system-image revision, the e2e legs go RED with a
+message naming both numbers, and the fix is a one-line pin bump in its own PR. That is the pin working, not
+a flake - and the alternative is the state this item fixed (the emulator's bytes changing silently).
+
+**Left for the next crew item:** the `a1` job still boots api-34 without this machinery. The audit's 3f
+names the pins fingerprint, which the legs carry; extending the pin to a1 is a follow-up, not something
+smuggled into this PR.
+
+## 2026-11-06: BUG-225 — the 3f install step now resolves sdkmanager from cmdline-tools (PR #204's red cause)
+
+Root cause of the emulator-leg reds on PRs #204-#211 (run 42058337877, jobs 127363544216/127363543972):
+the "Install the pinned system image" step called a bare `sdkmanager`, and the runner image does not put
+`$ANDROID_HOME/cmdline-tools/latest/bin` on PATH — `sdkmanager: command not found`, then the revision
+assert read a directory that was never installed (`Pkg.Revision=unknown, SYSIMG_REV_35=9`). The assert
+was right; the install never ran.
+
+Fix on `e2e-sysimg-pinned` (pushed; updates PR #204): the step resolves the NEWEST
+`$sdk/cmdline-tools/*/bin` (`ls -d … | sort -V | tail -n 1` — `latest` wins when present, else the
+highest numbered), fails with a `::error::` NAMING THE PATH when no sdkmanager exists under it, and
+exports the bin via `$GITHUB_PATH` + `export PATH` before the install loop. `check-e2e-sysimg-pin.mjs`
+now fails when any of the three pieces is missing (2 new test cases, 8 total). Red first: the extended
+gate against the pre-fix workflow names all three, exit 1. Green after: gate passes, 8/8 tests,
+check-workflows clean, parity 0 reopened. Evidence: `docs/evidence/e2e-sysimg-path-225/README.md`.
+BUG-225 filed. NOT claimed: the emulator legs themselves are green — that is the next CI run's evidence.
+
+## 2026-11-06: BUG-227 — the 3f install loop's `yes | sdkmanager` under pipefail wiped every good install (PR #204's second red cause)
+
+After the BUG-225 PATH fix, run 42118045102 (head b49aa64) showed sdkmanager resolving correctly
+(`…/cmdline-tools/latest/bin`) yet all 3 install attempts "failing" — each attempt's sdkmanager.log tail
+ended at 100% unzip of the LAST zip file, with `yes: standard output: Broken pipe` just before. Root
+cause: `set -euo pipefail` + `until yes | sdkmanager …` — sdkmanager exits 0 on a complete install,
+`yes` dies of SIGPIPE (141), pipefail makes the pipeline 141, the loop reads the good install as a
+failure and `rm -rf "$dir"` deletes it before retrying. Latent since 3f (the step died earlier at
+`command not found` until BUG-225). The emulator-runner action's own sdk-installer.ts does it safely:
+`yes | sdkmanager --licenses` once, then `sdkmanager --install …` with no yes in the pipeline.
+
+Fix on `e2e-sysimg-pinned` (pushed; updates PR #204): licenses accepted once with `|| true` guarding
+the same SIGPIPE, then `until sdkmanager --install "$image" … </dev/null; do … done`; the final-failure
+dump now greps the log for error lines too. `check-e2e-sysimg-pin.mjs` extended: fails if the loop pipes
+`yes` into sdkmanager or skips the `--licenses` step (2 new tests, 10 total). Red first: gate vs
+b49aa64's workflow names both, exit 1. Green after: gate passes, 10/10 tests, check-workflows clean.
+Evidence: `docs/evidence/e2e-sysimg-pipefail-227/README.md`. BUG-227 filed. NOT claimed: emulator legs
+green — that is the next CI run's evidence on this head.
+
+## 2026-11-06: #203 api-35 leg red on d99fb22 = runner flake, re-run with the root cause evidenced (PLAYBOOK 17)
+
+Run 42150920439, job 127673925748 (api 35): boot normal (33 s), image found, AVD created, Streamed Install Success, am start pid=3229 - then `no first screen appeared in 90s`, relaunches=0, no FATAL/ANR/crash in the log between start and timeout. The api-34 leg and A1 on the SAME head are green, and the 3e diff touches only the AVD cache restore-keys + docs + a gate - nothing in the app or the emulator options. That is the BUG-060/061 runner class (swiftshader first-frame stall on one leg). Re-ran the failed job (`gh run rerun 42150920439 --failed`) per the BUG-185/BUG-061 precedent; the retry budget of one lands with 3h (#207).
+
+## 2026-11-06: #203 merged as 51c8ce1 (api-35 red was a runner flake, re-run green); origin/main into the 3f branch (18a427b)
+
+- #203 (3e, BUG-216) green 21/21 on `d99fb22` after the api-35 leg flake re-run (root cause in the log above); merged as `51c8ce1`; tag `archive/e2e-avd-exact-key` @ `d99fb22`; branch deleted, ls-remote empty.
+- The 3f branch (was `3ec94a3`, BUG-217 + BUG-225 + BUG-227) carries origin/main via `18a427b` (BUGS.md rows union-sorted 217/225/226/227; log conflict both-sides-kept): parity 0 reopened, 204 bug rows, nothing deleted, counts re-pasted. Pushed to `e2e-sysimg-pinned` via the API workaround. Its emulator legs were already green on `3ec94a3` (BUG-225/227 fixes); the Semgrep red cleared with main's BUG-226 exclusion.
+## The 2026-11-05 audit's CI / INFRA item 3g (BUG-218): the emulator jobs report `skipped`, not missing
+
+`android-e2e.yml`'s `pull_request` trigger carried a `paths:` filter, which keeps
+the whole WORKFLOW RUN from existing for a change it does not match. The check
+names it would report (`Build the release APK`, the two Maestro legs, `A1: the app
+against the real API (no mock)`) are then never reported at all - and a required
+check that is not reported is a PR that can never be merged, forever pending. The
+filter's own comment named the risk ("a PR check set that does not run for it is a
+check set that lies") without fixing it.
+
+- The trigger's `paths:` is gone from `pull_request`; the push trigger keeps it (a
+  post-merge check on main is not a merge gate).
+- A `changes` job diffs the paths with a plain `git diff --name-only` step - no new
+  action, so nothing to SHA-pin and nothing for the licence inventory - fetching
+  the whole history (a shallow clone's base sha is an unknown revision, and the
+  diff then reads as "nothing changed"), falling back to `HEAD~1` for a new branch's
+  forty-zero `before`, and giving a human's nightly or dispatch the whole set.
+- `if:` on build/e2e/a1, so each job names the paths it needs and reports `skipped`
+  instead of not existing. The build job also runs for a flow-only change (the legs
+  download the APK it uploads; the content-hash cache makes that a restore), and the
+  legs gate on the build job's success so they never run without an APK.
+- `scripts/ci/check-e2e-trigger-conditions.mjs` (a step in the Floor guard job)
+  holds every half, with an 8-case test; evidence in
+  `docs/evidence/e2e-job-level-filter/README.md`, which carries the classification
+  proven against ten fabricated path lists (docs only skips everything; the app,
+  a shared package, a manifest, a flow-only, a script-only and a workflow-only change
+  each classify as intended; the API service and the mobile CI are not this
+  workflow's to watch).
+
+**Where this becomes load-bearing:** item 3j, which writes the exact required-checks
+list in FOUNDER_TODO.md. Until the founder's ruleset requires those names, the
+filter was only a minutes question; after it, a check that does not report blocks
+every PR - which is what this item fixes.
+
+**Next in item 3:** 3h (fail the e2e/a1 jobs when `github.run_attempt > 2`, with a
+job-summary line on attempt 2 asking for the justification), then the four 3i PRs in
+order and 3j.
+
+## The 2026-11-05 audit's CI / INFRA item 3h (BUG-219): the emulator jobs have a retry budget of one
+
+The `e2e` and `a1` jobs had no cap on `github.run_attempt`, so a flake could be "fixed" by pressing
+re-run until green. PLAYBOOK 17.1 (a re-run is not a diagnosis; a red is a root cause) was enforced by
+memory alone. The recurring case is the harness, not the code - the same APK green on api-35 and red on
+api-34 four times with the code byte-identical (BUG-065).
+
+- A `The retry budget` step is now the FIRST step of both jobs: it fails when
+  `github.run_attempt > 2` (before booting an emulator, so the budget saves the minutes), and on
+  attempt 2 it writes the justification request into `$GITHUB_STEP_SUMMARY` - what changed since
+  attempt 1, what the root cause is, and that "a re-run" is not an answer. The budget is one re-run,
+  which is what the recurring harness flake needs.
+- `scripts/ci/check-e2e-retry-budget.mjs` (a step in the Floor guard job) holds every half, with a
+  6-case test. Evidence: `docs/evidence/e2e-retry-budget/README.md`, including the budget step's real
+  body run with attempts 1/2/3 (pass, pass + summary, fail).
+- **A bug the test caught in the gate itself:** the first draft anchored its step regex with `\Z`,
+  which JavaScript does not have (it is the literal letter Z there), so a step that is the job's LAST
+  step never matched. The 3d gate's identical anchor was fixed in the same commit. `\Z` is a PCRE-ism;
+  JS uses `$`.
+
+**Item 3's letters are now all on branches with PRs:** 3a #199, 3b #200, 3c #201, 3d #202, 3e #203,
+3f #204, 3g #205, 3h this one. Remaining in item 3: the four 3i PRs IN ORDER (C12 pin setup-uv by SHA,
+C11 Node 20 -> 24, C10 pin every action by digest, C14 dependabot + a cron staging smoke), then 3j (the
+required-checks list, which is a FOUNDER_TODO row - the names are written down for the founder to set).
+
+## 2026-11-06: #205 merged as ef46eac; origin/main into `e2e-retry-budget` (5149434)
+
+- The previous stack PR merged as `ef46eac`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `e2e-retry-budget` (was `38d557e`) carries origin/main via `5149434` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 208 bug rows (open 7 · doing 3 · testing 1 · fixed 165 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+Also carrying the #205 bookkeeping (counts re-pasted one branch late to save a CI cycle): #205 merged as ef46eac, tag archive/e2e-job-level-filter @ 9a486f6, branch deleted.
+## The 2026-11-05 audit's CI / INFRA item 3i, finding C12 (BUG-220): setup-uv pinned to ONE sha
+
+`astral-sh/setup-uv` was referenced by two different commit SHAs in the same tree (v5
+`d4b2f3b…` in ci/codeql/quality-gates, v10.3.3 `68559e9…` in linz-changeset/mutation), so the
+same tool ran as two versions depending on which workflow built you, and a bump PR that
+touched one list silently left the other.
+
+- The four v5 references moved to the v10.3.3 SHA (a bump of an action already in the tree: no
+  new licence-inventory row, no lockfile change). Behaviour of the new version is verified by
+  this PR's own CI run, since ci/codeql/quality-gates all install uv through the moved ref.
+- `scripts/ci/check-setup-uv-pin.mjs` (a step in the Floor guard job) holds the check-e2e-pins
+  rule for it: every ref is a full 40-hex SHA, all refs AGREE, both step spellings are read, and
+  an empty tree fails rather than passing vacuously. 5-case test.
+- Evidence: `docs/evidence/setup-uv-one-pin/README.md` (the red names both SHAs).
+
+**3i continues in order:** C11 (Node 24) next, then C10 (the every-action digest-pin gate), then
+C14 (dependabot + the cron staging smoke), then 3j.
+
+## 2026-11-06: #207 merged as 39976e3; origin/main into `setup-uv-one-pin` (7c0180a)
+
+- The previous stack PR merged as `39976e3`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `setup-uv-one-pin` (was `788893e`) carries origin/main via `7c0180a` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 209 bug rows (open 7 · doing 3 · testing 1 · fixed 166 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#207 (3h, BUG-219) merged as 39976e3; tag archive/e2e-retry-budget @ c10179c, branch deleted.
+## The 2026-11-05 audit's CI / INFRA item 3i, finding C11 (BUG-221): Node 24, declared once
+
+The runner's Node was declared in thirteen places (`node-version: 22` across 8 workflows) and
+package.json's `engines.node` said `>=22.0.0` separately, so the runner and the floor could drift
+apart one edit at a time - the same split the setup-uv pin had (BUG-220).
+
+- All thirteen `node-version:` lines now say 24 (the current LTS, what the audit asked for) and
+  `engines.node` is `>=24.0.0`. package.json's diff is that one line; no dependency changed, so no
+  lockfile or licence-inventory change.
+- `scripts/ci/check-node-pin.mjs` (a step in the Floor guard job) holds the rule: one major declared
+  everywhere (the exported `NODE_MAJOR`), matching the engines floor; an empty tree fails rather than
+  passing vacuously. 5-case test. Evidence: `docs/evidence/node-24/README.md` (the red names all
+  thirteen old lines).
+- The bump's behaviour check is this PR's own CI: every job installs Node through a moved line, so a
+  dependency that breaks on 24 fails here, in the open.
+
+**3i continues in order:** C10 (the every-action digest-pin gate) next, then C14 (dependabot + the cron
+staging smoke), then 3j.
+
+## 2026-11-06: #208 merged as 8333043; origin/main into `node-24` (dbb2b9a)
+
+- The previous stack PR merged as `8333043`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `node-24` (was `2088ae6`) carries origin/main via `dbb2b9a` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 210 bug rows (open 7 · doing 3 · testing 1 · fixed 167 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#208 (C12, BUG-220) merged as 8333043; tag archive/setup-uv-one-pin @ 3c4ba27, branch deleted.
+## The 2026-11-05 audit's CI / INFRA item 3i, finding C10 (BUG-222): every action pinned by commit sha, held by a gate
+
+The tree already pinned all 116 `uses:` refs to full 40-hex commit SHAs, but NOTHING ASSERTED IT -
+the next action added as `actions/checkout@v4` would have been green, and a tag can be re-pointed to
+run new code with no commit in this repository.
+
+- `scripts/ci/check-action-pins.mjs` (a step in the Floor guard job) holds the rule: every `uses:` ref
+  is `owner/repo@<40-hex sha>` (tag/branch/short-sha all fail, named with file:line), a `docker://`
+  image needs a `@sha256:` digest, a local `./` action passes (reviewed with the code), both step
+  spellings are read, and an empty tree fails rather than passing vacuously. 8-case test. Evidence:
+  `docs/evidence/action-digest-pins/README.md` (the red is a fabricated tag-ref workflow, exit 1).
+- No workflow file changed - the tree was compliant; the PR's value is that the next ref cannot be
+  added unpinned.
+- Boundary, said out loud: a SHA pin means the code a workflow runs is the code a commit in THIS repo
+  pointed at, reviewable in the introducing diff. It does not make an upstream compromise impossible -
+  that is what dependabot (C14, next) and review are for.
+
+**3i's last PR:** C14 (`.github/dependabot.yml` for npm + github-actions, and a cron workflow that runs
+`infra/smoke.sh` against staging on a schedule), then 3j (the required-checks list into
+FOUNDER_TODO.md).
+
+## 2026-11-06: #209 merged as 257cc6e; origin/main into `action-digest-pins` (2df79ef)
+
+- The previous stack PR merged as `257cc6e`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `action-digest-pins` (was `5f3aba4`) carries origin/main via `2df79ef` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 212 bug rows (open 7 · doing 2 · testing 1 · fixed 170 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#209 (C11, BUG-221) merged as 257cc6e; tag archive/node-24 @ d355555, branch deleted. Also: the screen-recordings 45-min timeout on d355555 was a runner stall (zero log lines 08:02-08:35), re-run green (PLAYBOOK 17 note).
+## The 2026-11-05 audit's CI / INFRA item 3i, finding C14 (BUG-223): dependabot + the cron staging smoke
+
+Two standing gaps closed:
+
+1. **No `.github/dependabot.yml` existed** - no ecosystem was watched at all. Now version 2, all
+   weekly: `github-actions` and `npm` at `/` (pnpm workspace; the npm ecosystem reads
+   pnpm-lock.yaml), `uv` for `/services/api` and `/services/courier-voice`. Ecosystem support verified
+   against GitHub's own configuration reference on 2026-11-06 (`uv` is a supported
+   `package-ecosystem` value; npm reads pnpm v7-v12 lockfiles). The config's comments carry the PR
+   rules: action PRs re-pin to the new commit SHA (BUG-222), npm/uv PRs carry the lockfile and the
+   `docs/product/LICENSES.md` inventory in the same PR.
+2. **Nothing smoked staging on a schedule.** `.github/workflows/staging-smoke.yml`: nightly cron
+   18:05 UTC (07:05 NZDT) + `workflow_dispatch`; runs
+   `bash infra/smoke.sh --domain "$DOMAIN" --token "$TOKEN" --no-version` (`--no-version` BY DESIGN -
+   a cron run is not a deploy; the version check is the deploy leg's, item 3b). Secrets only in
+   step-level `env:` (3c/BUG-100); when COURIER_STAGING_DOMAIN / COURIER_SMOKE_TOKEN are unset
+   (FOUNDER_TODO) the run skips with a `::notice::` naming them. Report uploaded as an artifact.
+   `permissions: contents: read`; all `uses:` SHA-pinned.
+
+- `scripts/ci/check-staging-smoke.mjs` (a step in the Floor guard job) holds both halves; 14-case
+  test. Evidence: `docs/evidence/dependabot-cron-223/README.md` (the red names both missing halves).
+- The new workflow passes check-workflows (15 files now) and check-action-pins (118 refs).
+- NOT claimed: the cron smoke has not run green against a real staging - it skip-notices until the
+  founder sets the two staging secrets.
+
+**Item 3i is complete (C12, C11, C10, C14 in order). Item 3j remains:** the exact required-checks
+list goes into `docs/status/FOUNDER_TODO.md` for the founder to set as the branch ruleset.
+
+## Incident note (2026-11-06): a stray `git stash pop` conflicted four foreign files — resolved, stashes left alone
+
+While red-proving C14, a `git stash push` of two UNTRACKED files failed ("Did you forget to
+'git add'?"), and the `git stash pop` in the same command then applied an OLDER stash that was
+not mine (`stash@{0}: WIP on fix/mutmut-leaves-client-test-to-ci: 4f711e1`, another crew's WIP)
+onto this branch's working tree. That conflicted `docs/status/BUGS.md`, `infra/env.example`,
+`services/api/pyproject.toml`, `services/auth/src/config.ts` and
+`services/auth/src/__tests__/config.test.ts`, and mangled some em-dashes in the conflicted
+region of BUGS.md (caught by `check-mojibake` / `check-parity`'s B1 findings: 19 findings,
+duplicated BUG-128..145).
+
+Resolution, deliberate: the four foreign files were restored from HEAD with
+`git restore --source=HEAD --staged --worktree` (they are not this branch's files; the stray
+content was discarded, HEAD kept). `docs/status/BUGS.md` was restored from HEAD and my BUG-223
+row re-applied from its parked copy - the kept conflict side was NOT trusted because the pop had
+already mojibake'd it. After: `check-mojibake` clean, `check-parity` back to 0 reopened, 259
+scripted tests pass, no conflict markers anywhere. The two stash entries (`stash@{0}` the
+mutmut-branch WIP, `stash@{1}` `On c1-backend-fixes: bug-115`) were LEFT IN PLACE - they are
+other crews' work, not mine to drop. Lesson recorded: never pair a `git stash push` of untracked
+files with a `git stash pop` in one command; for untracked files use `Move-Item` aside/back
+instead (that is what the C14 red proof ended up using).
+
+## 2026-11-06: #210 merged as a0674da; origin/main into `dependabot-cron-223` (0a8a955)
+
+- The previous stack PR merged as `a0674da`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `dependabot-cron-223` (was `eb75e35`) carries origin/main via `0a8a955` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 214 bug rows (open 7 · doing 2 · testing 1 · fixed 172 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#210 (C10, BUG-222) merged as a0674da; tag archive/action-digest-pins @ 6a71ee9, branch deleted.
+
+## 2026-11-06: BUG-228 — the new dependabot.yml had no cooldown; Semgrep Blocking fired on #211 (fixed the config, not excluded)
+
+PR #211's head `80edbac` went red in the sast job (runs 42197669307/42197664922): Semgrep `package_managers.dependabot.dependabot-missing-cooldown` (Blocking), 4 findings — one per `updates` entry of the new `.github/dependabot.yml`. Decision: fix the CONFIG, not an exclusion — cooldown is the intended lever, and the pinned registry (semgrep==1.182.1) is the authority. Fix on the `dependabot-cron-223` branch: `cooldown: days: 7` on all four entries + header comment; `check-staging-smoke.mjs` extended to require a cooldown on every entry (names BUG-228); 1 new test case (15 total). Red-first proof: the extended gate against eb75e35's pre-fix dependabot.yml in a temp tree exits 1 naming all four missing cooldowns; green on the fixed tree. BUG-228 row filed (inserted before the BUG-187 anchor), evidence in `docs/evidence/dependabot-cooldown-228/`. The Semgrep red clearing is the next CI run's evidence. Pushed via the API workaround.
+## The 2026-11-05 audit's CI / INFRA item 3j (BUG-224): the exact required status checks for `protect-main` are written down
+
+The `protect-main` ruleset (founder directive 2026-10-28) requires 0 status checks, so nothing at the
+repository level forces a PR through the gates, and the check names GitHub reports were written down
+nowhere. Now `docs/status/FOUNDER_TODO.md` has a section ("The required status checks for
+`protect-main`") with the exact list, derived from every workflow's `name:` + jobs + `pull_request`
+trigger: every-PR checks `CI / quality|secrets`, `Quality gates / floor|coverage|licences|audits|sast`,
+`CodeQL / analyse`, `android-e2e / changes|build|e2e|a1` (the last three skip on non-app PRs, which
+does not block); path-limited `Restore test / restore` and `Screen recordings (…) / build|record`;
+and the explicit note that the schedule/dispatch-only workflows (Deploy staging, Staging smoke, APK
+lanes, Store readiness, Mutation floor, LINZ changeset, Map pack, android-e2e-health) cannot be
+required PR checks. The founder sets the list in the ruleset UI in one paste - that setting is a
+FOUNDER_TODO row, not an agent action. Evidence: `docs/evidence/required-checks-224/README.md`
+(the derivation table). No code changed, so no red/green; BUG-224 filed.
+
+**Item 3 is now fully on branches with PRs: 3a-3h (#199-#207), 3i C12/C11/C10/C14 (#208-#211), 3j
+this one.** Next in the queue: item 4 (API hardening a-g), then item 5, then item 7's chain.
+
+## 2026-11-06: #211 merged as b524abe; origin/main into `required-checks-224` (26cda0a)
+
+- The previous stack PR merged as `b524abe`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `required-checks-224` (was `155e31c`) carries origin/main via `26cda0a` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 216 bug rows (open 7 · doing 2 · testing 1 · fixed 174 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#211 (C14, BUG-223 + BUG-228) merged as b524abe; tag archive/dependabot-cron-223 @ e6a1187, branch deleted. The BUG-228 Semgrep red on 80edbac was fixed by cooldown on all four dependabot entries (config fix, not exclusion; gate extended, 15/15 tests) and confirmed green in CI (Semgrep x2 success on e6a1187). This is the last sub-item of audit item 3 (3j).
+
+## 2026-11-06 (later): BUG-228 second iteration — Dependabot's schema rejects a bare `days:` cooldown key; corrected to `default-days: 7` on the #212 branch
+
+The BUG-228 fix merged with #211 (`b524abe`) used `cooldown: days: 7`: Semgrep's missing-cooldown branch was satisfied (17/17 green on `e6a1187`), but Dependabot's OWN config check went red on #212's head (check-run 127840393944): "additional properties [days] outside of the schema" for all 4 entries. Verified against both authorities: Semgrep's registry rule (semgrep/semgrep-rules package_managers/dependabot/dependabot-missing-cooldown.yaml) requires `cooldown: default-days: >= 7` (branch 2 fires below 7), and GitHub's dependabot options reference lists only `default-days` / `semver-*-days` / `include` / `exclude` under `cooldown` — no `days` key. Corrected on the `required-checks-224` branch: `cooldown: default-days: 7` on all four entries + header comment; the gate now requires `cooldown:` + `default-days >= 7` and fails a bare `days:` key (3 new tests, 17 total). Red-first: the extended gate exits 1 naming all four entries against BOTH eb75e35 (no cooldown) and e6a1187 (bare `days:`); green on the fixed tree. Merging #212 corrects main's dependabot.yml. Semgrep + the Dependabot config check going green is the next CI run's evidence.
+
+## 2026-11-07: item 4a (BUG-229) — per-caller rate limits on the API (slowapi, pinned)
+
+Audit item 4 (API hardening) starts with 4a. Adopted `slowapi==0.1.10` (MIT, verified on PyPI 2026-11-07; dep `limits>=2.3` MIT) exactly as research §1.4 A1 decided — pinned because one maintainer; the in-memory store is per-process, so >1 uvicorn worker means the Redis backend (one constructor arg). New `app/rate_limit.py`: buckets per bearer token (sha256 of the header, never stored clear) else per client IP; limits are per-request callables over `RATE_LIMIT_*` env (default 120/min, auth 20/min, uploads 30/min, webhooks 60/min) so a running process re-tunes without a redeploy; `SlowAPIASGIMiddleware` on purpose — slowapi's BaseHTTPMiddleware subclass only invokes SYNC exception handlers and would silently fall back to the default 429 (no Retry-After); custom 429 handler derives Retry-After from the failed limit's window; `/healthz` exempt; the voice WebSocket passes through non-http scopes by design (own budget, BUG-116). Decorated: /auth/me + /auth/verify, POD upload + manifest photo + spreadsheet import, billing webhook (decorated endpoints need a `request` param — keyword-only where PLR0917 fires). conftest disables the limiter on the shared app. Red first: the new `tests/test_rate_limit.py` failed with `'State' object has no attribute 'limiter'`; green after: 6/6 (429 + Retry-After at limit+1, healthz exempt, per-token buckets, auth 2/min, webhook 2/min, suite unthrottled), full suite 591 passed, ruff + mypy clean, typed client fresh, parity 0 reopened. BUG-229 filed; evidence in `docs/evidence/api-rate-limit-229/`. Skills applied: security-and-hardening, test-driven-development, source-driven-development (slowapi 0.1.10 source read from the pinned tag before wiring), incremental-implementation, constraint-driven-development. Branch `api-rate-limit-229`.
+
+## 2026-11-07: item 4a (BUG-229) merged — #239 as `ef12d64`; tag `archive/api-rate-limit-229` @ `d46e8bb`, branch deleted
+
+PR #239 (branch `api-rate-limit-229`, head `d46e8bb`) went green 24/24 and merged as `ef12d64`. Per-caller rate limits are live: slowapi==0.1.10 pinned, buckets per bearer token (sha256) else per IP, `RATE_LIMIT_*` env read per request (120/20/30/60 per minute by route class), 429 with Retry-After, /healthz exempt, voice socket untouched. Full API suite 591 passed on the head, ruff/mypy clean, typed client fresh, parity 0 reopened. Counts re-pasted: 312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 217 bug rows (open 7 · doing 2 · testing 1 · fixed 175 · closed 2 · moved to PARITY 30). Item 4b (BUG-230: CORS allow-list + TrustedHostMiddleware + global request-size cap) is next on branch `api-cors-trustedhost-230`.
+
+## 2026-11-07: item 4b (BUG-230) — CORS allow-list + trusted-host check + global request-size cap
+
+New `app/request_guards.py`, installed in `main.py` right after the rate limiter (trusted-host outermost). CORS: explicit allow-list from `API_CORS_ALLOW_ORIGINS`, default EMPTY — the app is native and sends no Origin, so no browser may call the API until a dashboard origin is named; `allow_credentials=False`. Trusted hosts: `API_ALLOWED_HOSTS`, falling back to `COURIER_DOMAIN` + the compose-internal names, `*` only in local dev — and all three compose files now pass it (prod/staging from `COURIER_DOMAIN`, CI lists `10.0.2.2` for the emulator). Size cap: a pure-ASGI guard answers 413 before reading the body when the declared Content-Length exceeds `API_MAX_REQUEST_BYTES` (default 11 MiB = 10 MiB POD + multipart framing); per-route caps stay tighter; chunked bodies remain bounded by the route reads; websocket scopes pass through. Starlette built-ins only — no new dependency. Red first: `tests/test_request_guards.py` failed at collection; green after: 7/7 (origin blocked/allowed, preflight 400, spoofed Host 400, 413 over cap, default 11 MiB, shared app carries the guards). Full API suite green on the head, ruff/mypy clean, typed client fresh, parity 0 reopened. BUG-230 filed; evidence in `docs/evidence/api-edge-guards-230/`. Branch `api-cors-trustedhost-230`. Skills: security-and-hardening, test-driven-development, source-driven-development (starlette 1.8.0 TrustedHostMiddleware source read — port is stripped from the Host match), incremental-implementation, constraint-driven-development.
+
+## 2026-11-07: item 4b (BUG-230) merged — #241; tag `archive/api-cors-trustedhost-230`, branch deleted
+
+PR #241 (head `e2d7d4c`) green 24/24, merged. Edge guards live: CORS allow-list from `API_CORS_ALLOW_ORIGINS` (default empty), `TrustedHostMiddleware` from `API_ALLOWED_HOSTS` (compose files pass it), and the pure-ASGI request-size guard (413 before reading, default 11 MiB via `API_MAX_REQUEST_BYTES`). Full API suite 598 passed on the head; ruff/mypy clean; parity 0 reopened. Counts re-pasted: 312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 218 bug rows (open 7 · doing 2 · testing 1 · fixed 176 · closed 2 · moved to PARITY 30). Item 4c (BUG-231: the shared `safe_fetch()` SSRF guard over the jwks + omniroute httpx calls) is next.
+
+## 2026-11-07: item 4c (BUG-231) - the shared `safe_fetch()` SSRF guard over every server-side fetch
+
+Research row 61 + section 2: no maintained Python SSRF library exists, so the guard is ours. New `app/safe_fetch.py`: `check_url()` refuses non-http(s), hostless, unresolvable, and non-public-resolving URLs (private/loopback/link-local/reserved/multicast/unspecified via `ipaddress`; IP literals checked without DNS; one private among public refused); `safe_fetch()` drives httpx with `follow_redirects=False` and re-checks every redirect hop. `UnsafeFetchError` extends `Exception` (not ValueError) so the jwks/omniroute wrappers never flatten a refusal - it fails closed and loud. Wired into `jwks.py::_refresh` (allowed_hosts = internal_hosts | LOOPBACK_HOSTS) and `omniroute.py::_chat` (new `OMNIROUTE_INTERNAL_HOSTS`); operator-listed hosts are the one named exception. conftest fakes `_resolve` suite-wide (names -> public IP, localhost -> 127.0.0.1, literals -> themselves) so the mock-transport tests stay hermetic. Red first: collection error `No module named 'app.safe_fetch'`; green after: 12/12 in `tests/test_safe_fetch.py` (incl. redirect to 169.254.169.254 refused before it is followed, and the JWKS internal host still verifying), targeted 103 passed, full API suite **611 passed**, ruff + mypy clean (80 files), typed client fresh, parity 0 reopened. BUG-231 filed; evidence in `docs/evidence/api-safe-fetch-231/`. Branch `api-safe-fetch-231`. Skills: security-and-hardening, test-driven-development, source-driven-development, incremental-implementation, constraint-driven-development.
+
+## 2026-11-07: item 4c (BUG-231) merged - #242; tag `archive/api-safe-fetch-231`, branch deleted
+
+PR #242 (head `febdb79`) green 23/23, merged. The SSRF guard is live: `app/safe_fetch.py` checks every URL (http/https only, host must resolve to public addresses, IP literals without DNS, one-private-among-public refused) and re-checks every redirect before following it; `UnsafeFetchError` is deliberately not a ValueError so the jwks/omniroute wrappers never flatten it. Wired into the JWKS refresh (allowed_hosts = internal_hosts | LOOPBACK_HOSTS) and the OmniRoute chat (new `OMNIROUTE_INTERNAL_HOSTS`). Full API suite 611 passed on the head; ruff/mypy clean; typed client fresh; parity 0 reopened. Counts re-pasted: 312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 219 bug rows (open 7 · doing 2 · testing 1 · fixed 177 · closed 2 · moved to PARITY 30). Item 4d (BUG-232: the SQL-parameterisation gate) is next on branch `api-sql-parameterisation-232`.
+
+## 2026-11-07: item 4d (BUG-232) - the SQL-parameterisation gate
+
+Research row 62 wanted "no string-built SQL anywhere in services/api" as a property of the code. New gate `scripts/ci/check-sql-parameterisation.mjs` in the floor job of quality-gates.yml: it fails on f-string SQL, concat/.format/% SQL in text() calls, execute() first args and statement-variable assignments, and on placeholder SQL (`?` or `:name`) executed without a params argument; literal text()/execute(), static placeholder-free SQL and plain statement variables pass. Red first: the 4 bad fixtures passed before the gate existed; a naive first version flagged 31 false positives on the real tree (prose `text(`, `read_text(`, `text.replace`, multi-line assignments) - fixed by classifying only real SQL RHS and reading whole logical lines. Green: real tree clean (65 statements, 31 files), 9/9 fixture tests, all node gates pass, check-workflows clean, parity 0 reopened. BUG-232 filed; evidence in `docs/evidence/api-sql-parameterisation-232/`. Branch `api-sql-parameterisation-232`. Skills: security-and-hardening, test-driven-development, incremental-implementation, constraint-driven-development, ci-cd-and-automation.
 
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 

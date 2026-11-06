@@ -1,22 +1,37 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `0b083b9` (PR #170's handoff). Lead session 13, 2026-11-02.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `ef12d64` (PR #239, audit item 4a);
+ahead of it `4851380` = PR #217 (queue 4g), `938cf26` = PR #216 (queue 4f),
+`3400082` = PR #218 (release hygiene), `8333043` = PR #208). Lead session 14,
+2026-11-05/07. Next: D1 (founder decision D1 — the live voice assistant in the
+shipped build, app side), B5 + Play internal-testing prep, A3's app side, §22's
+app side, P4 baselines, P7 acceptance on two screen sizes — to the §6 Definition
+of Done.**
 
-## Lead session 13, started (2026-11-02): D62 recorded — the trial build IS the product
+## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
-Verified on origin (every branch, `scripts/ci`-style register scan): highest BUG = 162
-(main, c1-voice-mediums, fix/c1-lows-batch), highest D = 61 (main, c1-voice-mediums) —
-so the new decision is **D62** and the first new BUG row is **164** (163 stays reserved
-for the backend's BUG-113 renumber). D62 supersedes D52–D59: every TRIAL_SCOPE deferral
-is in the trial, scheduled queue steps 4.1 (nav hand-off deep links), 4.2 (reopt /
-time-window / priority app surfaces), 4.3 (import, reasons, stop types, breaks, finish).
-DECISIONS + TRIAL_SCOPE + PARITY update in one PR (`docs/d62-trial-is-the-product`).
-Open PRs verified: #135 (feat/a1-slice-3-run-store @ 4241000, both checks on the head
-red: CI lint `require-await` at sessionRestoreBounded.test.tsx:81 and the a1 E2E job —
-the device dump shows `not-found-screen`, root cause: the root Stack mounts only after
-the 8 s restore bound, so the router resolves the initial route against the empty stack;
-planned fix: `initialRouteName` on the root Stack), #166 (fix/c1-lows-batch @ 4eb353e).
-#164 (c1-voice-mediums) merged as 1c12d7b during session 13.
+The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
+with it. The register's truth at the merge: 312 PARITY rows (Have 30 · Better 4 ·
+Planned (task) 272 · Skip (reason) 6) and **187 BUGS rows** (open 6 · doing 3 · testing
+1 · fixed 145 · closed 2 · moved to PARITY 30) — row by row after item 2's corrections
+below, which came from this same audit.
+
+**Merged on main by session 14:** #135 (the a1 slice 3, `2382f68`), #166 (the eight C1
+lows, `38db903`), #189 (audit item A4 — the mock stop list is unreachable from a
+non-E2E entry and the E2E flag is refused in a release build; BUG-079 closed), #191
+(queue 4.1, the navigation hand-off) and their ritual docs PRs. The archive tags
+`archive/feat-a1-slice-3-run-store`, `archive/fix-c1-lows-batch`,
+`archive/feat-a4-no-mock-stops` and `archive/feat-nav-handoff` carry the final heads.
+
+**In flight on this branch's PRs:** **#193** (`feat/reopt-surface`, queue 4.2's reopt
+surface: the solver's answer is applied to the phone's own day, BUG-189 and BUG-190).
+Open on origin at the time of writing: just `#193` — every other queue item is a
+branch that has not been pushed yet, not an open PR.
+
+**The register's own history, restored** (item 2a): PR #166's merge carried only 210 of
+`docs/status/BUGS.md`'s 417 lines and lost the "Last Updated" line, the section headers
+and the BUG-060/061/066 investigation histories. This PR restores them from
+`38db9035^1` and keeps every current row (all 186 rows are main's own, byte for byte).
 
 **Step 0 done (PR on `fix/register-step0-reopen-guard`):** the six stale rows
 (BUG-080/#146, BUG-085/#147, BUG-100/101/162/#155, BUG-103/#161) are `fixed` with their
@@ -359,23 +374,20 @@ closed 2, moved 30); PARITY 312 (Have 30).
   head, archived).
 - On main, `apps/mobile/app/(tabs)/index.tsx` and `apps/mobile/app/driving.tsx`
   read the run through `useRun()` — `mockStops` is gone from both.
-- A4 has landed on `feat/a4-no-mock-stops` (PR to follow): `check-mock-reach.mjs`
+- A4 has landed on main as PR #189 (5d69fac): `check-mock-reach.mjs`
   proves the mock list is reachable only through the two E2E seams (lock-screen,
   delivered, copilot, stops and map now read the run through the store; index and
   driving already did) and `check-e2e-flag.mjs` refuses the E2E flag in a release
-  build (BUG-079 closed). The queue resumes at BUG-081, then #166, then the trial
-  features' app halves, then B5, A3, A2 and §22.
+  build (BUG-079 closed, with its register row).
   (was: remove `mockStops` from the seven screens on main
   (index, map, stops, copilot, delivered, driving, lock-screen) so they read the
   real run through `useRunDay`, plus the build check that fails a release build
   on a reachable mock (BUG-079). Then BUG-081, then #166, then the trial
   features' app halves, then B5, A3, A2 and §22.
 
-Merge #135 only when CI + a1 + both E2E
-legs are green on the final head with no re-run (§17.4); then confirm on main that
-mockStops is gone from `app/(tabs)/index.tsx` and `app/driving.tsx` (already true on the
-branch: both read `useRun()`).
-
+The queue resumed past all of that on 2026-11-05: #166 merged (38db903), #189
+merged (5d69fac), #191 merged (f9781fb), and #193 (queue 4.2, the reopt surface)
+is the open PR this session.
 
 ## Lead session 12, the closing state (2026-11-02): the a1 job's blank first screen is rooted and fixed
 
@@ -435,7 +447,6 @@ shared failure (its api-35 leg's five flows are the BUG-161 double-handle bug, w
 - **The numbering:** the highest BUG row across origin/main and every open PR branch is BUG-162; a NEW row starts at BUG-163. DECISIONS is at D61 (D52-D61 were written for C2), so a new decision is D62.
 - **The mutation floor's red on main** (run 41274033506) is the backend's B4 lane — one line per §16.3, not chased here.
 
-
 ## Lead session 12 (2026-11-01): the four open PRs triaged, both reds rooted, the numbering verified
 
 **State at the session's start, verified on origin (§13.1):** `origin/main` at `412d978`. The four open PRs from session 11's handoff, re-checked after main moved:
@@ -458,7 +469,6 @@ shared failure (its api-35 leg's five flows are the BUG-161 double-handle bug, w
 **Where it stands as this commit is pushed (session 12 continues):** #155 MERGED (`45132ef`, archive tag pushed, remote branch deleted — the ls-remote proof is on file). #135's KVM fix is pushed (`46341bd`), its E2E is running; **do not push to that branch while the run is in flight**. #146 (`1f053eb`) and #147 (`3e3c397`) have taken main and are re-running. **BUG-103 is fixed on `fix/c1-bug-103-licenses-gate`** (an unanswered `pnpm view` fails the gate instead of passing as a third state, red-first, and the 31-`unknown` inventory now carries the registry's real answers — all MIT), and the branch's E2E/gate run is next. The numbering still stands: the highest is **BUG-162**, so a NEW row starts at **BUG-163**.
 
 **Later in session 12, on `fix/c1-lows-batch` (the eight lows as one batch):** #146 and #147 MERGED (`5a83427`, `d264659`, both archived and deleted with the ls-remote proof). #161 (BUG-103) MERGED (`7e84b6a`). #135's a1 job got past the emulator on the KVM fix (`Boot completed in 45604 ms`, run 41261701192) and surfaced the next layer — the flow runner installed an APK path that exists nowhere (this job builds its own under `apps/mobile/android/`, unlike the legs, which install the build job's artifact at `apk/`) — fixed in `run-a1.sh` at `8f64c22`, its run is the next step. The eight lows (BUG-082, 083, 084, 093, 105, 106, 107, 108) are each fixed at the root with a red-first test on this branch, mobile 584/584 and the scripts suite 142 pass / 0 fail; BUG-106's drill was proven both ways against Docker (dead with `extension "postgis" is not available` on the old image, green on production's `postgis/postgis:16-3.6`). **BUG-081 is already fixed on #135's branch** — `app/(tabs)/index.tsx` no longer keeps `doneIds/skippedIds/failedIds`; the marks go through `run.markDelivered`, which records the delivery into the outbox — so its row closes with #135, not here.
-
 
 ## Lead session 11 (2026-11-01): the CI mediums, the gate that found a second one, and the app-side root cause of five red flows
 
@@ -499,9 +509,6 @@ shared failure (its api-35 leg's five flows are the BUG-161 double-handle bug, w
 - **An `eslint-disable-next-line` for a rule that is not configured is an error**, not a no-op — and a suppression would be a floor-guard finding anyway.
 
 **What is left, in order:** A1 slice 4's green run on the final head of #135 (watch the run, do not push while it is in flight); then A4 (the build check that fails a release build on a reachable mock — **BUG-079's row says its fix lands with that build check**, so it closes in that PR), A2, C2, A6, MASTER 22's app side, the remaining mediums (BUG-081 — but slice 3 already rewired Today to the run store on #135, so check the row against that branch before writing a red test), the lows as one batch, BUG-102 and BUG-096 left to the backend, and the rest of the audit and MASTER to the 6 Definition of Done.
-
-
-
 
 ## Lead session 9 (2026-10-31): step 0's register, #52's three device legs, and A1 slice 3's screens
 
@@ -547,7 +554,6 @@ shared failure (its api-35 leg's five flows are the BUG-161 double-handle bug, w
 - **A hook's default source must not import the production store.** The `better-auth` ESM chain breaks every screen suite that pulls it in transitively.
 - **The plural of "delivery" is "deliveries"**, and the app's own words are asserted by a test that caught the "deliverys" draft.
 
-
 ## Lead session 8 (2026-10-30): PR #49 merges, BUG-113/114 land, and C1 starts
 
 **Merged this session, with the full ritual (merge commit → archive tag `archive/<branch>` → remote branch deleted, `git ls-remote --heads origin <branch>` printing nothing):**
@@ -588,7 +594,6 @@ Main ends at **BUG-114** (BUG-113 is PR #52's, BUG-114 is #49's; DECISIONS ends 
 - **A gate that a PR adds can fail on the register that same PR just wrote.** #58's own `check-parity.mjs` rejected #58's own prose statuses. Run the new gate against the new register before pushing.
 - **A row whose Fix cell holds a pipe inside an inline code span splits into extra cells** and its status column moves out of count. `|` escapes it; `BUG-064` in BUGS.md is the worked example.
 - **A register split by a blank line stops being one table**: the gate then reads each run's first line as a header, and the rows in it stop being counted.
-
 
 ## Lead session 8b (2026-10-30/31): C1's five high findings land, A1 slice 3's seams land, and #52's last E2E leg
 
@@ -887,45 +892,234 @@ Both backtraces end on the same Hermes frames (0x148aee, 0x293ba1, 0x1bf197, hoo
 
 **The traps of this session (2026-10-27/28):** the GWP-ASan report never appears when the crash is inside the recorder — change the detector, not the patience (bionic malloc_debug records with a real unwinder); a green run under forced sampling proves nothing; a run at the readiness gate that dies in 1-2 minutes is the harness or the build, not the sweep; a 320x640 device in a leg's `Maestro ... Got device info` line is BUG-068, never the app; the exp-branch `env` argument belongs at the step level or the runner action never sees it; a `git push` that prints an error here has often succeeded — `git ls-remote` is the witness; and the queue's "no waiting" rule survives a red gate only when the red's cause is written down first.
 
-**PR #189 (A4) and #166 (the lows batch) — the queue's state at this session (2026-11-05).**
+**PR #189 (A4), #166 (the lows batch) and #191 (the nav hand-off) — all merged
+(2026-11-05).**
 
 - **#166 merged** (commit 38db903 on main). Its ritual: archive tag
   `archive/fix-c1-lows-batch` at `74cc10d` (the final head), the branch gone
   from `git ls-remote --heads origin`, and every check green on that head
   (run 41827408707: the release APK, the a1 job's three flows + rows assert +
   the BUG-188 suite, and both emulator legs).
-- **#189 (A4)** is on its final head `033e71e` (origin/main folded in) awaiting
-  the last E2E round (41832854524). Its every check was green on `63dc705`
-  (run 41818329793: the release APK, the a1 job's three flows + rows assert +
-  the BUG-188 suite, and both emulator legs) with the a1 job's one infra
-  re-run the playbook allows.
-- **#191 (queue 4.1, the navigation hand-off)** is open off main: the nav
-  hand-off (`src/maps/navHandoff.ts`, `driving-nav-handoff`) hands the run's
-  own stop to the courier's nav app with the key-free Google Maps deep link.
-  Its a1 job, both builds, CodeQL, the restore drill and every Quality gate
-  are green; the api-35 leg failed on the runner's emulator ("Unable to
-  connect to adb daemon", "device offline") and its one re-run is in flight.
-- Next in the queue after #189 and #191: B5 (Maestro video), A3 (the
-  recorder), A2 (on-device voice) and §22's app half.
+- **#189 (A4) merged** (5d69fac). Its archive tag
+  `archive/feat-a4-no-mock-stops` carries the final head `b9c73c2`, whose code
+  run 41839401508 proved green (the release APK, the a1 job's three flows +
+  rows assert + the BUG-188 suite, and both emulator legs). BUG-079 is closed
+  with its proof in the register.
+- **#191 (queue 4.1, the navigation hand-off) merged** (f9781fb). The api-35
+  leg's first attempt on the branch died on the runner's own emulator (twice:
+  "Unable to connect to adb daemon", "device offline") — the runner-infra
+  flake the playbook names — and the leg is green on a fresh runner (run
+  41850232394, every job). `src/maps/navHandoff.ts` + `driving-nav-handoff`.
+- Next in the queue after those: **#193** (queue 4.2's reopt surface, this
+  session), then the rest of 4.3 (import, reasons, stop types, breaks, finish,
+  POD), then B5, A3, A2 and §22's app half.
 
 **The queue's state for the next session (2026-11-05).**
 
-Merged on main this session: #135 (the a1 slice 3, commit 2382f68, archive
-tag archive/feat-a1-slice-3-run-store), #166 (the eight lows, commit 38db903,
-archive tag archive/fix-c1-lows-batch) and the ritual's docs PR #187
-(ab349db). BUG-081 is verified solved by #135 (its test is green on main).
+Merged on main: #135 (2382f68), #166 (38db903), #189 (5d69fac), #191 (f9781fb)
+and the ritual docs PRs. BUG-081 is verified solved by #135 (its test is green
+on main).
 
-Open, awaiting green:
-- **#189 (A4)** on `feat/a4-no-mock-stops` (final head `b9c73c2`): every
-  check green on `033e71e` (run 41832854524) and again in flight on the
-  merged head (41839401508). The mock list is reachable only through the two
-  E2E seams; BUG-079 closed.
-- **#191 (queue 4.1, the navigation hand-off)** on `feat/nav-handoff`
-  (`1fcec93`): every check green except the api-35 leg, which twice hit the
-  runner's emulator boot flake (its one re-run is the playbook's allowance;
-  the same APK passes both legs on the A4 and #166 branches).
+Open PR on origin: **#193** (`feat/reopt-surface`, queue 4.2). The register's
+truth for the next session is in the header above: 312 PARITY rows, 187 BUGS
+rows, and the item-2 corrections (BUG-058 filed, BUG-065's renumber recorded,
+BUG-079/082/083/084/093/105..108/109/060 marked fixed with their PRs).
 
-Next in the queue: B5 (Maestro video), A3 (the recorder), A2 (on-device
-voice) and §22's app half, then the trial features' remaining app surfaces
-(re-optimise / time windows / priority, import, failed reasons, stop types,
-breaks and finish).
+**Queue 4a landed (trial #11 and #13): the run's own priority and time window
+reach the courier's screen.** The app's `Stop` carries `priority` and a
+`window`; the E2E day answers them in the contract's own fields; `toStop`
+reads them from a server answer; and the route row and the stop's sheet name
+them (the window on the device's own clock). `.maestro/stops.yaml` asserts
+both. Next in the queue: #193's merge, then 4.3 (import, reasons, stop types,
+breaks, finish, POD), then B5/A3/§22.
+
+**Queue 4b landed (trial #17): a failed delivery says why.** The Fail button
+on Today answered the courier's hand with a haptic and wrote nothing — that
+is BUG-191, and it is fixed in this PR. The courier's own list (six reasons,
+`src/runs/failureReasons.ts`), the picker on Today (`today-fail-*`),
+`RunStore.markFailed` as the run store's own write path, and
+`DeliveryEvent.reason` through the boundary both ways. `.maestro/today-fail.yaml`
+drives it on the emulator. Next in the queue: 4c (stop types), then 4d
+(breaks + the finish point), then the rest.
+
+**Queue 4b's merge ritual and its two E2E root causes (PR #206, merged
+`1fc952a`, head `1557f4d`, tag `archive/feat-trial-failed-reason`, branch
+deleted — ls-remote proof in the PR comments).** The first head failed both
+emulator legs at today-fail.yaml step 006 (`today-fail` below the peek fold —
+the BUG-181 shape; fixed in the flow, 8d60ba6). The second failed at
+"Why did it fail?" because the picker was a child of the bottom sheet's
+ScrollView and centred in the scrolled content on the 320x540 emulator
+(run 42098860803, step-011 hierarchy); fixed in the app — the picker is now a
+full-screen overlay sibling of the sheet with its own scrolling bounded
+content (1557f4d), red-first structural test in todayFailReason.test.tsx.
+Final head 1557f4d: run 42103695949 fully green (14/14 flows both legs,
+today-fail included); the parallel push-event run 42103640280's api-34 leg
+died to the documented BUG-185 remove-task race (the fresh process killed
+10 ms after launch, before any assertion — logcat quoted in the PR), not app
+code. Register after the merge: 190 BUGS rows (open 6 · doing 3 · testing 1
+· fixed 148 · closed 2 · moved 30), 312 PARITY rows.
+
+**Queue 4c merged (PR #213, `c484353`, head `8b04b05`, tag
+`archive/feat-trial-stop-types`, branch deleted — ls-remote proof in the PR).**
+E2E on the head: manual dispatch run 42111747844 and push-event run 42111750215
+both fully green (14/14 flows on api-34 and api-35, the new Pickup assertions
+in stops.yaml included); run 42111749992's "Record the screens" job died in
+runner setup before the emulator booted (`Error on ZipFile unknown archive`
+-> `could not connect to TCP port 5554: Connection refused`) — the playbook's
+runner-infra flake class, documented in PR #213#issuecomment-6670515977.
+Register after the merge: 191 BUGS rows on main (BUG-192 fixed), 312 PARITY.
+
+**Queue 4d built on `feat/trial-break-finish` (trial #12 + #14, ADR-022's app
+half, BUG-193):** the run's own break window and finish point reach the route
+screen — RUN_TABLE v2 with the four columns (ALTER on installed v1 tables),
+write/read/runOf round-tripping `break_window`/`finish`, `RunDay` exposing
+`breakWindow`/`finish`/`depot`, the E2E day carrying a 12:00-13:00 UTC break
+and its depot as the finish, `stops-break` ("Break" + device-clock times) and
+`stops-finish` ("Finish at the depot") rows, and `.maestro/stops.yaml`
+scrolling to them and asserting each node. Red-first: 10 tests failed on the
+pre-change tree. Main (c484353, queue 4c) merged in (b29ec3b; registers taken
+from main wholesale + BUG-193 re-applied; no file deleted, no register
+shrunk). 742 tests (85 suites), tsc, eslint, check-parity (0 reopened) green.
+Next after it: 4e (spreadsheet import #6, ADR-025), 4f (POD photo #16), 4g
+(the nav hand-off flow #15), then release hygiene and D1/B5/A3/§22/P4/P7 to
+the §6 Definition of Done.
+
+**Queue 4d merged (PR #214, `a6dffe7`, head `49f084b`, tag
+`archive/feat-trial-break-finish`, branch deleted — ls-remote proof in the PR).**
+The first head (9748630) had its A1 leg crash the release APK at launch:
+`TypeError: Cannot read property 'start' of null` in `RunProvider` — the real
+API serializes an absent `break_window`/`finish` as JSON null and the guard
+checked only `undefined` (BUG-195, root-caused from the evidence's
+logcat-crash.txt, fixed with a red test answering `null` exactly as the API
+does). On the fixed head 49f084b the manual dispatch run 42128052831 is fully
+green (A1 success, 14/14 flows on api-34 incl. the Break/Finish assertions,
+api-35 success, Record-screens success in run 42127895857); the push-event
+run 42127895761's A1 died in the runner — the launcher ANR "Pixel Launcher
+isn't responding" with an empty crash log and adb-daemon boot errors —
+documented in PR #214#issuecomment-6672783067.
+
+**Queue 4e built on `feat/trial-import-stops` (trial #6, ADR-025's app half,
+BUG-194):** paste-to-import on the route screen — no document picker exists in
+this build, so the courier pastes the CSV: `writeImportFile` writes it to the
+cache as `stops-import.csv`, `importStops` posts it as one multipart part (no
+Content-Type set — the platform sets the boundary), refuses an empty shift id,
+shape-checks the 201, and reads 409/413/415/422 as the server's own code and
+sentence; `RunDay` exposes `shiftId`; the E2E seam `importForThisBuild.ts`
+answers the canned import (labelReader's pattern); the import sheet spells
+"Imported N stops." / "Ignored columns: …" / the refusal as its own nodes and
+re-reads the day; `.maestro/import.yaml` drives the paste end to end.
+Red-first: 13 tests failed on the pre-change tree. Main (a6dffe7, queue 4d +
+the backend squad's BUG-211/ADR-026) merged in (00353a5; registers from main
+wholesale + BUG-194 re-applied; no file deleted, no register shrunk). 761
+tests (86 suites), tsc, eslint, check-parity (0 reopened) green. Next after
+it: 4f (POD photo #16 via the existing POD endpoint; signature once the
+backend's signature contract lands), 4g (the nav hand-off flow #15), then
+release hygiene and D1/B5/A3/§22/P4/P7 to the §6 Definition of Done.
+
+**Queue 4f = PR #216 and 4g = PR #217, both re-dispatched after their first
+heads' E2E failures (root-caused, §12).** 4f's head e039376d: only the new
+`pod.yaml` failed — the job log showed `Unknown Property: point` (the deliver
+swipe's `point` was a sibling of `from:` instead of inside the selector), so
+the flow never loaded; fixed on 7d5716d (all 15 existing flows passed on the
+failing run). 4g's head 04ed2186: only `nav-handoff.yaml` failed, at the
+post-tap assert — the evidence screen showed Google Maps' own landing ("Make
+it your map"): the pinned emulator image ships Maps, so the key-free link IS
+answered and the nav app takes the foreground; the flow on d1e44db now asserts
+Maps' landing, screenshots it, presses back, and asserts the drive is still on
+"STOP 2 OF 5". Root-cause comments on the PRs (#6678133127, #6678133640).
+Also observed: PR #205's `changes` job sets only build/flows/scripts/pipeline
+on the human-dispatch path, so manual `workflow_dispatch` runs SKIP the
+e2e/a1 jobs (runs 42166994398, 42167332868) — filed as **BUG-198 (open,
+backend-owned .github)**; the `pull_request` runs are the E2E evidence.
+
+**Release hygiene on `feat/release-hygiene` (this branch):** verified the
+E2E-flag gate end to end — `check-e2e-flag.mjs --variant release` with
+`EXPO_PUBLIC_E2E=1` exits 1 (BUG-079's rule: a release build never inlines the
+mocks; the e2e legs declare `--variant e2e`, the a1/release legs `--variant
+release`), and `check-mock-reach.mjs` proves the mock list is reachable only
+through the E2E seams (labelReader's `readerForThisBuild` included). New
+`scripts/ci/check-design-gate.mjs` (+ 9 node --test cases) proves the design
+lab and compat screen are out of a release build: metro blockLists
+`app/design/**` + `app/compat.tsx` when neither flag is set (and the gate
+fails if the blockList also matches a product screen), `buildFlags.ts` inlines
+the same decision, `_layout.tsx` registers the design route only under it, and
+the gated files must exist (no vacuous pass). Verified `syncService.sync`
+confirms `batch.slice(0, accepted)` with the clamp (line 126-127). Register:
+BUG-040 and BUG-046 closed as fixed with evidence (tsc clean on this head;
+compat.yaml's `openLink: "courier:///compat"` → `compat-screen` green on runs
+42161172886/42166989624), BUG-198 filed open, BUG-197 stays open/queued
+(KeyboardAvoidingView on the import sheet). Counts re-pasted (209 rows).
+Next: merge #216 then #217 when their heads are green (ritual), then this
+branch, then D1, B5 + Play internal-testing prep, A3, §22's app side, P4
+baselines, P7 acceptance on two screen sizes — to the §6 Definition of Done.
+
+**Queue 4e MERGED: PR #215, merge commit 491af4d on head a14b98ba.** Two E2E
+root causes were found and fixed on the branch before the green run: (1) run
+42136053866's legs failed `import.yaml` with "Element not found:
+stops-import-go" — the evidence dump showed the paste had landed but the
+Go/Not-now row sat inside the sheet's clipped ScrollView on the 320x640
+emulator, so 0f1d5a4 pinned the sheet to a definite height and moved the notes
++ actions OUTSIDE the scroll view; (2) run 42155905246 failed the same step
+again — the layout fix was live ([8,64][312,576] sheet) but the screenshot
+showed the soft keyboard covering the sheet's bottom: with edge-to-edge the
+manifest's adjustResize does not shrink the window, so a14b98b made the flow
+do `hideKeyboard` after `inputText`, and the small-screen polish was filed
+honestly as BUG-197 (open, KeyboardAvoidingView on the sheet). `scan.yaml`'s
+first-head failure was the BUG-185 runner race (system-UI-only screen, empty
+crash log, "remove task" kill line) — §17-excepted with quoted lines on the PR.
+Final head a14b98ba: run 42161172886 ALL green — 15/15 flows on api-34
+(incl. import.yaml) and api-35, A1, APK, Record-screens, all static. Merged
+via the API with sha, evidence comment #issuecomment-6677182640; tag
+`archive/feat-trial-import-stops` @ a14b98ba; branch deleted (ls-remote
+proof). PR #205 (ef46eac, BUG-218) landed on main in between; the pod branch
+re-merged origin/main against it.
+
+**Queue 4f MERGED: PR #216, merge commit 938cf26 on head 58bb568c.** Final head
+58bb568c (re-merged on 3400082): run 42187080042 — Maestro api-34 SUCCESS
+(flows.txt 16/16 pass incl. pod.yaml) and api-35 SUCCESS, APK + record + all
+static SUCCESS; A1 failed on a runner flake (gradle NDK install: "Archive is
+not a ZIP archive") before any app boot — §17-excepted with quoted lines on
+the PR (#6681191561); the same code's A1 was green on run 42176913133
+(4f24692d). Two flow/code root causes fixed along the way: the swipe's
+`point` inside the `from:` selector (7d5716d) and the canned JPEG as a whole
+valid 380-char base64, 284 bytes FFD8FF..FFD9 (4f24692d — run 42171314486 had
+answered "bad base-64"). Ritual: tag `archive/feat/trial-pod-photo` @
+58bb568c, branch deleted (ls-remote proof).
+
+**Queue 4g MERGED: PR #217, merge commit 4851380 on head 00e6e3ae.** Final head
+00e6e3ae (re-merged on 938cf26): run 42206533436 — Maestro api-34 AND api-35
+SUCCESS (flows.txt 16/16 pass incl. nav-handoff.yaml), A1 SUCCESS, APK SUCCESS,
+all static gates SUCCESS; the Record-screens job was cancelled twice by its
+concurrency group mid-emulator-boot ("The operation was canceled." while qemu
+started, before any flow assertion) — §17-excepted with quoted lines on the PR
+(#6685606272). Seven flow iterations, each root-caused from the evidence dumps
+and commented on the PR (#6678133640, #6678858411, #6679365073, #6679749019,
+#6682036154, #6682819961, #6683257830): the swipe `point` inside `from:`; the
+pinned image ships Google Maps so the key-free link IS answered (the flow now
+asserts Maps' landing "Make it your map"); Maps' location dialog appears only
+after `back` and ignores `back` (wait for "Don.t allow" — tapOn's `text` is a
+regex in Maestro 2.11, the `textRegex` KEY is rejected — then tap it);
+after dismissal Maps' main UI is still foreground, so `launchApp` (no
+clearState) re-foregrounds our app on its Today tab and the flow re-enters the
+drive (swipe, `today-go`) asserting `driving-screen` + "STOP 2 OF 5" — the app
+survived the hand-off with its run intact. Ritual: tag
+`archive/feat/trial-nav-handoff-flow` @ 00e6e3a, branch deleted (ls-remote
+proof). TRIAL_SCOPE row 15 re-applied on the merge; counts re-pasted by
+counting; no file deleted, no register shrunk.
+
+**Trial queue 4 is now fully on main; release hygiene is on main.** Remaining
+queue (pinned 2026-11-07): **D1** = founder decision D1 (FINAL_PROMPT §2.3 /
+DECISIONS): "the live voice assistant (full conversation) is essential in the
+shipped version and works throughout the shift" — the app-side remainder in
+`apps/mobile/src/voice` (A2's 296 MB model choice stays founder-gated in
+FOUNDER_TODO); then **B5** (store review risk: the prominent background-location
+disclosure the app must carry + Play internal-testing prep; the Play account
+and the disclosure video via the recording workflow stay founder/backend-gated);
+then **A3's app side** (the voice eval set is built on the backend
+2026-11-03; the app-side opt-in debug recorder if one remains); then **§22's
+app side** (D48 device-agent techniques in `apps/mobile/src/voice`:
+pre-classifier, ask-on-low-confidence, visible/clearable memory); then **P4**
+visual-regression baselines (design mockups + screenshots
+day/night/small/large/200%); then **P7** acceptance on the CI emulator at two
+screen sizes, scorecard ≥ 8/10, v1.0.0 (the release itself is founder-gated) —
+to the §6 Definition of Done.

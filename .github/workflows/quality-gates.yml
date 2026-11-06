@@ -27,7 +27,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: 24
       - name: Check the diff against the floor
         run: node scripts/ci/check-floor.mjs ${{ github.event.pull_request.base.sha || 'origin/main' }}
       # Step 0 (2026-11-02): a PR that turns a `fixed`/`closed` BUGS row back
@@ -38,6 +38,12 @@ jobs:
         run: node scripts/ci/check-parity.mjs --base ${{ github.event.pull_request.base.sha || 'origin/main' }}
       - name: No merge conflict markers in the tree
         run: node scripts/ci/check-conflict-markers.mjs
+      # BUG-232 (audit item 4d, research row 62): no string-built SQL in the
+      # API - every statement is a literal text()/execute() with parameters
+      # where placeholders exist. Its own test runs with the rest of
+      # scripts/*/__tests__ (test:store-readiness).
+      - name: No string-built SQL in services/api (BUG-232)
+        run: node scripts/ci/check-sql-parameterisation.mjs
       - name: Check the links of the documentation
         run: node scripts/ci/check-doc-links.mjs
       - name: No control characters in the tracked text
@@ -80,6 +86,117 @@ jobs:
       # `node --test scripts/*/__tests__/*.test.mjs`.
       - name: Every emulator boot carries the same pins
         run: node scripts/ci/check-e2e-pins.mjs
+      # The 2026-11-05 audit's item 3a: `rsync infra/ services/ packages/`
+      # (trailing slashes) copied the CONTENTS of each flat into /opt/courier
+      # and --delete removed what was there, so the deploy's own next command -
+      # `cd /opt/courier/infra` - failed on a directory that never arrived. The
+      # gate asserts the command's shape everywhere and runs both shapes against
+      # a scratch directory where rsync exists (here, on the runner).
+      - name: The deploy's rsync keeps the tree (audit 3a)
+        run: node scripts/ci/check-deploy-rsync.mjs
+      # The 2026-11-05 audit's item 3b: the deploy step has always carried
+      # APP_VERSION, but the remote smoke.sh invocation never forwarded it, so
+      # smoke.sh took its "APP_VERSION is not set: skipping the version check"
+      # branch and reported a green smoke test about a deployment it never
+      # identified. The gate holds all three halves: the version is forwarded,
+      # smoke.sh dies without it (--no-version is the only skip), and the
+      # version fetch cannot fail quietly.
+      - name: The deployed version reaches the smoke test (audit 3b)
+        run: node scripts/ci/check-smoke-version.mjs
+      # The 2026-11-05 audit's item 3c: the deploy used to interpolate
+      # COURIER_STAGING_DOMAIN and COURIER_SMOKE_TOKEN straight into the remote
+      # ssh command, which puts a secret in an argv - readable in the host's own
+      # process list, and one quoting mistake from a log. The gate holds the
+      # line: no secret in a command line, the two secrets in the step's env and
+      # piped over stdin, read by the remote shell into variables.
+      - name: The deploy's secrets never reach a command line (audit 3c)
+        run: node scripts/ci/check-deploy-secrets-inline.mjs
+      # The 2026-11-05 audit's item 3d: the deploy job used to run on the push
+      # to main, in parallel with the repository's own CI and Quality gates, so
+      # the staging host could be served a tree CI was about to call red. The
+      # gate holds the workflow_run shape: both required workflows named, the
+      # completed event, the deploy's `if:` off the push trigger, the checkout
+      # pinned to the sha the gates ran on, and the gate step that reads both
+      # conclusions from the API rather than assuming them.
+      - name: The deploy waits for CI and Quality gates (audit 3d)
+        run: node scripts/ci/check-deploy-gate.mjs
+      # BUG-226: every --exclude-rule of the Semgrep scan must be written down -
+      # a rule id in .semgrepignore with a numbered reason, and a W-row in the
+      # exceptions table of docs/plan/CONSTRAINTS.md. An accepted finding with no
+      # written reason is a suppression by another name (the floor's
+      # no-suppressions check only sees inline Semgrep suppression comments).
+      - name: Every Semgrep exclusion is written down (BUG-226)
+        run: node scripts/ci/check-semgrep-exclusions.mjs
+      # The 2026-11-05 audit's item 3e: the android-e2e AVD cache carried a
+      # `restore-keys` prefix that stops short of the pins' fingerprint, so a
+      # fingerprint miss restored an AVD built under a different Maestro version,
+      # emulator build, system-image revision or option set - BUG-068's
+      # tiny-device-profile failure, re-armed. Only an EXACT key restores now,
+      # and the health workflow (which has none) is held to the same line.
+      - name: Only an exact AVD cache key restores (audit 3e)
+        run: node scripts/ci/check-e2e-avd-restore-keys.mjs
+      # The 2026-11-05 audit's item 3f: the emulator-runner action installs the
+      # system image from the stable channel by api-level, so the emulator's
+      # BYTES change whenever Google publishes a revision and nothing commits it
+      # - BUG-065's class (the same APK green on api-35 one hour and red on four
+      # PRs the next). The gate holds the pin: SYSIMG_REV_<api> for every
+      # matrix leg, the pins fingerprint reading it, the install pre-step's
+      # three attempts with the wipe between them and its Pkg.Revision
+      # assertion, the revision-keyed cache, and the record step failing if the
+      # action moved the image under the pin.
+      - name: The system image is pinned by revision (audit 3f)
+        run: node scripts/ci/check-e2e-sysimg-pin.mjs
+      # The 2026-11-05 audit's item 3g: the emulator workflow's pull_request
+      # trigger carried a `paths:` filter, which keeps the whole workflow from
+      # EXISTING for a documentation-only change - so its check names are never
+      # reported, and a required check that is not reported blocks every PR
+      # forever. The filter moved to a `changes` job (a plain
+      # `git diff --name-only` step: no new action, nothing to SHA-pin, nothing
+      # for the licence inventory) with `if:` on build/e2e/a1, so the jobs
+      # report `skipped` instead of not existing.
+      - name: The emulator jobs report skipped, not missing (audit 3g)
+        run: node scripts/ci/check-e2e-trigger-conditions.mjs
+      # The 2026-11-05 audit's item 3h: PLAYBOOK 17.1 says a re-run is not a
+      # diagnosis, and the recurring case here is the harness (the same APK
+      # green on api-35 and red on api-34 with the code byte-identical,
+      # BUG-065). One re-run is the budget: the e2e and a1 jobs fail when
+      # github.run_attempt > 2, and the second attempt writes the
+      # justification request into the job summary. The gate holds the budget
+      # as the FIRST step of each job, so a third attempt fails before it
+      # boots an emulator.
+      - name: The emulator jobs have a retry budget of one (audit 3h)
+        run: node scripts/ci/check-e2e-retry-budget.mjs
+      # The 2026-11-05 audit's item 3i, finding C12: setup-uv was referenced by
+      # TWO different commit SHAs in the same tree (v5 in ci/codeql/quality-gates,
+      # v10.3.3 in linz-changeset/mutation), so the same tool ran as two versions
+      # depending on which workflow built you. The gate holds the check-e2e-pins
+      # rule for it: every reference is a full 40-hex SHA and all of them AGREE.
+      - name: setup-uv is pinned to one sha everywhere (audit 3i / C12)
+        run: node scripts/ci/check-setup-uv-pin.mjs
+      # The 2026-11-05 audit's item 3i, finding C11: the workflows declared
+      # node-version in thirteen places and package.json's engines floor could
+      # drift from them one edit at a time. Everything now says Node 24 (the
+      # current LTS), and the gate holds one major declared everywhere plus an
+      # engines floor that matches it - a bump is one PR that moves the
+      # constant, every line and the floor together.
+      - name: Node is one pinned major everywhere (audit 3i / C11)
+        run: node scripts/ci/check-node-pin.mjs
+      # The 2026-11-05 audit's item 3i, finding C10: every `uses:` ref must be
+      # pinned to a full 40-hex commit sha. The tree already is (116 refs), but
+      # nothing asserted it, so the next action added with a tag would have been
+      # green - and a tag can be re-pointed to run new code with no commit in
+      # this repository. Local ./ actions pass (reviewed with the code);
+      # docker:// images need a @sha256: digest.
+      - name: Every action is pinned by commit sha (audit 3i / C10)
+        run: node scripts/ci/check-action-pins.mjs
+      # The 2026-11-05 audit's item 3i, finding C14: dependabot watches the
+      # three ecosystems this repo has (github-actions and npm at /, uv for
+      # each service with a uv.lock) weekly, and a cron workflow smokes the
+      # staging deployment nightly with the same infra/smoke.sh the deploy leg
+      # runs. Secrets stay in step env only; without them the run skips with
+      # a notice, not silently.
+      - name: Dependabot is configured and the cron staging smoke exists (audit 3i / C14)
+        run: node scripts/ci/check-staging-smoke.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers
@@ -110,12 +227,12 @@ jobs:
           version: 12.14.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
-      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
       - run: pnpm install --frozen-lockfile
@@ -142,7 +259,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: 24
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 12.14.0
@@ -161,12 +278,12 @@ jobs:
           version: 12.14.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
-      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - run: pnpm install --frozen-lockfile
       - name: JavaScript advisories
         run: node scripts/ci/check-audit.mjs
@@ -186,7 +303,7 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
-      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - name: Semgrep (community rules)
         run: |
           # semgrep is pinned: the registry rules and the parameter checks change
@@ -203,6 +320,7 @@ jobs:
             --exclude-rule "javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp" \
             --exclude-rule "javascript.audit.detect-replaceall-sanitization.detect-replaceall-sanitization" \
             --exclude-rule "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure" \
+            --exclude-rule "yaml.github-actions.security.workflow-run-target-code-checkout.workflow-run-target-code-checkout" \
             --error --quiet .
       - name: Why the excluded rules are excluded
         run: |
@@ -212,3 +330,5 @@ jobs:
           echo "test runner (W4). The read-only-filesystem rule would stop the databases (W3)."
           echo "The uv cooldown, the non-literal regexp of a test, the HTML escaper of the"
           echo "render script and the token counter of the voice service are W3 and W5."
+          echo "The workflow_run checkout rule is a static heuristic; our deploy checks out"
+          echo "the sha the gates ran on, after BOTH required workflows said success on it (W6)."

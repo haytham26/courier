@@ -49,12 +49,23 @@ the gateway (no OmniRoute deployment yet — see below):
 | routed commands answered wrong vs the gold intent | — | **0** |
 | mean turn latency | — | free 1.35 ms / full 1.97 ms |
 
-The gate's own cost is the last line of the table: 200 classifications in well
-under a second, pinned by the suite's bound. The numbers that cannot be
-measured yet are named rather than estimated: the gateway round trip and the
-token counts depend on an OmniRoute deployment, which is the founder's item
-(`docs/status/FOUNDER_TODO.md`) — a number that was not measured is never
-reported as a pass.
+Re-measured on the shift simulations' own 24 turns (a second, scripted set):
+**7 free (29.2 %)**, 0 wrong — the routing is correct on both, and the share is
+lower because a full shift is mostly conversation.
+
+**Both numbers are ceiling-shaped, and say so (BUG-210).** The 720 scripts are
+the eval generator's own templates, and the offline brain's regexes spell those
+templates out word for word (11 standing overlaps — the gate
+`scripts/ci/check-parser-circularity.mjs` names every one and fails on a new
+one). The free share is therefore "the parser's own commands answered without a
+model call", not a measured property of held-out speech; the held-out set is
+the founder's to give (FOUNDER_TODO).
+
+The numbers §22 asked for that CANNOT be measured are named, not estimated: the
+gateway round trip and the token counts depend on an OmniRoute deployment,
+which is the founder's item (`docs/status/FOUNDER_TODO.md`) — a number that was
+not measured is never reported as a pass. **§22's "with numbers" stays UNMET
+until then.**
 
 ## Techniques B and C — the lane's next steps, honestly
 

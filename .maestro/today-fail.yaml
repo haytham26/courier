@@ -1,0 +1,84 @@
+appId: com.courier.copilot
+name: 'A failed delivery carries its reason (queue 4b, ADR-023)'
+---
+# Queue 4b's courier-facing half: a failed delivery says WHY.
+#
+# The audit's finding (trial #17): the Fail button answered the courier's hand
+# with a haptic and wrote nothing — no status, no event, no reason. The stop
+# status said "failed" and nothing said why, so the office could never ask.
+# ADR-023 puts the reason in the event; this flow proves the courier's own half
+# of it end to end: the picker, the courier's own list, the recorded mark, and
+# the stop's own status following it on Today.
+#
+# BUG-185: stop the app FIRST, then clear its state (the old task's removal
+# killed the freshly started process on api-34).
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+
+# The sheet opens at peek (BUG-050), and the actions row sits below the fold of
+# the peek: the courier raises the sheet with its grabber first, the way
+# today-list.yaml does, and a scroll inside the sheet reaches the Fail button.
+# Asserting it straight from the peek fails on an element that is rendered but
+# not on screen - the BUG-181 shape: run 42090425951's api-34 and api-35 legs
+# both failed exactly here (step 006, "id: today-fail is visible").
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- scrollUntilVisible:
+    element:
+      id: "today-fail"
+    direction: DOWN
+    timeout: 20000
+
+# The run's own next stop is the one a failure is recorded against, and the
+# Fail button names it (the accessibility label carries the address).
+- assertVisible:
+    id: "today-fail"
+- tapOn:
+    id: "today-fail"
+
+# The picker: the courier's own list (ADR-023 — a product decision, not a
+# generic enum), the sentence for what the list does not carry, and a record
+# that is armed only when there is a reason (the server refuses a failed event
+# without one, and takes the whole outbox batch with it).
+- extendedWaitUntil:
+    visible:
+      id: "today-fail-sheet"
+    timeout: 30000
+- assertVisible: "Why did it fail?"
+- assertVisible: "No access"
+- assertVisible: "Nobody home"
+- assertVisible: "Wrong address"
+
+# With nothing chosen and nothing said, the record is not answerable — the
+# phone refuses a failure with no reason before the server ever sees it.
+- assertVisible:
+    id: "today-fail-note"
+- assertVisible:
+    id: "today-fail-confirm"
+- takeScreenshot: "today-fail-empty"
+
+# The courier's own word, taken from the list. The reason is its own node, so
+# it is asserted as itself.
+- tapOn:
+    id: "today-fail-reason-no_access"
+- assertVisible:
+    id: "today-fail-confirm"
+- takeScreenshot: "today-fail-reason"
+
+# And the failure is recorded on the run: the sheet closes, and the stop is no
+# longer the run's next one — the stop's own status followed the mark the way
+# a delivery's does (BUG-178's same-stop contract).
+- tapOn:
+    id: "today-fail-confirm"
+- extendedWaitUntil:
+    notVisible:
+      id: "today-fail-sheet"
+    timeout: 30000
+- takeScreenshot: "today-fail-recorded"

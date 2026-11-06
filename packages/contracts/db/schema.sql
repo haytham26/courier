@@ -199,3 +199,28 @@ ALTER TABLE delivery_events
 ALTER TABLE stops
     ADD COLUMN IF NOT EXISTS type text NOT NULL DEFAULT 'delivery'
         CHECK (type IN ('delivery', 'pickup'));
+
+-- BUG-211: the shift's sequence is UNIQUE per shift. Two concurrent imports
+-- used to read MAX(sequence) unlocked, so both got the same base and the
+-- insert collided (one import silently overwrote the other's stop). The repo
+-- now takes the shift row's lock before reading the base, and this index is
+-- the belt-and-braces: the database itself refuses the duplicate.
+--
+-- The dedupe first: an existing deployment can hold duplicates from the
+-- unlocked window, and a UNIQUE index cannot be built over them. The lowest
+-- id wins (the earlier write is the one that landed first); the losers' rows
+-- are removed. This migration is idempotent - it does nothing on a database
+-- that is already deduped.
+WITH duplicates AS (
+    SELECT id,
+           row_number() OVER (PARTITION BY shift_id, sequence ORDER BY id) AS rn
+    FROM stops
+),
+removed AS (
+    DELETE FROM stops
+    WHERE id IN (SELECT id FROM duplicates WHERE rn > 1)
+)
+SELECT 1;
+
+DROP INDEX IF EXISTS stops_shift_sequence;
+CREATE UNIQUE INDEX IF NOT EXISTS stops_shift_sequence ON stops (shift_id, sequence);
