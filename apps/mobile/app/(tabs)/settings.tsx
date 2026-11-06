@@ -335,6 +335,13 @@ export default function SettingsScreen() {
           <Ionicons name="chevron-forward" size={20} color={t.colors.secondaryLabel} />
         </View>
 
+        {/* Audit B5: the legal rows sit directly under the identity, the same
+            rule as the sign-out below - a row a reviewer or a courier has to
+            hunt for on a small screen is a row that is never found (the
+            BUG-050 class), and the 320x640 emulator drops whatever is below
+            the fold out of the accessibility tree. */}
+        <SettingsGroup title="Legal" rows={legalRows} />
+
         <SettingsGroup title="Voice" rows={voiceRows} />
 
         <View style={[styles.group, { backgroundColor: t.colors.card }]} accessibilityRole="radiogroup">
@@ -381,7 +388,6 @@ export default function SettingsScreen() {
         <SettingsGroup title="Map" rows={mapRows} />
         <SettingsGroup title="Device" rows={deviceRows} />
         <SettingsGroup title="Team" rows={teamRows} />
-        <SettingsGroup title="Legal" rows={legalRows} />
 
         <View style={[styles.group, { backgroundColor: t.colors.card }]}>
           <View style={styles.row}>

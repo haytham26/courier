@@ -235,6 +235,19 @@ describe('the settings screen', () => {
       expect(screen.queryByTestId('location-disclosure')).toBeNull();
     });
 
+    // The 320x640 emulator drops whatever is below the fold out of the a11y
+    // tree (run 42293603090's api-34 leg: `settings-location-privacy` was not
+    // visible with the Legal group at the bottom), so the group sits under
+    // the identity, above the Voice group - pinned here so it cannot drift.
+    it('the Legal group sits above the Voice group in the tree', () => {
+      const { toJSON } = renderScreen();
+      const flat = JSON.stringify(toJSON());
+      const legal = flat.indexOf('LEGAL');
+      const voice = flat.indexOf('VOICE');
+      expect(legal).toBeGreaterThanOrEqual(0);
+      expect(voice).toBeGreaterThan(legal);
+    });
+
     it('Location & Privacy opens the disclosure with the legal text, Done closes it', () => {
       renderScreen();
 
