@@ -24,7 +24,7 @@
  * cannot. The record is in the evidence sheet; the button is never faked.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Camera, Map as MapView, Marker } from '@maplibre/maplibre-react-native';
 
@@ -32,6 +32,7 @@ import { ChosenProvider, GlassSurface, Segmented, StopPin, Timeline, useChosen }
 import type { TimelineItem } from '@/components/chosen';
 import { errorMessage } from '@/lib/errors';
 import { CourierApiClient } from '@/lib/api-client';
+import { importerForThisBuild, writeImportFile } from '@/run/importForThisBuild';
 import type { RouteOrderEntry } from '@/run/types';
 import { radii, spacing, typography } from '@courier/design-tokens/chosen';
 import { DRIVE_ORIGIN_LNGLAT } from '@/maps/drive';
@@ -105,6 +106,17 @@ function RouteScreen() {
   // One ask at a time: a second press while the solver is working would race
   // two answers into one note.
   const [optimising, setOptimising] = useState(false);
+  // Queue 4e (the trial's #6, ADR-025's app half): the spreadsheet import's
+  // own sheet, its pasted text, and the answer the server gave - each note is
+  // its own node so a flow asserts the words exactly.
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importNote, setImportNote] = useState<string | null>(null);
+  const [importIgnored, setImportIgnored] = useState<string | null>(null);
+  // The importer of this build: the mock in the E2E build, the real client's
+  // importStops in every other (the labelReader seam's own rule).
+  const importer = useMemo(() => importerForThisBuild(), []);
   // The screen's own lifetime: a note the courier has already navigated away
   // from must not be written, which React names as one.
   const aliveRef = useRef(true);
@@ -329,6 +341,76 @@ function RouteScreen() {
     })();
   }, [optimising, run, stops]);
 
+  /**
+   * Queue 4e: the paste-to-import. The pasted CSV is written to the cache as
+   * the .csv the contract names, the ask names the SHIFT the day carries (the
+   * import endpoint is about a shift - the run's id would be a URL about no
+   * shift, BUG-189's rule), and the answer is spelled in the server's own
+   * words: the count, the ignored columns, or the refusal with its code.
+   */
+  const handleImport = useCallback(() => {
+    if (importing) {
+      return;
+    }
+    const shiftId = run.day.shiftId;
+    if (shiftId === null) {
+      setImportNote('The day has not been read yet, so there is no shift to import into.');
+      return;
+    }
+    if (importText.trim().length === 0) {
+      setImportNote('Paste the spreadsheet first.');
+      return;
+    }
+    setImporting(true);
+    setImportNote(null);
+    setImportIgnored(null);
+    void (async () => {
+      try {
+        const file = await writeImportFile(importText);
+        const outcome = await importer.importStops(shiftId, file);
+        if (!aliveRef.current) {
+          return;
+        }
+        if (outcome.status === 'ok') {
+          setImportNote(`Imported ${outcome.data.imported} stops.`);
+          // The contract answers unknown columns, never drops them silently
+          // (ADR-025), so the courier is told which ones were ignored.
+          setImportIgnored(
+            outcome.data.ignored_columns.length === 0
+              ? null
+              : `Ignored columns: ${outcome.data.ignored_columns.join(', ')}`,
+          );
+          // The day is re-read, so the imported stops are the run's own.
+          void run.day.refreshDay();
+        } else if (outcome.status === 'unauthorized') {
+          setImportNote('The session has gone - sign in again, then import.');
+        } else if (outcome.status === 'offline') {
+          setImportNote('No network - the file was not sent.');
+        } else if (outcome.status === 'server') {
+          // 404/413/415/422 read exactly as the server answered them.
+          setImportNote(`The import was refused (${outcome.code}): ${outcome.message}`);
+        } else {
+          setImportNote(outcome.message);
+        }
+      } catch (error) {
+        if (aliveRef.current) {
+          setImportNote(`The file could not be written (${errorMessage(error)}).`);
+        }
+      } finally {
+        if (aliveRef.current) {
+          setImporting(false);
+        }
+      }
+    })();
+  }, [importing, importText, run, importer]);
+
+  const handleImportDismiss = useCallback(() => {
+    setImportOpen(false);
+    setImportText('');
+    setImportNote(null);
+    setImportIgnored(null);
+  }, []);
+
   return (
     <View testID="stops-screen" style={styles.screen}>
       <MapView testID="stops-map" mapStyle={mapStyle} style={styles.map}>
@@ -352,26 +434,54 @@ function RouteScreen() {
           <Text testID="stops-title" style={[styles.title, { color: t.colors.label }]} accessibilityRole="header">
             Route
           </Text>
-          <Pressable
-            accessible
-            role="button"
-            accessibilityLabel="Optimise the route"
-            accessibilityHint="Resequences the run with the solver"
-            onPress={handleOptimise}
-            // BUG-189: the request's subject is the run's own id, so the
-            // control is not answerable until the day has been read - and not
-            // answerable twice while one ask is in flight.
-            disabled={run.day.runId === null || optimising}
-            testID="stops-optimise"
-            style={({ pressed }) => [
-              styles.optimise,
-              { backgroundColor: t.colors.accent, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <Text style={[styles.optimiseLabel, { color: t.colors.onAccent }]}>
-              {optimising ? 'Reordering\u2026' : 'Optimise'}
-            </Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            {/* Queue 4e (ADR-025's app half): the spreadsheet import's own
+                control. Like Optimise, its request's subject is an id the day
+                has to carry - the shift's this time - so it is not answerable
+                before the day has been read. */}
+            <Pressable
+              accessible
+              role="button"
+              accessibilityLabel="Import stops from a spreadsheet"
+              accessibilityHint="Pastes a CSV of stops into the shift"
+              onPress={() => {
+                setImportNote(null);
+                setImportIgnored(null);
+                setImportOpen(true);
+              }}
+              disabled={run.day.shiftId === null}
+              testID="stops-import"
+              style={({ pressed }) => [
+                styles.import,
+                {
+                  borderColor: t.colors.separator,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              <Text style={[styles.optimiseLabel, { color: t.colors.label }]}>Import</Text>
+            </Pressable>
+            <Pressable
+              accessible
+              role="button"
+              accessibilityLabel="Optimise the route"
+              accessibilityHint="Resequences the run with the solver"
+              onPress={handleOptimise}
+              // BUG-189: the request's subject is the run's own id, so the
+              // control is not answerable until the day has been read - and not
+              // answerable twice while one ask is in flight.
+              disabled={run.day.runId === null || optimising}
+              testID="stops-optimise"
+              style={({ pressed }) => [
+                styles.optimise,
+                { backgroundColor: t.colors.accent, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Text style={[styles.optimiseLabel, { color: t.colors.onAccent }]}>
+                {optimising ? 'Reordering\u2026' : 'Optimise'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         <Segmented
@@ -482,6 +592,92 @@ function RouteScreen() {
           </GlassSurface>
         </>
       )}
+
+      {/* Queue 4e (the trial's #6, ADR-025's app half): the import sheet. The
+          courier pastes the spreadsheet's CSV here (there is no document
+          picker in this build); the file is written to the cache and the ask
+          names the shift the day carries. The answer's notes are their own
+          nodes, so a flow asserts each sentence exactly. */}
+      {importOpen === false ? null : (
+        <>
+          <Pressable
+            style={styles.scrim}
+            accessibilityLabel="Close the import"
+            onPress={handleImportDismiss}
+            testID="stops-import-scrim"
+          />
+          {/* The sheet has a definite height (top and bottom pinned) and the
+              actions row rides OUTSIDE the scroll view, pinned at the sheet's
+              bottom: run 42136053866's api-34 leg failed with "Element not
+              found: stops-import-go" because the Go button sat inside the
+              ScrollView's clipped content on the emulator's 320x640 screen -
+              the courier's primary action was unreachable without scrolling.
+              The scroll view carries only what may overflow: the title, the
+              hint and the paste field. The notes pin above the actions, so
+              every answer is on screen when it is spoken. */}
+          <GlassSurface kind="sheet" testID="stops-import-sheet" style={[styles.detail, styles.importSheet]}>
+            <ScrollView style={styles.importScrollBody} contentContainerStyle={styles.importScroll}>
+              <Text style={[styles.detailTitle, { color: t.colors.label }]}>Import stops</Text>
+              <Text style={[styles.detailSuburb, { color: t.colors.secondaryLabel }]}>
+                Paste the spreadsheet (CSV): one header row, an address column.
+              </Text>
+              <TextInput
+                multiline
+                value={importText}
+                onChangeText={setImportText}
+                placeholder={'address,type,notes\n1 Import Lane, delivery, leave at door'}
+                accessibilityLabel="The spreadsheet's CSV text"
+                testID="stops-import-text"
+                placeholderTextColor={t.colors.secondaryLabel}
+                style={[styles.importInput, { color: t.colors.label, borderColor: t.colors.separator }]}
+              />
+            </ScrollView>
+            {importNote === null ? null : (
+              <View testID="stops-import-note">
+                <Text style={[styles.note, { color: t.colors.secondaryLabel }]}>{importNote}</Text>
+              </View>
+            )}
+            {importIgnored === null ? null : (
+              <View testID="stops-import-ignored">
+                <Text style={[styles.note, { color: t.colors.secondaryLabel }]}>{importIgnored}</Text>
+              </View>
+            )}
+            <View style={styles.importActions}>
+                <Pressable
+                  accessible
+                  role="button"
+                  accessibilityLabel="Close without importing"
+                  onPress={handleImportDismiss}
+                  testID="stops-import-dismiss"
+                  style={[styles.detailAction, { borderColor: t.colors.separator, borderWidth: 1 }]}
+                >
+                  <Text style={[styles.detailActionLabel, { color: t.colors.label }]}>Not now</Text>
+                </Pressable>
+                <Pressable
+                  accessible
+                  role="button"
+                  accessibilityLabel="Import the pasted spreadsheet"
+                  accessibilityHint="Sends the pasted CSV to the shift"
+                  onPress={handleImport}
+                  // One ask at a time; an empty paste is NOT blocked here - the
+                  // handler answers it with its own note ("Paste the
+                  // spreadsheet first."), the way every refusal is a
+                  // sentence and not a silent button.
+                  disabled={importing}
+                  testID="stops-import-go"
+                  style={({ pressed }) => [
+                    styles.detailAction,
+                    { backgroundColor: t.colors.accent, opacity: pressed ? 0.85 : 1 },
+                  ]}
+                >
+                  <Text style={[styles.detailActionLabel, { color: t.colors.onAccent }]}>
+                    {importing ? 'Importing\u2026' : 'Import'}
+                  </Text>
+                </Pressable>
+            </View>
+          </GlassSurface>
+        </>
+      )}
     </View>
   );
 }
@@ -522,12 +718,47 @@ const styles = StyleSheet.create({
     lineHeight: typography.largeTitle.lineHeight,
     fontWeight: typography.largeTitle.weight,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.space8,
+  },
   optimise: {
     height: spacing.space48,
     paddingHorizontal: spacing.space20,
     borderRadius: radii.button,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Queue 4e: the import control sits beside Optimise as the quieter of the
+  // two - a bordered button, not a filled one.
+  import: {
+    height: spacing.space48,
+    paddingHorizontal: spacing.space20,
+    borderRadius: radii.button,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Queue 4e's sheet: a definite height (top pinned beside the bottom) so the
+  // scroll view is bounded and the pinned actions below it are always on
+  // screen - run 42136053866's api-34 leg clipped the Go button out of the
+  // accessibility tree on the 320x640 emulator.
+  importSheet: { top: spacing.space64 },
+  importScrollBody: { flex: 1 },
+  importScroll: { gap: spacing.space12 },
+  importInput: {
+    minHeight: spacing.space64 * 2,
+    borderWidth: 1,
+    borderRadius: radii.card,
+    padding: spacing.space12,
+    fontSize: typography.body.size,
+    lineHeight: typography.body.lineHeight,
+    textAlignVertical: 'top',
+  },
+  importActions: {
+    flexDirection: 'row',
+    gap: spacing.space12,
   },
   optimiseLabel: {
     fontSize: typography.button.size,

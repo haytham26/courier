@@ -474,3 +474,44 @@ describe("the run's own break window and finish point on the day (queue 4d)", ()
     expect(getByTestId('finish').props.children).toBe('none');
   });
 });
+
+/**
+ * Queue 4e (the trial's #6, ADR-025's app half): the shift's own id reaches
+ * the screens through the day, because the import endpoint is about a shift
+ * (`POST /shifts/{shift_id}/import`) - the run's id would dial a URL about
+ * no shift at all (BUG-189's rule, one seam over).
+ */
+describe("the shift's own id on the day (queue 4e)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockLoad.mockResolvedValue(okLoad);
+    mockDeliveredMarks.mockResolvedValue([]);
+  });
+
+  it("carries the shift's id from the run the store answers with", async () => {
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return <Text testID="shift">{day.shiftId ?? 'none'}</Text>;
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('shift').props.children).toBe('shift-1'));
+  });
+
+  it('answers null when there is no day at all', async () => {
+    mockLoad.mockResolvedValue({
+      status: 'offline',
+      snapshot: null,
+    } as unknown as Awaited<ReturnType<typeof mockLoad>>);
+
+    const Probe = () => {
+      const day = useRunDay(storeSource);
+      return <Text testID="shift">{day.shiftId ?? 'none'}</Text>;
+    };
+
+    const { getByTestId } = render(<Probe />);
+
+    await waitFor(() => expect(getByTestId('shift').props.children).toBe('none'));
+  });
+});

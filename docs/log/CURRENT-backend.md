@@ -441,6 +441,151 @@ Semgrep job green - that is the next CI run's evidence on this head.
 - #200 (3b, BUG-213) went green on 0f44e31 after one self-inflicted red: my log note written via an inline `python -c` mangled backticks into BEL/control chars and `check-control-chars` (a Floor-guard step I had not been running locally) failed run 42138822228. Fixed in 0f44e31; control-chars now run locally before every push. Merged as `fb4708b`; tag `archive/smoke-version-213` @ `0f44e31`; branch deleted, ls-remote empty.
 - #201 (3c, BUG-214) shared head 5e91a06 with #200: GitHub marked it merged when #200 landed (three-dot diff vs main empty; BUG-214 row `fixed` in main; 47/47 checks green). Comment left on the PR; tag `archive/deploy-secrets-inline-214` @ `5e91a06`; branch deleted.
 - The 3d branch (was 0169533, BUG-215 + BUG-226) now carries origin/main via `64de5c8` (one log conflict, both sections kept): parity 0 reopened, 200 bug rows, nothing deleted, counts re-pasted. Pushed to `deploy-gates-215` via the API workaround.
+## The 2026-11-05 audit's CI / INFRA item 3e (BUG-216): only an exact AVD cache key restores
+
+`android-e2e.yml`'s "Cache the AVD snapshot" step carried
+`restore-keys: avd-<os>-<api>-google-apis-x86_64-`, which restores the newest
+cache whose key starts with that prefix when the exact key misses - so a
+fingerprint miss handed the job an AVD built under a different Maestro version,
+emulator build, system-image revision or emulator-option set. That is BUG-068's
+tiny-device-profile failure again, one line below the comment explaining how
+BUG-068 was fixed.
+
+- The two restore-keys lines are gone (the exact key stays), with a comment
+  recording why, so nobody adds the prefix back for speed.
+- `scripts/ci/check-e2e-avd-restore-keys.mjs` (a step in the Floor guard job)
+  holds the line over every emulator workflow with an AVD cache -
+  `android-e2e-health.yml` included, which has none and is asserted rather than
+  assumed.
+- Evidence: `docs/evidence/e2e-avd-exact-key/README.md` (the red is the block
+  re-attached and the gate naming it).
+
+**The same class elsewhere, deliberately not touched:** `screen-recordings.yml`
+carries four `restore-keys` prefixes (a Playwright browser cache and an AVD
+cache). The audit's item 3e names `android-e2e.yml` only, and BUG-097's own test
+is titled "the recordings cache is content-hashed with a restore-keys", so that
+prefix is a recorded decision, not an oversight. It is logged here as the next
+crew item rather than silently overturned in a PR about a different file - and
+if the lead wants only-exact-keys there too, it is a one-line change plus that
+test's title.
+
+**Next in item 3:** 3f (pin the Android system image), 3g (drop the paths
+filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt
+2), then the four 3i PRs in order and 3j.
+
+## 2026-11-06: #202 merged as 671bfda; origin/main into the 3e branch (dfbf42f + cc1e9a8)
+
+- #202 (3d, BUG-215 + BUG-226) went green on its merge-in head `6d471c4` (21/21, Semgrep green with the W6 exclusion) and merged as `671bfda`; tag `archive/deploy-gates-215` @ `6d471c4`; branch deleted, ls-remote empty.
+- Side effect found while merging main into the 3e branch: the BUG-226 README rows that landed with #202 were mangled (a doubled `| |` and a merged line) by the insert script. Repaired as `cc1e9a8` on this branch; `check-doc-links`/control-chars/mojibake/parity all clean.
+- The 3e branch (was `f5094ef`, BUG-216) carries origin/main via `dfbf42f` (4 adjacent-insertion conflicts, all union-resolved keeping both sides): parity 0 reopened, 201 bug rows, nothing deleted, counts re-pasted. Pushed to `e2e-avd-exact-key` via the API workaround.
+## The 2026-11-05 audit's CI / INFRA item 3f (BUG-217): the emulator's system image is pinned by revision
+
+The emulator-runner action installs `system-images;android-<api>;google_apis;x86_64` from the stable
+channel by api-level, so the emulator's bytes change whenever Google publishes a revision with no commit.
+The pins fingerprint's own comment claimed it covered "the system image's revision" while the fingerprint
+string carried no revision at all - a documentation lie, and BUG-065's class.
+
+- The pins are read from the last green run's OWN evidence, not from memory:
+  `SYSIMG_REV_34: '14'` and `SYSIMG_REV_35: '9'` (run 42019215529 on b81ad239,
+  `.maestro/evidence/e2e-pins.txt`).
+- The pins step reads the pin through an indirect variable (a matrix step cannot name a per-api env key in
+  an expression) and outputs the revision; the pins fingerprint carries it; the image is cached BY revision.
+- A pre-step installs the image with three attempts, wiping the image directory between them (a failed
+  install leaves a half-unpacked image, and installing on top of one is how a run asserts a revision from a
+  directory that is not the image), then ASSERTS `Pkg.Revision` equals the pin.
+- The record step now FAILS when the action moved the image under the pin.
+- `scripts/ci/check-e2e-sysimg-pin.mjs` (a step in the Floor guard job) holds every half; evidence in
+  `docs/evidence/e2e-sysimg-pinned/README.md`.
+
+**The cost, said out loud:** when Google publishes a system-image revision, the e2e legs go RED with a
+message naming both numbers, and the fix is a one-line pin bump in its own PR. That is the pin working, not
+a flake - and the alternative is the state this item fixed (the emulator's bytes changing silently).
+
+**Left for the next crew item:** the `a1` job still boots api-34 without this machinery. The audit's 3f
+names the pins fingerprint, which the legs carry; extending the pin to a1 is a follow-up, not something
+smuggled into this PR.
+
+## 2026-11-06: BUG-225 — the 3f install step now resolves sdkmanager from cmdline-tools (PR #204's red cause)
+
+Root cause of the emulator-leg reds on PRs #204-#211 (run 42058337877, jobs 127363544216/127363543972):
+the "Install the pinned system image" step called a bare `sdkmanager`, and the runner image does not put
+`$ANDROID_HOME/cmdline-tools/latest/bin` on PATH — `sdkmanager: command not found`, then the revision
+assert read a directory that was never installed (`Pkg.Revision=unknown, SYSIMG_REV_35=9`). The assert
+was right; the install never ran.
+
+Fix on `e2e-sysimg-pinned` (pushed; updates PR #204): the step resolves the NEWEST
+`$sdk/cmdline-tools/*/bin` (`ls -d … | sort -V | tail -n 1` — `latest` wins when present, else the
+highest numbered), fails with a `::error::` NAMING THE PATH when no sdkmanager exists under it, and
+exports the bin via `$GITHUB_PATH` + `export PATH` before the install loop. `check-e2e-sysimg-pin.mjs`
+now fails when any of the three pieces is missing (2 new test cases, 8 total). Red first: the extended
+gate against the pre-fix workflow names all three, exit 1. Green after: gate passes, 8/8 tests,
+check-workflows clean, parity 0 reopened. Evidence: `docs/evidence/e2e-sysimg-path-225/README.md`.
+BUG-225 filed. NOT claimed: the emulator legs themselves are green — that is the next CI run's evidence.
+
+## 2026-11-06: BUG-227 — the 3f install loop's `yes | sdkmanager` under pipefail wiped every good install (PR #204's second red cause)
+
+After the BUG-225 PATH fix, run 42118045102 (head b49aa64) showed sdkmanager resolving correctly
+(`…/cmdline-tools/latest/bin`) yet all 3 install attempts "failing" — each attempt's sdkmanager.log tail
+ended at 100% unzip of the LAST zip file, with `yes: standard output: Broken pipe` just before. Root
+cause: `set -euo pipefail` + `until yes | sdkmanager …` — sdkmanager exits 0 on a complete install,
+`yes` dies of SIGPIPE (141), pipefail makes the pipeline 141, the loop reads the good install as a
+failure and `rm -rf "$dir"` deletes it before retrying. Latent since 3f (the step died earlier at
+`command not found` until BUG-225). The emulator-runner action's own sdk-installer.ts does it safely:
+`yes | sdkmanager --licenses` once, then `sdkmanager --install …` with no yes in the pipeline.
+
+Fix on `e2e-sysimg-pinned` (pushed; updates PR #204): licenses accepted once with `|| true` guarding
+the same SIGPIPE, then `until sdkmanager --install "$image" … </dev/null; do … done`; the final-failure
+dump now greps the log for error lines too. `check-e2e-sysimg-pin.mjs` extended: fails if the loop pipes
+`yes` into sdkmanager or skips the `--licenses` step (2 new tests, 10 total). Red first: gate vs
+b49aa64's workflow names both, exit 1. Green after: gate passes, 10/10 tests, check-workflows clean.
+Evidence: `docs/evidence/e2e-sysimg-pipefail-227/README.md`. BUG-227 filed. NOT claimed: emulator legs
+green — that is the next CI run's evidence on this head.
+
+## 2026-11-06: #203 api-35 leg red on d99fb22 = runner flake, re-run with the root cause evidenced (PLAYBOOK 17)
+
+Run 42150920439, job 127673925748 (api 35): boot normal (33 s), image found, AVD created, Streamed Install Success, am start pid=3229 - then `no first screen appeared in 90s`, relaunches=0, no FATAL/ANR/crash in the log between start and timeout. The api-34 leg and A1 on the SAME head are green, and the 3e diff touches only the AVD cache restore-keys + docs + a gate - nothing in the app or the emulator options. That is the BUG-060/061 runner class (swiftshader first-frame stall on one leg). Re-ran the failed job (`gh run rerun 42150920439 --failed`) per the BUG-185/BUG-061 precedent; the retry budget of one lands with 3h (#207).
+
+## 2026-11-06: #203 merged as 51c8ce1 (api-35 red was a runner flake, re-run green); origin/main into the 3f branch (18a427b)
+
+- #203 (3e, BUG-216) green 21/21 on `d99fb22` after the api-35 leg flake re-run (root cause in the log above); merged as `51c8ce1`; tag `archive/e2e-avd-exact-key` @ `d99fb22`; branch deleted, ls-remote empty.
+- The 3f branch (was `3ec94a3`, BUG-217 + BUG-225 + BUG-227) carries origin/main via `18a427b` (BUGS.md rows union-sorted 217/225/226/227; log conflict both-sides-kept): parity 0 reopened, 204 bug rows, nothing deleted, counts re-pasted. Pushed to `e2e-sysimg-pinned` via the API workaround. Its emulator legs were already green on `3ec94a3` (BUG-225/227 fixes); the Semgrep red cleared with main's BUG-226 exclusion.
+## The 2026-11-05 audit's CI / INFRA item 3g (BUG-218): the emulator jobs report `skipped`, not missing
+
+`android-e2e.yml`'s `pull_request` trigger carried a `paths:` filter, which keeps
+the whole WORKFLOW RUN from existing for a change it does not match. The check
+names it would report (`Build the release APK`, the two Maestro legs, `A1: the app
+against the real API (no mock)`) are then never reported at all - and a required
+check that is not reported is a PR that can never be merged, forever pending. The
+filter's own comment named the risk ("a PR check set that does not run for it is a
+check set that lies") without fixing it.
+
+- The trigger's `paths:` is gone from `pull_request`; the push trigger keeps it (a
+  post-merge check on main is not a merge gate).
+- A `changes` job diffs the paths with a plain `git diff --name-only` step - no new
+  action, so nothing to SHA-pin and nothing for the licence inventory - fetching
+  the whole history (a shallow clone's base sha is an unknown revision, and the
+  diff then reads as "nothing changed"), falling back to `HEAD~1` for a new branch's
+  forty-zero `before`, and giving a human's nightly or dispatch the whole set.
+- `if:` on build/e2e/a1, so each job names the paths it needs and reports `skipped`
+  instead of not existing. The build job also runs for a flow-only change (the legs
+  download the APK it uploads; the content-hash cache makes that a restore), and the
+  legs gate on the build job's success so they never run without an APK.
+- `scripts/ci/check-e2e-trigger-conditions.mjs` (a step in the Floor guard job)
+  holds every half, with an 8-case test; evidence in
+  `docs/evidence/e2e-job-level-filter/README.md`, which carries the classification
+  proven against ten fabricated path lists (docs only skips everything; the app,
+  a shared package, a manifest, a flow-only, a script-only and a workflow-only change
+  each classify as intended; the API service and the mobile CI are not this
+  workflow's to watch).
+
+**Where this becomes load-bearing:** item 3j, which writes the exact required-checks
+list in FOUNDER_TODO.md. Until the founder's ruleset requires those names, the
+filter was only a minutes question; after it, a check that does not report blocks
+every PR - which is what this item fixes.
+
+**Next in item 3:** 3h (fail the e2e/a1 jobs when `github.run_attempt > 2`, with a
+job-summary line on attempt 2 asking for the justification), then the four 3i PRs in
+order and 3j.
 
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 

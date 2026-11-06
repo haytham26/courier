@@ -1,8 +1,8 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `671bfda` (PR #202, audit 3d).
-Lead session 14, 2026-11-05/06. Queue 4e's PR #215 in flight (head 0f1d5a4); queue 4f
-built locally on `feat/trial-pod-photo` (4cdb8f1 + main merge).**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `ef46eac` (PR #205, audit 3g —
+the emulator jobs report skipped, not missing; ahead of it `491af4d` = PR #215, queue 4e).
+Lead session 14, 2026-11-05/06.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -980,38 +980,70 @@ Next after it: 4e (spreadsheet import #6, ADR-025), 4f (POD photo #16), 4g
 (the nav hand-off flow #15), then release hygiene and D1/B5/A3/§22/P4/P7 to
 the §6 Definition of Done.
 
-**Queue 4e's first E2E triaged and fixed (PR #215, head df259cd3 → 0f1d5a4).**
-Run 42136053866's api-34/api-35 legs failed two flows. `import.yaml` died at
-`tapOn stops-import-go` with "Element not found" — the evidence dump showed
-the paste HAD landed (the EditText carries the CSV) but the Go/Not-now row
-sat inside the sheet's ScrollView, clipped out of the accessibility tree on
-the 320x640 emulator ([8,245][312,576] sheet, ScrollView [28,265][292,556]),
-so the courier's primary action was unreachable. §12 fix on 0f1d5a4: the sheet
-now has a definite height (top pinned), the ScrollView (flex: 1) carries only
-title/hint/paste field, and the notes + actions pin outside it at the sheet's
-bottom. `scan.yaml` died at its first assert with only the system UI on
-screen, an empty crash log and `Killing 10286:com.courier.copilot … remove
-task` in the device logcat — the BUG-185 runner race killing the freshly
-started process before any app assertion; excepted per §17 (4e touched
-nothing on the boot path; scan passed on #214's green run). Main (671bfda)
-merged into the 4e branch; 761 tests (86 suites) + all gates green; pushed
-0f1d5a4, root cause posted on PR #215 (#issuecomment-6675951953), E2E
-re-dispatched as run 42155905246.
+**Queue 4d merged (PR #214, `a6dffe7`, head `49f084b`, tag
+`archive/feat-trial-break-finish`, branch deleted — ls-remote proof in the PR).**
+The first head (9748630) had its A1 leg crash the release APK at launch:
+`TypeError: Cannot read property 'start' of null` in `RunProvider` — the real
+API serializes an absent `break_window`/`finish` as JSON null and the guard
+checked only `undefined` (BUG-195, root-caused from the evidence's
+logcat-crash.txt, fixed with a red test answering `null` exactly as the API
+does). On the fixed head 49f084b the manual dispatch run 42128052831 is fully
+green (A1 success, 14/14 flows on api-34 incl. the Break/Finish assertions,
+api-35 success, Record-screens success in run 42127895857); the push-event
+run 42127895761's A1 died in the runner — the launcher ANR "Pixel Launcher
+isn't responding" with an empty crash log and adb-daemon boot errors —
+documented in PR #214#issuecomment-6672783067.
 
-**Queue 4f built on `feat/trial-pod-photo` (trial #16, ADR-010's app half,
-BUG-196):** the proof photo on the delivered confirm — `uploadPod` posts the
-multipart (image + occurred_at + client event_id + safe_place when said) to
-`/runs/{run_id}/stops/{stop_id}/pod`, refuses an empty run/stop id, shape-
-checks both 200 (replay) and 201 (`isPod`); the `src/pod/podForThisBuild.ts`
-seam answers the canned 1×1 JPEG (magic FFD8FF, base64 to the cache) and the
-canned PodResponse in the E2E build, and in every other build says the
-capture is unavailable (P5 step 06 — labelReader posture) with the real
-client as the one upload path; `app/delivered.tsx`'s `delivered-pod` control
-+ `delivered-pod-note` node take the photo with `newEventId()` and spell each
-answer as its own node; `.maestro/pod.yaml` drives it end to end. Red-first:
-9 api-client + 4 seam + 5 screen tests failed pre-change, all green after.
-761 tests (86 suites), tsc, eslint, check-parity (0 reopened) green; main
-(671bfda) merged in (0059d28; registers wholesale + BUG-196 kept; no file
-deleted, no register shrunk). Pushing/PR after #215 merges so the branch
-merges main once. Next after 4f: 4g (the nav hand-off flow #15), then release
-hygiene and D1/B5/A3/§22/P4/P7 to the §6 Definition of Done.
+**Queue 4e built on `feat/trial-import-stops` (trial #6, ADR-025's app half,
+BUG-194):** paste-to-import on the route screen — no document picker exists in
+this build, so the courier pastes the CSV: `writeImportFile` writes it to the
+cache as `stops-import.csv`, `importStops` posts it as one multipart part (no
+Content-Type set — the platform sets the boundary), refuses an empty shift id,
+shape-checks the 201, and reads 409/413/415/422 as the server's own code and
+sentence; `RunDay` exposes `shiftId`; the E2E seam `importForThisBuild.ts`
+answers the canned import (labelReader's pattern); the import sheet spells
+"Imported N stops." / "Ignored columns: …" / the refusal as its own nodes and
+re-reads the day; `.maestro/import.yaml` drives the paste end to end.
+Red-first: 13 tests failed on the pre-change tree. Main (a6dffe7, queue 4d +
+the backend squad's BUG-211/ADR-026) merged in (00353a5; registers from main
+wholesale + BUG-194 re-applied; no file deleted, no register shrunk). 761
+tests (86 suites), tsc, eslint, check-parity (0 reopened) green. Next after
+it: 4f (POD photo #16 via the existing POD endpoint; signature once the
+backend's signature contract lands), 4g (the nav hand-off flow #15), then
+release hygiene and D1/B5/A3/§22/P4/P7 to the §6 Definition of Done.
+
+**Queue 4e MERGED: PR #215, merge commit 491af4d on head a14b98ba.** Two E2E
+root causes were found and fixed on the branch before the green run: (1) run
+42136053866's legs failed `import.yaml` with "Element not found:
+stops-import-go" — the evidence dump showed the paste had landed but the
+Go/Not-now row sat inside the sheet's clipped ScrollView on the 320x640
+emulator, so 0f1d5a4 pinned the sheet to a definite height and moved the notes
++ actions OUTSIDE the scroll view; (2) run 42155905246 failed the same step
+again — the layout fix was live ([8,64][312,576] sheet) but the screenshot
+showed the soft keyboard covering the sheet's bottom: with edge-to-edge the
+manifest's adjustResize does not shrink the window, so a14b98b made the flow
+do `hideKeyboard` after `inputText`, and the small-screen polish was filed
+honestly as BUG-197 (open, KeyboardAvoidingView on the sheet). `scan.yaml`'s
+first-head failure was the BUG-185 runner race (system-UI-only screen, empty
+crash log, "remove task" kill line) — §17-excepted with quoted lines on the PR.
+Final head a14b98ba: run 42161172886 ALL green — 15/15 flows on api-34
+(incl. import.yaml) and api-35, A1, APK, Record-screens, all static. Merged
+via the API with sha, evidence comment #issuecomment-6677182640; tag
+`archive/feat-trial-import-stops` @ a14b98ba; branch deleted (ls-remote
+proof). PR #205 (ef46eac, BUG-218) landed on main in between; the pod branch
+re-merged origin/main against it.
+
+**Queue 4f on `feat/trial-pod-photo` (trial #16, ADR-010's app half,
+BUG-196):** main (ef46eac) merged in; the code conflict resolution kept main's
+4e `form` arm + importStops and re-applied uploadPod/isPod + the queue-4f test
+describe; registers taken from main wholesale + BUG-196 re-applied after
+BUG-197, counts re-pasted by counting (208 rows, fixed 165, open 7). Pushing
+for PR + manual E2E dispatch on the head. **Queue 4g ready on
+`feat/trial-nav-handoff-flow`** (9026017, from origin/main ad92924): only
+`.maestro/nav-handoff.yaml` + TRIAL_SCOPE row 15 — asserts
+`driving-nav-handoff` on the drive panel, taps it, and asserts the drive is
+still the screen ("STOP 2 OF 5") since no nav app answers on the emulator.
+Next after 4f/4g merge: release hygiene (labelReader's EAS gate, design-lab
+gating, syncService's `batch.slice(0, accepted)`, close open/doing lead rows;
+BUG-197 queued), then D1, B5 + Play internal-testing prep, A3, §22's app side,
+P4 baselines, P7 acceptance on two screen sizes — to the §6 Definition of Done.

@@ -121,6 +121,35 @@ jobs:
       # no-suppressions check only sees inline Semgrep suppression comments).
       - name: Every Semgrep exclusion is written down (BUG-226)
         run: node scripts/ci/check-semgrep-exclusions.mjs
+      # The 2026-11-05 audit's item 3e: the android-e2e AVD cache carried a
+      # `restore-keys` prefix that stops short of the pins' fingerprint, so a
+      # fingerprint miss restored an AVD built under a different Maestro version,
+      # emulator build, system-image revision or option set - BUG-068's
+      # tiny-device-profile failure, re-armed. Only an EXACT key restores now,
+      # and the health workflow (which has none) is held to the same line.
+      - name: Only an exact AVD cache key restores (audit 3e)
+        run: node scripts/ci/check-e2e-avd-restore-keys.mjs
+      # The 2026-11-05 audit's item 3f: the emulator-runner action installs the
+      # system image from the stable channel by api-level, so the emulator's
+      # BYTES change whenever Google publishes a revision and nothing commits it
+      # - BUG-065's class (the same APK green on api-35 one hour and red on four
+      # PRs the next). The gate holds the pin: SYSIMG_REV_<api> for every
+      # matrix leg, the pins fingerprint reading it, the install pre-step's
+      # three attempts with the wipe between them and its Pkg.Revision
+      # assertion, the revision-keyed cache, and the record step failing if the
+      # action moved the image under the pin.
+      - name: The system image is pinned by revision (audit 3f)
+        run: node scripts/ci/check-e2e-sysimg-pin.mjs
+      # The 2026-11-05 audit's item 3g: the emulator workflow's pull_request
+      # trigger carried a `paths:` filter, which keeps the whole workflow from
+      # EXISTING for a documentation-only change - so its check names are never
+      # reported, and a required check that is not reported blocks every PR
+      # forever. The filter moved to a `changes` job (a plain
+      # `git diff --name-only` step: no new action, nothing to SHA-pin, nothing
+      # for the licence inventory) with `if:` on build/e2e/a1, so the jobs
+      # report `skipped` instead of not existing.
+      - name: The emulator jobs report skipped, not missing (audit 3g)
+        run: node scripts/ci/check-e2e-trigger-conditions.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers
