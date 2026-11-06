@@ -163,6 +163,35 @@ echo "::endgroup::"
 
 run_flow "sync"
 
+echo "::group::A1: wait for the held delivery to land on the server"
+# BUG-237: BUG-188's bounded wait ran in the rows-assert STEP, which executes
+# after the emulator-runner action has already killed the emulator (this
+# script IS the action's script) - so the phone was dead during the whole 45 s
+# wait and the outbox's retry could never arrive (run 42294886524: all four
+# flows passed, the assert then found 3 of 4 delivery events after 45 s).
+# The wait belongs here, while the app is still alive: this runner shares the
+# host with the compose project the job started, so poll the same database the
+# assert reads, bounded, and fail loudly with the stack's own logs if the row
+# never lands. The count is the flow's own: three online plus one held = 4.
+held=0
+waited=0
+while [ "$waited" -lt 60 ]; do
+  held=$(docker compose -f infra/compose.ci.yml exec -T postgres psql -U courier -d courier -Atc "SELECT count(*) FROM delivery_events" 2>/dev/null || echo 0)
+  if [ "$held" = "4" ]; then
+    echo "the held delivery landed on the server after ${waited}s"
+    break
+  fi
+  sleep 2
+  waited=$((waited + 2))
+done
+if [ "$held" != "4" ]; then
+  echo "::error::the held delivery did not land on the server within ${waited}s (delivery_events=$held) - the phone held it, the network was back, and the row still never arrived"
+  dump_evidence
+  keep_flow_dump
+  exit 1
+fi
+echo "::endgroup::"
+
 echo "::group::A1: the flow's own record"
 {
   echo "apk=$APK"

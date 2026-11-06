@@ -22,6 +22,16 @@ GET /shifts/{id}/stops answered null/defaults for a day the A1 job drives as the
 - `pytest tests/test_demo_seed.py -m "not db"`: 27 passed. Full suite `-m "not db"`: 624 passed.
 - `node --test scripts/ci/__tests__/a1/assert-a1-rows.test.mjs` (compose Postgres, the A1 job's own stack):
   pass 2 fail 0, with the fixture day at the day-one shape.
+- `pytest tests/test_demo_seed.py -m db` against local Postgres 17 (DATABASE_URL=127.0.0.1:55432): 2 passed,
+  including the new `test_the_day_one_fields_land_in_postgres` - the seed's INSERT carries the day-one columns
+  on the production repository, not just the in-memory one.
+
+## BUG-237 (found while proving this on CI)
+PR #251's A1 run (42294886524) failed `expected 4 delivery events ... found 3 after 45s` although all four flows
+passed. Root cause: the emulator-runner action kills the emulator when `.maestro/run-a1.sh` returns, so the
+rows-assert's 45 s wait ran against a dead phone - the held event could only land before `emu kill` (green runs:
+`delivery_events: 4` already at assert start). Fixed in `run-a1.sh`: a bounded (60 s) wait for the server row
+right after the sync flow, while the app is alive, polling the compose Postgres directly.
 - ruff clean; mypy 81 files clean; check-sql-parameterisation 65 statements clean; contract/api-client/
   response-model tests 14 passed; all node gates pass; parity 0 reopened vs origin/main.
 - Seed shape unchanged (1 run / 1 shift / 5 stops / 4 delivery events), so the existing A1 asserts hold.
