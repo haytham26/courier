@@ -31,11 +31,13 @@ name: 'The proof photo stores on the delivered confirm (queue 4f, trial #16)'
     visible:
       id: "driving-screen"
     timeout: 30000
-# The deliver: a slide is required (a tap never marks the run).
+# The deliver: a slide is required (a tap never marks the run) - the point
+# lives INSIDE the from selector (a sibling `point:` is an unknown property
+# and the flow fails to load: run 42166989624's api-34 leg).
 - swipe:
     from:
       id: "driving-slide"
-    point: "10%, 50%"
+      point: "10%, 50%"
     direction: RIGHT
 - waitForAnimationToEnd:
     timeout: 2500
