@@ -18,21 +18,35 @@
 # Ecosystem support verified against GitHub's own configuration reference on
 # 2026-11-06: `uv` is a supported `package-ecosystem` value, and the `npm`
 # ecosystem reads pnpm lockfiles (pnpm v7-v12).
+#
+# Every entry carries a 7-day cooldown (BUG-228): Semgrep's
+# dependabot-missing-cooldown rule (Blocking) fired on this file without one.
+# The cooldown only delays the automated PR by a week after a release; the
+# pin-exact policy and the audit/licence gates still run on every landed PR,
+# and a security patch can still be applied by hand the day it is published.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      days: 7
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      days: 7
   - package-ecosystem: uv
     directory: /services/api
     schedule:
       interval: weekly
+    cooldown:
+      days: 7
   - package-ecosystem: uv
     directory: /services/courier-voice
     schedule:
       interval: weekly
+    cooldown:
+      days: 7

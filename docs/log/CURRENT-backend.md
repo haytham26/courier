@@ -746,6 +746,10 @@ instead (that is what the C14 red proof ended up using).
 - `dependabot-cron-223` (was `eb75e35`) carries origin/main via `0a8a955` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 214 bug rows (open 7 · doing 2 · testing 1 · fixed 172 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
 #210 (C10, BUG-222) merged as a0674da; tag archive/action-digest-pins @ 6a71ee9, branch deleted.
 
+## 2026-11-06: BUG-228 — the new dependabot.yml had no cooldown; Semgrep Blocking fired on #211 (fixed the config, not excluded)
+
+PR #211's head `80edbac` went red in the sast job (runs 42197669307/42197664922): Semgrep `package_managers.dependabot.dependabot-missing-cooldown` (Blocking), 4 findings — one per `updates` entry of the new `.github/dependabot.yml`. Decision: fix the CONFIG, not an exclusion — cooldown is the intended lever, and the pinned registry (semgrep==1.182.1) is the authority. Fix on the `dependabot-cron-223` branch: `cooldown: days: 7` on all four entries + header comment; `check-staging-smoke.mjs` extended to require a cooldown on every entry (names BUG-228); 1 new test case (15 total). Red-first proof: the extended gate against eb75e35's pre-fix dependabot.yml in a temp tree exits 1 naming all four missing cooldowns; green on the fixed tree. BUG-228 row filed (inserted before the BUG-187 anchor), evidence in `docs/evidence/dependabot-cooldown-228/`. The Semgrep red clearing is the next CI run's evidence. Pushed via the API workaround.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
