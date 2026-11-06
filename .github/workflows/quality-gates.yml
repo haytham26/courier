@@ -80,6 +80,47 @@ jobs:
       # `node --test scripts/*/__tests__/*.test.mjs`.
       - name: Every emulator boot carries the same pins
         run: node scripts/ci/check-e2e-pins.mjs
+      # The 2026-11-05 audit's item 3a: `rsync infra/ services/ packages/`
+      # (trailing slashes) copied the CONTENTS of each flat into /opt/courier
+      # and --delete removed what was there, so the deploy's own next command -
+      # `cd /opt/courier/infra` - failed on a directory that never arrived. The
+      # gate asserts the command's shape everywhere and runs both shapes against
+      # a scratch directory where rsync exists (here, on the runner).
+      - name: The deploy's rsync keeps the tree (audit 3a)
+        run: node scripts/ci/check-deploy-rsync.mjs
+      # The 2026-11-05 audit's item 3b: the deploy step has always carried
+      # APP_VERSION, but the remote smoke.sh invocation never forwarded it, so
+      # smoke.sh took its "APP_VERSION is not set: skipping the version check"
+      # branch and reported a green smoke test about a deployment it never
+      # identified. The gate holds all three halves: the version is forwarded,
+      # smoke.sh dies without it (--no-version is the only skip), and the
+      # version fetch cannot fail quietly.
+      - name: The deployed version reaches the smoke test (audit 3b)
+        run: node scripts/ci/check-smoke-version.mjs
+      # The 2026-11-05 audit's item 3c: the deploy used to interpolate
+      # COURIER_STAGING_DOMAIN and COURIER_SMOKE_TOKEN straight into the remote
+      # ssh command, which puts a secret in an argv - readable in the host's own
+      # process list, and one quoting mistake from a log. The gate holds the
+      # line: no secret in a command line, the two secrets in the step's env and
+      # piped over stdin, read by the remote shell into variables.
+      - name: The deploy's secrets never reach a command line (audit 3c)
+        run: node scripts/ci/check-deploy-secrets-inline.mjs
+      # The 2026-11-05 audit's item 3d: the deploy job used to run on the push
+      # to main, in parallel with the repository's own CI and Quality gates, so
+      # the staging host could be served a tree CI was about to call red. The
+      # gate holds the workflow_run shape: both required workflows named, the
+      # completed event, the deploy's `if:` off the push trigger, the checkout
+      # pinned to the sha the gates ran on, and the gate step that reads both
+      # conclusions from the API rather than assuming them.
+      - name: The deploy waits for CI and Quality gates (audit 3d)
+        run: node scripts/ci/check-deploy-gate.mjs
+      # BUG-226: every --exclude-rule of the Semgrep scan must be written down -
+      # a rule id in .semgrepignore with a numbered reason, and a W-row in the
+      # exceptions table of docs/plan/CONSTRAINTS.md. An accepted finding with no
+      # written reason is a suppression by another name (the floor's
+      # no-suppressions check only sees inline Semgrep suppression comments).
+      - name: Every Semgrep exclusion is written down (BUG-226)
+        run: node scripts/ci/check-semgrep-exclusions.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers
@@ -203,6 +244,7 @@ jobs:
             --exclude-rule "javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp" \
             --exclude-rule "javascript.audit.detect-replaceall-sanitization.detect-replaceall-sanitization" \
             --exclude-rule "python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure" \
+            --exclude-rule "yaml.github-actions.security.workflow-run-target-code-checkout.workflow-run-target-code-checkout" \
             --error --quiet .
       - name: Why the excluded rules are excluded
         run: |
@@ -212,3 +254,5 @@ jobs:
           echo "test runner (W4). The read-only-filesystem rule would stop the databases (W3)."
           echo "The uv cooldown, the non-literal regexp of a test, the HTML escaper of the"
           echo "render script and the token counter of the voice service are W3 and W5."
+          echo "The workflow_run checkout rule is a static heuristic; our deploy checks out"
+          echo "the sha the gates ran on, after BOTH required workflows said success on it (W6)."
