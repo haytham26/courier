@@ -1,9 +1,9 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `ef46eac` (PR #205, audit 3g;
-ahead of it `491af4d` = PR #215, queue 4e). Lead session 14, 2026-11-05/06.
-Queue 4f = PR #216 and 4g = PR #217 in flight; release hygiene on
-`feat/release-hygiene`.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `3400082` (PR #218, release hygiene;
+ahead of it `8333043` = PR #208). Queue 4f = PR #216 (ALL_GREEN on 4f24692d,
+run 42176913133, 16/16 flows incl. pod.yaml) merging next; 4g = PR #217 in
+flight. Lead session 14, 2026-11-05/06.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -1049,3 +1049,25 @@ compat.yaml's `openLink: "courier:///compat"` → `compat-screen` green on runs
 Next: merge #216 then #217 when their heads are green (ritual), then this
 branch, then D1, B5 + Play internal-testing prep, A3, §22's app side, P4
 baselines, P7 acceptance on two screen sizes — to the §6 Definition of Done.
+
+**Queue 4e MERGED: PR #215, merge commit 491af4d on head a14b98ba.** Two E2E
+root causes were found and fixed on the branch before the green run: (1) run
+42136053866's legs failed `import.yaml` with "Element not found:
+stops-import-go" — the evidence dump showed the paste had landed but the
+Go/Not-now row sat inside the sheet's clipped ScrollView on the 320x640
+emulator, so 0f1d5a4 pinned the sheet to a definite height and moved the notes
++ actions OUTSIDE the scroll view; (2) run 42155905246 failed the same step
+again — the layout fix was live ([8,64][312,576] sheet) but the screenshot
+showed the soft keyboard covering the sheet's bottom: with edge-to-edge the
+manifest's adjustResize does not shrink the window, so a14b98b made the flow
+do `hideKeyboard` after `inputText`, and the small-screen polish was filed
+honestly as BUG-197 (open, KeyboardAvoidingView on the sheet). `scan.yaml`'s
+first-head failure was the BUG-185 runner race (system-UI-only screen, empty
+crash log, "remove task" kill line) — §17-excepted with quoted lines on the PR.
+Final head a14b98ba: run 42161172886 ALL green — 15/15 flows on api-34
+(incl. import.yaml) and api-35, A1, APK, Record-screens, all static. Merged
+via the API with sha, evidence comment #issuecomment-6677182640; tag
+`archive/feat-trial-import-stops` @ a14b98ba; branch deleted (ls-remote
+proof). PR #205 (ef46eac, BUG-218) landed on main in between; the pod branch
+re-merged origin/main against it.
+

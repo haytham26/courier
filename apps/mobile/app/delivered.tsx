@@ -6,18 +6,21 @@
  * hands the drive the next one (the run's own next stop, the same contract
  * the drive reads).
  *
- * The reference's proof-photo card, the two note chips ("Side gate" /
- * "Safe place", "Voice note" / "0:06") and the Copilot reminder line are
- * RECORDED OMISSIONS until a source exists: the proof photo needs the Scan
- * camera wired to a store (P5, step 06), the chips and the reminder line
- * need a notes model on the stop (`src/doorMemory` is an empty placeholder
- * today). A mock with neither renders no invented picture and no invented
- * note - the numbers never invent themselves (MASTER_EXECUTION §13.2). The
- * delivery minute is a clock read at the mark (the event's own moment), so
- * what is here is true: the badge, the address, the minute, the two
- * choices.
+ * The reference's proof-photo card is the capture surface (queue 4f, the
+ * trial's #16): the confirm's own "Add proof photo" takes the photo through
+ * the seam and uploads it to the contract's POD endpoint - the image, the
+ * event's own moment and its client-generated uuid. The Scan camera wired to
+ * a store is still P5, step 06, so a release build's capture says it is
+ * unavailable instead of pretending (the labelReader posture). The two note
+ * chips ("Side gate" / "Safe place", "Voice note" / "0:06") and the Copilot
+ * reminder line stay RECORDED OMISSIONS until a notes model exists on the
+ * stop (`src/doorMemory` is an empty placeholder today). A mock with neither
+ * renders no invented picture and no invented note - the numbers never invent
+ * themselves (MASTER_EXECUTION §13.2). The delivery minute is a clock read at
+ * the mark (the event's own moment), so what is here is true: the badge, the
+ * address, the minute, the two choices, the proof photo.
  */
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Camera, Map as MapView, Marker } from '@maplibre/maplibre-react-native';
@@ -29,13 +32,16 @@ import {
   StopPin,
   useChosen,
 } from '@/components/chosen';
-import { spacing, typography } from '@courier/design-tokens/chosen';
+import { radii, spacing, typography } from '@courier/design-tokens/chosen';
 import { DRIVE_ORIGIN_LNGLAT, hourMinuteOf } from '@/maps/drive';
 import { useRun } from '@/maps/runState';
 import { useMapBoot } from '@/maps/useMapBoot';
 import { getCourierStyle } from '@/maps/styles';
 import { hapticFor } from '@/motion/haptics';
 import { publishVoiceCommand } from '@/voice/commandChannel';
+import { errorMessage } from '@/lib/errors';
+import { captureForThisBuild, uploaderForThisBuild } from '@/pod/podForThisBuild';
+import { newEventId } from '@/sync/eventId';
 
 /** The height of the action row (the reference's 54; the floor is 48). */
 const ROW_HEIGHT = 54;
@@ -86,6 +92,29 @@ const styles = StyleSheet.create({
     fontWeight: typography.confirmTitle.weight,
   },
   subtitle: {
+    fontSize: typography.body.size,
+    lineHeight: typography.body.lineHeight,
+    fontWeight: typography.body.weight,
+  },
+  // Queue 4f: the proof-photo row - the bordered control (the quieter of the
+  // sheet's actions) with its note beneath it.
+  podRow: {
+    gap: spacing.space8,
+  },
+  pod: {
+    height: ROW_HEIGHT,
+    paddingHorizontal: spacing.space20,
+    borderRadius: radii.button,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  podLabel: {
+    fontSize: typography.button.size,
+    lineHeight: typography.button.lineHeight,
+    fontWeight: typography.button.weight,
+  },
+  podNoteText: {
     fontSize: typography.body.size,
     lineHeight: typography.body.lineHeight,
     fontWeight: typography.body.weight,
@@ -165,6 +194,85 @@ function DeliveredScreen() {
     router.back();
   }, [router]);
 
+  // Queue 4f (the trial's #16, the POD endpoint's app half): the proof photo.
+  // The capture and the upload each come from this build's seam - the canned
+  // photo and the canned answer in the E2E build, the honest "unavailable"
+  // capture and the real client's upload everywhere else.
+  const aliveRef = useRef(true);
+  const [podWorking, setPodWorking] = useState(false);
+  const [podNote, setPodNote] = useState<string | null>(null);
+  const pod = useMemo(() => ({ capture: captureForThisBuild(), uploader: uploaderForThisBuild() }), []);
+
+  // The async capture/upload answers only while the screen is mounted.
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
+
+  const handlePod = useCallback(() => {
+    // One photo at a time: a second press while one is storing would race two
+    // answers into one note.
+    if (podWorking) {
+      return;
+    }
+    const runId = run.day.runId;
+    const stopId = target?.id;
+    // BUG-189's rule, one seam over: the upload's subjects are the run's and
+    // the stop's own ids - a call without either is refused with a sentence,
+    // never dialed as a URL about no run or no stop.
+    if (runId === null || runId.trim().length === 0 || stopId === undefined || stopId.trim().length === 0) {
+      setPodNote('The photo needs the run and the stop of this delivery, and one is missing.');
+      return;
+    }
+    setPodWorking(true);
+    setPodNote(null);
+    void (async () => {
+      try {
+        const capture = await pod.capture.capture();
+        if (capture.kind === 'unavailable') {
+          // The labelReader posture: say why, never pretend a photo.
+          if (aliveRef.current) {
+            setPodNote(capture.reason);
+          }
+          return;
+        }
+        const outcome = await pod.uploader.uploadPod(runId, stopId, {
+          image: capture.image,
+          // The event's own moment: the clock read when the courier takes it.
+          occurredAt: new Date().toISOString(),
+          // The client-generated uuid; a replay of it answers 200 with the
+          // first store (BUG-176's rule - the server's parse accepts uuids).
+          eventId: newEventId(),
+        });
+        if (!aliveRef.current) {
+          return;
+        }
+        if (outcome.status === 'ok') {
+          setPodNote('Proof photo stored.');
+        } else if (outcome.status === 'unauthorized') {
+          setPodNote('The session has gone - sign in again, then take the photo.');
+        } else if (outcome.status === 'offline') {
+          setPodNote('No network - the photo was not sent.');
+        } else if (outcome.status === 'server') {
+          // 404/413/415 read exactly as the server answered them.
+          setPodNote(`The photo was refused (${outcome.code}): ${outcome.message}`);
+        } else {
+          setPodNote(outcome.message);
+        }
+      } catch (error) {
+        if (aliveRef.current) {
+          setPodNote(`The photo could not be taken (${errorMessage(error)}).`);
+        }
+      } finally {
+        if (aliveRef.current) {
+          setPodWorking(false);
+        }
+      }
+    })();
+  }, [pod, podWorking, run, target]);
+
   return (
     <SafeAreaView testID="delivered-screen" style={styles.container}>
       {/* The map keeps the scene: the run's markers stay drawn (the same
@@ -217,6 +325,43 @@ function DeliveredScreen() {
                 : 'no delivery to confirm'}
             </Text>
           </View>
+        </View>
+        {/* Queue 4f (the trial's #16): the proof photo of this delivery. The
+            control and its note ride the sheet between the header and the
+            courier's two choices; the note is its own node so a flow asserts
+            each sentence exactly. */}
+        <View style={styles.podRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add a proof photo"
+            accessibilityHint="Stores the proof-of-delivery photo for this stop"
+            accessibilityState={{ disabled: target === null || podWorking }}
+            disabled={target === null || podWorking}
+            onPress={handlePod}
+            testID="delivered-pod"
+            style={({ pressed }) => [
+              styles.pod,
+              {
+                borderColor: t.colors.separator,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <Text
+              testID="delivered-pod-label"
+              style={[
+                styles.podLabel,
+                { color: target === null ? t.colors.secondaryLabel : t.colors.label },
+              ]}
+            >
+              {podWorking ? 'Storing…' : 'Add proof photo'}
+            </Text>
+          </Pressable>
+          {podNote === null ? null : (
+            <View testID="delivered-pod-note">
+              <Text style={[styles.podNoteText, { color: t.colors.secondaryLabel }]}>{podNote}</Text>
+            </View>
+          )}
         </View>
         <View style={styles.actionsRow}>
           <Pressable
