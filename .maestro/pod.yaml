@@ -1,0 +1,60 @@
+appId: com.courier.copilot
+name: 'The proof photo stores on the delivered confirm (queue 4f, trial #16)'
+---
+# Queue 4f's courier-facing half: the proof-of-delivery photo (the trial's
+# #16). The reference's proof-photo card was a recorded omission on the
+# confirm; now the confirm's own "Add proof photo" takes the photo through
+# the build's seam and uploads it to the contract's POD endpoint as one
+# multipart (the image, the event's own moment, its client-generated uuid).
+# The E2E build's capture writes the canned JPEG to the cache and its uploader
+# answers the canned PodResponse, so the flow proves the screen's own half end
+# to end: the control on the confirm, the press, and the note the answer
+# spells.
+#
+# BUG-185: stop the app FIRST, then clear its state (the old task's removal
+# killed the freshly started process on api-34).
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The sheet opens at peek (BUG-050): raise it before the Go.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- tapOn:
+    id: "today-go"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 30000
+# The deliver: a slide is required (a tap never marks the run).
+- swipe:
+    from:
+      id: "driving-slide"
+    point: "10%, 50%"
+    direction: RIGHT
+- waitForAnimationToEnd:
+    timeout: 2500
+- extendedWaitUntil:
+    visible:
+      id: "delivered-screen"
+    timeout: 15000
+
+# The proof photo: the confirm's own control rides the sheet between the
+# header and Undo / Next Stop, visible without scrolling on the emulator.
+- assertVisible:
+    id: "delivered-pod"
+- tapOn:
+    id: "delivered-pod"
+# The answer is its own node; the sentence is asserted exactly (whole-node
+# text match), the way the import flow asserts its count.
+- extendedWaitUntil:
+    visible:
+      id: "delivered-pod-note"
+    timeout: 30000
+- assertVisible: "Proof photo stored."
+- takeScreenshot: "pod-stored"

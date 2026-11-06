@@ -15,6 +15,7 @@
  */
 import type {
   DemoRun,
+  PodResponse,
   RunResponse,
   StopResponse,
   ReoptResponse,
@@ -147,6 +148,61 @@ export class CourierApiClient {
     );
   }
 
+  /**
+   * The proof-of-delivery photo: `POST /runs/{run_id}/stops/{stop_id}/pod`
+   * with the image as the one multipart part and the event's own facts beside
+   * it (queue 4f, the trial's #16, ADR-010's app half).
+   *
+   * The upload is idempotent on the client-generated `event_id` - a replay
+   * answers 200 with the first upload's answer - so both 200 and 201 answer
+   * the same shape-checked `PodResponse`, and the contract's refusals
+   * (404/413/415) ride through as the server's own code and sentence. Like
+   * the reopt (BUG-189), the run's and the stop's own ids come first, and a
+   * call without either is refused here rather than dialed as a URL about no
+   * run or no stop at all.
+   */
+  async uploadPod(
+    runId: string,
+    stopId: string,
+    payload: {
+      image: { uri: string; name: string; type?: string };
+      occurredAt: string;
+      eventId: string;
+      safePlace?: string;
+    },
+  ): Promise<ApiOutcome<PodResponse>> {
+    const run = runId.trim();
+    const stop = stopId.trim();
+    if (run.length === 0 || stop.length === 0) {
+      return {
+        status: 'refused',
+        message: 'the POD upload needs the run\'s own id and the stop\'s, and one of them was not given',
+      };
+    }
+    const form = new FormData();
+    // React Native's FormData takes the file as a {uri, name, type} triple and
+    // turns it into the multipart part itself, setting the boundary on the
+    // Content-Type - which is why the request below sends no Content-Type.
+    form.append('image', {
+      uri: payload.image.uri,
+      name: payload.image.name,
+      type: payload.image.type ?? 'image/jpeg',
+    } as unknown as Blob);
+    form.append('occurred_at', payload.occurredAt);
+    form.append('event_id', payload.eventId);
+    // The safe place is optional on the contract; an empty one is not a part,
+    // because a whitespace-only note would be stored as if the courier said it.
+    const safePlace = (payload.safePlace ?? '').trim();
+    if (safePlace.length > 0) {
+      form.append('safe_place', safePlace);
+    }
+    return this.request<PodResponse>(
+      `/runs/${this.escape(run)}/stops/${this.escape(stop)}/pod`,
+      { method: 'POST', form },
+      isPod,
+    );
+  }
+
   /** The outbox: `POST /shifts/{shift_id}/events:batch`. */
   async postDeliveryEvents(
     shiftId: string,
@@ -174,7 +230,7 @@ export class CourierApiClient {
 
   private async request<TData>(
     path: string,
-    options: { method: 'GET' | 'POST'; body?: unknown },
+    options: { method: 'GET' | 'POST'; body?: unknown; form?: FormData },
     shape?: (data: unknown) => boolean,
   ): Promise<ApiOutcome<TData>> {
     const token = await this.getToken();
@@ -183,6 +239,7 @@ export class CourierApiClient {
     }
 
     const hasBody = options.body !== undefined;
+    const hasForm = options.form !== undefined;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
 
@@ -193,9 +250,12 @@ export class CourierApiClient {
         headers: {
           Accept: 'application/json',
           Authorization: `Bearer ${token}`,
+          // A JSON body declares itself. A multipart body does NOT: the
+          // platform sets the Content-Type with the boundary, and a header
+          // set here would strip it and leave the server no part to read.
           ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
         },
-        ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
+        ...(hasForm ? { body: options.form } : hasBody ? { body: JSON.stringify(options.body) } : {}),
         signal: controller.signal,
       });
     } catch {
@@ -262,6 +322,24 @@ function isRun(data: unknown): boolean {
 /** The stops the contract declares: a list. */
 function isStopList(data: unknown): boolean {
   return Array.isArray(data);
+}
+
+/**
+ * The POD answer the contract declares (`PodResponse`): the client event's id,
+ * the stop it proves, the stored bytes' own fingerprint and size, when they
+ * were stored, and whether this call was a replay of an already-stored id
+ * (200) or the first store (201) - both answer the same shape.
+ */
+function isPod(data: unknown): boolean {
+  const body = data as Partial<PodResponse> | undefined;
+  return (
+    typeof body?.event_id === 'string' &&
+    typeof body?.stop_id === 'string' &&
+    typeof body?.sha256 === 'string' &&
+    typeof body?.bytes === 'number' &&
+    typeof body?.stored_at === 'string' &&
+    typeof body?.already_stored === 'boolean'
+  );
 }
 
 /**

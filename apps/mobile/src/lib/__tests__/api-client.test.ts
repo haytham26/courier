@@ -497,3 +497,195 @@ describe('the seeded day', () => {
     expect(calls[0]?.body).toEqual({});
   });
 });
+
+/**
+ * Queue 4f (the trial's #16, the POD endpoint's app half): the proof-of-
+ * delivery photo, `POST /runs/{run_id}/stops/{stop_id}/pod` with the image as
+ * one multipart part and the event's own facts beside it.
+ *
+ * The upload is idempotent on the client's own event id (a replay answers
+ * 200 with the first upload's answer), so this boundary's own contract is
+ * exact: the parts are appended in the contract's names, no Content-Type is
+ * set (the platform sets the boundary), 200 and 201 both answer the shape-
+ * checked `PodResponse`, every refusal the contract declares (404/413/415)
+ * rides through as the server's own code and sentence - and a call without
+ * the run's or the stop's own id is refused before any request is made
+ * (BUG-189's rule).
+ */
+describe('the POD photo upload (queue 4f)', () => {
+  /** A fetch that records the raw body, so a FormData is not JSON.parsed. */
+  function aRawFetch(answers: Answer[]): {
+    impl: typeof fetch;
+    calls: { url: string; init: RequestInit }[];
+  } {
+    const calls: { url: string; init: RequestInit }[] = [];
+    let index = 0;
+    const impl = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const answer = answers[Math.min(index, answers.length - 1)];
+      index += 1;
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      calls.push({ url, init: init ?? {} });
+      if (answer?.networkError !== undefined) {
+        return Promise.reject(answer.networkError);
+      }
+      const status = answer?.status ?? 200;
+      return Promise.resolve({
+        ok: status < 400,
+        status,
+        json:
+          answer?.brokenJson === true
+            ? () => Promise.reject(new Error('the answer was an html page'))
+            : () => Promise.resolve(answer?.body ?? {}),
+      } as Response);
+    };
+    return { impl, calls };
+  }
+
+  /** Captures the FormData's appends: the parts as the platform receives them. */
+  function captureAppends(): { appended: [string, unknown][]; restore: () => void } {
+    const appended: [string, unknown][] = [];
+    const spy = jest.spyOn(FormData.prototype, 'append').mockImplementation((name, value) => {
+      appended.push([name, value]);
+    });
+    return { appended, restore: () => spy.mockRestore() };
+  }
+
+  const aPodAnswer = {
+    event_id: '33333333-3333-4333-8333-333333333333',
+    stop_id: 'stop-2',
+    sha256: 'ab'.repeat(32),
+    bytes: 67,
+    stored_at: '2026-10-31T08:15:00.000Z',
+    already_stored: false,
+  };
+
+  const anImage = { uri: 'file:///cache/pod-photo.jpg', name: 'pod-photo.jpg', type: 'image/jpeg' };
+  const aPayload = {
+    image: anImage,
+    occurredAt: '2026-10-31T08:14:59.000Z',
+    eventId: '33333333-3333-4333-8333-333333333333',
+  };
+
+  it('posts the image, the moment and the event id as multipart parts, with no Content-Type the boundary would be stripped from', async () => {
+    const { impl, calls } = aRawFetch([{ status: 201, body: aPodAnswer }]);
+    const { appended, restore } = captureAppends();
+    try {
+      const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+      expect(outcome.status).toBe('ok');
+      expect(calls[0]?.url).toBe('http://api.test/runs/run-1/stops/stop-2/pod');
+      expect(calls[0]?.init.method).toBe('POST');
+      const headers = (calls[0]?.init.headers ?? {}) as Record<string, string>;
+      expect(headers['Authorization']).toBe('Bearer token-1');
+      expect(headers['Accept']).toBe('application/json');
+      expect(headers['Content-Type']).toBeUndefined();
+      expect(calls[0]?.init.body).toBeInstanceOf(FormData);
+      expect(appended).toEqual([
+        ['image', { uri: anImage.uri, name: 'pod-photo.jpg', type: 'image/jpeg' }],
+        ['occurred_at', '2026-10-31T08:14:59.000Z'],
+        ['event_id', '33333333-3333-4333-8333-333333333333'],
+      ]);
+    } finally {
+      restore();
+    }
+  });
+
+  it('adds the safe place as its own part only when the courier said one', async () => {
+    const { impl } = aRawFetch([{ status: 201, body: aPodAnswer }]);
+    const withPlace = captureAppends();
+    try {
+      await aClient(impl).uploadPod('run-1', 'stop-2', { ...aPayload, safePlace: 'behind the gate' });
+      expect(withPlace.appended).toEqual([
+        ['image', { uri: anImage.uri, name: 'pod-photo.jpg', type: 'image/jpeg' }],
+        ['occurred_at', '2026-10-31T08:14:59.000Z'],
+        ['event_id', '33333333-3333-4333-8333-333333333333'],
+        ['safe_place', 'behind the gate'],
+      ]);
+    } finally {
+      withPlace.restore();
+    }
+
+    const { impl: impl2 } = aRawFetch([{ status: 201, body: aPodAnswer }]);
+    const withoutPlace = captureAppends();
+    try {
+      await aClient(impl2).uploadPod('run-1', 'stop-2', { ...aPayload, safePlace: '   ' });
+      // An empty safe place is not a part: the contract's field is optional,
+      // and a whitespace-only one would be stored as if said.
+      expect(withoutPlace.appended.filter(([name]) => name === 'safe_place')).toEqual([]);
+    } finally {
+      withoutPlace.restore();
+    }
+  });
+
+  it('answers both the 201 (stored) and the 200 (a replay of the same event id) as the declared shape', async () => {
+    for (const status of [201, 200]) {
+      const { impl } = aRawFetch([{ status, body: aPodAnswer }]);
+
+      const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+      expect(outcome).toEqual({ status: 'ok', data: aPodAnswer });
+    }
+  });
+
+  it('refuses a 200/201 that is not the declared shape', async () => {
+    const { impl } = aRawFetch([{ status: 201, body: { event_id: aPodAnswer.event_id, stop_id: 'stop-2' } }]);
+
+    const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+    expect(outcome.status).toBe('server');
+    if (outcome.status === 'server') {
+      expect(outcome.code).toBe(201);
+    }
+  });
+
+  it('reads the contract\u2019s refusals exactly as declared: 413, 415 and 404 with the server\u2019s own sentence', async () => {
+    for (const [code, message] of [
+      [413, 'the image is over the 10 MiB cap'],
+      [415, 'the bytes are not a JPEG, PNG or HEIC image'],
+      [404, 'no such stop on this run'],
+    ] as const) {
+      const { impl } = aRawFetch([{ status: code, body: { message } }]);
+
+      const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+      expect(outcome).toEqual({ status: 'server', code, message });
+    }
+  });
+
+  it('classifies 401 and 403 as unauthorized', async () => {
+    for (const code of [401, 403]) {
+      const { impl } = aRawFetch([{ status: code, body: { message: 'no session' } }]);
+
+      const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+      expect(outcome).toEqual({ status: 'unauthorized' });
+    }
+  });
+
+  it('classifies a gone network as offline', async () => {
+    const { impl } = aRawFetch([{ networkError: new Error('radio off') }]);
+
+    const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+    expect(outcome).toEqual({ status: 'offline' });
+  });
+
+  it('refuses an empty run or stop id before any request is made (BUG-189\u2019s rule)', async () => {
+    const { impl, calls } = aRawFetch([{ status: 201, body: aPodAnswer }]);
+
+    const noRun = await aClient(impl).uploadPod('  ', 'stop-2', aPayload);
+    const noStop = await aClient(impl).uploadPod('run-1', '', aPayload);
+
+    expect(noRun.status).toBe('refused');
+    expect(noStop.status).toBe('refused');
+    expect(calls.length).toBe(0);
+  });
+
+  it('escapes the run and stop ids so they cannot move the request', async () => {
+    const { impl, calls } = aRawFetch([{ status: 201, body: aPodAnswer }]);
+
+    await aClient(impl).uploadPod('run 1/x', 'stop 2/y', aPayload);
+
+    expect(calls[0]?.url).toBe('http://api.test/runs/run%201%2Fx/stops/stop%202%2Fy/pod');
+  });
+});
