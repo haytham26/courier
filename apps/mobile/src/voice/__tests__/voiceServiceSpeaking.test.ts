@@ -28,7 +28,45 @@ jest.mock(
   'react-native-sherpa-onnx/stt',
   () => ({
     createSTT: jest.fn(() => ({ destroy: jest.fn() })),
-    detectSttModel: jest.fn(() => ({ success: true })),
+    detectSttModel: jest.fn(() => ({ success: true, modelType: 'transducer' })),
+    getOnlineTypeOrNull: jest.fn((detected: string | undefined) =>
+      detected === 'whisper' ? null : ('transducer' as const),
+    ),
+    createStreamingSTT: jest.fn(() =>
+      Promise.resolve({
+        createStream: jest.fn(() =>
+          Promise.resolve({
+            acceptWaveform: jest.fn(() => Promise.resolve()),
+            inputFinished: jest.fn(() => Promise.resolve()),
+            decode: jest.fn(() => Promise.resolve()),
+            isReady: jest.fn(() => Promise.resolve(false)),
+            getResult: jest.fn(() => Promise.resolve({ text: '', tokens: [], timestamps: [] })),
+            isEndpoint: jest.fn(() => Promise.resolve(false)),
+            processAudioChunk: jest.fn(() =>
+              Promise.resolve({ result: { text: '', tokens: [], timestamps: [] }, isEndpoint: false }),
+            ),
+            reset: jest.fn(() => Promise.resolve()),
+            release: jest.fn(() => Promise.resolve()),
+          }),
+        ),
+        destroy: jest.fn(() => Promise.resolve()),
+      }),
+    ),
+  }),
+  { virtual: true },
+);
+jest.mock(
+  'react-native-sherpa-onnx/audio',
+  () => ({
+    // The microphone answers with nothing rather than a crash from the native
+    // registry (A2: the streaming ear's own seam).
+    createPcmLiveStream: jest.fn(() => ({
+      start: jest.fn(() => Promise.resolve()),
+      stop: jest.fn(() => Promise.resolve()),
+      onData: jest.fn(() => () => undefined),
+      onError: jest.fn(() => () => undefined),
+    })),
+    decodeAudioFileToFloatSamples: jest.fn(() => Promise.resolve({ samples: [], sampleRate: 16000 })),
   }),
   { virtual: true },
 );
@@ -98,6 +136,10 @@ describe('the voice machine during an answer (BUG-083)', () => {
     await voiceService.initialize(CONFIG, CALLBACKS);
 
     voiceService.onEarbudEvent({ type: 'long', timestamp: 1 });
+    // A2: the press opens the ear before the state moves (detect, create,
+    // start the mic), so the listening settles after those promises rather
+    // than on the tick of the press. The claim and the capture are one act.
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(voiceService.getState()).toBe('listening');
   });
