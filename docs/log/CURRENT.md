@@ -1,9 +1,8 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `3400082` (PR #218, release hygiene;
-ahead of it `8333043` = PR #208). Queue 4f = PR #216 (ALL_GREEN on 4f24692d,
-run 42176913133, 16/16 flows incl. pod.yaml) merging next; 4g = PR #217 in
-flight. Lead session 14, 2026-11-05/06.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `938cf26` (PR #216, queue 4f — the POD photo on the delivered confirm);
+ahead of it `3400082` = PR #218 (release hygiene), `8333043` = PR #208).
+Queue 4g = PR #217 in flight. Lead session 14, 2026-11-05/06.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -1071,3 +1070,14 @@ via the API with sha, evidence comment #issuecomment-6677182640; tag
 proof). PR #205 (ef46eac, BUG-218) landed on main in between; the pod branch
 re-merged origin/main against it.
 
+**Queue 4f MERGED: PR #216, merge commit 938cf26 on head 58bb568c.** Final head
+58bb568c (re-merged on 3400082): run 42187080042 — Maestro api-34 SUCCESS
+(flows.txt 16/16 pass incl. pod.yaml) and api-35 SUCCESS, APK + record + all
+static SUCCESS; A1 failed on a runner flake (gradle NDK install: "Archive is
+not a ZIP archive") before any app boot — §17-excepted with quoted lines on
+the PR (#6681191561); the same code's A1 was green on run 42176913133
+(4f24692d). Two flow/code root causes fixed along the way: the swipe's
+`point` inside the `from:` selector (7d5716d) and the canned JPEG as a whole
+valid 380-char base64, 284 bytes FFD8FF..FFD9 (4f24692d — run 42171314486 had
+answered "bad base-64"). Ritual: tag `archive/feat/trial-pod-photo` @
+58bb568c, branch deleted (ls-remote proof).
