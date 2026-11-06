@@ -1,0 +1,81 @@
+name: ZAP nightly DAST
+
+# The nightly DAST of the security research (A6, row 65): OWASP ZAP scans the
+# staging API every night, so a regression in the API's input validation,
+# auth or headers is found by a machine, not by the first courier's customer.
+# The scan is NON-BLOCKING by decision (research section 6, item 8): the run
+# reports its findings as an artifact and the findings are triaged into tasks -
+# a ZAP scan against a database-backed API will try injections, so it runs
+# only against staging, whose database is throwaway.
+#
+# The domain comes from the repository secret COURIER_STAGING_DOMAIN and
+# lives ONLY in the steps' own `env:` (BUG-100: never at the job level, never
+# in a command line). Until the founder sets it (FOUNDER_TODO - the same
+# secret the deploy and smoke legs wait for) the run skips with a notice
+# naming exactly what is missing. A scan that silently did nothing would be
+# worse than no scan.
+
+on:
+  schedule:
+    # Nightly, 18:35 UTC = 07:35 NZDT (November, UTC+13): after the smoke
+    # (07:05) and the batch jobs, before the first shift.
+    - cron: "35 18 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: zap-nightly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  zap:
+    name: DAST scan of the staging API
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # The secret is read in THIS step's env only, and the step decides
+      # whether there is anything to scan.
+      - name: The staging secret
+        id: secrets
+        env:
+          COURIER_STAGING_DOMAIN: ${{ secrets.COURIER_STAGING_DOMAIN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${COURIER_STAGING_DOMAIN:-}" ]; then
+            echo "::notice::the nightly ZAP scan is skipped: COURIER_STAGING_DOMAIN is not set (FOUNDER_TODO - the same secret the deploy and smoke legs wait for)"
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      - name: Nothing to scan yet
+        if: steps.secrets.outputs.configured != 'true'
+        run: |
+          echo "::notice::the nightly ZAP DAST is skipped: COURIER_STAGING_DOMAIN is not configured (FOUNDER_TODO)"
+          echo "Until the staging host exists, the verify leg of deploy.yml exercises this same API on the stack it builds on the runner."
+
+      # The edge (Caddy) serves the API at the domain's root. fail_action is
+      # false ON PURPOSE (research decision 8): the scan is non-blocking, its
+      # findings land in the report artifact and are triaged into tasks.
+      - name: ZAP baseline scan of staging
+        if: steps.secrets.outputs.configured == 'true'
+        env:
+          STAGING_URL: https://${{ secrets.COURIER_STAGING_DOMAIN }}
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target-url: ${{ env.STAGING_URL }}
+          fail_action: false
+          report_path: zap-report
+
+      - name: Publish the ZAP report
+        if: always() && steps.secrets.outputs.configured == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: zap-nightly-report
+          path: zap-report
+          retention-days: 14
+          if-no-files-found: warn
