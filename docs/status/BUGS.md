@@ -450,4 +450,4 @@ and it took exactly one re-run of the failed leg, which is what the rule allows.
 Both shapes recorded because they need different owners: A is the app, B is the
 runner, and neither is chased as the other.
 
-**Total Bugs:** 223 | **Open:** 7 | **Fixed:** 181 | **Doing:** 2 | **Testing:** 1 | **Closed:** 2 | **Moved to PARITY:** 30 |
+**Total Bugs:** 224 | **Open:** 7 | **Fixed:** 182 | **Doing:** 2 | **Testing:** 1 | **Closed:** 2 | **Moved to PARITY:** 30 |
