@@ -499,6 +499,35 @@ describe('the seeded day', () => {
 });
 
 /**
+ * A fetch that records the raw body, so a FormData is not JSON.parsed. Shared by
+ * the two multipart describes (the import of queue 4e and the POD photo of
+ * queue 4f): both assert the parts at append and the headers as sent.
+ */
+function aRawFetch(answers: Answer[]): { impl: typeof fetch; calls: { url: string; init: RequestInit }[] } {
+  const calls: { url: string; init: RequestInit }[] = [];
+  let index = 0;
+  const impl = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const answer = answers[Math.min(index, answers.length - 1)];
+    index += 1;
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    calls.push({ url, init: init ?? {} });
+    if (answer?.networkError !== undefined) {
+      return Promise.reject(answer.networkError);
+    }
+    const status = answer?.status ?? 200;
+    return Promise.resolve({
+      ok: status < 400,
+      status,
+      json:
+        answer?.brokenJson === true
+          ? () => Promise.reject(new Error('the answer was an html page'))
+          : () => Promise.resolve(answer?.body ?? {}),
+    } as Response);
+  };
+  return { impl, calls };
+}
+
+/**
  * Queue 4e (the trial's #6, ADR-025's app half): the spreadsheet import,
  * `POST /shifts/{shift_id}/import` with the file as one multipart part.
  *
@@ -509,31 +538,6 @@ describe('the seeded day', () => {
  * is classified - with an empty shift id refused before any request is made.
  */
 describe('the spreadsheet import (queue 4e)', () => {
-  /** A fetch that records the raw body, so a FormData is not JSON.parsed. */
-  function aRawFetch(answers: Answer[]): { impl: typeof fetch; calls: { url: string; init: RequestInit }[] } {
-    const calls: { url: string; init: RequestInit }[] = [];
-    let index = 0;
-    const impl = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-      const answer = answers[Math.min(index, answers.length - 1)];
-      index += 1;
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-      calls.push({ url, init: init ?? {} });
-      if (answer?.networkError !== undefined) {
-        return Promise.reject(answer.networkError);
-      }
-      const status = answer?.status ?? 200;
-      return Promise.resolve({
-        ok: status < 400,
-        status,
-        json:
-          answer?.brokenJson === true
-            ? () => Promise.reject(new Error('the answer was an html page'))
-            : () => Promise.resolve(answer?.body ?? {}),
-      } as Response);
-    };
-    return { impl, calls };
-  }
-
   const anImportAnswer = {
     shift_id: 'shift-1',
     imported: 2,
