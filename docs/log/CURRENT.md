@@ -1,10 +1,12 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `a2ee7d3` (PR #240, the log PR);
-ahead of it `ef12d64` = PR #239 (audit item 4a), `4851380` = PR #217 (queue 4g),
-`938cf26` = PR #216 (queue 4f), `3400082` = PR #218 (release hygiene). Lead
-session 14, 2026-11-05/07. In flight: **D1's app side** on
-`feat/d1-voice-turn-flow` (BUG-231). Next: D1 (founder decision D1 — the live voice assistant in the
+**Week:** 2026-W44. **Local `main` == `origin/main` == `85606a0` (PR #242, audit item 4c,
+BUG-231 — the backend's row; this branch's D1 row was renumbered BUG-233 after the
+merge); ahead of it `c382c36` = PR #241 (item 4b), `a2ee7d3` = PR #240 (the log PR),
+`ef12d64` = PR #239 (item 4a), `4851380` = PR #217 (queue 4g), `938cf26` = PR #216
+(queue 4f), `3400082` = PR #218 (release hygiene). Lead session 14, 2026-11-05/07.
+In flight: **D1's app side** on `feat/d1-voice-turn-flow` (BUG-233). Next: D1
+(founder decision D1 — the live voice assistant in the
 shipped build, app side), B5 + Play internal-testing prep, A3's app side, §22's
 app side, P4 baselines, P7 acceptance on two screen sizes — to the §6 Definition
 of Done.**
@@ -1125,7 +1127,7 @@ day/night/small/large/200%); then **P7** acceptance on the CI emulator at two
 screen sizes, scorecard ≥ 8/10, v1.0.0 (the release itself is founder-gated) —
 to the §6 Definition of Done.
 
-**D1's app side in flight (2026-11-07, BUG-231 filed, branch `feat/d1-voice-turn-flow`).**
+**D1's app side in flight (2026-11-07, BUG-233 filed, branch `feat/d1-voice-turn-flow`).**
 The audit against founder decision D1 (FINAL_PROMPT §2.3: the live voice
 assistant, full conversation, essential in the shipped version and working
 throughout the shift) found the app side unwired: no screen ever passed a
