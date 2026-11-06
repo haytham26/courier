@@ -740,6 +740,12 @@ other crews' work, not mine to drop. Lesson recorded: never pair a `git stash pu
 files with a `git stash pop` in one command; for untracked files use `Move-Item` aside/back
 instead (that is what the C14 red proof ended up using).
 
+## 2026-11-06: #210 merged as a0674da; origin/main into `dependabot-cron-223` (0a8a955)
+
+- The previous stack PR merged as `a0674da`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `dependabot-cron-223` (was `eb75e35`) carries origin/main via `0a8a955` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 214 bug rows (open 7 · doing 2 · testing 1 · fixed 172 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#210 (C10, BUG-222) merged as a0674da; tag archive/action-digest-pins @ 6a71ee9, branch deleted.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
