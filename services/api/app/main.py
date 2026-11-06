@@ -80,6 +80,7 @@ from .repo import (
     RunRecord,
     get_repo,
 )
+from .request_guards import install_request_guards
 from .responses import (
     DemoRunResponse,
     EntitlementResponse,
@@ -129,6 +130,10 @@ app = FastAPI(title="Courier Copilot", version=os.environ.get("APP_VERSION", "0.
 # on every http request, the decorated routes below check their own tighter
 # limits, and /healthz is exempt. The tests disable the limiter (conftest).
 install_rate_limiter(app)
+
+# The edge guards (BUG-230): CORS allow-list, trusted-host check and the
+# global request-size cap. The security headers are the middleware below.
+install_request_guards(app)
 
 # The unhandled-error trail the PLAYBOOK triage reads (RUNBOOK section 10).
 logger = logging.getLogger("courier_api")

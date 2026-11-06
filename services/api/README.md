@@ -54,6 +54,15 @@ gets a 429 with a `Retry-After` header. The store is in-memory and
 per-process: with more than one uvicorn worker, move the limiter to its
 Redis backend.
 
+The edge guards (`app/request_guards.py`, BUG-230) — the security headers
+are the `hardening_headers` middleware in `app/main.py`:
+
+| Variable | Default | What it is |
+|---|---|---|
+| `API_CORS_ALLOW_ORIGINS` | empty (no browser origin may call the API) | the comma-separated CORS allow-list; the mobile app is native and sends no `Origin`, so only a web dashboard's origin belongs here |
+| `API_ALLOWED_HOSTS` | `COURIER_DOMAIN` + the compose-internal names; `*` only when neither is set (local dev) | the only `Host` headers the API answers (trusted-host check; the port is not part of the match) |
+| `API_MAX_REQUEST_BYTES` | `11534336` (11 MiB) | the global request-size cap: a declared `Content-Length` over it is a 413 before the body is read (the 10 MiB POD photo plus its multipart framing); each route keeps its own tighter read cap |
+
 ## The gates
 
 ```
