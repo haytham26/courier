@@ -212,16 +212,17 @@ class TestAnonymousGetsNothing:
     def test_the_protected_routes_all_answer_401(self, anonymous_client: TestClient, owned_run: tuple) -> None:
         run_id, shift_id, stop_id = owned_run
         event_id = uuid.uuid4()
-        attempts = [
-            ("GET", f"/runs/{run_id}", {}),
-            ("GET", "/runs", {}),
-            ("GET", f"/shifts/{shift_id}/stops", {}),
-            ("POST", f"/shifts/{shift_id}/intake", {"json": {"text": "x"}}),
-            ("POST", f"/shifts/{shift_id}/events:batch", {"json": []}),
+        gets = [f"/runs/{run_id}", "/runs", f"/shifts/{shift_id}/stops"]
+        posts = [
+            (f"/shifts/{shift_id}/intake", {"text": "x"}),
+            (f"/shifts/{shift_id}/events:batch", []),
         ]
-        for method, path, kwargs in attempts:
-            answer = anonymous_client.request(method, path, **kwargs)  # type: ignore[arg-type]
-            assert answer.status_code == 401, f"{method} {path} -> {answer.status_code}"
+        for path in gets:
+            answer = anonymous_client.get(path)
+            assert answer.status_code == 401, f"GET {path} -> {answer.status_code}"
+        for path, body in posts:
+            answer = anonymous_client.post(path, json=body)
+            assert answer.status_code == 401, f"POST {path} -> {answer.status_code}"
 
         # The one grant-authenticated route (ADR-011 §2 - the image loader
         # sends no bearer): anonymous gets a 404 on a bogus grant, never the
