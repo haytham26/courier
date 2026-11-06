@@ -63,7 +63,12 @@ class RunResponse(BaseModel):
 
 
 class DemoStopResponse(BaseModel):
-    """One stop of the seeded demo day (`demo_day_body`)."""
+    """One stop of the seeded demo day (`demo_day_body`).
+
+    BUG-236: the seeded day carries the day-one fields, so the seed's own
+    answer carries them too - the type and the time window ride beside the
+    priority, exactly as the contract's `Stop` does.
+    """
 
     id: uuid.UUID
     address: str
@@ -71,6 +76,9 @@ class DemoStopResponse(BaseModel):
     lon: float
     priority: bool
     parcels: int
+    type: Literal["delivery", "pickup"] = "delivery"
+    window_start: datetime | None = None
+    window_end: datetime | None = None
 
 
 class DemoRunResponse(BaseModel):

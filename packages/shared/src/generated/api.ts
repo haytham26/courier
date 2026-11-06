@@ -81,6 +81,9 @@ export interface DemoStop {
   lon: number;
   priority?: boolean;
   parcels?: number;
+  type?: 'delivery' | 'pickup';
+  window_start?: string;
+  window_end?: string;
 }
 
 export interface Entitlement {
