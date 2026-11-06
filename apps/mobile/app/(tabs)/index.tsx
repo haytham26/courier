@@ -10,8 +10,8 @@
  * The copy is plain New Zealand English, there is no emoji anywhere, and
  * every control has an accessibility label and a role.
  */
-import React, { useCallback, useEffect, useMemo } from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Camera, Map as MapView, Marker } from '@maplibre/maplibre-react-native';
@@ -25,9 +25,11 @@ import {
   StopPin,
   TopPills,
   useChosen,
+  type NoteChip,
 } from '@/components/chosen';
 import { errorMessage } from '@/lib/errors';
 import { hapticFor } from '@/motion/haptics';
+import { FAILURE_REASONS, boundReason } from '@/runs/failureReasons';
 import { useRun } from '@/maps/runState';
 import { getCourierStyle } from '@/maps/styles';
 import type { Stop } from '@/maps/stops';
@@ -56,6 +58,13 @@ const TODAY_NOTE_CHIPS = [
   { icon: 'cube' as const, tone: 'info2' as const, label: 'Shelf B3' },
 ];
 
+/**
+ * Queue 4c (the trial's #21, ADR-024): the chip the next stop's own type adds
+ * when the run calls that stop a pickup. A delivery adds nothing - the run's
+ * own word is the only thing that names the stop.
+ */
+const PICKUP_CHIP: NoteChip = { icon: 'cube', tone: 'info2', label: 'Pickup' };
+
 /** The clock time the run finishes at, as an estimate the courier can trust. */
 const finishTime = (stopsLeft: number): string => {
   const at = new Date(Date.now() + stopsLeft * MINUTES_PER_STOP * 60 * 1000);
@@ -66,6 +75,71 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  // Queue 4b: the failed delivery's reason picker, over the sheet.
+  failScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.space20,
+  },
+  failSheet: {
+    width: '100%',
+    // Bounded to the screen, not the content: the picker is a full-screen
+    // overlay (a sibling of the bottom sheet), and its own ScrollView takes
+    // whatever height is left, so a short screen scrolls the list instead of
+    // clipping the title off the top (run 42098860803's api-34/api-35 legs).
+    maxHeight: '92%',
+    backgroundColor: 'rgba(28,28,30,0.98)',
+    borderRadius: radii.button,
+    padding: spacing.space20,
+    gap: spacing.space12,
+  },
+  failScrollContent: {
+    gap: spacing.space12,
+  },
+  failTitle: {
+    fontSize: typography.emphasis.size,
+    lineHeight: typography.emphasis.lineHeight,
+    fontWeight: '600',
+  },
+  failStop: {
+    fontSize: typography.body.size,
+  },
+  failReasons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.space8,
+  },
+  failReason: {
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.space12,
+    paddingVertical: spacing.space8,
+  },
+  failNote: {
+    borderWidth: 1,
+    borderRadius: radii.button,
+    paddingHorizontal: spacing.space12,
+    paddingVertical: spacing.space12,
+    fontSize: typography.body.size,
+  },
+  failActions: {
+    flexDirection: 'row',
+    gap: spacing.space12,
+  },
+  failButton: {
+    flex: 1,
+    height: touch.minimum,
+    borderRadius: radii.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  failConfirm: {},
   map: {
     flex: 1,
   },
@@ -234,9 +308,53 @@ export default function TodayScreen() {
     hapticFor('confirm');
   }, []);
 
-  const handleFail = useCallback((_stop: Stop) => {
+  /**
+   * The failed delivery opens the picker, and the picker records it (queue
+   * 4b, ADR-023).
+   *
+   * A failed outcome without its reason is the gap the audit named: the status
+   * says "failed" and nothing says why, so the office cannot ask. The picker
+   * takes the courier's own word (their list, or their sentence), and the
+   * reason rides the event the store writes - which is what the server's own
+   * rule requires and what the outbox sends.
+   */
+  const [failing, setFailing] = useState<Stop | null>(null);
+  const [failNote, setFailNote] = useState('');
+  // The word the courier chose from the list, or null when they are saying it
+  // in their own sentence instead.
+  const [failReasonId, setFailReasonId] = useState<string | null>(null);
+  const chosenReason = useMemo(
+    () => FAILURE_REASONS.find((reason) => reason.id === failReasonId) ?? null,
+    [failReasonId],
+  );
+  const handleFail = useCallback((stop: Stop) => {
     hapticFor('error');
+    setFailNote('');
+    setFailReasonId(null);
+    setFailing(stop);
   }, []);
+  const handleFailDismiss = useCallback(() => {
+    setFailing(null);
+    setFailNote('');
+    setFailReasonId(null);
+  }, []);
+  const boundedReason = useMemo(
+    () => boundReason(chosenReason, failNote),
+    [chosenReason, failNote],
+  );
+  const handleFailConfirm = useCallback(() => {
+    if (failing === null || boundedReason === null) {
+      return;
+    }
+    hapticFor('error');
+    run.markFailed(failing, {
+      reason: boundedReason,
+      ...(failNote.trim().length === 0 || chosenReason !== null ? {} : { utterance: failNote.trim() }),
+    });
+    setFailing(null);
+    setFailNote('');
+    setFailReasonId(null);
+  }, [failing, boundedReason, failNote, chosenReason, run]);
 
   // The Go starts the drive: the command zooms the drive camera to the next
   // stop, and the router hands the courier to the driving screen.
@@ -367,7 +485,16 @@ export default function TodayScreen() {
                     {nextStop.address}
                   </Text>
                   <View style={styles.chips}>
-                    <NoteChips chips={TODAY_NOTE_CHIPS} testID="today-notes" />
+                    {/* Queue 4c: the next stop's own type rides its card - a
+                        pickup the run gave the stop is chipped as itself. */}
+                    <NoteChips
+                      chips={
+                        nextStop !== null && nextStop.type === 'pickup'
+                          ? [...TODAY_NOTE_CHIPS, PICKUP_CHIP]
+                          : TODAY_NOTE_CHIPS
+                      }
+                      testID="today-notes"
+                    />
                   </View>
                 </View>
                 <Pressable
@@ -455,7 +582,7 @@ export default function TodayScreen() {
               <Pressable
                 role="button"
                 accessibilityLabel={`Mark ${nextStop.address} failed`}
-                accessibilityHint="Records the failed delivery"
+                accessibilityHint="Records the failed delivery, with its reason"
                 onPress={() => handleFail(nextStop)}
                 testID="today-fail"
                 style={[styles.ghostButton, ghost(t.colors)]}
@@ -465,8 +592,105 @@ export default function TodayScreen() {
               </Pressable>
             </View>
           ) : null}
+
         </ScrollView>
       </BottomSheet>
+
+      {/* Queue 4b (ADR-023): the failed delivery's reason. The courier's
+          own list first, then their own sentence for the case the list
+          does not carry, and a record that is only armed when there is a
+          reason - the server refuses a failed outcome without one, and the
+          phone must not send it.
+
+          The picker is a full-screen overlay, a SIBLING of the bottom sheet
+          and not a child of its ScrollView: rendered inside the scroll it
+          centred itself in the scrolled content, so after the courier raised
+          the sheet to the Fail button the picker's title clipped off the top
+          of a short screen and its first reasons were unreachable (run
+          42098860803's api-34 and api-35 legs failed exactly there). Its own
+          content scrolls within a bounded height, so every reason stays
+          reachable on the smallest screen the emulator runs. */}
+      {failing === null ? null : (
+        <View style={styles.failScrim} testID="today-fail-scrim">
+          <View style={styles.failSheet} testID="today-fail-sheet">
+            <ScrollView
+              testID="today-fail-scroll"
+              contentContainerStyle={styles.failScrollContent}
+            >
+              <Text style={[styles.failTitle, { color: t.colors.label }]}>Why did it fail?</Text>
+                <Text style={[styles.failStop, { color: t.colors.secondaryLabel }]}>
+                  {`${failing.address}, ${failing.suburb}`}
+                </Text>
+                <View style={styles.failReasons}>
+                  {FAILURE_REASONS.map((reason) => (
+                    <Pressable
+                      key={reason.id}
+                      role="radio"
+                      accessibilityState={chosenReason?.id === reason.id ? { selected: true } : undefined}
+                      accessibilityLabel={reason.label}
+                      onPress={() => setFailReasonId(reason.id)}
+                      testID={`today-fail-reason-${reason.id}`}
+                      style={[
+                        styles.failReason,
+                        {
+                          borderColor: chosenReason?.id === reason.id ? t.colors.accent : t.colors.separator,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color: chosenReason?.id === reason.id ? t.colors.accent : t.colors.label,
+                          fontWeight: chosenReason?.id === reason.id ? '600' : '400',
+                        }}
+                      >
+                        {reason.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <TextInput
+                  value={failNote}
+                  onChangeText={setFailNote}
+                  placeholder="Or say it in your own words"
+                  accessibilityLabel="The reason in your own words"
+                  testID="today-fail-note"
+                  placeholderTextColor={t.colors.secondaryLabel}
+                  style={[styles.failNote, { color: t.colors.label, borderColor: t.colors.separator }]}
+                />
+                <View style={styles.failActions}>
+                  <Pressable
+                    role="button"
+                    accessibilityLabel="Close without recording"
+                    onPress={handleFailDismiss}
+                    testID="today-fail-dismiss"
+                    style={[styles.failButton, { borderColor: t.colors.separator }]}
+                  >
+                    <Text style={{ color: t.colors.label }}>Not now</Text>
+                  </Pressable>
+                  <Pressable
+                    role="button"
+                    accessibilityLabel="Record the failed delivery"
+                    accessibilityHint={boundedReason === null ? 'Choose a reason first' : undefined}
+                    accessibilityState={boundedReason === null ? { disabled: true } : undefined}
+                    onPress={handleFailConfirm}
+                    testID="today-fail-confirm"
+                    style={[
+                      styles.failButton,
+                      styles.failConfirm,
+                      {
+                        backgroundColor: boundedReason === null ? t.colors.fill : t.colors.danger,
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: boundedReason === null ? t.colors.secondaryLabel : t.colors.onAccent }}>
+                      Record failure
+                    </Text>
+                  </Pressable>
+                </View>
+            </ScrollView>
+          </View>
+        </View>
+        )}
     </SafeAreaView>
   );
 }

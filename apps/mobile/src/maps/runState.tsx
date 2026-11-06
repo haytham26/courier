@@ -29,9 +29,32 @@ import { inMemoryMarkStore } from '@/run/inMemoryMarkStore';
 import { noDayStore, useRunDay } from '@/run/useRunDay';
 import type { StoreSource } from '@/run/useRunDay';
 import type { RunDay } from '@/run/useRunDay';
-import type { MarkStore, RunDayStore } from '@/run/types';
+import type { MarkStore, RouteOrderEntry, RunDayStore } from '@/run/types';
 
 import type { Stop } from './stops';
+
+/**
+ * The failed write, on the store that carries it.
+ *
+ * Only the app's own run store records the reason (an in-memory marks store
+ * has no event log), so this is the check: a build whose store is not the run
+ * store says so, rather than pretending a delivery was recorded.
+ */
+async function writeFailed(
+  store: MarkStore,
+  stop: Stop,
+  outcome: { reason: string; utterance?: string },
+): Promise<void> {
+  const writes = (store as Partial<MarkStore & { markFailed: unknown }>).markFailed;
+  if (typeof writes !== 'function') {
+    throw new Error('this build has no event log: the failed delivery cannot be recorded');
+  }
+  await (writes as (s: Stop, o: { reason: string; utterance?: string }) => Promise<void>).call(
+    store,
+    stop,
+    outcome,
+  );
+}
 
 /** One delivery the run made: the stop and the moment it landed. */
 export interface DeliveredEvent {
@@ -51,6 +74,11 @@ export interface RunState {
   /** Takes a stop back: the mark of it leaves the run. */
   undoDelivered(stopId: string): void;
   /**
+   * Records a delivery that failed, with the reason the courier chose (queue
+   * 4b, ADR-023).
+   */
+  markFailed(stop: Stop, outcome: { reason: string; utterance?: string }): void;
+  /**
    * The day itself, read through the same store the marks are written to.
    *
    * A1 slice 3: the screens read the run's own stops here, so a screen that
@@ -61,6 +89,11 @@ export interface RunState {
   day: RunDay;
   /** Re-reads the day from the network, when the courier asks for it. */
   refreshDay(): Promise<void>;
+  /**
+   * Applies the order the server's solver worked out to the day the run
+   * holds, and answers whether the run now carries it (queue 4.2).
+   */
+  applyRouteOrder(order: readonly RouteOrderEntry[]): Promise<boolean>;
 }
 
 const RunContext = createContext<RunState | undefined>(undefined);
@@ -158,6 +191,34 @@ export const RunProvider = ({
     [marks, day],
   );
 
+  /**
+   * The failed delivery, written through the store's own path (queue 4b).
+   *
+   * The reason is required: a failed outcome without it is refused by the
+   * server (ADR-023) and would take the whole outbox batch with it, so the
+   * phone refuses it here first and names why. The mark's own write is the
+   * day's number following it (BUG-178).
+   */
+  const markFailed = useCallback(
+    (stop: Stop, outcome: { reason: string; utterance?: string }) => {
+      setDelivered((current) =>
+        current.some((event) => event.stopId === stop.id)
+          ? current
+          : [...current, { stopId: stop.id, sequence: stop.sequence, at: Date.now() }],
+      );
+      void (async () => {
+        try {
+          await writeFailed(marks, stop, outcome);
+          await day.refreshMarks();
+        } catch (error) {
+          setDelivered((current) => current.filter((event) => event.stopId !== stop.id));
+          console.warn(`run: the failure of ${stop.id} could not be written: ${errorMessage(error)}`);
+        }
+      })();
+    },
+    [marks, day],
+  );
+
   const isDelivered = useCallback(
     (stopId: string) => delivered.some((event) => event.stopId === stopId),
     [delivered],
@@ -175,9 +236,34 @@ export const RunProvider = ({
     }
   }, [dayStore]);
 
+  /**
+   * Applies the solver's order through the day's own write path, and the day
+   * is re-read behind it so every screen follows (queue 4.2).
+   */
+  const applyRouteOrder = useCallback(
+    async (order: readonly RouteOrderEntry[]) => {
+      try {
+        return await day.applyRouteOrder(order);
+      } catch (error) {
+        console.warn(`run: the solver\u2019s order could not be applied: ${errorMessage(error)}`);
+        return false;
+      }
+    },
+    [day],
+  );
+
   const value = useMemo(
-    () => ({ delivered, isDelivered, markDelivered, undoDelivered, day, refreshDay }),
-    [delivered, isDelivered, markDelivered, undoDelivered, day, refreshDay],
+    () => ({
+      delivered,
+      isDelivered,
+      markDelivered,
+      undoDelivered,
+      markFailed,
+      day,
+      refreshDay,
+      applyRouteOrder,
+    }),
+    [delivered, isDelivered, markDelivered, undoDelivered, markFailed, day, refreshDay, applyRouteOrder],
   );
 
   return <RunContext.Provider value={value}>{children}</RunContext.Provider>;
