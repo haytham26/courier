@@ -1,19 +1,20 @@
-# BUG-228 evidence — dependabot entries must carry a cooldown
+# BUG-228 evidence — dependabot entries must carry cooldown.default-days >= 7
 
-## The red (Semgrep, Blocking)
-- PR #211 (`dependabot-cron-223`) head `80edbac`: runs 42197669307 and 42197664922, jobs 127824878787 / 127824864516, "Static analysis (Semgrep)" — `package_managers.dependabot.dependabot-missing-cooldown` on `.github/dependabot.yml` (4 findings, one per `updates` entry).
+## The reds
+1. Semgrep (Blocking) on PR #211's head `80edbac`: runs 42197669307 / 42197664922, jobs 127824878787 / 127824864516 — `package_managers.dependabot.dependabot-missing-cooldown`, 4 findings (one per `updates` entry, no `cooldown:` at all).
+2. Dependabot's own config check on PR #212's head `defe324` (which carried the first fix): check-run 127840393944 — `The property '#/updates/N/cooldown' contains additional properties ["days"] outside of the schema when none are allowed` for all 4 entries. The first fix used `cooldown: days: 7`, which Semgrep's missing-cooldown branch accepts but the schema rejects.
 
-## Red first (the extended gate against the pre-fix config)
-`scripts/ci/check-staging-smoke.mjs` was extended to require `cooldown:` + `days: [1-9]` on every entry. Run against `eb75e35`'s copy of `.github/dependabot.yml` in a temp tree: exit 1, four findings:
+## What the two validators actually require (verified 2026-11-06)
+- Semgrep registry rule `package_managers/dependabot.dependabot-missing-cooldown` (semgrep/semgrep-rules, package_managers/dependabot/dependabot-missing-cooldown.yaml): branch 1 fires when an entry has no `cooldown:`; branch 2 fires when `default-days < 7`; branch 3 fires on a non-numeric default-days. Message: add `cooldown` with `default-days: 7`.
+- GitHub's Dependabot options reference (configuration-options-for-dependency-updates, `cooldown` section): parameters are `default-days`, `semver-major-days`, `semver-minor-days`, `semver-patch-days`, `include`, `exclude`. There is no `days` key.
+So the only shape that satisfies both is `cooldown: { default-days: 7 }`.
 
-```
-- a dependabot entry has no cooldown (BUG-228: - package-ecosystem: github-actions ...)
-- a dependabot entry has no cooldown (BUG-228: - package-ecosystem: npm ...)
-- a dependabot entry has no cooldown (BUG-228: - package-ecosystem: uv ...)
-- a dependabot entry has no cooldown (BUG-228: - package-ecosystem: uv ...)
-```
+## Red first (the extended gate against both bad shapes)
+`scripts/ci/check-staging-smoke.mjs` now requires `cooldown:` + `default-days: >= 7` per entry and fails on a bare `days:` key:
+- against `eb75e35`'s dependabot.yml (no cooldown): exit 1, four `no cooldown.default-days (BUG-228: ...)` findings.
+- against `e6a1187`'s dependabot.yml (bare `days: 7`): exit 1, same four findings.
 
 ## Green after
-- `cooldown: days: 7` on all four entries (`.github/dependabot.yml`, with a header comment).
-- Gate passes on the real tree; `node --test scripts/ci/__tests__/check-staging-smoke.test.mjs` 15/15 (new case: an entry without a cooldown fails, naming BUG-228).
-- Semgrep itself is the CI authority (pinned semgrep==1.182.1); the red clears on the next run of PR #211's pushed head — that CI run is the Semgrep evidence, not claimed here.
+- `cooldown: default-days: 7` on all four entries in `.github/dependabot.yml` (+ header comment naming both validators).
+- Gate passes on the real tree; `node --test scripts/ci/__tests__/check-staging-smoke.test.mjs` 17/17 (new cases: no cooldown; default-days < 7; bare `days:` key).
+- Semgrep (sast job) and the Dependabot config check clearing are the next CI run's evidence on PR #212's pushed head — not claimed here.

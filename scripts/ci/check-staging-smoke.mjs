@@ -7,8 +7,10 @@
 //     ecosystems this repo actually has - `github-actions` and `npm` (the
 //     pnpm workspace; the npm ecosystem reads pnpm-lock.yaml) at `/`, and
 //     `uv` for every directory that carries a uv.lock - each on a weekly
-//     schedule AND with a cooldown (BUG-228: Semgrep's
-//     dependabot-missing-cooldown rule is Blocking on a config without one).
+//     schedule AND with a `cooldown: default-days:` of at least 7 (BUG-228:
+//     Semgrep's dependabot-missing-cooldown rule is Blocking on a missing
+//     cooldown or default-days < 7, and Dependabot's schema only accepts
+//     `default-days`, not a bare `days:`).
 //     A dependabot config that watches nothing is a config that proves
 //     nothing.
 //
@@ -73,13 +75,21 @@ if (!existsSync(dependabotPath)) {
     if (!/interval:\s*weekly/.test(b)) {
       problems.push(`a dependabot entry is not on a weekly schedule: ${b.split('\n')[0].trim()}`);
     }
-    // BUG-228: every entry carries a cooldown (Semgrep's
-    // dependabot-missing-cooldown rule is Blocking and fired on a config
-    // without one) - a new release must age before dependabot opens a PR.
-    if (!/cooldown:\s*\n\s+days:\s*[1-9]\d*/.test(b)) {
+    // BUG-228: every entry carries cooldown.default-days >= 7 - the shape both
+    // validators accept. Semgrep's dependabot-missing-cooldown rule (Blocking)
+    // fires on a missing cooldown AND on default-days < 7; Dependabot's own
+    // config check rejects a bare `days:` key as outside the schema.
+    const cd = /cooldown:\s*\n\s+default-days:\s*(\d+)/.exec(b);
+    if (!cd) {
       problems.push(
-        `a dependabot entry has no cooldown (BUG-228: ${b.split('\n')[0].trim()} - add ` +
-          '`cooldown:` with `days: 7`; Semgrep\'s dependabot-missing-cooldown rule is Blocking on this file)',
+        `a dependabot entry has no cooldown.default-days (BUG-228: ${b.split('\n')[0].trim()} - add ` +
+          '`cooldown:` with `default-days: 7`; Semgrep\'s dependabot-missing-cooldown rule is Blocking on this ' +
+          'file, and Dependabot\'s schema rejects a bare `days:` key)',
+      );
+    } else if (parseInt(cd[1], 10) < 7) {
+      problems.push(
+        `a dependabot entry's cooldown.default-days is ${cd[1]}, below 7 (BUG-228: ${b.split('\n')[0].trim()} - ` +
+          "Semgrep's dependabot-missing-cooldown rule requires default-days >= 7)",
       );
     }
   }
@@ -163,4 +173,4 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
-console.log(`${BUG_ID}: dependabot watches github-actions, npm and uv weekly with a 7-day cooldown each (BUG-228), and staging-smoke.yml smokes staging on a cron (secrets step-level only, skip-notice when unset, --no-version by design)`);
+console.log(`${BUG_ID}: dependabot watches github-actions, npm and uv weekly with a 7-day cooldown (default-days, BUG-228) on each entry, and staging-smoke.yml smokes staging on a cron (secrets step-level only, skip-notice when unset, --no-version by design)`);

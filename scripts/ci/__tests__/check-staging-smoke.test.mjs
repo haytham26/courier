@@ -5,7 +5,8 @@
 // Every case is a property of the gate, run against a fabricated repo root in
 // a temp tree: the real tree passes; a missing dependabot.yml fails; a
 // missing ecosystem fails; a uv entry without a uv.lock fails; a non-weekly
-// schedule fails; an entry without a cooldown fails (BUG-228); a missing
+// schedule fails; an entry without a cooldown, with default-days < 7, or with
+// a bare `days:` key fails (BUG-228); a missing
 // workflow fails; a missing cron or dispatch fails;
 // a smoke call without --no-version fails; a job-level or command-line secret
 // fails; a missing skip-notice fails; a tag-pinned action fails; missing
@@ -28,19 +29,19 @@ updates:
     schedule:
       interval: weekly
     cooldown:
-      days: 7
+      default-days: 7
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
     cooldown:
-      days: 7
+      default-days: 7
   - package-ecosystem: uv
     directory: /services/api
     schedule:
       interval: weekly
     cooldown:
-      days: 7
+      default-days: 7
 `;
 
 const SHA = 'a'.repeat(40);
@@ -140,11 +141,29 @@ test('a non-weekly schedule fails', () => {
 
 test('a dependabot entry without a cooldown fails (BUG-228)', () => {
   const answer = tree({
-    dependabot: DEPENDABOT.replace('    cooldown:\n      days: 7\n', ''),
+    dependabot: DEPENDABOT.replace('    cooldown:\n      default-days: 7\n', ''),
     extra: { 'services/api/uv.lock': '' },
   });
   assert.notEqual(answer.code, 0);
-  assert.match(answer.out, /no cooldown \(BUG-228/);
+  assert.match(answer.out, /no cooldown\.default-days \(BUG-228/);
+});
+
+test('a cooldown below 7 days fails (BUG-228, Semgrep requires default-days >= 7)', () => {
+  const answer = tree({
+    dependabot: DEPENDABOT.replace('default-days: 7', 'default-days: 3'),
+    extra: { 'services/api/uv.lock': '' },
+  });
+  assert.notEqual(answer.code, 0);
+  assert.match(answer.out, /below 7 \(BUG-228/);
+});
+
+test('a bare days: cooldown key fails (BUG-228, Dependabot schema rejects it)', () => {
+  const answer = tree({
+    dependabot: DEPENDABOT.replace('      default-days: 7\n', '      days: 7\n'),
+    extra: { 'services/api/uv.lock': '' },
+  });
+  assert.notEqual(answer.code, 0);
+  assert.match(answer.out, /no cooldown\.default-days \(BUG-228/);
 });
 
 test('a missing staging-smoke.yml fails', () => {
