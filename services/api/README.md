@@ -35,6 +35,25 @@ The verification's other settings, with their why:
 | `AUTH_JWKS_INTERNAL_HOSTS` | the hosts a plaintext JWKS hop may use; loopback is always exempt (BUG-131) |
 | `AUTH_JWKS_KEY_FINGERPRINTS` | the pinned sha256 digests of the JWKS's keys, optional — see `infra/env.example` for the command that computes one (BUG-131) |
 
+The per-caller rate limits (`app/rate_limit.py`, BUG-229) are read from the
+environment on every request, so a running process can be re-tuned without a
+redeploy. Buckets are per bearer token, or per client IP when no token is
+present:
+
+| Variable | Default | Applies to |
+|---|---|---|
+| `RATE_LIMIT_DEFAULT` | `120/minute` | every http route without its own limit |
+| `RATE_LIMIT_AUTH` | `20/minute` | `GET /auth/me`, `GET /auth/verify` |
+| `RATE_LIMIT_UPLOADS` | `30/minute` | the POD upload, the manifest photo, the spreadsheet import |
+| `RATE_LIMIT_WEBHOOKS` | `60/minute` | `POST /billing/webhooks/{source}` |
+
+`/healthz` is exempt (the uptime probe holds no token), and the voice
+WebSocket is not rate-limited — slowapi passes non-http scopes through; the
+socket has its own budget (`COPILOT_BUDGET_SECONDS`). A client over a limit
+gets a 429 with a `Retry-After` header. The store is in-memory and
+per-process: with more than one uvicorn worker, move the limiter to its
+Redis backend.
+
 ## The gates
 
 ```

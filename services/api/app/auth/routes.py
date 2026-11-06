@@ -7,9 +7,10 @@ only expose the identity that a verified access token carries.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials
 
+from ..rate_limit import AUTH_LIMIT, limiter
 from ..responses import AuthMeResponse, AuthVerifyResponse
 from .jwks import (
     AuthPrincipal,
@@ -23,7 +24,10 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.get("/me", response_model=AuthMeResponse)
-async def get_me(principal: AuthPrincipal = Depends(get_current_principal)) -> dict:
+@limiter.limit(AUTH_LIMIT)
+async def get_me(
+    request: Request, principal: AuthPrincipal = Depends(get_current_principal)
+) -> dict:
     """Returns the identity behind the presented access token."""
     return {
         "user_id": principal.user_id,
@@ -34,7 +38,9 @@ async def get_me(principal: AuthPrincipal = Depends(get_current_principal)) -> d
 
 
 @router.get("/verify", response_model=AuthVerifyResponse)
+@limiter.limit(AUTH_LIMIT)
 async def verify_session(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     verifier=Depends(get_verifier),
 ) -> dict:

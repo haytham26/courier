@@ -38,6 +38,11 @@ from app.repo import InMemoryRepo, get_repo
 from app.routing import BreakConstraint, RouteRequest, RouteStop, RunConstraints, TimeWindow
 from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 
+# BUG-229: the rate limiter is installed on the shared app, but the suite runs
+# unthrottled - tests/test_rate_limit.py re-enables it per test with fresh
+# tokens, so the module-level buckets start empty there.
+app.state.limiter.enabled = False
+
 COURIER = "driver-7"
 OTHER = "driver-8"
 
