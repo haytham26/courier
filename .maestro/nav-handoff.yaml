@@ -9,10 +9,12 @@ name: 'The drive hands the stop to the nav app (queue 4g, trial #15)'
 # What this flow proves on the emulator: the control rides the drive panel
 # with the run's own stop, and the press takes the hand-off - the pinned
 # emulator image ships Google Maps, so the key-free link is answered and Maps
-# takes the foreground; back then returns to the drive, which is still on the
-# run's stop (the app did not crash and kept its place in the stack). On a
-# phone with no nav app the link is unanswered and the drive simply stays
-# (the hand-off's 'failed' answer is a console warning, by design).
+# takes the foreground ("Make it your map"). Coming back, the app is alive and
+# its run is intact: after dismissing Maps' own location prompt (which appears
+# after `back` from its landing), re-entering the drive from the today screen
+# shows the same stop - "STOP 2 OF 5". On a phone with no nav app the link is
+# unanswered and the drive simply stays (the hand-off's 'failed' answer is a
+# console warning, by design).
 #
 # BUG-185: stop the app FIRST, then clear its state.
 - stopApp
@@ -66,11 +68,12 @@ name: 'The drive hands the stop to the nav app (queue 4g, trial #15)'
 # textRegex field - run 42181802892 - and the YAML key `textRegex` itself is
 # rejected, run 42179171405), so "Don.t allow" matches the pinned image's
 # typographic apostrophe (U+2019) and the ASCII one. Then bring OUR app back
-# to the front with launchApp (no clearState, so the existing task and its
-# drive screen are preserved - run 42197937390 showed that after the dialog
-# is dismissed Maps' own main UI is still foreground, so `back` alone is not a
-# reliable way home), and assert the drive is still on the run's stop: the app
-# did not crash, did not invent a chooser, and kept its place in the stack.
+# to the front with launchApp (no clearState) and RE-ENTER the drive from the
+# today screen (run 42203476851: after the round trip the app came back on its
+# Today tab, not the drive - the drive is a pushed route, so the reliable proof
+# that the app survived the hand-off is driving again from the same run state):
+# the drive comes back and is still on the run's stop - "STOP 2 OF 5" - so the
+# app did not crash, did not invent a chooser, and kept its run.
 - back
 - extendedWaitUntil:
     visible:
@@ -82,6 +85,16 @@ name: 'The drive hands the stop to the nav app (queue 4g, trial #15)'
     optional: true
 - launchApp:
     appId: "com.courier.copilot"
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 15000
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- tapOn:
+    id: "today-go"
 - extendedWaitUntil:
     visible:
       id: "driving-screen"
