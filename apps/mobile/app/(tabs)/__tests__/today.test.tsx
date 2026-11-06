@@ -445,3 +445,58 @@ describe('Today', () => {
     await waitFor(() => expect(seenByTheOtherScreen).toContain(marks[0].stopId));
   });
 });
+
+/**
+ * Queue 4c (the trial's #21, ADR-024): the next stop's own type on Today. The
+ * run calls a stop a pickup, and the next-stop card chips the word - its own
+ * node, so a flow can assert it as itself.
+ */
+describe("the next stop's own type on Today (queue 4c)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    resetSyncAnswers();
+  });
+
+  /** A day store whose next stop is the run's own pickup. */
+  function makePickupDayStore() {
+    const day = e2eDay();
+    const snapshot = {
+      run: day.run,
+      stops: day.stops.map((stop, index) =>
+        index === 0 ? { ...stop, type: 'pickup' as const } : stop,
+      ),
+    };
+    const base = makeDayStore();
+    const theLoad = { status: 'ok' as const, source: 'network' as const, snapshot };
+    return {
+      ...base,
+      load: () => Promise.resolve(theLoad),
+      refresh: () => Promise.resolve(theLoad),
+    };
+  }
+
+  it('chips the pickup the run gives the next stop', async () => {
+    render(
+      <ChosenProvider mode="light">
+        <RunProvider store={makePickupDayStore()}>
+          <BriefContext.Provider value={makeBrief()}>
+            <TodayScreen />
+          </BriefContext.Provider>
+        </RunProvider>
+      </ChosenProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('today-notes-Pickup')).toBeTruthy();
+    });
+  });
+
+  it('leaves a delivery next stop without the pickup chip', async () => {
+    renderScreen();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('today-go')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('today-notes-Pickup')).toBeNull();
+  });
+});
