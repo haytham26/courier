@@ -125,6 +125,9 @@ services:
       # of the auth service, the same one the auth service signs with.
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
       VALKEY_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
+      # BUG-230: the only Host headers the API answers. The edge forwards the
+      # public name; the healthcheck and the compose network use the rest.
+      API_ALLOWED_HOSTS: ${API_ALLOWED_HOSTS:-${COURIER_DOMAIN},api,api_a,api_b,localhost,127.0.0.1,[::1]}
     depends_on:
       postgres:
         condition: service_healthy
