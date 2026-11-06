@@ -56,19 +56,21 @@ name: 'The drive hands the stop to the nav app (queue 4g, trial #15)'
       text: "Make it your map"
     timeout: 30000
 - takeScreenshot: "nav-app-answered"
-# Maps' own location prompt appears a beat AFTER its landing on a fresh
-# emulator (runs 42171396160 / 42175587894 / 42181802892 / 42186483187: a tap
-# fired while the landing was still up warned through even with
-# waitUntilVisible, and `back` does not dismiss the system dialog - the dialog
-# was up when the drive was asserted). So WAIT for the dialog's own button
-# (required: the image is pinned by revision, PR #204, and the runner grants
-# permissions to OUR app only, so Maps always asks - seen on all four runs),
-# tap it, then go back to the drive, which is still on the run's stop: the app
-# did not crash, did not invent a chooser, and kept its place in the stack.
-# Note `text` in a selector is a REGEX in Maestro 2.11 (it deserializes to the
-# selector's textRegex field - run 42181802892 - and the YAML key `textRegex`
-# itself is rejected, run 42179171405), so "Don.t allow" matches the pinned
-# image's typographic apostrophe (U+2019) and the ASCII one.
+# Maps' own location prompt appears only AFTER `back` from its landing on a
+# fresh emulator - run 42192458574 waited 30 s for the dialog with the landing
+# still up and it never came; runs 42171396160 / 42175587894 / 42181802892 /
+# 42186483187 all had it up within seconds of the back (a system dialog also
+# ignores back, which is why the drive was never reached before). So: go back
+# FIRST, then WAIT for the dialog's own button (required - the image is pinned
+# by revision, PR #204, the runner grants permissions to OUR app only, and
+# Maps asked on every observed run), tap it, then back again to the drive,
+# which is still on the run's stop: the app did not crash, did not invent a
+# chooser, and kept its place in the stack. Note `text` in a selector is a
+# REGEX in Maestro 2.11 (it deserializes to the selector's textRegex field -
+# run 42181802892 - and the YAML key `textRegex` itself is rejected, run
+# 42179171405), so "Don.t allow" matches the pinned image's typographic
+# apostrophe (U+2019) and the ASCII one.
+- back
 - extendedWaitUntil:
     visible:
       text: "Don.t allow"
