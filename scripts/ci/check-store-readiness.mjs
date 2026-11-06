@@ -396,6 +396,31 @@ export function checkStoreReadiness(options = {}) {
     }
   }
 
+  // The disclosure has to be SHOWN, not only defined (audit B5): some app
+  // source outside the constants file has to import the constant, so a
+  // screen really renders it before the location permission request.
+  if (backgroundLocation) {
+    const legalFile = join('src', 'constants', 'legal.ts');
+    const appSources = walkFiles(appDir).filter(
+      (file) =>
+        /\.(ts|tsx)$/.test(file) &&
+        file !== legalFile &&
+        !file.split(/[\\/]/).includes('__tests__'),
+    );
+    const shown = appSources.some((file) =>
+      (readText(join(appDir, file)) ?? '').includes('BACKGROUND_LOCATION_DISCLOSURE'),
+    );
+    if (!shown) {
+      add(
+        'BLOCKER',
+        'in-app-disclosure-shown',
+        'The background location disclosure is never shown in the app',
+        'The legal text defines BACKGROUND_LOCATION_DISCLOSURE, but no source file under apps/mobile/app or apps/mobile/src imports it, so no screen renders the disclosure before the location permission request.',
+        'Render BACKGROUND_LOCATION_DISCLOSURE in a screen shown before the location permission request (the drive) and open it from the settings.',
+      );
+    }
+  }
+
   // The documents the store needs.
   for (const document of DOCUMENTS) {
     if (!backgroundLocation && document.id === 'permissions-declaration') continue;

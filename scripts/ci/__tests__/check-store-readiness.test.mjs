@@ -222,6 +222,15 @@ function makeFixture() {
     `${JSON.stringify({ name: 'mobile', dependencies: { expo: '~58.0.14' } }, null, 2)}\n`,
   );
   writeFile(root, 'apps/mobile/src/constants/legal.ts', LEGAL_TS);
+  // A screen that shows the disclosure before the permission request (audit
+  // B5): the check proves the constant is wired into app code, not only
+  // defined in the constants file.
+  writeFile(
+    root,
+    'apps/mobile/app/driving.tsx',
+    "import { BACKGROUND_LOCATION_DISCLOSURE } from '../src/constants/legal';\n" +
+      'export const DISCLOSURE_SHOWN = BACKGROUND_LOCATION_DISCLOSURE;\n',
+  );
   writeFile(root, 'apps/mobile/assets/icon.png', pngBytes(512, 512));
   writeFile(root, 'apps/mobile/assets/android-icon-foreground.png', pngBytes(64, 64));
   writeFile(root, 'apps/mobile/assets/android-icon-background.png', pngBytes(64, 64));
@@ -367,6 +376,22 @@ test('with --release a good APK still passes, so the gate is the artefact and no
     const result = runCheck(root, ['--apk', apk, '--release']);
     assert.equal(result.code, 0, 'the check failed');
     assert.match(result.stdout, /READY/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// Audit B5: the background location disclosure is a Play review rule, and
+// "defined in the constants file" is not "shown in the app" - the check has
+// to fail when no screen imports the constant.
+test('the background location disclosure has to be shown by the app, not only defined', () => {
+  const { root, apk } = makeFixture();
+  try {
+    rmSync(join(root, 'apps/mobile/app/driving.tsx'));
+    const result = runCheck(root, ['--apk', apk]);
+    assert.equal(result.code, 1, 'the check has to fail when no screen shows the disclosure');
+    assert.match(result.stdout, /never shown/i);
+    assert.match(result.stdout, /NOT READY/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

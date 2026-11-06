@@ -17,4 +17,5 @@ export { StopPin, type StopPinProps } from './StopPin';
 export { DeliveredBadge, DELIVERED_BADGE, DELIVERED_CHECK, type DeliveredBadgeProps } from './DeliveredBadge';
 export { ScanOverlay, type ScanOverlayProps } from './ScanOverlay';
 export { ScanMatchSheet, VAN_POSITIONS, MATCH_BADGE_SIZE, type ScanMatchSheetProps } from './ScanMatchSheet';
+export { LocationDisclosure, type LocationDisclosureProps } from './LocationDisclosure';
 export type { CopilotState, GlassKind, MapsFirstColorMode } from './types';

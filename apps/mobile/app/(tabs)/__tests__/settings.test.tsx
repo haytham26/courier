@@ -20,6 +20,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ChosenProvider } from '@/components/chosen';
 import { touch } from '@courier/design-tokens/chosen';
+import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/constants/legal';
 import SettingsScreen from '../settings';
 
 // The preferences are kept in memory, so one test cannot leave a choice behind
@@ -81,6 +82,11 @@ jest.mock('expo-router', () => ({
   router: { replace: jest.fn(), navigate: jest.fn(), push: jest.fn(), back: jest.fn() },
   useRouter: () => ({ replace: jest.fn(), navigate: jest.fn(), push: jest.fn() }),
 }));
+
+// The legal rows open the browser through expo-linking, which the test
+// answers rather than the phone.
+const mockOpenURL = jest.fn((_url: string) => Promise.resolve());
+jest.mock('expo-linking', () => ({ openURL: (url: string) => mockOpenURL(url) }));
 
 function renderScreen() {
   return render(
@@ -208,6 +214,65 @@ describe('the settings screen', () => {
       fireEvent.press(screen.getByTestId('settings-sign-out'));
 
       expect(mockLogout).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // Audit B5: the settings carry the legal rows - the location disclosure on
+  // demand (the reviewer reads it without starting a drive) and the policy
+  // links, all from the ONE legal text file.
+  describe('the legal rows', () => {
+    beforeEach(() => {
+      mockOpenURL.mockClear();
+    });
+
+    it('shows the Legal group with its three rows, disclosure closed', () => {
+      renderScreen();
+
+      expect(screen.getByText('LEGAL')).toBeTruthy();
+      expect(screen.getByTestId('settings-location-privacy')).toBeTruthy();
+      expect(screen.getByTestId('settings-privacy-policy')).toBeTruthy();
+      expect(screen.getByTestId('settings-terms')).toBeTruthy();
+      expect(screen.queryByTestId('location-disclosure')).toBeNull();
+    });
+
+    // The 320x640 emulator drops whatever is below the fold out of the a11y
+    // tree (run 42293603090: `settings-location-privacy` not visible with the
+    // Legal group at the bottom; run 42299860105: `settings-sign-out` not
+    // found after Legal pushed it down), so the rows the flows tap — Legal,
+    // then the sign-out — sit high in the tree, pinned here so they cannot
+    // drift back below the fold.
+    it('Legal and Session sit above Voice in the tree, so both are on a 320x640 screen', () => {
+      const { toJSON } = renderScreen();
+      const flat = JSON.stringify(toJSON());
+      const legal = flat.indexOf('LEGAL');
+      const session = flat.indexOf('SESSION');
+      const voice = flat.indexOf('VOICE');
+      expect(legal).toBeGreaterThanOrEqual(0);
+      expect(session).toBeGreaterThan(legal);
+      expect(voice).toBeGreaterThan(session);
+    });
+
+    it('Location & Privacy opens the disclosure with the legal text, Done closes it', () => {
+      renderScreen();
+
+      fireEvent.press(screen.getByTestId('settings-location-privacy'));
+
+      expect(screen.getByTestId('location-disclosure')).toBeTruthy();
+      expect(screen.getByTestId('location-disclosure-body')).toHaveTextContent(/never sold/);
+      expect(screen.getByTestId('location-disclosure-continue')).toHaveTextContent('Done');
+
+      fireEvent.press(screen.getByTestId('location-disclosure-continue'));
+      expect(screen.queryByTestId('location-disclosure')).toBeNull();
+    });
+
+    it('the policy rows open the ONE URLs from the legal text', () => {
+      renderScreen();
+
+      fireEvent.press(screen.getByTestId('settings-privacy-policy'));
+      expect(mockOpenURL).toHaveBeenCalledWith(PRIVACY_POLICY_URL);
+
+      fireEvent.press(screen.getByTestId('settings-terms'));
+      expect(mockOpenURL).toHaveBeenCalledWith(TERMS_OF_USE_URL);
     });
   });
 });
