@@ -473,6 +473,12 @@ test's title.
 filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt
 2), then the four 3i PRs in order and 3j.
 
+## 2026-11-06: #202 merged as 671bfda; origin/main into the 3e branch (dfbf42f + cc1e9a8)
+
+- #202 (3d, BUG-215 + BUG-226) went green on its merge-in head `6d471c4` (21/21, Semgrep green with the W6 exclusion) and merged as `671bfda`; tag `archive/deploy-gates-215` @ `6d471c4`; branch deleted, ls-remote empty.
+- Side effect found while merging main into the 3e branch: the BUG-226 README rows that landed with #202 were mangled (a doubled `| |` and a merged line) by the insert script. Repaired as `cc1e9a8` on this branch; `check-doc-links`/control-chars/mojibake/parity all clean.
+- The 3e branch (was `f5094ef`, BUG-216) carries origin/main via `dfbf42f` (4 adjacent-insertion conflicts, all union-resolved keeping both sides): parity 0 reopened, 201 bug rows, nothing deleted, counts re-pasted. Pushed to `e2e-avd-exact-key` via the API workaround.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
