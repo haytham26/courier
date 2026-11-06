@@ -1,7 +1,7 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `cdc2e5b` (PR #247, audit item
-4g, BUG-235 — the backend's row). Behind it `f8f8092` = PR #244 (D1's app side,
+**Week:** 2026-W44. **Local `main` == `origin/main` == `161a844` (PR #248, the #244 log PR). Behind it `cdc2e5b` = PR #247 (audit item
+4g, BUG-235 — the backend's row), `f8f8092` = PR #244 (D1's app side,
 BUG-199 — the live voice assistant now works in the shipped build, full
 conversation, all shift), `57676df` = PR #246 (item 4f, BUG-234 — the backend's
 row), `85606a0` = PR #242 (audit item 4c, BUG-231 — the backend's row; the lead's

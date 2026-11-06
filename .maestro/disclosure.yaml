@@ -1,0 +1,65 @@
+appId: com.courier.copilot
+name: The background-location disclosure shows before the app asks (B5)
+---
+# BUG-185: stop the app FIRST, then clear its state.
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The drive opened with the E2E force flag: the disclosure has to be on
+# screen BEFORE the permission request. (run-all.sh pre-grants the location
+# permission on the emulator, so after Continue the request answers at once
+# and no system dialog sits on the flow.)
+- openLink: "courier:///driving?disclose=1"
+- extendedWaitUntil:
+    visible:
+      id: "location-disclosure"
+    timeout: 30000
+# The sheet carries the ONE legal text, the privacy link and the one action.
+- assertVisible:
+    id: "location-disclosure-body"
+- assertVisible:
+    id: "location-disclosure-privacy"
+- assertVisible:
+    id: "location-disclosure-continue"
+# Continue is the only way through: the request follows the tap, and the
+# drive's own panel is what waits underneath.
+- tapOn:
+    id: "location-disclosure-continue"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 30000
+- assertVisible:
+    id: "driving-panel"
+- assertNotVisible:
+    id: "location-disclosure"
+# The settings carry the same disclosure on demand, plus the policy rows.
+- openLink: "courier:///settings"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 30000
+- assertVisible:
+    id: "settings-location-privacy"
+- assertVisible:
+    id: "settings-privacy-policy"
+- tapOn:
+    id: "settings-location-privacy"
+- extendedWaitUntil:
+    visible:
+      id: "location-disclosure"
+    timeout: 15000
+- assertVisible:
+    id: "location-disclosure-body"
+- tapOn:
+    id: "location-disclosure-continue"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- assertNotVisible:
+    id: "location-disclosure"

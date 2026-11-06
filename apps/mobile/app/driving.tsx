@@ -22,7 +22,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, Pressable, View, useColorScheme } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import {
   Camera,
@@ -36,6 +36,7 @@ import { handOffToNavApp } from '@/maps/navHandoff';
 import {
   ChosenProvider,
   GlassSurface,
+  LocationDisclosure,
   MapButton,
   MapButtonColumn,
   SlideToDeliver,
@@ -59,6 +60,7 @@ import {
 import { getCourierStyle } from '@/maps/styles';
 import { useRun } from '@/maps/runState';
 import { useMapBoot } from '@/maps/useMapBoot';
+import { disclosureForThisBuild } from '@/location/disclosureForThisBuild';
 import { useVoice } from '@/voice/useVoice';
 
 /** The map's home zoom: the run's stops all sit inside it. */
@@ -158,6 +160,15 @@ export function DrivingScreen() {
   // reference (12-driving-night.html).
   const [night, setNight] = useState(scheme === 'dark');
   const [locationAllowed, setLocationAllowed] = useState(false);
+  // Audit B5: the prominent in-app disclosure for the background location is
+  // on screen BEFORE the app asks for the permission (Play's review rule).
+  const [disclosureVisible, setDisclosureVisible] = useState(false);
+  const searchParams = useLocalSearchParams<{ disclose?: string }>();
+  // The E2E seam: a drive opened with ?disclose=1 in the E2E build forces the
+  // disclosure even when the emulator's pm grant already gave the
+  // permission, so the flow can prove the order. A release build never
+  // forces it.
+  const forceDisclosure = searchParams.disclose === '1' && disclosureForThisBuild();
 
   // The run the drive moves on: the delivered marks live in the run state
   // above the routes (src/maps/runState.tsx - the boundary shift the
@@ -193,24 +204,50 @@ export function DrivingScreen() {
 
   // The position engine: without a grant the drive still reads (the map
   // stays centred on the run), with one the camera follows the vehicle.
+  // Audit B5: the permission is only REQUESTED after the disclosure's
+  // Continue - the disclosure is what Play reviews, so it is never skipped
+  // on the way to the system prompt.
   useEffect(() => {
     let cancelled = false;
 
     void (async () => {
       try {
-        const result = await Location.requestForegroundPermissionsAsync();
-        if (!cancelled) {
-          setLocationAllowed(result.granted);
+        const current = await Location.getForegroundPermissionsAsync();
+        if (cancelled) {
+          return;
         }
+        if (current.granted && !forceDisclosure) {
+          setLocationAllowed(true);
+          return;
+        }
+        setDisclosureVisible(true);
       } catch {
-        // The drive is useable without a fix: the map shows the run.
-        setLocationAllowed(false);
+        // The drive is useable without a fix: the map shows the run, and the
+        // disclosure still comes first if a request follows.
+        if (!cancelled) {
+          setDisclosureVisible(true);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
+  }, [forceDisclosure]);
+
+  // The disclosure's one action: close the sheet, then ask. The emulator
+  // pre-grants the permission, so in the E2E build this answers at once.
+  const handleDisclosureContinue = useCallback(() => {
+    setDisclosureVisible(false);
+    hapticFor('confirm');
+    void (async () => {
+      try {
+        const result = await Location.requestForegroundPermissionsAsync();
+        setLocationAllowed(result.granted);
+      } catch {
+        setLocationAllowed(false);
+      }
+    })();
   }, []);
 
   // Queue 4.1: the navigation hand-off. The destination is the run's own
@@ -354,6 +391,13 @@ export function DrivingScreen() {
           </Pressable>
         ) : null}
       </GlassSurface>
+
+      {/* Audit B5: the prominent background-location disclosure, shown
+          before the permission request (and reachable from the settings). */}
+      <LocationDisclosure
+        visible={disclosureVisible}
+        onContinue={handleDisclosureContinue}
+      />
     </SafeAreaView>
   );
 }

@@ -2,7 +2,9 @@
  * Settings - the Account tab on the chosen tokens (T6 slice 3, screen 11).
  *
  * The reference is a short, glanceable list: who is signed in, then the rows
- * that change the run - the voice, the map, the device and the team. The
+ * that change the run - the voice, the map, the device and the team - and
+ * the legal rows (the location disclosure on demand and the policy links,
+ * audit B5: Play reads them from here without starting a drive). The
  * previous screen held the same settings as a long form on the legacy theme;
  * this one keeps every one of them and puts them where the reference puts
  * them, and the settings stay real:
@@ -28,8 +30,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { openURL } from 'expo-linking';
 
-import { useChosen } from '@/components/chosen';
+import { LocationDisclosure, useChosen } from '@/components/chosen';
+import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/constants/legal';
 import { useAuth } from '@/providers/AuthProvider';
 import { areHapticsEnabled, hapticFor, setHapticsEnabled } from '@/motion/haptics';
 import { useMapBoot } from '@/maps/useMapBoot';
@@ -100,6 +104,10 @@ export default function SettingsScreen() {
    * is not there to be tapped again.
    */
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+
+  // Audit B5: the background-location disclosure is reachable here too, so a
+  // reviewer (or the courier) reads it without starting a drive.
+  const [legalVisible, setLegalVisible] = useState(false);
 
   const signOut = useCallback(() => {
     hapticFor('confirm');
@@ -249,6 +257,45 @@ export default function SettingsScreen() {
     { key: 'team', label: 'Team', value: 'Northwood', icon: 'people', tone: 'warning', testID: 'settings-team' },
   ];
 
+  // Audit B5 (Play's review rule): the legal rows, all from the ONE legal
+  // text file - the disclosure on demand, and the policy links the store
+  // listing points at.
+  const legalRows: Row[] = [
+    {
+      key: 'location-privacy',
+      label: 'Location & Privacy',
+      icon: 'location',
+      tone: 'info2',
+      onPress: () => {
+        hapticFor('confirm');
+        setLegalVisible(true);
+      },
+      testID: 'settings-location-privacy',
+    },
+    {
+      key: 'privacy-policy',
+      label: 'Privacy Policy',
+      icon: 'shield-checkmark',
+      tone: 'success',
+      onPress: () => {
+        hapticFor('confirm');
+        void openURL(PRIVACY_POLICY_URL);
+      },
+      testID: 'settings-privacy-policy',
+    },
+    {
+      key: 'terms',
+      label: 'Terms of Use',
+      icon: 'document-text',
+      tone: 'info2',
+      onPress: () => {
+        hapticFor('confirm');
+        void openURL(TERMS_OF_USE_URL);
+      },
+      testID: 'settings-terms',
+    },
+  ];
+
   // The sign-out ends the shift, so it sits on its own at the end of the list
   // and asks before it goes (the destructive-ish confirm above).
   const signOutRows: Row[] = [
@@ -334,6 +381,7 @@ export default function SettingsScreen() {
         <SettingsGroup title="Map" rows={mapRows} />
         <SettingsGroup title="Device" rows={deviceRows} />
         <SettingsGroup title="Team" rows={teamRows} />
+        <SettingsGroup title="Legal" rows={legalRows} />
 
         <View style={[styles.group, { backgroundColor: t.colors.card }]}>
           <View style={styles.row}>
@@ -358,6 +406,14 @@ export default function SettingsScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Audit B5: the same disclosure the drive shows before the permission
+          request, opened on demand from the Legal row. */}
+      <LocationDisclosure
+        visible={legalVisible}
+        onContinue={() => setLegalVisible(false)}
+        continueLabel="Done"
+      />
     </SafeAreaView>
   );
 }

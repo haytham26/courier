@@ -77,10 +77,18 @@ jest.mock('@/voice/useVoice', () => {
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ navigate: jest.fn(), push: jest.fn() }),
+  useLocalSearchParams: () => mockSearchParams,
 }));
 
+/** The route params the drive reads (the E2E force flag rides `?disclose=1`). */
+let mockSearchParams: Record<string, string> = {};
+
+const mockGetForeground = jest.fn(() => Promise.resolve({ granted: true }));
+const mockRequestForeground = jest.fn(() => Promise.resolve({ granted: true }));
+
 jest.mock('expo-location', () => ({
-  requestForegroundPermissionsAsync: jest.fn(() => Promise.resolve({ granted: false })),
+  getForegroundPermissionsAsync: () => mockGetForeground(),
+  requestForegroundPermissionsAsync: () => mockRequestForeground(),
 }));
 
 /** The live startListening spy of the mocked voice. */
@@ -230,5 +238,67 @@ describe('Driving', () => {
     fireEvent.press(screen.getByTestId('driving-copilot'));
 
     expect(startListening).toHaveBeenCalledTimes(1);
+  });
+
+  // Audit B5 (Play's review rule): the prominent in-app disclosure is on
+  // screen BEFORE the app asks for the location permission, and only its
+  // Continue asks.
+  describe('the location disclosure', () => {
+    beforeEach(() => {
+      mockSearchParams = {};
+      delete process.env.EXPO_PUBLIC_E2E;
+      mockGetForeground.mockClear().mockResolvedValue({ granted: true });
+      mockRequestForeground.mockClear().mockResolvedValue({ granted: true });
+    });
+
+    it('shows the disclosure and does NOT ask while it is up; Continue asks once', async () => {
+      mockGetForeground.mockResolvedValue({ granted: false });
+
+      renderDrive();
+
+      // The disclosure is up before any request: the permission call has
+      // not happened yet, and the body is the ONE legal text.
+      const disclosure = await screen.findByTestId('location-disclosure');
+      expect(disclosure).toBeTruthy();
+      expect(screen.getByTestId('location-disclosure-body')).toHaveTextContent(/never sold/);
+      expect(mockRequestForeground).not.toHaveBeenCalled();
+
+      fireEvent.press(screen.getByTestId('location-disclosure-continue'));
+
+      await waitFor(() => expect(mockRequestForeground).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(screen.queryByTestId('location-disclosure')).toBeNull());
+    });
+
+    it('asks straight away when the permission is already granted: no disclosure', async () => {
+      renderDrive();
+
+      await waitFor(() => expect(screen.getByTestId('stop-pin-2')).toBeTruthy());
+      expect(screen.queryByTestId('location-disclosure')).toBeNull();
+      expect(mockRequestForeground).not.toHaveBeenCalled();
+    });
+
+    it('the E2E force flag (?disclose=1 in the E2E build) shows the disclosure even when granted', async () => {
+      process.env.EXPO_PUBLIC_E2E = '1';
+      mockSearchParams = { disclose: '1' };
+
+      renderDrive();
+
+      expect(await screen.findByTestId('location-disclosure')).toBeTruthy();
+      expect(mockRequestForeground).not.toHaveBeenCalled();
+
+      fireEvent.press(screen.getByTestId('location-disclosure-continue'));
+      await waitFor(() => expect(mockRequestForeground).toHaveBeenCalledTimes(1));
+
+      delete process.env.EXPO_PUBLIC_E2E;
+    });
+
+    it('a release build with ?disclose=1 does NOT force the disclosure', async () => {
+      mockSearchParams = { disclose: '1' };
+
+      renderDrive();
+
+      await waitFor(() => expect(screen.getByTestId('stop-pin-2')).toBeTruthy());
+      expect(screen.queryByTestId('location-disclosure')).toBeNull();
+    });
   });
 });
