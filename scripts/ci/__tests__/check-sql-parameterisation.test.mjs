@@ -107,6 +107,23 @@ test('static SQL with no placeholders and no params passes', () => {
   assert.equal(code, 0);
 });
 
+test('text(...).bindparams(expanding) with a params dict passes', () => {
+  const { code } = runFixture('good-bindparams', [
+    'from sqlalchemy import bindparam, text',
+    'STMT = text(',
+    '    """',
+    '    SELECT count(*)',
+    '    FROM delivery_events',
+    '    WHERE shift_id = :shift_id AND kind IN :kinds',
+    '    """',
+    ').bindparams(bindparam("kinds", expanding=True))',
+    'def f(conn, shift_id, kinds):',
+    '    conn.execute(STMT, {"shift_id": shift_id, "kinds": kinds})',
+    '',
+  ].join('\n'));
+  assert.equal(code, 0);
+});
+
 test('a docstring that mentions SQL is not flagged', () => {
   const { code } = runFixture('docstring', [
     'def f(conn):',

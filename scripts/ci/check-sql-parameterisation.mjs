@@ -38,7 +38,7 @@ function callArgs(src, openParen) {
     const ch = src[i];
     if (inStr) {
       if (ch === '\\') { i += 1; continue; }
-      if (src.startsWith(inStr, i - inStr.length + 1)) { i += inStr.length - 1; inStr = null; }
+      if (src.startsWith(inStr, i)) { i += inStr.length - 1; inStr = null; }
       continue;
     }
     if (ch === '"' || ch === "'") {
@@ -68,7 +68,7 @@ function splitTopLevel(src, sep) {
     const ch = src[i];
     if (inStr) {
       if (ch === '\\') { i += 1; continue; }
-      if (src.startsWith(inStr, i - inStr.length + 1)) { i += inStr.length - 1; inStr = null; }
+      if (src.startsWith(inStr, i)) { i += inStr.length - 1; inStr = null; }
       continue;
     }
     if (ch === '"' || ch === "'") {
@@ -151,7 +151,7 @@ function logicalLineEnd(src, i) {
     const ch = src[j];
     if (inStr) {
       if (ch === '\\') { j += 1; continue; }
-      if (src.startsWith(inStr, j - inStr.length + 1)) { j += inStr.length - 1; inStr = null; }
+      if (src.startsWith(inStr, j)) { j += inStr.length - 1; inStr = null; }
       continue;
     }
     if (ch === '"' || ch === "'") {
