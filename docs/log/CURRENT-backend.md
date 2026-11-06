@@ -383,6 +383,64 @@ and 3j.
 The 3b/3c branch (was 5e91a06) now carries origin/main via `ad6047b` (one log conflict, both
 sections kept): parity 0 reopened, 198 bug rows, nothing deleted, counts re-pasted. Pushed to
 \smoke-version-213\ via the API workaround (git push still rejected server-side).
+## The 2026-11-05 audit's CI / INFRA item 3d (BUG-215): the deploy waits for CI and Quality gates
+
+The deploy job used to run on the same push that started CI and Quality gates, with nothing waiting for
+the other two workflows, so the staging host could be deployed a tree CI was about to call red - and the
+checkout took the branch tip rather than the sha anything had tested. It has never run against a real host
+(the OCI host and key are FOUNDER_TODO), which is exactly why its trigger was never reviewable.
+
+- `workflow_run` on `["CI", "Quality gates"]`, `types: [completed]`. The dispatch trigger stays (a human
+  may always ask) and the push trigger stays (the verify leg builds the local-VM stack on every push, on
+  purpose - it now carries `if: github.event_name != 'workflow_run'` so a gates-completion run does not
+  build it twice).
+- The deploy job's `if:` is dispatch or workflow_run - never the push. The gate step reads the runs on
+  `github.event.workflow_run.head_sha` from the API and requires BOTH workflows `completed` AND
+  `success`: the trigger fires when EITHER finishes, and a deploy that waited for CI alone while Quality
+  gates was red is the same bug as no gate at all. The awk predicate is proven against four shapes (both
+  green passes; one running fails; one failed fails; neither run fails).
+- The checkout is pinned to that sha, and the deploy no longer `needs: verify` (a job that exists only on
+  the push event - the ordering guarantee is the gate step, not the job dependency).
+- `scripts/ci/check-deploy-gate.mjs` (a step in the Floor guard job) holds every half, with an 8-case
+  test. Evidence: `docs/evidence/deploy-gates-215/README.md`.
+
+**Next in item 3:** 3e (the android-e2e restore-keys block), 3f (pin the Android system image), 3g (drop
+the paths filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt 2), then the
+four 3i PRs in order (C12 setup-uv SHA, C11 Node-24, C10 digest pins, C14 dependabot + a cron staging
+smoke) and 3j (the required-checks list in FOUNDER_TODO).
+
+## 2026-11-06: BUG-226 — the workflow_run Semgrep finding is excluded WITH a written record (PR #202's red cause)
+
+Root cause of the "Static analysis (Semgrep)" reds on PRs #202-#212 (run 42015970715 etc.):
+`yaml.github-actions.security.workflow-run-target-code-checkout` (Blocking) is a STATIC heuristic - any
+workflow_run + checkout of the incoming head is flagged. deploy.yml checks out
+`github.event.workflow_run.head_sha` (the sha the gates ran on, not the tip) and the deploy job's gate
+step requires BOTH CI and Quality gates completed+success on that sha BEFORE the checkout runs
+(BUG-215) - the dynamic gate exceeds the rule's assumption, so the finding is accepted, and the fix is a
+documented `--exclude-rule`, not a code change to deploy.yml.
+
+But the accepted finding had no written record: exclusions lived only in the scan's `--exclude-rule`
+list (the floor's no-suppressions check only sees `nosemgrep` comments), and two older W4 exclusions
+weren't even listed in `.semgrepignore`. Fixed on `deploy-gates-215` (pushed; updates PR #202):
+
+- `--exclude-rule "yaml…workflow-run-target-code-checkout…"` in the sast job + a W6 line in its
+  "Why the excluded rules are excluded" echo;
+- `.semgrepignore` entry 7 (the reason, W6), entry 8 (the two missing W4 rule ids), all ids listed;
+- a W6 row in CONSTRAINTS.md's exceptions table (owner lead executor, expires 2026-12-01);
+- `scripts/ci/check-semgrep-exclusions.mjs` (Floor guard step): every `--exclude-rule` must be a
+  `.semgrepignore` line under a numbered reason, and every cited W-id must have a CONSTRAINTS.md row;
+  6-case test.
+
+Red first: the gate against the new workflow + the OLD .semgrepignore/CONSTRAINTS names all three
+unrecorded exclusions, exit 1. Green after: gate passes, 6/6 tests, check-workflows clean, parity 0
+reopened. Evidence: `docs/evidence/semgrep-exclusion-226/README.md`. BUG-226 filed. NOT claimed: the
+Semgrep job green - that is the next CI run's evidence on this head.
+
+## 2026-11-06: #200 merged as fb4708b; #201 auto-merged with it (shared head 5e91a06, BUG-214 row fixed in main); origin/main into the 3d branch (64de5c8)
+
+- #200 (3b, BUG-213) went green on 0f44e31 after one self-inflicted red: my log note written via an inline `python -c` mangled backticks into BEL/control chars and `check-control-chars` (a Floor-guard step I had not been running locally) failed run 42138822228. Fixed in 0f44e31; control-chars now run locally before every push. Merged as `fb4708b`; tag `archive/smoke-version-213` @ `0f44e31`; branch deleted, ls-remote empty.
+- #201 (3c, BUG-214) shared head 5e91a06 with #200: GitHub marked it merged when #200 landed (three-dot diff vs main empty; BUG-214 row `fixed` in main; 47/47 checks green). Comment left on the PR; tag `archive/deploy-secrets-inline-214` @ `5e91a06`; branch deleted.
+- The 3d branch (was 0169533, BUG-215 + BUG-226) now carries origin/main via `64de5c8` (one log conflict, both sections kept): parity 0 reopened, 200 bug rows, nothing deleted, counts re-pasted. Pushed to `deploy-gates-215` via the API workaround.
 
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
