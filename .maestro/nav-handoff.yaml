@@ -59,14 +59,20 @@ name: 'The drive hands the stop to the nav app (queue 4g, trial #15)'
 # Maps' own location prompt sits on top on a fresh emulator (runs 42171396160
 # and 42175587894, both api legs: the dialog still showed "Allow Maps to access
 # this device's location?" when the drive was asserted, and `back` alone does
-# not dismiss a system permission dialog). Dismiss it - optional, because a
-# runner that pre-granted Maps' permission never shows it. The button's label
-# uses a typographic apostrophe on the pinned image ("Don't allow" with U+2019),
-# so match any character there: textRegex "Don.t allow". Then go back to the
-# drive, which is still on the run's stop: the app did not crash, did not
-# invent a chooser, and kept its place in the stack.
+# not dismiss a system permission dialog). Dismiss it with its own button -
+# optional, because a runner that pre-granted Maps' permission never shows it.
+# The pinned image renders the label with a typographic apostrophe (U+2019,
+# "Don’t allow" - run 42175587894's hierarchy), so try that exact text first,
+# then the ASCII-apostrophe spelling; Maestro 2.11 has no textRegex property on
+# tapOn (run 42179171405: "Unknown Property: textRegex"), so both are literal
+# optional taps. Then go back to the drive, which is still on the run's stop:
+# the app did not crash, did not invent a chooser, and kept its place in the
+# stack.
 - tapOn:
-    textRegex: "Don.t allow"
+    text: "Don’t allow"
+    optional: true
+- tapOn:
+    text: "Don't allow"
     optional: true
 - back
 - extendedWaitUntil:
