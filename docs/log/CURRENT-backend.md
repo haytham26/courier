@@ -821,6 +821,10 @@ PR #245 (head `acdce3d`) green 23/23, merged. `tests/test_tenant_isolation.py` n
 
 Research A4 adopted PyCQA/bandit (Apache-2.0, 8 326 stars, pushed 2026-10-19) because Semgrep's Python rules are not a substitute for its Python-specific checks. Added `uvx bandit==1.9.4 -r services/api/app -ll -ii --quiet` to the sast job of quality-gates.yml (job renamed "Static analysis (Semgrep + Bandit)"), pinned like semgrep; -ll -ii means medium+ severity and confidence fail (bar: zero high/critical). Red first: plain bandit exits 1 on 3 LOW false positives (2x B105 message strings, B405 on the ParseError import that only catches openpyxl errors - upload XML is never parsed with stdlib ET); a probe with dynamic shell=True/pickle/exec/eval fails even under -ll -ii. Green: tree exits 0 under -ll -ii; check-workflows clean; parity 0 reopened. CI tool via uvx, so no uv.lock/LICENSES change. BUG-234 filed; evidence in `docs/evidence/api-bandit-sast-234/`. Branch `api-bandit-sast-234`. Skills: security-and-hardening, ci-cd-and-automation, source-driven-development, constraint-driven-development.
 
+## 2026-11-07: item 4f (BUG-234) merged - #246; tag `archive/api-bandit-sast-234`, branch deleted
+
+PR #246 (head `3dbc2a4`) green 21/21, merged. bandit==1.9.4 (Apache-2.0, pinned) now runs in the sast job at medium+ severity/confidence alongside semgrep; the 3 accepted LOW false positives are documented in the workflow comment; a probe verified the gate fails on dynamic shell=True/pickle/exec/eval. check-workflows clean; parity 0 reopened. Counts re-pasted: 312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 222 bug rows (open 7 · doing 2 · testing 1 · fixed 180 · closed 2 · moved to PARITY 30). Item 4g (BUG-235: the ZAP nightly workflow that skips with a notice when staging secrets are unset) is next on branch `api-zap-nightly-235`.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
