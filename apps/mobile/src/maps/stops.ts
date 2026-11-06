@@ -10,6 +10,29 @@ import type { Theme } from '@courier/design-tokens/themes';
 
 export type StopStatus = 'pending' | 'active' | 'delivered' | 'failed' | 'skipped';
 
+/**
+ * What the stop is: a delivery or a pickup (ADR-024, the trial's #21).
+ *
+ * The contract carries it as a required field (`StopResponse.type`), closed
+ * at the database to these two words, and the app's own view of a stop carries
+ * it the same way, so a pickup reads as a pickup on every screen.
+ */
+export type StopType = 'delivery' | 'pickup';
+
+/**
+ * The time window a stop has to be reached in, in the contract's own words.
+ *
+ * A window is the run's own (`window_start`/`window_end`, ISO on the server):
+ * a stop with no window has none to name, which is the honest answer for a
+ * plain delivery.
+ */
+export interface StopWindow {
+  /** When the stop's window opens. */
+  start: string;
+  /** When it closes. */
+  end: string;
+}
+
 export interface Stop {
   id: string;
   address: string;
@@ -17,6 +40,18 @@ export interface Stop {
   status: StopStatus;
   sequence: number;
   coordinates: { lat: number; lng: number };
+  /**
+   * Whether the run itself calls this stop a priority one (queue 4a, the
+   * trial's #13). The run owns the word, not the list.
+   */
+  priority: boolean;
+  /** The run's own time window, when it has one (queue 4a, the trial's #11). */
+  window?: StopWindow;
+  /**
+   * What the stop is (queue 4c, the trial's #21, ADR-024): the run's own word,
+   * read from the contract's required `type`.
+   */
+  type: StopType;
 }
 
 /**
@@ -36,6 +71,8 @@ export const mockStops: Stop[] = [
     status: 'delivered',
     sequence: 1,
     coordinates: { lat: -43.535, lng: 172.605 },
+    priority: false,
+    type: 'delivery',
   },
   {
     id: '2',
@@ -44,6 +81,9 @@ export const mockStops: Stop[] = [
     status: 'active',
     sequence: 2,
     coordinates: { lat: -43.518, lng: 172.625 },
+    priority: true,
+    window: { start: '2026-10-31T09:00:00.000Z', end: '2026-10-31T11:00:00.000Z' },
+    type: 'delivery',
   },
   {
     id: '3',
@@ -52,6 +92,12 @@ export const mockStops: Stop[] = [
     status: 'pending',
     sequence: 3,
     coordinates: { lat: -43.545, lng: 172.595 },
+    priority: false,
+    window: { start: '2026-10-31T10:30:00.000Z', end: '2026-10-31T13:00:00.000Z' },
+    // Queue 4c (the trial's #21): one stop of the mock list is the run's own
+    // pickup, so the E2E day answers a type a courier can read and the flows
+    // can assert the word.
+    type: 'pickup',
   },
   {
     id: '4',
@@ -60,6 +106,8 @@ export const mockStops: Stop[] = [
     status: 'pending',
     sequence: 4,
     coordinates: { lat: -43.565, lng: 172.575 },
+    priority: false,
+    type: 'delivery',
   },
   {
     id: '5',
@@ -68,6 +116,8 @@ export const mockStops: Stop[] = [
     status: 'pending',
     sequence: 5,
     coordinates: { lat: -43.548, lng: 172.638 },
+    priority: false,
+    type: 'delivery',
   },
 ];
 
