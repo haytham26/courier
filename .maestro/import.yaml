@@ -1,0 +1,77 @@
+appId: com.courier.copilot
+name: 'A pasted spreadsheet imports its stops (queue 4e, ADR-025)'
+---
+# Queue 4e's courier-facing half: the spreadsheet import (trial #6). There is
+# no document picker in this build, so the courier pastes the CSV into the
+# route screen's import sheet; the file is written to the cache as the .csv
+# the contract names and the ask names the shift the day carries. The E2E
+# build's importer answers the canned import, so the flow asserts the
+# screen's own half end to end: the sheet, the paste, the count, and the
+# ignored columns the contract answers rather than drops silently.
+#
+# BUG-185: stop the app FIRST, then clear its state (the old task's removal
+# killed the freshly started process on api-34).
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+
+# The route tab by its testID (the word "Stops" also appears on today's list
+# and Maestro matches text case-insensitively).
+- tapOn:
+    id: "tab-stops"
+- extendedWaitUntil:
+    visible:
+      id: "stops-screen"
+    timeout: 30000
+
+# The import control lives in the sheet's header row beside Optimise, visible
+# without scrolling (the a1 optimise flow asserts stops-optimise the same way).
+- assertVisible:
+    id: "stops-import"
+- tapOn:
+    id: "stops-import"
+- extendedWaitUntil:
+    visible:
+      id: "stops-import-sheet"
+    timeout: 30000
+- assertVisible: "Import stops"
+
+# The paste: Maestro's inputText goes to the focused element, so the field is
+# tapped first. The text carries a newlines (sendStringSync sends them) and a
+# "notes" column, which the import answers as ignored.
+- tapOn:
+    id: "stops-import-text"
+- inputText: "address,type,notes\n1 Import Lane, delivery, leave at door\n2 Pickup Ave, pickup, ring bell"
+# The keyboard covers the sheet's bottom on the emulator (edge-to-edge, so
+# adjustResize does not shrink the window - BUG-197): the courier dismisses it
+# before pressing Import, and the flow does the same. The actions row is
+# pinned above the sheet's bottom edge, so with the keyboard down it is visible.
+- hideKeyboard
+
+# The ask: one press, and the sheet spells the answer. The count and the
+# ignored columns are two nodes - the app writes them apart so each is
+# asserted as itself, the whole-node lesson of the optimise flow.
+- tapOn:
+    id: "stops-import-go"
+- extendedWaitUntil:
+    visible:
+      id: "stops-import-note"
+    timeout: 30000
+- assertVisible: "Imported 2 stops."
+- assertVisible:
+    id: "stops-import-ignored"
+- assertVisible: "Ignored columns: notes"
+- takeScreenshot: "import-done"
+
+# And the sheet closes on the courier's own word.
+- tapOn:
+    id: "stops-import-dismiss"
+- extendedWaitUntil:
+    notVisible:
+      id: "stops-import-sheet"
+    timeout: 30000
+- takeScreenshot: "import-dismissed"

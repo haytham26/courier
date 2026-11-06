@@ -20,6 +20,10 @@ import { styleOf } from '../../src/components/chosen/test-support';
 import { hourMinuteOf } from '@/maps/drive';
 import { e2eDay } from '@/run/dayForThisBuild';
 import type { DeliveredMark } from '@/run/types';
+import { isUuid } from '@/sync/eventId';
+import type { PodCaptureResult, PodUploadPayload } from '@/pod/podForThisBuild';
+import type { PodResponse } from '@courier/shared/src/generated/api';
+import type { ApiOutcome } from '@/lib/api-client';
 import { RunProvider, useRun } from '@/maps/runState';
 import { tokens } from '@courier/design-tokens/chosen';
 
@@ -79,6 +83,37 @@ jest.mock('@/voice/commandChannel', () => {
   return { publishVoiceCommand: publish };
 });
 
+// Queue 4f (the trial's #16): the proof-photo seam is replaced the same way
+// the scanner's reader is - what is proven here is the confirm's own half:
+// the control, the capture, the upload's own payload, and the note each
+// answer spells.
+const mockCapture = jest.fn((): Promise<PodCaptureResult> =>
+  Promise.resolve({
+    kind: 'photo',
+    image: { uri: 'file:///cache/pod-photo.jpg', name: 'pod-photo.jpg', type: 'image/jpeg' },
+  }),
+);
+const mockUploadPod = jest.fn(
+  (_runId: string, _stopId: string, _payload: PodUploadPayload): Promise<ApiOutcome<PodResponse>> =>
+    Promise.resolve({
+      status: 'ok',
+      data: {
+        event_id: '33333333-3333-4333-8333-333333333333',
+        stop_id: '2',
+        sha256: 'ab'.repeat(32),
+        bytes: 107,
+        stored_at: '2026-10-31T08:15:00.000Z',
+        already_stored: false,
+      },
+    }),
+);
+jest.mock('@/pod/podForThisBuild', () => ({
+  captureForThisBuild: () => ({ capture: () => mockCapture() }),
+  uploaderForThisBuild: () => ({
+    uploadPod: (runId: string, stopId: string, payload: PodUploadPayload) => mockUploadPod(runId, stopId, payload),
+  }),
+}));
+
 /** The live spies of the mocked modules. */
 const theBack = (): jest.Mock => {
   if (!mockBack) {
@@ -100,9 +135,26 @@ const thePublish = (): jest.Mock => {
  * the mark is made on the day's stop and not on the mock list's.
  */
 /** One stop of the run's own day, as the app's own view of a stop. */
-function toAppStop(stop: { id: string; seq: number; address?: string; lat?: number; lon?: number }) {
+function toAppStop(stop: {
+  id: string;
+  seq: number;
+  address?: string;
+  lat?: number;
+  lon?: number;
+  priority?: boolean;
+  window_start?: string;
+  window_end?: string;
+  type?: string;
+}) {
   const parts = (stop.address ?? '').split(',').map((part) => part.trim());
   const hasSuburb = parts.length > 1;
+  const window =
+    typeof stop.window_start === 'string' &&
+    stop.window_start.length > 0 &&
+    typeof stop.window_end === 'string' &&
+    stop.window_end.length > 0
+      ? { start: stop.window_start, end: stop.window_end }
+      : undefined;
   return {
     id: stop.id,
     sequence: stop.seq,
@@ -110,6 +162,11 @@ function toAppStop(stop: { id: string; seq: number; address?: string; lat?: numb
     suburb: hasSuburb ? (parts[parts.length - 1] ?? '') : '',
     status: 'pending' as const,
     coordinates: { lat: stop.lat ?? -43.5, lng: stop.lon ?? 172.6 },
+    // Queue 4a: the run's own priority and the run's own window ride the stop.
+    priority: stop.priority === true,
+    ...(window === undefined ? {} : { window }),
+    // Queue 4c (ADR-024): the stop's own type rides it too.
+    type: stop.type === 'pickup' ? ('pickup' as const) : ('delivery' as const),
   };
 }
 
@@ -255,5 +312,106 @@ describe('Delivered', () => {
     renderConfirm({ params: {}, seed: '2' });
 
     await screen.findByText(/45 Papanui Road, \d{2}:\d{2}/);
+  });
+});
+
+/**
+ * Queue 4f (the trial's #16, the POD endpoint's app half): the proof photo on
+ * the delivered confirm.
+ *
+ * The reference's proof-photo card was a recorded omission until now (the
+ * screen's own header says so: the photo needs the Scan camera wired to a
+ * store, P5 step 06). This slice is the capture surface: the confirm's own
+ * button takes the photo through the seam and uploads it as the contract's
+ * multipart - the image, the moment, the client-generated event id - and
+ * spells each answer as its own node, the way every other answer on this
+ * screen is a sentence.
+ */
+describe("the confirm's proof photo (queue 4f)", () => {
+  beforeEach(() => {
+    mockCapture.mockClear();
+    mockUploadPod.mockClear();
+    mockCapture.mockResolvedValue({
+      kind: 'photo' as const,
+      image: { uri: 'file:///cache/pod-photo.jpg', name: 'pod-photo.jpg', type: 'image/jpeg' },
+    });
+    mockUploadPod.mockResolvedValue({
+      status: 'ok' as const,
+      data: {
+        event_id: '33333333-3333-4333-8333-333333333333',
+        stop_id: '2',
+        sha256: 'ab'.repeat(32),
+        bytes: 107,
+        stored_at: '2026-10-31T08:15:00.000Z',
+        already_stored: false,
+      },
+    });
+  });
+
+  it('captures, uploads to the run and stop of the delivery, and spells "Proof photo stored."', async () => {
+    renderConfirm({ seed: '2' });
+
+    fireEvent.press(await screen.findByTestId('delivered-pod'));
+
+    await screen.findByText('Proof photo stored.');
+    expect(mockCapture).toHaveBeenCalledTimes(1);
+    expect(mockUploadPod).toHaveBeenCalledTimes(1);
+    const [runId, stopId, payload] = mockUploadPod.mock.calls[0] ?? [];
+    // The run's own id and the stop's own id (the E2E day's run and the
+    // handover's stop) - never an empty pair, which the client refuses.
+    expect(runId).toBe('run-e2e');
+    expect(stopId).toBe('2');
+    expect(payload.image).toEqual({
+      uri: 'file:///cache/pod-photo.jpg',
+      name: 'pod-photo.jpg',
+      type: 'image/jpeg',
+    });
+    // The event's own moment (an ISO stamp) and its own id (a uuid the
+    // server's parse accepts - BUG-176's rule).
+    expect(payload.occurredAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    expect(isUuid(payload.eventId)).toBe(true);
+  });
+
+  it('spells a 415 refusal with the server\u2019s own sentence and code', async () => {
+    mockUploadPod.mockResolvedValue({
+      status: 'server',
+      code: 415,
+      message: 'the bytes are not a JPEG, PNG or HEIC image',
+    });
+    renderConfirm({ seed: '2' });
+
+    fireEvent.press(await screen.findByTestId('delivered-pod'));
+
+    await screen.findByText('The photo was refused (415): the bytes are not a JPEG, PNG or HEIC image');
+  });
+
+  it('spells the capture\u2019s own unavailability instead of pretending a photo (the labelReader posture)', async () => {
+    mockCapture.mockResolvedValue({
+      kind: 'unavailable',
+      reason: 'Taking the proof photo needs the Scan camera wired to a store (P5, step 06).',
+    });
+    renderConfirm({ seed: '2' });
+
+    fireEvent.press(await screen.findByTestId('delivered-pod'));
+
+    await screen.findByText('Taking the proof photo needs the Scan camera wired to a store (P5, step 06).');
+    expect(mockUploadPod).not.toHaveBeenCalled();
+  });
+
+  it('spells a gone network as its own sentence', async () => {
+    mockUploadPod.mockResolvedValue({ status: 'offline' });
+    renderConfirm({ seed: '2' });
+
+    fireEvent.press(await screen.findByTestId('delivered-pod'));
+
+    await screen.findByText('No network - the photo was not sent.');
+  });
+
+  it('without a stop to confirm the photo control sits out, like the undo', () => {
+    renderConfirm({ params: {} });
+
+    expect(screen.getByTestId('delivered-pod').props).toMatchObject({
+      accessibilityState: { disabled: true },
+    });
   });
 });

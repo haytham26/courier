@@ -5,7 +5,8 @@
 // Every case is a property of the gate, run against a fabricated repo root in
 // a temp tree: the real tree passes; a missing dependabot.yml fails; a
 // missing ecosystem fails; a uv entry without a uv.lock fails; a non-weekly
-// schedule fails; a missing workflow fails; a missing cron or dispatch fails;
+// schedule fails; an entry without a cooldown fails (BUG-228); a missing
+// workflow fails; a missing cron or dispatch fails;
 // a smoke call without --no-version fails; a job-level or command-line secret
 // fails; a missing skip-notice fails; a tag-pinned action fails; missing
 // permissions fail.
@@ -26,14 +27,20 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      days: 7
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      days: 7
   - package-ecosystem: uv
     directory: /services/api
     schedule:
       interval: weekly
+    cooldown:
+      days: 7
 `;
 
 const SHA = 'a'.repeat(40);
@@ -129,6 +136,15 @@ test('a non-weekly schedule fails', () => {
   });
   assert.notEqual(answer.code, 0);
   assert.match(answer.out, /not on a weekly schedule/);
+});
+
+test('a dependabot entry without a cooldown fails (BUG-228)', () => {
+  const answer = tree({
+    dependabot: DEPENDABOT.replace('    cooldown:\n      days: 7\n', ''),
+    extra: { 'services/api/uv.lock': '' },
+  });
+  assert.notEqual(answer.code, 0);
+  assert.match(answer.out, /no cooldown \(BUG-228/);
 });
 
 test('a missing staging-smoke.yml fails', () => {

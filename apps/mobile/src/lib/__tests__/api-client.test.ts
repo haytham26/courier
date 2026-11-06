@@ -98,6 +98,15 @@ function anEvent(overrides: Partial<DeliveryEvent> = {}): DeliveryEvent {
   };
 }
 
+/**
+ * The reopt answer as the contract declares it: `finish_delta_s` is a float on
+ * the server (a fraction of a second is legal), and the stops are the solver's
+ * own order - stop_id and sequence.
+ */
+function aReoptAnswer() {
+  return { run_id: 'run-1', engine: 'vrplib', finish_delta_s: -180, stops: [] };
+}
+
 describe('the base URL of the API', () => {
   it('builds every request on the base URL it is given', async () => {
     const { impl, calls } = aFetch([{ body: { id: 'run-1' } }]);
@@ -395,6 +404,78 @@ describe('the delivery events of the phone', () => {
   });
 });
 
+// Queue 4.2: the reopt call carries the stops the courier touched and answers
+// with the server's own new order and finish-time delta.
+describe('the reopt route call', () => {
+  it('posts the affected stops the caller names', async () => {
+    const { impl, calls } = aFetch([{ body: aReoptAnswer() }]);
+
+    const outcome = await aClient(impl).reoptRoute('run-1', ['stop-1', 'stop-2']);
+
+    expect(outcome.status).toBe('ok');
+    expect(calls[0]?.method).toBe('POST');
+    expect(calls[0]?.url).toBe('http://api.test/runs/run-1/route:reopt');
+    expect(calls[0]?.body).toEqual({ affected_stop_ids: ['stop-1', 'stop-2'] });
+    expect(calls[0]?.headers['Content-Type']).toBe('application/json');
+  });
+
+  it('answers the caller\u2019s unauthorized without dialing the server', async () => {
+    const { impl, calls } = aFetch([{ body: {} }]);
+
+    const outcome = await aClient(impl, {
+      getToken: () => Promise.resolve(null),
+    }).reoptRoute('run-1', ['stop-1']);
+
+    expect(outcome.status).toBe('unauthorized');
+    expect(calls.length).toBe(0);
+  });
+
+  // BUG-189: the run's own id is missing, so the request could only be built
+  // as /runs//route:reopt - a URL that is not the run's, and a round trip
+  // that would answer a 404 the courier reads as "the run is gone". The
+  // client refuses before it dials, and the screen is told why.
+  it('refuses an empty run id without dialing the server (BUG-189)', async () => {
+    const { impl, calls } = aFetch([{ body: aReoptAnswer() }]);
+
+    const outcome = await aClient(impl).reoptRoute('', ['stop-1']);
+
+    expect(outcome.status).toBe('refused');
+    expect(calls.length).toBe(0);
+  });
+
+  it('refuses a run id that is only spaces, too', async () => {
+    const { impl, calls } = aFetch([{ body: aReoptAnswer() }]);
+
+    const outcome = await aClient(impl).reoptRoute('   ', ['stop-1']);
+
+    expect(outcome.status).toBe('refused');
+    expect(calls.length).toBe(0);
+  });
+
+  // The 200 that is not the contract's own answer: the boundary's shape guard
+  // exists precisely so a body the contract never declared (a proxy's page, a
+  // newer field, a truncated answer) cannot reach a screen as if it were one.
+  it('refuses a 200 answer that is not the contract\u2019s own shape', async () => {
+    const { impl } = aFetch([{ body: { finish_delta_s: 'three minutes', stops: 'none' } }]);
+
+    const outcome = await aClient(impl).reoptRoute('run-1', ['stop-1']);
+
+    expect(outcome.status).toBe('server');
+    if (outcome.status !== 'server') {
+      return;
+    }
+    expect(outcome.message).toMatch(/not the shape the contract declares/);
+  });
+
+  it('refuses a 200 answer whose stops are not the order the contract declares', async () => {
+    const { impl } = aFetch([{ body: { run_id: 'run-1', engine: 'vrplib', finish_delta_s: 12, stops: [{}] } }]);
+
+    const outcome = await aClient(impl).reoptRoute('run-1', ['stop-1']);
+
+    expect(outcome.status).toBe('server');
+  });
+});
+
 describe('the seeded day', () => {
   it('seeds the day with the reason the app asks for', async () => {
     const { impl, calls } = aFetch([{ body: { run_id: 'run-1', shift_id: 'shift-1', stops: [] } }]);
@@ -414,5 +495,329 @@ describe('the seeded day', () => {
     await aClient(impl).seedDemoRun();
 
     expect(calls[0]?.body).toEqual({});
+  });
+});
+
+/**
+ * A fetch that records the raw body, so a FormData is not JSON.parsed. Shared by
+ * the two multipart describes (the import of queue 4e and the POD photo of
+ * queue 4f): both assert the parts at append and the headers as sent.
+ */
+function aRawFetch(answers: Answer[]): { impl: typeof fetch; calls: { url: string; init: RequestInit }[] } {
+  const calls: { url: string; init: RequestInit }[] = [];
+  let index = 0;
+  const impl = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const answer = answers[Math.min(index, answers.length - 1)];
+    index += 1;
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    calls.push({ url, init: init ?? {} });
+    if (answer?.networkError !== undefined) {
+      return Promise.reject(answer.networkError);
+    }
+    const status = answer?.status ?? 200;
+    return Promise.resolve({
+      ok: status < 400,
+      status,
+      json:
+        answer?.brokenJson === true
+          ? () => Promise.reject(new Error('the answer was an html page'))
+          : () => Promise.resolve(answer?.body ?? {}),
+    } as Response);
+  };
+  return { impl, calls };
+}
+
+/**
+ * Queue 4e (the trial's #6, ADR-025's app half): the spreadsheet import,
+ * `POST /shifts/{shift_id}/import` with the file as one multipart part.
+ *
+ * The import is all-or-nothing on the server, so the client's own contract is
+ * exact: the file rides as multipart (never a JSON body, never a Content-Type
+ * the platform's boundary would be stripped from), the 201 answer is shape-
+ * checked, and every refusal the contract declares (401/403/404/413/415/422)
+ * is classified - with an empty shift id refused before any request is made.
+ */
+describe('the spreadsheet import (queue 4e)', () => {
+  const anImportAnswer = {
+    shift_id: 'shift-1',
+    imported: 2,
+    stop_ids: ['stop-9', 'stop-10'],
+    ignored_columns: ['notes'],
+  };
+
+  const aFile = { name: 'stops.csv', type: 'text/csv', uri: 'file:///cache/stops-import.csv' };
+
+  it('posts the file as one multipart part, with no Content-Type the boundary would be stripped from', async () => {
+    const { impl, calls } = aRawFetch([{ status: 201, body: anImportAnswer }]);
+    // The part is captured at append: React Native's FormData keeps the
+    // {uri, name, type} triple as the file part on device, while the test
+    // environment's FormData stringifies it - so the triple itself is what
+    // is asserted, at the seam it crosses.
+    const appended: [string, unknown][] = [];
+    const appendSpy = jest.spyOn(FormData.prototype, 'append').mockImplementation((name, value) => {
+      appended.push([name, value]);
+    });
+
+    try {
+      const outcome = await aClient(impl).importStops('shift-1', aFile);
+
+      expect(outcome.status).toBe('ok');
+      expect(calls[0]?.url).toBe('http://api.test/shifts/shift-1/import');
+      expect(calls[0]?.init.method).toBe('POST');
+      const headers = (calls[0]?.init.headers ?? {}) as Record<string, string>;
+      expect(headers['Authorization']).toBe('Bearer token-1');
+      expect(headers['Accept']).toBe('application/json');
+      // The platform sets multipart's Content-Type WITH the boundary; setting
+      // it here would send a bare "multipart/form-data" and the server could
+      // not find the part.
+      expect(headers['Content-Type']).toBeUndefined();
+      const body = calls[0]?.init.body;
+      expect(body).toBeInstanceOf(FormData);
+      expect(appended).toEqual([
+        ['file', { uri: aFile.uri, name: 'stops.csv', type: 'text/csv' }],
+      ]);
+    } finally {
+      appendSpy.mockRestore();
+    }
+  });
+
+  it('answers the 201 shape the contract declares', async () => {
+    const { impl } = aRawFetch([{ status: 201, body: anImportAnswer }]);
+
+    const outcome = await aClient(impl).importStops('shift-1', aFile);
+
+    expect(outcome).toEqual({ status: 'ok', data: anImportAnswer });
+  });
+
+  it('refuses a 201 that is not the declared shape', async () => {
+    const { impl } = aRawFetch([{ status: 201, body: { shift_id: 'shift-1', imported: 'two' } }]);
+
+    const outcome = await aClient(impl).importStops('shift-1', aFile);
+
+    expect(outcome.status).toBe('server');
+    if (outcome.status === 'server') {
+      expect(outcome.code).toBe(201);
+    }
+  });
+
+  it('reads the contract\u2019s refusals exactly as declared: 413, 415 and 422 with the server\u2019s own sentence', async () => {
+    for (const [code, message] of [
+      [413, 'the file is over the 5 MiB cap'],
+      [415, 'the name and the bytes disagree'],
+      [422, 'row 4 has no address - nothing was stored'],
+    ] as const) {
+      const { impl } = aRawFetch([{ status: code, body: { message } }]);
+
+      const outcome = await aClient(impl).importStops('shift-1', aFile);
+
+      expect(outcome).toEqual({ status: 'server', code, message });
+    }
+  });
+
+  it('reads 404 as the server\u2019s own answer about the shift', async () => {
+    const { impl } = aRawFetch([{ status: 404, body: { message: 'no such shift' } }]);
+
+    const outcome = await aClient(impl).importStops('shift-1', aFile);
+
+    expect(outcome).toEqual({ status: 'server', code: 404, message: 'no such shift' });
+  });
+
+  it('classifies 401 and 403 as unauthorized', async () => {
+    for (const code of [401, 403]) {
+      const { impl } = aRawFetch([{ status: code, body: { message: 'no session' } }]);
+
+      const outcome = await aClient(impl).importStops('shift-1', aFile);
+
+      expect(outcome).toEqual({ status: 'unauthorized' });
+    }
+  });
+
+  it('classifies a gone network as offline', async () => {
+    const { impl } = aRawFetch([{ networkError: new Error('radio off') }]);
+
+    const outcome = await aClient(impl).importStops('shift-1', aFile);
+
+    expect(outcome).toEqual({ status: 'offline' });
+  });
+
+  it('refuses an empty shift id before any request is made (BUG-189\u2019s rule)', async () => {
+    const { impl, calls } = aRawFetch([{ status: 201, body: anImportAnswer }]);
+
+    const outcome = await aClient(impl).importStops('   ', aFile);
+
+    expect(outcome.status).toBe('refused');
+    expect(calls.length).toBe(0);
+  });
+
+  it('escapes the shift id so it cannot move the request', async () => {
+    const { impl, calls } = aRawFetch([{ status: 201, body: anImportAnswer }]);
+
+    await aClient(impl).importStops('shift 1/other', aFile);
+
+    expect(calls[0]?.url).toBe('http://api.test/shifts/shift%201%2Fother/import');
+  });
+});
+
+/**
+ * Queue 4f (the trial's #16, the POD endpoint's app half): the proof-of-
+ * delivery photo, `POST /runs/{run_id}/stops/{stop_id}/pod` with the image as
+ * one multipart part and the event's own facts beside it.
+ *
+ * The upload is idempotent on the client's own event id (a replay answers
+ * 200 with the first upload's answer), so this boundary's own contract is
+ * exact: the parts are appended in the contract's names, no Content-Type is
+ * set (the platform sets the boundary), 200 and 201 both answer the shape-
+ * checked `PodResponse`, every refusal the contract declares (404/413/415)
+ * rides through as the server's own code and sentence - and a call without
+ * the run's or the stop's own id is refused before any request is made
+ * (BUG-189's rule).
+ */
+describe('the POD photo upload (queue 4f)', () => {
+  /** Captures the FormData's appends: the parts as the platform receives them. */
+  function captureAppends(): { appended: [string, unknown][]; restore: () => void } {
+    const appended: [string, unknown][] = [];
+    const spy = jest.spyOn(FormData.prototype, 'append').mockImplementation((name, value) => {
+      appended.push([name, value]);
+    });
+    return { appended, restore: () => spy.mockRestore() };
+  }
+
+  const aPodAnswer = {
+    event_id: '33333333-3333-4333-8333-333333333333',
+    stop_id: 'stop-2',
+    sha256: 'ab'.repeat(32),
+    bytes: 67,
+    stored_at: '2026-10-31T08:15:00.000Z',
+    already_stored: false,
+  };
+
+  const anImage = { uri: 'file:///cache/pod-photo.jpg', name: 'pod-photo.jpg', type: 'image/jpeg' };
+  const aPayload = {
+    image: anImage,
+    occurredAt: '2026-10-31T08:14:59.000Z',
+    eventId: '33333333-3333-4333-8333-333333333333',
+  };
+
+  it('posts the image, the moment and the event id as multipart parts, with no Content-Type the boundary would be stripped from', async () => {
+    const { impl, calls } = aRawFetch([{ status: 201, body: aPodAnswer }]);
+    const { appended, restore } = captureAppends();
+    try {
+      const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+      expect(outcome.status).toBe('ok');
+      expect(calls[0]?.url).toBe('http://api.test/runs/run-1/stops/stop-2/pod');
+      expect(calls[0]?.init.method).toBe('POST');
+      const headers = (calls[0]?.init.headers ?? {}) as Record<string, string>;
+      expect(headers['Authorization']).toBe('Bearer token-1');
+      expect(headers['Accept']).toBe('application/json');
+      expect(headers['Content-Type']).toBeUndefined();
+      expect(calls[0]?.init.body).toBeInstanceOf(FormData);
+      expect(appended).toEqual([
+        ['image', { uri: anImage.uri, name: 'pod-photo.jpg', type: 'image/jpeg' }],
+        ['occurred_at', '2026-10-31T08:14:59.000Z'],
+        ['event_id', '33333333-3333-4333-8333-333333333333'],
+      ]);
+    } finally {
+      restore();
+    }
+  });
+
+  it('adds the safe place as its own part only when the courier said one', async () => {
+    const { impl } = aRawFetch([{ status: 201, body: aPodAnswer }]);
+    const withPlace = captureAppends();
+    try {
+      await aClient(impl).uploadPod('run-1', 'stop-2', { ...aPayload, safePlace: 'behind the gate' });
+      expect(withPlace.appended).toEqual([
+        ['image', { uri: anImage.uri, name: 'pod-photo.jpg', type: 'image/jpeg' }],
+        ['occurred_at', '2026-10-31T08:14:59.000Z'],
+        ['event_id', '33333333-3333-4333-8333-333333333333'],
+        ['safe_place', 'behind the gate'],
+      ]);
+    } finally {
+      withPlace.restore();
+    }
+
+    const { impl: impl2 } = aRawFetch([{ status: 201, body: aPodAnswer }]);
+    const withoutPlace = captureAppends();
+    try {
+      await aClient(impl2).uploadPod('run-1', 'stop-2', { ...aPayload, safePlace: '   ' });
+      // An empty safe place is not a part: the contract's field is optional,
+      // and a whitespace-only one would be stored as if said.
+      expect(withoutPlace.appended.filter(([name]) => name === 'safe_place')).toEqual([]);
+    } finally {
+      withoutPlace.restore();
+    }
+  });
+
+  it('answers both the 201 (stored) and the 200 (a replay of the same event id) as the declared shape', async () => {
+    for (const status of [201, 200]) {
+      const { impl } = aRawFetch([{ status, body: aPodAnswer }]);
+
+      const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+      expect(outcome).toEqual({ status: 'ok', data: aPodAnswer });
+    }
+  });
+
+  it('refuses a 200/201 that is not the declared shape', async () => {
+    const { impl } = aRawFetch([{ status: 201, body: { event_id: aPodAnswer.event_id, stop_id: 'stop-2' } }]);
+
+    const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+    expect(outcome.status).toBe('server');
+    if (outcome.status === 'server') {
+      expect(outcome.code).toBe(201);
+    }
+  });
+
+  it('reads the contract\u2019s refusals exactly as declared: 413, 415 and 404 with the server\u2019s own sentence', async () => {
+    for (const [code, message] of [
+      [413, 'the image is over the 10 MiB cap'],
+      [415, 'the bytes are not a JPEG, PNG or HEIC image'],
+      [404, 'no such stop on this run'],
+    ] as const) {
+      const { impl } = aRawFetch([{ status: code, body: { message } }]);
+
+      const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+      expect(outcome).toEqual({ status: 'server', code, message });
+    }
+  });
+
+  it('classifies 401 and 403 as unauthorized', async () => {
+    for (const code of [401, 403]) {
+      const { impl } = aRawFetch([{ status: code, body: { message: 'no session' } }]);
+
+      const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+      expect(outcome).toEqual({ status: 'unauthorized' });
+    }
+  });
+
+  it('classifies a gone network as offline', async () => {
+    const { impl } = aRawFetch([{ networkError: new Error('radio off') }]);
+
+    const outcome = await aClient(impl).uploadPod('run-1', 'stop-2', aPayload);
+
+    expect(outcome).toEqual({ status: 'offline' });
+  });
+
+  it('refuses an empty run or stop id before any request is made (BUG-189\u2019s rule)', async () => {
+    const { impl, calls } = aRawFetch([{ status: 201, body: aPodAnswer }]);
+
+    const noRun = await aClient(impl).uploadPod('  ', 'stop-2', aPayload);
+    const noStop = await aClient(impl).uploadPod('run-1', '', aPayload);
+
+    expect(noRun.status).toBe('refused');
+    expect(noStop.status).toBe('refused');
+    expect(calls.length).toBe(0);
+  });
+
+  it('escapes the run and stop ids so they cannot move the request', async () => {
+    const { impl, calls } = aRawFetch([{ status: 201, body: aPodAnswer }]);
+
+    await aClient(impl).uploadPod('run 1/x', 'stop 2/y', aPayload);
+
+    expect(calls[0]?.url).toBe('http://api.test/runs/run%201%2Fx/stops/stop%202%2Fy/pod');
   });
 });

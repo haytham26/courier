@@ -55,6 +55,13 @@ export function e2eDay(): RunSnapshot {
       depot: { lat: -43.532, lon: 172.599 },
       speed_kmh: 40,
       start_at: '2026-10-31T07:30:00.000Z',
+      // Queue 4d (the trial's #12 and #14, ADR-022's app half): the mock run
+      // carries its own break window and its own finish point, the way the
+      // server's seeded day answers them - the finish is the depot, which is
+      // what a round trip is. The times are UTC stamps; the screens read them
+      // on the device's own clock.
+      break_window: { start: '2026-10-31T12:00:00.000Z', end: '2026-10-31T13:00:00.000Z' },
+      finish: { lat: -43.532, lon: 172.599 },
     },
     stops: mockStops.map((stop) => ({
       id: stop.id,
@@ -68,11 +75,21 @@ export function e2eDay(): RunSnapshot {
       location_id: `e2e-loc-${stop.id}`,
       lat: stop.coordinates.lat,
       lon: stop.coordinates.lng,
-      priority: false,
+      // Queue 4a (the trial's #11 and #13): the run's OWN priority and the
+      // run's OWN window, in the contract's own names. A stop the run gave no
+      // window has none to answer - the audit's finding was the hardcoded
+      // `false`, which threw the run's own word away before any screen could
+      // read it.
+      priority: stop.priority === true,
+      ...(stop.window === undefined
+        ? {}
+        : { window_start: stop.window.start, window_end: stop.window.end }),
       parcels: 1,
-      // ADR-024: the stop's type is required by the contract, and the mock
-      // list's stops are all deliveries.
-      type: 'delivery',
+      // ADR-024 / queue 4c (the trial's #21): the stop's own type, in the
+      // contract's own word. The mock list carries one pickup, so the E2E
+      // day answers a pickup the screens can read - the type was hardcoded
+      // 'delivery' before, which threw the run's own word away.
+      type: stop.type === 'pickup' ? 'pickup' : 'delivery',
     })),
   };
 }
