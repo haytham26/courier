@@ -239,9 +239,17 @@ jobs:
           # the pins step computes (the runner revision, the emulator build, the
           # system image's revision, the Maestro version and the emulator options
           # itself), so a change to any of them is the commit that renames the key.
+          #
+          # No `restore-keys` (audit item 3e, 2026-11-05): a restore-keys PREFIX
+          # restores a cache entry whose key does not match, which undoes the
+          # paragraph above. With `avd-<os>-<api>-google-apis-x86_64-` as the
+          # prefix, an AVD built under a different Maestro version, emulator
+          # build, system-image revision or option set is handed to this job on a
+          # fingerprint miss - which is exactly BUG-068's tiny-device-profile
+          # failure, re-armed one line below the comment that describes fixing it.
+          # Only an EXACT key restores now, and a pin change is a cache miss that
+          # builds the right AVD.
           key: avd-${{ runner.os }}-${{ matrix.api }}-google-apis-x86_64-${{ steps.pins.outputs.hash }}
-          restore-keys: |
-            avd-${{ runner.os }}-${{ matrix.api }}-google-apis-x86_64-
 
       - name: Install Maestro
         env:

@@ -441,6 +441,43 @@ Semgrep job green - that is the next CI run's evidence on this head.
 - #200 (3b, BUG-213) went green on 0f44e31 after one self-inflicted red: my log note written via an inline `python -c` mangled backticks into BEL/control chars and `check-control-chars` (a Floor-guard step I had not been running locally) failed run 42138822228. Fixed in 0f44e31; control-chars now run locally before every push. Merged as `fb4708b`; tag `archive/smoke-version-213` @ `0f44e31`; branch deleted, ls-remote empty.
 - #201 (3c, BUG-214) shared head 5e91a06 with #200: GitHub marked it merged when #200 landed (three-dot diff vs main empty; BUG-214 row `fixed` in main; 47/47 checks green). Comment left on the PR; tag `archive/deploy-secrets-inline-214` @ `5e91a06`; branch deleted.
 - The 3d branch (was 0169533, BUG-215 + BUG-226) now carries origin/main via `64de5c8` (one log conflict, both sections kept): parity 0 reopened, 200 bug rows, nothing deleted, counts re-pasted. Pushed to `deploy-gates-215` via the API workaround.
+## The 2026-11-05 audit's CI / INFRA item 3e (BUG-216): only an exact AVD cache key restores
+
+`android-e2e.yml`'s "Cache the AVD snapshot" step carried
+`restore-keys: avd-<os>-<api>-google-apis-x86_64-`, which restores the newest
+cache whose key starts with that prefix when the exact key misses - so a
+fingerprint miss handed the job an AVD built under a different Maestro version,
+emulator build, system-image revision or emulator-option set. That is BUG-068's
+tiny-device-profile failure again, one line below the comment explaining how
+BUG-068 was fixed.
+
+- The two restore-keys lines are gone (the exact key stays), with a comment
+  recording why, so nobody adds the prefix back for speed.
+- `scripts/ci/check-e2e-avd-restore-keys.mjs` (a step in the Floor guard job)
+  holds the line over every emulator workflow with an AVD cache -
+  `android-e2e-health.yml` included, which has none and is asserted rather than
+  assumed.
+- Evidence: `docs/evidence/e2e-avd-exact-key/README.md` (the red is the block
+  re-attached and the gate naming it).
+
+**The same class elsewhere, deliberately not touched:** `screen-recordings.yml`
+carries four `restore-keys` prefixes (a Playwright browser cache and an AVD
+cache). The audit's item 3e names `android-e2e.yml` only, and BUG-097's own test
+is titled "the recordings cache is content-hashed with a restore-keys", so that
+prefix is a recorded decision, not an oversight. It is logged here as the next
+crew item rather than silently overturned in a PR about a different file - and
+if the lead wants only-exact-keys there too, it is a one-line change plus that
+test's title.
+
+**Next in item 3:** 3f (pin the Android system image), 3g (drop the paths
+filter, add a changes job, `if:` on build/e2e/a1), 3h (fail e2e/a1 after attempt
+2), then the four 3i PRs in order and 3j.
+
+## 2026-11-06: #202 merged as 671bfda; origin/main into the 3e branch (dfbf42f + cc1e9a8)
+
+- #202 (3d, BUG-215 + BUG-226) went green on its merge-in head `6d471c4` (21/21, Semgrep green with the W6 exclusion) and merged as `671bfda`; tag `archive/deploy-gates-215` @ `6d471c4`; branch deleted, ls-remote empty.
+- Side effect found while merging main into the 3e branch: the BUG-226 README rows that landed with #202 were mangled (a doubled `| |` and a merged line) by the insert script. Repaired as `cc1e9a8` on this branch; `check-doc-links`/control-chars/mojibake/parity all clean.
+- The 3e branch (was `f5094ef`, BUG-216) carries origin/main via `dfbf42f` (4 adjacent-insertion conflicts, all union-resolved keeping both sides): parity 0 reopened, 201 bug rows, nothing deleted, counts re-pasted. Pushed to `e2e-avd-exact-key` via the API workaround.
 
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 

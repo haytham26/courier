@@ -121,6 +121,14 @@ jobs:
       # no-suppressions check only sees inline Semgrep suppression comments).
       - name: Every Semgrep exclusion is written down (BUG-226)
         run: node scripts/ci/check-semgrep-exclusions.mjs
+      # The 2026-11-05 audit's item 3e: the android-e2e AVD cache carried a
+      # `restore-keys` prefix that stops short of the pins' fingerprint, so a
+      # fingerprint miss restored an AVD built under a different Maestro version,
+      # emulator build, system-image revision or option set - BUG-068's
+      # tiny-device-profile failure, re-armed. Only an EXACT key restores now,
+      # and the health workflow (which has none) is held to the same line.
+      - name: Only an exact AVD cache key restores (audit 3e)
+        run: node scripts/ci/check-e2e-avd-restore-keys.mjs
       # BUG-122: the API reads AUTH_JWT_ISSUER from its own environment while
       # the auth service signs with `AUTH_JWT_ISSUER ?? BETTER_AUTH_URL`, and
       # nothing compared the two - a deployment where they disagree answers
