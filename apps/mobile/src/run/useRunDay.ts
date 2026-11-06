@@ -73,6 +73,12 @@ export interface RunDay {
   hasRun: boolean;
   /** The run's own id, or null before the day has been read (queue 4.2). */
   runId: string | null;
+  /**
+   * The shift's own id, or null before the day has been read (queue 4e). The
+   * import endpoint is about a shift, so the screen that sends a file needs
+   * this one - the run's id would dial a URL about no shift at all.
+   */
+  shiftId: string | null;
   /** The stops of the run, in the run's own order. Empty while loading. */
   stops: Stop[];
   /** The deliveries this run carries, in delivery order. */
@@ -285,6 +291,14 @@ export function useRunDay(source: StoreSource): RunDay {
     [snapshot],
   );
 
+  // Queue 4e (the trial's #6, ADR-025's app half): the shift's own id, read
+  // from the same snapshot as the run's - one read, one source, so the import
+  // asks about the shift the day actually belongs to.
+  const shiftId = useMemo(
+    () => (snapshot?.status === 'ok' ? snapshot.snapshot.run.shift_id : null),
+    [snapshot],
+  );
+
   // Queue 4d (the trial's #12 and #14, ADR-022's app half): the run's own
   // break window, finish point and depot, read from the same snapshot as the
   // id - one read, one source, so the offline answer and the online answer
@@ -328,6 +342,7 @@ export function useRunDay(source: StoreSource): RunDay {
     () => ({
       hasRun: stops.length > 0,
       runId,
+      shiftId,
       stops,
       delivered: marks,
       isDelivered,
@@ -340,6 +355,6 @@ export function useRunDay(source: StoreSource): RunDay {
       refreshDay,
       applyRouteOrder,
     }),
-    [stops, marks, isDelivered, nextStop, deliveredIds, runId, runFacts, refreshMarks, refreshDay, applyRouteOrder],
+    [stops, marks, isDelivered, nextStop, deliveredIds, runId, shiftId, runFacts, refreshMarks, refreshDay, applyRouteOrder],
   );
 }
