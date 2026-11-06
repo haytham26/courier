@@ -612,6 +612,12 @@ api-34 four times with the code byte-identical (BUG-065).
 C11 Node 20 -> 24, C10 pin every action by digest, C14 dependabot + a cron staging smoke), then 3j (the
 required-checks list, which is a FOUNDER_TODO row - the names are written down for the founder to set).
 
+## 2026-11-06: #205 merged as ef46eac; origin/main into `e2e-retry-budget` (5149434)
+
+- The previous stack PR merged as `ef46eac`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `e2e-retry-budget` (was `38d557e`) carries origin/main via `5149434` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 208 bug rows (open 7 · doing 3 · testing 1 · fixed 165 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+Also carrying the #205 bookkeeping (counts re-pasted one branch late to save a CI cycle): #205 merged as ef46eac, tag archive/e2e-job-level-filter @ 9a486f6, branch deleted.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
