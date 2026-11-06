@@ -118,18 +118,35 @@ async function outputOf(child) {
   return { code, text };
 }
 
-/** The seeded day the a1 flow starts from: one run, one shift, five stops. */
+/**
+ * The seeded day the a1 flow starts from: one run, one shift, five stops -
+ * and since BUG-236 a real day-one day: the run carries its planned break and
+ * a finish back at the depot, and the stops carry a priority flag (the
+ * second), a delivery window (the third) and a pickup type (the fourth),
+ * the same shape the fixed demo seed writes.
+ */
 function seedTheDay() {
   psql('TRUNCATE delivery_events, stops, shifts, runs CASCADE');
   psql(`INSERT INTO shifts (id, courier_id, started_at)
         VALUES ('00000000-0000-0000-0000-000000000002','courier-test',now())`);
-  psql(`INSERT INTO runs (id, shift_id, courier_id, name, depot_lat, depot_lon, speed_kmh, start_at, created_at, updated_at)
+  psql(`INSERT INTO runs (id, shift_id, courier_id, name, depot_lat, depot_lon, speed_kmh, start_at,
+                          break_start_at, break_end_at, finish_lat, finish_lon, created_at, updated_at)
         VALUES ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002','courier-test',
-        'Test run',-43.5,172.6,30,now(),now(),now())`);
+        'Test run',-43.5,172.6,30,now(),now() + interval '4 hours', now() + interval '5 hours',
+        -43.5,172.6,now(),now())`);
   for (let i = 1; i <= 5; i++) {
-    psql(`INSERT INTO stops (id, shift_id, sequence, location_id, status, address, priority, parcels)
+    // The day-one fields, in the seeded order: priority on the second stop,
+    // a window on the third, a pickup type on the fourth (BUG-236).
+    const priority = i === 2 ? 'true' : 'false';
+    const window = i === 3
+      ? `now() + interval '6 hours', now() + interval '8 hours'`
+      : 'NULL, NULL';
+    const type = i === 4 ? "'pickup'" : "'delivery'";
+    psql(`INSERT INTO stops (id, shift_id, sequence, location_id, status, address, priority, parcels,
+                              time_window_start, time_window_end, type)
           VALUES ('00000000-0000-0000-0000-00000000000${String(i)}','00000000-0000-0000-0000-000000000002',
-          ${i},'00000000-0000-0000-0000-0000000000${String(i)}0','pending','stop ${i}',false,2)`);
+          ${i},'00000000-0000-0000-0000-0000000000${String(i)}0','pending','stop ${i}',${priority},2,
+          ${window},${type})`);
   }
   for (let i = 1; i <= 3; i++) {
     psql(`INSERT INTO delivery_events (id, shift_id, stop_id, kind, occurred_at, received_at)

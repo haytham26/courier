@@ -268,6 +268,69 @@ class TestTheSeededDayReadsBack:
         assert client.get(f"/runs/{theirs['run_id']}").status_code == 404
 
 
+class TestTheSeededDayCarriesTheDayOneFields:
+    """BUG-236: the trial server's seeded day is a real day-one day.
+
+    The day-one list (docs/status/TRIAL_SCOPE.md) has the run's planned break
+    and finish point, and on the stops a priority flag, a time window and a
+    type (D55/D59/D63's server halves). The A1 job seeds this day and reads it
+    back through GET /runs and GET /shifts/{id}/stops, so the seed has to
+    WRITE them - a day of bare ids and addresses proves none of them.
+    """
+
+    def test_the_run_carries_a_break_window_and_a_depot_finish(
+        self, client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        seeded_day = client.post(PATH, json=a_seed()).json()
+
+        run = client.get(f"/runs/{seeded_day['run_id']}")
+
+        assert run.status_code == 200, run.text
+        body = run.json()
+        assert body["break_window"] is not None
+        assert body["break_window"]["start"] < body["break_window"]["end"]
+        assert body["finish"] is not None
+        assert body["finish"]["lat"] == body["depot"]["lat"]
+        assert body["finish"]["lon"] == body["depot"]["lon"]
+
+    def test_the_stops_carry_priority_a_window_and_a_pickup(
+        self, client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        seeded_day = client.post(PATH, json=a_seed()).json()
+
+        stops = client.get(f"/shifts/{seeded_day['shift_id']}/stops")
+
+        assert stops.status_code == 200, stops.text
+        by_seq = {stop["seq"]: stop for stop in stops.json()}
+        assert len(by_seq) == STOPS
+        # The day-one fields sit on the day in the seeded order: the second
+        # stop is priority, the third carries a delivery window, the fourth is
+        # a pickup; the rest stay plain deliveries.
+        assert by_seq[2]["priority"] is True
+        assert by_seq[3]["window_start"] is not None
+        assert by_seq[3]["window_end"] is not None
+        assert by_seq[3]["window_start"] < by_seq[3]["window_end"]
+        assert by_seq[4]["type"] == "pickup"
+        assert by_seq[1]["type"] == "delivery"
+        assert by_seq[1]["priority"] is False
+        assert by_seq[1]["window_start"] is None
+
+    def test_the_day_itself_carries_the_fields(self, seeded: None) -> None:
+        day = demo_day_for(COURIER, "e2e")
+
+        assert day.run.break_start_at is not None
+        assert day.run.break_end_at is not None
+        assert day.run.break_start_at < day.run.break_end_at
+        assert day.run.finish_lat == day.run.depot_lat
+        assert day.run.finish_lon == day.run.depot_lon
+        assert day.stops[1].priority is True
+        assert day.stops[2].window_start is not None
+        assert day.stops[2].window_end is not None
+        assert day.stops[2].window_start < day.stops[2].window_end
+        assert day.stops[3].type == "pickup"
+        assert day.stops[0].type == "delivery"
+
+
 @pytest.mark.db
 class TestTheDemoSeedOnPostgres:
     """The same guarantee through the production repository (CI's db job).
@@ -318,6 +381,45 @@ class TestTheDemoSeedOnPostgres:
             # The seeded stop reads back with the status a seeded stop starts at.
             assert stops[0].status == "pending"
             assert stops[0].address
+        finally:
+            with engine.begin() as connection:
+                connection.execute(
+                    text("DELETE FROM stops WHERE shift_id = :shift"),
+                    {"shift": expected.run.shift_id},
+                )
+                connection.execute(
+                    text("DELETE FROM runs WHERE id = :run"),
+                    {"run": expected.run.id},
+                )
+                connection.execute(
+                    text("DELETE FROM shifts WHERE id = :shift"),
+                    {"shift": expected.run.shift_id},
+                )
+
+    def test_the_day_one_fields_land_in_postgres(self, engine: Engine) -> None:
+        """BUG-236's SQL half: the seed's own INSERT carries type and the
+        window columns, so the rows Postgres holds are the day-one day - the
+        pre-fix insert wrote none of them and the reads answered the schema's
+        defaults ('delivery', NULL windows, priority false).
+        """
+        repo = SqlAlchemyRepo(engine)
+        expected = demo_day_for(COURIER, "e2e")
+        try:
+            day = write_demo_day(repo, COURIER, "e2e")
+
+            run = repo.get_run(day.run.id)
+            assert run is not None
+            assert run.break_start_at == day.run.break_start_at
+            assert run.break_end_at == day.run.break_end_at
+            assert run.finish_lat == day.run.depot_lat
+            assert run.finish_lon == day.run.depot_lon
+            stops = {stop.id: stop for stop in repo.get_run_stops(day.run.id)}
+            assert stops[demo_stop_id(COURIER, "e2e", 1)].priority is True
+            window = stops[demo_stop_id(COURIER, "e2e", 2)]
+            assert window.window_start == day.stops[2].window_start
+            assert window.window_end == day.stops[2].window_end
+            assert stops[demo_stop_id(COURIER, "e2e", 3)].type == "pickup"
+            assert stops[demo_stop_id(COURIER, "e2e", 0)].type == "delivery"
         finally:
             with engine.begin() as connection:
                 connection.execute(

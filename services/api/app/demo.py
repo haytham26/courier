@@ -22,7 +22,7 @@ from __future__ import annotations
 import os
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import text
@@ -50,6 +50,23 @@ _DEMO_ADDRESSES: tuple[tuple[str, float, float], ...] = (
     ("7 Blenheim Road, Riccarton", -43.5260, 172.5850),
 )
 
+#: The demo depot: the day starts and ends there (the round trip, ADR-022).
+_DEMO_DEPOT: tuple[float, float] = (-43.5330, 172.6300)
+
+#: BUG-236: the seeded day is a real day-one day, so it carries the fields the
+#: day-one list has and the reads answer (TRIAL_SCOPE.md): the run's planned
+#: break (four hours in, one hour long) and a finish back at the depot, and on
+#: the stops a priority flag (the second), a delivery window (the third) and a
+#: pickup type (the fourth). The shape the A1 job asserts is unchanged: one
+#: run, one shift, five stops.
+_DEMO_BREAK_AFTER = timedelta(hours=4)
+_DEMO_BREAK_LENGTH = timedelta(hours=1)
+_DEMO_PRIORITY_INDEX = 1
+_DEMO_WINDOW_INDEX = 2
+_DEMO_PICKUP_INDEX = 3
+_DEMO_WINDOW_AFTER = timedelta(hours=6)
+_DEMO_WINDOW_LENGTH = timedelta(hours=2)
+
 #: The demo shift's insert, idempotent on its id.
 _SHIFT_SQL = (
     "INSERT INTO shifts (id, courier_id, started_at) "
@@ -58,13 +75,15 @@ _SHIFT_SQL = (
 )
 
 #: The demo stop's insert, idempotent on its id, with the status the schema's
-#: default gives a seeded stop.
+#: default gives a seeded stop. BUG-236: it carries the day-one columns too -
+#: type and the time window - the same columns the import writer inserts, so
+#: the seeded day reads back the fields the day-one list has.
 _STOP_SQL = (
     "INSERT INTO stops "
     "(id, shift_id, sequence, address, latitude, longitude, status, priority, parcels, "
-    "location_id) "
+    "location_id, type, time_window_start, time_window_end) "
     "VALUES (:id, :shift_id, :sequence, :address, :lat, :lon, 'pending', :priority, :parcels, "
-    ":location) "
+    ":location, :type, :window_start, :window_end) "
     "ON CONFLICT (id) DO NOTHING"
 )
 
@@ -108,30 +127,47 @@ class DemoDay:
 
 
 def demo_day_for(courier_id: str, reason: str, starts_at: datetime | None = None) -> DemoDay:
-    """The deterministic day for this caller and reason."""
+    """The deterministic day for this caller and reason.
+
+    The day carries the day-one fields (BUG-236): the run has its planned
+    break and its finish back at the depot, and the stops have one priority
+    flag, one delivery window and one pickup type among them - the fields
+    GET /runs and GET /shifts/{id}/stops answer, so the trial server's seeded
+    day is a real day, not bare ids.
+    """
     start = starts_at or datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+    depot_lat, depot_lon = _DEMO_DEPOT
     run = RunRecord(
         id=demo_run_id(courier_id, reason),
         shift_id=demo_shift_id(courier_id, reason),
         courier_id=courier_id,
         name=f"Demo run ({reason})",
-        depot_lat=-43.5330,
-        depot_lon=172.6300,
+        depot_lat=depot_lat,
+        depot_lon=depot_lon,
         capacity_parcels=None,
         speed_kmh=30.0,
         start_at=start,
+        break_start_at=start + _DEMO_BREAK_AFTER,
+        break_end_at=start + _DEMO_BREAK_AFTER + _DEMO_BREAK_LENGTH,
+        finish_lat=depot_lat,
+        finish_lon=depot_lon,
     )
     stops = [
         RouteStopRow(
             id=demo_stop_id(courier_id, reason, index),
             lat=lat,
             lon=lon,
-            priority=False,
+            priority=index == _DEMO_PRIORITY_INDEX,
             parcels=1,
             service_time_s=None,
-            window_start=None,
-            window_end=None,
+            window_start=start + _DEMO_WINDOW_AFTER if index == _DEMO_WINDOW_INDEX else None,
+            window_end=(
+                start + _DEMO_WINDOW_AFTER + _DEMO_WINDOW_LENGTH
+                if index == _DEMO_WINDOW_INDEX
+                else None
+            ),
             address=address,
+            type="pickup" if index == _DEMO_PICKUP_INDEX else "delivery",
         )
         for index, (address, lat, lon) in enumerate(_DEMO_ADDRESSES[:DEMO_STOPS])
     ]
@@ -151,6 +187,9 @@ def demo_day_body(day: DemoDay) -> dict[str, object]:
                 "lon": stop.lon,
                 "priority": stop.priority,
                 "parcels": stop.parcels,
+                "type": stop.type,
+                "window_start": stop.window_start.isoformat() if stop.window_start else None,
+                "window_end": stop.window_end.isoformat() if stop.window_end else None,
             }
             for stop in day.stops
         ],
@@ -219,6 +258,9 @@ def _write_stops(repo: Any, day: DemoDay, engine: Engine | None) -> None:
                 "priority": stop.priority,
                 "parcels": stop.parcels,
                 "location": location_id_for(stop.address or "", None),
+                "type": stop.type,
+                "window_start": stop.window_start,
+                "window_end": stop.window_end,
             }
             # The sequence is the stop's place in the seeded day, not its
             # place among the missing rows: a caller who lost one stop and

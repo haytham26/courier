@@ -770,6 +770,10 @@ components:
 
     DemoStop:
       type: object
+      description: >-
+        One stop of the seeded demo day. BUG-236: the seeded day is a real
+        day-one day, so the seed's answer carries the type and the time window
+        beside the priority, as the contract's Stop does.
       required: [id, address, lat, lon]
       properties:
         id:
@@ -787,6 +791,17 @@ components:
           type: boolean
         parcels:
           type: integer
+        type:
+          type: string
+          enum: [delivery, pickup]
+        window_start:
+          type: string
+          format: date-time
+          nullable: true
+        window_end:
+          type: string
+          format: date-time
+          nullable: true
 
     Entitlement:
       type: object

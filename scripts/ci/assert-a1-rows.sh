@@ -106,5 +106,22 @@ if [ "$distinct_stops" != "4" ]; then
   exit 1
 fi
 
+# BUG-236: the seeded day is a real day-one day (TRIAL_SCOPE.md), not bare ids:
+# the run carries its planned break and a finish back at the depot, and three
+# of the stops carry a day-one field - a priority flag, a delivery window, a
+# pickup type. The counts are decisive: the seed writes exactly that shape.
+run_fields=$(query "SELECT count(*) FROM runs WHERE break_start_at IS NOT NULL AND break_end_at IS NOT NULL AND break_start_at < break_end_at AND finish_lat = depot_lat AND finish_lon = depot_lon")
+echo "runs with a break window and a depot finish: $run_fields"
+if [ "$run_fields" != "1" ]; then
+  echo "::error::expected the seeded run to carry its break window and its depot finish (BUG-236), found $run_fields"
+  exit 1
+fi
+day_one_stops=$(query "SELECT count(*) FROM stops WHERE priority OR time_window_start IS NOT NULL OR type <> 'delivery'")
+echo "stops carrying a day-one field (priority, window or pickup type): $day_one_stops"
+if [ "$day_one_stops" != "3" ]; then
+  echo "::error::expected three seeded stops to carry a priority flag, a window or a pickup type (BUG-236), found $day_one_stops"
+  exit 1
+fi
+
 echo "the seeded day and the four deliveries are in Postgres, against the run the API seeded"
 echo "::endgroup::"
