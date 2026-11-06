@@ -545,6 +545,11 @@ green — that is the next CI run's evidence on this head.
 
 Run 42150920439, job 127673925748 (api 35): boot normal (33 s), image found, AVD created, Streamed Install Success, am start pid=3229 - then `no first screen appeared in 90s`, relaunches=0, no FATAL/ANR/crash in the log between start and timeout. The api-34 leg and A1 on the SAME head are green, and the 3e diff touches only the AVD cache restore-keys + docs + a gate - nothing in the app or the emulator options. That is the BUG-060/061 runner class (swiftshader first-frame stall on one leg). Re-ran the failed job (`gh run rerun 42150920439 --failed`) per the BUG-185/BUG-061 precedent; the retry budget of one lands with 3h (#207).
 
+## 2026-11-06: #203 merged as 51c8ce1 (api-35 red was a runner flake, re-run green); origin/main into the 3f branch (18a427b)
+
+- #203 (3e, BUG-216) green 21/21 on `d99fb22` after the api-35 leg flake re-run (root cause in the log above); merged as `51c8ce1`; tag `archive/e2e-avd-exact-key` @ `d99fb22`; branch deleted, ls-remote empty.
+- The 3f branch (was `3ec94a3`, BUG-217 + BUG-225 + BUG-227) carries origin/main via `18a427b` (BUGS.md rows union-sorted 217/225/226/227; log conflict both-sides-kept): parity 0 reopened, 204 bug rows, nothing deleted, counts re-pasted. Pushed to `e2e-sysimg-pinned` via the API workaround. Its emulator legs were already green on `3ec94a3` (BUG-225/227 fixes); the Semgrep red cleared with main's BUG-226 exclusion.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
