@@ -1,0 +1,52 @@
+appId: com.courier.copilot
+name: 'The drive hands the stop to the nav app (queue 4g, trial #15)'
+---
+# Queue 4g's courier-facing half: the navigation hand-off (the trial's #15,
+# built in PR #191 as `driving-nav-handoff`). The drive's own map is not a nav
+# engine, so the panel's "Open in nav app" hands the run's own stop to the nav
+# app the courier already has, with the key-free Google Maps deep link.
+#
+# What this flow proves on the emulator: the control rides the drive panel
+# with the run's own stop, the press takes the hand-off, and a phone with no
+# nav app to answer the link does NOT take the app down - the drive is still
+# the screen afterwards (the hand-off's 'failed' answer is a console warning,
+# by design: no invented chooser, no crash).
+#
+# BUG-185: stop the app FIRST, then clear its state.
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The Go sits inside the run sheet, below the fold of the peek: raise the
+# sheet first (driving.yaml's convention).
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- tapOn:
+    id: "today-go"
+- extendedWaitUntil:
+    visible:
+      id: "driving-screen"
+    timeout: 30000
+
+# The hand-off control: the accent pill under the slide, on the drive panel,
+# visible without scrolling on the emulator (driving.yaml asserts the slide
+# at the same depth).
+- assertVisible:
+    id: "driving-nav-handoff"
+- assertVisible: "Open in nav app"
+- tapOn:
+    id: "driving-nav-handoff"
+- waitForAnimationToEnd:
+    timeout: 2500
+# The hand-off was taken (no nav app answers on the emulator) and the drive is
+# still the screen: the app did not leave, did not crash, did not invent a
+# chooser.
+- assertVisible:
+    id: "driving-screen"
+- assertVisible: "STOP 2 OF 5"
+- takeScreenshot: "nav-handoff-taken"
