@@ -1,8 +1,9 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `a6dffe7` (PR #214, queue 4d —
-the run's break window and finish point, incl. the BUG-195 null fix). Lead session 14,
-2026-11-05/06.**
+**Week:** 2026-W44. **Local `main` == `origin/main` == `ef46eac` (PR #205, audit 3g;
+ahead of it `491af4d` = PR #215, queue 4e). Lead session 14, 2026-11-05/06.
+Queue 4f = PR #216 and 4g = PR #217 in flight; release hygiene on
+`feat/release-hygiene`.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
@@ -1011,3 +1012,40 @@ tests (86 suites), tsc, eslint, check-parity (0 reopened) green. Next after
 it: 4f (POD photo #16 via the existing POD endpoint; signature once the
 backend's signature contract lands), 4g (the nav hand-off flow #15), then
 release hygiene and D1/B5/A3/§22/P4/P7 to the §6 Definition of Done.
+
+**Queue 4f = PR #216 and 4g = PR #217, both re-dispatched after their first
+heads' E2E failures (root-caused, §12).** 4f's head e039376d: only the new
+`pod.yaml` failed — the job log showed `Unknown Property: point` (the deliver
+swipe's `point` was a sibling of `from:` instead of inside the selector), so
+the flow never loaded; fixed on 7d5716d (all 15 existing flows passed on the
+failing run). 4g's head 04ed2186: only `nav-handoff.yaml` failed, at the
+post-tap assert — the evidence screen showed Google Maps' own landing ("Make
+it your map"): the pinned emulator image ships Maps, so the key-free link IS
+answered and the nav app takes the foreground; the flow on d1e44db now asserts
+Maps' landing, screenshots it, presses back, and asserts the drive is still on
+"STOP 2 OF 5". Root-cause comments on the PRs (#6678133127, #6678133640).
+Also observed: PR #205's `changes` job sets only build/flows/scripts/pipeline
+on the human-dispatch path, so manual `workflow_dispatch` runs SKIP the
+e2e/a1 jobs (runs 42166994398, 42167332868) — filed as **BUG-198 (open,
+backend-owned .github)**; the `pull_request` runs are the E2E evidence.
+
+**Release hygiene on `feat/release-hygiene` (this branch):** verified the
+E2E-flag gate end to end — `check-e2e-flag.mjs --variant release` with
+`EXPO_PUBLIC_E2E=1` exits 1 (BUG-079's rule: a release build never inlines the
+mocks; the e2e legs declare `--variant e2e`, the a1/release legs `--variant
+release`), and `check-mock-reach.mjs` proves the mock list is reachable only
+through the E2E seams (labelReader's `readerForThisBuild` included). New
+`scripts/ci/check-design-gate.mjs` (+ 9 node --test cases) proves the design
+lab and compat screen are out of a release build: metro blockLists
+`app/design/**` + `app/compat.tsx` when neither flag is set (and the gate
+fails if the blockList also matches a product screen), `buildFlags.ts` inlines
+the same decision, `_layout.tsx` registers the design route only under it, and
+the gated files must exist (no vacuous pass). Verified `syncService.sync`
+confirms `batch.slice(0, accepted)` with the clamp (line 126-127). Register:
+BUG-040 and BUG-046 closed as fixed with evidence (tsc clean on this head;
+compat.yaml's `openLink: "courier:///compat"` → `compat-screen` green on runs
+42161172886/42166989624), BUG-198 filed open, BUG-197 stays open/queued
+(KeyboardAvoidingView on the import sheet). Counts re-pasted (209 rows).
+Next: merge #216 then #217 when their heads are green (ritual), then this
+branch, then D1, B5 + Play internal-testing prep, A3, §22's app side, P4
+baselines, P7 acceptance on two screen sizes — to the §6 Definition of Done.
