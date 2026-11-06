@@ -57,21 +57,24 @@ name: 'The drive hands the stop to the nav app (queue 4g, trial #15)'
     timeout: 30000
 - takeScreenshot: "nav-app-answered"
 # Maps' own location prompt appears a beat AFTER its landing on a fresh
-# emulator (runs 42171396160 / 42175587894 / 42181802892: taps fired while the
-# landing was still up warned through, then `back` did not dismiss the system
-# dialog and the drive never came back). So the dismiss-tap waits for its
-# button to become visible - optional, because a runner that pre-granted Maps'
-# permission never shows the dialog. Note `text` in a tapOn selector is a REGEX
-# in Maestro 2.11 (the deserialized selector field is textRegex - run 42181802892
-# - and the YAML key `textRegex` itself is rejected, run 42179171405), so
-# "Don.t allow" matches the pinned image's typographic apostrophe (U+2019) and
-# the ASCII one alike. Then go back to the drive, which is still on the run's
-# stop: the app did not crash, did not invent a chooser, and kept its place in
-# the stack.
+# emulator (runs 42171396160 / 42175587894 / 42181802892 / 42186483187: a tap
+# fired while the landing was still up warned through even with
+# waitUntilVisible, and `back` does not dismiss the system dialog - the dialog
+# was up when the drive was asserted). So WAIT for the dialog's own button
+# (required: the image is pinned by revision, PR #204, and the runner grants
+# permissions to OUR app only, so Maps always asks - seen on all four runs),
+# tap it, then go back to the drive, which is still on the run's stop: the app
+# did not crash, did not invent a chooser, and kept its place in the stack.
+# Note `text` in a selector is a REGEX in Maestro 2.11 (it deserializes to the
+# selector's textRegex field - run 42181802892 - and the YAML key `textRegex`
+# itself is rejected, run 42179171405), so "Don.t allow" matches the pinned
+# image's typographic apostrophe (U+2019) and the ASCII one.
+- extendedWaitUntil:
+    visible:
+      text: "Don.t allow"
+    timeout: 30000
 - tapOn:
     text: "Don.t allow"
-    optional: true
-    waitUntilVisible: true
 - back
 - extendedWaitUntil:
     visible:
