@@ -606,8 +606,17 @@ function RouteScreen() {
             onPress={handleImportDismiss}
             testID="stops-import-scrim"
           />
-          <GlassSurface kind="sheet" testID="stops-import-sheet" style={styles.detail}>
-            <ScrollView contentContainerStyle={styles.importScroll}>
+          {/* The sheet has a definite height (top and bottom pinned) and the
+              actions row rides OUTSIDE the scroll view, pinned at the sheet's
+              bottom: run 42136053866's api-34 leg failed with "Element not
+              found: stops-import-go" because the Go button sat inside the
+              ScrollView's clipped content on the emulator's 320x640 screen -
+              the courier's primary action was unreachable without scrolling.
+              The scroll view carries only what may overflow: the title, the
+              hint and the paste field. The notes pin above the actions, so
+              every answer is on screen when it is spoken. */}
+          <GlassSurface kind="sheet" testID="stops-import-sheet" style={[styles.detail, styles.importSheet]}>
+            <ScrollView style={styles.importScrollBody} contentContainerStyle={styles.importScroll}>
               <Text style={[styles.detailTitle, { color: t.colors.label }]}>Import stops</Text>
               <Text style={[styles.detailSuburb, { color: t.colors.secondaryLabel }]}>
                 Paste the spreadsheet (CSV): one header row, an address column.
@@ -622,17 +631,18 @@ function RouteScreen() {
                 placeholderTextColor={t.colors.secondaryLabel}
                 style={[styles.importInput, { color: t.colors.label, borderColor: t.colors.separator }]}
               />
-              {importNote === null ? null : (
-                <View testID="stops-import-note">
-                  <Text style={[styles.note, { color: t.colors.secondaryLabel }]}>{importNote}</Text>
-                </View>
-              )}
-              {importIgnored === null ? null : (
-                <View testID="stops-import-ignored">
-                  <Text style={[styles.note, { color: t.colors.secondaryLabel }]}>{importIgnored}</Text>
-                </View>
-              )}
-              <View style={styles.importActions}>
+            </ScrollView>
+            {importNote === null ? null : (
+              <View testID="stops-import-note">
+                <Text style={[styles.note, { color: t.colors.secondaryLabel }]}>{importNote}</Text>
+              </View>
+            )}
+            {importIgnored === null ? null : (
+              <View testID="stops-import-ignored">
+                <Text style={[styles.note, { color: t.colors.secondaryLabel }]}>{importIgnored}</Text>
+              </View>
+            )}
+            <View style={styles.importActions}>
                 <Pressable
                   accessible
                   role="button"
@@ -664,8 +674,7 @@ function RouteScreen() {
                     {importing ? 'Importing\u2026' : 'Import'}
                   </Text>
                 </Pressable>
-              </View>
-            </ScrollView>
+            </View>
           </GlassSurface>
         </>
       )}
@@ -731,6 +740,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Queue 4e's sheet: a definite height (top pinned beside the bottom) so the
+  // scroll view is bounded and the pinned actions below it are always on
+  // screen - run 42136053866's api-34 leg clipped the Go button out of the
+  // accessibility tree on the 320x640 emulator.
+  importSheet: { top: spacing.space64 },
+  importScrollBody: { flex: 1 },
   importScroll: { gap: spacing.space12 },
   importInput: {
     minHeight: spacing.space64 * 2,

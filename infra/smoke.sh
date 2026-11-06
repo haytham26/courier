@@ -21,6 +21,15 @@
 # without one (1-3, plus the anonymous 401) and says which ones it skipped. A
 # smoke test that faked a token to make itself green would be worse than no test.
 #
+# The VERSION is not optional (2026-11-05, audit item 3b). It used to be: the
+# script logged "APP_VERSION is not set: skipping the version check" and went on
+# green, so a deployment that answered the previous image's version - the exact
+# failure check 2 exists to catch - passed the smoke test. The deploy leg has
+# always had the version in its environment; it simply never reached the script.
+# Now it does, and without it the script dies: a check that silently does not run
+# is a check nobody reads. `--no-version` skips it on purpose, for a local run
+# against a stack whose image tag is not a commit sha, and the report says so.
+#
 # It fails on the first failure with a non-zero exit, and it prints the URL and
 # the status of every check: a failing smoke test is the signal for
 # `infra/deploy.sh rollback`, so its output has to say what it saw.
@@ -37,6 +46,10 @@ EVIDENCE_DIR="${COURIER_SMOKE_DIR:-/tmp/courier-smoke}"
 # reach the stack it had just built: `curl: (7) Failed to connect ...
 # port 443`, which reads like a dead edge and is really a wrong port.
 PORT="${COURIER_SMOKE_PORT:-443}"
+# The version check is run unless this flag says otherwise. It exists for a
+# local run only: a deployment's smoke test that does not prove the version is
+# not a smoke test.
+NO_VERSION=0
 
 die() {
   printf '::error::%s\n' "$*" >&2
@@ -69,11 +82,21 @@ while [ "$#" -gt 0 ]; do
       PORT="$2"
       shift 2
       ;;
+    --no-version)
+      NO_VERSION=1
+      shift
+      ;;
     *) die "unknown argument: $1" ;;
   esac
 done
 
 [ -n "$DOMAIN" ] || die "--domain is required (the deployment's public name)"
+# The version is required, because it is the one check that proves WHICH image
+# the edge is serving. Without it the smoke test's green says only that something
+# answered, which is the failure this check exists to catch.
+if [ -z "${APP_VERSION:-}" ] && [ "$NO_VERSION" != "1" ]; then
+  die "APP_VERSION is required: the smoke test proves the version that was just deployed (or pass --no-version for a local run that deliberately skips it)"
+fi
 [ -n "$DOMAIN" ] || die "--port must be a number"   # DOMAIN is checked above; keep the port honest too
 case "$PORT" in
   ''|*[!0-9]*) die "--port must be a number (the default is 443)" ;;
@@ -156,7 +179,16 @@ fi
 # check that cannot pass is worse than a check that is not run, because it looks
 # like coverage.
 VERSION_FILE="$EVIDENCE_DIR/version.json"
-curl -sS --max-time 15 -k "$BASE/openapi.json" | tee "$VERSION_FILE" > /dev/null || true
+# The fetch is not allowed to fail quietly: `|| true` used to swallow a curl
+# failure and leave an EMPTY version file, which then made the grep fail with
+# "APP_VERSION not in <nothing>" - a failure message that names the wrong cause.
+# A document that cannot be fetched is a failed check, not a skipped one.
+if ! curl -sS --max-time 15 -k "$BASE/openapi.json" | tee "$VERSION_FILE" > /dev/null; then
+  CHECKS=$((CHECKS + 1))
+  printf 'FAIL  %-34s the edge did not answer /openapi.json\n' "the deployed version"
+  printf 'FAIL  the deployed version: the edge did not answer /openapi.json\n' >> "$REPORT"
+  die "the edge did not answer /openapi.json: the deployed version cannot be proved, so the smoke test cannot say what is serving"
+fi
 if [ -n "${APP_VERSION:-}" ]; then
   if grep -q "\"version\":\"$APP_VERSION\"\|\"version\": \"$APP_VERSION\"" "$VERSION_FILE"; then
     # A passing check counts as a check as well as a pass: without this the
@@ -172,8 +204,12 @@ if [ -n "${APP_VERSION:-}" ]; then
     printf 'FAIL  the deployed version: %s not in the openapi answer\n' "$APP_VERSION" >> "$REPORT"
     die "the stack answers a different version than the one deployed: rollback"
   fi
+elif [ "$NO_VERSION" = "1" ]; then
+  log "--no-version: the version check is skipped on purpose, and the report says so"
 else
-  log "APP_VERSION is not set: skipping the version check (set it to prove the swap)"
+  # Unreachable: the flag parse above dies without APP_VERSION. Kept so the
+  # script can never grow a third path back to a silent skip.
+  die "APP_VERSION is required (this branch is unreachable; pass --no-version to skip)"
 fi
 
 # --- 3. the authenticated round trip --------------------------------------
@@ -243,7 +279,11 @@ fi
   if [ -z "$TOKEN" ]; then
     printf -- '- **The seeded round trip:** skipped (no --token)\n'
   fi
-  printf -- '- **The deployment:** %s\n' "${APP_VERSION:-unset}"
+  if [ -n "${APP_VERSION:-}" ]; then
+    printf -- '- **The deployment:** %s\n' "$APP_VERSION"
+  else
+    printf -- '- **The deployment:** not checked (--no-version)\n'
+  fi
   printf -- '- **The evidence:** %s\n\n' "$EVIDENCE_DIR"
   cat "$REPORT"
 } >> "$EVIDENCE_DIR/README.md"
