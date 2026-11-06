@@ -121,6 +121,9 @@ services:
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
       VALKEY_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
+      # BUG-230: the only Host headers the API answers. The edge forwards the
+      # staging name; the healthcheck and the compose network use the rest.
+      API_ALLOWED_HOSTS: ${API_ALLOWED_HOSTS:-${COURIER_DOMAIN},api,api_a,localhost,127.0.0.1,[::1]}
       # The POD store's signing grant (ADR-011): the API refuses to boot without
       # it, because the grant is the only authorization on a photo URL. Staging
       # writes the photos to the container's own directory; the S3-compatible

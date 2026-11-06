@@ -26,6 +26,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from ..safe_fetch import safe_fetch
+
 
 def canonical_jwk_digest(key: dict[str, Any]) -> str:
     """The sha256 of one JWK's canonical form, lowercase hex.
@@ -233,7 +235,16 @@ class JwksVerifier:
         self._fetched_at = 0.0
 
     def _refresh(self) -> None:
-        response = self._client.get(self._settings.auth_jwks_url)
+        # BUG-231: the fetch goes through the SSRF guard. The operator-listed
+        # internal hosts (the compose network's `auth` service, BUG-131) and
+        # loopback (the fetch never leaves the machine) are the deliberate
+        # exceptions; everything else must resolve to public addresses.
+        response = safe_fetch(
+            self._client,
+            "GET",
+            self._settings.auth_jwks_url,
+            allowed_hosts=self._settings.internal_hosts | LOOPBACK_HOSTS,
+        )
         response.raise_for_status()
         document = response.json()
         keys = document.get("keys") if isinstance(document, dict) else None
