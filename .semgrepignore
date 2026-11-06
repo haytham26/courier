@@ -42,7 +42,20 @@
 # 6. The logger rule: the flagged line logs the NUMBER of tokens and the cost
 #    of the call, never a token and never a key.
 #
-# Tracked as the W3 and W5 exceptions in docs/plan/CONSTRAINTS.md.
+# 7. The workflow_run checkout rule is a STATIC heuristic: it flags any
+#    workflow_run workflow that checks out the incoming head, assuming the
+#    checkout runs PR code with access to secrets. deploy.yml checks out
+#    `github.event.workflow_run.head_sha` - the sha the gates ran on, not the
+#    branch tip - and the deploy job's gate step requires BOTH required
+#    workflows (CI, Quality gates) to have concluded completed+success on that
+#    exact sha before the checkout runs (audit item 3d, BUG-215). That dynamic
+#    gate is stricter than the rule's assumption, so the finding is accepted.
+#    Tracked as the W6 exception in CONSTRAINTS.md (BUG-226).
+#
+# 8. The loopback HTTP and child-process rules: excluded by rule in the scan
+#    command (W4, the test server and the test runner).
+#
+# Tracked as the W3, W4, W5 and W6 exceptions in docs/plan/CONSTRAINTS.md.
 
 package_managers.pnpm.pnpm-missing-minimum-release-age
 package_managers.pnpm.pnpm-trust-policy
@@ -53,3 +66,6 @@ package_managers.uv.uv-missing-dependency-cooldown.uv-missing-dependency-cooldow
 javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
 javascript.audit.detect-replaceall-sanitization.detect-replaceall-sanitization
 python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure
+typescript.react.security.react-insecure-request.react-insecure-request
+javascript.lang.security.detect-child-process.detect-child-process
+yaml.github-actions.security.workflow-run-target-code-checkout.workflow-run-target-code-checkout

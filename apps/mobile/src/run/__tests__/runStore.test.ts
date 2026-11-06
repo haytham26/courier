@@ -509,3 +509,115 @@ describe('the write path of the run store', () => {
     expect(await log.pendingCount()).toBe(1);
   });
 });
+
+/**
+ * Queue 4.2: the server's solver re-places the run, and the phone applies
+ * what the server answered to the day it holds. The server stores the plan,
+ * not the stops' own `seq`, so a later read serves the same order the phone
+ * already had - the answer is therefore the only thing that carries the new
+ * one, and applying it is the store's own write.
+ */
+describe('applying the order the solver worked out', () => {
+  /** A day already on the phone: three stops, in the order the plan made. */
+  function aPhoneDay(cache: FakeCache): void {
+    const run = aRun('Hornby morning');
+    if (run.status !== 'ok') {
+      throw new Error('the fixture run was not answered');
+    }
+    const theRun: RunResponse = run.data;
+    cache.snapshot = {
+      run: theRun,
+      stops: [
+        { id: 'stop-1', seq: 1, status: 'pending', address: '12 Riccarton Road' },
+        { id: 'stop-2', seq: 2, status: 'pending', address: '45 Papanui Road' },
+        { id: 'stop-3', seq: 3, status: 'pending', address: '2/14 Riccarton Road' },
+      ] as StopResponse[],
+    };
+  }
+
+  it('writes the solver\u2019s order into the day the phone holds', async () => {
+    const { store, cache } = aStore();
+    aPhoneDay(cache);
+
+    const applied = await store.applyRouteOrder([
+      { stopId: 'stop-3', sequence: 1 },
+      { stopId: 'stop-1', sequence: 2 },
+      { stopId: 'stop-2', sequence: 3 },
+    ]);
+
+    expect(applied).toBe(true);
+    expect(cache.snapshot?.stops.map((stop) => stop.id)).toEqual(['stop-3', 'stop-1', 'stop-2']);
+    // The order and the sequence say the same thing: the pins are numbered in
+    // the order the courier now drives, so a day cannot contradict itself.
+    expect(cache.snapshot?.stops.map((stop) => stop.seq)).toEqual([1, 2, 3]);
+  });
+
+  it('refuses an order that does not cover the day\u2019s own stops', async () => {
+    const { store, cache } = aStore();
+    aPhoneDay(cache);
+    const before = cache.snapshot?.stops.map((stop) => stop.id);
+
+    // A half order would silently drop a stop off a courier's day, which is
+    // the one outcome that must never happen - so it is refused, whole.
+    const applied = await store.applyRouteOrder([
+      { stopId: 'stop-3', sequence: 1 },
+      { stopId: 'stop-2', sequence: 2 },
+    ]);
+
+    expect(applied).toBe(false);
+    expect(cache.snapshot?.stops.map((stop) => stop.id)).toEqual(before);
+  });
+
+  it('refuses an order that names a stop the run does not have', async () => {
+    const { store, cache } = aStore();
+    aPhoneDay(cache);
+
+    const applied = await store.applyRouteOrder([
+      { stopId: 'stop-3', sequence: 1 },
+      { stopId: 'stop-1', sequence: 2 },
+      { stopId: 'stop-2', sequence: 3 },
+      { stopId: 'stop-elsewhere', sequence: 4 },
+    ]);
+
+    expect(applied).toBe(false);
+    expect(cache.snapshot?.stops.map((stop) => stop.id)).toEqual(['stop-1', 'stop-2', 'stop-3']);
+  });
+
+  it('refuses an order naming the same stop twice', async () => {
+    const { store, cache } = aStore();
+    aPhoneDay(cache);
+
+    const applied = await store.applyRouteOrder([
+      { stopId: 'stop-1', sequence: 1 },
+      { stopId: 'stop-1', sequence: 2 },
+      { stopId: 'stop-2', sequence: 3 },
+    ]);
+
+    expect(applied).toBe(false);
+  });
+
+  it('answers false when there is no day on the phone to reorder', async () => {
+    const { store } = aStore();
+
+    const applied = await store.applyRouteOrder([{ stopId: 'stop-1', sequence: 1 }]);
+
+    expect(applied).toBe(false);
+  });
+
+  it('leaves the deliveries the courier already made where they are', async () => {
+    const { store, cache } = aStore();
+    aPhoneDay(cache);
+    await store.markDelivered({ id: 'stop-1', sequence: 1 });
+
+    await store.applyRouteOrder([
+      { stopId: 'stop-3', sequence: 1 },
+      { stopId: 'stop-1', sequence: 2 },
+      { stopId: 'stop-2', sequence: 3 },
+    ]);
+
+    // A mark is the delivery the courier made, and reordering the day does
+    // not unmake one: the run's own marks stay, by stop id.
+    expect((await store.deliveredMarks()).map((mark) => mark.stopId)).toEqual(['stop-1']);
+    expect(cache.snapshot?.stops.find((stop) => stop.id === 'stop-1')?.seq).toBe(2);
+  });
+});
