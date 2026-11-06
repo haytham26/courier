@@ -236,16 +236,20 @@ describe('the settings screen', () => {
     });
 
     // The 320x640 emulator drops whatever is below the fold out of the a11y
-    // tree (run 42293603090's api-34 leg: `settings-location-privacy` was not
-    // visible with the Legal group at the bottom), so the group sits under
-    // the identity, above the Voice group - pinned here so it cannot drift.
-    it('the Legal group sits above the Voice group in the tree', () => {
+    // tree (run 42293603090: `settings-location-privacy` not visible with the
+    // Legal group at the bottom; run 42299860105: `settings-sign-out` not
+    // found after Legal pushed it down), so the rows the flows tap — Legal,
+    // then the sign-out — sit high in the tree, pinned here so they cannot
+    // drift back below the fold.
+    it('Legal and Session sit above Voice in the tree, so both are on a 320x640 screen', () => {
       const { toJSON } = renderScreen();
       const flat = JSON.stringify(toJSON());
       const legal = flat.indexOf('LEGAL');
+      const session = flat.indexOf('SESSION');
       const voice = flat.indexOf('VOICE');
       expect(legal).toBeGreaterThanOrEqual(0);
-      expect(voice).toBeGreaterThan(legal);
+      expect(session).toBeGreaterThan(legal);
+      expect(voice).toBeGreaterThan(session);
     });
 
     it('Location & Privacy opens the disclosure with the legal text, Done closes it', () => {

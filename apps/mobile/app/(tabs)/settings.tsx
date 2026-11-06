@@ -335,12 +335,18 @@ export default function SettingsScreen() {
           <Ionicons name="chevron-forward" size={20} color={t.colors.secondaryLabel} />
         </View>
 
-        {/* Audit B5: the legal rows sit directly under the identity, the same
-            rule as the sign-out below - a row a reviewer or a courier has to
-            hunt for on a small screen is a row that is never found (the
-            BUG-050 class), and the 320x640 emulator drops whatever is below
-            the fold out of the accessibility tree. */}
+        {/* Audit B5: the legal rows sit directly under the identity - a row a
+            reviewer or a courier has to hunt for on a small screen is a row
+            that is never found (the BUG-050 class), and the 320x640 emulator
+            drops whatever is below the fold out of the accessibility tree. */}
         <SettingsGroup title="Legal" rows={legalRows} />
+
+        {/* The sign-out sits high in the list, directly under the Legal group,
+            not at the end of a long scroll list: a row a courier has to hunt
+            for is a row that is never found, and the flow that taps it reads
+            "Element not found" the moment the list is taller than the window
+            (the same class of failure as BUG-050's clipped actions row). */}
+        <SettingsGroup title="Session" rows={signOutRows} />
 
         <SettingsGroup title="Voice" rows={voiceRows} />
 
@@ -377,13 +383,6 @@ export default function SettingsScreen() {
             );
           })}
         </View>
-
-        {/* The sign-out sits directly under the identity, not at the end of a
-            long scroll list: a row a courier has to hunt for is a row that is
-            never found, and the flow that taps it reads "Element not found" the
-            moment the list is taller than the window (the same class of
-            failure as BUG-050's clipped actions row). */}
-        <SettingsGroup title="Session" rows={signOutRows} />
 
         <SettingsGroup title="Map" rows={mapRows} />
         <SettingsGroup title="Device" rows={deviceRows} />
