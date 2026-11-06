@@ -105,6 +105,16 @@ export interface VoiceCallbacks {
   onCommand: (command: VoiceCommand) => void;
   onError: (error: Error) => void;
   onEarbudEvent: (event: EarbudEvent) => void;
+  /**
+   * The finished sentence, handed over whole (D1, BUG-231).
+   *
+   * When a consumer sets this delegate, every final transcript reaches the
+   * turn flow (`useCourierVoice.sendTurn`) instead of the local parser: the
+   * full conversation - not only the catalog commands - is answered. When no
+   * delegate is set, `holdTranscript` keeps the pre-D1 behaviour and parses
+   * locally.
+   */
+  onFinalTranscript?: (text: string) => void;
 }
 
 class VoiceService {
@@ -117,6 +127,14 @@ class VoiceService {
   private callbacks: VoiceCallbacks | null = null;
   private state: VoiceState = 'idle';
   private isInitialized = false;
+  /**
+   * Why the engines could not be created, when they could not (D1, BUG-231).
+   *
+   * A phone without the model files must still boot the voice: the problem is
+   * recorded here instead of thrown, and `startListening` answers `no-model`
+   * with the reason.
+   */
+  private initProblem: string | null = null;
   private audioPlayer: AudioPlayer | null = null;
   private earbudListener: ((event: EarbudEvent) => void) | null = null;
 
@@ -141,17 +159,26 @@ class VoiceService {
     try {
       // Initialize Sherpa-onnx for on-device STT/TTS
       await this.initializeSherpa();
-      
-      // Set up earbud button listener
-      this.setupEarbudListener();
-      
-      this.isInitialized = true;
-      this.setState('idle');
+      this.initProblem = null;
     } catch (error) {
-      this.setState('error');
+      // D1 (BUG-231): a missing model is not a boot failure. The service comes
+      // up without its engines, the problem is recorded, and the first
+      // `startListening` answers `no-model` with the reason - the courier is
+      // never shown a listening that would capture nothing.
+      this.initProblem = error instanceof Error ? error.message : String(error);
       this.callbacks?.onError(error as Error);
-      throw error;
     }
+
+    // Set up earbud button listener
+    this.setupEarbudListener();
+
+    this.isInitialized = true;
+    this.setState('idle');
+  }
+
+  /** Why the engines could not be created, or null when they could (D1). */
+  initialisationProblem(): string | null {
+    return this.initProblem;
   }
 
   private async initializeSherpa(): Promise<void> {
@@ -292,19 +319,36 @@ class VoiceService {
   /**
    * Holds what the recognizer heard, and hands a finished sentence to the app.
    *
-   * A partial is reported so the courier sees the words as they are heard; a
-   * finished one is parsed into a command, which is the product's own promise
-   * - the assistant answers AND acts (`commands.parseVoiceCommand`).
+   * A partial is reported so the courier sees the words as they are heard. A
+   * finished one goes to the `onFinalTranscript` delegate when a consumer set
+   * one (D1, BUG-231): the delegate owns the turn, so the full conversation
+   * reaches `useCourierVoice.sendTurn` and the local parser does not fire a
+   * second time. Without a delegate, the finished sentence is parsed into a
+   * command, which is the product's own promise - the assistant answers AND
+   * acts (`commands.parseVoiceCommand`).
    */
   private holdTranscript(text: string, final: boolean): void {
     this.callbacks?.onTranscript(text, final);
     if (!final || text.trim().length === 0) {
       return;
     }
+    const delegate = this.callbacks?.onFinalTranscript;
+    if (delegate !== undefined) {
+      delegate(text);
+      return;
+    }
     const command = parseVoiceCommand(text);
     if (command !== null) {
       this.emitCommand(command);
     }
+  }
+
+  /**
+   * Hands a finished sentence to the app, exactly as the recognizer would
+   * (D1): the E2E seam and any text entry use this to drive the turn flow.
+   */
+  submitTranscript(text: string): void {
+    this.holdTranscript(text, true);
   }
 
   async speak(text: string): Promise<void> {

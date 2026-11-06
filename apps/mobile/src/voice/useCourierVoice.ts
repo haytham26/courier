@@ -31,6 +31,7 @@ import {
   type CourierVoiceSession,
   type CourierVoiceTurn,
 } from './courierVoiceClient';
+import { ackLineFor, routeTurn } from './turnRouter';
 import {
   DEFAULT_VOICE_SETTINGS,
   readVoiceSettings,
@@ -57,6 +58,12 @@ export interface UseCourierVoiceOptions {
   store?: PreferenceStore;
   /** Whether the phone has a network. */
   online?: boolean;
+  /**
+   * The client to use (D1): the build's own seam passes the E2E mock client,
+   * so the turn flow is exercisable without a network; by default the real
+   * client is built from `baseUrl` and `getToken`.
+   */
+  client?: CourierVoiceClient;
 }
 
 /** The turn the app sends. */
@@ -88,6 +95,19 @@ export interface CourierVoiceApi {
   ) => Promise<CourierVoiceTurn | null>;
   /** The last failure, as a plain sentence. */
   error: string | null;
+  /**
+   * How the last turn was routed (D1): 'free' | 'ignore' | 'full', or null
+   * when no turn has been sent yet.
+   */
+  lastGate: string | null;
+  /** The last turn's own answer, as the service (or the free route) sent it. */
+  lastAnswer: CourierVoiceTurn | null;
+  /**
+   * The question the last answer was about, when the answer carried a notice
+   * and no action (the service's ask-on-low-confidence, MASTER §22): the next
+   * turn may be the answer to it.
+   */
+  lastQuestion: string | null;
 }
 
 /**
@@ -103,18 +123,22 @@ export function useCourierVoice(options: UseCourierVoiceOptions = {}): CourierVo
     getToken = sessionToken,
     store,
     online = true,
+    client: givenClient,
   } = options;
 
   const [session, setSession] = useState<CourierVoiceSession | null>(null);
   const [settings, setSettings] = useState<VoiceSettings>(DEFAULT_VOICE_SETTINGS);
   const [brief, setBrief] = useState<CourierVoiceProactive | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastGate, setLastGate] = useState<string | null>(null);
+  const [lastAnswer, setLastAnswer] = useState<CourierVoiceTurn | null>(null);
+  const [lastQuestion, setLastQuestion] = useState<string | null>(null);
   const sessionRef = useRef<CourierVoiceSession | null>(null);
   const startedFor = useRef<string | null>(null);
 
   const client = useMemo(
-    () => new CourierVoiceClient({ baseUrl, getToken }),
-    [baseUrl, getToken],
+    () => givenClient ?? new CourierVoiceClient({ baseUrl, getToken }),
+    [givenClient, baseUrl, getToken],
   );
 
   useEffect(() => {
@@ -203,6 +227,43 @@ export function useCourierVoice(options: UseCourierVoiceOptions = {}): CourierVo
       transcript: string,
       turn: CourierVoiceTurnOptions = {},
     ): Promise<CourierVoiceTurn | null> => {
+      // D1 (BUG-231): the turn is routed before anything is sent anywhere,
+      // mirroring the service's own pre-classifier (MASTER §22 technique A).
+      const routed = routeTurn(transcript);
+      setLastGate(routed.gate);
+      if (routed.gate === 'ignore') {
+        // Nothing was said that needed an answer: no model call, no command.
+        return null;
+      }
+      if (routed.gate === 'free' && routed.command !== null) {
+        // A command whose answer does not depend on the day: the phone
+        // answers it - the command goes on the channel and the ack is spoken
+        // - with NO HTTP call.
+        publishVoiceCommand(routed.command);
+        const ack = ackLineFor(routed.command);
+        const answer: CourierVoiceTurn = {
+          speech: ack,
+          action: null,
+          engine: 'offline-brain',
+          source: 'on-device',
+          mode: online ? 'auto' : 'offline',
+          barge_in: false,
+          ended_turn: true,
+          priority: 'now',
+          notice: null,
+          words: ack.split(/\s+/).filter((w) => w.length > 0).length,
+          latency_ms: 0,
+          gate: 'free',
+        };
+        setLastAnswer(answer);
+        setLastQuestion(null);
+        setError(null);
+        if (ack.length > 0) {
+          await voiceService.speak(ack);
+        }
+        return answer;
+      }
+
       const current = sessionRef.current;
       if (current === null) {
         return null;
@@ -219,6 +280,13 @@ export function useCourierVoice(options: UseCourierVoiceOptions = {}): CourierVo
           started_at: turn.startedAt,
         });
         setError(null);
+        // The service's own routing decision is passed through and kept, so
+        // it is reviewable after the fact rather than assumed.
+        setLastGate(answer.gate ?? 'full');
+        setLastAnswer(answer);
+        // An answer that carries a notice and no action is a question: the
+        // next turn may be the answer to it (the ask-on-low-confidence rule).
+        setLastQuestion(answer.notice !== null && answer.action === null ? answer.notice : null);
 
         const command = toVoiceCommand(answer.action);
         if (command !== null) {
@@ -250,5 +318,8 @@ export function useCourierVoice(options: UseCourierVoiceOptions = {}): CourierVo
     refreshBrief,
     sendTurn,
     error,
+    lastGate,
+    lastAnswer,
+    lastQuestion,
   };
 }

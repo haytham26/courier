@@ -13,19 +13,24 @@
  * is the last thing the phone heard. The chosen tokens wrap everything, so
  * the bar and every screen on it resolve light or dark from the system.
  */
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { Tabs } from 'expo-router/js-tabs';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'react-native';
 
 import { ChosenProvider, TabBar } from '@/components/chosen';
 import type { TabSlot } from '@/components/chosen';
+import { activeOf } from '@/maps/drive';
+import { useRun } from '@/maps/runState';
 import { hapticFor } from '@/motion/haptics';
 import { useOptionalAuth } from '@/providers/AuthProvider';
 import type { VoiceCommand } from '@/voice/VoiceService';
+import { subscribeToVoiceCommands } from '@/voice/commandChannel';
 import { copilotStateOf } from '@/voice/copilotState';
 import { useCourierVoice } from '@/voice/useCourierVoice';
+import { cannedTurnForThisBuild, voiceClientForThisBuild } from '@/voice/turnForThisBuild';
 import { useVoice } from '@/voice/useVoice';
+import { voiceConfigFromBuild } from '@/voice/voiceConfig';
 
 import { BriefContext } from './briefContext';
 
@@ -74,17 +79,59 @@ export default function TabsLayout() {
   const router = useRouter();
   const scheme = useColorScheme();
   const auth = useOptionalAuth();
-  const voice = useVoice();
-  const courierVoice = useCourierVoice({ driverId: auth?.user?.id ?? null });
+  const run = useRun();
+  // D1 (BUG-231): the tab layout OWNS the voice service - the one consumer
+  // that passes a config initializes it - and every finished transcript goes
+  // to the turn flow, so the full conversation (not only the catalog
+  // commands) is answered. The client is the build's own seam: the canned one
+  // in the E2E build, the real one everywhere else.
+  const voiceClient = useMemo(() => voiceClientForThisBuild(), []);
+  const courierVoice = useCourierVoice({ driverId: auth?.user?.id ?? null, client: voiceClient });
+  const voiceConfig = useMemo(
+    () => voiceConfigFromBuild(courierVoice.settings.language),
+    [courierVoice.settings.language],
+  );
+  const voice = useVoice(voiceConfig, {
+    onFinalTranscript: (text) => {
+      void courierVoice.sendTurn(text);
+    },
+  });
+
+  // D1 (BUG-231): the voice→run bridge. A spoken stop command moves the run
+  // whichever screen the courier is on - the drive included, which before
+  // only the copilot and map screens heard. A spoken "delivered" marks the
+  // active stop and opens the confirm, exactly as the slide does.
+  useEffect(() => {
+    return subscribeToVoiceCommands((command) => {
+      if (command.type !== 'mark_delivered' && command.type !== 'mark_failed') {
+        return;
+      }
+      const deliveredIds = run.delivered.map((event) => event.stopId);
+      const active = activeOf(run.day.stops, deliveredIds);
+      if (active === null) {
+        return;
+      }
+      if (command.type === 'mark_delivered') {
+        run.markDelivered(active);
+        router.push(`/delivered?stop=${active.id}`);
+      } else {
+        run.markFailed(active, { reason: command.reason, utterance: 'voice' });
+      }
+    });
+  }, [run, router]);
 
   const toggleVoice = useCallback(() => {
     hapticFor('voice');
     if (voice.state === 'listening') {
       void voice.stopListening();
-    } else {
+      return;
+    }
+    // The E2E build has no microphone model: a tap injects the canned
+    // transcript into the same turn flow instead.
+    if (!cannedTurnForThisBuild((transcript) => void courierVoice.sendTurn(transcript))) {
       void voice.startListening();
     }
-  }, [voice]);
+  }, [voice, courierVoice]);
 
   const sayBrief = useCallback(() => {
     const line = courierVoice.brief?.text;
@@ -150,7 +197,13 @@ export default function TabsLayout() {
                   onPress: toggleVoice,
                   onLongPress: sayBrief,
                 }}
-                caption={voice.lastCommand ? commandWords[voice.lastCommand.type] : undefined}
+                caption={
+                  courierVoice.lastAnswer !== null && courierVoice.lastAnswer.speech.length > 0
+                    ? courierVoice.lastAnswer.speech
+                    : voice.lastCommand
+                      ? commandWords[voice.lastCommand.type]
+                      : undefined
+                }
               />
             );
           }}

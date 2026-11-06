@@ -87,6 +87,9 @@ const makeBrief = (): CourierVoiceApi => ({
   refreshBrief: jest.fn(() => Promise.resolve(null)),
   sendTurn: () => Promise.resolve(null),
   error: null,
+  lastGate: null,
+  lastAnswer: null,
+  lastQuestion: null,
 });
 
 /**

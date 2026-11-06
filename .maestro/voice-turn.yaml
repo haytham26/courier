@@ -1,0 +1,45 @@
+appId: com.courier.copilot
+name: 'The voice turn flow (D1): a question is answered, a spoken "delivered" lands the run'
+---
+# D1 (founder decision, FINAL_PROMPT §2.3): the live voice assistant works
+# throughout the shift. The app side of it (BUG-231's fix) is the turn flow:
+# the tab layout owns the voice service, every finished transcript is routed
+# (free / ignore / full, mirroring the service's own gate), a free command is
+# answered on the phone with no HTTP, and a spoken stop command moves the run
+# through the layout's voice→run bridge - the drive included.
+#
+# The E2E build has no microphone model, so a tap on the Copilot sphere
+# injects the canned transcript into the same turn flow (turnForThisBuild),
+# and the voice client answers the canned session and turn.
+#
+# BUG-185: stop the app FIRST, then clear its state (the old task's removal
+# killed the freshly started process on api-34).
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The dock's centre sphere is the voice (D34). First tap: the canned question
+# - routed FULL - reaches the (canned) voice service, and the dock's caption
+# carries its spoken answer.
+- tapOn:
+    id: "copilot-sphere"
+- extendedWaitUntil:
+    visible:
+      id: "tab-caption"
+    timeout: 15000
+- assertVisible: "Four stops left on the run."
+- takeScreenshot: "voice-turn-answer"
+# Second tap: the canned "delivered" - routed FREE, no HTTP - publishes the
+# command on the voice channel, and the layout's bridge marks the run's active
+# stop and opens the confirm, exactly as the slide does.
+- tapOn:
+    id: "copilot-sphere"
+- extendedWaitUntil:
+    visible:
+      id: "delivered-screen"
+    timeout: 15000
+- assertVisible: "Delivered"
+- takeScreenshot: "voice-turn-delivered"

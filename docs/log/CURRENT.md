@@ -1,9 +1,10 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `ef12d64` (PR #239, audit item 4a);
-ahead of it `4851380` = PR #217 (queue 4g), `938cf26` = PR #216 (queue 4f),
-`3400082` = PR #218 (release hygiene), `8333043` = PR #208). Lead session 14,
-2026-11-05/07. Next: D1 (founder decision D1 — the live voice assistant in the
+**Week:** 2026-W44. **Local `main` == `origin/main` == `a2ee7d3` (PR #240, the log PR);
+ahead of it `ef12d64` = PR #239 (audit item 4a), `4851380` = PR #217 (queue 4g),
+`938cf26` = PR #216 (queue 4f), `3400082` = PR #218 (release hygiene). Lead
+session 14, 2026-11-05/07. In flight: **D1's app side** on
+`feat/d1-voice-turn-flow` (BUG-231). Next: D1 (founder decision D1 — the live voice assistant in the
 shipped build, app side), B5 + Play internal-testing prep, A3's app side, §22's
 app side, P4 baselines, P7 acceptance on two screen sizes — to the §6 Definition
 of Done.**
@@ -1123,3 +1124,28 @@ visual-regression baselines (design mockups + screenshots
 day/night/small/large/200%); then **P7** acceptance on the CI emulator at two
 screen sizes, scorecard ≥ 8/10, v1.0.0 (the release itself is founder-gated) —
 to the §6 Definition of Done.
+
+**D1's app side in flight (2026-11-07, BUG-231 filed, branch `feat/d1-voice-turn-flow`).**
+The audit against founder decision D1 (FINAL_PROMPT §2.3: the live voice
+assistant, full conversation, essential in the shipped version and working
+throughout the shift) found the app side unwired: no screen ever passed a
+`VoiceConfig` to `useVoice`, so `voiceService.initialize` never ran and
+`startListening` always answered "the voice engine was never initialised";
+`holdTranscript` only ran the local parser, so a final transcript that is not
+a catalog command was dropped and `courierVoice.sendTurn` was never called
+from the listening flow; and only `copilot.tsx`/`map.tsx` subscribed to the
+voice channel, so a spoken "delivered" did nothing on the drive. The PR wires
+the turn flow: `turnRouter.ts` (app-side pre-classifier mirroring the
+service's `turn_gate.py`, free/ignore/full), `voiceConfig.ts`, the E2E seam
+`turnForThisBuild.ts`, `VoiceService.onFinalTranscript` + tolerant `initialize`
+(missing model recorded, `startListening` answers `no-model` with the reason),
+`useCourierVoice.sendTurn` routing (free = publish + spoken ack, no HTTP; full
+= service, `gate` passed through, `lastQuestion` on notice && !action), and
+the tab layout owning the service plus the voice→run bridge (spoken
+"delivered" → `markDelivered` + `/delivered?stop=`, "failed" → `markFailed`).
+Red-first: six new suites (29 tests) red before, green after; full mobile
+suite 808/808 (93 suites), tsc, eslint, parity 0 reopened (218 bug rows),
+mojibake/markers/control-chars/doc-links/floor clean; `.maestro/voice-turn.yaml`
+drives the flow on the emulator (question answered in the dock's caption,
+spoken "delivered" lands the run's confirm). A2's on-device model choice
+stays founder-gated in FOUNDER_TODO.

@@ -21,32 +21,55 @@ import { voiceService } from './VoiceService';
  */
 let liveConsumers = 0;
 
-export function useVoice(config?: VoiceConfig) {
+export function useVoice(config?: VoiceConfig, handlers?: Partial<VoiceCallbacks>) {
   const [state, setState] = useState<VoiceState>('idle');
   const [isReady, setIsReady] = useState(false);
   const [lastTranscript, setLastTranscript] = useState('');
   const [lastCommand, setLastCommand] = useState<VoiceCommand | null>(null);
   const [lastEarbudEvent, setLastEarbudEvent] = useState<EarbudEvent | null>(null);
-  const callbacksRef = useRef<VoiceCallbacks>({
-    onStateChange: (newState) => {
-      setState(newState);
-      setIsReady(voiceService.isReady());
-    },
-    onTranscript: (text, final) => {
-      if (final) {
-        setLastTranscript(text);
-      }
-    },
-    onCommand: (command) => {
-      setLastCommand(command);
-    },
-    onError: (error) => {
-      console.error('Voice error:', error);
-    },
-    onEarbudEvent: (event) => {
-      setLastEarbudEvent(event);
-    },
-  });
+  // D1 (BUG-231): a consumer may pass handlers (the tab layout passes
+  // `onFinalTranscript`, so every finished sentence reaches the turn flow).
+  // They are read through a ref, so a handler that changes between renders is
+  // honoured without re-initializing the shared service.
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
+  const callbacksRef = useRef<VoiceCallbacks | null>(null);
+  if (callbacksRef.current === null) {
+    const callbacks: VoiceCallbacks = {
+      onStateChange: (newState) => {
+        setState(newState);
+        setIsReady(voiceService.isReady());
+        handlersRef.current?.onStateChange?.(newState);
+      },
+      onTranscript: (text, final) => {
+        if (final) {
+          setLastTranscript(text);
+        }
+        handlersRef.current?.onTranscript?.(text, final);
+      },
+      onCommand: (command) => {
+        setLastCommand(command);
+        handlersRef.current?.onCommand?.(command);
+      },
+      onError: (error) => {
+        console.error('Voice error:', error);
+        handlersRef.current?.onError?.(error);
+      },
+      onEarbudEvent: (event) => {
+        setLastEarbudEvent(event);
+        handlersRef.current?.onEarbudEvent?.(event);
+      },
+    };
+    // The delegate is installed only when the first render passed one: a
+    // consumer without handlers keeps the local parser in the service.
+    if (handlers?.onFinalTranscript !== undefined) {
+      callbacks.onFinalTranscript = (text) => {
+        handlersRef.current?.onFinalTranscript?.(text);
+      };
+    }
+    callbacksRef.current = callbacks;
+  }
+  const callbacks = callbacksRef.current;
 
   useEffect(() => {
     // Only a consumer that drives the service takes a claim on it. A screen
@@ -57,7 +80,7 @@ export function useVoice(config?: VoiceConfig) {
     const ownsTheService = config !== undefined;
     if (ownsTheService) {
       liveConsumers += 1;
-      voiceService.initialize(config, callbacksRef.current).catch(console.error);
+      voiceService.initialize(config, callbacks).catch(console.error);
     }
 
     return () => {
