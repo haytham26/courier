@@ -12,22 +12,22 @@ on:
   pull_request:
     branches:
       - main
+    # NO `paths:` filter here (audit item 3g, 2026-11-05): the same paths
+    # are filtered at the JOB level below, by the `changes` job. A filter
+    # on the trigger keeps the whole workflow from EXISTING for a change it
+    # does not match, so the check names it would report (`Build the release
+    # APK`, `Run the Maestro flows on the emulator (api 34)`, `A1: the app
+    # against the real API (no mock)`) are never reported at all - and a
+    # required check that is not reported is a PR that can never be merged,
+    # forever pending. A job that runs and reports `skipped` is something
+    # branch protection can actually reason about.
+    #
     # Only the app, the shared packages, the flows, the a1 job's own scripts
-    # and the pipeline itself can break the emulator: a documentation-only push
-    # must not spend the minutes. `scripts/**` is on the list because the a1
-    # job's rows assert and its own suite live there - a change to them can
-    # turn the done-when red, and a PR check set that does not run for it is
-    # a check set that lies (BUG-188's suite was the first thing to sit on
-    # the wrong side of this filter).
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'services/**'
-      - '.maestro/**'
-      - 'scripts/**'
-      - '.github/workflows/android-e2e.yml'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
+    # and the pipeline itself can break the emulator - a documentation-only
+    # push must not spend the minutes, and `scripts/**` is on the list
+    # because the a1 job's rows assert and its own suite live there
+    # (BUG-188's suite sat on the wrong side of this filter once). The
+    # filter moved; the intent did not.
   push:
     branches:
       - main
@@ -88,8 +88,113 @@ env:
   SYSIMG_REV_35: '9'
 
 jobs:
+  # The paths filter the pull_request trigger used to carry (audit item 3g,
+  # 2026-11-05). It lives HERE now: a plain `git diff --name-only` step, so no
+  # new action enters the tree (nothing to SHA-pin, nothing to add to the
+  # licence inventory), and every job below names the paths it needs instead of
+  # vanishing with the whole workflow when the trigger filtered the run out.
+  #
+  # Why the trigger's filter was wrong and this one is right: a trigger-level
+  # `paths:` keeps the workflow run from EXISTING for a change it does not
+  # match, so the check names this workflow reports are never reported at all.
+  # A required check that is not reported is a PR that can never be merged -
+  # forever pending - which is the "check set that lies" in a stronger form: it
+  # says nothing. A job with `if:` reports `skipped`, which branch protection
+  # can reason about.
+  #
+  # The intent is unchanged from the comment the trigger carried: only the app,
+  # the shared packages, the flows, the a1 job's own scripts and the pipeline
+  # itself can break the emulator, so a documentation-only change must not spend
+  # the minutes. `scripts/**` is on the list because the a1 job's rows assert
+  # and its own suite live there - a change to them can turn the done-when red
+  # (BUG-188's suite sat on the wrong side of this filter once).
+  changes:
+    name: What changed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.diff.outputs.build }}
+      flows: ${{ steps.diff.outputs.flows }}
+      scripts: ${{ steps.diff.outputs.scripts }}
+      pipeline: ${{ steps.diff.outputs.pipeline }}
+      # The two the jobs below gate on, declared because a `needs.<job>.outputs`
+      # reference only reads a job output the job declares.
+      e2e: ${{ steps.diff.outputs.e2e }}
+      a1: ${{ steps.diff.outputs.a1 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # The base sha is a commit that only exists in the repository, so the
+          # whole history is fetched; a shallow clone answers "unknown revision"
+          # and the diff then reads as "nothing changed", which is the failure
+          # this gate exists to prevent.
+          fetch-depth: 0
+
+      - name: What this change touches
+        id: diff
+        run: |
+          set -euo pipefail
+          # A human who asks (a nightly, a manual dispatch) gets the whole set:
+          # the point of the filter is to save the minutes a nobody asked for.
+          if [ "${{ github.event_name }}" != "pull_request" ] && [ "${{ github.event_name }}" != "push" ]; then
+            echo "the run was asked for by a human: every job runs"
+            { echo "build=true"; echo "flows=true"; echo "scripts=true"; echo "pipeline=true"; } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          # A new branch's `before` is forty zeroes and a force-push's makes the
+          # sha vanish, and neither is a diff: the parent commit is. A diff
+          # against nothing would read as "nothing changed", which silently
+          # skips every job below.
+          if [ -z "$base" ] || [ "${base//0/}" = "" ] || ! git rev-parse -q --verify "$base^{commit}" > /dev/null; then
+            base="$(git rev-parse HEAD~1)"
+            echo "::notice::the base sha is unusable (a new branch or a force-push), so the diff is against HEAD~1"
+          fi
+          changed="$(git diff --name-only "$base" HEAD)"
+          printf 'the base: %s\nthe changed paths:\n%s\n' "$base" "$changed"
+          wants() { printf '%s\n' "$changed" | grep -qE "$1"; }
+          app=false flows=false scripts=false pipeline=false
+          if wants '^(apps/|packages/)' || wants '^(package\.json|pnpm-lock\.yaml)$'; then app=true; fi
+          if wants '^\.maestro/'; then flows=true; fi
+          if wants '^scripts/'; then scripts=true; fi
+          if wants '^\.github/workflows/android-e2e\.yml$'; then pipeline=true; fi
+          build="$app"
+          if [ "$app" = true ] || [ "$flows" = true ] || [ "$scripts" = true ] || [ "$pipeline" = true ]; then
+            e2e=true
+          else
+            e2e=false
+          fi
+          # The a1 flow needs the app and the flows and the scripts; a docs-only
+          # change cannot break a real stack that nothing in it touched.
+          a1="$e2e"
+          {
+            echo "build=$build"
+            echo "flows=$flows"
+            echo "scripts=$scripts"
+            echo "pipeline=$pipeline"
+            echo "e2e=$e2e"
+            echo "a1=$a1"
+          } >> "$GITHUB_OUTPUT"
+          echo "the jobs: build=$build e2e=$e2e a1=$a1"
+
   build:
     name: Build the release APK
+    # The filter the trigger used to carry (audit item 3g): the job runs
+    # for a change that can change the APK, and reports `skipped` for a
+    # change that cannot - a reported skip is what makes this check usable
+    # as a required check.
+    #
+    # The second half of the condition: a flow-only change (a new `.maestro/`
+    # flow, a script's assert) does not change the APK's bytes, but the legs
+    # below download the APK this job uploads, so it still has to produce one.
+    # That is cheap, not wasteful: the APK is cached by content hash, so an
+    # unchanged app restores the same APK rather than rebuilding it.
+    if: needs.changes.outputs.build == 'true' || needs.changes.outputs.e2e == 'true'
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
@@ -187,7 +292,11 @@ jobs:
 
   e2e:
     name: Run the Maestro flows on the emulator (api ${{ matrix.api }})
-    needs: build
+    # `always()` because the legs cannot run without the APK the build
+    # job produced: when the build is skipped, this job is skipped too -
+    # and a skipped job still reports, which is the whole point of item 3g.
+    if: always() && needs.changes.outputs.e2e == 'true' && needs.build.result == 'success'
+    needs: [changes, build]
     runs-on: ubuntu-latest
     timeout-minutes: 40
     # BUG-051 (the founder): the crash is pinned to the api-34 image's own
@@ -465,6 +574,10 @@ jobs:
   #     is the audit's done-when, not a unit test.
   a1:
     name: 'A1: the app against the real API (no mock)'
+    # The same filter, at the job level (audit item 3g). The a1 flow needs
+    # its own APK, so it waits for the build job to have produced one.
+    if: always() && needs.changes.outputs.a1 == 'true' && needs.build.result == 'success'
+    needs: [changes, build]
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
