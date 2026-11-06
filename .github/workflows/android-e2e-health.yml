@@ -1,4 +1,4 @@
-﻿name: Android E2E health (5 runs per leg)
+name: Android E2E health (5 runs per leg)
 
 # PLAYBOOK 17.4 (BUG-065): flake is measured, not argued. The nightly suite runs
 # the FULL flow set five times per leg on main, then writes the per-flow pass
@@ -101,7 +101,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Download the APK
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: courier-health-apk
           path: apk
@@ -200,7 +200,7 @@ jobs:
         with:
           persist-credentials: true
       - name: Gather the ten runs' results
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: health
           pattern: health-api*
