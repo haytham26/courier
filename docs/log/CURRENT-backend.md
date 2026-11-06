@@ -541,6 +541,10 @@ b49aa64's workflow names both, exit 1. Green after: gate passes, 10/10 tests, ch
 Evidence: `docs/evidence/e2e-sysimg-pipefail-227/README.md`. BUG-227 filed. NOT claimed: emulator legs
 green — that is the next CI run's evidence on this head.
 
+## 2026-11-06: #203 api-35 leg red on d99fb22 = runner flake, re-run with the root cause evidenced (PLAYBOOK 17)
+
+Run 42150920439, job 127673925748 (api 35): boot normal (33 s), image found, AVD created, Streamed Install Success, am start pid=3229 - then `no first screen appeared in 90s`, relaunches=0, no FATAL/ANR/crash in the log between start and timeout. The api-34 leg and A1 on the SAME head are green, and the 3e diff touches only the AVD cache restore-keys + docs + a gate - nothing in the app or the emulator options. That is the BUG-060/061 runner class (swiftshader first-frame stall on one leg). Re-ran the failed job (`gh run rerun 42150920439 --failed`) per the BUG-185/BUG-061 precedent; the retry budget of one lands with 3h (#207).
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
