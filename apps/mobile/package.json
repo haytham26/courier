@@ -8,7 +8,7 @@
     "@courier/design-tokens": "workspace:*",
     "@courier/shared": "workspace:*",
     "@expo/vector-icons": "15.1.1",
-    "@maplibre/maplibre-react-native": "11.3.7",
+    "@maplibre/maplibre-react-native": "11.5.1",
     "@op-engineering/op-sqlite": "18.2.5",
     "@pipecat-ai/client-js": "1.14.0",
     "@shopify/react-native-skia": "2.14.0",
