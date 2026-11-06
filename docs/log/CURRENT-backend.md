@@ -749,6 +749,33 @@ instead (that is what the C14 red proof ended up using).
 ## 2026-11-06: BUG-228 — the new dependabot.yml had no cooldown; Semgrep Blocking fired on #211 (fixed the config, not excluded)
 
 PR #211's head `80edbac` went red in the sast job (runs 42197669307/42197664922): Semgrep `package_managers.dependabot.dependabot-missing-cooldown` (Blocking), 4 findings — one per `updates` entry of the new `.github/dependabot.yml`. Decision: fix the CONFIG, not an exclusion — cooldown is the intended lever, and the pinned registry (semgrep==1.182.1) is the authority. Fix on the `dependabot-cron-223` branch: `cooldown: days: 7` on all four entries + header comment; `check-staging-smoke.mjs` extended to require a cooldown on every entry (names BUG-228); 1 new test case (15 total). Red-first proof: the extended gate against eb75e35's pre-fix dependabot.yml in a temp tree exits 1 naming all four missing cooldowns; green on the fixed tree. BUG-228 row filed (inserted before the BUG-187 anchor), evidence in `docs/evidence/dependabot-cooldown-228/`. The Semgrep red clearing is the next CI run's evidence. Pushed via the API workaround.
+## The 2026-11-05 audit's CI / INFRA item 3j (BUG-224): the exact required status checks for `protect-main` are written down
+
+The `protect-main` ruleset (founder directive 2026-10-28) requires 0 status checks, so nothing at the
+repository level forces a PR through the gates, and the check names GitHub reports were written down
+nowhere. Now `docs/status/FOUNDER_TODO.md` has a section ("The required status checks for
+`protect-main`") with the exact list, derived from every workflow's `name:` + jobs + `pull_request`
+trigger: every-PR checks `CI / quality|secrets`, `Quality gates / floor|coverage|licences|audits|sast`,
+`CodeQL / analyse`, `android-e2e / changes|build|e2e|a1` (the last three skip on non-app PRs, which
+does not block); path-limited `Restore test / restore` and `Screen recordings (…) / build|record`;
+and the explicit note that the schedule/dispatch-only workflows (Deploy staging, Staging smoke, APK
+lanes, Store readiness, Mutation floor, LINZ changeset, Map pack, android-e2e-health) cannot be
+required PR checks. The founder sets the list in the ruleset UI in one paste - that setting is a
+FOUNDER_TODO row, not an agent action. Evidence: `docs/evidence/required-checks-224/README.md`
+(the derivation table). No code changed, so no red/green; BUG-224 filed.
+
+**Item 3 is now fully on branches with PRs: 3a-3h (#199-#207), 3i C12/C11/C10/C14 (#208-#211), 3j
+this one.** Next in the queue: item 4 (API hardening a-g), then item 5, then item 7's chain.
+
+## 2026-11-06: #211 merged as b524abe; origin/main into `required-checks-224` (26cda0a)
+
+- The previous stack PR merged as `b524abe`; its tag `archive/<branch>` is at its PR head and its branch is deleted (ls-remote empty).
+- `required-checks-224` (was `155e31c`) carries origin/main via `26cda0a` (conflicts union-resolved): parity 0 reopened, nothing deleted vs origin/main, counts re-pasted (`312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 216 bug rows (open 7 · doing 2 · testing 1 · fixed 174 · closed 2 · moved to PARITY 30)`). Pushed via the API workaround (git push still rejected server-side).
+#211 (C14, BUG-223 + BUG-228) merged as b524abe; tag archive/dependabot-cron-223 @ e6a1187, branch deleted. The BUG-228 Semgrep red on 80edbac was fixed by cooldown on all four dependabot entries (config fix, not exclusion; gate extended, 15/15 tests) and confirmed green in CI (Semgrep x2 success on e6a1187). This is the last sub-item of audit item 3 (3j).
+
+## 2026-11-06 (later): BUG-228 second iteration — Dependabot's schema rejects a bare `days:` cooldown key; corrected to `default-days: 7` on the #212 branch
+
+The BUG-228 fix merged with #211 (`b524abe`) used `cooldown: days: 7`: Semgrep's missing-cooldown branch was satisfied (17/17 green on `e6a1187`), but Dependabot's OWN config check went red on #212's head (check-run 127840393944): "additional properties [days] outside of the schema" for all 4 entries. Verified against both authorities: Semgrep's registry rule (semgrep/semgrep-rules package_managers/dependabot/dependabot-missing-cooldown.yaml) requires `cooldown: default-days: >= 7` (branch 2 fires below 7), and GitHub's dependabot options reference lists only `default-days` / `semver-*-days` / `include` / `exclude` under `cooldown` — no `days` key. Corrected on the `required-checks-224` branch: `cooldown: default-days: 7` on all four entries + header comment; the gate now requires `cooldown:` + `default-days >= 7` and fails a bare `days:` key (3 new tests, 17 total). Red-first: the extended gate exits 1 naming all four entries against BOTH eb75e35 (no cooldown) and e6a1187 (bare `days:`); green on the fixed tree. Merging #212 corrects main's dependabot.yml. Semgrep + the Dependabot config check going green is the next CI run's evidence.
 
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
