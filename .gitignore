@@ -80,3 +80,8 @@ graphify-out/
 # the temp file is never source.
 packages/shared/src/generated/.api-check.ts
 packages/shared/src/generated/.api-test.ts
+# mutmut's copied/mutated source tree, its cache and its exported stats/results
+# (mutation.yml uploads them as artifacts; a local WSL run must not dirty the
+# worktree) - BUG-241.
+services/*/mutants/
+.mutmut-cache

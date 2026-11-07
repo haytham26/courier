@@ -855,6 +855,10 @@ PR #251's A1 job failed `expected 4 delivery events ... found 3 after 45s` with 
 
 Register rules from the same message: main holds up to BUG-237; BUG-199 is the lead's; the old range 210..239 has only BUG-238/239 left; the NEW reserved range for this crew is **BUG-240..BUG-269** — before every new row, `git fetch origin --prune` and check the number is free on main AND every origin branch. Along the way, close the backend-owned open/doing rows in BUGS.md (red-first, PR, ritual); the lead's rows stay with the lead.
 
+## 2026-11-07: item 7, B4 slice 1 (BUG-241) on `item7-b4-lane-repair` - the mutation lane repaired + survivor list exported
+
+The last three nightly mutation runs (41821954541, 42019403364, 42210602994) died in mutmut's stats pass in 10-36 s with no artifacts: the API job's BUG-135 source-scan tests anchored at `parents[2]`, which under mutmut is the copied `mutants/` tree (stale copies there made `len(readers) == 1` fail), and the voice job's `test_eval_audio.py` needs the `eval` extra (numpy) the lane does not install. Fixed: both `app_sources()` helpers strip the trailing `mutants` (pinned by new invariant tests; red/green proven locally by emulating the mutants tree - 1 failed pre-fix, green post-fix), voice ignores the eval-audio test in the mutant run (`app/eval_audio.py` is outside the scope), `check-mutation-floor.mjs run` now also writes `mutants/mutmut-results.txt` (`mutmut results`) and `mutation.yml` uploads it beside the stats, `.gitignore` covers the mutants outputs, and the extras lookup normalises Windows path separators (it silently dropped the API's s3test extra locally). BUG-241 filed; evidence `docs/evidence/mutation-lane-241/`. Next: dispatch the lane on this branch and read the survivor list to write the killing tests. Skills: debugging-and-error-recovery, test-driven-development, ci-cd-and-automation, constraint-driven-development.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:

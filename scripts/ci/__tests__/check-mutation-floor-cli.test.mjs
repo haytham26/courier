@@ -9,12 +9,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { checkStats, normaliseStats, scoreOf } from '../check-mutation-floor.mjs';
+import {
+  buildMutmutCommand,
+  checkStats,
+  normaliseStats,
+  RESULTS_RELATIVE,
+  scoreOf,
+  writeResults,
+} from '../check-mutation-floor.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const script = path.join(repoRoot, 'scripts', 'ci', 'check-mutation-floor.mjs');
@@ -121,4 +128,48 @@ test('the exported arithmetic stays mutmut own', () => {
     killed: 0,
     timeout: 0,
   });
+});
+
+// --- BUG-241: the run mode must export the per-mutant survivor list ---------
+
+test('the survivor list lands beside the stats as mutants/mutmut-results.txt', () => {
+  assert.equal(RESULTS_RELATIVE, path.join('mutants', 'mutmut-results.txt'));
+});
+
+test('writeResults writes the list into the service mutants dir and returns the file', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mutation-results-'));
+  try {
+    const file = writeResults(dir, 'Survived app/main.py:12: x == y -> x != y\n');
+    assert.equal(file, path.join(dir, 'mutants', 'mutmut-results.txt'));
+    assert.equal(readFileSync(file, 'utf8'), 'Survived app/main.py:12: x == y -> x != y\n');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('writeResults creates the mutants dir when the run wrote nothing', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mutation-results-empty-'));
+  try {
+    const file = writeResults(dir, '');
+    assert.equal(readFileSync(file, 'utf8'), '');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the mutmut command ends at the subcommand and carries each service own extras', () => {
+  const api = buildMutmutCommand('services/api', ['results']);
+  assert.deepEqual(api.slice(-2), ['mutmut', 'results']);
+  // The API's suite needs s3test (tests/test_pod_store.py raises without it);
+  // the path must be normalised so the lookup works on Windows too, where
+  // path.relative returns `services\api` and the lookup would fall back.
+  const extras = api.filter((_, i) => api[i - 1] === '--extra');
+  assert.deepEqual(extras, ['dev', 's3test']);
+  assert.ok(api.includes('--directory'));
+  assert.ok(api.includes('services/api') || api.includes('services\\api'));
+
+  const voice = buildMutmutCommand('services/courier-voice', ['results']);
+  assert.deepEqual(voice.slice(-2), ['mutmut', 'results']);
+  // s3test is not defined for courier-voice - naming it there failed (run 41241517747).
+  assert.deepEqual(voice.filter((_, i) => voice[i - 1] === '--extra'), ['dev']);
 });

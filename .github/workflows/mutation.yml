@@ -16,6 +16,11 @@
 # The PR-time variant is `check-mutation-floor.mjs check <service>` against the
 # stats artefact this workflow uploads; wiring it into the floor job is the
 # follow-up slice once the first nightly run has measured the runtime.
+#
+# The `run` mode also exports the PER-MUTANT survivor list
+# (`mutants/mutmut-results.txt`, from `mutmut results`): the stats JSON carries
+# only counts, and the survivors have to be named before tests can be written
+# to kill them (BUG-241). Both files are uploaded.
 
 name: Mutation floor
 
@@ -55,7 +60,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: mutation-api-stats
-          path: services/api/mutants/mutmut-cicd-stats.json
+          path: |
+            services/api/mutants/mutmut-cicd-stats.json
+            services/api/mutants/mutmut-results.txt
           retention-days: 90
           if-no-files-found: warn
 
@@ -80,6 +87,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: mutation-voice-stats
-          path: services/courier-voice/mutants/mutmut-cicd-stats.json
+          path: |
+            services/courier-voice/mutants/mutmut-cicd-stats.json
+            services/courier-voice/mutants/mutmut-results.txt
           retention-days: 90
           if-no-files-found: warn

@@ -21,12 +21,17 @@
 // run, exports the stats, and checks them in the same job - so a slow suite
 // never blocks a PR, and the floor still blocks the merge when it drops.
 //
+// The `run` mode also exports the PER-MUTANT list (`mutmut results`, one line
+// per mutant with its status) to `mutants/mutmut-results.txt` beside the stats
+// JSON: the stats carry only counts, and without the list the survivors cannot
+// be named, so no test can be written to kill them (BUG-241).
+//
 // mutmut refuses to start on Windows (`platform.system() == "Windows"` exits
 // 1, boxed/mutmut#397), so the local run is WSL's; CI's ubuntu runner is the
 // harness for this gate, exactly as the restore drill's is Postgres.
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -41,6 +46,9 @@ export const DEFAULT_FLOOR = 70;
 const thisFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(thisFile), '..', '..');
 const STATS_RELATIVE = path.join('mutants', 'mutmut-cicd-stats.json');
+
+/** Where the `run` mode writes the per-mutant `mutmut results` list. */
+export const RESULTS_RELATIVE = path.join('mutants', 'mutmut-results.txt');
 
 /**
  * The mutation score, in mutmut's own arithmetic (see the header).
@@ -146,14 +154,48 @@ const EXTRAS_BY_SERVICE = {
   'services/courier-voice': ['dev'],
 };
 
-function runMutmut(serviceDir, args) {
+/**
+ * The exact `uv run … mutmut …` command for a service, as a pure value so the
+ * suite can pin it: the extras come from EXTRAS_BY_SERVICE, and `--directory`
+ * is what makes the service directory mutmut's working directory (so its
+ * `mutants/` lands where `readStats` looks).
+ */
+export function buildMutmutCommand(serviceDir, args) {
   const absolute = path.resolve(repoRoot, serviceDir);
-  const relative = path.relative(repoRoot, absolute) || '.';
+  // path.relative uses the platform separator, so on Windows it is
+  // `services\api` and the EXTRAS_BY_SERVICE lookup silently fell back to
+  // ['dev'] - dropping the API's s3test extra on any local run. Normalise.
+  const relative = (path.relative(repoRoot, absolute) || '.').split(path.sep).join('/');
   const extras = EXTRAS_BY_SERVICE[relative] ?? ['dev'];
   const command = ['run'];
   for (const extra of extras) command.push('--extra', extra);
   command.push('--directory', relative, 'mutmut', ...args);
-  execFileSync('uv', command, { cwd: repoRoot, stdio: 'inherit' });
+  return command;
+}
+
+function runMutmut(serviceDir, args) {
+  execFileSync('uv', buildMutmutCommand(serviceDir, args), { cwd: repoRoot, stdio: 'inherit' });
+}
+
+/** The same command, with stdout captured instead of streamed. */
+function runMutmutCapture(serviceDir, args) {
+  return execFileSync('uv', buildMutmutCommand(serviceDir, args), {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
+}
+
+/**
+ * Write the per-mutant results list (`mutmut results` output) into the
+ * service's `mutants/` directory, creating it if the run wrote nothing.
+ * @returns {string} the file written
+ */
+export function writeResults(serviceDir, text) {
+  const file = path.resolve(repoRoot, serviceDir, RESULTS_RELATIVE);
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, text, 'utf8');
+  return file;
 }
 
 export { repoRoot as mutationRepoRoot };
@@ -169,6 +211,9 @@ const main = () => {
   if (mode === 'run') {
     runMutmut(serviceDir, ['run']);
     runMutmut(serviceDir, ['export-cicd-stats']);
+    // The survivor list, for triage: `mutmut results` names every mutant with
+    // its status. The workflow uploads it beside the stats (BUG-241).
+    writeResults(serviceDir, runMutmutCapture(serviceDir, ['results']));
   }
   const stats = readStats(path.resolve(repoRoot, serviceDir));
   const failures = checkStats(stats, { label: `${BUG_ID} (${serviceDir})` });

@@ -75,7 +75,17 @@ source_paths = [
 # failed). Its own CI job proves it (ci.yml runs the whole suite); here it would
 # fail every mutant for the harness's reason, not the code's. mutmut appends
 # this to every pytest invocation it makes.
-pytest_add_cli_args = ["--ignore=tests/test_eval_harness.py"]
+# The eval AUDIO test fails the same way, one layer earlier: it imports numpy
+# and soundfile, which are the `eval` extra - ci.yml installs that extra
+# (`uv sync --extra dev --extra eval`) but this lane runs `--extra dev` only,
+# and run 42210602994's voice job died at COLLECTION with
+# `ModuleNotFoundError: No module named 'numpy'` before a single mutant ran
+# (BUG-241). `app/eval_audio.py` is outside this floor's `source_paths`, so
+# nothing the lane mutates needs the extra; the test's own CI job proves it.
+pytest_add_cli_args = [
+    "--ignore=tests/test_eval_harness.py",
+    "--ignore=tests/test_eval_audio.py",
+]
 
 [tool.ruff]
 line-length = 100

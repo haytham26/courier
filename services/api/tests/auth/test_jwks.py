@@ -654,8 +654,20 @@ class TestNoUnusedExportedSymbolRemains:
 
     @staticmethod
     def _app_sources() -> list[Path]:
-        app_dir = Path(__file__).resolve().parents[2] / "app"
+        # mutmut's runner chdirs into the copied `mutants/` tree, where a plain
+        # `parents[2]` is the copy, not the service (run 42210602994: the lane's
+        # stats pass read stale mutated copies and died). Strip the trailing
+        # `mutants` so the scan always reads the real tree. BUG-241.
+        service = Path(__file__).resolve().parents[2]
+        if service.name == "mutants":
+            service = service.parent
+        app_dir = service / "app"
         return sorted(path for path in app_dir.rglob("*.py") if path != app_dir / "auth" / "jwks.py")
+
+    def test_app_sources_never_resolves_into_the_mutants_copy(self) -> None:
+        """The helper's anchor, pinned for the mutation lane (BUG-241)."""
+        for source in self._app_sources():
+            assert "mutants" not in source.parts, f"{source} resolves inside the mutants copy"
 
 
 class TestTheSubjectIsARealIdentity:
