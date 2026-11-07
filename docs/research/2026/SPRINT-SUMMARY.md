@@ -6,7 +6,7 @@ candidate, the top 5 of each area deep-reviewed, benchmarks only where an eval s
 - **Area files:** `docs/research/2026/*.md` (16 files, 619 KB) + the founder's
   `oss-maps-courier.md`, which this sprint **verified and corrected** (it was UNVERIFIED).
 - **Squad files:** `docs/squads/<module>/research.md` and `decisions.md` rewritten from the sprint.
-- **Clean-room studies:** `docs/study/{fleetbase,navigator-app,openrouteservice,nominatim,voicestudio}/SPEC.md` + `GAP.md`.
+- **Clean-room studies:** `docs/study/{fleetbase,navigator-app,openrouteservice,nominatim,voicestudio}/SPEC.md` + `GAP.md`. Andee's ideas are recorded separately and ideas-only in `docs/study/andee/IDEAS.md` (D48: never code).
 - **ADRs written:** ADR-004 (the voice service licences).
 
 ## 1. The three findings that change the plan
