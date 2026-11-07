@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `59b5504` (PR #262, `docs/HANDOVER.md`, BUG-034 doing). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
+**Week:** 2026-W44. **Local `main` == `origin/main` == `f1ae091` (PR #265, the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
 side, BUG-200 — the prominent background-location disclosure is shown in-app
 before the permission request, and the settings carry the Legal rows). Behind it
 `0f500fe` = PR #251 (BUG-236 — the backend's row), `ffa60ba` = PR #249 (item 5a,
@@ -28,6 +28,18 @@ seeded from screen-recordings run 42353916218 re-run; determinism measured
 0.077-0.186 % per view across two green runs; ALL_GREEN, CI run 42363098107).
 Queue next: **P7** acceptance on two screen sizes — to the §6 Definition of
 Done.**
+
+Merged this session: **PR #261 (a9a8cc6) — BUG-197 fixed** (v2 root cause: RN 0.88
+KAV reads the unshrunk visible display frame edge-to-edge, so the sheet now pads by
+the Keyboard event IME-inset height; E2E run 42380615185, 21/21 flows both api legs
+incl. import.yaml with the keyboard down; comment #6708854526), **PR #262 (59b5504) —
+BUG-034 fixed** (`docs/HANDOVER.md`), **PR #265 (f1ae091) — the P7 acceptance record**
+(`docs/evidence/acceptance/README.md`: run 42363101590, 21/21 both legs + A1 no-mock
+with Postgres row asserts), **BUG-270 filed** (the large-screen AVD profile is
+platform-owned) and **the scorecard refreshed 2026-11-08** (address/safety/delivery
+at 8/10+; voice/routing/offline below for named reasons). Queue next: the §6 Definition
+of Done checklist + `docs/status/FINAL_REPORT.md`; the v1.0.0 release stays
+founder-gated (FOUNDER_TODO).
 
 Also in flight: **BUG-034** on `docs/handover-034` (`docs/HANDOVER.md` —
 run, deploy, keys, map updates, acceptance, the v1.0.0 release order) and
