@@ -351,3 +351,125 @@ jobs:
           echo "render script and the token counter of the voice service are W3 and W5."
           echo "The workflow_run checkout rule is a static heuristic; our deploy checks out"
           echo "the sha the gates ran on, after BOTH required workflows said success on it (W6)."
+
+  # BUG-245 (audit item 7, B4's "then gate it in CI"): the mutation floor as a
+  # PR-time gate. The nightly lane (mutation.yml) proves the floor on a
+  # schedule; here the floor BLOCKS THE MERGE, but only for a change that can
+  # move it - the same What-changed pattern android-e2e.yml's `changes` job
+  # uses (audit item 3g): a job-level `if:` reports `skipped`, never absent,
+  # so a required check is always reported and a docs-only PR never spends
+  # the minutes.
+  #
+  # `mutation-scopes` diffs the base against HEAD and reads each service's
+  # `[tool.mutmut] source_paths` from its pyproject
+  # (scripts/ci/changed-mutation-scopes.mjs): a change under a service's
+  # source, tests/, pyproject.toml or uv.lock - or to the mutation pipeline
+  # itself - runs that service's floor. mutmut 3.8.1's `run` takes only
+  # mutant names and reads its config from the cwd pyproject, so the job runs
+  # the service's FULL configured scope (a superset of the changed files,
+  # identical to what the nightly lane measures), and `run` mode enforces the
+  # 70 % floor itself (check-mutation-floor.mjs main -> checkStats, exit 1
+  # below the floor).
+  mutation-scopes:
+    name: Mutation scopes (what changed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      api: ${{ steps.scopes.outputs.api }}
+      voice: ${{ steps.scopes.outputs.voice }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # The base sha is a commit that only exists in the repository, so
+          # the whole history is fetched; a shallow clone answers "unknown
+          # revision" and the diff then reads as "nothing changed", which is
+          # the failure this gate exists to prevent.
+          fetch-depth: 0
+
+      - name: Which mutation scopes this change touches
+        id: scopes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+        run: node scripts/ci/changed-mutation-scopes.mjs
+
+  mutation-api:
+    name: The API's mutation floor (PR gate, BUG-245)
+    needs: mutation-scopes
+    if: needs.mutation-scopes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # The same pinned PostGIS service as ci.yml's db step and mutation.yml's
+    # API job, with DATABASE_URL set (BUG-243: without it the db-marked suite
+    # stays `no_tests` and the floor is measured over the wrong suite). The
+    # schema needs PostGIS; never a production database - the container lives
+    # and dies with the runner.
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: courier
+          POSTGRES_PASSWORD: courier
+          POSTGRES_DB: courier
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U courier"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://courier:courier@127.0.0.1:5432/courier
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Python and the API's dependencies
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/api/uv.lock
+
+      - name: Run the floor
+        run: node scripts/ci/check-mutation-floor.mjs run services/api
+
+      - name: Keep the stats
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mutation-api-pr-stats
+          path: |
+            services/api/mutants/mutmut-cicd-stats.json
+            services/api/mutants/mutmut-results.txt
+            services/api/mutants/mutmut-survivors.txt
+          retention-days: 90
+          if-no-files-found: warn
+
+  mutation-voice:
+    name: The voice service's mutation floor (PR gate, BUG-245)
+    needs: mutation-scopes
+    if: needs.mutation-scopes.outputs.voice == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Python and the voice service's dependencies
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: services/courier-voice/uv.lock
+
+      - name: Run the floor
+        run: node scripts/ci/check-mutation-floor.mjs run services/courier-voice
+
+      - name: Keep the stats
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mutation-voice-pr-stats
+          path: |
+            services/courier-voice/mutants/mutmut-cicd-stats.json
+            services/courier-voice/mutants/mutmut-results.txt
+            services/courier-voice/mutants/mutmut-survivors.txt
+          retention-days: 90
+          if-no-files-found: warn

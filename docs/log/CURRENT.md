@@ -29,12 +29,10 @@ seeded from screen-recordings run 42353916218 re-run; determinism measured
 Queue next: **P7** acceptance on two screen sizes — to the §6 Definition of
 Done.**
 
-In flight: **BUG-197** on `feat/bug197-import-keyboard` (the small-screen
-acceptance defect: the soft keyboard covered the import sheet's pinned
-actions on edge-to-edge api 34/35 — the fix wraps the sheet in a
-`KeyboardAvoidingView`, and `import.yaml` now taps Import with the keyboard
-still down). Queue next after it: **P7** acceptance evidence + scorecard,
-**BUG-034** handover docs.
+Also in flight: **BUG-034** on `docs/handover-034` (`docs/HANDOVER.md` —
+run, deploy, keys, map updates, acceptance, the v1.0.0 release order) and
+**BUG-197** on `feat/bug197-import-keyboard` (PR #261, the small-screen
+keyboard fix).
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 

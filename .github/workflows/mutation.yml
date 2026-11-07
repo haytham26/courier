@@ -13,9 +13,13 @@
 # stats, and fails the job below 70 % - the score arithmetic is mutmut's, read
 # from its installed source.
 #
-# The PR-time variant is `check-mutation-floor.mjs check <service>` against the
-# stats artefact this workflow uploads; wiring it into the floor job is the
-# follow-up slice once the first nightly run has measured the runtime.
+# The PR-time variant lives in quality-gates.yml (BUG-245): a `mutation-scopes`
+# What-changed job plus per-service floor jobs that run
+# `check-mutation-floor.mjs run <service>` whenever the PR touches that
+# service's `[tool.mutmut] source_paths`, tests, pyproject or lockfile - so the
+# floor blocks the merge, not only the night. This workflow stays the nightly
+# measurement and the manual dispatch; both run the identical `run` mode, so
+# the PR gate and the night measure the same scope with the same floor.
 #
 # The `run` mode also exports the PER-MUTANT survivor list
 # (`mutants/mutmut-results.txt`, from `mutmut results`): the stats JSON carries
