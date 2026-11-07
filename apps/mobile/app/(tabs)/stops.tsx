@@ -24,7 +24,17 @@
  * cannot. The record is in the evidence sheet; the button is never faked.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
+import {
+  Keyboard,
+  type KeyboardEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useColorScheme,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Camera, Map as MapView, Marker } from '@maplibre/maplibre-react-native';
 
@@ -114,6 +124,24 @@ function RouteScreen() {
   const [importing, setImporting] = useState(false);
   const [importNote, setImportNote] = useState<string | null>(null);
   const [importIgnored, setImportIgnored] = useState<string | null>(null);
+  // BUG-197: the soft keyboard's own height, read from the Keyboard events.
+  // On Android the event's endCoordinates.height comes from the window's IME
+  // insets (ReactRootView.checkForKeyboardEvents), which are correct even
+  // edge-to-edge on api 34/35 - where the visible display frame is NOT
+  // shrunk by the keyboard, which is exactly why KeyboardAvoidingView's own
+  // padding math computed 0 there (run 42371008275: the actions row stayed
+  // under the keyboard on both api legs).
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const onShow = (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height);
+    const onHide = () => setKeyboardHeight(0);
+    const show = Keyboard.addListener('keyboardDidShow', onShow);
+    const hide = Keyboard.addListener('keyboardDidHide', onHide);
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
   // The importer of this build: the mock in the E2E build, the real client's
   // importStops in every other (the labelReader seam's own rule).
   const importer = useMemo(() => importerForThisBuild(), []);
@@ -616,7 +644,27 @@ function RouteScreen() {
               hint and the paste field. The notes pin above the actions, so
               every answer is on screen when it is spoken. */}
           <GlassSurface kind="sheet" testID="stops-import-sheet" style={[styles.detail, styles.importSheet]}>
-            <ScrollView style={styles.importScrollBody} contentContainerStyle={styles.importScroll}>
+            {/* BUG-197: Android draws edge-to-edge on api 34/35, so
+                windowSoftInputMode="adjustResize" does not shrink the window
+                and the soft keyboard covers the sheet's bottom while the paste
+                field is focused - the pinned actions row left the
+                accessibility tree (runs 42136053866 + 42155905246, and with the
+                KeyboardAvoidingView attempt, run 42371008275 on BOTH api legs:
+                the KAV's math reads the visible display frame, which the
+                keyboard does not shrink edge-to-edge, so it padded 0). The
+                container instead pads by the Keyboard event's IME-inset height
+                (correct edge-to-edge), so the actions ride above the keyboard
+                while typing. */}
+            <View
+              style={[styles.importAvoid, { paddingBottom: keyboardHeight }]}
+              testID="stops-import-kav"
+            >
+            <ScrollView
+              style={styles.importScrollBody}
+              contentContainerStyle={styles.importScroll}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
               <Text style={[styles.detailTitle, { color: t.colors.label }]}>Import stops</Text>
               <Text style={[styles.detailSuburb, { color: t.colors.secondaryLabel }]}>
                 Paste the spreadsheet (CSV): one header row, an address column.
@@ -674,6 +722,7 @@ function RouteScreen() {
                     {importing ? 'Importing\u2026' : 'Import'}
                   </Text>
                 </Pressable>
+            </View>
             </View>
           </GlassSurface>
         </>
@@ -745,6 +794,9 @@ const styles = StyleSheet.create({
   // screen - run 42136053866's api-34 leg clipped the Go button out of the
   // accessibility tree on the 320x640 emulator.
   importSheet: { top: spacing.space64 },
+  // BUG-197: the avoiding view fills the sheet so its padding pushes the
+  // pinned actions above the soft keyboard.
+  importAvoid: { flex: 1 },
   importScrollBody: { flex: 1 },
   importScroll: { gap: spacing.space12 },
   importInput: {

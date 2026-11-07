@@ -12,8 +12,8 @@
  * the run's marks and the segments, and none of that needs a device.
  */
 import React from 'react';
-import { Text } from 'react-native';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { Keyboard, Text } from 'react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import RouteTab from '../stops';
@@ -758,5 +758,58 @@ describe("the route screen's import sheet (queue 4e)", () => {
     await waitFor(() => {
       expect(screen.queryByTestId('stops-import-sheet')).toBeNull();
     });
+  });
+
+  // BUG-197: on edge-to-edge Android (api 34/35) adjustResize does not shrink
+  // the window, so the soft keyboard used to cover the sheet's pinned actions
+  // row and `stops-import-go` left the accessibility tree (runs 42136053866,
+  // 42155905246 - and run 42371008275 proved KeyboardAvoidingView cannot fix it
+  // there: its padding math reads the visible display frame, which the
+  // keyboard does not shrink edge-to-edge, so it padded 0). The fix pads the
+  // sheet's container by the Keyboard event's IME-inset height instead - the
+  // pinned actions are INSIDE the padded container, so they ride above the
+  // keyboard while the paste field is focused.
+  it('pads the pinned actions above the soft keyboard (BUG-197)', async () => {
+    // Capture the Keyboard listeners the screen registers.
+    const listeners: Record<string, (e: { endCoordinates: { height: number } }) => void> = {};
+    const spy = jest.spyOn(Keyboard, 'addListener').mockImplementation((event, cb) => {
+      listeners[event] = cb;
+      return { remove: jest.fn() };
+    });
+    try {
+      await openAndPaste('address\n1 Import Lane');
+
+      const padOf = (): number => {
+        const el = screen.getByTestId('stops-import-kav');
+        const props = el.props as { style: unknown };
+        const style = props.style as Array<{ paddingBottom?: number }>;
+        return style[style.length - 1]?.paddingBottom ?? 0;
+      };
+      // The primary action, the dismiss and the paste field are all inside
+      // the padded container - that containment is the whole fix, not a style
+      // on the row.
+      const sheet = screen.getByTestId('stops-import-kav');
+      expect(within(sheet).getByTestId('stops-import-go')).toBeTruthy();
+      expect(within(sheet).getByTestId('stops-import-dismiss')).toBeTruthy();
+      expect(within(sheet).getByTestId('stops-import-text')).toBeTruthy();
+      expect(padOf()).toBe(0);
+
+      // The keyboard opens: the container pads by exactly the IME-inset
+      // height the Keyboard event reports (correct edge-to-edge).
+      act(() => {
+        listeners['keyboardDidShow']({ endCoordinates: { height: 260 } });
+      });
+      expect(padOf()).toBe(260);
+      // ...and the actions are still inside it after the pad.
+      expect(within(screen.getByTestId('stops-import-kav')).getByTestId('stops-import-go')).toBeTruthy();
+
+      // The keyboard hides: the pad comes back off.
+      act(() => {
+        listeners['keyboardDidHide']({ endCoordinates: { height: 0 } });
+      });
+      expect(padOf()).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
