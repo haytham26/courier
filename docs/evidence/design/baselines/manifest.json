@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "tolerance": {
+    "perChannel": 8,
+    "maxDiffPct": 0.5
+  },
+  "entries": [
+    {
+      "file": "03-today-day-small.png",
+      "screen": "03-today",
+      "view": "day-small",
+      "status": "baseline",
+      "width": 1440,
+      "height": 2560,
+      "sha256": "22ecdbf59ce668e5069ede1782c759552f0ef5aa84597560fdb18b6081253069",
+      "source": {
+        "run": "42353916218 (screen-recordings job re-run, head 9119687, green)",
+        "artifact": "screen-recordings #13567763595",
+        "flow": ".maestro/recordings/03-today.yaml",
+        "mode": "uimode light",
+        "emulator": "screen-recordings AVD google-apis x86_64 320x640 logical (1440x2560 device px), pins MAESTRO_VERSION cli-2.11.0, EMULATOR_BUILD 16632760"
+      },
+      "capturedAt": "2026-11-07"
+    },
+    {
+      "file": "03-today-night-small.png",
+      "screen": "03-today",
+      "view": "night-small",
+      "status": "baseline",
+      "width": 1440,
+      "height": 2560,
+      "sha256": "0c7cb04cd198662eda71137746316d6e20b1214b04ae1154617e930ba03cffb3",
+      "source": {
+        "run": "42353916218 (screen-recordings job re-run, head 9119687, green)",
+        "artifact": "screen-recordings #13567763595",
+        "flow": ".maestro/recordings/03-today.yaml",
+        "mode": "uimode dark",
+        "emulator": "screen-recordings AVD google-apis x86_64 320x640 logical (1440x2560 device px), pins MAESTRO_VERSION cli-2.11.0, EMULATOR_BUILD 16632760"
+      },
+      "capturedAt": "2026-11-07"
+    },
+    {
+      "file": "04-driving-day-small.png",
+      "screen": "04-driving",
+      "view": "day-small",
+      "status": "baseline",
+      "width": 1440,
+      "height": 2560,
+      "sha256": "fd6f9fc08e691215b1219248a555310f529195411e6b9e87a0ce90fb104bd821",
+      "source": {
+        "run": "42353916218 (screen-recordings job re-run, head 9119687, green)",
+        "artifact": "screen-recordings #13567763595",
+        "flow": ".maestro/recordings/04-driving.yaml",
+        "mode": "uimode light",
+        "emulator": "screen-recordings AVD google-apis x86_64 320x640 logical (1440x2560 device px), pins MAESTRO_VERSION cli-2.11.0, EMULATOR_BUILD 16632760"
+      },
+      "capturedAt": "2026-11-07"
+    },
+    {
+      "file": "04-driving-night-small.png",
+      "screen": "04-driving",
+      "view": "night-small",
+      "status": "baseline",
+      "width": 1440,
+      "height": 2560,
+      "sha256": "be485410b0fc12f2aeb058d98373897d2597d1d0739b015871d20f4d44d0f796",
+      "source": {
+        "run": "42353916218 (screen-recordings job re-run, head 9119687, green)",
+        "artifact": "screen-recordings #13567763595",
+        "flow": ".maestro/recordings/04-driving.yaml",
+        "mode": "uimode dark",
+        "emulator": "screen-recordings AVD google-apis x86_64 320x640 logical (1440x2560 device px), pins MAESTRO_VERSION cli-2.11.0, EMULATOR_BUILD 16632760"
+      },
+      "capturedAt": "2026-11-07"
+    },
+    {
+      "file": "03-today-day-large.png",
+      "screen": "03-today",
+      "view": "day-large",
+      "status": "pending",
+      "note": "needs a large-screen AVD (capture procedure in docs/evidence/design/README.md)"
+    },
+    {
+      "file": "03-today-night-large.png",
+      "screen": "03-today",
+      "view": "night-large",
+      "status": "pending",
+      "note": "needs a large-screen AVD (capture procedure in docs/evidence/design/README.md)"
+    },
+    {
+      "file": "03-today-day-small-200pct.png",
+      "screen": "03-today",
+      "view": "day-small-200pct",
+      "status": "pending",
+      "note": "needs font_scale 2.0 on the same AVD (capture procedure in docs/evidence/design/README.md)"
+    },
+    {
+      "file": "03-today-night-small-200pct.png",
+      "screen": "03-today",
+      "view": "night-small-200pct",
+      "status": "pending",
+      "note": "needs font_scale 2.0 on the same AVD (capture procedure in docs/evidence/design/README.md)"
+    },
+    {
+      "file": "04-driving-day-large.png",
+      "screen": "04-driving",
+      "view": "day-large",
+      "status": "pending",
+      "note": "needs a large-screen AVD (capture procedure in docs/evidence/design/README.md)"
+    },
+    {
+      "file": "04-driving-night-large.png",
+      "screen": "04-driving",
+      "view": "night-large",
+      "status": "pending",
+      "note": "needs a large-screen AVD (capture procedure in docs/evidence/design/README.md)"
+    },
+    {
+      "file": "04-driving-day-small-200pct.png",
+      "screen": "04-driving",
+      "view": "day-small-200pct",
+      "status": "pending",
+      "note": "needs font_scale 2.0 on the same AVD (capture procedure in docs/evidence/design/README.md)"
+    },
+    {
+      "file": "04-driving-night-small-200pct.png",
+      "screen": "04-driving",
+      "view": "night-small-200pct",
+      "status": "pending",
+      "note": "needs font_scale 2.0 on the same AVD (capture procedure in docs/evidence/design/README.md)"
+    }
+  ]
+}
