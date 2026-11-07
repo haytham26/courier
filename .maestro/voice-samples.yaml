@@ -1,5 +1,5 @@
 appId: com.courier.copilot
-name: The debug-build voice-sample recorder records with consent (A3)
+name: The voice-sample recorder records with consent (A3)
 ---
 # BUG-185: stop the app FIRST, then clear its state.
 - stopApp
@@ -27,23 +27,48 @@ name: The debug-build voice-sample recorder records with consent (A3)
     id: "voice-samples-wording-evaluation"
 - assertVisible:
     id: "voice-samples-wording-training"
-# Consent to evaluation use, separately from training use.
+# Consent to evaluation use, separately from training use. Wait until the
+# switch reads checked, so the consent record is written before Record taps.
 - tapOn:
     id: "voice-samples-consent-evaluation"
-# Record, then stop: the sample lands in the list with its consent pointer.
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-consent-evaluation"
+      checked: true
+    timeout: 15000
+# On the 320x640 emulator the Record control sits below the fold of the
+# screen's own ScrollView (the BUG-050 class), so reveal it first - the
+# repo's scrollUntilVisible convention (summary.yaml, sign-in.yaml).
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-record"
+    direction: DOWN
+    timeout: 20000
+# Record, then stop: the sample lands in the list below.
 - tapOn:
     id: "voice-samples-record"
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "voice-samples-stop"
-    timeout: 15000
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: "voice-samples-stop"
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-list"
+    direction: DOWN
+    timeout: 20000
 - extendedWaitUntil:
     visible:
-      id: "voice-samples-sample"
+      id: "voice-samples-sample-"
     timeout: 30000
 # Delete removes the sample again.
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-sample-.*-delete"
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: "voice-samples-sample-.*-delete"
 - extendedWaitUntil:
@@ -51,19 +76,36 @@ name: The debug-build voice-sample recorder records with consent (A3)
       id: "voice-samples-empty"
     timeout: 15000
 # Record once more, then revoke (the second tap confirms): revocation deletes
-# every sample.
+# every sample. The Record control is ABOVE the list we just scrolled to, so
+# the reveal scrolls back up.
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-record"
+    direction: UP
+    timeout: 20000
 - tapOn:
     id: "voice-samples-record"
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "voice-samples-stop"
-    timeout: 15000
+    direction: UP
+    timeout: 20000
 - tapOn:
     id: "voice-samples-stop"
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-list"
+    direction: DOWN
+    timeout: 20000
 - extendedWaitUntil:
     visible:
-      id: "voice-samples-sample"
+      id: "voice-samples-sample-"
     timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-revoke"
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: "voice-samples-revoke"
 - tapOn:
@@ -73,4 +115,4 @@ name: The debug-build voice-sample recorder records with consent (A3)
       id: "voice-samples-empty"
     timeout: 15000
 - assertNotVisible:
-    id: "voice-samples-sample"
+    id: "voice-samples-sample-"
