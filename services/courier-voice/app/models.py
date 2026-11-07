@@ -118,9 +118,7 @@ class LearnedRuns(Frozen):
     """
 
     usual_order: Annotated[tuple[str, ...], Field(max_length=MAX_LEARNED_ENTRIES)] = ()
-    service_times_s: Annotated[
-        dict[str, int], Field(max_length=MAX_LEARNED_ENTRIES)
-    ] = {}
+    service_times_s: Annotated[dict[str, int], Field(max_length=MAX_LEARNED_ENTRIES)] = {}
     door_notes: Annotated[dict[str, str], Field(max_length=MAX_LEARNED_ENTRIES)] = {}
     preferences: Annotated[dict[str, str], Field(max_length=MAX_LEARNED_ENTRIES)] = {}
 
@@ -338,6 +336,11 @@ class TurnRequest(Frozen):
     """One turn of the conversation."""
 
     transcript: str = Field(default="", max_length=4000)
+    # MASTER §22-B: the STT's own confidence in the transcript, as the phone's
+    # engine reported it. When it falls below the configured bar the service
+    # asks instead of acting (see `config.VoiceConfig.voice_ask_confidence_bar`).
+    # Absent means the STT reported nothing, and no bar is applied.
+    stt_confidence: Annotated[float | None, Field(default=None, ge=0.0, le=1.0)] = None
     trigger: Trigger = Trigger.PUSH_TO_TALK
     speed_kmh: float = 0.0
     audio_focus: AudioFocus = AudioFocus.NORMAL
@@ -370,6 +373,27 @@ class TurnResponse(Frozen):
     # MASTER §22 technique A: how the pre-classifier routed this turn, and why.
     # The routing decision is reviewable after the fact rather than assumed.
     gate: str | None = None
+
+
+class SessionMemoryView(Frozen):
+    """What the service remembers of the shift, as the app reads it.
+
+    MASTER §22-C: the "what I think is true right now" surface - the live
+    context, the learned runs, the last thing the voice said and the last
+    question it asked, and the settings. Readable so the courier can see
+    and correct what the voice believes; clearable through
+    `DELETE /v1/sessions/{id}/memory`.
+    """
+
+    session_id: str
+    shift_id: str | None = None
+    remembered: bool = True
+    turns: int = 0
+    last_instruction: str | None = None
+    last_question: str | None = None
+    learned: LearnedRuns = LearnedRuns()
+    context: RunContext = RunContext()
+    settings: VoiceSettings = VoiceSettings()
 
 
 class SessionState(Frozen):

@@ -72,6 +72,21 @@ class VoiceConfig(BaseSettings):
     voice_silence_timeout_seconds: float = 6.0
     voice_parked_silence_timeout_seconds: float = 10.0
     voice_barge_in_min_words: int = 1
+    # MASTER §22-B: the ONE ask-on-low-confidence bar. When the STT's own
+    # confidence in a turn's transcript falls below it, the service asks one
+    # short question instead of acting on the guess. The bar is configuration
+    # here, not prompt text and not a per-feature decision. The default is the
+    # starting bar; the final tuning runs on the HELD-OUT set of real courier
+    # sentences, which is the founder's (FOUNDER_TODO) - until it exists the
+    # bar is not claimed to be held-out-tuned.
+    voice_ask_confidence_bar: float = 0.8
+
+    @field_validator("voice_ask_confidence_bar")
+    @classmethod
+    def the_bar_is_a_probability(cls, value: float) -> float:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError("VOICE_ASK_CONFIDENCE_BAR is a probability: 0.0..1.0")
+        return value
 
     @property
     def omniroute_providers(self) -> tuple[str, ...]:

@@ -1,8 +1,11 @@
 """The HTTP surface of Courier Voice.
 
-The app talks to this service over four kinds of call:
+The app talks to this service over five kinds of call:
 
   - `POST /v1/sessions` and `GET /v1/sessions/{id}`: the shift;
+  - `GET /v1/sessions/{id}/memory` and `DELETE /v1/sessions/{id}/memory`:
+    the memory of the shift, read (MASTER §22-C: what the voice currently
+    believes) and forgotten;
   - `POST /v1/sessions/{id}/turn`: one turn of the conversation;
   - `POST /v1/sessions/{id}/proactive`: "is there anything to say?";
   - `GET`/`PUT /v1/settings`: the choices the courier made.
@@ -27,6 +30,7 @@ from pydantic import BaseModel, field_validator, model_validator
 from . import licences
 from .auth import Principal, get_principal
 from .config import VoiceConfig
+from .conversation import ask_question_of
 from .engines import EngineRouter, OmniRouteEngine, SherpaOnnxEngine
 from .memory import InMemoryStore, MemoryStore, SessionMemory, apply_settings, new_session
 from .models import (
@@ -37,6 +41,7 @@ from .models import (
     ReasoningReply,
     ReasoningRequest,
     RunContext,
+    SessionMemoryView,
     SessionState,
     TurnRequest,
     TurnResponse,
@@ -225,6 +230,31 @@ def create_app(
         """What the service remembers about the shift."""
         return _state_of(session_of(session_id, principal))
 
+    @service.get("/v1/sessions/{session_id}/memory", response_model=SessionMemoryView)
+    def read_memory(
+        session_id: str,
+        principal: Annotated[Principal, Depends(get_principal)],
+    ) -> SessionMemoryView:
+        """What the service currently believes about the shift, readable.
+
+        MASTER §22-C: the visible memory. The app shows this surface beside
+        the conversation so the courier can see - and correct or clear -
+        what the voice believes. Only the courier the token names reads it:
+        another courier's shift is a 404, the same as the session read.
+        """
+        memory = session_of(session_id, principal)
+        return SessionMemoryView(
+            session_id=memory.id,
+            shift_id=memory.shift_id,
+            remembered=memory.settings.remember,
+            turns=memory.turns,
+            last_instruction=memory.last_instruction,
+            last_question=memory.last_question,
+            learned=memory.learned,
+            context=memory.context,
+            settings=memory.settings,
+        )
+
     @service.delete("/v1/sessions/{session_id}/memory")
     def forget_session(
         session_id: str,
@@ -267,6 +297,7 @@ def create_app(
                 brains=brains,
                 client=client,
                 memory_store=memory_store,
+                ask_bar=settings.voice_ask_confidence_bar,
             )
 
     @service.post("/v1/sessions/{session_id}/proactive", response_model=ProactiveResponse)
@@ -366,6 +397,7 @@ def _turn(
     brains: EngineRouter,
     client: RunClient,
     memory_store: MemoryStore,
+    ask_bar: float,
 ) -> TurnResponse:
     """One turn: the trigger, the words, the answer and the safety."""
     started = time.monotonic()
@@ -423,7 +455,7 @@ def _turn(
     # knows, whose answer does not read the day, is answered with neither.
     gate = route_turn(body.transcript)
     if gate.route is TurnRoute.FREE and gate.command is not None:
-        reply = _free_reply(gate, memory, body, chosen, moving)
+        reply = _maybe_ask(_free_reply(gate, memory, body, chosen, moving), body, ask_bar)
         return _finished(
             memory,
             memory_store,
@@ -438,19 +470,23 @@ def _turn(
 
     context = _context_of(memory, body, principal, client)
 
-    reply = brains.reason(
-        ReasoningRequest(
-            transcript=body.transcript,
-            context=context,
-            settings=chosen,
-            language=body.language or chosen.language,
-            moving=moving,
-            last_instruction=memory.last_instruction,
-            last_question=memory.last_question,
-            learned=body.learned or memory.learned,
+    reply = _maybe_ask(
+        brains.reason(
+            ReasoningRequest(
+                transcript=body.transcript,
+                context=context,
+                settings=chosen,
+                language=body.language or chosen.language,
+                moving=moving,
+                last_instruction=memory.last_instruction,
+                last_question=memory.last_question,
+                learned=body.learned or memory.learned,
+            ),
+            mode=body.mode,
+            online=body.online,
         ),
-        mode=body.mode,
-        online=body.online,
+        body,
+        ask_bar,
     )
 
     speech = reply.speech or (reply.notice or "")
@@ -490,6 +526,33 @@ def _turn(
         words=word_count(outcome.speech),
         latency_ms=int((time.monotonic() - started) * 1000),
         gate=f"{gate.route.value}: {gate.reason}",
+    )
+
+
+def _maybe_ask(reply: ReasoningReply, body: TurnRequest, ask_bar: float) -> ReasoningReply:
+    """MASTER §22-B: at the decision point, below the bar the service asks.
+
+    The bar is one configured value (`ask_bar`), evaluated here - where the
+    action is about to be taken - not by the model deciding whether it feels
+    sure. A turn whose STT confidence falls below it is answered with one
+    short question (a `notice` carrying no `action`, which the app reads as
+    the question) and the question is recorded as the shift's
+    `last_question`, so the asking is a visible, recorded event. A turn with
+    no reported confidence is acted on as before: the bar applies only when
+    the STT said how sure it was.
+    """
+    if reply.action is None:
+        return reply
+    confidence = body.stt_confidence
+    if confidence is None or confidence >= ask_bar:
+        return reply
+    question = ask_question_of(reply.action)
+    return ReasoningReply(
+        speech=question,
+        notice=question,
+        question=f"ask:{reply.action.type}",
+        source=reply.source,
+        engine=reply.engine,
     )
 
 
