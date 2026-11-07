@@ -1,8 +1,14 @@
 # The deep code audit, 2026-10 (C1) — method, verdicts, and the accepted findings
 
-Status: **IN PROGRESS — the three lead-owned squads (1, 3's app side, 6) have reported and have been
-verified, and the backend squad's four (2, 3's server side, 4, 5) have reported and have been
-verified; the findings below are the verified set for all seven.** The fix order (C1): critical and high before A1 continues; medium in the same slice as the code it touches; low as a batch. The accepted findings are NOT yet filed in `docs/status/BUGS.md`; they are filed in one PR with numbers taken from `origin/main` at that moment (the register's next free number as of this writing is **BUG-068**, main having reached BUG-067).
+Status: **CLOSED for the executor's half, 2026-11-08 (BUG-271): every critical and high finding
+below is mapped to its BUG row and the PR that fixed it — all 25 are `fixed` with their red-first
+reproduction green (see the closure table at the end of this file).** The one clause that stays
+with the founder: the adviser's review of this report (C1's done-when) is a FOUNDER_TODO row.
+Originally: the three lead-owned squads (1, 3's app side, 6) reported and were verified, and the
+backend squad's four (2, 3's server side, 4, 5) reported and were verified; the findings below
+are the verified set for all seven. The fix order (C1): critical and high before A1 continues;
+medium in the same slice as the code it touches; low as a batch. The accepted findings were filed
+in `docs/status/BUGS.md` in one PR each with numbers taken from `origin/main` at that moment.
 
 ## Method (per the audit brief, `docs/plan/AUDIT_2026-10-25.md` C1)
 
@@ -198,3 +204,53 @@ The `EXPO_PUBLIC_E2E` mocks themselves (tracked as A1/A4); the D33 contrast tabl
 ## Filing and the fix order
 
 The accepted findings are filed in `docs/status/BUGS.md` in one PR with numbers taken from `origin/main` at that moment (next free: **BUG-113**). Critical and high first — but note the interlock the verifier established: the squad-1/squad-3 CRITICAL runtime defects all sit on modules with **zero production callers** (no API client in the app yet), so they are fixed as part of A1's wiring, not before it; the squad-6 findings fix on their own slice in parallel.
+
+---
+
+## C1 closure — every critical/high finding mapped to its BUG and PR (2026-11-08, BUG-271)
+
+The founder's item-7 step "C1 closure: map every critical/high finding to its BUG and PR". All
+25 accepted critical/high findings from the tables above, mapped to the register. Every row is
+**`fixed`** in `docs/status/BUGS.md`, each with its red-first reproduction turned green (the row's
+fix cell names the failing probe and the passing suite); the PR that fixed it is named where the
+register or the merge history records it. Evidence: `docs/evidence/c1-closure/README.md`.
+
+### The 2 critical findings
+
+| Audit finding | BUG | State | Fixed in / evidence |
+|---|---|---|---|
+| Squad 3 #1 (= squad 1 #1): delivered marks live in `useState` only; no production path constructs the event store, marks vanish on relaunch, no event reaches the API | BUG-69 | fixed | landed with A1's wiring (PR #135, slice 3 — the app's real read/write path); the row keeps the verifier's probe (mark, remount, count = 0) as the red |
+| Squad 3 #2 (= squad 1 #8): `log.confirm(batch)` marks the WHOLE batch synced on a partial accept (`{accepted: 0, conflicts: [...]}` → `pendingCount 0`) | BUG-76 | fixed (filed CRITICAL) | the row keeps both probes (squad 1's `{accepted: 1}` for a 2-event batch; squad 3's `{accepted: 0, conflicts: ['a','b']}`) as the red |
+
+### The 23 high findings
+
+| Audit finding | BUG | State | Fixed in / evidence |
+|---|---|---|---|
+| Squad 1 #2: `AuthProvider.tsx:178` treats every `useSession` error — incl. a real 401 — as offline and grants `isAuthenticated` from the stored receipt | BUG-71 | fixed | row's probe plants `{status: 0}` and asserts the fix is not "refuse every error" (offline-first kept) |
+| Squad 1 #3: `auth-client.ts:17` hard-codes `localhost:3000`; the release APK cannot reach any auth server | BUG-72 | fixed | PR #130 (real auth URL in release); the cleartext half is BUG-184, PR #135 |
+| Squad 1 #4: the voice command's captured safe place is dropped at both sites (`commands.ts:153-155`, `courierVoiceClient.ts:317-318`) | BUG-73 | fixed | parser 19/19, client 15/15, copilot 29/29, mobile 532/532 green; the old test that asserted the drop was corrected |
+| Squad 1 #5: `register.tsx:44` routes to `/(tabs)` before the session settles | BUG-74 | fixed | PR #133 (a new account ends in a session) |
+| Squad 1 #6: the `voiceService` singleton is shut down by the first unmounting consumer | BUG-75 | fixed | suite 2/2, mobile 538/538, spy on the lifecycle decision |
+| Squad 3 #3: the catch around `transport.send` swallows every error class (422 → pending, 1 attempt, no quarantine/backoff/log) | BUG-86 | fixed | row keeps the 422 probe as the red; ADR-014 §3's drop-or-repair is now enforced |
+| Squad 3 #5: no `PRAGMA user_version` migration — new-shape INSERT/SELECT throws on a live install | BUG-87 | fixed | row keeps the wider-`CREATE TABLE` probe (`no such column`) |
+| Squad 3 #6: `occurred_at` stored as unvalidated TEXT, ordered as TEXT ≠ instant order | BUG-88 | fixed | row keeps the `['naive','zulu','chch']` probe |
+| Squad 3 #7: static file-level `open`, no cache, no `close()`, no writer lock | BUG-89 | fixed | row keeps the fresh-handle / write-between-pending-and-confirm probe |
+| Squad 6 #2: `cancel-in-progress` on push cancels the run and the `if: always()` evidence upload never runs | BUG-94 | fixed | PR #141 (the C1 CI highs, each fixed at its root) |
+| Squad 6 #3: `release-apk.yml`'s `Collect the APK` cp path resolves at the repo root; the `files:` path mismatches too | BUG-95 | fixed | PR #141 |
+| Squad 6 #4: `infra/deploy.sh` records the INCOMING image into `.deploy-state` before the smoke test, so rollback re-deploys the failing image | BUG-96 | fixed | PR #138 (one of the backend nine highs, red first) |
+| Squad 6 #5: screen-recordings Playwright cache key has no content hash / restore-keys; a green run can carry blank reference images | BUG-97 | fixed | PR #141 |
+| Squad 6 #6: the E2E APK cache runs BEFORE the build with no cache-hit guard | BUG-98 | fixed | PR #141 |
+| Squad 6 #7: store-readiness's missing `--apk` is a WARN; the 80 MB / arm64 budget is never enforced on the submit path | BUG-99 | fixed | PR #141 |
+| Squad 3 (server) #5 = squad 2 #2: no production writer of `stops.status`; on Postgres a synced `delivered` still reads `pending` | BUG-115 | fixed | PR #139 — the status is derived from the events on Postgres too |
+| Squad 4 #1: no negative cache on an unknown `kid` — every bogus kid forces a synchronous JWKS fetch (unauthenticated amplification) | BUG-121 | fixed | PR #138 |
+| Squad 4 #2: `AUTH_JWT_ISSUER` (API env) vs `config.jwt.issuer` (auth) are never cross-checked — a disagreement is a total 401 outage with no diagnosis | BUG-122 | fixed | PR #138 |
+| Squad 4 #7: rate limiting is keyed by IP+path only; 500 password guesses from rotating IPs never trip a bucket | BUG-127 | fixed | PR #138; the per-process bucket half is BUG-132, PR #186 (shared store) |
+| Squad 5 #1: the transcript is interpolated raw into the prompt — `</transcript><role>system</role>...` injects a system turn | BUG-146 | fixed | PR #138 |
+| Squad 5 #2: `shift_id` is interpolated into the run client's URL — `../../../v1/admin` reaches API-internal paths with the driver's token | BUG-147 | fixed | PR #138 |
+| Squad 5 #3: `stops()` returns `[]` for every failure class — on a 403 the voice speaks from the caller's own context snapshot | BUG-148 | fixed | PR #138 |
+| Squad 5 #5: `context.stops` is unbounded — 100,000 Stop objects accepted and held per session | BUG-150 | fixed | PR #138 |
+
+**Remaining clause of C1's done-when:** "the founder's adviser has reviewed the report" — only
+the founder can do that; it is a row in `docs/status/FOUNDER_TODO.md`. Everything the executors
+own — the report on main, every critical/high fixed with its reproduction green, this mapping —
+is done.
