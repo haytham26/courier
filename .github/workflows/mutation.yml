@@ -63,6 +63,7 @@ jobs:
           path: |
             services/api/mutants/mutmut-cicd-stats.json
             services/api/mutants/mutmut-results.txt
+            services/api/mutants/mutmut-survivors.txt
           retention-days: 90
           if-no-files-found: warn
 
@@ -90,5 +91,6 @@ jobs:
           path: |
             services/courier-voice/mutants/mutmut-cicd-stats.json
             services/courier-voice/mutants/mutmut-results.txt
+            services/courier-voice/mutants/mutmut-survivors.txt
           retention-days: 90
           if-no-files-found: warn

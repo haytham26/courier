@@ -16,10 +16,14 @@ import { fileURLToPath } from 'node:url';
 
 import {
   buildMutmutCommand,
+  buildUvRunCommand,
   checkStats,
   normaliseStats,
   RESULTS_RELATIVE,
   scoreOf,
+  SURVIVORS_RELATIVE,
+  SURVIVORS_SCRIPT,
+  writeMutantFile,
   writeResults,
 } from '../check-mutation-floor.mjs';
 
@@ -172,4 +176,32 @@ test('the mutmut command ends at the subcommand and carries each service own ext
   assert.deepEqual(voice.slice(-2), ['mutmut', 'results']);
   // s3test is not defined for courier-voice - naming it there failed (run 41241517747).
   assert.deepEqual(voice.filter((_, i) => voice[i - 1] === '--extra'), ['dev']);
+});
+
+test('the survivor dump lands beside the stats and results as mutants/mutmut-survivors.txt', () => {
+  assert.equal(SURVIVORS_RELATIVE, path.join('mutants', 'mutmut-survivors.txt'));
+  assert.equal(SURVIVORS_SCRIPT, path.join('scripts', 'ci', 'mutmut-survivors.py'));
+});
+
+test('writeMutantFile writes any mutant artifact into the service mutants dir', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mutation-artifact-'));
+  try {
+    const file = writeMutantFile(dir, SURVIVORS_RELATIVE, '# app/main.py x__f__mutmut_1: survived\n-diff\n');
+    assert.equal(file, path.join(dir, 'mutants', 'mutmut-survivors.txt'));
+    assert.match(readFileSync(file, 'utf8'), /survived/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the uv run command wraps any tail - mutmut CLI or the survivors python script', () => {
+  const mut = buildUvRunCommand('services/api', ['mutmut', 'results']);
+  assert.deepEqual(mut.slice(0, 1), ['run']);
+  assert.deepEqual(mut.slice(-2), ['mutmut', 'results']);
+  assert.ok(mut.includes('--directory'));
+
+  const py = buildUvRunCommand('services/api', ['python', '../../scripts/ci/mutmut-survivors.py']);
+  assert.deepEqual(py.slice(-2), ['python', '../../scripts/ci/mutmut-survivors.py']);
+  // the extras still come from the service, whichever tail runs
+  assert.deepEqual(py.filter((_, i) => py[i - 1] === '--extra'), ['dev', 's3test']);
 });
