@@ -559,3 +559,31 @@ map pack) stand: they are not day-one deferrals, they are P5/P3 scheduled work.
   already on main. The contract fragment for the lead is ADR-028's "Contract" section.
 - Red-first: `services/courier-voice/tests/test_s22_bc.py` (9 tests); suite 364 passed,
   `ruff check .` clean. Evidence `docs/evidence/s22-bc/`.
+
+## D66 — MASVS L2 scope: the backend publishes the control matrix now; the hardening is the lead's app slice; PARITY 195–198 stay Planned (2026-11-08, backend squad, audit item 7)
+
+- Recorded in `docs/decisions/adr/ADR-029-masvs-l2-scope.md`. The queue's "MASVS L2 or a
+  recorded decision" is answered with **both**: `docs/security/MASVS-L2.md` is the L2
+  control review — every L2-relevant control mapped to its MASVS id, status,
+  evidence/test id and owner (PARITY 195's done-when, published) — and this D66 records
+  the scope decision.
+- **Headline finding (BUG-275):** op-sqlite 18.2.5 links SQLCipher on Android
+  (`USE_SQLCIPHER` in its CMakeLists) but encryption engages only with an
+  `encryptionKey`, and `sharedDatabase` opens with `open({ name })` and no key
+  (`src/sync/dbConnections.ts:50`) — so `courier.db` is **plaintext** while the sync
+  comments call it "the SQLCipher file" (overclaim, corrected in the matrix, fixed in
+  the app slice).
+- **Already satisfied and recorded as Pass:** cleartext refused platform-wide except the
+  emulator's own `10.0.2.2` (`plugins/withEmulatorCleartext.js` + its test); session
+  credential in the Android Keystore (`session-storage.ts`); no secrets in the release
+  artefact (CI gate); no WebView; dev screens out of the release bundle.
+- **The lead's app slice (file targets named in ADR-029):** DB `encryptionKey`
+  (`expo-crypto` key in Keystore via `session-storage.ts`, `open({ name, encryptionKey
+  })`) + `android:allowBackup="false"` + FLAG_SECURE (PARITY 195); App Link / Universal
+  Link instead of bare `courier://` (PARITY 196); certificate pinning with a rotation
+  procedure (PARITY 197); root/emulator signal, never blocking the CI emulator (PARITY
+  195); R8 via `expo-build-properties` (PARITY 195); Play Integrity via
+  `@expo/app-integrity` with a server-side verdict, blank = signal not block (PARITY
+  198, also founder-blocked on the Play Console).
+- **PARITY 195–198 stay `Planned (task)` (T7.16)** until that slice lands with tests; no
+  status is flipped by the matrix. Evidence `docs/evidence/masvs-l2/`.
