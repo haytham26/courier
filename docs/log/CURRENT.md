@@ -16,10 +16,13 @@ there would collide with theirs), `c382c36` = PR #241 (item 4b), `a2ee7d3` = PR
 14, 2026-11-05/07. Merged this session: **PR #253 (6ed02bc) — A3's app side, BUG-201 fixed** (the
 opt-in test-build voice-sample recorder with the per-purpose consent, so beta
 couriers can add real in-van samples later; 20/20 flows on both api legs, run
-42343406238). Queue next: **§22's app side** (D48 device-agent techniques in
-`apps/mobile/src/voice`: the settings `remember` toggle, forgetSession), **P4**
-baselines, **P7** acceptance on two screen sizes — to the §6 Definition of
-Done.**
+42343406238). In flight: **§22's app side** on `feat/s22-voice-memory` (BUG-202 —
+D48 technique C's app half: the visible and clearable memory — the settings
+`Remember this shift` switch riding the tab layout's shared voice instance,
+and a two-tap `Forget this shift` row wired to the hook's new `forgetMemory()`
+which DELETEs the service memory AND drops the carried-forward question).
+Queue next after it: **P4** baselines, **P7** acceptance on two screen sizes —
+to the §6 Definition of Done.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 

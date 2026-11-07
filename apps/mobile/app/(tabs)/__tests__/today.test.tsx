@@ -90,6 +90,7 @@ const makeBrief = (): CourierVoiceApi => ({
   lastGate: null,
   lastAnswer: null,
   lastQuestion: null,
+  forgetMemory: () => Promise.resolve(false),
 });
 
 /**
