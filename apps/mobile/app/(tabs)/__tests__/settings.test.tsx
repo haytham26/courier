@@ -21,6 +21,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ChosenProvider } from '@/components/chosen';
 import { touch } from '@courier/design-tokens/chosen';
 import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from '@/constants/legal';
+import type { CourierVoiceApi } from '@/voice/useCourierVoice';
+import { DEFAULT_VOICE_SETTINGS } from '@/voice/settings';
+import { BriefContext } from '../briefContext';
 import SettingsScreen from '../settings';
 
 // The preferences are kept in memory, so one test cannot leave a choice behind
@@ -33,7 +36,12 @@ jest.mock('@/sync/preferenceFiles', () => {
 });
 
 // The voice hook reaches the native audio module, which has no place in a unit
-// test: the same mock the Today and summary screens' tests use.
+// test: the same mock the Today and summary screens' tests use. The memory
+// controls (MASTER §22 technique C, BUG-202) are asserted through the two
+// mock-prefixed calls the screen makes.
+const mockSaveSettings = jest.fn((_settings: unknown) => Promise.resolve());
+const mockForgetMemory = jest.fn(() => Promise.resolve(true));
+
 jest.mock('@/voice/useCourierVoice', () => ({
   useCourierVoice: () => ({
     ready: true,
@@ -48,7 +56,8 @@ jest.mock('@/voice/useCourierVoice', () => ({
       remember: true,
       proactive: {},
     },
-    saveSettings: jest.fn(() => Promise.resolve()),
+    saveSettings: mockSaveSettings,
+    forgetMemory: mockForgetMemory,
     brief: null,
     refreshBrief: jest.fn(() => Promise.resolve(null)),
   }),
@@ -309,6 +318,99 @@ describe('the settings screen', () => {
 
       fireEvent.press(screen.getByTestId('settings-terms'));
       expect(mockOpenURL).toHaveBeenCalledWith(TERMS_OF_USE_URL);
+    });
+  });
+
+  // MASTER §22 (D48) technique C, BUG-202: the shift memory is visible and
+  // clearable here - the "Remember this shift" switch saves through the hook,
+  // and the "Forget this shift" row asks before it clears (the sign-out's
+  // two-tap pattern).
+  describe('the memory controls (MASTER §22 technique C, BUG-202)', () => {
+    beforeEach(() => {
+      mockSaveSettings.mockClear();
+      mockForgetMemory.mockClear();
+    });
+
+    it('shows the Remember this shift switch on, as the stored setting says', () => {
+      renderScreen();
+
+      const value = (screen.getByTestId('settings-remember').props as { value?: boolean }).value;
+      expect(value).toBe(true);
+      expect(screen.getByText('Remember this shift')).toBeTruthy();
+    });
+
+    it('turning the switch off saves remember: false through the hook', () => {
+      renderScreen();
+
+      const valueOf = (): boolean =>
+        (screen.getByTestId('settings-remember').props as { value?: boolean }).value ?? false;
+      expect(valueOf()).toBe(true);
+
+      fireEvent(screen.getByTestId('settings-remember'), 'valueChange', false);
+
+      expect(valueOf()).toBe(false);
+      expect(mockSaveSettings).toHaveBeenCalledTimes(1);
+      expect(mockSaveSettings).toHaveBeenCalledWith(expect.objectContaining({ remember: false }));
+    });
+
+    it('the forget row asks before it clears: the first tap is the question', () => {
+      renderScreen();
+
+      fireEvent.press(screen.getByTestId('settings-forget-memory'));
+
+      expect(screen.getByText('Forget this shift?')).toBeTruthy();
+      expect(mockForgetMemory).not.toHaveBeenCalled();
+    });
+
+    it('the second tap clears the memory and the row goes back', () => {
+      renderScreen();
+
+      fireEvent.press(screen.getByTestId('settings-forget-memory'));
+      fireEvent.press(screen.getByTestId('settings-forget-memory'));
+
+      expect(mockForgetMemory).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText('Forget this shift?')).toBeNull();
+      expect(screen.getByText('Forget this shift')).toBeTruthy();
+    });
+
+    it('the forget row carries a role, a label and the 48 pt floor', () => {
+      renderScreen();
+
+      const row = screen.getByTestId('settings-forget-memory');
+      const style = StyleSheet.flatten(row.props.style as never) as Record<string, number>;
+      expect(row.props.accessibilityRole).toBe('button');
+      expect(row.props.accessibilityLabel).toBe('Forget this shift');
+      expect(style.minHeight).toBe(touch.minimum);
+    });
+
+    it('rides the tab layout\'s shared voice instance when there is one', () => {
+      const shared: CourierVoiceApi = {
+        ready: true,
+        session: null,
+        settings: { ...DEFAULT_VOICE_SETTINGS, remember: false },
+        saveSettings: mockSaveSettings,
+        forgetMemory: mockForgetMemory,
+        brief: null,
+        refreshBrief: jest.fn(() => Promise.resolve(null)),
+        sendTurn: jest.fn(() => Promise.resolve(null)),
+        error: null,
+        lastGate: null,
+        lastAnswer: null,
+        lastQuestion: null,
+      };
+      render(
+        <GestureHandlerRootView>
+          <ChosenProvider mode="light">
+            <BriefContext.Provider value={shared}>
+              <SettingsScreen />
+            </BriefContext.Provider>
+          </ChosenProvider>
+        </GestureHandlerRootView>,
+      );
+
+      // The switch shows the SHARED instance's setting, not the default's.
+      const value = (screen.getByTestId('settings-remember').props as { value?: boolean }).value;
+      expect(value).toBe(false);
     });
   });
 });

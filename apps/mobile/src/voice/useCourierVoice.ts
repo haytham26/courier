@@ -108,6 +108,15 @@ export interface CourierVoiceApi {
    * turn may be the answer to it.
    */
   lastQuestion: string | null;
+  /**
+   * Clears what the voice remembers of this shift (MASTER §22 technique C,
+   * BUG-202): the service's memory is deleted AND the app's carried-forward
+   * question is dropped, so the next turn cannot answer from cleared state.
+   * Answers false when there is no shift, or when the service could not be
+   * reached (the local question is dropped either way; the failure is said,
+   * never silent).
+   */
+  forgetMemory: () => Promise<boolean>;
 }
 
 /**
@@ -309,6 +318,26 @@ export function useCourierVoice(options: UseCourierVoiceOptions = {}): CourierVo
     [client, online, settings],
   );
 
+  const forgetMemory = useCallback(async (): Promise<boolean> => {
+    const current = sessionRef.current;
+    if (current === null) {
+      return false;
+    }
+    // MASTER §22 (D48) technique C: deletion is total and immediate - the
+    // app's own carried-forward state goes first, so a clear that only
+    // half-clears cannot carry the memory on into the next turn.
+    setLastQuestion(null);
+    setSession({ ...current, remembered: false });
+    try {
+      await client.forgetSession(current.id);
+      setError(null);
+      return true;
+    } catch (problem) {
+      setError(errorMessage(problem));
+      return false;
+    }
+  }, [client]);
+
   return {
     ready: session !== null,
     session,
@@ -321,5 +350,6 @@ export function useCourierVoice(options: UseCourierVoiceOptions = {}): CourierVo
     lastGate,
     lastAnswer,
     lastQuestion,
+    forgetMemory,
   };
 }

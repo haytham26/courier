@@ -50,7 +50,7 @@ function answerOf(overrides: Partial<CourierVoiceTurn>): CourierVoiceTurn {
 
 function fakeClient(
   sendTurnImpl?: (id: string, turn: { transcript: string }) => Promise<CourierVoiceTurn>,
-): { client: CourierVoiceClient; sendTurn: jest.Mock } {
+): { client: CourierVoiceClient; sendTurn: jest.Mock; forgetSession: jest.Mock } {
   const cannedSession = {
     id: 'session-1',
     driver_id: 'driver-1',
@@ -62,25 +62,26 @@ function fakeClient(
   // The sendTurn mock is kept in a local so the assertions never reference
   // the method unbound (the lint rule's point).
   const sendTurn = jest.fn(sendTurnImpl ?? (() => Promise.resolve(answerOf({}))));
+  const forgetSession = jest.fn(() => Promise.resolve());
   const client = {
     startSession: jest.fn(() => Promise.resolve(cannedSession)),
     readSession: jest.fn(() => Promise.resolve(cannedSession)),
     sendTurn,
     proactive: jest.fn(() => Promise.resolve({ kind: null, text: '', words: 0 })),
-    forgetSession: jest.fn(() => Promise.resolve()),
+    forgetSession,
     readSettings: jest.fn(() => Promise.resolve(DEFAULT_VOICE_SETTINGS)),
     writeSettings: jest.fn((settings: VoiceSettings) => Promise.resolve(settings)),
     engines: jest.fn(() => Promise.resolve([])),
     licences: jest.fn(() => Promise.resolve([])),
   } as unknown as CourierVoiceClient;
-  return { client, sendTurn };
+  return { client, sendTurn, forgetSession };
 }
 
 let api: CourierVoiceApi;
 
-function Probe({ client }: { client: CourierVoiceClient }) {
+function Probe({ client, driverId = 'driver-1' }: { client: CourierVoiceClient; driverId?: string | null }) {
   api = useCourierVoice({
-    driverId: 'driver-1',
+    driverId,
     getToken: () => Promise.resolve('token'),
     client,
   });
@@ -177,6 +178,77 @@ describe('useCourierVoice sendTurn routing (D1, BUG-231)', () => {
 
     expect(answer).toBeNull();
     expect(publishMock).toHaveBeenCalledWith({ type: 'how_many_left' });
+    expect(api.error).toMatch(/cannot be reached/);
+  });
+});
+
+// MASTER §22 (D48) technique C, BUG-202: the memory of the shift is clearable
+// from the app - forgetMemory deletes the service's memory AND drops the
+// carried-forward question, so the next turn cannot answer from cleared state.
+describe('useCourierVoice forgetMemory (§22 technique C, BUG-202)', () => {
+  it('deletes the service memory and drops the carried-forward question', async () => {
+    const { client, forgetSession } = fakeClient(() =>
+      Promise.resolve(
+        answerOf({ speech: 'Was that the red van at the gate?', notice: 'Was that the red van at the gate?', action: null }),
+      ),
+    );
+    render(<Probe client={client} />);
+    await act(async () => {});
+    await act(async () => {
+      await api.sendTurn('was that the red van at the gate?');
+    });
+    expect(api.lastQuestion).toBe('Was that the red van at the gate?');
+    expect(api.session?.remembered).toBe(true);
+
+    let cleared: boolean | null = null;
+    await act(async () => {
+      cleared = await api.forgetMemory();
+    });
+
+    expect(forgetSession).toHaveBeenCalledWith('session-1');
+    expect(cleared).toBe(true);
+    expect(api.lastQuestion).toBeNull();
+    expect(api.session?.remembered).toBe(false);
+    expect(api.error).toBeNull();
+  });
+
+  it('answers false and calls nothing when there is no shift', async () => {
+    const { client, forgetSession } = fakeClient();
+    render(<Probe client={client} driverId={null} />);
+    await act(async () => {});
+
+    let cleared: boolean | null = null;
+    await act(async () => {
+      cleared = await api.forgetMemory();
+    });
+
+    expect(cleared).toBe(false);
+    expect(forgetSession).not.toHaveBeenCalled();
+  });
+
+  it('drops the local question even when the service cannot be reached, and says so', async () => {
+    const { client, forgetSession } = fakeClient(() =>
+      Promise.resolve(answerOf({ speech: 'Is that the right gate?', notice: 'Is that the right gate?', action: null })),
+    );
+    forgetSession.mockRejectedValueOnce(new Error('the voice service cannot be reached'));
+    render(<Probe client={client} />);
+    await act(async () => {});
+    await act(async () => {
+      await api.sendTurn('is that the right gate?');
+    });
+    expect(api.lastQuestion).toBe('Is that the right gate?');
+
+    let cleared: boolean | null = null;
+    await act(async () => {
+      cleared = await api.forgetMemory();
+    });
+
+    expect(forgetSession).toHaveBeenCalledWith('session-1');
+    expect(cleared).toBe(false);
+    // The app-side clear is total either way: a stop that half-stops is how
+    // cleared state carries on talking - but the failure is reported.
+    expect(api.lastQuestion).toBeNull();
+    expect(api.session?.remembered).toBe(false);
     expect(api.error).toMatch(/cannot be reached/);
   });
 });

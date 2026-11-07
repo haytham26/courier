@@ -1,0 +1,75 @@
+appId: com.courier.copilot
+name: The shift memory is visible and clearable in settings (§22 technique C, BUG-202)
+---
+# BUG-185: stop the app FIRST, then clear its state.
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+- openLink: "courier:///settings"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 30000
+# The Memory group sits below the fold on a 320x640 screen (the BUG-050
+# class), so each control is revealed with the repo's scrollUntilVisible
+# convention (summary.yaml, sign-in.yaml, voice-samples.yaml) before it is
+# tapped or asserted. centerElement: true is load-bearing here: with the
+# default (centering disabled) scrollUntilVisible stops as soon as the row is
+# 100% visible, which at the bottom of the settings ScrollView is UNDER the
+# tab dock - run 42350703414 tapped the forget row at y=592, the touch landed
+# on the dock, onPress never fired and the confirm text never appeared. Centred,
+# the row sits mid-viewport and the tap lands on it.
+- scrollUntilVisible:
+    element:
+      id: "settings-remember"
+    direction: DOWN
+    timeout: 20000
+    centerElement: true
+# The switch starts on (the default) and a tap turns the shift memory off.
+- extendedWaitUntil:
+    visible:
+      id: "settings-remember"
+      checked: true
+    timeout: 15000
+- tapOn:
+    id: "settings-remember"
+- extendedWaitUntil:
+    visible:
+      id: "settings-remember"
+      checked: false
+    timeout: 15000
+# And back on: the setting saves through the shared hook on every change.
+- tapOn:
+    id: "settings-remember"
+- extendedWaitUntil:
+    visible:
+      id: "settings-remember"
+      checked: true
+    timeout: 15000
+# The forget row asks before it clears (the sign-out's two-tap pattern): the
+# first tap turns the row into the question - asserted by its hint, which
+# only the confirming state carries.
+- scrollUntilVisible:
+    element:
+      id: "settings-forget-memory"
+    direction: DOWN
+    timeout: 20000
+    centerElement: true
+- tapOn:
+    id: "settings-forget-memory"
+- assertVisible:
+    text: "Tap again to clear.*"
+# The second tap clears (the E2E build's seam client answers the DELETE) and
+# the row goes back to its plain label.
+- tapOn:
+    id: "settings-forget-memory"
+- assertNotVisible:
+    text: "Tap again to clear.*"
+- extendedWaitUntil:
+    visible:
+      id: "settings-forget-memory"
+    timeout: 15000

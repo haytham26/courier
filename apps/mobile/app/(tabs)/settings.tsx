@@ -44,6 +44,7 @@ import { createMemoryPreferenceStore } from '@/sync/storage';
 import { VOICE_VERBOSITIES, type VoiceSettings, type VoiceVerbosity } from '@/voice/settings';
 import { recorderForThisBuild } from '@/voice/testing/recorderForThisBuild';
 import { useCourierVoice } from '@/voice/useCourierVoice';
+import { useBriefOfTabs } from './briefContext';
 import { radii, spacing, touch, typography } from '@courier/design-tokens/chosen';
 
 /** The detail levels, as the reference's chips spell them. */
@@ -94,7 +95,13 @@ const PROFILE_INITIALS = 'TR';
 
 export default function SettingsScreen() {
   const { t } = useChosen();
-  const courierVoice = useCourierVoice();
+  const ownVoice = useCourierVoice();
+  // §22 (BUG-202): ride the tab layout's ONE shared voice instance when there
+  // is one - the shift starts once per courier, not once per screen, and the
+  // memory controls below must act on THAT shift (in the E2E build, on the
+  // build's seam client, so the flows can prove them). Outside the tabs - the
+  // screen's own tests - the hook's own instance is the fallback.
+  const courierVoice = useBriefOfTabs() ?? ownVoice;
   const { pack } = useMapBoot();
   const { logout } = useAuth();
   const [haptics, setHaptics] = useState(() => areHapticsEnabled());
@@ -144,6 +151,12 @@ export default function SettingsScreen() {
   // the stored truth it is written back to.
   const [verbosity, setVerbosity] = useState<VoiceVerbosity>(settings?.verbosity ?? 'normal');
   const voiceLabel = settings ? VOICE_LABELS[settings.voice] ?? settings.voice : 'Aria';
+  // §22 (BUG-202): whether the voice remembers this shift, held here for the
+  // same reason as the detail level - the tap answers at once.
+  const [remember, setRemember] = useState<boolean>(settings?.remember ?? true);
+  // The clear of the shift memory is destructive-ish, so it confirms with a
+  // second tap, exactly like the sign-out below.
+  const [confirmForget, setConfirmForget] = useState(false);
 
   // The map style row shows the driver's stored mode: the same one the Map tab
   // reads, so the two never disagree. The choice itself stays on the Map tab.
@@ -187,6 +200,32 @@ export default function SettingsScreen() {
       hapticFor('confirm');
     }
   }, []);
+
+  // §22 (BUG-202): the remember switch saves through the same shared hook the
+  // dock reads, so the service sees the choice on the very next turn.
+  const toggleRemember = useCallback(
+    (next: boolean) => {
+      setRemember(next);
+      if (settings) {
+        save({ ...settings, remember: next });
+      }
+      hapticFor('confirm');
+    },
+    [save, settings],
+  );
+
+  // §22 (BUG-202): the clear asks before it goes - the first tap turns the row
+  // into the question, only the second clears (deletion is total and
+  // immediate once it happens, never a half-stop).
+  const forgetShift = useCallback(() => {
+    if (!confirmForget) {
+      setConfirmForget(true);
+      return;
+    }
+    setConfirmForget(false);
+    hapticFor('error');
+    void courierVoice.forgetMemory();
+  }, [confirmForget, courierVoice]);
 
   // The offline map row says what is true: the pack when it is ready, and the
   // plain truth when it is not.
@@ -405,6 +444,73 @@ export default function SettingsScreen() {
               </Pressable>
             );
           })}
+        </View>
+
+        {/* §22 (D48) technique C, BUG-202: the shift memory is visible and
+            clearable here - the "Remember this shift" switch, and the
+            "Forget this shift" row that asks before it clears (the sign-out's
+            two-tap pattern, with the 48 pt floor because it is a button). */}
+        <View style={styles.groupBlock}>
+          <Text style={[styles.groupTitle, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+            MEMORY
+          </Text>
+          <View style={[styles.group, { backgroundColor: t.colors.card }]}>
+            <View style={styles.row} testID="settings-remember-row">
+              <Tile name="archive" tone="info2" />
+              <View style={styles.rowText}>
+                <Text style={[styles.rowLabel, { color: t.colors.label }]} maxFontSizeMultiplier={1.4}>
+                  Remember this shift
+                </Text>
+                <Text style={[styles.rowHint, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+                  The voice can refer back to earlier in the shift.
+                </Text>
+              </View>
+              <Switch
+                value={remember}
+                onValueChange={toggleRemember}
+                accessibilityLabel="Remember this shift"
+                accessibilityHint="Lets the voice refer back to earlier in the shift"
+                testID="settings-remember"
+                thumbColor={t.colors.accent}
+                trackColor={{ true: t.colors.accent, false: t.colors.separator }}
+              />
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={confirmForget ? 'Forget this shift?' : 'Forget this shift'}
+              accessibilityHint={
+                confirmForget
+                  ? 'Tap again to clear what the voice remembers of this shift.'
+                  : 'Clears what the voice remembers of this shift.'
+              }
+              onPress={forgetShift}
+              testID="settings-forget-memory"
+              style={({ pressed }) => [
+                styles.row,
+                styles.rowAction,
+                { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.colors.separator },
+                pressed ? { opacity: 0.7 } : null,
+              ]}
+            >
+              <Tile name="trash" tone="danger" />
+              <View style={styles.rowText}>
+                <Text
+                  style={[
+                    styles.rowLabel,
+                    { color: confirmForget ? t.colors.danger : t.colors.label },
+                  ]}
+                  maxFontSizeMultiplier={1.4}
+                >
+                  {confirmForget ? 'Forget this shift?' : 'Forget this shift'}
+                </Text>
+                <Text style={[styles.rowHint, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+                  {confirmForget
+                    ? 'Tap again to clear what the voice remembers of this shift.'
+                    : 'Clears what the voice remembers of this shift.'}
+                </Text>
+              </View>
+            </Pressable>
+          </View>
         </View>
 
         <SettingsGroup title="Map" rows={mapRows} />
