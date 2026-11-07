@@ -43,6 +43,31 @@ jobs:
     name: The API's mutation floor (sync, runs, auth)
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    # BUG-243: the same PostGIS service ci.yml's db step runs against, with
+    # DATABASE_URL set - so the lane measures the WHOLE suite, the db-marked
+    # tests included (the pyproject's mutmut args override the ini
+    # `-m 'not db'`). Without it, every SqlAlchemyRepo line reachable only
+    # through the db suite stayed `no_tests` (941 of 2656 on run 42350269397)
+    # and the 70 % floor was unreachable at this scope. The schema needs
+    # PostGIS (packages/contracts/db/schema.sql), same pinned image as ci.yml;
+    # never a production database - the container lives and dies with the
+    # runner.
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: courier
+          POSTGRES_PASSWORD: courier
+          POSTGRES_DB: courier
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U courier"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://courier:courier@127.0.0.1:5432/courier
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 

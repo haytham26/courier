@@ -129,6 +129,17 @@ pytest_add_cli_args = [
     # And a third of the same shape: the LINZ pipeline's test resolves
     # `scripts/data/fetch-linz.py` from the repository root (run 41268007824).
     "--ignore=tests/test_linz_pipeline_paths.py",
+    # BUG-243: run the WHOLE suite, db-marked tests included. The ini addopts
+    # deselect them (`-m 'not db'`), and mutmut appends this list AFTER the
+    # addopts, so this later `-m` wins (verified: `-m 'not db' -m 'not __never__'`
+    # collects all 663). The mutation lane's API job now carries the same
+    # PostGIS service as ci.yml with DATABASE_URL set (mutation.yml), so the
+    # db suite runs there - without it, every SqlAlchemyRepo line reachable
+    # only through the db suite stayed `no_tests` and the 70 % floor was
+    # unreachable at this scope (run 42350269397: 941 of 2656 API mutants).
+    # The marker `__never__` matches nothing, so `not __never__` matches all.
+    "-m",
+    "not __never__",
 ]
 
 [tool.ruff]
