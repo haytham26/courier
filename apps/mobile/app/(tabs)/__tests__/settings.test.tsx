@@ -270,7 +270,9 @@ describe('the settings screen', () => {
     it('hides the Debug group in a release build', () => {
       const g = globalThis as unknown as { __DEV__: boolean };
       const original = g.__DEV__;
+      const originalE2E = process.env.EXPO_PUBLIC_E2E;
       g.__DEV__ = false;
+      delete process.env.EXPO_PUBLIC_E2E;
       try {
         const { toJSON, unmount } = renderScreen();
         expect(screen.queryByTestId('settings-voice-samples')).toBeNull();
@@ -278,6 +280,11 @@ describe('the settings screen', () => {
         unmount();
       } finally {
         g.__DEV__ = original;
+        if (originalE2E === undefined) {
+          delete process.env.EXPO_PUBLIC_E2E;
+        } else {
+          process.env.EXPO_PUBLIC_E2E = originalE2E;
+        }
       }
     });
 

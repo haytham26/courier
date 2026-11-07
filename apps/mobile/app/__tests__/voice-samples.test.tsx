@@ -92,9 +92,11 @@ function renderScreen() {
 describe('the voice-sample recorder screen', () => {
   const g = globalThis as unknown as { __DEV__: boolean };
   const originalDev = g.__DEV__;
+  const originalE2E = process.env.EXPO_PUBLIC_E2E;
 
   beforeEach(() => {
     g.__DEV__ = true;
+    delete process.env.EXPO_PUBLIC_E2E;
     manifest = { consentedId: '', samples: [] };
     jest.clearAllMocks();
     mockReadManifest.mockImplementation(() => Promise.resolve(manifest));
@@ -122,6 +124,11 @@ describe('the voice-sample recorder screen', () => {
 
   afterEach(() => {
     g.__DEV__ = originalDev;
+    if (originalE2E === undefined) {
+      delete process.env.EXPO_PUBLIC_E2E;
+    } else {
+      process.env.EXPO_PUBLIC_E2E = originalE2E;
+    }
   });
 
   it('shows the exact per-purpose wording, and the record control is off until a purpose is consented to', async () => {
@@ -138,6 +145,7 @@ describe('the voice-sample recorder screen', () => {
 
   it('is not in a release build', () => {
     g.__DEV__ = false;
+    delete process.env.EXPO_PUBLIC_E2E;
     renderScreen();
 
     expect(screen.getByTestId('voice-samples-gone')).toBeTruthy();

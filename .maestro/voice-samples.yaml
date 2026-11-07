@@ -9,8 +9,8 @@ name: The debug-build voice-sample recorder records with consent (A3)
     visible:
       id: "today-screen"
     timeout: 60000
-# The settings' Debug row (rendered in the debug build only) opens the
-# recorder screen.
+# The settings' Debug row (rendered in the test build the E2E legs install)
+# opens the recorder screen.
 - openLink: "courier:///settings"
 - extendedWaitUntil:
     visible:

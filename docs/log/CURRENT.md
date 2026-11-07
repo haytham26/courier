@@ -14,7 +14,7 @@ there would collide with theirs), `c382c36` = PR #241 (item 4b), `a2ee7d3` = PR
 #240 (the log PR), `ef12d64` = PR #239 (item 4a), `4851380` = PR #217 (queue 4g),
 `938cf26` = PR #216 (queue 4f), `3400082` = PR #218 (release hygiene). Lead session
 14, 2026-11-05/07. In flight: **A3's app side** on `feat/a3-voice-sample-recorder` (BUG-201 — the
-opt-in debug-build voice-sample recorder with the per-purpose consent, so
+opt-in test-build voice-sample recorder with the per-purpose consent, so
 beta couriers can add real in-van samples later). Queue next after it: (the voice eval
 set is built on the backend 2026-11-03; the app-side opt-in debug recorder if one
 remains), then **§22's app side** (D48 device-agent techniques in

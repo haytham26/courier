@@ -1,10 +1,12 @@
 /**
- * The voice-sample recorder (audit A3 item 3), in the DEBUG build only:
- * a small opt-in recorder so beta couriers can add real in-van samples to
- * the eval set later, under the consent rules `docs/squads/voice/EVAL.md`
- * sets - consent explicit, per-purpose and revocable, the exact wording
- * shown recorded with every sample, and real audio never uploaded and never
- * in the repository.
+ * The voice-sample recorder (audit A3 item 3), in a TEST build only: a debug
+ * build or the E2E emulator build (both answer `recorderForThisBuild()`), so
+ * beta couriers can add real in-van samples to the eval set later, under the
+ * consent rules `docs/squads/voice/EVAL.md` sets - consent explicit,
+ * per-purpose and revocable, the exact wording shown recorded with every
+ * sample, and real audio never uploaded and never in the repository. A shipped
+ * release build can reach neither condition (BUG-079 refuses the E2E flag in
+ * a release variant), and then the route says the tool is not there.
  *
  * The way in is the settings' Debug row (rendered only when
  * `recorderForThisBuild()` is on). In a release build the route says the
@@ -169,7 +171,8 @@ function VoiceSamplesScreen() {
     hapticFor('error');
   }, [confirmRevoke, consent, driverId, store]);
 
-  // A release build has no recorder: the route says so instead of pretending.
+  // A shipped release build has no recorder: the route says so instead of
+  // pretending.
   if (!recorderForThisBuild()) {
     return (
       <SafeAreaView testID="voice-samples-gone" style={[styles.screen, { backgroundColor: t.colors.background }]}>
