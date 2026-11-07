@@ -1,0 +1,76 @@
+appId: com.courier.copilot
+name: The debug-build voice-sample recorder records with consent (A3)
+---
+# BUG-185: stop the app FIRST, then clear its state.
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The settings' Debug row (rendered in the debug build only) opens the
+# recorder screen.
+- openLink: "courier:///settings"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 30000
+- tapOn:
+    id: "settings-voice-samples"
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-screen"
+    timeout: 30000
+# The exact per-purpose wording is on the screen (consent is never bundled).
+- assertVisible:
+    id: "voice-samples-wording-evaluation"
+- assertVisible:
+    id: "voice-samples-wording-training"
+# Consent to evaluation use, separately from training use.
+- tapOn:
+    id: "voice-samples-consent-evaluation"
+# Record, then stop: the sample lands in the list with its consent pointer.
+- tapOn:
+    id: "voice-samples-record"
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-stop"
+    timeout: 15000
+- tapOn:
+    id: "voice-samples-stop"
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-sample"
+    timeout: 30000
+# Delete removes the sample again.
+- tapOn:
+    id: "voice-samples-sample-.*-delete"
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-empty"
+    timeout: 15000
+# Record once more, then revoke (the second tap confirms): revocation deletes
+# every sample.
+- tapOn:
+    id: "voice-samples-record"
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-stop"
+    timeout: 15000
+- tapOn:
+    id: "voice-samples-stop"
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-sample"
+    timeout: 30000
+- tapOn:
+    id: "voice-samples-revoke"
+- tapOn:
+    id: "voice-samples-revoke"
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-empty"
+    timeout: 15000
+- assertNotVisible:
+    id: "voice-samples-sample"
