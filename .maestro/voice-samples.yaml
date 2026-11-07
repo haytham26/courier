@@ -39,17 +39,14 @@ name: The voice-sample recorder records with consent (A3)
 # On the 320x640 emulator the controls below the consent card sit below the
 # fold of the screen's own ScrollView (the BUG-050 class), so each is revealed
 # with the repo's scrollUntilVisible convention (summary.yaml, sign-in.yaml)
-# before it is tapped or asserted.
+# before it is tapped or asserted. The E2E build's recorder answers the canned
+# m4a at once (the emulator runs -noaudio), so stop() lands the row quickly.
 - scrollUntilVisible:
     element:
       id: "voice-samples-record"
     direction: DOWN
     timeout: 20000
-# Record, then stop. NOTE: on the emulator the audio HAL logs pcm I/O errors,
-# so recorder.stop() can take ~60 s to resolve before the sample row enters
-# the tree - the reveal below gets 90 s and doubles as the wait for the row
-# (run-all.sh caps a flow at 180 s, so this flow records ONCE and proves the
-# revocation path with that sample; the single-delete path is unit-tested).
+# Record, then stop: the sample lands in the list below.
 - tapOn:
     id: "voice-samples-record"
 - tapOn:
@@ -58,13 +55,44 @@ name: The voice-sample recorder records with consent (A3)
     element:
       id: "voice-samples-sample-"
     direction: DOWN
-    timeout: 90000
+    timeout: 30000
 - extendedWaitUntil:
     visible:
       id: "voice-samples-sample-"
     timeout: 30000
-# Revoke (the second tap confirms): revocation deletes every sample - the
-# headline rule of the consent contract.
+# Delete removes the sample again.
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-sample-.*-delete"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "voice-samples-sample-.*-delete"
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-empty"
+    timeout: 30000
+# Record once more, then revoke (the second tap confirms): revocation deletes
+# every sample - the headline rule of the consent contract. The Record control
+# is ABOVE the list we just scrolled to, so the reveal scrolls back up.
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-record"
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: "voice-samples-record"
+- tapOn:
+    id: "voice-samples-stop"
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-sample-"
+    direction: DOWN
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-sample-"
+    timeout: 30000
 - scrollUntilVisible:
     element:
       id: "voice-samples-revoke"
@@ -79,7 +107,7 @@ name: The voice-sample recorder records with consent (A3)
     element:
       id: "voice-samples-empty"
     direction: UP
-    timeout: 30000
+    timeout: 20000
 - extendedWaitUntil:
     visible:
       id: "voice-samples-empty"

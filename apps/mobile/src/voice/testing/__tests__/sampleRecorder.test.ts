@@ -88,6 +88,7 @@ describe('the sample recorder', () => {
   beforeEach(() => {
     mockFsFiles.clear();
     jest.clearAllMocks();
+    delete process.env.EXPO_PUBLIC_E2E;
     mockRequestPermission.mockResolvedValue({ granted: true, status: 'granted' });
     mockRecorder.uri = '';
     mockRecorder.stop.mockImplementation(() => {
@@ -112,9 +113,6 @@ describe('the sample recorder', () => {
     if (begun.status !== 'recording') return;
 
     const outcome = await begun.handle.stop();
-    if (outcome.status === 'refused') {
-      console.log('REFUSAL REASON:', outcome.reason);
-    }
     expect(outcome.status).toBe('recorded');
     if (outcome.status !== 'recorded') return;
 
@@ -131,6 +129,43 @@ describe('the sample recorder', () => {
     expect(manifest.samples[0]).toEqual(outcome.sample);
     // the temp recording is gone: the audio lives only in the samples dir
     expect(mockFsFiles.has('file:///cache/recording.m4a')).toBe(false);
+  });
+
+  it('in the E2E build writes the canned m4a (real ftyp magic) without touching the native recorder, and stop() keeps it at once', async () => {
+    process.env.EXPO_PUBLIC_E2E = '1';
+    try {
+      const nativeRecorder = {
+        prepareToRecordAsync: jest.fn(() => Promise.reject(new Error('must not be called'))),
+        record: jest.fn(() => {
+          throw new Error('must not be called');
+        }),
+        stop: jest.fn(() => Promise.reject(new Error('must not be called'))),
+        uri: null,
+      };
+      const begun = await beginSample(nativeRecorder, consent, samplesDirectory(), now);
+      expect(begun.status).toBe('recording');
+      if (begun.status !== 'recording') return;
+
+      const outcome = await begun.handle.stop();
+      expect(outcome.status).toBe('recorded');
+      if (outcome.status !== 'recorded') return;
+
+      expect(nativeRecorder.prepareToRecordAsync).not.toHaveBeenCalled();
+      expect(nativeRecorder.record).not.toHaveBeenCalled();
+      expect(nativeRecorder.stop).not.toHaveBeenCalled();
+
+      // the canned file carries the real MPEG-4 magic (ftyp at offset 4)
+      const dir = samplesDirectory();
+      const stored = mockFsFiles.get(`${dir.uri}/${outcome.sample.file}`) ?? '';
+      const bytes = Buffer.from(stored, 'base64');
+      expect(bytes.slice(4, 8).toString('latin1')).toBe('ftyp');
+
+      const manifest = await readManifest(dir);
+      expect(manifest.samples[0]).toEqual(outcome.sample);
+      expect(outcome.sample.synthetic).toBe(false);
+    } finally {
+      delete process.env.EXPO_PUBLIC_E2E;
+    }
   });
 
   it('deleteSample removes the file and the row', async () => {
