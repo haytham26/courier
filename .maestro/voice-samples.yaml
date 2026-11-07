@@ -46,6 +46,8 @@ name: The voice-sample recorder records with consent (A3)
     direction: DOWN
     timeout: 20000
 # Record, then stop: the sample lands in the list below.
+# NOTE: on the emulator the audio HAL logs pcm I/O errors, so stop() can take
+# ~20 s to resolve before the row is added - the reveal and the wait get 60 s.
 - tapOn:
     id: "voice-samples-record"
 - tapOn:
@@ -54,11 +56,11 @@ name: The voice-sample recorder records with consent (A3)
     element:
       id: "voice-samples-sample-"
     direction: DOWN
-    timeout: 20000
+    timeout: 60000
 - extendedWaitUntil:
     visible:
       id: "voice-samples-sample-"
-    timeout: 30000
+    timeout: 60000
 # Delete removes the sample again.
 - scrollUntilVisible:
     element:
@@ -70,7 +72,7 @@ name: The voice-sample recorder records with consent (A3)
 - extendedWaitUntil:
     visible:
       id: "voice-samples-empty"
-    timeout: 15000
+    timeout: 30000
 # Record once more, then revoke (the second tap confirms): revocation deletes
 # every sample. The Record control is ABOVE the list we just scrolled to, so
 # the reveal scrolls back up.
@@ -87,11 +89,11 @@ name: The voice-sample recorder records with consent (A3)
     element:
       id: "voice-samples-sample-"
     direction: DOWN
-    timeout: 20000
+    timeout: 60000
 - extendedWaitUntil:
     visible:
       id: "voice-samples-sample-"
-    timeout: 30000
+    timeout: 60000
 - scrollUntilVisible:
     element:
       id: "voice-samples-revoke"
@@ -110,6 +112,6 @@ name: The voice-sample recorder records with consent (A3)
 - extendedWaitUntil:
     visible:
       id: "voice-samples-empty"
-    timeout: 15000
+    timeout: 30000
 - assertNotVisible:
     id: "voice-samples-sample-"
