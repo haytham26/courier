@@ -36,9 +36,10 @@ name: The voice-sample recorder records with consent (A3)
       id: "voice-samples-consent-evaluation"
       checked: true
     timeout: 15000
-# On the 320x640 emulator the Record control sits below the fold of the
-# screen's own ScrollView (the BUG-050 class), so reveal it first - the
-# repo's scrollUntilVisible convention (summary.yaml, sign-in.yaml).
+# On the 320x640 emulator the controls below the consent card sit below the
+# fold of the screen's own ScrollView (the BUG-050 class), so each is revealed
+# with the repo's scrollUntilVisible convention (summary.yaml, sign-in.yaml)
+# before it is tapped or asserted.
 - scrollUntilVisible:
     element:
       id: "voice-samples-record"
@@ -47,16 +48,11 @@ name: The voice-sample recorder records with consent (A3)
 # Record, then stop: the sample lands in the list below.
 - tapOn:
     id: "voice-samples-record"
-- scrollUntilVisible:
-    element:
-      id: "voice-samples-stop"
-    direction: DOWN
-    timeout: 20000
 - tapOn:
     id: "voice-samples-stop"
 - scrollUntilVisible:
     element:
-      id: "voice-samples-list"
+      id: "voice-samples-sample-"
     direction: DOWN
     timeout: 20000
 - extendedWaitUntil:
@@ -85,16 +81,11 @@ name: The voice-sample recorder records with consent (A3)
     timeout: 20000
 - tapOn:
     id: "voice-samples-record"
-- scrollUntilVisible:
-    element:
-      id: "voice-samples-stop"
-    direction: UP
-    timeout: 20000
 - tapOn:
     id: "voice-samples-stop"
 - scrollUntilVisible:
     element:
-      id: "voice-samples-list"
+      id: "voice-samples-sample-"
     direction: DOWN
     timeout: 20000
 - extendedWaitUntil:
@@ -110,6 +101,12 @@ name: The voice-sample recorder records with consent (A3)
     id: "voice-samples-revoke"
 - tapOn:
     id: "voice-samples-revoke"
+# The list sits above the revoke row we just revealed: scroll back up to it.
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-empty"
+    direction: UP
+    timeout: 20000
 - extendedWaitUntil:
     visible:
       id: "voice-samples-empty"
