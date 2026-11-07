@@ -523,3 +523,22 @@ map pack) stand: they are not day-one deferrals, they are P5/P3 scheduled work.
   plus one) and updates its PARITY row in the same PR — honestly: the row is not `Have` until
   the courier-facing feature works, so the row records "server half landed in PR #N; app half
   is the lead's queue" while staying `Planned (task)`.
+
+## D64 — Address and map quality: LINZ first, OSM for the pack, Google only as a hand-off (2026-11-08, backend squad, audit item 7 / C3)
+
+- Recorded in `docs/decisions/adr/ADR-027-address-quality-c3.md`. The D8 engine's accuracy
+  is measured on the real LINZ register with one command
+  (`uv run --directory services/api pytest tests/test_linz_accuracy.py -q`, 1800-check
+  seeded sample over 656,392 addresses): **85.2 % → 96.9 % (2026-10-30) → 98.2 %
+  (2026-11-04), reproduced 98.2 % (1767/1800) on 2026-11-08** — the trial target of
+  ≥ 98 % right-door without a manual fix is met on the eval set.
+- Sources and licences: LINZ NZ Addresses (CC BY 4.0, attribution duty recorded, now in
+  `docs/product/LICENSES.md`'s adopted-data table) is the address authority; OpenStreetMap
+  stays in the offline map pack only (ODbL, attribution) and out of the on-device address
+  slice until the share-alike review lands; LINZ's business-name gap is covered by the
+  driver's correction as door memory (ADR-012).
+- The Google limit was verified against the live terms on 2026-11-08: Geocoding API
+  content may NOT be used with a non-Google map at all (Maps Service Specific Terms §B.6.2),
+  and only lat/lng may be cached, 30 days at most (§B.6.3.1) — so no Google geocoding is
+  merged into the MapLibre map; the navigation hand-off stays (PARITY row 21). Any future
+  Google use needs its own ADR with the measured gap.

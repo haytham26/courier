@@ -47,6 +47,7 @@ here with its URL and the date it was read.
 | ---- | -------- | ------- | ------- | --------------- |
 | God's Eye View | https://github.com/bilawalsidhu/gods-eye-view | MIT (Copyright (c) 2026 Bilawal Sidhu) | 2026-10-22 | the spoken camera verbs in `apps/mobile/src/maps/cameraCommands.ts`; the MIT notice is kept in that file |
 | NZ Building Outlines | https://data.linz.govt.nz/layer/101290-nz-building-outlines/ | Creative Commons Attribution 4.0 International (CC BY 4.0) | 2026-10-22 | the footprints of the 3D buildings, baked into the offline pack |
+| NZ Addresses (the address register) | https://data.linz.govt.nz/layer/123113-nz-addresses/ (plus the Roads layer 123110 and Road Sections layer 123109) | Creative Commons Attribution 4.0 International (CC BY 4.0) | 2026-11-08 | the D8 address engine's slice (`data/linz/`, fetched by `scripts/data/fetch-linz.py`, git-ignored like the data); the attribution duty is recorded in ADR-027 |
 | OpenStreetMap | https://www.openstreetmap.org/copyright | Open Database License (ODbL) | 2026-10-21 | the roads, the building levels and the attribution of the offline pack |
 
 ## The voice evaluation data (packages/eval/voice)

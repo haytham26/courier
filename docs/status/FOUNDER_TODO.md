@@ -55,6 +55,9 @@ Quality gates / coverage
 Quality gates / licences
 Quality gates / audits
 Quality gates / sast
+Quality gates / mutation-scopes
+Quality gates / mutation-api
+Quality gates / mutation-voice
 CodeQL / analyse
 android-e2e / changes
 android-e2e / build
@@ -68,6 +71,12 @@ Notes on the list:
   flows (the `changes` job's outputs, audit item 3g) — a skipped check does not block a merge, so
   listing them is safe and makes every app-touching PR gate on the emulator. `android-e2e / changes`
   itself always runs.
+- `Quality gates / mutation-scopes` always runs; `Quality gates / mutation-api` and
+  `Quality gates / mutation-voice` report **skipped** on PRs that touch neither service's
+  mutation scope nor the pipeline itself (the `mutation-scopes` job's outputs, BUG-245) — skipped
+  does not block, so listing them is safe, and on a PR that does touch a scope they run the
+  mutation floor and block below 70 % (measured 85.8 %/87.1 % on PR #263's head). The
+  `Mutation floor` workflow's own `api`/`voice` jobs stay scheduled/dispatch-only.
 - `Restore test / restore` (paths: `infra/**`) and
   `Screen recordings (13 reference screens) / build`, `/ record` (paths: the screens and flows) are
   path-limited: they report skipped on most PRs and gate only their own paths. Include them or not —
