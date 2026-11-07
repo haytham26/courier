@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import UUID, uuid4
 
 os.environ.setdefault("AUTH_JWKS_URL", "http://127.0.0.1:9/api/auth/jwks")
@@ -45,6 +46,28 @@ from tests.auth.test_jwks import make_key_pair, make_verifier, sign
 # unthrottled - tests/test_rate_limit.py re-enables it per test with fresh
 # tokens, so the module-level buckets start empty there.
 app.state.limiter.enabled = False
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """BUG-243: under mutmut WITHOUT a database, deselect the db-marked suite.
+
+    The mutation lane overrides the ini `-m 'not db'` (services/api
+    pyproject `[tool.mutmut] pytest_add_cli_args`) so the db suite runs when
+    the lane's PostGIS service is there (mutation.yml sets DATABASE_URL, like
+    ci.yml's db step). Without DATABASE_URL the db fixtures would ERROR -
+    and an errored run is pytest exit code 1, which mutmut counts as a KILL:
+    every mutant would "die" for the runner's reason and the floor would read
+    fake. Deselect instead, so those lines stay honestly `no_tests`. Outside
+    the mutants tree the fixtures' fail-loud guard is untouched.
+    """
+    service = Path(__file__).resolve().parents[1]
+    if service.name != "mutants" or os.environ.get("DATABASE_URL"):
+        return
+    deselected = [item for item in items if item.get_closest_marker("db")]
+    if not deselected:
+        return
+    items[:] = [item for item in items if not item.get_closest_marker("db")]
+    config.hook.pytest_deselected(items=deselected)
 
 
 @pytest.fixture(autouse=True)

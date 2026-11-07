@@ -50,6 +50,29 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 COURIER = "driver-7"
 
 
+def schema_script() -> str:
+    """The contract's schema, read from the REAL repository root.
+
+    mutmut runs this suite from the copied `mutants/` tree (BUG-243: the
+    mutation lane now runs the db suite against the Postgres service), where
+    a plain `parents[3]` is the services directory, not the repo root - and
+    reading the schema from there fails every mutant for the runner's reason.
+    Strip the trailing `mutants`; the assert pins it.
+    """
+    service = Path(__file__).resolve().parents[1]
+    if service.name == "mutants":
+        service = service.parent
+    path = service.parent.parent / "packages" / "contracts" / "db" / "schema.sql"
+    assert "mutants" not in path.parts, f"{path} resolves inside the mutants copy"
+    return path.read_text(encoding="utf-8")
+
+
+def test_the_schema_anchor_never_resolves_into_the_mutants_copy() -> None:
+    """BUG-243's pin for the fixture above."""
+    script = schema_script()
+    assert "CREATE" in script
+
+
 @pytest.fixture()
 def engine() -> Iterator[Engine]:
     if not DATABASE_URL:
@@ -58,9 +81,7 @@ def engine() -> Iterator[Engine]:
             "(run `-m 'not db'` for the suite without a database)"
         )
     engine = create_engine(DATABASE_URL)
-    script = (
-        Path(__file__).resolve().parents[3] / "packages" / "contracts" / "db" / "schema.sql"
-    ).read_text(encoding="utf-8")
+    script = schema_script()
     with engine.begin() as connection:
         connection.execute(text(script))
     yield engine

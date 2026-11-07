@@ -13,8 +13,26 @@ from __future__ import annotations
 
 import pytest
 
-from app.models import ReasoningRequest
-from app.offline_brain import command_speech, offline_reason, parse_command
+from app.models import (
+    ReasoningReply,
+    ReasoningRequest,
+    RunContext,
+    Stop,
+    StopStatus,
+    Verbosity,
+    VoiceAction,
+    VoiceSettings,
+)
+from app.offline_brain import (
+    OFFLINE_LINES,
+    _answer_of,
+    _company_of,
+    _dynamic_speech,
+    _question_of_action,
+    command_speech,
+    offline_reason,
+    parse_command,
+)
 
 
 class TestTheDeliveryForms:
@@ -195,3 +213,98 @@ class TestTheWholeReply:
 
     def test_the_command_speech_is_the_line_the_voice_says(self) -> None:
         assert command_speech("delivered at 57 Poulson Street, Addington") == "Delivered."
+
+
+def a_day() -> RunContext:
+    """A day in the middle: one stop delivered, one active, two pending."""
+    return RunContext(
+        stops=(
+            Stop(id="s1", sequence=1, number="42", street="Main North Road", status=StopStatus.DELIVERED),
+            Stop(id="s2", sequence=2, number="14", street="Harewood", status=StopStatus.ACTIVE),
+            Stop(id="s3", sequence=3, number="3", street="Kowhai Street", status=StopStatus.PENDING),
+            Stop(id="s4", sequence=4, number="9", street="Rimu Street", status=StopStatus.PENDING),
+        ),
+    )
+
+
+class TestTheReplyContract:
+    """The offline brain's replies pin their WHOLE ReasoningReply - speech,
+    action, source, engine and question - not just the speech.
+
+    BUG-244: the mutation floor's survivors here were the `source=`/`engine=`/
+    `question=` kwargs and the empty-speech fallbacks of `_answer_of` and
+    `_company_of` (64 mutants in run 42350269397) - the existing tests asserted
+    only `reply.speech` or `reply.action`, so those mutants survived.
+    """
+
+    def test_a_question_about_the_run_answers_with_its_whole_reply(self) -> None:
+        reply = offline_reason(ReasoningRequest(transcript="how many left?", context=a_day()))
+        assert reply == ReasoningReply(
+            speech="3 stops left.",
+            action=VoiceAction(type="how_many_left"),
+            source="on-device",
+            engine="on-device",
+            question="how_many_left",
+        )
+
+    def test_where_am_i_at_a_stop(self) -> None:
+        reply = offline_reason(ReasoningRequest(transcript="where am I", context=a_day()))
+        assert reply == ReasoningReply(
+            speech="you're at 14 Harewood.",
+            action=VoiceAction(type="where_am_i"),
+            source="on-device",
+            engine="on-device",
+            question="where_am_i",
+        )
+
+    def test_where_am_i_between_stops(self) -> None:
+        reply = offline_reason(ReasoningRequest(transcript="where am I", context=RunContext()))
+        assert reply == ReasoningReply(
+            speech="you're between stops.",
+            action=VoiceAction(type="where_am_i"),
+            source="on-device",
+            engine="on-device",
+            question="where_am_i",
+        )
+
+    def test_chatter_stays_empty_with_the_normal_verbosity(self) -> None:
+        reply = offline_reason(ReasoningRequest(transcript="the coffee is cold"))
+        assert reply == ReasoningReply(speech="", source="on-device", engine="on-device")
+
+    def test_chatty_chatter_picks_an_offline_line(self) -> None:
+        request = ReasoningRequest(
+            transcript="the coffee is cold",
+            settings=VoiceSettings(verbosity=Verbosity.CHATTY),
+        )
+        reply = offline_reason(request)
+        expected = OFFLINE_LINES[len("the coffee is cold") % len(OFFLINE_LINES)]
+        assert reply == ReasoningReply(speech=expected, source="on-device", engine="on-device")
+
+    def test_small_talk_is_answered(self) -> None:
+        reply = offline_reason(ReasoningRequest(transcript="cheers"))
+        assert reply == ReasoningReply(speech="No worries.", source="on-device", engine="on-device")
+
+    def test_an_empty_transcript_says_nothing(self) -> None:
+        reply = offline_reason(ReasoningRequest(transcript="   "))
+        assert reply == ReasoningReply(speech="", source="on-device", engine="on-device")
+
+    def test_the_answer_of_chatter_is_empty_but_on_device(self) -> None:
+        assert _answer_of(ReasoningRequest(transcript="the coffee is cold")) == ReasoningReply(
+            speech="", source="on-device", engine="on-device"
+        )
+
+    def test_the_company_of_normal_chatter_is_empty(self) -> None:
+        assert _company_of(ReasoningRequest(transcript="the coffee is cold")) == ReasoningReply(
+            speech="", source="on-device", engine="on-device"
+        )
+
+    def test_the_question_of_each_action(self) -> None:
+        assert _question_of_action(VoiceAction(type="how_many_left")) == "how_many_left"
+        assert _question_of_action(VoiceAction(type="where_am_i")) == "where_am_i"
+        assert _question_of_action(VoiceAction(type="mark_delivered")) is None
+
+    def test_the_dynamic_speech_of_each_action(self) -> None:
+        assert _dynamic_speech(VoiceAction(type="how_many_left"), a_day()) == "3 stops left."
+        assert _dynamic_speech(VoiceAction(type="where_am_i"), a_day()) == "you're at 14 Harewood."
+        assert _dynamic_speech(VoiceAction(type="where_am_i"), RunContext()) == "you're between stops."
+        assert _dynamic_speech(VoiceAction(type="mark_delivered"), a_day()) == ""

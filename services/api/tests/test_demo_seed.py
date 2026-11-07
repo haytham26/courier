@@ -37,6 +37,27 @@ STOPS = 5
 PATH = "/demo/runs"
 
 
+def schema_script() -> str:
+    """The contract's schema, read from the REAL repository root.
+
+    mutmut runs this suite from the copied `mutants/` tree (BUG-243: the
+    mutation lane now runs the db suite against the Postgres service), where
+    a plain `parents[3]` is the services directory, not the repo root. Strip
+    the trailing `mutants`; the assert pins it.
+    """
+    service = Path(__file__).resolve().parents[1]
+    if service.name == "mutants":
+        service = service.parent
+    path = service.parent.parent / "packages" / "contracts" / "db" / "schema.sql"
+    assert "mutants" not in path.parts, f"{path} resolves inside the mutants copy"
+    return path.read_text(encoding="utf-8")
+
+
+def test_the_schema_anchor_never_resolves_into_the_mutants_copy() -> None:
+    """BUG-243's pin for the db fixture below."""
+    assert "CREATE" in schema_script()
+
+
 @pytest.fixture()
 def seeded(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """The gate is on, as the E2E job sets it."""
@@ -355,9 +376,7 @@ class TestTheDemoSeedOnPostgres:
                 "(run -m 'not db' for the suite without a database)"
             )
         engine = create_engine(DATABASE_URL)
-        script = (
-            Path(__file__).resolve().parents[3] / "packages" / "contracts" / "db" / "schema.sql"
-        ).read_text(encoding="utf-8")
+        script = schema_script()
         with engine.begin() as connection:
             connection.execute(text(script))
         yield engine
