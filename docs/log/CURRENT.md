@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `d6471b1` (PR #256, §22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
+**Week:** 2026-W44. **Local `main` == `origin/main` == `03c55f6` (PR #257, the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
 side, BUG-200 — the prominent background-location disclosure is shown in-app
 before the permission request, and the settings carry the Legal rows). Behind it
 `0f500fe` = PR #251 (BUG-236 — the backend's row), `ffa60ba` = PR #249 (item 5a,
@@ -21,9 +21,13 @@ technique C's app half: the visible and clearable memory — the settings
 `Remember this shift` switch riding the tab layout's shared voice instance,
 and a two-tap `Forget this shift` row wired to the hook's new `forgetMemory()`
 which DELETEs the service memory AND drops the carried-forward question;
-21/21 flows on both api legs, run 42353916220). Queue next: **P4**
-visual-regression baselines, then **P7** acceptance on two screen sizes — to
-the §6 Definition of Done.**
+21/21 flows on both api legs, run 42353916220). In flight: **P4's
+visual-regression baselines** on `feat/p4-visual-baselines` (BUG-203 —
+`scripts/ci/check-visual-baselines.mjs` + the first committed baselines in
+`docs/evidence/design/baselines/`, seeded from CI run 42353916218's
+screen-recordings artifact; large-screen and 200 % views pending their capture
+lane). Queue next after it: **P7** acceptance on two screen sizes — to the §6
+Definition of Done.**
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
