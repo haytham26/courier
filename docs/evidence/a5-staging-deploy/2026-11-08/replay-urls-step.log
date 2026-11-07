@@ -1,0 +1,21 @@
+# Replay of main-apk.yml step 'The URLs this APK dials' (id: urls), 2026-11-08, local (git-bash sh)
+# The run: | block was extracted verbatim from .github/workflows/main-apk.yml and executed with
+# GITHUB_OUTPUT pointed at a temp file, once per env branch. All four rc=0, outputs:
+
+=== staging var set rc 0
+pinned=staging
+auth_url=https://staging.courier.example.co.nz/api/auth
+api_url=https://staging.courier.example.co.nz
+configured=yes
+=== only auth var rc 0
+pinned=var
+auth_url=https://auth.courier.example.co.nz/api/auth
+api_url=https://auth.courier.example.co.nz
+configured=yes
+=== auth+api vars rc 0
+pinned=var
+auth_url=https://auth.example.co.nz/api/auth
+api_url=https://api.example.co.nz
+configured=yes
+=== neither rc 0
+configured=no

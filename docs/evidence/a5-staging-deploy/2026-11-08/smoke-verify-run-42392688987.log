@@ -1,0 +1,18 @@
+# The verify leg of `Deploy staging`, run 42392688987 (push to ff04a164, 2026-11-07T16:43Z)
+# Job 128463393753 `Build and smoke-test the staging stack (the local VM)`: success.
+# The smoke-test section of the job log, verbatim:
+
+    bash infra/smoke.sh --domain staging.courier.local --port 8443 --evidence .smoke
+    == the smoke test of staging.courier.local (the evidence lands in .smoke) ==
+    == the edge answers HTTPS at https://staging.courier.local:8443 ==
+    PASS  the edge answers TLS               404
+    PASS  the deployed version               ff04a16432db47ec615a47c1937d74ff422b6e84
+    PASS  the seed needs a token             401
+    == no token: the seeded round trip (the seed, the run, the stops) is skipped ==
+    PASS  the health endpoint is not public  404
+    == the smoke test passed (4/4): the deployment holds a courier's day ==
+
+# The token-authenticated round trip runs on the deploy leg (with the staging smoke
+# token, a secret) and on the nightly cron (staging-smoke.yml); both skip with a
+# notice until the founder sets COURIER_STAGING_DOMAIN / COURIER_SMOKE_TOKEN / the
+# OCI host (FOUNDER_TODO).
