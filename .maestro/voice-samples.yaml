@@ -47,18 +47,22 @@ name: The voice-sample recorder records with consent (A3)
     direction: DOWN
     timeout: 20000
 # Record, then stop: the sample lands in the list below.
+# NOTE: Maestro's id selector is a FULL-match regex - the sample's testID is
+# dynamic (voice-samples-sample-<stamp>-<roll>), so every selector on it
+# carries the trailing `.*` (runs 42331471045..42339366069 failed 30 s of
+# "Element not found" on the bare prefix alone).
 - tapOn:
     id: "voice-samples-record"
 - tapOn:
     id: "voice-samples-stop"
 - scrollUntilVisible:
     element:
-      id: "voice-samples-sample-"
+      id: "voice-samples-sample-.*"
     direction: DOWN
     timeout: 30000
 - extendedWaitUntil:
     visible:
-      id: "voice-samples-sample-"
+      id: "voice-samples-sample-.*"
     timeout: 30000
 # Delete removes the sample again.
 - scrollUntilVisible:
@@ -86,12 +90,12 @@ name: The voice-sample recorder records with consent (A3)
     id: "voice-samples-stop"
 - scrollUntilVisible:
     element:
-      id: "voice-samples-sample-"
+      id: "voice-samples-sample-.*"
     direction: DOWN
     timeout: 30000
 - extendedWaitUntil:
     visible:
-      id: "voice-samples-sample-"
+      id: "voice-samples-sample-.*"
     timeout: 30000
 - scrollUntilVisible:
     element:
@@ -113,7 +117,7 @@ name: The voice-sample recorder records with consent (A3)
       id: "voice-samples-empty"
     timeout: 30000
 - assertNotVisible:
-    id: "voice-samples-sample-"
+    id: "voice-samples-sample-.*"
 # And the consent itself is revoked: the evaluation switch reads unchecked.
 - scrollUntilVisible:
     element:
