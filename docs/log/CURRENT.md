@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `f1ae091` (PR #265, the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
+**Week:** 2026-W44. **Local `main` == `origin/main` == `3525a50` (PR #266, the #261/#262/#265 log PR). Behind it `f1ae091` = PR #265 (the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
 side, BUG-200 — the prominent background-location disclosure is shown in-app
 before the permission request, and the settings carry the Legal rows). Behind it
 `0f500fe` = PR #251 (BUG-236 — the backend's row), `ffa60ba` = PR #249 (item 5a,
@@ -40,6 +40,10 @@ platform-owned) and **the scorecard refreshed 2026-11-08** (address/safety/deliv
 at 8/10+; voice/routing/offline below for named reasons). Queue next: the §6 Definition
 of Done checklist + `docs/status/FINAL_REPORT.md`; the v1.0.0 release stays
 founder-gated (FOUNDER_TODO).
+
+In flight: **FINAL_REPORT** on `docs/final-report` — `docs/status/FINAL_REPORT.md`
+(what was built, the 2026-11-08 scores, how to install, the founder-only list,
+the honest §6 DoD checklist).
 
 Also in flight: **BUG-034** on `docs/handover-034` (`docs/HANDOVER.md` —
 run, deploy, keys, map updates, acceptance, the v1.0.0 release order) and
