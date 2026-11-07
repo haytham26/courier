@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `2cf2cc0` (PR #252, the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
+**Week:** 2026-W44. **Local `main` == `origin/main` == `6ed02bc` (PR #253, A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
 side, BUG-200 — the prominent background-location disclosure is shown in-app
 before the permission request, and the settings carry the Legal rows). Behind it
 `0f500fe` = PR #251 (BUG-236 — the backend's row), `ffa60ba` = PR #249 (item 5a,
@@ -13,11 +13,10 @@ reserved range BUG-189..209 because the backend's next number is 233 and a row
 there would collide with theirs), `c382c36` = PR #241 (item 4b), `a2ee7d3` = PR
 #240 (the log PR), `ef12d64` = PR #239 (item 4a), `4851380` = PR #217 (queue 4g),
 `938cf26` = PR #216 (queue 4f), `3400082` = PR #218 (release hygiene). Lead session
-14, 2026-11-05/07. In flight: **A3's app side** on `feat/a3-voice-sample-recorder` (BUG-201 — the
-opt-in test-build voice-sample recorder with the per-purpose consent, so
-beta couriers can add real in-van samples later). Queue next after it: (the voice eval
-set is built on the backend 2026-11-03; the app-side opt-in debug recorder if one
-remains), then **§22's app side** (D48 device-agent techniques in
+14, 2026-11-05/07. Merged this session: **PR #253 (6ed02bc) — A3's app side, BUG-201 fixed** (the
+opt-in test-build voice-sample recorder with the per-purpose consent, so beta
+couriers can add real in-van samples later; 20/20 flows on both api legs, run
+42343406238). Queue next: **§22's app side** (D48 device-agent techniques in
 `apps/mobile/src/voice`: the settings `remember` toggle, forgetSession), **P4**
 baselines, **P7** acceptance on two screen sizes — to the §6 Definition of
 Done.**
