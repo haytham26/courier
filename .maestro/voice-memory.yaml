@@ -17,12 +17,18 @@ name: The shift memory is visible and clearable in settings (§22 technique C, B
 # The Memory group sits below the fold on a 320x640 screen (the BUG-050
 # class), so each control is revealed with the repo's scrollUntilVisible
 # convention (summary.yaml, sign-in.yaml, voice-samples.yaml) before it is
-# tapped or asserted.
+# tapped or asserted. centerElement: true is load-bearing here: with the
+# default (centering disabled) scrollUntilVisible stops as soon as the row is
+# 100% visible, which at the bottom of the settings ScrollView is UNDER the
+# tab dock - run 42350703414 tapped the forget row at y=592, the touch landed
+# on the dock, onPress never fired and the confirm text never appeared. Centred,
+# the row sits mid-viewport and the tap lands on it.
 - scrollUntilVisible:
     element:
       id: "settings-remember"
     direction: DOWN
     timeout: 20000
+    centerElement: true
 # The switch starts on (the default) and a tap turns the shift memory off.
 - extendedWaitUntil:
     visible:
@@ -52,6 +58,7 @@ name: The shift memory is visible and clearable in settings (§22 technique C, B
       id: "settings-forget-memory"
     direction: DOWN
     timeout: 20000
+    centerElement: true
 - tapOn:
     id: "settings-forget-memory"
 - assertVisible:
