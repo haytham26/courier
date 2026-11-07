@@ -25,7 +25,8 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
+  Keyboard,
+  type KeyboardEvent,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -123,6 +124,24 @@ function RouteScreen() {
   const [importing, setImporting] = useState(false);
   const [importNote, setImportNote] = useState<string | null>(null);
   const [importIgnored, setImportIgnored] = useState<string | null>(null);
+  // BUG-197: the soft keyboard's own height, read from the Keyboard events.
+  // On Android the event's endCoordinates.height comes from the window's IME
+  // insets (ReactRootView.checkForKeyboardEvents), which are correct even
+  // edge-to-edge on api 34/35 - where the visible display frame is NOT
+  // shrunk by the keyboard, which is exactly why KeyboardAvoidingView's own
+  // padding math computed 0 there (run 42371008275: the actions row stayed
+  // under the keyboard on both api legs).
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const onShow = (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height);
+    const onHide = () => setKeyboardHeight(0);
+    const show = Keyboard.addListener('keyboardDidShow', onShow);
+    const hide = Keyboard.addListener('keyboardDidHide', onHide);
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
   // The importer of this build: the mock in the E2E build, the real client's
   // importStops in every other (the labelReader seam's own rule).
   const importer = useMemo(() => importerForThisBuild(), []);
@@ -629,12 +648,17 @@ function RouteScreen() {
                 windowSoftInputMode="adjustResize" does not shrink the window
                 and the soft keyboard covers the sheet's bottom while the paste
                 field is focused - the pinned actions row left the
-                accessibility tree (runs 42136053866 + 42155905246). The
-                avoiding view pads the sheet's content up by the keyboard's
-                height, so the actions ride above the keyboard; "padding" is
-                the behavior that works edge-to-edge (the window itself is
-                never resized). */}
-            <KeyboardAvoidingView behavior="padding" style={styles.importAvoid} testID="stops-import-kav">
+                accessibility tree (runs 42136053866 + 42155905246, and with the
+                KeyboardAvoidingView attempt, run 42371008275 on BOTH api legs:
+                the KAV's math reads the visible display frame, which the
+                keyboard does not shrink edge-to-edge, so it padded 0). The
+                container instead pads by the Keyboard event's IME-inset height
+                (correct edge-to-edge), so the actions ride above the keyboard
+                while typing. */}
+            <View
+              style={[styles.importAvoid, { paddingBottom: keyboardHeight }]}
+              testID="stops-import-kav"
+            >
             <ScrollView
               style={styles.importScrollBody}
               contentContainerStyle={styles.importScroll}
@@ -699,7 +723,7 @@ function RouteScreen() {
                   </Text>
                 </Pressable>
             </View>
-            </KeyboardAvoidingView>
+            </View>
           </GlassSurface>
         </>
       )}
