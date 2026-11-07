@@ -24,7 +24,16 @@ from tests.auth.test_jwks import sign
 
 @pytest.fixture()
 def limiter_on(monkeypatch: pytest.MonkeyPatch):
-    """Enable the limiter with tiny limits for the duration of one test."""
+    """Enable the limiter with tiny limits for the duration of one test.
+
+    The in-memory buckets are module-global, and mutmut runs the suite more
+    than once in one process (the stats pass, then the clean pass), so the
+    webhook test's shared `ip:testclient` bucket is still full on the second
+    pass and its first post answers 429 instead of 404 (run 42347923596:
+    `assert 429 == 404`, `ratelimit 2 per 1 minute (ip:testclient) exceeded`).
+    Reset the storage first: every test starts from empty buckets. BUG-242.
+    """
+    app.state.limiter.reset()
     app.state.limiter.enabled = True
     monkeypatch.setenv("RATE_LIMIT_DEFAULT", "100/minute")
     monkeypatch.setenv("RATE_LIMIT_AUTH", "100/minute")
@@ -106,3 +115,16 @@ def test_the_shared_suite_runs_unthrottled(verifier_key: object, client: TestCli
     assert app.state.limiter.enabled is False
     for _ in range(20):
         assert client.get("/runs").status_code == 200
+
+
+def test_reset_clears_the_shared_buckets(verifier_key: object, limiter_on: pytest.MonkeyPatch) -> None:
+    """BUG-242's pin: the fixture's `reset()` really empties the module-global
+    in-memory storage, so a suite run twice in one process (mutmut's stats and
+    clean passes) cannot leak a full `ip:testclient` bucket into the next run
+    of the webhook test."""
+    limiter_on.setenv("RATE_LIMIT_WEBHOOKS", "1/minute")
+    client = TestClient(app)
+    assert client.post("/billing/webhooks/stripe", content=b"{}").status_code == 404
+    assert client.post("/billing/webhooks/stripe", content=b"{}").status_code == 429
+    app.state.limiter.reset()
+    assert client.post("/billing/webhooks/stripe", content=b"{}").status_code == 404

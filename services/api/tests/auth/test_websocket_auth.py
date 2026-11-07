@@ -279,8 +279,19 @@ class TestOneVerifierForBothSurfaces:
 
 
 def app_sources() -> list[Path]:
-    """Every Python file of the service's own application code."""
-    app_dir = Path(__file__).resolve().parents[2] / "app"
+    """Every Python file of the service's own application code.
+
+    mutmut's runner chdirs into the copied `mutants/` tree and puts it first on
+    sys.path (mutmut/utils/file_utils.py), so from `mutants/tests/...` a plain
+    `parents[2]` is the mutants copy, not the service - and the lane's stats
+    pass then reads stale mutated copies and dies before measuring anything
+    (run 42210602994: `len(readers) == 1` failed on two readers in the copy).
+    Strip the trailing `mutants` so the scan always reads the real tree.
+    """
+    service = Path(__file__).resolve().parents[2]
+    if service.name == "mutants":
+        service = service.parent
+    app_dir = service / "app"
     return sorted(app_dir.rglob("*.py"))
 
 
@@ -324,3 +335,14 @@ class TestTheDeletedDependency:
         source, line = readers[0]
         head = "\n".join(source.read_text(encoding="utf-8").splitlines()[:line])
         assert "def _reason_for" in head, f"{source}:{line} reads a token outside the refusal's reason"
+
+    def test_app_sources_never_resolves_into_the_mutants_copy(self) -> None:
+        """The helper's anchor, pinned for the mutation lane (BUG-241).
+
+        Under mutmut the suite runs from `mutants/tests/`, where `parents[2]`
+        is the copied tree; scanning it read stale mutated copies on run
+        42210602994 and killed the lane's stats pass. The real source tree is
+        what these invariants are about, so the helper must never resolve there.
+        """
+        for source in app_sources():
+            assert "mutants" not in source.parts, f"{source} resolves inside the mutants copy"

@@ -21,12 +21,17 @@
 // run, exports the stats, and checks them in the same job - so a slow suite
 // never blocks a PR, and the floor still blocks the merge when it drops.
 //
+// The `run` mode also exports the PER-MUTANT list (`mutmut results`, one line
+// per mutant with its status) to `mutants/mutmut-results.txt` beside the stats
+// JSON: the stats carry only counts, and without the list the survivors cannot
+// be named, so no test can be written to kill them (BUG-241).
+//
 // mutmut refuses to start on Windows (`platform.system() == "Windows"` exits
 // 1, boxed/mutmut#397), so the local run is WSL's; CI's ubuntu runner is the
 // harness for this gate, exactly as the restore drill's is Postgres.
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -41,6 +46,15 @@ export const DEFAULT_FLOOR = 70;
 const thisFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(thisFile), '..', '..');
 const STATS_RELATIVE = path.join('mutants', 'mutmut-cicd-stats.json');
+
+/** Where the `run` mode writes the per-mutant `mutmut results` list. */
+export const RESULTS_RELATIVE = path.join('mutants', 'mutmut-results.txt');
+
+/** Where the `run` mode writes the survivor dump WITH diffs (BUG-241). */
+export const SURVIVORS_RELATIVE = path.join('mutants', 'mutmut-survivors.txt');
+
+/** The survivor-dump exporter, relative to the repository root. */
+export const SURVIVORS_SCRIPT = path.join('scripts', 'ci', 'mutmut-survivors.py');
 
 /**
  * The mutation score, in mutmut's own arithmetic (see the header).
@@ -146,14 +160,71 @@ const EXTRAS_BY_SERVICE = {
   'services/courier-voice': ['dev'],
 };
 
-function runMutmut(serviceDir, args) {
+/**
+ * The exact `uv run … mutmut …` command for a service, as a pure value so the
+ * suite can pin it: the extras come from EXTRAS_BY_SERVICE, and `--directory`
+ * is what makes the service directory mutmut's working directory (so its
+ * `mutants/` lands where `readStats` looks).
+ */
+export function buildUvRunCommand(serviceDir, tail) {
   const absolute = path.resolve(repoRoot, serviceDir);
-  const relative = path.relative(repoRoot, absolute) || '.';
+  // path.relative uses the platform separator, so on Windows it is
+  // `services\api` and the EXTRAS_BY_SERVICE lookup silently fell back to
+  // ['dev'] - dropping the API's s3test extra on any local run. Normalise.
+  const relative = (path.relative(repoRoot, absolute) || '.').split(path.sep).join('/');
   const extras = EXTRAS_BY_SERVICE[relative] ?? ['dev'];
   const command = ['run'];
   for (const extra of extras) command.push('--extra', extra);
-  command.push('--directory', relative, 'mutmut', ...args);
-  execFileSync('uv', command, { cwd: repoRoot, stdio: 'inherit' });
+  command.push('--directory', relative, ...tail);
+  return command;
+}
+
+/** The `uv run … mutmut …` command for a service (kept as its own name: the suite pins it). */
+export function buildMutmutCommand(serviceDir, args) {
+  return buildUvRunCommand(serviceDir, ['mutmut', ...args]);
+}
+
+function runMutmut(serviceDir, args) {
+  execFileSync('uv', buildMutmutCommand(serviceDir, args), { cwd: repoRoot, stdio: 'inherit' });
+}
+
+/** The same command, with stdout captured instead of streamed. */
+function runUvCapture(serviceDir, tail) {
+  return execFileSync('uv', buildUvRunCommand(serviceDir, tail), {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
+}
+
+function runMutmutCapture(serviceDir, args) {
+  return runUvCapture(serviceDir, ['mutmut', ...args]);
+}
+
+/** Run a repository script inside the service's environment (cwd = the service dir). */
+function runServicePython(serviceDir, args) {
+  const scriptFromService = path
+    .relative(path.resolve(repoRoot, serviceDir), path.join(repoRoot, SURVIVORS_SCRIPT))
+    .split(path.sep)
+    .join('/');
+  return runUvCapture(serviceDir, ['python', scriptFromService, ...args]);
+}
+
+/**
+ * Write a mutant artifact into the service's `mutants/` directory, creating it
+ * if the run wrote nothing.
+ * @returns {string} the file written
+ */
+export function writeMutantFile(serviceDir, relative, text) {
+  const file = path.resolve(repoRoot, serviceDir, relative);
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, text, 'utf8');
+  return file;
+}
+
+/** Write the per-mutant results list (`mutmut results` output). */
+export function writeResults(serviceDir, text) {
+  return writeMutantFile(serviceDir, RESULTS_RELATIVE, text);
 }
 
 export { repoRoot as mutationRepoRoot };
@@ -169,6 +240,13 @@ const main = () => {
   if (mode === 'run') {
     runMutmut(serviceDir, ['run']);
     runMutmut(serviceDir, ['export-cicd-stats']);
+    // The survivor list, for triage: `mutmut results` names every mutant with
+    // its status. The workflow uploads it beside the stats (BUG-241).
+    writeResults(serviceDir, runMutmutCapture(serviceDir, ['results']));
+    // And the survivor DUMP with diffs (file, line, original -> mutated), so
+    // the score-raising slices can name the surviving classes and write the
+    // killing tests instead of guessing.
+    writeMutantFile(serviceDir, SURVIVORS_RELATIVE, runServicePython(serviceDir, []));
   }
   const stats = readStats(path.resolve(repoRoot, serviceDir));
   const failures = checkStats(stats, { label: `${BUG_ID} (${serviceDir})` });
