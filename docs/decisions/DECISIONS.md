@@ -542,3 +542,20 @@ map pack) stand: they are not day-one deferrals, they are P5/P3 scheduled work.
   and only lat/lng may be cached, 30 days at most (§B.6.3.1) — so no Google geocoding is
   merged into the MapLibre map; the navigation hand-off stays (PARITY row 21). Any future
   Google use needs its own ADR with the measured gap.
+
+## D65 — Courier Voice §22 B + C: ask on low confidence (one configured bar) + the memory read endpoint (2026-11-08, backend squad, audit item 7)
+
+- Recorded in `docs/decisions/adr/ADR-028-voice-s22-bc.md`.
+- **§22 B:** when the turn's `stt_confidence` (new optional field on `TurnRequest`, 0..1)
+  falls below the one configured bar (`VOICE_ASK_CONFIDENCE_BAR`, default 0.8), the
+  service asks one short question (`notice` + `speech`, `action: null`,
+  `last_question = "ask:<type>"`) instead of acting — at the decision point, on both the
+  free and the paid route. No reported confidence → no bar applied. The bar's final
+  tuning runs on the HELD-OUT set, which is the founder's (FOUNDER_TODO); until then the
+  bar is a starting value and is not claimed held-out-tuned.
+- **§22 C:** `GET /v1/sessions/{id}/memory` returns the visible memory
+  (`SessionMemoryView`: context, learned, last instruction/question, turns, settings,
+  remembered); foreign shift 404, no token 401; the clear half (`DELETE …/memory`) was
+  already on main. The contract fragment for the lead is ADR-028's "Contract" section.
+- Red-first: `services/courier-voice/tests/test_s22_bc.py` (9 tests); suite 364 passed,
+  `ruff check .` clean. Evidence `docs/evidence/s22-bc/`.

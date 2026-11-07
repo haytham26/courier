@@ -235,3 +235,28 @@ def answer_correction(
     if last_question == "how_many_left":
         return Answer(speech=f"{_spoken_number(number)} stops left.", question="how_many_left")
     return None
+
+
+#: The one short question per command, asked when the STT's confidence in the
+#: transcript fell below the bar (MASTER §22-B). The question is generated
+#: from the decision context - what is being asked and what it commits to - so
+#: answering is unambiguous while driving.
+ASK_LINES: dict[str, str] = {
+    "mark_delivered": "Delivered, yes?",
+    "mark_failed": "Mark it failed, yes?",
+    "skip_stop": "Skip this stop, yes?",
+    "add_stop": "Add that stop, yes?",
+    "start_break": "Start the break, yes?",
+    "end_break": "End the break, yes?",
+    "add_location_note": "Save that note, yes?",
+}
+
+
+def ask_question_of(action: VoiceAction) -> str:
+    """The question the service puts to the courier instead of acting.
+
+    MASTER §22-B: below the confidence bar the turn stops and asks, rather
+    than acting on a guess. The question names the command it parsed, so the
+    courier can confirm or correct it in one word.
+    """
+    return ASK_LINES.get(action.type, f"{action.type.replace('_', ' ')}, yes?")
