@@ -15,13 +15,21 @@ name: Main APK
 # installs on a phone the founder controls, which is what the acceptance run
 # is.
 #
-# The auth URL: a build that names no auth server builds an APK that cannot
-# sign anyone in (BUG-072). On the tag path (release-apk.yml) that fails the
-# job, because a release must be whole. Here the job SKIPS with a notice
-# instead: the repository variable is a founder-configurable value, and a merge
-# must not go red over a variable nobody has set yet - the LINZ weekly's skip
-# is the same pattern (BUG-162). Set EXPO_PUBLIC_AUTH_URL and the next merge
-# publishes the APK.
+# The URLs the APK dials (A5, BUG-272): the founder's APK is PINNED TO
+# STAGING. When the repository variable COURIER_STAGING_DOMAIN is set, the
+# build carries EXPO_PUBLIC_AUTH_URL=https://<domain>/api/auth and
+# EXPO_PUBLIC_API_URL=https://<domain> - the edge's own layout
+# (infra/Caddyfile.staging: /api/auth/* -> the auth service, everything else
+# -> the API), so one domain serves both. Without the staging domain the
+# build falls back to the EXPO_PUBLIC_AUTH_URL / EXPO_PUBLIC_API_URL
+# variables (the API URL defaults to the auth URL's own host, since the edge
+# is one domain). A build that names no server at all builds an APK that
+# cannot sign anyone in (BUG-072): on the tag path (release-apk.yml) that
+# fails the job, because a release must be whole. Here the job SKIPS with a
+# notice instead: the repository variables are founder-configurable values,
+# and a merge must not go red over a variable nobody has set yet - the LINZ
+# weekly's skip is the same pattern (BUG-162). Set the variables and the next
+# merge publishes the APK.
 on:
   push:
     branches: [main]
@@ -45,6 +53,51 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - name: The URLs this APK dials (pinned to staging, A5)
+        # Runs FIRST, because the Node cache below is enabled only when there
+        # is something to build: with `cache: pnpm` and no `pnpm install` on
+        # the runner, setup-node's cache-save step fails the job on the
+        # missing pnpm store ("Path Validation Error ... no cache is being
+        # saved", run 42385639298) - a merge went RED over a variable nobody
+        # had set, which is the opposite of the skip-notice this job exists
+        # for (BUG-272).
+        # The values are reported as outputs, not exported into every later
+        # step's environment: a repository VARIABLE is not a secret, but the
+        # build step is the one place the values belong (the shape BUG-100
+        # removed was values leaking into every step's env).
+        id: urls
+        env:
+          STAGING_DOMAIN: ${{ vars.COURIER_STAGING_DOMAIN }}
+          AUTH_URL: ${{ vars.EXPO_PUBLIC_AUTH_URL }}
+          API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+        run: |
+          set -euo pipefail
+          if [ -n "${STAGING_DOMAIN}" ]; then
+            # A5: the founder's APK points at staging. The edge is one
+            # domain: /api/auth/* -> the auth service, the rest -> the API
+            # (infra/Caddyfile.staging).
+            echo "pinned=staging" >> "$GITHUB_OUTPUT"
+            echo "auth_url=https://${STAGING_DOMAIN}/api/auth" >> "$GITHUB_OUTPUT"
+            echo "api_url=https://${STAGING_DOMAIN}" >> "$GITHUB_OUTPUT"
+            echo "configured=yes" >> "$GITHUB_OUTPUT"
+            echo "::notice::this APK is pinned to staging: auth=https://${STAGING_DOMAIN}/api/auth api=https://${STAGING_DOMAIN}"
+          elif [ -n "${AUTH_URL}" ]; then
+            echo "pinned=var" >> "$GITHUB_OUTPUT"
+            echo "auth_url=${AUTH_URL}" >> "$GITHUB_OUTPUT"
+            if [ -n "${API_URL}" ]; then
+              echo "api_url=${API_URL}" >> "$GITHUB_OUTPUT"
+            else
+              # The API rides the same edge as the auth URL unless the API
+              # variable says otherwise: the edge is one domain.
+              host="$(printf '%s' "${AUTH_URL}" | sed -E 's#(https?://[^/]+).*#\1#')"
+              echo "api_url=${host}" >> "$GITHUB_OUTPUT"
+            fi
+            echo "configured=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=no" >> "$GITHUB_OUTPUT"
+            echo "::notice::neither COURIER_STAGING_DOMAIN nor EXPO_PUBLIC_AUTH_URL is set, so this merge publishes no APK: a build that names no auth server cannot sign anyone in (BUG-072). Set the repository variables (Settings > Secrets and variables > Actions > Variables); the next merge publishes the stable link (A6), pinned to staging when COURIER_STAGING_DOMAIN is set (A5)."
+          fi
+
       - name: Set up pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
@@ -54,7 +107,10 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
-          cache: pnpm
+          # The pnpm cache is enabled only when the build will run: without a
+          # `pnpm install` the pnpm store does not exist on a fresh runner
+          # and the cache-save step fails the job (run 42385639298, BUG-272).
+          cache: ${{ steps.urls.outputs.configured == 'yes' ? 'pnpm' : '' }}
 
       - name: Set up Java 17
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
@@ -62,35 +118,18 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Whether the auth URL is configured
-        # The value is reported without being read into the environment of
-        # every later step: a repository VARIABLE is not a secret, but the
-        # presence check is the one the steps after it need, and exporting the
-        # value everywhere to find out is the shape BUG-100 removed.
-        id: auth-url
-        env:
-          EXPO_PUBLIC_AUTH_URL: ${{ vars.EXPO_PUBLIC_AUTH_URL }}
-        run: |
-          set -euo pipefail
-          if [ -z "${EXPO_PUBLIC_AUTH_URL}" ]; then
-            echo "configured=no" >> "$GITHUB_OUTPUT"
-            echo "::notice::EXPO_PUBLIC_AUTH_URL is not set, so this merge publishes no APK: a build that names no auth server cannot sign anyone in (BUG-072). Set the repository variable (Settings > Secrets and variables > Actions > Variables); the next merge publishes the stable link (A6)."
-          else
-            echo "configured=yes" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Install the dependencies
-        if: steps.auth-url.outputs.configured == 'yes'
+        if: steps.urls.outputs.configured == 'yes'
         run: pnpm install --frozen-lockfile
 
       - name: Build the design tokens
-        if: steps.auth-url.outputs.configured == 'yes'
+        if: steps.urls.outputs.configured == 'yes'
         # The app imports @courier/design-tokens/tokens; Metro resolves it from
         # the built dist, so the package is built before the bundle.
         run: pnpm --filter @courier/design-tokens build
 
       - name: Read the signing secrets
-        if: steps.auth-url.outputs.configured == 'yes'
+        if: steps.urls.outputs.configured == 'yes'
         id: keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -105,20 +144,23 @@ jobs:
           fi
 
       - name: Build the APK
-        if: steps.auth-url.outputs.configured == 'yes'
+        if: steps.urls.outputs.configured == 'yes'
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          # BUG-072: the auth base URL is a build-time literal. Without this
-          # the release bundle carries a localhost literal that no phone can
-          # reach, and nothing downstream can tell.
-          EXPO_PUBLIC_AUTH_URL: ${{ vars.EXPO_PUBLIC_AUTH_URL }}
+          # BUG-072: the URLs are build-time literals. Without this the bundle
+          # carries a localhost literal that no phone can reach, and nothing
+          # downstream can tell. BUG-272 (A5): BOTH URLs are pinned - the auth
+          # URL and the API base - so the shipped APK dials the staging edge
+          # for sign-in AND for the run data, not one and a localhost.
+          EXPO_PUBLIC_AUTH_URL: ${{ steps.urls.outputs.auth_url }}
+          EXPO_PUBLIC_API_URL: ${{ steps.urls.outputs.api_url }}
         run: |
           set -euo pipefail
-          if [ -z "${EXPO_PUBLIC_AUTH_URL}" ]; then
-            echo "::error::EXPO_PUBLIC_AUTH_URL is not set: this APK could not sign anyone in."
+          if [ -z "${EXPO_PUBLIC_AUTH_URL}" ] || [ -z "${EXPO_PUBLIC_API_URL}" ]; then
+            echo "::error::the build URLs are not set: this APK could not sign anyone in or reach the API."
             exit 1
           fi
           pnpm --filter mobile exec expo prebuild --platform android --no-install
@@ -134,7 +176,7 @@ jobs:
           fi
 
       - name: Collect the APK
-        if: steps.auth-url.outputs.configured == 'yes'
+        if: steps.urls.outputs.configured == 'yes'
         id: apk
         working-directory: apps/mobile/android
         run: |
@@ -150,7 +192,7 @@ jobs:
           echo "file=$(ls artifacts)" >> "$GITHUB_OUTPUT"
 
       - name: Check the APK against the store budget
-        if: steps.auth-url.outputs.configured == 'yes'
+        if: steps.urls.outputs.configured == 'yes'
         # The 80 MB budget and the 64-bit requirement, on the very bytes this
         # run produced (BUG-099's release mode).
         run: |
@@ -159,7 +201,7 @@ jobs:
             --apk "apps/mobile/android/artifacts/${{ steps.apk.outputs.file }}"
 
       - name: Attach the APK to the stable link
-        if: steps.auth-url.outputs.configured == 'yes'
+        if: steps.urls.outputs.configured == 'yes'
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           # The fixed tag: the same URL after every merge.
