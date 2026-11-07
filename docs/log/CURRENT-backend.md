@@ -923,6 +923,10 @@ main-apk.yml's new first step `The URLs this APK dials` pins the stable `latest`
 
 `docs/study/andee/IDEAS.md` records the Andee ideas clean-room, in our own words, written WITHOUT re-opening the source (from the 2026-10-27 root-only read recorded in reference-repos.md and the clean-room spec). Each idea carries its status: pre-classifier, stop-and-ask and inspectable memory are ADOPTED (§22 A on main; B+C via ADR-028/D65/BUG-273 and BUG-202); labelled-grid aiming is NOT adopted for the driver (Play's accessibility-service restriction, D48 out of trial scope); four further ideas are recorded unscheduled. No code, prompts, file names or model identifiers from the source appear; the licence stance (A.1(d)) is restated; the CI licence gate runs on every PR. BUG-274 filed; evidence `docs/evidence/andee-cleanroom-ideas/`. Next in item 7: MASVS L2 or a recorded decision. Skills: documentation-and-adrs, constraint-driven-development.
 
+## 2026-11-08: PR #272 merged (7fdccd2) - the clean-room ideas are recorded in docs/study/andee/IDEAS.md (BUG-274, D48)
+
+The Andee ideas now live in the study tree, ideas only and never code: §22 A/B/C marked adopted (turn_gate.py; ADR-028/D65/BUG-273; BUG-202/PR #256), labelled-grid aiming not adopted for the driver (Play's accessibility-service restriction; out of trial scope per D48), four further ideas recorded unscheduled. The file carries no source code/prompts/file names/model identifiers and was written without re-opening the source; the CI licence gate runs on every PR. All 17 checks green on head fe0a8f6 (12 success, 5 skipped path-limited gates). Squash-merged as 7fdccd2, archive tag archive/item7-cleanroom @ fe0a8f6, branch deleted, ls-remote proof recorded. BUG-274 fixed. Next in item 7: MASVS L2 or a recorded decision. Skills: documentation-and-adrs, git-workflow-and-versioning.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
