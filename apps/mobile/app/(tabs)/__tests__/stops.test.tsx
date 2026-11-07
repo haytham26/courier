@@ -12,7 +12,7 @@
  * the run's marks and the segments, and none of that needs a device.
  */
 import React from 'react';
-import { Text } from 'react-native';
+import { KeyboardAvoidingView, Text } from 'react-native';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -758,5 +758,27 @@ describe("the route screen's import sheet (queue 4e)", () => {
     await waitFor(() => {
       expect(screen.queryByTestId('stops-import-sheet')).toBeNull();
     });
+  });
+
+  // BUG-197: on edge-to-edge Android (api 34/35) adjustResize does not shrink
+  // the window, so the soft keyboard used to cover the sheet's pinned actions
+  // row and `stops-import-go` left the accessibility tree (runs 42136053866,
+  // 42155905246). The fix is a KeyboardAvoidingView around the sheet's
+  // content: the pinned actions are INSIDE it, so they ride above the keyboard
+  // while the paste field is focused.
+  it('rides the pinned actions above the soft keyboard (BUG-197)', async () => {
+    await openAndPaste('address\n1 Import Lane');
+
+    // KAV destructures `behavior`, so it is read off the component, not the
+    // host view the testID lands on.
+    const avoiding = screen.UNSAFE_getByType(KeyboardAvoidingView);
+    expect(avoiding.props.behavior).toBe('padding');
+    // The primary action and the dismiss are both inside the avoiding view -
+    // that containment is the whole fix, not a style on the row.
+    expect(within(avoiding).getByTestId('stops-import-go')).toBeTruthy();
+    expect(within(avoiding).getByTestId('stops-import-dismiss')).toBeTruthy();
+    // And the sheet's own body is inside it too, so the keyboard pushes the
+    // whole content, not only the row.
+    expect(within(avoiding).getByTestId('stops-import-text')).toBeTruthy();
   });
 });
