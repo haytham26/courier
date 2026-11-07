@@ -24,7 +24,16 @@
  * cannot. The record is in the evidence sheet; the button is never faked.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useColorScheme,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Camera, Map as MapView, Marker } from '@maplibre/maplibre-react-native';
 
@@ -616,7 +625,22 @@ function RouteScreen() {
               hint and the paste field. The notes pin above the actions, so
               every answer is on screen when it is spoken. */}
           <GlassSurface kind="sheet" testID="stops-import-sheet" style={[styles.detail, styles.importSheet]}>
-            <ScrollView style={styles.importScrollBody} contentContainerStyle={styles.importScroll}>
+            {/* BUG-197: Android draws edge-to-edge on api 34/35, so
+                windowSoftInputMode="adjustResize" does not shrink the window
+                and the soft keyboard covers the sheet's bottom while the paste
+                field is focused - the pinned actions row left the
+                accessibility tree (runs 42136053866 + 42155905246). The
+                avoiding view pads the sheet's content up by the keyboard's
+                height, so the actions ride above the keyboard; "padding" is
+                the behavior that works edge-to-edge (the window itself is
+                never resized). */}
+            <KeyboardAvoidingView behavior="padding" style={styles.importAvoid} testID="stops-import-kav">
+            <ScrollView
+              style={styles.importScrollBody}
+              contentContainerStyle={styles.importScroll}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
               <Text style={[styles.detailTitle, { color: t.colors.label }]}>Import stops</Text>
               <Text style={[styles.detailSuburb, { color: t.colors.secondaryLabel }]}>
                 Paste the spreadsheet (CSV): one header row, an address column.
@@ -675,6 +699,7 @@ function RouteScreen() {
                   </Text>
                 </Pressable>
             </View>
+            </KeyboardAvoidingView>
           </GlassSurface>
         </>
       )}
@@ -745,6 +770,9 @@ const styles = StyleSheet.create({
   // screen - run 42136053866's api-34 leg clipped the Go button out of the
   // accessibility tree on the 320x640 emulator.
   importSheet: { top: spacing.space64 },
+  // BUG-197: the avoiding view fills the sheet so its padding pushes the
+  // pinned actions above the soft keyboard.
+  importAvoid: { flex: 1 },
   importScrollBody: { flex: 1 },
   importScroll: { gap: spacing.space12 },
   importInput: {

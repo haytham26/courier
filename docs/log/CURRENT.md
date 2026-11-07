@@ -29,6 +29,13 @@ seeded from screen-recordings run 42353916218 re-run; determinism measured
 Queue next: **P7** acceptance on two screen sizes — to the §6 Definition of
 Done.**
 
+In flight: **BUG-197** on `feat/bug197-import-keyboard` (the small-screen
+acceptance defect: the soft keyboard covered the import sheet's pinned
+actions on edge-to-edge api 34/35 — the fix wraps the sheet in a
+`KeyboardAvoidingView`, and `import.yaml` now taps Import with the keyboard
+still down). Queue next after it: **P7** acceptance evidence + scorecard,
+**BUG-034** handover docs.
+
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
