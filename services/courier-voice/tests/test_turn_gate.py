@@ -18,7 +18,17 @@ from typing import Any
 from app.models import RunContext
 from app.turn_gate import TurnRoute, route_turn
 
-REPO = Path(__file__).resolve().parents[3]
+# mutmut runs the suite from the copied `mutants/` tree, where a plain
+# `parents[3]` is the services directory, not the repository root - and the
+# lane's clean pass then read `services/packages/eval/voice/manifest/...` and
+# died (run 42347923596: FileNotFoundError in
+# TestTheRoutingIsMeasureAndCorrectOnTheSet). Strip the trailing `mutants` so
+# the anchor is the real repository either way. BUG-242.
+_here = Path(__file__).resolve()
+_service = _here.parents[1]
+if _service.name == "mutants":
+    _service = _service.parent
+REPO = _service.parent.parent
 SCRIPTS = REPO / "packages" / "eval" / "voice" / "manifest" / "scripts.jsonl"
 
 #: The commands whose answer does not depend on the day: the gate may answer
@@ -33,6 +43,13 @@ CONTEXT_FREE = {
     "start_break",
     "end_break",
 }
+
+
+def test_the_manifest_anchor_never_resolves_into_the_mutants_copy() -> None:
+    """BUG-242: pinned for the mutation lane - the eval manifest is read from
+    the real repository root, never from mutmut's copied `mutants/` tree."""
+    assert "mutants" not in REPO.parts, f"{REPO} resolves inside the mutants copy"
+    assert SCRIPTS.is_file(), f"{SCRIPTS} is not there"
 
 
 class TestTheClosedOutcomeSet:
