@@ -1,0 +1,131 @@
+appId: com.courier.copilot
+name: The voice-sample recorder records with consent (A3)
+---
+# BUG-185: stop the app FIRST, then clear its state.
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The settings' Debug row (rendered in the test build the E2E legs install)
+# opens the recorder screen.
+- openLink: "courier:///settings"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 30000
+- tapOn:
+    id: "settings-voice-samples"
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-screen"
+    timeout: 30000
+# The exact per-purpose wording is on the screen (consent is never bundled).
+- assertVisible:
+    id: "voice-samples-wording-evaluation"
+- assertVisible:
+    id: "voice-samples-wording-training"
+# Consent to evaluation use, separately from training use. Wait until the
+# switch reads checked, so the consent record is written before Record taps.
+- tapOn:
+    id: "voice-samples-consent-evaluation"
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-consent-evaluation"
+      checked: true
+    timeout: 15000
+# On the 320x640 emulator the controls below the consent card sit below the
+# fold of the screen's own ScrollView (the BUG-050 class), so each is revealed
+# with the repo's scrollUntilVisible convention (summary.yaml, sign-in.yaml)
+# before it is tapped or asserted. The E2E build's recorder answers the canned
+# m4a at once (the emulator runs -noaudio), so stop() lands the row quickly.
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-record"
+    direction: DOWN
+    timeout: 20000
+# Record, then stop: the sample lands in the list below.
+# NOTE: Maestro's id selector is a FULL-match regex - the sample's testID is
+# dynamic (voice-samples-sample-<stamp>-<roll>), so every selector on it
+# carries the trailing `.*` (runs 42331471045..42339366069 failed 30 s of
+# "Element not found" on the bare prefix alone).
+- tapOn:
+    id: "voice-samples-record"
+- tapOn:
+    id: "voice-samples-stop"
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-sample-.*"
+    direction: DOWN
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-sample-.*"
+    timeout: 30000
+# Delete removes the sample again.
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-sample-.*-delete"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "voice-samples-sample-.*-delete"
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-empty"
+    timeout: 30000
+# Record once more, then revoke (the second tap confirms): revocation deletes
+# every sample - the headline rule of the consent contract. The Record control
+# is ABOVE the list we just scrolled to, so the reveal scrolls back up.
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-record"
+    direction: UP
+    timeout: 20000
+- tapOn:
+    id: "voice-samples-record"
+- tapOn:
+    id: "voice-samples-stop"
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-sample-.*"
+    direction: DOWN
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-sample-.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-revoke"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "voice-samples-revoke"
+- tapOn:
+    id: "voice-samples-revoke"
+# The list sits above the revoke row we just revealed: scroll back up to it.
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-empty"
+    direction: UP
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-empty"
+    timeout: 30000
+- assertNotVisible:
+    id: "voice-samples-sample-.*"
+# And the consent itself is revoked: the evaluation switch reads unchecked.
+- scrollUntilVisible:
+    element:
+      id: "voice-samples-consent-evaluation"
+    direction: UP
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "voice-samples-consent-evaluation"
+      checked: false
+    timeout: 15000

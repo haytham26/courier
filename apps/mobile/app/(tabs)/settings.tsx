@@ -42,6 +42,7 @@ import { readStoredViewMode } from '@/maps/viewModes';
 import { createFilePreferenceStore } from '@/sync/preferenceFiles';
 import { createMemoryPreferenceStore } from '@/sync/storage';
 import { VOICE_VERBOSITIES, type VoiceSettings, type VoiceVerbosity } from '@/voice/settings';
+import { recorderForThisBuild } from '@/voice/testing/recorderForThisBuild';
 import { useCourierVoice } from '@/voice/useCourierVoice';
 import { radii, spacing, touch, typography } from '@courier/design-tokens/chosen';
 
@@ -311,6 +312,25 @@ export default function SettingsScreen() {
     },
   ];
 
+  // Audit A3 item 3: the test-build voice-sample recorder gets its row here,
+  // in a Debug group that only a test build renders (a debug build or the E2E
+  // emulator build; a shipped release renders neither). It sits with the
+  // other high rows (under Session), not at the end of the list, so the row
+  // is above the fold on a 320x640 screen and the flow that taps it finds it.
+  const debugRows: Row[] = [
+    {
+      key: 'voice-samples',
+      label: 'Voice samples (beta)',
+      icon: 'mic',
+      tone: 'info2',
+      onPress: () => {
+        hapticFor('confirm');
+        router.navigate('/voice-samples');
+      },
+      testID: 'settings-voice-samples',
+    },
+  ];
+
   return (
     <SafeAreaView testID="settings-screen" style={[styles.container, { backgroundColor: t.colors.background }]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -347,6 +367,9 @@ export default function SettingsScreen() {
             "Element not found" the moment the list is taller than the window
             (the same class of failure as BUG-050's clipped actions row). */}
         <SettingsGroup title="Session" rows={signOutRows} />
+
+        {/* Audit A3: the test-build-only row, rendered only when the seam is on. */}
+        {recorderForThisBuild() && <SettingsGroup title="Debug" rows={debugRows} />}
 
         <SettingsGroup title="Voice" rows={voiceRows} />
 

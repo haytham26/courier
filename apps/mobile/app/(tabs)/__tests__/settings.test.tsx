@@ -252,6 +252,42 @@ describe('the settings screen', () => {
       expect(voice).toBeGreaterThan(session);
     });
 
+    // Audit A3: the debug-build voice-sample recorder gets its row in a Debug
+    // group between Session and Voice (above the fold, like the rows the
+    // flows tap), and only in a debug build.
+    it('shows the Debug group with the voice-samples row in a debug build', () => {
+      const { toJSON } = renderScreen();
+      const flat = JSON.stringify(toJSON());
+
+      expect(screen.getByTestId('settings-voice-samples')).toBeTruthy();
+      const session = flat.indexOf('SESSION');
+      const debug = flat.indexOf('DEBUG');
+      const voice = flat.indexOf('VOICE');
+      expect(debug).toBeGreaterThan(session);
+      expect(voice).toBeGreaterThan(debug);
+    });
+
+    it('hides the Debug group in a release build', () => {
+      const g = globalThis as unknown as { __DEV__: boolean };
+      const original = g.__DEV__;
+      const originalE2E = process.env.EXPO_PUBLIC_E2E;
+      g.__DEV__ = false;
+      delete process.env.EXPO_PUBLIC_E2E;
+      try {
+        const { toJSON, unmount } = renderScreen();
+        expect(screen.queryByTestId('settings-voice-samples')).toBeNull();
+        expect(JSON.stringify(toJSON())).not.toContain('DEBUG');
+        unmount();
+      } finally {
+        g.__DEV__ = original;
+        if (originalE2E === undefined) {
+          delete process.env.EXPO_PUBLIC_E2E;
+        } else {
+          process.env.EXPO_PUBLIC_E2E = originalE2E;
+        }
+      }
+    });
+
     it('Location & Privacy opens the disclosure with the legal text, Done closes it', () => {
       renderScreen();
 
