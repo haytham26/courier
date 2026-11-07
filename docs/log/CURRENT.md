@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `7fe5f04` (PR #259, P4 visual-regression baselines, BUG-203). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
+**Week:** 2026-W44. **Local `main` == `origin/main` == `59b5504` (PR #262, `docs/HANDOVER.md`, BUG-034 doing). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
 side, BUG-200 — the prominent background-location disclosure is shown in-app
 before the permission request, and the settings carry the Legal rows). Behind it
 `0f500fe` = PR #251 (BUG-236 — the backend's row), `ffa60ba` = PR #249 (item 5a,
@@ -33,6 +33,11 @@ Also in flight: **BUG-034** on `docs/handover-034` (`docs/HANDOVER.md` —
 run, deploy, keys, map updates, acceptance, the v1.0.0 release order) and
 **BUG-197** on `feat/bug197-import-keyboard` (PR #261, the small-screen
 keyboard fix).
+**P7 acceptance** on `docs/p7-acceptance` (this branch): BUG-270 filed (the
+second/large AVD profile is platform-owned), the acceptance record in
+`docs/evidence/acceptance/README.md` (run 42363101590: 21/21 flows on both
+api legs + A1 no-mock with Postgres row asserts), and the scorecard refreshed
+to 2026-11-08 in `docs/status/QUALITY_SCORECARD.md`.
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
