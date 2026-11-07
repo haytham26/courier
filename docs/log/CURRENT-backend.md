@@ -875,6 +875,10 @@ The first full measurement (run 42350269397: API 49.7 %, voice 58.0 %) showed th
 
 Two measurements now exist: with the db suite in the lane (BUG-243, PR #258, dispatch 42362684046) the API reads **85.8 %** (2264 killed + 15 timeout of 2656; no_tests fell 941 -> 23) - the floor job is GREEN; the voice service stays **58.0 %** (400 of 690; 284 survivors). BUG-244 adds 42 tests pinning the whole reply contract of the surviving classes (conversation answers incl. every empty branch and the `question=` kwarg; the offline brain's ReasoningReply incl. source/engine/question and the empty fallbacks; turns state attributes and the >= boundary; safety's exact counter/cleaner outputs). Red-first: 10 survivor mutants hand-applied -> 13 failures; reverted -> green; voice suite 355 passed. BUG-244 filed; evidence `docs/evidence/mutation-lane-244/`. Dispatching the lane on this branch to re-measure voice. Skills: test-driven-development, debugging-and-error-recovery, constraint-driven-development.
 
+## 2026-11-08: PR #258 merged - B4 MEASURED ABOVE THE FLOOR ON BOTH SERVICES: API 86.0 %, voice 87.1 %
+
+Dispatch 42366549049 on head 9c05df0: both mutation-floor jobs SUCCESS - API 2270 killed + 14 timeout of 2656 (86.0 %; no_tests 941 -> 23 once the db suite ran in the lane, BUG-243) and voice 601 of 690 (87.1 %; BUG-244's 42 whole-contract tests killed 201 of the 284 survivors). Merged as PR #258, archive tag archive/item7-b4-db-in-lane @ 9c05df0, branch deleted, ls-remote proof recorded. Remaining B4 step (BUG-245): gate the floor in CI at PR time - a `mutation-scopes` What-changed job in quality-gates.yml plus per-service floor jobs (PostGIS service for the API) that run `check-mutation-floor.mjs run <service>` whenever the PR touches that service's `[tool.mutmut] source_paths`; then BUG-112 goes to its real state. Skills: ci-cd-and-automation, constraint-driven-development.
+
 ## The CodeQL situation, in full (this is the item to read before touching the auth service)
 
 The repository has **two** code-scanning configurations, and they disagree on the same commit:
