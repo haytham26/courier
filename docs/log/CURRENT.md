@@ -95,6 +95,32 @@ Queue: this PR (PLAYBOOK §16 + TRIAL_SCOPE rows -> Built) -> voice audio-inject
 research -> BUG-270 PR (android-e2e.yml is mine now) -> voice eval honesty
 (held-out streets, real-STT numbers) -> scale-testing lane.
 
+---
+
+## 2026-11-08: BUG-270 PR opened — the large-screen AVD is the lead's now
+
+`.github/workflows/android-e2e.yml` moved to the lead in PR #276 (PLAYBOOK §16),
+so BUG-270 is ours: this PR adds a `profile` matrix dimension to the e2e job —
+`small` (empty `profile:` input = avdmanager's default device, the one every
+green run so far booted; verified in the action's own `createAvd`: an empty
+profile passes no `--device`) and `large` (`Pixel 6`, 1080×2400 google_apis
+x86_64) — on BOTH api 34 and 35 legs, so P7's two-screen-size half runs. Pin
+discipline kept and extended: the pins fingerprint now carries
+`profile=.../device=...` and the AVD cache key is
+`avd-<os>-<api>-<profile>-google-apis-x86_64-<pins-hash>` with NO restore-keys
+(exact-only restore, per check-e2e-avd-restore-keys.mjs); the evidence
+artifact is `android-e2e-evidence-api<api>-<profile>` and e2e-pins.txt records
+the profile. BUGS.md BUG-270 -> doing; acceptance README §3 amended. The
+screen-recordings.yml half (P4's 8 pending large/200% baselines) is the
+backend's file — the question is in the #276 entry above.
+
+Gates run locally on the branch: check-workflows, check-e2e-pins,
+check-e2e-avd-restore-keys, check-e2e-dispatch, check-emulator-gpu,
+check-action-pins, parity, doc-links, control-chars, mojibake, markers.
+This PR's diff touches `.github/workflows/android-e2e.yml`, so the pipeline
+leg DOES run on it: 4 Maestro legs + A1. The green large legs are the evidence
+that closes BUG-270 (status -> testing -> fixed with the run id).
+
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
