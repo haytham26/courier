@@ -25,7 +25,8 @@ import {
 import type { MapViewMode } from '@/maps/viewModes';
 import { publishVoiceCommand } from './commandChannel';
 import { parseVoiceCommand } from './commands';
-import { aLiveListener, type LiveListener } from './streamingStt';
+import { audioSourceForThisBuild } from './audioSourceForThisBuild';
+import { aLiveListener, transcribeRecordedUtterance, type LiveListener } from './streamingStt';
 
 export interface VoiceConfig {
   sttModelPath: string;
@@ -281,6 +282,34 @@ class VoiceService {
     if (this.listener !== null) {
       await this.listener.stop();
       this.listener = null;
+    }
+
+    // Option C (the audio-injection research): a TEST build that has an
+    // audio file armed feeds the push-to-talk through the EXISTING
+    // recorded-utterance seam (`transcribeRecordedUtterance`, reused here,
+    // not duplicated) instead of opening the microphone - byte-deterministic
+    // input for the scale runs. A release build never answers a file (the
+    // seam's own gate, pinned by audioSourceForThisBuild.test.ts and refused
+    // at build time by check-e2e-flag.mjs), so the live path below is the
+    // only path a shipped build takes.
+    const audioSource = audioSourceForThisBuild();
+    if (audioSource.kind === 'file') {
+      this.setState('listening');
+      const answer = await transcribeRecordedUtterance(audioSource.path, {
+        path: this.config.sttModelPath,
+      });
+      if (answer.status === 'ok') {
+        // The file's sentence drives the same turn flow a live ear drives.
+        this.holdTranscript(answer.text, true);
+        this.setState('idle');
+        return;
+      }
+      // The file could not be read or there is no recognizer: the answer
+      // names it, and the courier is never shown a listening that captured
+      // nothing (the A2 rule).
+      this.setState('error');
+      this.callbacks?.onError(new Error(answer.message));
+      return;
     }
 
     const start = await aLiveListener({

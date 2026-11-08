@@ -25,6 +25,7 @@ function over(files) {
     mkdirSync(path.join(dir, 'apps', 'mobile', 'app', '(tabs)'), { recursive: true });
     mkdirSync(path.join(dir, 'apps', 'mobile', 'src', 'scans'), { recursive: true });
     mkdirSync(path.join(dir, 'apps', 'mobile', 'src', 'maps'), { recursive: true });
+    mkdirSync(path.join(dir, 'apps', 'mobile', 'src', 'voice'), { recursive: true });
     for (const [relative, text] of Object.entries(files)) {
       writeFileSync(path.join(dir, relative), text, 'utf8');
     }
@@ -91,4 +92,30 @@ test('the gate is clean over the repository itself once A4 lands', () => {
     .filter((line) => /^\s+apps\/mobile/.test(line))
     .map((line) => line.trim());
   assert.deepEqual(offenders, [], `the mock list is still reachable from: ${offenders.join(', ')}`);
+});
+
+// The option-C audio-file input (docs/research/2026/voice-audio-injection.md):
+// the module that owns WHICH audio file a test build may feed the recognizer
+// is guarded the way the mock list is - only the build-flag seam
+// (audioSourceForThisBuild) may import it, so a release build can never reach
+// the file input from a screen.
+test('a screen importing the audio-file source directly fails, and is named', () => {
+  const { code, out } = over({
+    'apps/mobile/app/(tabs)/map.tsx':
+      "import { audioFileInput } from '@/voice/audioFileInput';\nexport const Map = () => audioFileInput;\n",
+    'apps/mobile/src/voice/audioSourceForThisBuild.ts':
+      "import { audioFileInput } from './audioFileInput';\nexport const source = () => audioFileInput;\n",
+  });
+  assert.notEqual(code, 0);
+  assert.match(out, /map\.tsx/);
+  assert.doesNotMatch(out, /audioSourceForThisBuild\.ts/);
+});
+
+test('the voice seam importing the audio-file source is not flagged', () => {
+  const { code } = over({
+    'apps/mobile/src/voice/audioFileInput.ts': 'export const audioFileInput = () => null;\n',
+    'apps/mobile/src/voice/audioSourceForThisBuild.ts':
+      "import { audioFileInput } from './audioFileInput';\nexport const source = () => audioFileInput;\n",
+  });
+  assert.equal(code, 0);
 });
