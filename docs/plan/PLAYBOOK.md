@@ -128,10 +128,11 @@ A test that passes without proving anything is worse than no test: it hides the 
 
 ## 16. Two sessions, one repo: never chase the other session's failure (founder directive 2026-10-25)
 
-**Who owns what:**
-- The lead owns `apps/mobile`, `.maestro`, `packages/design-tokens` and the Android E2E workflow.
-- The backend owns `services/`, `infra/`, `db/`, the API and voice contracts, and the CI steps that test them: the Postgres suite, the restore drill and the Locust SLO profile.
-- The docs and registers are shared; take numbers per §13.
+**Who owns what** (founder directive 2026-11-08 — this replaces the earlier split):
+- The lead owns `apps/mobile` (including `src/voice`), every `.maestro` flow, `packages/design-tokens`, `services/courier-voice`, `packages/eval/voice`, `scripts/eval/*voice*`, and `.github/workflows/android-e2e.yml` (the Android E2E workflow file).
+- The backend owns `services/api`, `services/auth`, `packages/shared`, `db/`, `infra/` and every other `.github` file, plus the CI steps that test them: the Postgres suite, the restore drill and the Locust SLO profile.
+- The docs and registers are shared; take numbers per §13. The lead's bug range is **BUG-300..349** (BUG-270..276 are already used); the backend's is **BUG-277..299**. Before taking a number, check `origin/main`, every origin branch AND the numbers claimed in `docs/log/CURRENT-backend.md` (its live branch may not be pushed yet).
+- From 2026-11-08 the lead logs only in `docs/log/CURRENT.md` (no week-file appends); the backend keeps `docs/log/CURRENT-backend.md`.
 
 **Before investigating any red check:**
 1. Read the failing step's name. If it tests the other session's paths, it is theirs.
