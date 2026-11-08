@@ -155,6 +155,16 @@ class ParsedAddress:
     # type). The engine matches it against the suburbs the road really runs
     # through, so a rural suburb the hardcoded list does not know still works.
     suburb_hint: str | None = None
+    # The two readings of a direction word after the street type ("1 Halsey
+    # Street, South New Brighton" vs "9 Ascot Avenue, North New Brighton"):
+    # the direction may belong to the ROAD ("Halsey St South") or to the
+    # SUBURB ("South New Brighton"). The parser cannot tell without the
+    # register's road names, so it hands the engine both readings:
+    # `street` keeps the direction on the road (as the driver said it) and
+    # `street_alt` is the road without it; `suburb_hint` is the tail after the
+    # direction, `hint_alt` the full tail including it.
+    street_alt: str | None = None
+    hint_alt: str | None = None
 
     @property
     def street_key(self) -> str:
@@ -345,49 +355,70 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
     tokens = rest.split()
     street, suburb, conf = None, None, 0.6
     hint = None
-    for i, tok in enumerate(tokens):
-        if tok in STREET_TYPES:
-            # C3: the road's direction word comes after its type ("193 Durham
-            # Street South Christchurch Central"), and the driver then repeats the
-            # city's name. The whole tail was handed to the suburb matcher, so it
-            # saw "south christchurch central christchurch", matched nothing, and
-            # answered with no suburb at all. The direction is set aside for the
-            # suburb match and kept on the road, because that is what the driver
-            # said and what the register's road name carries.
-            #
-            # It is set aside only when a suburb matches after it: "South
-            # Christchurch" is a suburb in its own right, and stripping it there
-            # would answer with the direction moved onto the road and no suburb at
-            # all. The direction is only a direction when the words after it name
-            # somewhere.
-            direction_tokens: list[str] = []
+    street_alt = None
+    hint_alt = None
+    # The split is at a street-type word, but a road name can carry more than
+    # one ("Lake Terrace Road": "terrace" and "road" are both types). The
+    # position whose tail names a suburb best wins; on a tie the LATER type
+    # word wins, because a road's own type is its last word ("Lake Terrace
+    # Rd"), while a suburb that starts with a type word ("St Albans") scores
+    # on the earlier position and protects itself.
+    type_positions = [i for i, tok in enumerate(tokens) if tok in STREET_TYPES]
+    if type_positions:
+        best_i, best_score = type_positions[0], -1.0
+        for i in type_positions:
+            tail = " ".join(tokens[i + 1 :])
+            score = match_suburb_tail(tail, suburbs)[1] if tail else 0.0
+            if score > best_score or (score == best_score and i > best_i):
+                best_i, best_score = i, score
+        i = best_i
+        tok = tokens[i]
+        # C3: the road's direction word comes after its type ("193 Durham
+        # Street South Christchurch Central"), and the driver then repeats the
+        # city's name. The whole tail was handed to the suburb matcher, so it
+        # saw "south christchurch central christchurch", matched nothing, and
+        # answered with no suburb at all. The direction is set aside for the
+        # suburb match and kept on the road, because that is what the driver
+        # said and what the register's road name carries.
+        #
+        # It is set aside only when a suburb matches after it: "South
+        # Christchurch" is a suburb in its own right, and stripping it there
+        # would answer with the direction moved onto the road and no suburb at
+        # all. The direction is only a direction when the words after it name
+        # somewhere.
+        direction_tokens: list[str] = []
+        tail_tokens = tokens[i + 1 :]
+        while tail_tokens and tail_tokens[0] in ROAD_DIRECTIONS:
+            direction_tokens.append(tail_tokens.pop(0))
+        street_core = " ".join(t.title() for t in tokens[:i]) + " " + STREET_TYPES[tok]
+        street = street_core
+        tail = " ".join(tail_tokens)
+        matched = match_suburb_tail(tail, suburbs)[0] if tail else None
+        if direction_tokens and matched is None:
+            # The direction was not a direction: it belongs to the suburb.
             tail_tokens = tokens[i + 1 :]
-            while tail_tokens and tail_tokens[0] in ROAD_DIRECTIONS:
-                direction_tokens.append(tail_tokens.pop(0))
-            street = " ".join(t.title() for t in tokens[:i]) + " " + STREET_TYPES[tok]
             tail = " ".join(tail_tokens)
             matched = match_suburb_tail(tail, suburbs)[0] if tail else None
-            if direction_tokens and matched is None:
-                # The direction was not a direction: it belongs to the suburb.
-                tail_tokens = tokens[i + 1 :]
-                tail = " ".join(tail_tokens)
-                matched = match_suburb_tail(tail, suburbs)[0] if tail else None
-                if matched is not None:
-                    direction_tokens.clear()
-            if direction_tokens:
-                street += " " + " ".join(token.title() for token in direction_tokens)
-            if tail:
-                # The tail is handed to the engine as a hint EVEN WHEN this
-                # parser's own vocabulary does not know it. The engine matches
-                # the hint against the suburbs the road really runs through, so
-                # the register - not a hardcoded list of 45 Christchurch
-                # suburbs - decides. Throwing the tail away made the engine ask
-                # "which suburb?" about an address whose driver had just named
-                # it (`docs/evidence/phase-2.3/linz-accuracy.md`).
-                hint = tail
-                if matched is not None:
-                    suburb, conf = match_suburb_tail(tail, suburbs)
-            break
+            if matched is not None:
+                direction_tokens.clear()
+        if direction_tokens:
+            street += " " + " ".join(token.title() for token in direction_tokens)
+            # Both readings go to the engine: the direction may name the road
+            # ("Ascot Avenue North") or the suburb ("South New Brighton"), and
+            # only the register's road names can say which.
+            street_alt = street_core
+            hint_alt = " ".join(tokens[i + 1 :])
+        if tail:
+            # The tail is handed to the engine as a hint EVEN WHEN this
+            # parser's own vocabulary does not know it. The engine matches
+            # the hint against the suburbs the road really runs through, so
+            # the register - not a hardcoded list of 45 Christchurch
+            # suburbs - decides. Throwing the tail away made the engine ask
+            # "which suburb?" about an address whose driver had just named
+            # it (`docs/evidence/phase-2.3/linz-accuracy.md`).
+            hint = tail
+            if matched is not None:
+                suburb, conf = match_suburb_tail(tail, suburbs)
     else:
         # No street type spoken: the tail that names the suburb is the SHORTEST
         # exact match first, and a fuzzy match is only tried when no exact one
@@ -412,5 +443,13 @@ def parse(raw: str, suburbs: list[str] = CHCH_SUBURBS) -> ParsedAddress:
     if not number:
         conf *= 0.5
     return ParsedAddress(
-        unit, number, suffix, street.strip() if street else None, suburb, round(conf, 2), hint
+        unit,
+        number,
+        suffix,
+        street.strip() if street else None,
+        suburb,
+        round(conf, 2),
+        hint,
+        street_alt.strip() if street_alt else None,
+        hint_alt,
     )

@@ -57,6 +57,9 @@ uv run --directory services/api pytest tests/test_linz_accuracy.py -q
 | 2026-10-30, after | 96.9 % (1744/1800) | 656,392 | the register's own suburb vocabulary + the spoken house number |
 | 2026-11-04 | 98.2 % (1767/1800) | 656,392 | a spoken unit keeps its letter (`287C/28`); the unit comparison folds case |
 | **2026-11-08, re-run for this ADR** | **98.2 % (1767/1800)** | 656,392 | `1 passed in 426s` — reproduces the 2026-11-04 number exactly |
+| 2026-11-08, directive item 2, held-out BEFORE | 97.57 % (5854/6000) held-out; 98.48 % (5909/6000) tune | 656,392 | the seeded held-out split (1,360 of 6,802 Canterbury streets, seed 20261108, list committed at `services/api/tests/fixtures/linz-holdout-streets.txt` by `scripts/data/split-linz-holdout.py`) measured before the fixes; error analysis grouped all 91 tune misses (`docs/evidence/phase-2.3/linz-errors-tune.md`) |
+| 2026-11-08, after round 1 | 99.63 % (5978/6000) held-out; 99.92 % (5995/6000) tune | 656,392 | root fixes per class: multi-type road names split at their own type ("Lake Terrace Rd"); both direction readings handed to the engine (`street_alt`/`hint_alt`, the register decides); the self-correction marker no longer eats roads named "No …"; road candidates disambiguated WITH the spoken suburb (`_match_roads` + progressive `_match_hint`) plus a completion bonus in `road_similarity` — the 0.78/0.8 bars never lowered |
+| 2026-11-08, after round 2 | 99.65% (5979/6000) held-out; 99.97% (5998/6000) tune; 99.5% (1791/1800) on the legacy seeded 1800 | 656,392 | the spoken number/unit existence and the shorter road name break ties among suburb-matched candidates ("334 Halswell" -> Halswell Road, not Halswell Junction Road; "100 Peterborough" -> Peterborough Street) |
 
 The 2026-10-20 baseline and the 2026-10-30 runs are not the same data set (LINZ
 publishes weekly; the 648 added addresses cannot be fetched back), so the honest
@@ -66,10 +69,11 @@ and `docs/evidence/phase-2.3/linz-accuracy.md` (regenerated 2026-11-08 by the ru
 above).
 
 **The trial target is met on the eval set: 98.2 % ≥ 98 % right-door without a
-manual fix (1767 of 1800).** The remaining 33 failures are enumerated per class in
+manual fix (1767 of 1800).** The directive's held-out target is met too: **99.65% on the held-out 20 % of streets** (floor 98 % per slice, lowest slice 98.75 %), measured by `test_d8_accuracy_on_heldout_streets` (`docs/evidence/phase-2.3/linz-accuracy-heldout.md`). The legacy seeded 1,800-check sample now measures 99.5 % (1791/1800). The 33 failures of the 2026-11-04 run were enumerated per class in
 the evidence file — 17 misses (ASR spelling tolerance, road-name matching), the
 road aliases with the type omitted, and the suburb tie-break — and the
-measure-fix-re-measure loop continues on them, each round with its before/after
+measure-fix-re-measure loop closed them in the 2026-11-08 rounds above (round 2
+leaves 2 misses on the 6,000-check tune sample), each round with its before/after
 committed the way the rounds above are.
 
 ## Decision — the chosen sources and their licences
