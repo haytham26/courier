@@ -15,12 +15,22 @@
 //      unmeasured until the held-out set exists (FOUNDER_TODO).
 //
 //   node scripts/ci/check-parser-circularity.mjs
-import { readFileSync } from 'node:fs';
+//
+//   3. the synthetic held-out set (founder directive 2026-11-08, item 4a) is
+//      split by STREET: packages/eval/voice/manifest/heldout_streets.json lists
+//      the held-out streets. This check also proves the gold templates (the
+//      builder) and the parser regexes (the brain's pattern=re.compile sources)
+//      carry no held-out-street text as a literal - the templates/regexes were
+//      not derived from held-out-street text. (A missing list is refused loudly
+//      by scripts/eval/check-voice-eval.mjs; here the proof runs when the list
+//      is present, so the temp trees of this check's own tests stay minimal.)
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const BRAIN = 'services/courier-voice/app/offline_brain.py';
 const BUILDER = 'scripts/eval/build-voice-eval.mjs';
 const BASELINE = 'packages/eval/voice/manifest/circularity-baseline.json';
+const HELDOUT_STREETS = 'packages/eval/voice/manifest/heldout_streets.json';
 
 /** The runs of plain words in a regex (metacharacters are separators). */
 function wordRuns(source) {
@@ -84,6 +94,39 @@ if (baseline && Array.isArray(baseline.overlaps)) {
   }
 }
 
+// The held-out street split (directive 2026-11-08, item 4a): the split is by
+// street, so the proof that the gold templates and the parser regexes were not
+// derived from held-out-street text is structural - no held-out street name
+// appears as a literal in the builder (whose whole text is template surface)
+// or in any of the brain's pattern=re.compile sources. Case-sensitive and
+// whole-word: the LINZ road names are capitalised, the templates and the
+// patterns are not. The brain's docstring examples are prose, not regexes.
+let heldOutStreetCount = 0;
+if (existsSync(HELDOUT_STREETS)) {
+  const heldOutDocument = JSON.parse(readFileSync(HELDOUT_STREETS, 'utf8'));
+  const heldOutList = Array.isArray(heldOutDocument.streets) ? heldOutDocument.streets : [];
+  heldOutStreetCount = heldOutList.length;
+  const brainPatterns = [...brain.matchAll(/pattern=re\.compile\(\s*r?"([^"]+)"/g)].map((m) => m[1]);
+  for (const street of heldOutList) {
+    const escaped = street.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const literal = new RegExp(`(?<![A-Za-z])${escaped}(?![A-Za-z])`);
+    if (literal.test(builder)) {
+      problems.push(
+        `the eval generator spells out the held-out street "${street}" as a literal - ` +
+          'the gold templates must not be derived from held-out-street text',
+      );
+    }
+    for (const pattern of brainPatterns) {
+      if (literal.test(pattern)) {
+        problems.push(
+          `the offline brain's regex spells out the held-out street "${street}" (pattern ${pattern.slice(0, 60)}) - ` +
+            'the parser regexes must not be derived from held-out-street text',
+        );
+      }
+    }
+  }
+}
+
 if (problems.length > 0) {
   console.error(`the parser-eval circularity check is broken (${problems.length}):`);
   for (const problem of problems) console.error(`- ${problem}`);
@@ -94,3 +137,9 @@ console.log(
   `check-parser-circularity: ${found.length} standing overlaps, all in the baseline - ` +
     'the intent number is a ceiling on its own templates until the held-out set exists',
 );
+if (heldOutStreetCount > 0) {
+  console.log(
+    `check-parser-circularity: ${heldOutStreetCount} held-out streets checked - ` +
+      'no held-out-street text in the gold templates or the parser regexes',
+  );
+}

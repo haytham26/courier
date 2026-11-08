@@ -1,7 +1,9 @@
 {
-  "generated": "2026-11-05",
+  "generated": "2026-11-08",
   "generator": "scripts/eval/build-voice-eval.mjs",
   "address_source": "data/linz (LINZ layer 123113: Christchurch, Waimakariri, Selwyn)",
+  "held_out_split": "held-out-street addresses are EXCLUDED from this manifest (packages\\eval\\voice\\manifest\\heldout_streets.json; --heldout emits them under manifest/heldout/)",
+  "held_out_streets": 1359,
   "scripts": 720,
   "utterances": 960,
   "addresses": 240,

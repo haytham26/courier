@@ -23,6 +23,12 @@ manifest/
                     the voice and the noise of a real day
   slices.json       the slice ids, the counts and the status
   licence.csv       the licence ledger of the audio the set is built from
+  heldout_streets.json  the committed held-out street split: 20 % of the
+                     Canterbury streets, split by street (never by address),
+                     seeded (mulberry32, seed 20261108)
+  heldout/           the held-out-only manifest (--heldout): addresses.jsonl,
+                     scripts.jsonl, utterances.jsonl, slices.json - every row
+                     tagged held_out: true
 ```
 
 ## The open data the audio comes from, and its attribution
@@ -56,20 +62,20 @@ eval-only and never shipped; its own row is in `licence.csv` too.
 
 ## The slices
 
-| slice | scripts | what it measures |
-|---|---|---|
-| `en_nz_quiet` | 120 | the plain NZ delivery language, with the real addresses |
-| `en_nz_van` | 120 | the same content at 0, 5 and 10 dB over the van beds (360 files) |
-| `en_mix` | 120 | the same words in the other English accents of the courier mix |
-| `mi_places` | 60 | te reo Māori place names inside English sentences |
-| `ar` | 40 | Modern Standard Arabic with the NZ diaspora accent |
-| `hi_pa` | 40 | Hindi, Punjabi and Hinglish |
-| `zh` | 40 | accented NZ Mandarin |
-| `sm_to` | 40 | Samoan and Tongan |
-| `numbers_corrections` | 40 | the numbers a courier mishears ("seven, no, seventeen") |
-| `code_switch` | 60 | the mid-sentence switches, with the gold switch position |
-| `chatter` | 40 | the talk that is not a command (M9) |
-| `shift_sim` | 3 shifts, 24 turns | the whole shift: the morning brief, the commands, the questions, the barge-in, the offline switch and the end of the day |
+| slice                 | scripts            | what it measures                                                                                                         |
+| --------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `en_nz_quiet`         | 120                | the plain NZ delivery language, with the real addresses                                                                  |
+| `en_nz_van`           | 120                | the same content at 0, 5 and 10 dB over the van beds (360 files)                                                         |
+| `en_mix`              | 120                | the same words in the other English accents of the courier mix                                                           |
+| `mi_places`           | 60                 | te reo Māori place names inside English sentences                                                                        |
+| `ar`                  | 40                 | Modern Standard Arabic with the NZ diaspora accent                                                                       |
+| `hi_pa`               | 40                 | Hindi, Punjabi and Hinglish                                                                                              |
+| `zh`                  | 40                 | accented NZ Mandarin                                                                                                     |
+| `sm_to`               | 40                 | Samoan and Tongan                                                                                                        |
+| `numbers_corrections` | 40                 | the numbers a courier mishears ("seven, no, seventeen")                                                                  |
+| `code_switch`         | 60                 | the mid-sentence switches, with the gold switch position                                                                 |
+| `chatter`             | 40                 | the talk that is not a command (M9)                                                                                      |
+| `shift_sim`           | 3 shifts, 24 turns | the whole shift: the morning brief, the commands, the questions, the barge-in, the offline switch and the end of the day |
 
 600 scripts is the plan; 500 is the floor (V4 §10.1). The shift simulations are
 the slice of the whole shift, and they are scored against the service itself.
@@ -78,11 +84,11 @@ the slice of the whole shift, and they are scored against the service itself.
 
 `manifest/shift_sims.json` holds three scripted shifts:
 
-| id | the shift | the noise |
-|---|---|---|
-| `SIM-001` | a wet morning in the city: the brief, a delivery, the parcel for Mrs Smith, a barge-in, the next stop, a skip | the van in the rain, 5 dB |
-| `SIM-002` | a rural run with no signal: the commands, the question that needs the internet, the correction, the map mode, a note | gravel road, 0 dB |
-| `SIM-003` | the last hour: the day so far, the pay, the small talk, the end of the shift | quiet |
+| id        | the shift                                                                                                            | the noise                 |
+| --------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `SIM-001` | a wet morning in the city: the brief, a delivery, the parcel for Mrs Smith, a barge-in, the next stop, a skip        | the van in the rain, 5 dB |
+| `SIM-002` | a rural run with no signal: the commands, the question that needs the internet, the correction, the map mode, a note | gravel road, 0 dB         |
+| `SIM-003` | the last hour: the day so far, the pay, the small talk, the end of the shift                                         | quiet                     |
 
 Every turn carries what the courier said, how the turn was opened, how fast the
 van was going, what had the phone's attention, and what the service was expected
@@ -106,8 +112,10 @@ never reported as a pass.
 ## How to regenerate
 
 ```
-node scripts/eval/build-voice-eval.mjs     # the text parts (the manifest)
-node scripts/eval/check-voice-eval.mjs     # the integrity of the set
+node scripts/eval/build-heldout-streets.mjs   # the held-out street split (the committed list)
+node scripts/eval/build-voice-eval.mjs        # the text parts (the main manifest; held-out streets excluded)
+node scripts/eval/build-voice-eval.mjs --heldout  # the held-out-only manifest (manifest/heldout/)
+node scripts/eval/check-voice-eval.mjs        # the integrity of both manifests
 node scripts/eval/fetch-open-voice-data.mjs  # the open clips and the van beds
 uv run --directory services/courier-voice --extra eval python -m app.eval_audio
                                            # builds the open audio and scores it
@@ -117,6 +125,36 @@ The address bank is read from `data/linz/` (the LINZ layer 123113 data, the
 three Canterbury districts). Nothing in the set is invented: the streets, the
 suburbs and the house numbers are the real ones, and the spoken words are the
 ones a courier says.
+
+## The two held-out sets
+
+Nothing is ever tuned on a held-out set. There are two, and they are different
+kinds:
+
+1. **The synthetic street-split set — built and committed.** 20 % of the
+   Canterbury _streets_ (1 359 of 6 799 distinct `road` values of the LINZ
+   index), split by street, NEVER by address: every address of a held-out
+   street is held out with it. The list is `manifest/heldout_streets.json`,
+   committed, seeded (mulberry32, seed 20261108, a documented partial
+   Fisher-Yates over the sorted street list) and byte-identical on every
+   regeneration: `node scripts/eval/build-heldout-streets.mjs [--linz-dir
+data/linz]`. `scripts/eval/build-voice-eval.mjs` excludes every
+   held-out-street address from the **default** manifest, so nothing is ever
+   tuned on held-out streets, and emits the held-out-only manifest under
+   `manifest/heldout/` with `--heldout`, every row tagged `held_out: true`.
+   `scripts/eval/check-voice-eval.mjs` refuses a main manifest containing a
+   held-out street and a held-out manifest containing a non-held-out street,
+   naming the row; `scripts/ci/check-parser-circularity.mjs` proves the gold
+   templates and the parser regexes carry no held-out-street text.
+2. **The founder's real-sentence set — not built yet.** ~100 sentences as real
+   couriers say them (ADR-028 / D65, `docs/status/FOUNDER_TODO.md`,
+   `manifest/held_out.jsonl`). **Until it exists, the §22 B threshold
+   (`VOICE_ASK_CONFIDENCE_BAR`) is NOT claimed tuned**, and BUG-210's headline
+   intent number stays what it honestly is: the parser ceiling on the
+   generator's own templates, not an accuracy.
+
+The synthetic set measures the pipeline on streets it has never seen; the
+real-sentence set will measure it on sentences nobody in this repo wrote.
 
 ## What is here (the open-data audio)
 
