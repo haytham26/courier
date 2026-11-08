@@ -1,0 +1,240 @@
+{"id":"A001","number":"57","suffix":null,"unit":null,"street":"Poulson Street","suburb":"Addington","held_out":true}
+{"id":"A002","number":"23","suffix":null,"unit":null,"street":"Cassinia Gardens","suburb":"Aidanfield","held_out":true}
+{"id":"A003","number":"45","suffix":null,"unit":null,"street":"Alford Forest Road","suburb":"Allenton","held_out":true}
+{"id":"A004","number":"4","suffix":null,"unit":null,"street":"Moore Street","suburb":"Ashburton","held_out":true}
+{"id":"A005","number":"67","suffix":null,"unit":null,"street":"Westgrove Avenue","suburb":"Avonhead","held_out":true}
+{"id":"A006","number":"1790","suffix":null,"unit":null,"street":"Bayleys Road","suburb":"Birdlings Flat","held_out":true}
+{"id":"A007","number":"24","suffix":null,"unit":null,"street":"Wendover Street","suburb":"Bishopdale","held_out":true}
+{"id":"A008","number":"82","suffix":null,"unit":null,"street":"Vanguard Drive","suburb":"Broomfield","held_out":true}
+{"id":"A009","number":"75","suffix":null,"unit":"2","street":"Garreg Road","suburb":"Bryndwr","held_out":true}
+{"id":"A010","number":"27","suffix":"A","unit":null,"street":"Parnwell Street","suburb":"Burwood","held_out":true}
+{"id":"A011","number":"1234","suffix":null,"unit":null,"street":"Highfield Road","suburb":"Charing Cross","held_out":true}
+{"id":"A012","number":"60","suffix":null,"unit":null,"street":"Durey Road","suburb":"Christchurch Airport","held_out":true}
+{"id":"A013","number":"9","suffix":null,"unit":null,"street":"Beveridge Street","suburb":"Christchurch Central","held_out":true}
+{"id":"A014","number":"91","suffix":null,"unit":null,"street":"Hororata Dunsandel Road","suburb":"Dunsandel","held_out":true}
+{"id":"A015","number":"31","suffix":"A","unit":null,"street":"Garreg Road","suburb":"Fendalton","held_out":true}
+{"id":"A016","number":"15","suffix":null,"unit":null,"street":"Bramleys Road","suburb":"Flaxton","held_out":true}
+{"id":"A017","number":"101","suffix":null,"unit":null,"street":"Hills Road","suburb":"Greenstreet","held_out":true}
+{"id":"A018","number":"2","suffix":null,"unit":null,"street":"Highlight Lane","suburb":"Heathcote Valley","held_out":true}
+{"id":"A019","number":"182","suffix":null,"unit":"1","street":"Buchanans Road","suburb":"Hei Hei","held_out":true}
+{"id":"A020","number":"360","suffix":null,"unit":null,"street":"Barkers Road","suburb":"Highbank","held_out":true}
+{"id":"A021","number":"230","suffix":null,"unit":null,"street":"Dicksons Road","suburb":"Hinds","held_out":true}
+{"id":"A022","number":"10","suffix":null,"unit":null,"street":"Loreto Place","suburb":"Hornby","held_out":true}
+{"id":"A023","number":"166","suffix":null,"unit":null,"street":"Shands Road","suburb":"Hornby South","held_out":true}
+{"id":"A024","number":"180","suffix":null,"unit":null,"street":"Haldon Road","suburb":"Hororata","held_out":true}
+{"id":"A025","number":"10","suffix":"A","unit":null,"street":"Gregory Avenue","suburb":"Islington","held_out":true}
+{"id":"A026","number":"28","suffix":null,"unit":null,"street":"Brockelbank Drive","suburb":"Kaiapoi","held_out":true}
+{"id":"A027","number":"754","suffix":null,"unit":null,"street":"Highfield Road","suburb":"Kirwee","held_out":true}
+{"id":"A028","number":"60","suffix":null,"unit":null,"street":"Mill Road","suburb":"Lagmhor","held_out":true}
+{"id":"A029","number":"441","suffix":null,"unit":null,"street":"Winchmore Lauriston Road","suburb":"Lauriston","held_out":true}
+{"id":"A030","number":"9","suffix":null,"unit":null,"street":"Holley Street","suburb":"Leeston","held_out":true}
+{"id":"A031","number":"16","suffix":null,"unit":null,"street":"Moirs Lane","suburb":"Lincoln","held_out":true}
+{"id":"A032","number":"128","suffix":null,"unit":null,"street":"Mulligans Road","suburb":"Maronan","held_out":true}
+{"id":"A033","number":"81","suffix":null,"unit":null,"street":"Conservators Road","suburb":"McLeans Island","held_out":true}
+{"id":"A034","number":"5759","suffix":null,"unit":null,"street":"Arundel Rakaia Gorge Road","suburb":"Methven","held_out":true}
+{"id":"A035","number":"218","suffix":null,"unit":null,"street":"Annex Road","suburb":"Middleton","held_out":true}
+{"id":"A036","number":"6079","suffix":null,"unit":null,"street":"Arundel Rakaia Gorge Road","suburb":"Mount Hutt","held_out":true}
+{"id":"A037","number":"86","suffix":null,"unit":null,"street":"Bowhill Road","suburb":"New Brighton","held_out":true}
+{"id":"A038","number":"804","suffix":null,"unit":null,"street":"Mill Road","suburb":"Ohoka","held_out":true}
+{"id":"A039","number":"27","suffix":null,"unit":null,"street":"Cairnbrae Drive","suburb":"Prebbleton","held_out":true}
+{"id":"A040","number":"48","suffix":null,"unit":null,"street":"Peverel Street","suburb":"Riccarton","held_out":true}
+{"id":"A041","number":"97","suffix":null,"unit":"2","street":"Warden Street","suburb":"Richmond","held_out":true}
+{"id":"A042","number":"1086","suffix":null,"unit":null,"street":"Newtons Road","suburb":"Rolleston","held_out":true}
+{"id":"A043","number":"42","suffix":"A","unit":null,"street":"Delaware Crescent","suburb":"Russley","held_out":true}
+{"id":"A044","number":"57","suffix":null,"unit":null,"street":"Birkdale Drive","suburb":"Shirley","held_out":true}
+{"id":"A045","number":"10","suffix":null,"unit":null,"street":"Hastings Street","suburb":"Southbridge","held_out":true}
+{"id":"A046","number":"50","suffix":"A","unit":null,"street":"Bletsoe Avenue","suburb":"Spreydon","held_out":true}
+{"id":"A047","number":"1","suffix":null,"unit":null,"street":"Leyland Crescent","suburb":"Swannanoa","held_out":true}
+{"id":"A048","number":"142","suffix":"A","unit":null,"street":"Hastings Street East","suburb":"Sydenham","held_out":true}
+{"id":"A049","number":"290","suffix":null,"unit":null,"street":"Old West Coast Road","suburb":"Templeton","held_out":true}
+{"id":"A050","number":"122","suffix":null,"unit":null,"street":"Thews Road","suburb":"Tinwald","held_out":true}
+{"id":"A051","number":"55","suffix":null,"unit":null,"street":"Eastwood Rise","suburb":"Waimairi Beach","held_out":true}
+{"id":"A052","number":"743","suffix":null,"unit":null,"street":"Weedons Ross Road","suburb":"West Melton","held_out":true}
+{"id":"A053","number":"48","suffix":null,"unit":null,"street":"Sheates Road","suburb":"Westerfield","held_out":true}
+{"id":"A054","number":"29","suffix":null,"unit":null,"street":"Hartleys Road","suburb":"Whitecliffs","held_out":true}
+{"id":"A055","number":"32","suffix":null,"unit":null,"street":"Napier Drive","suburb":"Wigram","held_out":true}
+{"id":"A056","number":"114","suffix":null,"unit":null,"street":"Winchmore Lauriston Road","suburb":"Winchmore","held_out":true}
+{"id":"A057","number":"138","suffix":null,"unit":null,"street":"Dicksons Road","suburb":"Winslow","held_out":true}
+{"id":"A058","number":"63","suffix":"F","unit":null,"street":"Mackworth Street","suburb":"Woolston","held_out":true}
+{"id":"A059","number":"100","suffix":null,"unit":null,"street":"Old West Coast Road","suburb":"Yaldhurst","held_out":true}
+{"id":"A060","number":"59","suffix":null,"unit":null,"street":"Poulson Street","suburb":"Addington","held_out":true}
+{"id":"A061","number":"23","suffix":null,"unit":null,"street":"Cassinia Gardens","suburb":"Aidanfield","held_out":true}
+{"id":"A062","number":"152","suffix":null,"unit":null,"street":"Alford Forest Road","suburb":"Allenton","held_out":true}
+{"id":"A063","number":"11","suffix":null,"unit":null,"street":"Oak Grove","suburb":"Ashburton","held_out":true}
+{"id":"A064","number":"63","suffix":null,"unit":null,"street":"Westgrove Avenue","suburb":"Avonhead","held_out":true}
+{"id":"A065","number":"1684","suffix":null,"unit":null,"street":"Bayleys Road","suburb":"Birdlings Flat","held_out":true}
+{"id":"A066","number":"22","suffix":null,"unit":null,"street":"Wendover Street","suburb":"Bishopdale","held_out":true}
+{"id":"A067","number":"84","suffix":null,"unit":null,"street":"Vanguard Drive","suburb":"Broomfield","held_out":true}
+{"id":"A068","number":"73","suffix":"A","unit":"2","street":"Garreg Road","suburb":"Bryndwr","held_out":true}
+{"id":"A069","number":"19","suffix":"A","unit":null,"street":"Bassett Street","suburb":"Burwood","held_out":true}
+{"id":"A070","number":"1234","suffix":null,"unit":null,"street":"Highfield Road","suburb":"Charing Cross","held_out":true}
+{"id":"A071","number":"27","suffix":null,"unit":null,"street":"Durey Road","suburb":"Christchurch Airport","held_out":true}
+{"id":"A072","number":"11","suffix":null,"unit":null,"street":"Beveridge Street","suburb":"Christchurch Central","held_out":true}
+{"id":"A073","number":"10","suffix":null,"unit":null,"street":"Hororata Dunsandel Road","suburb":"Dunsandel","held_out":true}
+{"id":"A074","number":"37","suffix":null,"unit":"2","street":"Garreg Road","suburb":"Fendalton","held_out":true}
+{"id":"A075","number":"15","suffix":null,"unit":null,"street":"Bramleys Road","suburb":"Flaxton","held_out":true}
+{"id":"A076","number":"92","suffix":null,"unit":null,"street":"Hills Road","suburb":"Greenstreet","held_out":true}
+{"id":"A077","number":"3","suffix":null,"unit":null,"street":"Highlight Lane","suburb":"Heathcote Valley","held_out":true}
+{"id":"A078","number":"184","suffix":null,"unit":null,"street":"Buchanans Road","suburb":"Hei Hei","held_out":true}
+{"id":"A079","number":"577","suffix":null,"unit":null,"street":"Barkers Road","suburb":"Highbank","held_out":true}
+{"id":"A080","number":"230","suffix":null,"unit":null,"street":"Dicksons Road","suburb":"Hinds","held_out":true}
+{"id":"A081","number":"1","suffix":null,"unit":null,"street":"Loreto Place","suburb":"Hornby","held_out":true}
+{"id":"A082","number":"706","suffix":null,"unit":null,"street":"Halswell Junction Road","suburb":"Hornby South","held_out":true}
+{"id":"A083","number":"180","suffix":null,"unit":null,"street":"Haldon Road","suburb":"Hororata","held_out":true}
+{"id":"A084","number":"650","suffix":null,"unit":null,"street":"Main South Road","suburb":"Islington","held_out":true}
+{"id":"A085","number":"30","suffix":null,"unit":null,"street":"Brockelbank Drive","suburb":"Kaiapoi","held_out":true}
+{"id":"A086","number":"754","suffix":null,"unit":null,"street":"Highfield Road","suburb":"Kirwee","held_out":true}
+{"id":"A087","number":"62","suffix":null,"unit":null,"street":"Mill Road","suburb":"Lagmhor","held_out":true}
+{"id":"A088","number":"442","suffix":null,"unit":null,"street":"Winchmore Lauriston Road","suburb":"Lauriston","held_out":true}
+{"id":"A089","number":"11","suffix":null,"unit":null,"street":"Holley Street","suburb":"Leeston","held_out":true}
+{"id":"A090","number":"25","suffix":null,"unit":null,"street":"Moirs Lane","suburb":"Lincoln","held_out":true}
+{"id":"A091","number":"31","suffix":null,"unit":null,"street":"Mulligans Road","suburb":"Maronan","held_out":true}
+{"id":"A092","number":"118","suffix":null,"unit":null,"street":"Conservators Road","suburb":"McLeans Island","held_out":true}
+{"id":"A093","number":"6043","suffix":null,"unit":null,"street":"Arundel Rakaia Gorge Road","suburb":"Methven","held_out":true}
+{"id":"A094","number":"218","suffix":"A","unit":null,"street":"Annex Road","suburb":"Middleton","held_out":true}
+{"id":"A095","number":"6384","suffix":null,"unit":null,"street":"Arundel Rakaia Gorge Road","suburb":"Mount Hutt","held_out":true}
+{"id":"A096","number":"86","suffix":null,"unit":null,"street":"Bowhill Road","suburb":"New Brighton","held_out":true}
+{"id":"A097","number":"853","suffix":null,"unit":null,"street":"Mill Road","suburb":"Ohoka","held_out":true}
+{"id":"A098","number":"699","suffix":null,"unit":null,"street":"Springs Road","suburb":"Prebbleton","held_out":true}
+{"id":"A099","number":"119","suffix":null,"unit":null,"street":"Blenheim Road","suburb":"Riccarton","held_out":true}
+{"id":"A100","number":"97","suffix":null,"unit":"3","street":"Warden Street","suburb":"Richmond","held_out":true}
+{"id":"A101","number":"1102","suffix":null,"unit":null,"street":"Newtons Road","suburb":"Rolleston","held_out":true}
+{"id":"A102","number":"42","suffix":"B","unit":null,"street":"Delaware Crescent","suburb":"Russley","held_out":true}
+{"id":"A103","number":"57","suffix":null,"unit":null,"street":"Birkdale Drive","suburb":"Shirley","held_out":true}
+{"id":"A104","number":"18","suffix":null,"unit":null,"street":"Hastings Street","suburb":"Southbridge","held_out":true}
+{"id":"A105","number":"84","suffix":null,"unit":null,"street":"Neville Street","suburb":"Spreydon","held_out":true}
+{"id":"A106","number":"1044","suffix":null,"unit":null,"street":"Browns Road","suburb":"Swannanoa","held_out":true}
+{"id":"A107","number":"19","suffix":"A","unit":null,"street":"Tennyson Street","suburb":"Sydenham","held_out":true}
+{"id":"A108","number":"294","suffix":null,"unit":null,"street":"Old West Coast Road","suburb":"Templeton","held_out":true}
+{"id":"A109","number":"71","suffix":null,"unit":null,"street":"Kennels Road","suburb":"Tinwald","held_out":true}
+{"id":"A110","number":"57","suffix":null,"unit":null,"street":"Eastwood Rise","suburb":"Waimairi Beach","held_out":true}
+{"id":"A111","number":"10","suffix":null,"unit":null,"street":"Westview Crescent","suburb":"West Melton","held_out":true}
+{"id":"A112","number":"61","suffix":null,"unit":null,"street":"Sheates Road","suburb":"Westerfield","held_out":true}
+{"id":"A113","number":"258","suffix":null,"unit":null,"street":"Hartleys Road","suburb":"Whitecliffs","held_out":true}
+{"id":"A114","number":"30","suffix":null,"unit":null,"street":"Napier Drive","suburb":"Wigram","held_out":true}
+{"id":"A115","number":"114","suffix":null,"unit":null,"street":"Winchmore Lauriston Road","suburb":"Winchmore","held_out":true}
+{"id":"A116","number":"138","suffix":null,"unit":null,"street":"Dicksons Road","suburb":"Winslow","held_out":true}
+{"id":"A117","number":"63","suffix":"E","unit":null,"street":"Mackworth Street","suburb":"Woolston","held_out":true}
+{"id":"A118","number":"105","suffix":null,"unit":null,"street":"Old West Coast Road","suburb":"Yaldhurst","held_out":true}
+{"id":"A119","number":"57","suffix":null,"unit":null,"street":"Poulson Street","suburb":"Addington","held_out":true}
+{"id":"A120","number":"23","suffix":null,"unit":null,"street":"Cassinia Gardens","suburb":"Aidanfield","held_out":true}
+{"id":"A121","number":"154","suffix":null,"unit":null,"street":"Alford Forest Road","suburb":"Allenton","held_out":true}
+{"id":"A122","number":"27","suffix":null,"unit":null,"street":"Oak Grove","suburb":"Ashburton","held_out":true}
+{"id":"A123","number":"67","suffix":null,"unit":null,"street":"Westgrove Avenue","suburb":"Avonhead","held_out":true}
+{"id":"A124","number":"1641","suffix":null,"unit":null,"street":"Bayleys Road","suburb":"Birdlings Flat","held_out":true}
+{"id":"A125","number":"8","suffix":null,"unit":null,"street":"Bonita Place","suburb":"Bishopdale","held_out":true}
+{"id":"A126","number":"86","suffix":null,"unit":null,"street":"Vanguard Drive","suburb":"Broomfield","held_out":true}
+{"id":"A127","number":"76","suffix":null,"unit":"2","street":"Garreg Road","suburb":"Bryndwr","held_out":true}
+{"id":"A128","number":"19","suffix":"B","unit":null,"street":"Bassett Street","suburb":"Burwood","held_out":true}
+{"id":"A129","number":"1234","suffix":null,"unit":null,"street":"Highfield Road","suburb":"Charing Cross","held_out":true}
+{"id":"A130","number":"30","suffix":null,"unit":null,"street":"Durey Road","suburb":"Christchurch Airport","held_out":true}
+{"id":"A131","number":"9","suffix":null,"unit":null,"street":"Beveridge Street","suburb":"Christchurch Central","held_out":true}
+{"id":"A132","number":"10","suffix":null,"unit":null,"street":"Browns Road","suburb":"Dunsandel","held_out":true}
+{"id":"A133","number":"29","suffix":null,"unit":"2","street":"Garreg Road","suburb":"Fendalton","held_out":true}
+{"id":"A134","number":"15","suffix":null,"unit":null,"street":"Bramleys Road","suburb":"Flaxton","held_out":true}
+{"id":"A135","number":"4","suffix":null,"unit":null,"street":"Hills Road","suburb":"Greenstreet","held_out":true}
+{"id":"A136","number":"4","suffix":null,"unit":null,"street":"Highlight Lane","suburb":"Heathcote Valley","held_out":true}
+{"id":"A137","number":"186","suffix":null,"unit":null,"street":"Buchanans Road","suburb":"Hei Hei","held_out":true}
+{"id":"A138","number":"465","suffix":null,"unit":null,"street":"Barkers Road","suburb":"Highbank","held_out":true}
+{"id":"A139","number":"230","suffix":null,"unit":null,"street":"Dicksons Road","suburb":"Hinds","held_out":true}
+{"id":"A140","number":"3","suffix":null,"unit":null,"street":"Loreto Place","suburb":"Hornby","held_out":true}
+{"id":"A141","number":"708","suffix":null,"unit":null,"street":"Halswell Junction Road","suburb":"Hornby South","held_out":true}
+{"id":"A142","number":"180","suffix":null,"unit":null,"street":"Haldon Road","suburb":"Hororata","held_out":true}
+{"id":"A143","number":"661","suffix":null,"unit":null,"street":"Main South Road","suburb":"Islington","held_out":true}
+{"id":"A144","number":"40","suffix":null,"unit":null,"street":"Brockelbank Drive","suburb":"Kaiapoi","held_out":true}
+{"id":"A145","number":"754","suffix":null,"unit":null,"street":"Highfield Road","suburb":"Kirwee","held_out":true}
+{"id":"A146","number":"64","suffix":null,"unit":null,"street":"Mill Road","suburb":"Lagmhor","held_out":true}
+{"id":"A147","number":"448","suffix":null,"unit":null,"street":"Winchmore Lauriston Road","suburb":"Lauriston","held_out":true}
+{"id":"A148","number":"12","suffix":null,"unit":null,"street":"Carston Street","suburb":"Leeston","held_out":true}
+{"id":"A149","number":"10","suffix":null,"unit":null,"street":"The Mews","suburb":"Lincoln","held_out":true}
+{"id":"A150","number":"459","suffix":null,"unit":null,"street":"Scales Road","suburb":"Maronan","held_out":true}
+{"id":"A151","number":"119","suffix":null,"unit":null,"street":"Conservators Road","suburb":"McLeans Island","held_out":true}
+{"id":"A152","number":"6059","suffix":null,"unit":null,"street":"Arundel Rakaia Gorge Road","suburb":"Methven","held_out":true}
+{"id":"A153","number":"218","suffix":null,"unit":null,"street":"Annex Road","suburb":"Middleton","held_out":true}
+{"id":"A154","number":"6404","suffix":null,"unit":null,"street":"Arundel Rakaia Gorge Road","suburb":"Mount Hutt","held_out":true}
+{"id":"A155","number":"86","suffix":null,"unit":null,"street":"Bowhill Road","suburb":"New Brighton","held_out":true}
+{"id":"A156","number":"857","suffix":null,"unit":null,"street":"Mill Road","suburb":"Ohoka","held_out":true}
+{"id":"A157","number":"10","suffix":null,"unit":null,"street":"Blakes Road","suburb":"Prebbleton","held_out":true}
+{"id":"A158","number":"48","suffix":null,"unit":null,"street":"Peverel Street","suburb":"Riccarton","held_out":true}
+{"id":"A159","number":"97","suffix":null,"unit":"5","street":"Warden Street","suburb":"Richmond","held_out":true}
+{"id":"A160","number":"1097","suffix":null,"unit":null,"street":"Newtons Road","suburb":"Rolleston","held_out":true}
+{"id":"A161","number":"42","suffix":"A","unit":null,"street":"Delaware Crescent","suburb":"Russley","held_out":true}
+{"id":"A162","number":"57","suffix":null,"unit":null,"street":"Birkdale Drive","suburb":"Shirley","held_out":true}
+{"id":"A163","number":"1","suffix":null,"unit":null,"street":"Taiaroa Place","suburb":"Southbridge","held_out":true}
+{"id":"A164","number":"86","suffix":null,"unit":null,"street":"Neville Street","suburb":"Spreydon","held_out":true}
+{"id":"A165","number":"1084","suffix":null,"unit":null,"street":"Browns Road","suburb":"Swannanoa","held_out":true}
+{"id":"A166","number":"142","suffix":"A","unit":null,"street":"Hastings Street East","suburb":"Sydenham","held_out":true}
+{"id":"A167","number":"302","suffix":null,"unit":null,"street":"Old West Coast Road","suburb":"Templeton","held_out":true}
+{"id":"A168","number":"74","suffix":null,"unit":null,"street":"Kennels Road","suburb":"Tinwald","held_out":true}
+{"id":"A169","number":"59","suffix":null,"unit":null,"street":"Eastwood Rise","suburb":"Waimairi Beach","held_out":true}
+{"id":"A170","number":"11","suffix":null,"unit":null,"street":"Westview Crescent","suburb":"West Melton","held_out":true}
+{"id":"A171","number":"90","suffix":null,"unit":null,"street":"Sheates Road","suburb":"Westerfield","held_out":true}
+{"id":"A172","number":"29","suffix":null,"unit":null,"street":"Hartleys Road","suburb":"Whitecliffs","held_out":true}
+{"id":"A173","number":"34","suffix":null,"unit":null,"street":"Napier Drive","suburb":"Wigram","held_out":true}
+{"id":"A174","number":"114","suffix":null,"unit":null,"street":"Winchmore Lauriston Road","suburb":"Winchmore","held_out":true}
+{"id":"A175","number":"138","suffix":null,"unit":null,"street":"Dicksons Road","suburb":"Winslow","held_out":true}
+{"id":"A176","number":"63","suffix":"D","unit":null,"street":"Mackworth Street","suburb":"Woolston","held_out":true}
+{"id":"A177","number":"120","suffix":null,"unit":null,"street":"Old West Coast Road","suburb":"Yaldhurst","held_out":true}
+{"id":"A178","number":"59","suffix":null,"unit":null,"street":"Poulson Street","suburb":"Addington","held_out":true}
+{"id":"A179","number":"23","suffix":null,"unit":null,"street":"Cassinia Gardens","suburb":"Aidanfield","held_out":true}
+{"id":"A180","number":"156","suffix":null,"unit":null,"street":"Alford Forest Road","suburb":"Allenton","held_out":true}
+{"id":"A181","number":"29","suffix":"A","unit":null,"street":"Oak Grove","suburb":"Ashburton","held_out":true}
+{"id":"A182","number":"63","suffix":null,"unit":null,"street":"Westgrove Avenue","suburb":"Avonhead","held_out":true}
+{"id":"A183","number":"1790","suffix":null,"unit":null,"street":"Bayleys Road","suburb":"Birdlings Flat","held_out":true}
+{"id":"A184","number":"2","suffix":null,"unit":null,"street":"Bonita Place","suburb":"Bishopdale","held_out":true}
+{"id":"A185","number":"88","suffix":null,"unit":null,"street":"Vanguard Drive","suburb":"Broomfield","held_out":true}
+{"id":"A186","number":"74","suffix":null,"unit":"2","street":"Garreg Road","suburb":"Bryndwr","held_out":true}
+{"id":"A187","number":"17","suffix":"A","unit":null,"street":"Bassett Street","suburb":"Burwood","held_out":true}
+{"id":"A188","number":"1234","suffix":null,"unit":null,"street":"Highfield Road","suburb":"Charing Cross","held_out":true}
+{"id":"A189","number":"8","suffix":null,"unit":null,"street":"Durey Road","suburb":"Christchurch Airport","held_out":true}
+{"id":"A190","number":"11","suffix":null,"unit":null,"street":"Beveridge Street","suburb":"Christchurch Central","held_out":true}
+{"id":"A191","number":"11","suffix":null,"unit":null,"street":"Hororata Dunsandel Road","suburb":"Dunsandel","held_out":true}
+{"id":"A192","number":"35","suffix":"A","unit":null,"street":"Garreg Road","suburb":"Fendalton","held_out":true}
+{"id":"A193","number":"15","suffix":null,"unit":null,"street":"Bramleys Road","suburb":"Flaxton","held_out":true}
+{"id":"A194","number":"79","suffix":null,"unit":null,"street":"Hills Road","suburb":"Greenstreet","held_out":true}
+{"id":"A195","number":"5","suffix":null,"unit":null,"street":"Highlight Lane","suburb":"Heathcote Valley","held_out":true}
+{"id":"A196","number":"188","suffix":"A","unit":null,"street":"Buchanans Road","suburb":"Hei Hei","held_out":true}
+{"id":"A197","number":"739","suffix":null,"unit":null,"street":"Barkers Road","suburb":"Highbank","held_out":true}
+{"id":"A198","number":"230","suffix":null,"unit":null,"street":"Dicksons Road","suburb":"Hinds","held_out":true}
+{"id":"A199","number":"4","suffix":null,"unit":null,"street":"Loreto Place","suburb":"Hornby","held_out":true}
+{"id":"A200","number":"710","suffix":null,"unit":null,"street":"Halswell Junction Road","suburb":"Hornby South","held_out":true}
+{"id":"A201","number":"180","suffix":null,"unit":null,"street":"Haldon Road","suburb":"Hororata","held_out":true}
+{"id":"A202","number":"671","suffix":null,"unit":null,"street":"Main South Road","suburb":"Islington","held_out":true}
+{"id":"A203","number":"32","suffix":null,"unit":null,"street":"Brockelbank Drive","suburb":"Kaiapoi","held_out":true}
+{"id":"A204","number":"754","suffix":null,"unit":null,"street":"Highfield Road","suburb":"Kirwee","held_out":true}
+{"id":"A205","number":"60","suffix":null,"unit":null,"street":"Mill Road","suburb":"Lagmhor","held_out":true}
+{"id":"A206","number":"441","suffix":null,"unit":null,"street":"Winchmore Lauriston Road","suburb":"Lauriston","held_out":true}
+{"id":"A207","number":"14","suffix":null,"unit":null,"street":"Carston Street","suburb":"Leeston","held_out":true}
+{"id":"A208","number":"10","suffix":null,"unit":null,"street":"Armil Place","suburb":"Lincoln","held_out":true}
+{"id":"A209","number":"128","suffix":null,"unit":null,"street":"Mulligans Road","suburb":"Maronan","held_out":true}
+{"id":"A210","number":"133","suffix":null,"unit":null,"street":"Conservators Road","suburb":"McLeans Island","held_out":true}
+{"id":"A211","number":"5912","suffix":null,"unit":null,"street":"Arundel Rakaia Gorge Road","suburb":"Methven","held_out":true}
+{"id":"A212","number":"218","suffix":"A","unit":null,"street":"Annex Road","suburb":"Middleton","held_out":true}
+{"id":"A213","number":"6269","suffix":null,"unit":null,"street":"Arundel Rakaia Gorge Road","suburb":"Mount Hutt","held_out":true}
+{"id":"A214","number":"86","suffix":null,"unit":null,"street":"Bowhill Road","suburb":"New Brighton","held_out":true}
+{"id":"A215","number":"861","suffix":null,"unit":null,"street":"Mill Road","suburb":"Ohoka","held_out":true}
+{"id":"A216","number":"11","suffix":null,"unit":null,"street":"Blakes Road","suburb":"Prebbleton","held_out":true}
+{"id":"A217","number":"119","suffix":null,"unit":null,"street":"Blenheim Road","suburb":"Riccarton","held_out":true}
+{"id":"A218","number":"97","suffix":null,"unit":"6","street":"Warden Street","suburb":"Richmond","held_out":true}
+{"id":"A219","number":"296","suffix":null,"unit":null,"street":"Weedons Ross Road","suburb":"Rolleston","held_out":true}
+{"id":"A220","number":"42","suffix":"B","unit":null,"street":"Delaware Crescent","suburb":"Russley","held_out":true}
+{"id":"A221","number":"57","suffix":null,"unit":null,"street":"Birkdale Drive","suburb":"Shirley","held_out":true}
+{"id":"A222","number":"20","suffix":null,"unit":null,"street":"Hastings Street","suburb":"Southbridge","held_out":true}
+{"id":"A223","number":"88","suffix":null,"unit":null,"street":"Neville Street","suburb":"Spreydon","held_out":true}
+{"id":"A224","number":"1","suffix":null,"unit":null,"street":"Leyland Crescent","suburb":"Swannanoa","held_out":true}
+{"id":"A225","number":"19","suffix":"A","unit":null,"street":"Tennyson Street","suburb":"Sydenham","held_out":true}
+{"id":"A226","number":"233","suffix":null,"unit":null,"street":"Old West Coast Road","suburb":"Templeton","held_out":true}
+{"id":"A227","number":"94","suffix":null,"unit":null,"street":"Thews Road","suburb":"Tinwald","held_out":true}
+{"id":"A228","number":"61","suffix":null,"unit":null,"street":"Eastwood Rise","suburb":"Waimairi Beach","held_out":true}
+{"id":"A229","number":"12","suffix":null,"unit":null,"street":"Westview Crescent","suburb":"West Melton","held_out":true}
+{"id":"A230","number":"271","suffix":null,"unit":null,"street":"Sheates Road","suburb":"Westerfield","held_out":true}
+{"id":"A231","number":"258","suffix":null,"unit":null,"street":"Hartleys Road","suburb":"Whitecliffs","held_out":true}
+{"id":"A232","number":"39","suffix":null,"unit":null,"street":"Napier Drive","suburb":"Wigram","held_out":true}
+{"id":"A233","number":"114","suffix":null,"unit":null,"street":"Winchmore Lauriston Road","suburb":"Winchmore","held_out":true}
+{"id":"A234","number":"138","suffix":null,"unit":null,"street":"Dicksons Road","suburb":"Winslow","held_out":true}
+{"id":"A235","number":"63","suffix":"F","unit":null,"street":"Mackworth Street","suburb":"Woolston","held_out":true}
+{"id":"A236","number":"132","suffix":null,"unit":null,"street":"Old West Coast Road","suburb":"Yaldhurst","held_out":true}
+{"id":"A237","number":"57","suffix":null,"unit":null,"street":"Poulson Street","suburb":"Addington","held_out":true}
+{"id":"A238","number":"23","suffix":null,"unit":null,"street":"Cassinia Gardens","suburb":"Aidanfield","held_out":true}
+{"id":"A239","number":"158","suffix":null,"unit":null,"street":"Alford Forest Road","suburb":"Allenton","held_out":true}
+{"id":"A240","number":"29","suffix":null,"unit":null,"street":"Oak Grove","suburb":"Ashburton","held_out":true}

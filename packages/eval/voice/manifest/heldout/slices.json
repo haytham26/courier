@@ -1,0 +1,111 @@
+{
+  "generated": "2026-11-08",
+  "generator": "scripts/eval/build-voice-eval.mjs",
+  "address_source": "data/linz (LINZ layer 123113: Christchurch, Waimakariri, Selwyn)",
+  "held_out_split": "this manifest contains ONLY held-out streets (packages\\eval\\voice\\manifest\\heldout_streets.json)",
+  "held_out_streets": 1359,
+  "scripts": 720,
+  "utterances": 960,
+  "addresses": 240,
+  "slices": [
+    {
+      "id": "en_nz_quiet",
+      "scripts": 120,
+      "target": 120,
+      "files": 120,
+      "distinctTemplates": 24,
+      "sharedTemplatesWith": null,
+      "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "en_nz_van",
+      "scripts": 120,
+      "target": 120,
+      "files": 360,
+      "distinctTemplates": 8,
+      "sharedTemplatesWith": null,
+      "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "en_mix",
+      "scripts": 120,
+      "target": 120,
+      "files": 120,
+      "distinctTemplates": 24,
+      "sharedTemplatesWith": "en_nz_quiet",
+      "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "mi_places",
+      "scripts": 60,
+      "target": 60,
+      "files": 60,
+      "distinctTemplates": 5,
+      "sharedTemplatesWith": null,
+      "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "ar",
+      "scripts": 40,
+      "target": 40,
+      "files": 40,
+      "distinctTemplates": 4,
+      "sharedTemplatesWith": null,
+      "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "hi_pa",
+      "scripts": 40,
+      "target": 40,
+      "files": 40,
+      "distinctTemplates": 4,
+      "sharedTemplatesWith": null,
+      "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "zh",
+      "scripts": 40,
+      "target": 40,
+      "files": 40,
+      "distinctTemplates": 4,
+      "sharedTemplatesWith": null,
+      "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "sm_to",
+      "scripts": 40,
+      "target": 40,
+      "files": 40,
+      "distinctTemplates": 4,
+      "sharedTemplatesWith": null,
+      "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "numbers_corrections",
+      "scripts": 40,
+      "target": 40,
+      "files": 40,
+      "distinctTemplates": 8,
+      "sharedTemplatesWith": null,
+      "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "code_switch",
+      "scripts": 60,
+      "target": 60,
+      "files": 60,
+      "distinctTemplates": 4,
+      "sharedTemplatesWith": null,
+      "status": "scripts ready, audio to generate"
+    },
+    {
+      "id": "chatter",
+      "scripts": 40,
+      "target": 40,
+      "files": 40,
+      "distinctTemplates": 8,
+      "sharedTemplatesWith": null,
+      "status": "scripts ready, audio to generate"
+    }
+  ]
+}

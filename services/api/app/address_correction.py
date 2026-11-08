@@ -320,6 +320,26 @@ def similarity(left: str, right: str) -> float:
     return ratio
 
 
+def road_similarity(key: str, candidate_key: str) -> float:
+    """Road-name similarity with a completion bonus.
+
+    When every token of the spoken street is a LEADING token of the candidate
+    ("oxford" -> "oxford tce"), the candidate is a completion of what the
+    driver said. Plain `ratio` scores that 0.75 and drops it under the 0.78
+    bar, so "66 Oxford, Christchurch Central" never even considered "Oxford
+    Terrace". The bonus scores a completion 0.85 - the 0.78 bar itself is
+    never lowered; the suburb the driver named then picks between completions.
+    Suburb matching keeps plain `similarity` (a spoken "Christchurch" must not
+    silently become "Christchurch Central").
+    """
+    score = similarity(key, candidate_key)
+    left = key.split()
+    right = candidate_key.split()
+    if left and right[: len(left)] == left:
+        score = max(score, 0.85)
+    return score
+
+
 def _as_int(number: str | None) -> int | None:
     if not number:
         return None
@@ -385,33 +405,93 @@ class AddressCorrector:
                 options=[],
             )
 
-        road, road_score = self._match_road(parsed.street)
-        if road is None:
-            return Correction(
-                original=original,
-                corrected=None,
-                reason=f"no known street called '{parsed.street}'",
-                confidence=0.0,
-                needs_question=True,
-                options=[],
-            )
-
-        road_suburbs = self.store.suburbs_for_road(road_key(road))
-        # The suburb is matched against the suburbs this road really runs
-        # through, not against a hardcoded list: a rural suburb the list does
-        # not know must still resolve.
+        # The spoken tail, most specific first: the full tail including a
+        # direction word ("south new brighton"), then the tail after it
+        # ("new brighton"), then the parser's own suburb reading.
         hint = parsed.suburb_hint or parsed.suburb
-        suburb = self._match_suburb(hint, road_suburbs)
+        hints: list[str] = []
+        for candidate in (parsed.hint_alt, hint, parsed.suburb):
+            if candidate and candidate not in hints:
+                hints.append(candidate)
 
-        if suburb is None and hint:
-            # The street type can be part of the road name ("Durham Street
-            # South"), so the hint is tried as a continuation of the road.
-            extended, extended_score = self._match_road(f"{parsed.street} {hint}")
-            if extended and extended_score >= 0.95:
-                road = extended
-                road_score = extended_score
-                road_suburbs = self.store.suburbs_for_road(road_key(road))
-                suburb = self._match_suburb(parsed.suburb, road_suburbs)
+        # Both street readings when a direction word was ambiguous: the road
+        # with the direction ("Halsey St South") and without it ("Halsey St").
+        variants = [parsed.street]
+        if parsed.street_alt and parsed.street_alt != parsed.street:
+            variants.append(parsed.street_alt)
+
+        # 1) The road that exists AND whose suburbs answer the spoken tail
+        # wins. Among those, the road that actually carries the spoken number
+        # (and unit) beats one that merely sounds right ("334 Halswell,
+        # Halswell" is Halswell Road, not Halswell Junction Road; "100
+        # Peterborough" is Peterborough Street, not Peterborough Lane), then
+        # the higher road score, then the SHORTER road name (the driver
+        # omitted the type, not whole words of the name).
+        road: str | None = None
+        road_score = 0.0
+        suburb: str | None = None
+        road_suburbs: list[str] = []
+        road_candidates: list[tuple[str, float]] = []
+        seen_roads: set[str] = set()
+        for variant in variants:
+            for candidate, score in self._match_roads(variant):
+                if candidate not in seen_roads:
+                    seen_roads.add(candidate)
+                    road_candidates.append((candidate, score))
+        number_value = _as_int(parsed.number)
+        unit_key = (parsed.unit or "").lower() or None
+        suffix_key = (parsed.suffix or "").upper() or None
+        best: tuple[tuple[int, float, int], str, float, str, list[str]] | None = None
+        for candidate, score in road_candidates:
+            candidate_suburbs = self.store.suburbs_for_road(road_key(candidate))
+            matched = self._match_hint(hints, candidate_suburbs)
+            if matched is None:
+                continue
+            rows = self.store.by_road(road_key(candidate))
+            rank = 0
+            if number_value is not None:
+                if any(
+                    _as_int(item.number) == number_value
+                    and (item.suffix or "").upper() == (suffix_key or "")
+                    and (unit_key is None or (item.unit or "").lower() == unit_key)
+                    for item in rows
+                ):
+                    rank = 2
+                elif any(_as_int(item.number) == number_value for item in rows):
+                    rank = 1
+            order = (-rank, -score, len(road_key(candidate).split()))
+            if best is None or order < best[0]:
+                best = (order, candidate, score, matched, candidate_suburbs)
+        if best is not None:
+            road, road_score, suburb, road_suburbs = best[1], best[2], best[3], best[4]
+
+        if road is None:
+            # 2) Fallback: the best road match on its own (the old path).
+            road, road_score = self._match_road(parsed.street)
+            if road is None:
+                return Correction(
+                    original=original,
+                    corrected=None,
+                    reason=f"no known street called '{parsed.street}'",
+                    confidence=0.0,
+                    needs_question=True,
+                    options=[],
+                )
+            road_suburbs = self.store.suburbs_for_road(road_key(road))
+            # The suburb is matched against the suburbs this road really runs
+            # through, not against a hardcoded list: a rural suburb the list does
+            # not know must still resolve.
+            suburb = self._match_hint(hints, road_suburbs)
+
+            if suburb is None and hint:
+                # The street type can be part of the road name ("Durham Street
+                # South"), so the hint is tried as a continuation of the road.
+                extended, extended_score = self._match_road(f"{parsed.street} {hint}")
+                if extended and extended_score >= 0.95:
+                    road = extended
+                    road_score = extended_score
+                    road_suburbs = self.store.suburbs_for_road(road_key(road))
+                    suburb = self._match_hint([parsed.suburb] if parsed.suburb else hints, road_suburbs)
 
         if suburb is None and len(road_suburbs) > 1:
             return Correction(
@@ -450,6 +530,19 @@ class AddressCorrector:
             return raw.strip()
 
         before = raw[: marker.start()].strip()
+        # The marker word is only a correction when the driver had already
+        # spoken an address: a bare number in front of it ("648 No 10 Road
+        # Swannanoa") means the word is the road's own name, not "no".
+        if (
+            before
+            and "," not in before
+            and "..." not in before
+            and not re.search(
+                r"\b(st|rd|ave|dr|pl|cres|tce|ln|cl|ct|way|gr|mews|quay|pde|hwy|sq|esp|byp|shwy)\b",
+                before.lower(),
+            )
+        ):
+            return raw.strip()
         after = raw[marker.end() :].strip()
         number = re.search(r"\b(\d+[a-z]?)\b", after)
         if not number:
@@ -465,20 +558,38 @@ class AddressCorrector:
         cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,")
         return f"{new_number} {cleaned}".strip()
 
-    def _match_road(self, street: str) -> tuple[str | None, float]:
+    def _match_roads(self, street: str) -> list[tuple[str, float]]:
+        """Every road the street could be: exact key matches first (score 1.0),
+        then fuzzy candidates at or above the 0.78 bar, best first.
+
+        The bar is never lowered; the caller disambiguates WITH the suburb the
+        driver named (a road whose suburbs answer the spoken tail beats a
+        merely similar road), which is what closes the wrong-road family
+        ("8 Harte Street, Woolston" answering "Hare Street, Ilam").
+        """
         key = road_key(street)
         known = self.store.roads()
-        if any(road_key(candidate) == key for candidate in known):
-            return next(candidate for candidate in known if road_key(candidate) == key), 1.0
-
-        best_name, best_score = None, 0.0
+        scored: list[tuple[str, float]] = []
+        seen: set[str] = set()
         for candidate in known:
-            score = similarity(key, road_key(candidate))
-            if score > best_score:
-                best_name, best_score = candidate, score
-        if best_score >= 0.78:
-            return best_name, best_score
-        return None, best_score
+            candidate_key = road_key(candidate)
+            if candidate_key == key:
+                scored.append((candidate, 1.0))
+                seen.add(candidate)
+        for candidate in known:
+            if candidate in seen:
+                continue
+            score = road_similarity(key, road_key(candidate))
+            if score >= 0.78:
+                scored.append((candidate, score))
+        scored.sort(key=lambda item: item[1], reverse=True)
+        return scored
+
+    def _match_road(self, street: str) -> tuple[str | None, float]:
+        scored = self._match_roads(street)
+        if scored:
+            return scored[0]
+        return None, 0.0
 
     def _match_suburb(self, suburb: str | None, road_suburbs: list[str]) -> str | None:
         if not road_suburbs:
@@ -495,6 +606,37 @@ class AddressCorrector:
                 best_name, best_score = value, score
         if best_score >= 0.8:
             return best_name
+        return None
+
+    def _match_hint(self, hints: list[str], road_suburbs: list[str]) -> str | None:
+        """Matches a spoken tail against the suburbs the road really runs through.
+
+        Progressive, like the parser's own `match_suburb_tail`: the driver says
+        "... New Brighton Christchurch" (the city repeated), so the whole tail
+        is tried first, then the tail without its last words - exact matches
+        before fuzzy ones, the 0.8 bar never lowered. The first hint that
+        matches wins; hints are ordered most-specific first by the caller.
+        """
+        if not road_suburbs:
+            return hints[0] if hints else None
+        for hint in hints:
+            if not hint:
+                continue
+            words = hint.split()
+            lowered = {value.lower(): value for value in road_suburbs}
+            for size in range(len(words), 0, -1):
+                window = " ".join(words[:size])
+                if window in lowered:
+                    return lowered[window]
+            best_name, best_score = None, 0.0
+            for size in range(len(words), 0, -1):
+                window = " ".join(words[:size])
+                for value in road_suburbs:
+                    score = similarity(window, value.lower())
+                    if score > best_score:
+                        best_name, best_score = value, score
+            if best_score >= 0.8:
+                return best_name
         return None
 
     def _resolve_number(
