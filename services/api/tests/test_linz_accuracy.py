@@ -241,7 +241,7 @@ def five_cases(corrector: AddressCorrector, address: Address, area: str) -> list
     missing = str(int(address.number) + 7919)
     raw = f"{missing} {address.road}, {address.suburb}"
     result = corrector.correct(raw)
-    ok = result.needs_question and result.options
+    ok = bool(result.needs_question and result.options)
     out.append(("unknown number asked", ok, "" if ok else f"[{area}] unknown number: {result.corrected!r} | reason={result.reason}", raw))
 
     return out

@@ -431,18 +431,18 @@ class AddressCorrector:
         road_score = 0.0
         suburb: str | None = None
         road_suburbs: list[str] = []
-        candidates: list[tuple[str, float]] = []
+        road_candidates: list[tuple[str, float]] = []
         seen_roads: set[str] = set()
         for variant in variants:
             for candidate, score in self._match_roads(variant):
                 if candidate not in seen_roads:
                     seen_roads.add(candidate)
-                    candidates.append((candidate, score))
+                    road_candidates.append((candidate, score))
         number_value = _as_int(parsed.number)
         unit_key = (parsed.unit or "").lower() or None
         suffix_key = (parsed.suffix or "").upper() or None
         best: tuple[tuple[int, float, int], str, float, str, list[str]] | None = None
-        for candidate, score in candidates:
+        for candidate, score in road_candidates:
             candidate_suburbs = self.store.suburbs_for_road(road_key(candidate))
             matched = self._match_hint(hints, candidate_suburbs)
             if matched is None:
