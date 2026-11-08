@@ -33,8 +33,11 @@
 //      every event (the same file carried this defect at the same time);
 //   3. a YAML anchor or an alias in a place this gate cannot read FAILS rather
 //      than passes: a gate that waves through what it cannot see is not a gate;
-//   4. the file parses as YAML with a real parser - a plain scalar carrying ": "
-//      is not YAML, and GitHub refuses the whole workflow over it (BUG-279);
+//   4. no unquoted plain scalar carrying ": " - that is not YAML, and GitHub
+//      refuses the whole workflow over it (BUG-279's root cause). The rule is
+//      zero-dependency (rule 4a) so the floor job, which runs this script with
+//      no node_modules, is covered; where js-yaml is installed (the lint and
+//      test jobs) the whole file is parsed with it as well (rule 4b);
 //   5. no `?` in a `${{ }}` expression - GitHub expressions have no ?: operator
 //      (BUG-279).
 //
@@ -48,14 +51,25 @@
 // GitHub refused the file, because line 113 carried
 // `cache: ${{ ... ? 'pnpm' : '' }}` - a plain scalar with ": " inside it, which
 // is not YAML at all ("mapping values are not allowed here"), and a `?:`
-// operator GitHub expressions do not have. So every workflow is now ALSO
-// parsed with a real YAML parser (rule 4 below), and no `${{ }}` expression may
-// carry a `?` (rule 5) - the quoted form parses as YAML but still dies at
-// expression evaluation.
+// operator GitHub expressions do not have. So the gate now also refuses an
+// unquoted plain scalar carrying ": " (rule 4a, below, with no dependency) and
+// parses every file with js-yaml wherever that module is installed (rule 4b),
+// and no `${{ }}` expression may carry a `?` (rule 5) - the quoted form parses
+// as YAML but still dies at expression evaluation.
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { load as parseYaml } from 'js-yaml';
+
+// The floor job of quality-gates.yml runs this script with no node_modules at
+// all (every gate script there is zero-dependency, on purpose), so the YAML
+// parser is loaded when it is there and the zero-dependency rules carry the job
+// when it is not. A missing module is never an error: rule 4a stands alone.
+let parseYaml = null;
+try {
+  parseYaml = (await import('js-yaml')).load;
+} catch {
+  parseYaml = null;
+}
 
 export const BUG_ID = 'BUG-067';
 
@@ -294,6 +308,24 @@ export function violationsOf(lines) {
       continue;
     }
 
+    // BUG-279 rule 4a: an unquoted plain scalar cannot carry ": " - that is the
+    // character sequence YAML reads as a nested mapping, so a value like
+    // `... ? 'pnpm' : ''` makes the whole file unreadable to GitHub's parser
+    // and the workflow never starts. The rule needs no dependency (the floor
+    // job runs this script with no node_modules); js-yaml's own parse runs
+    // wherever the module is installed (see `parseViolationsOf`).
+    const value = entry.value;
+    if (value !== '' && !BLOCK_SCALAR.test(value)) {
+      const withoutComment = value.replace(/\s+#.*$/, '').trim();
+      const quotedOrTagged = /^['"|>&*[{!#]/.test(withoutComment);
+      if (!quotedOrTagged && withoutComment.includes(': ')) {
+        push(
+          `an unquoted plain scalar cannot contain ": " - GitHub's parser reads the whole file as invalid YAML and refuses the workflow before any job starts (BUG-279): quote the value, or use && and || for a conditional`,
+        );
+        continue;
+      }
+    }
+
     if (entry.key === null || entry.path[0] !== 'jobs') continue;
 
     // A key directly under `steps:` (no item column) is a step key that lost
@@ -360,10 +392,16 @@ export function jobLevelSecretFindings(lines) {
 }
 
 /**
- * BUG-279's two rules, over the whole file text: a real YAML parse (the line
- * reader above places every line, so it cannot see that a plain scalar with
- * ": " inside it is not YAML at all), and no `?` inside a `${{ }}` expression
- * (GitHub expressions have no ?: operator - use && and ||).
+ * BUG-279's whole-file rules: where js-yaml is installed the file is parsed
+ * with a real YAML parser (rule 4b - the line reader above places every line,
+ * so it cannot see that a plain scalar with ": " inside it is not YAML at all),
+ * and no `?` inside a `${{ }}` expression (rule 5 - GitHub expressions have no
+ * ?: operator - use && and ||).
+ *
+ * The parser is optional on purpose: the floor job of quality-gates.yml runs
+ * this script with no node_modules, so rule 4a in `violationsOf` (zero
+ * dependency, same root cause) carries that job, and this parse widens the net
+ * wherever the module is installed.
  *
  * @param {string} text the whole file
  * @param {string[]} lines the file's lines, for the report
@@ -371,18 +409,20 @@ export function jobLevelSecretFindings(lines) {
  */
 export function parseViolationsOf(text, lines) {
   const found = [];
-  try {
-    parseYaml(text);
-  } catch (error) {
-    const mark = /** @type {{ mark?: { line: number, column: number } }} */ (error);
-    const line = (mark.mark?.line ?? 0) + 1;
-    found.push({
-      line: line > 0 ? line : 1,
-      text: (lines[line - 1] ?? '').trim(),
-      problem:
-        'this file is not valid YAML, so GitHub refuses the whole workflow before any job ' +
-        `starts (BUG-279): ${error instanceof Error ? error.message : String(error)}`,
-    });
+  if (parseYaml) {
+    try {
+      parseYaml(text);
+    } catch (error) {
+      const mark = /** @type {{ mark?: { line: number, column: number } }} */ (error);
+      const line = (mark.mark?.line ?? 0) + 1;
+      found.push({
+        line: line > 0 ? line : 1,
+        text: (lines[line - 1] ?? '').trim(),
+        problem:
+          'this file is not valid YAML, so GitHub refuses the whole workflow before any job ' +
+          `starts (BUG-279): ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
   }
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];

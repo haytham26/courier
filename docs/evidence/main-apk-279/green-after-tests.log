@@ -1,10 +1,10 @@
-\$ node --test scripts/ci/__tests__/check-workflows.test.mjs   (AFTER the fix, directive-main-apk-279)
+$ node --test scripts/ci/__tests__/check-workflows.test.mjs   (AFTER the fix, directive-main-apk-279)
 exit code: 0
 
 # Subtest: an unknown key at a job level fails, and a known one passes
 # Subtest: a directory that does not exist fails rather than scanning nothing
 # Subtest: the repo's own workflows pass, which is the bug fixed
-# tests 22
-# pass 22
+# tests 25
+# pass 25
 # fail 0
 # cancelled 0

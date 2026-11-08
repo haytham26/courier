@@ -300,6 +300,10 @@ test("a sequence at its parent key's column is read too (BUG-108)", () => {
 // which is not YAML ("mapping values are not allowed here"), and a `?:`
 // operator GitHub expressions do not have. These are the shapes that were red
 // on the real file before the fix (docs/evidence/main-apk-279/red-before.log).
+// Either message counts as the finding: the zero-dependency rule fires with no
+// node_modules at all (the floor job of quality-gates.yml), the js-yaml parse
+// fires wherever the module is installed, and the test must hold in both.
+const NOT_YAML = /not valid YAML|plain scalar cannot contain/;
 test('the BUG-279 root cause: a ?: ternary in a plain scalar is not valid YAML', () => {
   const result = checkWorkflow([
     'jobs:',
@@ -311,7 +315,7 @@ test('the BUG-279 root cause: a ?: ternary in a plain scalar is not valid YAML',
     "          cache: ${{ steps.urls.outputs.configured == 'yes' ? 'pnpm' : '' }}",
   ]);
   assert.equal(result.ok, false);
-  const parse = result.violations.find((v) => /not valid YAML/.test(v.problem));
+  const parse = result.violations.find((v) => NOT_YAML.test(v.problem));
   assert.ok(parse, `expected a YAML parse violation, got: ${JSON.stringify(result.violations)}`);
   assert.equal(parse.line, 7);
 });
@@ -365,6 +369,41 @@ test('a ? in a comment or in plain text outside an expression is not flagged', (
     '    steps:',
     '      # does this gate read "what?" - it is a comment (BUG-279)',
     '      - run: echo "really? yes"',
+  ]);
+  assert.equal(result.ok, true, result.violations.map((v) => v.problem).join('; '));
+});
+
+test('a trailing comment carrying ": " is a comment, not a scalar, and is not flagged', () => {
+  const result = checkWorkflow([
+    'jobs:',
+    '  build:',
+    '    steps:',
+    '      - run: echo ok # note: this one is fine',
+  ]);
+  assert.equal(result.ok, true, result.violations.map((v) => v.problem).join('; '));
+});
+
+test('a flow mapping value carrying ": " is valid YAML and is not flagged', () => {
+  const result = checkWorkflow([
+    'on:',
+    '  workflow_call:',
+    '    inputs:',
+    '      where: { type: string, default: staging }',
+    'jobs:',
+    '  build:',
+    '    runs-on: ubuntu-latest',
+  ]);
+  assert.equal(result.ok, true, result.violations.map((v) => v.problem).join('; '));
+});
+
+test('a quoted value carrying ": " is valid YAML and is not flagged', () => {
+  const result = checkWorkflow([
+    'jobs:',
+    '  build:',
+    '    steps:',
+    '      - run: echo done',
+    '        env:',
+    '          NOTE: "key: value"',
   ]);
   assert.equal(result.ok, true, result.violations.map((v) => v.problem).join('; '));
 });

@@ -1,4 +1,4 @@
-\$ node scripts/ci/check-workflows.mjs   (on directive-main-apk-279 AFTER the fix)
+$ node scripts/ci/check-workflows.mjs   (on directive-main-apk-279 AFTER the fix)
 exit code: 0
 
 check-workflows: 16 workflows parse as YAML, carry only keys GitHub accepts, and read their inputs through the github context

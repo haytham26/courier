@@ -1,0 +1,27 @@
+# BUG-279: the floor job of quality-gates.yml runs `node scripts/ci/check-workflows.mjs`
+# with NO node_modules (every gate script there is zero-dependency on purpose).
+# The first version of this fix imported js-yaml unconditionally and that job died with
+# ERR_MODULE_NOT_FOUND (PR #285, run 42532246146) - so the gate now carries a
+# zero-dependency rule (an unquoted plain scalar cannot contain ': ' - rule 4a) and
+# parses with js-yaml wherever the module is installed (rule 4b). The script below is a
+# byte-identical copy of scripts/ci/check-workflows.mjs placed in a directory with no
+# node_modules anywhere above it, so the js-yaml import resolves to nothing.
+
+$ node <copy with no node_modules> <pre-fix main-apk.yml fixture>
+exit code: 1
+
+check-workflows (BUG-067): 2 violation(s):
+  main-apk.yml:113: a GitHub expression has no ?: operator - write it with && and || (BUG-279): ${{ steps.urls.outputs.configured == 'yes' ? 'pnpm' : '' }}
+      cache: ${{ steps.urls.outputs.configured == 'yes' ? 'pnpm' : '' }}
+  main-apk.yml:113: an unquoted plain scalar cannot contain ": " - GitHub's parser reads the whole file as invalid YAML and refuses the workflow before any job starts (BUG-279): quote the value, or use && and || for a conditional
+      cache: ${{ steps.urls.outputs.configured == 'yes' ? 'pnpm' : '' }}
+
+$ node <copy with no node_modules> <the fixed main-apk.yml>
+exit code: 0
+
+check-workflows: 1 workflows parse as YAML, carry only keys GitHub accepts, and read their inputs through the github context
+
+$ node <copy with no node_modules> .github/workflows   (the whole tree, fixed)
+exit code: 0
+
+check-workflows: 16 workflows parse as YAML, carry only keys GitHub accepts, and read their inputs through the github context
