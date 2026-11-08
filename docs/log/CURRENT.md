@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W45. **Local `main` == `origin/main` == `abd3754` (PR #276 — the founder directive 2026-11-08 FIRST PR: PLAYBOOK §16 ownership, TRIAL_SCOPE rows 6/10-14/16/17/21 -> Built). Behind it `8d89f8c` = PR #274 (BUG-276, S1-S5 task breakdown). Behind it `3525a50` = PR #266 (the #261/#262/#265 log PR). Behind it `f1ae091` = PR #265 (the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
+**Week:** 2026-W45. **Local `main` == `origin/main` == `d1f9f60` (PR #279 — voice lane 1: the synthetic held-out street split, committed). Behind it `b76c333` = PR #277 (the audio-injection research + licence reads), behind it `b389e56` = PR #275 (the backend's BUG-277: LINZ hotword export), behind it `abd3754` = PR #276 (the directive FIRST PR). Behind it `3525a50` = PR #266 (the #261/#262/#265 log PR). Behind it `f1ae091` = PR #265 (the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
 side, BUG-200 — the prominent background-location disclosure is shown in-app
 before the permission request, and the settings carry the Legal rows). Behind it
 `0f500fe` = PR #251 (BUG-236 — the backend's row), `ffa60ba` = PR #249 (item 5a,
@@ -143,6 +143,46 @@ AVD in the matrix, AVD cache key carries the profile) -> voice lane via sub-agen
 worktrees `..\courier-voice-wt`: held-out street split (20% of Canterbury streets,
 seeded, committed list) + real-STT measurement on it -> the test-flavour audio
 input + mock-reach seam -> >=500-turn A-to-Z simulation in docs/evidence/voice-scale/.
+
+---
+
+## 2026-11-08: PR #279 merged — the synthetic held-out set (directive item 4a) is committed
+
+Voice lane 1 (sub-agent in `..\courier-voice-wt`, branch `voice/heldout-street-split`)
+delivered and it merged as `d1f9f60` with the full ritual (evidence comment with the
+run table, tag `archive/voice/heldout-street-split` pushed, branch deleted, ls-remote
+empty, post-merge deletion check empty). All-green head `bd3530b8`: CI run
+42461310246 (337 tests, 0 fail), Quality gates 42461310257 (check-voice-eval green
+incl. the held-out manifest), Android E2E 42461310285 green on both api legs + A1;
+26 success / 4 path-filtered skips (the mutation floors).
+
+The set: 656,044 LINZ rows -> 6,799 distinct Canterbury streets -> **1,359 held out**
+(= floor(0.20 x 6799), mulberry32 seed 20261108, partial Fisher-Yates over the
+code-unit-sorted list), committed as `packages/eval/voice/manifest/heldout_streets.json`
+(sha256 `8230c5cbfe02ef5df6840426d8b70d58b590c3e07438e403d22971b82b229991`,
+byte-identical across two runs). The split is BY STREET, never by address. The default
+`build-voice-eval` now excludes held-out-street addresses (62 of the old 240-bank were
+held out; the regenerated bank has 0); `--heldout` emits `manifest/heldout/` (240
+addresses / 720 scripts, all `held_out: true`). `check-voice-eval` refuses both
+directions naming the row; `check-parser-circularity` additively proves the 1,359
+held-out streets appear in neither the gold templates nor the parser regexes (BUG-210's
+11 known overlaps untouched). Evidence with the exact commands:
+`docs/evidence/voice-heldout/README.md`.
+
+Honest notes carried from lane 1's report: (1) `results/utterances/` was produced
+against the pre-split manifest and is stale w.r.t. the new `scripts.jsonl` until
+`app.eval_audio` re-runs — the next voice lane re-measures on the NEW manifest, on the
+held-out set, from REAL STT output; (2) `services/courier-voice/app/offline_brain.py`
+carries "57 Poulson Street" in two docstring examples — prose, not a regex; a held-out
+street in a docstring is harmless but noted for a later lane; (3) the founder's real-
+sentence set (ADR-028) still does not exist, so §22 B is NOT claimed tuned.
+
+Lanes now running: lane 2 (`..\courier-voice-wt\audio-input`) implements research
+option C — the test-flavour audio-file input (release-unreachable, mock-reach-gated) +
+a Maestro flow; lane 3 (`.worktrees/bug270-large`, branch `ci/bug270-large-fix`)
+root-causes BUG-300 (7 flows fail only on the large AVD, run 42455960697) in the app.
+PR #278 (BUG-270, large AVD in the e2e matrix) waits for lane 3's fix; its current
+head b620bbd has small legs + A1 green and the large legs red on BUG-300 as expected.
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
