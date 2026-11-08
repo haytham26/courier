@@ -55,6 +55,46 @@ second/large AVD profile is platform-owned), the acceptance record in
 api legs + A1 no-mock with Postgres row asserts), and the scorecard refreshed
 to 2026-11-08 in `docs/status/QUALITY_SCORECARD.md`.
 
+
+---
+
+## Founder directive 2026-11-08 received (replaces the previous queue)
+
+Ownership recorded in PLAYBOOK §16 (this PR): the lead now also owns
+`services/courier-voice`, `packages/eval/voice`, `scripts/eval/*voice*`,
+every `.maestro` flow and `.github/workflows/android-e2e.yml`; the backend
+keeps `services/api`, `services/auth`, `packages/shared`, `db`, `infra` and
+the other `.github` files. Bug range: lead **BUG-300..349** (270..276 used),
+backend 277..299 — checked against origin/main, all origin branches and
+CURRENT-backend.md before taking any number. From now the lead logs ONLY in
+this file (no week-file appends).
+
+**Founder's emulator probe (2026-11-08):** an adb server is running on this PC
+(PID 24544, `C:\Users\DCL\Downloads\platform-tools-extract\platform-tools\adb.exe`)
+but `adb devices -l` lists **zero devices attached** and no emulator/qemu
+process is running — the founder's Magisk emulator is not currently visible
+to this session. When it appears: `adb devices -l` + `getprop ro.product.model`
+/ `ro.build.version.release` / `ro.product.cpu.abi` / `ro.kernel.qemu` + `su -c id`
+go here, then our APK installs alongside (never touching the founder's apps or
+root). Its results are SUPPLEMENTARY; the CI AVD legs stay the gate. A rooted
+device fails Play Integrity — recorded, not our bug.
+
+**Voice team:** opencode can spawn sub-agents, so voice runs as its own lane via
+sub-agents, each in its own worktree (`git worktree add ..\courier-voice-wt -b voice/<topic> origin/main`,
+own install/ports, never the main worktree's branch); the lead reviews every
+voice PR before merge. First voice work: the audio-injection research
+(`docs/research/2026/voice-audio-injection.md`) and the held-out street split
+for the synthetic eval set.
+
+**Question for the backend** (per §16, asked here): BUG-270 needs the large-screen
+AVD in the screen-recordings workflow too — does `.github/workflows/screen-recordings.yml`
+need the same second profile, or is android-e2e.yml enough for P4's 8 pending
+large/200 % baselines?
+
+Queue: this PR (PLAYBOOK §16 + TRIAL_SCOPE rows -> Built) -> voice audio-injection
+research -> BUG-270 PR (android-e2e.yml is mine now) -> voice eval honesty
+(held-out streets, real-STT numbers) -> scale-testing lane.
+
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
