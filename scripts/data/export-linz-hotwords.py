@@ -39,7 +39,7 @@ def strip_macrons(text: str) -> str:
     return unicodedata.normalize("NFC", stripped)
 
 
-def collect() -> dict[str, set[str]]:
+def collect() -> tuple[dict[str, set[str]], dict[str, int]]:
     names: dict[str, set[str]] = {"roads": set(), "suburbs": set(), "towns": set()}
     counts: dict[str, int] = {}
     for area in AREAS:
@@ -59,7 +59,7 @@ def collect() -> dict[str, set[str]]:
                     names["towns"].add(str(row["town"]).strip())
                 n += 1
         counts[area] = n
-    return names, counts  # type: ignore[return-value]
+    return names, counts
 
 
 def main() -> None:
