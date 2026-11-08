@@ -79,9 +79,11 @@ unknown or not commercial.
 | sherpa-onnx | https://github.com/k2-fsa/sherpa-onnx | Apache-2.0 (code and the models it ships) | 2026-10-21 | the on-device speech - STT, TTS, VAD and the keyword spotting - through `react-native-sherpa-onnx` 0.4.4 (MIT) |
 | Kokoro-82M | https://huggingface.co/hexgrad/Kokoro-82M | Apache-2.0 (weights) | 2026-10-21 | the voice that speaks on the phone; the attribution is in the licences screen of the app |
 | smart-turn-v3 | https://github.com/pipecat-ai/smart-turn | BSD-2-Clause (code, weights, data and the training script) | 2026-10-21 | the end of the turn, read from the prosody on the phone |
-| silero-vad | https://github.com/snakers4/silero-vad | MIT in the LICENSE file, CC BY-NC 4.0 in the README badge - contradictory, UNVERIFIED | 2026-10-21 | the voice activity gate, only through sherpa-onnx; internal-only until the file is read in our own tree |
+| silero-vad | https://github.com/snakers4/silero-vad | MIT in the LICENSE file (re-read 2026-11-08 from raw.githubusercontent.com/snakers4/silero-vad/master/LICENSE); the README badge still shows CC BY-NC 4.0, so the badge contradicts the file — the file governs the code, and we still use VAD only through sherpa-onnx's Apache-2.0 release | 2026-11-08 | the voice activity gate, only through sherpa-onnx |
 | Qwen3-ASR and Qwen3-TTS | https://huggingface.co/Qwen | Apache-2.0 (weights) | 2026-10-21 | the server speech candidates of the gateway; not enabled by default |
 | OmniRoute | https://github.com/diegosouzapw/OmniRoute | MIT | 2026-10-21 | the one gateway the server brain talks to (D25) |
+| rnnoise | https://github.com/xiph/rnnoise | BSD-3-Clause (COPYING re-read 2026-11-08: Xiph.Org / Mozilla / Jean-Marc Valin copyrights) | 2026-11-08 | **candidate, not adopted yet**: noise suppression on the van slice, measured as its own lever in the voice eval |
+| pipecat | https://github.com/pipecat-ai/pipecat | BSD-2-Clause (LICENSE re-read 2026-11-08, Copyright (c) 2024-2026 Daily) — adoptable per D24 | 2026-11-08 | **ideas/orchestration only** for the server-side voice-agent harness compared in docs/research/2026/voice-audio-injection.md; no code taken |
 | OmniVoice pretrained weights | https://huggingface.co/k2-fsa/OmniVoice | CC-BY-NC | 2026-10-21 | **blocked**: not downloaded, not shipped and not served to a driver |
 | OmniVoice audio_tokenizer weights | https://huggingface.co/k2-fsa/OmniVoice | Boson Higgs Audio 2 Community Licence Agreement | 2026-10-21 | **blocked**: the community licence carries obligations we do not take |
 | openWakeWord shipped models | https://huggingface.co/davidscripka/openwakeword | CC-BY-NC-SA-4.0 | 2026-10-21 | **blocked**: the weights are non-commercial and share-alike |
@@ -95,6 +97,16 @@ unknown or not commercial.
 | certifi | https://github.com/certifi/python-certifi | MPL-2.0 | 2026-10-22 | the trust store of httpx; it does not reach the app bundle |
 
 The imagery providers that need a commercial licence are **not** adopted: Google Photorealistic 3D Tiles and Cesium ion are refused by `scripts/data/build-3d-buildings.mjs` (see `docs/decisions/adr/ADR-005-map-view-modes.md`).
+
+## Dev-machine tools (never shipped in the app, never in CI images)
+
+Tools installed on the founder's dev PC only, to run the voice tests. Nothing
+here enters the repo beyond this row, the research doc and the scripts that use
+the file-input path; nothing is reachable in a release build.
+
+| What | Upstream | Licence | Read on | Where it is used |
+| ---- | -------- | ------- | ------- | ---------------- |
+| VB-CABLE (virtual audio cable) | https://vb-audio.com/Cable/index.htm | **Donationware** — "VB-CABLE is a Donationware! All participations are welcome"; package `VBCABLE_Driver_Pack46.zip` (NOV 2026, XP to WIN11 32/64 bits/Arm64); install runs the setup in administrator mode and **needs a reboot** | 2026-11-08 | routing test WAVs into the emulator's mic on the founder's PC (the real-mic parity path, option A in docs/research/2026/voice-audio-injection.md). Install is FOUNDER_TODO until the reboot/UAC is allowed; until then all runs use the test-flavour file input |
 
 ## The API service (services/api)
 
