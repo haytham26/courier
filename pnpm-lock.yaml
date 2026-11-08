@@ -181,6 +181,9 @@ importers:
       eslint:
         specifier: 10.13.0
         version: 10.13.0(supports-color@8.1.1)
+      js-yaml:
+        specifier: 4.3.2
+        version: 4.3.2
       pnpm:
         specifier: 12.14.0
         version: 12.14.0

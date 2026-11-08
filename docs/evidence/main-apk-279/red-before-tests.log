@@ -1,0 +1,3 @@
+$ node --test scripts/ci/__tests__/check-workflows.test.mjs   (BEFORE the fix commit; the real-tree tests assert over .github/workflows)
+exit code: 1 - the tests "the repo's own workflows pass" and "the repo's own workflows carry no job-level secret" failed on main-apk.yml:113 (not valid YAML).
+Reproduced via the fixture in red-before.log. AFTER the fix: exit code 0, # tests 22 / # pass 22 / # fail 0 (green-after-tests.log).

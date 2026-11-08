@@ -25,23 +25,37 @@
 // job, with no report of which line. A job-level `if:` guard cannot help a
 // workflow that cannot start.
 //
-// The rules, then, are the three that make a workflow file unstartable:
+// The rules, then, are the ones that make a workflow file unstartable:
 //
 //   1. no unknown key at a step or a job (the BUG-067 root cause);
 //   2. no bare `inputs` context - it exists for a `workflow_dispatch` or a
 //      `workflow_call` only, so `github.event.inputs` is the form that reads for
 //      every event (the same file carried this defect at the same time);
 //   3. a YAML anchor or an alias in a place this gate cannot read FAILS rather
-//      than passes: a gate that waves through what it cannot see is not a gate.
+//      than passes: a gate that waves through what it cannot see is not a gate;
+//   4. the file parses as YAML with a real parser - a plain scalar carrying ": "
+//      is not YAML, and GitHub refuses the whole workflow over it (BUG-279);
+//   5. no `?` in a `${{ }}` expression - GitHub expressions have no ?: operator
+//      (BUG-279).
 //
 // The parser is deliberately small, like check-emulator-gpu.mjs's, but it reads
 // the STRUCTURE - the mapping paths, whatever indentation a file is written in
 // (BUG-108) - not this repository's two-space habit: a workflow written in any
 // other valid YAML style used to be reported clean without being read at all.
 // A line the structure cannot place is a violation, not a skip.
+//
+// BUG-279: that line reader still placed every line of `main-apk.yml` while
+// GitHub refused the file, because line 113 carried
+// `cache: ${{ ... ? 'pnpm' : '' }}` - a plain scalar with ": " inside it, which
+// is not YAML at all ("mapping values are not allowed here"), and a `?:`
+// operator GitHub expressions do not have. So every workflow is now ALSO
+// parsed with a real YAML parser (rule 4 below), and no `${{ }}` expression may
+// carry a `?` (rule 5) - the quoted form parses as YAML but still dies at
+// expression evaluation.
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { load as parseYaml } from 'js-yaml';
 
 export const BUG_ID = 'BUG-067';
 
@@ -168,7 +182,13 @@ export function structureOf(lines) {
       } else {
         const parentPath = marker && marker.indent <= itemIndent ? marker.path : [];
         const count = 0;
-        marker = { indent: itemIndent, isSeq: true, parentPath, count, path: [...parentPath, count] };
+        marker = {
+          indent: itemIndent,
+          isSeq: true,
+          parentPath,
+          count,
+          path: [...parentPath, count],
+        };
         stack.push(marker);
       }
       const itemPath = [...marker.path];
@@ -190,7 +210,8 @@ export function structureOf(lines) {
       }
       entries[index] = { line: index + 1, path: itemPath, key: null, value: content.trim() };
       if (/^[*&]/.test(content.trim())) {
-        entries[index].problem = 'a YAML anchor or alias this gate cannot read: write the value out';
+        entries[index].problem =
+          'a YAML anchor or alias this gate cannot read: write the value out';
       }
       continue;
     }
@@ -251,7 +272,9 @@ export function violationsOf(lines) {
     }
     for (const expression of line.match(/\$\{\{[^}]*\}\}/g) ?? []) {
       if (/[*&!]/.test(expression) && /\binputs\b/.test(expression)) {
-        push('an `inputs` expression this gate cannot read (an anchor or an alias): write it out so the check can see it');
+        push(
+          'an `inputs` expression this gate cannot read (an anchor or an alias): write it out so the check can see it',
+        );
       }
     }
 
@@ -278,21 +301,27 @@ export function violationsOf(lines) {
     if (entry.path.length === 4 && entry.path[2] === 'steps') {
       // A key directly under `steps:` is a step key that lost its `- `.
       if (!STEP_KEYS.has(entry.key)) {
-        push(`${entry.key} is not a key a step may carry (expected one of ${[...STEP_KEYS].sort().join(', ')})`);
+        push(
+          `${entry.key} is not a key a step may carry (expected one of ${[...STEP_KEYS].sort().join(', ')})`,
+        );
       }
       continue;
     }
     if (entry.path.length === 5 && entry.path[2] === 'steps') {
       // A key inside the item's own mapping: a step key.
       if (!STEP_KEYS.has(entry.key)) {
-        push(`${entry.key} is not a key a step may carry (expected one of ${[...STEP_KEYS].sort().join(', ')})`);
+        push(
+          `${entry.key} is not a key a step may carry (expected one of ${[...STEP_KEYS].sort().join(', ')})`,
+        );
       }
       continue;
     }
     if (entry.path.length === 3 && entry.path[2] !== 'steps') {
       // A key of a job: depth 2 is the job's own id, depth 3 its keys.
       if (!JOB_KEYS.has(entry.key)) {
-        push(`${entry.key} is not a key a job may carry (expected one of ${[...JOB_KEYS].sort().join(', ')})`);
+        push(
+          `${entry.key} is not a key a job may carry (expected one of ${[...JOB_KEYS].sort().join(', ')})`,
+        );
       }
     }
   }
@@ -330,8 +359,50 @@ export function jobLevelSecretFindings(lines) {
   return findings;
 }
 
+/**
+ * BUG-279's two rules, over the whole file text: a real YAML parse (the line
+ * reader above places every line, so it cannot see that a plain scalar with
+ * ": " inside it is not YAML at all), and no `?` inside a `${{ }}` expression
+ * (GitHub expressions have no ?: operator - use && and ||).
+ *
+ * @param {string} text the whole file
+ * @param {string[]} lines the file's lines, for the report
+ * @returns {Array<{ line: number, text: string, problem: string }>}
+ */
+export function parseViolationsOf(text, lines) {
+  const found = [];
+  try {
+    parseYaml(text);
+  } catch (error) {
+    const mark = /** @type {{ mark?: { line: number, column: number } }} */ (error);
+    const line = (mark.mark?.line ?? 0) + 1;
+    found.push({
+      line: line > 0 ? line : 1,
+      text: (lines[line - 1] ?? '').trim(),
+      problem:
+        'this file is not valid YAML, so GitHub refuses the whole workflow before any job ' +
+        `starts (BUG-279): ${error instanceof Error ? error.message : String(error)}`,
+    });
+  }
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line.trim() === '' || line.trim().startsWith('#')) continue;
+    for (const expression of line.match(/\$\{\{[^}]*\}\}/g) ?? []) {
+      if (expression.includes('?')) {
+        found.push({
+          line: index + 1,
+          text: line.trim(),
+          problem: `a GitHub expression has no ?: operator - write it with && and || (BUG-279): ${expression}`,
+        });
+      }
+    }
+  }
+  return found;
+}
+
 export function checkWorkflow(lines) {
-  const violations = violationsOf(lines);
+  const violations = [...parseViolationsOf(lines.join('\n'), lines), ...violationsOf(lines)];
+  violations.sort((a, b) => a.line - b.line);
   return { ok: violations.length === 0, violations };
 }
 
@@ -357,7 +428,7 @@ export function checkWorkflowDir(directory = WORKFLOW_DIR) {
     if (!entry.endsWith('.yml') && !entry.endsWith('.yaml')) continue;
     const file = path.join(directory, entry);
     checked.push(entry);
-    for (const violation of violationsOf(readFileSync(file, 'utf8').split(/\r?\n/))) {
+    for (const violation of checkWorkflow(readFileSync(file, 'utf8').split(/\r?\n/)).violations) {
       violations.push({ file: entry, ...violation });
     }
   }
@@ -386,7 +457,7 @@ function main(argv) {
     return;
   }
   console.log(
-    `check-workflows: ${result.checked.length} workflows read their inputs through the github context and carry only keys GitHub accepts`,
+    `check-workflows: ${result.checked.length} workflows parse as YAML, carry only keys GitHub accepts, and read their inputs through the github context`,
   );
 }
 
