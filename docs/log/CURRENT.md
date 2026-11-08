@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W44. **Local `main` == `origin/main` == `47ba08c` (PR #267, `docs/status/FINAL_REPORT.md` — the §6 report for the founder). Behind it `3525a50` = PR #266 (the #261/#262/#265 log PR). Behind it `f1ae091` = PR #265 (the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
+**Week:** 2026-W45. **Local `main` == `origin/main` == `abd3754` (PR #276 — the founder directive 2026-11-08 FIRST PR: PLAYBOOK §16 ownership, TRIAL_SCOPE rows 6/10-14/16/17/21 -> Built). Behind it `8d89f8c` = PR #274 (BUG-276, S1-S5 task breakdown). Behind it `3525a50` = PR #266 (the #261/#262/#265 log PR). Behind it `f1ae091` = PR #265 (the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
 side, BUG-200 — the prominent background-location disclosure is shown in-app
 before the permission request, and the settings carry the Legal rows). Behind it
 `0f500fe` = PR #251 (BUG-236 — the backend's row), `ffa60ba` = PR #249 (item 5a,
@@ -94,6 +94,55 @@ large/200 % baselines?
 Queue: this PR (PLAYBOOK §16 + TRIAL_SCOPE rows -> Built) -> voice audio-injection
 research -> BUG-270 PR (android-e2e.yml is mine now) -> voice eval honesty
 (held-out streets, real-STT numbers) -> scale-testing lane.
+
+---
+
+## 2026-11-08, lead session after the directive: PR #276 merged, audio-injection research done
+
+**PR #276 merged as `abd3754`** (all-green head `2726fc93`: 13 completed checks
+success; the 5 skips are the path-filtered legs of a docs-only diff — API/voice
+mutation floors, A1, APK build, Maestro). Ritual done: evidence comment posted,
+merge commit -> tag `archive/docs/founder-directive-2026-11-08` pushed -> branch
+deleted via API -> `git ls-remote origin refs/heads/docs/founder-directive-2026-11-08`
+= empty. Post-merge deletion check: `git diff --name-status --diff-filter=D
+abd3754^1 abd3754` = nothing. FINAL_REPORT scorecard unchanged — a docs-only merge
+moves no measured number.
+
+**Audio-injection research written**: `docs/research/2026/voice-audio-injection.md`
+(this PR). Note: the session's websearch tool returned HTTP 402 on every query
+today, so every source was fetched directly (official pages + raw LICENSE files,
+all read 2026-11-08) — the doc says so. Decision: **option C** (test-flavour
+audio-file input through the existing `transcribeRecordedUtterance` seam, gated
+so release never reaches it and `check-mock-reach.mjs` must cover it) is the
+deterministic scale path; **option A** (host loopback — VB-CABLE on the founder's
+PC, PulseAudio null sink on CI — into the AVD's real audio backend) is the
+real-mic parity path, >=1 sample per slice; **option B** (`-audio-in`) rejected —
+officially deprecated on the emulator command-line page; **option D** (pipecat,
+BSD-2-Clause verified) ideas only.
+
+**LICENSES.md updated** (same PR): silero-vad LICENSE file re-read = MIT (the
+README badge still says CC BY-NC — contradiction recorded, file governs, VAD
+still only via sherpa-onnx); rnnoise = BSD-3-Clause (candidate, not adopted);
+pipecat = BSD-2-Clause (ideas only); new "Dev-machine tools" section records
+VB-CABLE as donationware, dev-PC only, admin install + reboot => FOUNDER_TODO
+until the founder allows it; until then the file-input path serves all runs.
+
+**Seen on origin:** the backend pushed `directive-voice-handover-277` (BUG-277 —
+in its own 277..299 range, no collision with the lead's BUG-300..349): it exports
+`packages/nz-address/data/linz-hotwords.json` (7,077 lines) +
+`scripts/data/export-linz-hotwords.py` and writes the hand-over state in
+CURRENT-backend.md + docs/evidence/voice-handover-277/. That hotword export is
+the contextual-biasing source for the voice lane. Their PR is theirs to merge;
+asked in the #276 entry whether screen-recordings.yml also needs the BUG-270
+large AVD — answer not yet in CURRENT-backend.md on origin/main.
+
+**Founder's emulator still not visible** (adb server PID 24544, zero devices).
+
+Queue next: BUG-270 PR on `.github/workflows/android-e2e.yml` (second large-screen
+AVD in the matrix, AVD cache key carries the profile) -> voice lane via sub-agent
+worktrees `..\courier-voice-wt`: held-out street split (20% of Canterbury streets,
+seeded, committed list) + real-STT measurement on it -> the test-flavour audio
+input + mock-reach seam -> >=500-turn A-to-Z simulation in docs/evidence/voice-scale/.
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
