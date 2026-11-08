@@ -12,6 +12,7 @@ data, which is either large (the map extracts) or personal (the label photos).
 | `fetch-linz-changeset.py` | Fetches the LINZ changeset — the week's inserts, updates and deletes — for the three areas (C3's weekly import). `uv run --with httpx python scripts/data/fetch-linz-changeset.py --from 2026-10-23`. The weekly lane `.github/workflows/linz-changeset.yml` runs it, rebuilds the index and re-runs the accuracy measure. |
 | `list-linz-layers.py` | Prints the live LINZ LDS layer list, so a stale layer id is caught against `GetCapabilities`. `uv run --with httpx python scripts/data/list-linz-layers.py`. |
 | `build-linz-index.py` | Turns the LINZ GeoJSON into the one-line-per-address JSONL index the D8 engine loads (`data/linz/addresses-<area>.jsonl`). `uv run python scripts/data/build-linz-index.py --area christchurch`. |
+| `export-linz-hotwords.py` | Exports the DERIVED LINZ name list (unique road/suburb/town names + macron-stripped spoken forms, CC BY 4.0 attribution in the header, no raw bulk) to `packages/nz-address/data/linz-hotwords.json` for voice hotwords. `uv run python scripts/data/export-linz-hotwords.py --execute`. |
 
 ## The rules
 
