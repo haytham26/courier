@@ -30,6 +30,21 @@ name: 'The option-C audio-file input feeds the push-to-talk of the test build (v
     visible:
       id: "today-screen"
     timeout: 60000
+# The actions live inside the run sheet, which opens at peek (the morning
+# glance): raise it with the grabber first - the design's own gesture - then
+# scroll to the action, the same convention as today-list.yaml. Run
+# 42495857072's api-34/api-35 legs failed this flow with "Element not found:
+# today-add-by-voice" on the bare tap (the 320x640 emulator folds the sheet's
+# lower rows below the peek height).
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- scrollUntilVisible:
+    element:
+      id: "today-add-by-voice"
+    direction: DOWN
+    timeout: 20000
 # The push-to-talk through the file input: "Add by Voice" calls
 # voice.startListening(), which in this build takes the file branch - the
 # microphone is never opened for it.

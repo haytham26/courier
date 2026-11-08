@@ -108,11 +108,39 @@ by the unit tests above and the two gates.
 
 ## CI
 
+PR **#282** — https://github.com/haytham26/courier/pull/282 — branch
+`voice/audio-file-input`, head `20e0115` (base `main`; the branch's merge-base
+with `main` is `b389e56`, zero file overlap with lane 1's in-flight merges).
 PR CI (`.github/workflows/android-e2e.yml` legs run because `.maestro/**`
-changed): run ids and conclusions recorded here after the run — see §5.
+changed).
 
 ## §5 CI runs
 
-- PR: #TBD (branch `voice/audio-file-input`, head TBD)
-- android-e2e run: TBD — conclusion: TBD
-- unit/lint/typecheck legs: TBD — conclusion: TBD
+Push runs on `voice/audio-file-input` @ `20e0115`:
+
+- CI `42495114738` — success; Quality gates `42495114875` — success;
+  `main-apk.yml` `42495113083` — failure in 0 s ("workflow file issue" on the
+  branch-push trigger, the known path-filter quirk; the PR runs are the gate).
+
+PR runs on #282 @ `20e0115` (workflow run `42495857xxx` set):
+
+- CI `42495857012` — **success** (5m32s): unit tests, the `scripts/ci` gate
+  suites, lint, typecheck.
+- Quality gates `42495857063` — **success** (2m8s): check-mock-reach,
+  check-e2e-flag, check-parity, check-floor, doc/control-char/mojibake/
+  conflict gates.
+- CodeQL `42495857132` — **success** (1m28s).
+- Screen recordings `42495857085` — **success** (29m8s).
+- Android E2E `42495857072` — **failure, and this lane's own finding**:
+  - APK build + A1 leg success; both Maestro legs (api-34 job `128783014687`,
+    api-35 job `128783014740`) failed on exactly one flow,
+    `.maestro/voice-file-input.yaml`: `Element not found: today-add-by-voice`
+    — the today sheet opens at peek and the 320x640 emulator folds the
+    actions row below it (run-all.sh armed the fixture fine on both legs:
+    "the audio-file fixture is armed at
+    /data/data/com.courier.copilot/files/e2e-utterance.wav"). All 21 other
+    flows passed on both legs.
+  - Fix (next commit on this branch): raise the sheet with the grabber
+    (`swipe` from `today-sheet-grabber`) and `scrollUntilVisible` the action
+    before tapping — the same convention as `today-list.yaml`.
+- Re-run after the fix: TBD — see the last commit of this branch.
