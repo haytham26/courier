@@ -117,6 +117,14 @@ backend's file — the question is in the #276 entry above.
 Gates run locally on the branch: check-workflows, check-e2e-pins,
 check-e2e-avd-restore-keys, check-e2e-dispatch, check-emulator-gpu,
 check-action-pins, parity, doc-links, control-chars, mojibake, markers.
+Red-first on the first run (42452385800): both `large` legs died at AVD creation —
+'No device found matching --device Pixel 6' (jobs 128648219110/128648219135);
+plain 'Pixel 6' is not in the 2026 cmdline-tools device list. Fixed in the same
+PR by using `Nexus 6` (1440x2560), the profile screen-recordings.yml already boots
+green on this pinned stack — a harness fix, not an app change, and no re-run was
+spent on the dead name (§17). Note: main-apk.yml fails on EVERY push including
+main (b76c3331, b389e564) — pre-existing, not this PR, not chased (§16).
+
 This PR's diff touches `.github/workflows/android-e2e.yml`, so the pipeline
 leg DOES run on it: 4 Maestro legs + A1. The green large legs are the evidence
 that closes BUG-270 (status -> testing -> fixed with the run id).

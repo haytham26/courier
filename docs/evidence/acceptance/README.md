@@ -55,7 +55,7 @@ so far — every line names the run, the artifact and the job that proves it.
   large/200 % views).
 - Filed as **BUG-270** (2026-11-08): the second AVD profile lives in
   `.github/workflows/android-e2e.yml` — lead-owned since the founder directive
-  2026-11-08; the BUG-270 PR adds the `large` (Pixel 6, 1080×2400) leg to the
+  2026-11-08; the BUG-270 PR adds the `large` (Nexus 6, 1440×2560 — the profile screen-recordings.yml already boots) leg to the
   matrix on both api legs, with the profile in the pins fingerprint and the AVD
   cache key — and in `screen-recordings.yml` (the backend's; asked in
   `docs/log/CURRENT.md`). The flows

@@ -312,7 +312,11 @@ jobs:
     # "TWO screen sizes" half runs too. `small` passes no profile to the action
     # (avdmanager's own default device - the one every green run so far booted,
     # an empty input means no --device per the action's own createAvd);
-    # `large` boots a Pixel 6 (1080x2400, google_apis x86_64). The pins
+    # `large` boots a Nexus 6 (1440x2560, google_apis x86_64) - the profile
+    # screen-recordings.yml already boots green on this pinned stack. (`Pixel 6`
+    # is NOT in the SDK's device list: run 42452385800, jobs 128648219110 and
+    # 128648219135, both red with 'No device found matching --device Pixel 6';
+    # recent cmdline-tools dropped the plain Pixel 6 entry.) The pins
     # fingerprint and the AVD cache key below both carry the profile, so a
     # profile change is a cache miss by construction (BUG-065/BUG-068 discipline).
     strategy:
@@ -324,13 +328,13 @@ jobs:
             device: ''
           - api: 34
             profile: large
-            device: 'Pixel 6'
+            device: 'Nexus 6'
           - api: 35
             profile: small
             device: ''
           - api: 35
             profile: large
-            device: 'Pixel 6'
+            device: 'Nexus 6'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -547,7 +551,7 @@ jobs:
           target: google_apis
           arch: x86_64
           # BUG-270: '' = avdmanager's default device (small, as before);
-          # 'Pixel 6' = the large 1080x2400 profile.
+          # 'Nexus 6' = the large 1440x2560 profile (proven by screen-recordings.yml).
           profile: ${{ matrix.device }}
           disable-animations: true
           # BUG-060: software GL. Without a -gpu flag the emulator picks its own
