@@ -2,7 +2,8 @@
 //
 //   node --test scripts/ci/__tests__/check-e2e-flag.test.mjs
 //
-// The damage the gate exists for (a release build with the flag, the artifact
+// The damage the gate exists for (a release build with a test flag - the E2E
+// mocks or the option-C audio-file input - in the artifact a courier runs) and
 // the android-e2e workflow once built as routine) and the near misses (a
 // release with no flag, a debug with the flag, a dev variant with the flag).
 import { test } from 'node:test';
@@ -18,7 +19,13 @@ function runWith(env, args = ['--variant', 'release']) {
   const result = spawnSync(process.execPath, [CHECK, ...args], {
     cwd: ROOT,
     encoding: 'utf8',
-    env: { ...process.env, EXPO_PUBLIC_E2E: undefined, GRADLE_VARIANT: undefined, ...env },
+    env: {
+      ...process.env,
+      EXPO_PUBLIC_E2E: undefined,
+      EXPO_PUBLIC_E2E_AUDIO_FILE: undefined,
+      GRADLE_VARIANT: undefined,
+      ...env,
+    },
   });
   return { code: result.status, out: result.stdout + result.stderr };
 }
@@ -61,4 +68,42 @@ test('an empty flag value is not the flag', () => {
 test('the variant can come from the environment', () => {
   const { code } = runWith({ EXPO_PUBLIC_E2E: '1', GRADLE_VARIANT: 'release' }, []);
   assert.notEqual(code, 0);
+});
+
+// The option-C audio-file input (docs/research/2026/voice-audio-injection.md):
+// `EXPO_PUBLIC_E2E_AUDIO_FILE` names a WAV a TEST build may feed the recognizer,
+// so a release build must refuse it exactly as it refuses the E2E flag.
+test('a release build with the audio-file flag fails', () => {
+  const { code, out } = runWith({ EXPO_PUBLIC_E2E_AUDIO_FILE: 'e2e-utterance.wav' });
+  assert.notEqual(code, 0);
+  assert.match(out, /RELEASE build and EXPO_PUBLIC_E2E_AUDIO_FILE=e2e-utterance\.wav/);
+});
+
+test('a release build with both test flags fails and names both', () => {
+  const { code, out } = runWith({
+    EXPO_PUBLIC_E2E: '1',
+    EXPO_PUBLIC_E2E_AUDIO_FILE: 'e2e-utterance.wav',
+  });
+  assert.notEqual(code, 0);
+  assert.match(out, /EXPO_PUBLIC_E2E=1/);
+  assert.match(out, /EXPO_PUBLIC_E2E_AUDIO_FILE=e2e-utterance\.wav/);
+});
+
+test('a declared e2e build with the audio-file flag passes (the test artifact)', () => {
+  const { code, out } = runWith({ EXPO_PUBLIC_E2E_AUDIO_FILE: 'e2e-utterance.wav' }, [
+    '--variant',
+    'e2e',
+  ]);
+  assert.equal(code, 0);
+  assert.match(out, /the audio-file flag names e2e-utterance\.wav/);
+});
+
+test('a debug build with the audio-file flag passes', () => {
+  const { code } = runWith({ EXPO_PUBLIC_E2E_AUDIO_FILE: 'e2e-utterance.wav' }, ['--variant', 'debug']);
+  assert.equal(code, 0);
+});
+
+test('an empty audio-file flag value is not the flag', () => {
+  const { code } = runWith({ EXPO_PUBLIC_E2E_AUDIO_FILE: '' });
+  assert.equal(code, 0);
 });

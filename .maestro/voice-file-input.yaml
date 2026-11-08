@@ -1,0 +1,58 @@
+appId: com.courier.copilot
+name: 'The option-C audio-file input feeds the push-to-talk of the test build (voice/audio-file-input)'
+---
+# Option C of the audio-injection research
+# (docs/research/2026/voice-audio-injection.md): in a TEST build the
+# push-to-talk can be fed an audio FILE instead of the microphone. The build
+# seam (apps/mobile/src/voice/audioSourceForThisBuild.ts) answers the file for
+# this build: the E2E legs build with only EXPO_PUBLIC_E2E=1 inlined, so the
+# seam answers the runner-armed default - e2e-utterance.wav in the app's own
+# document directory, which run-all.sh pushes from
+# .maestro/fixtures/voice-file-input.wav before the flows run
+# (EXPO_PUBLIC_E2E_AUDIO_FILE names a file when it IS inlined, and
+# check-e2e-flag.mjs refuses it in a release variant). A release build answers
+# never, pinned by audioSourceForThisBuild.test.ts, and check-mock-reach.mjs
+# keeps the file input reachable only through the seam.
+#
+# startListening feeds the armed file through the EXISTING
+# transcribeRecordedUtterance seam (reused, not duplicated) instead of opening
+# the microphone. The emulator has no STT model pack (founder-gated), so the
+# honest answer there is the no-model error - the file-input WIRING is what
+# this flow exercises together with the unit tests; the turn below is then
+# completed through the E2E canned queue exactly as voice-turn.yaml does.
+#
+# BUG-185: stop the app FIRST, then clear its state (the old task's removal
+# killed the freshly started process on api-34).
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The push-to-talk through the file input: "Add by Voice" calls
+# voice.startListening(), which in this build takes the file branch - the
+# microphone is never opened for it.
+- tapOn:
+    id: "today-add-by-voice"
+# The machine must not wedge on it: the sphere's first tap is the canned
+# question (the queue of turnForThisBuild), answered in the dock's caption.
+- tapOn:
+    id: "copilot-sphere"
+- extendedWaitUntil:
+    visible:
+      id: "tab-caption"
+    timeout: 15000
+- assertVisible: "Four stops left on the run."
+- takeScreenshot: "voice-file-input-answer"
+# Second tap: the canned "delivered" - routed FREE, no HTTP - publishes the
+# command on the voice channel, and the layout's bridge marks the run's active
+# stop and opens the confirm.
+- tapOn:
+    id: "copilot-sphere"
+- extendedWaitUntil:
+    visible:
+      id: "delivered-screen"
+    timeout: 15000
+- assertVisible: "Delivered"
+- takeScreenshot: "voice-file-input-delivered"

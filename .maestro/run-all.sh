@@ -158,6 +158,31 @@ done
 echo "the first screen is on the device"
 echo "::endgroup::"
 
+# The option-C audio-file input (docs/research/2026/voice-audio-injection.md):
+# the E2E build's push-to-talk reads the runner-armed WAV from the app's own
+# document directory (audioSourceForThisBuild answers the default name
+# e2e-utterance.wav when EXPO_PUBLIC_E2E_AUDIO_FILE is not inlined, which is
+# the e2e legs' build). The push is best-effort: adb root is not granted on
+# every image, and a fixture that did not land must not take the flows down -
+# the emulator has no STT model pack, so the file branch answers the honest
+# no-model error there anyway; the wiring is pinned by the unit tests and the
+# check-mock-reach / check-e2e-flag gates.
+echo "::group::readiness: arm the audio-file fixture"
+FIXTURE=".maestro/fixtures/voice-file-input.wav"
+APP_FILES="/data/data/$PKG/files"
+if [ -f "$FIXTURE" ] && adb root >/dev/null 2>&1; then
+  adb shell "mkdir -p $APP_FILES" >/dev/null 2>&1 || true
+  if adb push "$FIXTURE" "$APP_FILES/e2e-utterance.wav" >/dev/null 2>&1 &&
+     [ "$(adb shell "test -f $APP_FILES/e2e-utterance.wav && echo armed" 2>/dev/null | tr -d '\r')" = "armed" ]; then
+    echo "the audio-file fixture is armed at $APP_FILES/e2e-utterance.wav"
+  else
+    echo "::warning::the audio-file fixture could not be pushed; the flows still run (the file branch answers honestly)"
+  fi
+else
+  echo "::warning::adb root or the fixture is unavailable; the audio-file fixture was not pushed"
+fi
+echo "::endgroup::"
+
 status=0
 # The per-flow result file: one line per flow, machine-readable, so the nightly
 # health run (PLAYBOOK 17.4) can count a pass rate instead of arguing about a
