@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W46. **Local `main` == `origin/main` == `191ac17` (PR #280 — the #279 log PR). Behind it `d1f9f60` = PR #279 (voice lane 1: the synthetic held-out street split, committed). Behind it `b76c333` = PR #277 (the audio-injection research + licence reads), behind it `b389e56` = PR #275 (the backend's BUG-277: LINZ hotword export), behind it `abd3754` = PR #276 (the directive FIRST PR). Behind it `3525a50` = PR #266 (the #261/#262/#265 log PR). Behind it `f1ae091` = PR #265 (the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
+**Week:** 2026-W46. **Local `main` == `origin/main` == `5df941f` (PR #283 — the 2026-11-09 log PR). Behind it `ca32f4a` = PR #281 (the backend's BUG-278: held-out 99.65% D8 accuracy), behind it `191ac17` = PR #280. Behind it `d1f9f60` = PR #279 (voice lane 1: the synthetic held-out street split, committed). Behind it `b76c333` = PR #277 (the audio-injection research + licence reads), behind it `b389e56` = PR #275 (the backend's BUG-277: LINZ hotword export), behind it `abd3754` = PR #276 (the directive FIRST PR). Behind it `3525a50` = PR #266 (the #261/#262/#265 log PR). Behind it `f1ae091` = PR #265 (the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
 side, BUG-200 — the prominent background-location disclosure is shown in-app
 before the permission request, and the settings carry the Legal rows). Behind it
 `0f500fe` = PR #251 (BUG-236 — the backend's row), `ffa60ba` = PR #249 (item 5a,
@@ -235,6 +235,25 @@ Conclusion: STEP 1 fails for now -> STEP 2.
 numbers from real STT hypotheses, per-target PASS/FAIL in
 `docs/evidence/voice-heldout/`) are running. PR #278 head `b620bbd`: small legs + A1
 green, large legs red on BUG-300 as expected — it waits on lane 3.
+
+---
+
+## 2026-11-09 07:36: emulator STEP 2 outcome — installer stalled with no UI, stopped per §15
+
+The BlueStacks micro installer launched at 05:46:11 (`BlueStacksMicroInstaller_5.22.286.1003_native.exe`,
+Authenticode Valid, CN="Now.gg, INC") bootstrapped to
+`C:\Users\DCL\AppData\Local\Temp\7zS05103E0F\BlueStacksInstaller.exe` (2.0 MB extracted), then sat with
+**no window title, no established network connections, 0 bytes of output for ~110 minutes** — an
+interactive step the agent cannot click. Per §15 it was stopped at **2026-11-09 07:36:18** (pids 336, 808;
+targeted `taskkill /PID /F` on my own installer processes only). The installers remain signature-verified
+and safe for the founder to run by hand — the exact state is in FOUNDER_TODO.md. `adb devices -l` still
+shows zero devices; no emulator adb port listens anywhere on this PC (full listen-port scan).
+
+**The gate is unchanged:** the CI AVDs (android-e2e.yml, now api 34/35 × small/large on PR #278) carry
+all E2E; any device that appears (the founder's Magisk emulator, or BlueStacks once the founder runs the
+installer and enables ADB in its Settings → Advanced) is SUPPLEMENTARY and gets STEP 3: identify via
+getprop + `su -c id` recorded here, APK installed alongside, Maestro flows run with `maestro --device`;
+rooted fails Play Integrity = recorded, not our bug. Never touch the founder's apps/data/Magisk.
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
