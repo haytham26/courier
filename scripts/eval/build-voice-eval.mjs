@@ -1,6 +1,6 @@
 // Builds the text parts of the voice evaluation set.
 //
-//   node scripts/eval/build-voice-eval.mjs
+//   node scripts/eval/build-voice-eval.mjs [--linz-dir data/linz] [--heldout]
 //
 // It writes the manifest under packages/eval/voice/manifest/:
 //   - addresses.jsonl  the NZ address bank, taken from the real LINZ data
@@ -13,8 +13,19 @@
 // the licence ledger before a sample is committed.
 //
 // The addresses come from data/linz/ (LINZ layer 123113, the three
-// Canterbury districts). Nothing here is invented: the street names, the
+// Canterbury districts; --linz-dir points elsewhere, e.g. a worktree that has
+// no data/linz of its own). Nothing here is invented: the street names, the
 // suburbs and the house numbers are the real ones.
+//
+// The held-out street split (founder directive 2026-11-08, item 4a): the
+// DEFAULT build EXCLUDES every address on a held-out street
+// (packages/eval/voice/manifest/heldout_streets.json, built by
+// scripts/eval/build-heldout-streets.mjs) from the main manifest, so nothing
+// is ever tuned on held-out streets. --heldout instead emits the held-out-only
+// manifest under packages/eval/voice/manifest/heldout/, with every generated
+// address and script whose road is in the held-out list tagged held_out: true.
+// scripts/eval/check-voice-eval.mjs refuses a main manifest containing a
+// held-out street and a held-out manifest containing a non-held-out street.
 import { createReadStream } from 'node:fs';
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
@@ -29,8 +40,34 @@ function readJsonlIfExists(file) {
     .map((line) => JSON.parse(line));
 }
 
-const OUT = 'packages/eval/voice/manifest';
-const LINZ = 'data/linz';
+function argValue(args, name, fallback) {
+  const index = args.indexOf(name);
+  return index >= 0 && args[index + 1] !== undefined ? args[index + 1] : fallback;
+}
+
+const args = process.argv.slice(2);
+const LINZ = argValue(args, '--linz-dir', 'data/linz');
+const HELDOUT_ONLY = args.includes('--heldout');
+const MAIN_MANIFEST = 'packages/eval/voice/manifest';
+const OUT = HELDOUT_ONLY ? join(MAIN_MANIFEST, 'heldout') : MAIN_MANIFEST;
+const HELDOUT_STREETS_FILE = join(MAIN_MANIFEST, 'heldout_streets.json');
+
+/** The committed held-out street split. Without it there is no split to
+ *  respect, so the build refuses rather than silently building on every
+ *  street. */
+function loadHeldOutStreets() {
+  if (!existsSync(HELDOUT_STREETS_FILE)) {
+    console.error(
+      `the held-out street split is missing: ${HELDOUT_STREETS_FILE} ` +
+        '(build it with: node scripts/eval/build-heldout-streets.mjs [--linz-dir data/linz])',
+    );
+    process.exit(1);
+  }
+  const document = JSON.parse(readFileSync(HELDOUT_STREETS_FILE, 'utf8'));
+  return new Set(Array.isArray(document.streets) ? document.streets : []);
+}
+
+const heldOutStreets = loadHeldOutStreets();
 
 const slices = [
   { id: 'en_nz_quiet', target: 120, files: 120, snrs: [null] },
@@ -87,10 +124,18 @@ for (const file of addressFiles) {
   raw.push(...(await readAddresses(join(LINZ, file), 4000)));
 }
 
+// The held-out split is by STREET, never by address: the default build drops
+// every address whose road is in the held-out list (so nothing is tuned on
+// held-out streets); --heldout keeps only those. Every address of a held-out
+// street is held out with it.
+const pool = raw.filter((row) =>
+  HELDOUT_ONLY ? heldOutStreets.has(row.street) : !heldOutStreets.has(row.street),
+);
+
 // Spread the bank over the suburbs: the first N of every file would all be
 // the same few streets.
 const bySuburb = new Map();
-for (const row of raw) {
+for (const row of pool) {
   if (!bySuburb.has(row.suburb)) bySuburb.set(row.suburb, []);
   bySuburb.get(row.suburb).push(row);
 }
@@ -101,7 +146,12 @@ while (addressBank.length < 240 && suburbs.length > 0) {
   for (const suburb of suburbs) {
     const rows = bySuburb.get(suburb);
     const row = rows[cursor % rows.length];
-    addressBank.push({ id: `A${String(addressBank.length + 1).padStart(3, '0')}`, ...row });
+    addressBank.push({
+      id: `A${String(addressBank.length + 1).padStart(3, '0')}`,
+      ...row,
+      // every generated address whose road is in the held-out list is tagged:
+      ...(heldOutStreets.has(row.street) ? { held_out: true } : {}),
+    });
     if (addressBank.length >= 240) break;
   }
   cursor += 1;
@@ -252,6 +302,8 @@ for (const slice of slices) {
       tags,
       address_id: address.id,
       speaker: `spk-${(index % 12) + 1}`,
+      // every generated script whose road is in the held-out list is tagged:
+      ...(heldOutStreets.has(address.street) ? { held_out: true } : {}),
     });
   }
 }
@@ -300,6 +352,11 @@ const summary = {
   generated: new Date().toISOString().slice(0, 10),
   generator: 'scripts/eval/build-voice-eval.mjs',
   address_source: 'data/linz (LINZ layer 123113: Christchurch, Waimakariri, Selwyn)',
+  // The held-out street split, in writing on every regeneration:
+  held_out_split: HELDOUT_ONLY
+    ? `this manifest contains ONLY held-out streets (${HELDOUT_STREETS_FILE})`
+    : `held-out-street addresses are EXCLUDED from this manifest (${HELDOUT_STREETS_FILE}; --heldout emits them under manifest/heldout/)`,
+  held_out_streets: heldOutStreets.size,
   scripts: scripts.length,
   utterances: utterances.length,
   addresses: addressBank.length,
@@ -342,5 +399,5 @@ const summary = {
 writeFileSync(join(OUT, 'slices.json'), `${JSON.stringify(summary, null, 2)}\n`);
 
 console.log(
-  `voice eval: ${scripts.length} scripts, ${utterances.length} planned files, ${addressBank.length} addresses, ${summary.slices.length} slices`,
+  `voice eval${HELDOUT_ONLY ? ' (held-out streets only)' : ''}: ${scripts.length} scripts, ${utterances.length} planned files, ${addressBank.length} addresses, ${summary.slices.length} slices -> ${OUT}`,
 );
