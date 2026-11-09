@@ -441,21 +441,7 @@ function RouteScreen() {
 
   return (
     <View testID="stops-screen" style={styles.screen}>
-      <MapView testID="stops-map" mapStyle={mapStyle} style={styles.map}>
-        <Camera initialViewState={{ center: DRIVE_ORIGIN_LNGLAT, zoom: 12 }} minZoom={4} maxZoom={19} />
-        {stops.map((stop) => (
-          <Marker
-            key={stop.id}
-            testID={`stops-marker-${stop.sequence}`}
-            lngLat={[stop.coordinates.lng, stop.coordinates.lat]}
-            anchor="bottom"
-          >
-            <View testID={`stops-pin-${stop.sequence}`}>
-              <StopPin number={String(stop.sequence)} />
-            </View>
-          </Marker>
-        ))}
-      </MapView>
+      <RouteBackdrop stops={stops} mapStyle={mapStyle} />
 
       <GlassSurface kind="sheet" testID="stops-panel" style={styles.panel}>
         <View style={styles.headerRow}>
@@ -730,6 +716,49 @@ function RouteScreen() {
     </View>
   );
 }
+
+/**
+ * The route screen's backdrop map (BUG-300, the large AVD).
+ *
+ * The same two properties the today screen's backdrop carries: hidden from
+ * the accessibility tree (no flow taps the map or its pins, and on the large
+ * screen each marker inflated the hierarchy dump to 4-11 s, so a
+ * scrollUntilVisible's 20 s budget ran out on rows that were on screen), and
+ * memoised, so typing in the pasted-CSV sheet does not re-render the map
+ * behind it.
+ */
+const RouteBackdrop = React.memo(function RouteBackdrop({
+  stops,
+  mapStyle,
+}: {
+  stops: Stop[];
+  mapStyle: ReturnType<typeof getCourierStyle>;
+}) {
+  return (
+    <View
+      testID="stops-map-veil"
+      style={styles.map}
+      importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
+    >
+      <MapView testID="stops-map" mapStyle={mapStyle} style={styles.map}>
+        <Camera initialViewState={{ center: DRIVE_ORIGIN_LNGLAT, zoom: 12 }} minZoom={4} maxZoom={19} />
+        {stops.map((stop) => (
+          <Marker
+            key={stop.id}
+            testID={`stops-marker-${stop.sequence}`}
+            lngLat={[stop.coordinates.lng, stop.coordinates.lat]}
+            anchor="bottom"
+          >
+            <View testID={`stops-pin-${stop.sequence}`}>
+              <StopPin number={String(stop.sequence)} />
+            </View>
+          </Marker>
+        ))}
+      </MapView>
+    </View>
+  );
+});
 
 export default function RouteTab() {
   const scheme = useColorScheme();
