@@ -109,6 +109,58 @@ latency of the service. The metrics that need the audio or a device are written
 down as **not measured**, with the reason: a number that was not measured is
 never reported as a pass.
 
+## How to measure (the two manifests, real STT output)
+
+Every score is measured from the recognizer's OWN output, never claimed from the
+gold text (founder directive 2026-11-08 item 4 and the 2026-11-09 PART B
+instruction; BUG-210 is why). Two commands, one per manifest, run from the
+repository root:
+
+```
+uv run --directory services/courier-voice --extra eval python -m app.eval_audio \
+  --manifest packages/eval/voice/manifest \
+  --data data/voice \
+  --out packages/eval/voice/results/utterances
+
+uv run --directory services/courier-voice --extra eval python -m app.eval_audio \
+  --manifest packages/eval/voice/manifest/heldout \
+  --data data/voice \
+  --out packages/eval/voice/results/heldout-utterances
+```
+
+The data comes first, once: `node scripts/eval/fetch-open-voice-data.mjs` writes
+`data/voice/` (git-ignored) with the Common Voice clips, the MUSAN beds and the
+judge archive, and re-verifies every clip's sha256 on every run. The scorer
+unpacks the judge from that LOCAL archive and downloads nothing itself, so the
+measurement is fully offline.
+
+What the committed results carry, beside the WER and the parser ceiling:
+
+- **`held_out` on every scored row** (`per_utterance.csv`) and in
+  `summary.json` (`held_out`, `held_out_utterances`, `held_out_scripts`,
+  `held_out_streets`, `street_key_check`). The scorer reads
+  `manifest/heldout_streets.json` - the same shared list
+  `scripts/eval/check-voice-eval.mjs` reads - by street key (the Python twin of
+  `scripts/eval/street-key.mjs`), and REFUSES a manifest whose rows disagree with
+  it, naming the row: a run from the wrong set is never published.
+- **`intent_on_stt_by_slice`** and **`address_extraction_on_stt_by_slice`**: the
+  intent accuracy and the exact-match address extraction, measured on the
+  judge's hypotheses. The gold-text legs stay published as the parser ceiling
+  they are, and `summary.json`'s `legs` says so in its own words.
+- **`directive_targets`**: one entry per target of the founder directive, each
+  with the slice its number was measured on, the counts behind it, and
+  PASS / FAIL / **NOT MEASURED**. NOT MEASURED carries the reason it has none,
+  so a leg this scorer cannot measure is never published as a pass.
+
+**What the two runs do and do not add to each other.** The open-data audio is
+assigned by utterance id, and both manifests lay their 600 open rows out in the
+same order with the same clip pool, so the held-out run transcribes the SAME 600
+files the main run does (verified: 600 of 600 ids mapped to the same clips). The
+WER legs are therefore the set's own acoustic difficulty, measured once - not
+independent evidence about held-out streets, and the held-out run does not claim
+them as such. What the held-out run adds is real: its scripts speak held-out
+streets, so its intent, address and ceiling legs are evidence about streets the
+parser has never been tuned on.
 ## How to regenerate
 
 ```
