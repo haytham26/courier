@@ -637,8 +637,17 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
         if recognizer is None:
             logger.warning("the judge could not be loaded: writing the set without WER")
     if recognizer is not None:
-        for identifier in built:
+        for index, identifier in enumerate(built, start=1):
             hypotheses[identifier] = transcribe(recognizer, audio_dir / f"{identifier}.wav")
+            # A 600-file CPU pass is not a silent wait: the lane watches the
+            # judge's progress, and the evidence carries how long it took.
+            if index % 50 == 0 or index == len(built):
+                logger.info(
+                    "the judge has transcribed %d of %d utterances (%s)",
+                    index,
+                    len(built),
+                    identifier,
+                )
 
     by_id = {row["id"]: row for row in utterances}
     script_of = {str(script.get("id")): script for script in scripts}
