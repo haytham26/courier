@@ -662,7 +662,10 @@ class TestTheDirectiveTargets:
             else None,
         )
         assert code == 0
-        return json.loads((root / "results" / "summary.json").read_text(encoding="utf-8"))
+        summary: dict[str, Any] = json.loads(
+            (root / "results" / "summary.json").read_text(encoding="utf-8")
+        )
+        return summary
 
     def test_the_directive_targets_are_published_with_the_slice_each_number_came_from(
         self, tmp_path: Path
@@ -772,7 +775,10 @@ class TestTheVerdictNotes:
             else None,
         )
         assert code == 0
-        return json.loads((root / "results" / "summary.json").read_text(encoding="utf-8"))
+        summary: dict[str, Any] = json.loads(
+            (root / "results" / "summary.json").read_text(encoding="utf-8")
+        )
+        return summary
 
     def test_a_measured_verdict_never_carries_the_note_that_it_was_not_measured(
         self, tmp_path: Path
