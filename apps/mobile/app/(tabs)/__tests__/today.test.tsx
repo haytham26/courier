@@ -272,10 +272,7 @@ describe('Today', () => {
     expect(screen.getByTestId('today-mark-delivered')).toBeTruthy();
     expect(screen.getByTestId('today-skip')).toBeTruthy();
     expect(screen.getByTestId('today-fail')).toBeTruthy();
-    // BUG-300: the backdrop map now sits OUTSIDE the accessibility tree (the
-    // veil wrapper), so the pin is queried as a hidden element: it still
-    // renders, which is what this line claims, and no flow taps it.
-    expect(screen.getByTestId('stop-pin-2', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByTestId('stop-pin-2')).toBeTruthy();
   });
 
   it("opens the summary of the day from Today's End of day action", () => {

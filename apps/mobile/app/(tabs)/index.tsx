@@ -243,50 +243,6 @@ const styles = StyleSheet.create({
   },
 });
 
-/**
- * The run's map as the screen's backdrop (BUG-300, the large AVD).
- *
- * Two properties the 1440x2560 legs proved the app needs. It is hidden from
- * the accessibility tree: no flow taps the map or its pins, and on the large
- * screen every stop marker, the route line and the style picker inflated each
- * Maestro hierarchy dump to 4-11 s, so a scrollUntilVisible's 20 s budget ran
- * out on rows that were on screen the whole time. And it is memoised: typing
- * in the fail note re-renders the screen, and the map behind the sheet must
- * not pay for a keystroke.
- */
-const BackdropMap = React.memo(function BackdropMap({
-  stops,
-  mapStyle,
-}: {
-  stops: Stop[];
-  mapStyle: ReturnType<typeof getCourierStyle>;
-}) {
-  return (
-    <View
-      testID="today-map-veil"
-      style={styles.map}
-      importantForAccessibility="no-hide-descendants"
-      accessibilityElementsHidden
-    >
-      <MapView testID="today-map" mapStyle={mapStyle} style={styles.map}>
-        <Camera initialViewState={{ center: MAP_CENTRE, zoom: 12 }} minZoom={4} maxZoom={19} />
-        {stops.map((stop) => (
-          <Marker
-            key={stop.id}
-            testID={`stop-marker-${stop.sequence}`}
-            lngLat={[stop.coordinates.lng, stop.coordinates.lat]}
-            anchor="bottom"
-          >
-            <View testID={`stop-pin-${stop.sequence}`}>
-              <StopPin number={String(stop.sequence)} />
-            </View>
-          </Marker>
-        ))}
-      </MapView>
-    </View>
-  );
-});
-
 export default function TodayScreen() {
   const { t } = useChosen();
   const router = useRouter();
@@ -431,7 +387,24 @@ export default function TodayScreen() {
 
   return (
     <SafeAreaView testID="today-screen" style={styles.container}>
-      <BackdropMap stops={stops} mapStyle={style} />
+      {/* The map is the backdrop: the run is on it, the sheet floats above. */}
+      <View style={styles.map}>
+        <MapView testID="today-map" mapStyle={style} style={styles.map}>
+          <Camera initialViewState={{ center: MAP_CENTRE, zoom: 12 }} minZoom={4} maxZoom={19} />
+          {stops.map((stop) => (
+            <Marker
+              key={stop.id}
+              testID={`stop-marker-${stop.sequence}`}
+              lngLat={[stop.coordinates.lng, stop.coordinates.lat]}
+              anchor="bottom"
+            >
+              <View testID={`stop-pin-${stop.sequence}`}>
+                <StopPin number={String(stop.sequence)} />
+              </View>
+            </Marker>
+          ))}
+        </MapView>
+      </View>
 
       <View style={styles.pills}>
         <TopPills runName={RUN_NAME} weather="Rain 2 pm" weatherIcon="cloud" />

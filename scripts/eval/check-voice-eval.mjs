@@ -18,6 +18,8 @@
 // purity, because its own audio floor comes when its audio is built.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { streetKeyOf } from './street-key.mjs';
+import { sha256Of } from './build-heldout-streets.mjs';
 import { pathToFileURL } from 'node:url';
 
 const MAIN_MANIFEST = 'packages/eval/voice/manifest';
@@ -92,7 +94,43 @@ const APP_COMMANDS = new Set([
 export function loadHeldOutStreets(file = HELDOUT_STREETS_FILE) {
   if (!existsSync(file)) return null;
   const document = JSON.parse(readFileSync(file, 'utf8'));
-  return new Set(Array.isArray(document.streets) ? document.streets : []);
+  // The shared list spells streets in the backend's road_key normalisation, so the
+  // manifest rows are compared by key (scripts/eval/street-key.mjs).
+  const streets = Array.isArray(document.streets) ? document.streets : [];
+  return new Set(streets.map((street) => streetKeyOf(street)));
+}
+
+/**
+ * The shared source contract (founder instruction 2026-11-09, PART B): the voice
+ * held-out list is a derived view of the backend's committed fixture, and the
+ * fixture must never change silently. Every check re-reads the fixture and
+ * refuses when its bytes no longer match the manifest's recorded source_sha256:
+ * that refusal IS the announcement the backend owes this lane.
+ */
+export function sharedSourceProblems(heldOutDocument) {
+  const problems = [];
+  const source = typeof heldOutDocument.source === 'string' ? heldOutDocument.source : null;
+  const recorded = typeof heldOutDocument.source_sha256 === 'string' ? heldOutDocument.source_sha256 : null;
+  if (source === null || recorded === null) {
+    problems.push(
+      `${HELDOUT_STREETS_FILE} does not record the shared source it was built from ` +
+        '(the source path and the source_sha256 are required since 2026-11-09)',
+    );
+    return problems;
+  }
+  if (!existsSync(source)) {
+    problems.push(`the shared held-out source is missing: ${source}`);
+    return problems;
+  }
+  const actual = sha256Of(readFileSync(source, 'utf8').replace(/\r\n/g, '\n'));
+  if (actual !== recorded) {
+    problems.push(
+      `the shared held-out source ${source} changed: recorded sha256 ${recorded.slice(0, 16)}, ` +
+        `on disk ${actual.slice(0, 16)} — the backend must announce the change in ` +
+        'docs/log/CURRENT-backend.md and the voice manifests must be rebuilt',
+    );
+  }
+  return problems;
 }
 
 function readJsonlFrom(dir, name, problems) {
@@ -170,7 +208,7 @@ export function collectProblems({ manifestDir, heldOutStreets, heldOutOnly = fal
   // The held-out street split, both directions, naming the row:
   if (heldOutStreets) {
     for (const address of addresses) {
-      const isHeldOutStreet = heldOutStreets.has(address.street);
+      const isHeldOutStreet = heldOutStreets.has(streetKeyOf(address.street));
       if (heldOutOnly) {
         if (!isHeldOutStreet) {
           problems.push(
@@ -199,7 +237,7 @@ export function collectProblems({ manifestDir, heldOutStreets, heldOutOnly = fal
     }
     for (const script of scripts) {
       const street = streetOfAddress.get(script.address_id);
-      const isHeldOutStreet = street !== undefined && heldOutStreets.has(street);
+      const isHeldOutStreet = street !== undefined && heldOutStreets.has(streetKeyOf(street));
       if (heldOutOnly) {
         if (script.held_out !== true) {
           problems.push(`${script.id}: a held-out script must carry held_out: true`);
@@ -325,6 +363,18 @@ export function collectProblems({ manifestDir, heldOutStreets, heldOutOnly = fal
 export function main(argv = process.argv.slice(2)) {
   const heldOutOnly = argv.includes('--heldout');
   const heldOutStreets = loadHeldOutStreets();
+// The shared source contract: the fixture behind the list must be the one the
+// manifest was built from (founder instruction 2026-11-09, PART B).
+const sharedSourceCheck = (() => {
+  if (!existsSync(HELDOUT_STREETS_FILE)) return [];
+  return sharedSourceProblems(JSON.parse(readFileSync(HELDOUT_STREETS_FILE, 'utf8')));
+})();
+for (const problem of sharedSourceCheck) {
+  console.error(`- ${problem}`);
+}
+if (sharedSourceCheck.length > 0) {
+  process.exit(1);
+}
   const problems = [];
 
   if (!heldOutStreets) {
