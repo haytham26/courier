@@ -744,3 +744,63 @@ class TestTheJudgeArchive:
         target.mkdir()
         (target / "something-else").mkdir()
         assert ensure_judge(target) is None
+
+
+class TestTheVerdictNotes:
+    """The caveat a verdict carries must describe the number it is on.
+
+    A measured number that carries an "it could not be measured" note is a
+    false claim with a decimal point: the note is lifted into a headline with
+    the value, so the two must agree.
+    """
+
+    def measure(self, root: Path, with_judge: bool) -> dict[str, Any]:
+        measurement = TestTheHeldOutMeasurement()
+        manifest = measurement.make_tree(root, held_out=True)
+        measurement.make_data(manifest)
+        args = argparse.Namespace(
+            manifest="manifest",
+            data="manifest/data",
+            out="results",
+            root=str(root),
+            no_judge=not with_judge,
+        )
+        code = run(
+            args,
+            judge=TestTheBuild.FakeJudge("delivered at 45 Poulson Street, Addington")
+            if with_judge
+            else None,
+        )
+        assert code == 0
+        return json.loads((root / "results" / "summary.json").read_text(encoding="utf-8"))
+
+    def test_a_measured_verdict_never_carries_the_note_that_it_was_not_measured(
+        self, tmp_path: Path
+    ) -> None:
+        summary = self.measure(tmp_path, with_judge=True)
+        by_target = {entry["target"]: entry for entry in summary["directive_targets"]}
+        # The quiet WER is measured and fails: it must not also say it could
+        # not be measured.
+        assert by_target["wer_quiet"]["verdict"] == "FAIL"
+        assert "reason" not in by_target["wer_quiet"]
+        assert by_target["wer_quiet"]["note"] == ""
+        # The false-action rate is measured too - in this tree the judge answers
+        # a command, so it is a measured 100% - and it says nothing but its
+        # own number.
+        assert by_target["false_action"]["verdict"] in {"PASS", "FAIL"}
+        assert by_target["false_action"]["note"] == ""
+        # While a number that could not be measured carries its reason, and
+        # only that.
+        assert by_target["corrections_on_stt"]["verdict"] == "NOT MEASURED"
+        assert by_target["corrections_on_stt"]["reason"]
+
+    def test_the_intent_verdict_carries_the_caveat_of_the_open_speech(
+        self, tmp_path: Path
+    ) -> None:
+        summary = self.measure(tmp_path, with_judge=True)
+        by_target = {entry["target"]: entry for entry in summary["directive_targets"]}
+        # The intent leg on the open-data slices is measured, and it carries the
+        # caveat that its speech is the speakers' own sentences - so nobody
+        # reads 4% as the product's command accuracy.
+        assert by_target["intent_on_stt"]["verdict"] in {"PASS", "FAIL"}
+        assert "OWN sentences" in by_target["intent_on_stt"]["note"]

@@ -285,6 +285,15 @@ UNMEASURED_REASONS = {
     ),
 }
 
+#: The caveat that rides with every number the open-data audio can produce, so
+#: nobody reads the recognizer's answer to a speaker's own sentence as the
+#: product's command accuracy.
+OPEN_SPEECH_CAVEAT = (
+    "the open-data speakers speak their OWN sentences (per_utterance.csv's "
+    "gold_text), not the manifest script, so this number is what the recognizer "
+    "returned for THAT speech: it is not the product's command accuracy"
+)
+
 
 def _verdict(
     target: dict[str, Any], value: float | None, counts: str, note: str = ""
@@ -346,7 +355,7 @@ def directive_verdicts(
             targets["wer_quiet"],
             quiet_mean if measured_quiet else None,
             f"{measured_quiet} utterances, mean WER {100 * quiet_mean:.2f}%",
-            UNMEASURED_REASONS["no_stt_output"],
+            "",
         )
     )
 
@@ -357,7 +366,7 @@ def directive_verdicts(
             targets["wer_van"],
             (sum(by_snr.values()) / len(by_snr)) if by_snr else None,
             ", ".join(f"{snr} dB {100 * value:.2f}%" for snr, value in by_snr.items()),
-            UNMEASURED_REASONS["no_stt_output"],
+            "",
         )
     )
 
@@ -370,6 +379,7 @@ def directive_verdicts(
             (correct / measured) if measured else None,
             f"{correct}/{measured} correct over {len(measured_slices)} measured slices "
             f"({', '.join(measured_slices)})",
+            OPEN_SPEECH_CAVEAT,
         )
     )
 
@@ -396,7 +406,7 @@ def directive_verdicts(
             targets["false_action"],
             (false_actions / transcribed) if transcribed else None,
             f"{false_actions}/{transcribed} transcribed utterances answered with a command",
-            UNMEASURED_REASONS["no_stt_output"],
+            "",
         )
     )
 
