@@ -1,0 +1,5119 @@
+{
+ "source": {
+  "what": "LINZ Data Service WFS, layer 123113 (NZ Addresses), fetched 2026-11-09",
+  "licence": "CC BY 4.0 (sourced from the LINZ Data Service)",
+  "url_pattern": "https://data.linz.govt.nz/services;key=<LINZ_LDS_API_KEY>/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=data.linz.govt.nz:layer-123113&bbox=<cell box>&srsName=EPSG:4326&outputFormat=application/json&count=5000&sortBy=address_id",
+  "sampling": "deterministic: a grid of 0.02-degree cells over each delivery territory box, row-major order, cap 6 stops per cell, every 5th address inside a cell",
+  "territory_boxes": {
+   "christchurch": [
+    -43.72,
+    172.45,
+    -43.4,
+    172.83
+   ],
+   "selwyn": [
+    -43.85,
+    171.85,
+    -43.55,
+    172.5
+   ],
+   "waimakariri": [
+    -43.85,
+    172.35,
+    -43.6,
+    172.8
+   ]
+  },
+  "grid_cell_degrees": 0.02,
+  "per_cell_cap": 6
+ },
+ "committed_from": "2521 fetched addresses, a suburb-balanced subsample (christchurch 300, selwyn 130, waimakariri 130)",
+ "stop_count": 560,
+ "areas": {
+  "christchurch": 300,
+  "selwyn": 130,
+  "waimakariri": 130
+ },
+ "depots": {
+  "christchurch": {
+   "pool_index": 148,
+   "address": "69A Ruskin Street, Addington, Christchurch",
+   "lat": -43.5458146,
+   "lon": 172.6262224
+  },
+  "selwyn": {
+   "pool_index": 333,
+   "address": "754 Heslerton Road, Dunsandel",
+   "lat": -43.7049486,
+   "lon": 172.1448333
+  },
+  "waimakariri": {
+   "pool_index": 522,
+   "address": "1683 Christchurch Akaroa Road, Gebbies Valley, Tai Tapu",
+   "lat": -43.7222671,
+   "lon": 172.5963747
+  }
+ },
+ "finishes": {
+  "christchurch": {
+   "pool_index": 243,
+   "address": "1/20 Ruskin Street, Addington, Christchurch",
+   "lat": -43.5462403,
+   "lon": 172.6233971
+  },
+  "selwyn": {
+   "pool_index": 315,
+   "address": "850 Heslerton Road, Dunsandel",
+   "lat": -43.6973199,
+   "lon": 172.1284598
+  },
+  "waimakariri": {
+   "pool_index": 549,
+   "address": "1640 Christchurch Akaroa Road, Gebbies Valley, Tai Tapu",
+   "lat": -43.7227082,
+   "lon": 172.5969218
+  }
+ },
+ "stops": [
+  {
+   "i": 0,
+   "address": "205 Wolfes Road, Springston",
+   "suburb": "Springston",
+   "area": "christchurch",
+   "lat": -43.7033121,
+   "lon": 172.4559115,
+   "linz_address_id": "1294184"
+  },
+  {
+   "i": 1,
+   "address": "235 Davidsons Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "christchurch",
+   "lat": -43.700599,
+   "lon": 172.4887848,
+   "linz_address_id": "1331168"
+  },
+  {
+   "i": 2,
+   "address": "107 Matthews Road, Motukarara, Tai Tapu",
+   "suburb": "Motukarara",
+   "area": "christchurch",
+   "lat": -43.7121399,
+   "lon": 172.539247,
+   "linz_address_id": "1421879"
+  },
+  {
+   "i": 3,
+   "address": "18 Ahuriri Road, Tai Tapu",
+   "suburb": "Tai Tapu",
+   "area": "christchurch",
+   "lat": -43.7004709,
+   "lon": 172.5695058,
+   "linz_address_id": "2303993"
+  },
+  {
+   "i": 4,
+   "address": "121 Gebbies Pass Road, Gebbies Valley, Tai Tapu",
+   "suburb": "Gebbies Valley",
+   "area": "christchurch",
+   "lat": -43.7135137,
+   "lon": 172.603263,
+   "linz_address_id": "201425"
+  },
+  {
+   "i": 5,
+   "address": "1084 Kaituna Valley Road, Ataahua, Tai Tapu",
+   "suburb": "Ataahua",
+   "area": "christchurch",
+   "lat": -43.7181958,
+   "lon": 172.7495415,
+   "linz_address_id": "285665"
+  },
+  {
+   "i": 6,
+   "address": "637 Western Valley Road, Little River",
+   "suburb": "Little River",
+   "area": "christchurch",
+   "lat": -43.7181841,
+   "lon": 172.7830118,
+   "linz_address_id": "287488"
+  },
+  {
+   "i": 7,
+   "address": "507 Richfield Road, Port Levy, Diamond Harbour",
+   "suburb": "Port Levy",
+   "area": "christchurch",
+   "lat": -43.7075202,
+   "lon": 172.8114145,
+   "linz_address_id": "1760335"
+  },
+  {
+   "i": 8,
+   "address": "556 Gebbies Pass Road, Teddington, Governors Bay",
+   "suburb": "Teddington",
+   "area": "christchurch",
+   "lat": -43.6913158,
+   "lon": 172.6392854,
+   "linz_address_id": "232038"
+  },
+  {
+   "i": 9,
+   "address": "299 Charteris Bay Road, Charteris Bay, Governors Bay",
+   "suburb": "Charteris Bay",
+   "area": "christchurch",
+   "lat": -43.6702109,
+   "lon": 172.6875224,
+   "linz_address_id": "2011590"
+  },
+  {
+   "i": 10,
+   "address": "116 Allandale Lane, Allandale, Governors Bay",
+   "suburb": "Allandale",
+   "area": "christchurch",
+   "lat": -43.6404615,
+   "lon": 172.6374641,
+   "linz_address_id": "232023"
+  },
+  {
+   "i": 11,
+   "address": "12 Monalua Avenue, Purau, Diamond Harbour",
+   "suburb": "Purau",
+   "area": "christchurch",
+   "lat": -43.6400198,
+   "lon": 172.7488919,
+   "linz_address_id": "285597"
+  },
+  {
+   "i": 12,
+   "address": "1330 Shands Road, Rolleston",
+   "suburb": "Rolleston",
+   "area": "christchurch",
+   "lat": -43.6280646,
+   "lon": 172.4533644,
+   "linz_address_id": "1398471"
+  },
+  {
+   "i": 13,
+   "address": "164 Hayes Road, Halswell, Christchurch",
+   "suburb": "Halswell",
+   "area": "christchurch",
+   "lat": -43.620216,
+   "lon": 172.5376811,
+   "linz_address_id": "1294575"
+  },
+  {
+   "i": 14,
+   "address": "2/104 Early Valley Road, Lansdowne",
+   "suburb": "Lansdowne",
+   "area": "christchurch",
+   "lat": -43.6246774,
+   "lon": 172.5849821,
+   "linz_address_id": "909170"
+  },
+  {
+   "i": 15,
+   "address": "11 Bay Heights, Governors Bay",
+   "suburb": "Governors Bay",
+   "area": "christchurch",
+   "lat": -43.6244471,
+   "lon": 172.6443546,
+   "linz_address_id": "231995"
+  },
+  {
+   "i": 16,
+   "address": "48 Waipapa Avenue, Diamond Harbour",
+   "suburb": "Diamond Harbour",
+   "area": "christchurch",
+   "lat": -43.630805,
+   "lon": 172.7395806,
+   "linz_address_id": "237404"
+  },
+  {
+   "i": 17,
+   "address": "1033 Shands Road, Prebbleton",
+   "suburb": "Prebbleton",
+   "area": "christchurch",
+   "lat": -43.6051585,
+   "lon": 172.4680328,
+   "linz_address_id": "1294899"
+  },
+  {
+   "i": 18,
+   "address": "97 Old Tai Tapu Road, Kennedys Bush, Christchurch",
+   "suburb": "Kennedys Bush",
+   "area": "christchurch",
+   "lat": -43.606509,
+   "lon": 172.5684351,
+   "linz_address_id": "50435"
+  },
+  {
+   "i": 19,
+   "address": "14 Sandy Beach Road, Te Rāpaki-o-Te Rakiwhakaputa, Lyttelton",
+   "suburb": "Te Rāpaki-o-Te Rakiwhakaputa",
+   "area": "christchurch",
+   "lat": -43.619667,
+   "lon": 172.6547761,
+   "linz_address_id": "239889"
+  },
+  {
+   "i": 20,
+   "address": "100 Governors Bay Road, Cass Bay, Lyttelton",
+   "suburb": "Cass Bay",
+   "area": "christchurch",
+   "lat": -43.6022908,
+   "lon": 172.6888589,
+   "linz_address_id": "265207"
+  },
+  {
+   "i": 21,
+   "address": "1/7 Simeon Quay, Lyttelton",
+   "suburb": "Lyttelton",
+   "area": "christchurch",
+   "lat": -43.6028605,
+   "lon": 172.7118991,
+   "linz_address_id": "274277"
+  },
+  {
+   "i": 22,
+   "address": "1 Tisbury Lane, Cracroft, Christchurch",
+   "suburb": "Cracroft",
+   "area": "christchurch",
+   "lat": -43.5926493,
+   "lon": 172.6098644,
+   "linz_address_id": "29722"
+  },
+  {
+   "i": 23,
+   "address": "104 Penruddock Rise, Westmorland, Christchurch",
+   "suburb": "Westmorland",
+   "area": "christchurch",
+   "lat": -43.5828619,
+   "lon": 172.6002506,
+   "linz_address_id": "200967"
+  },
+  {
+   "i": 24,
+   "address": "359 Worsleys Road, Cashmere, Christchurch",
+   "suburb": "Cashmere",
+   "area": "christchurch",
+   "lat": -43.5992272,
+   "lon": 172.6207313,
+   "linz_address_id": "215678"
+  },
+  {
+   "i": 25,
+   "address": "91 Avoca Valley Road, Heathcote Valley, Christchurch",
+   "suburb": "Heathcote Valley",
+   "area": "christchurch",
+   "lat": -43.5805282,
+   "lon": 172.6817405,
+   "linz_address_id": "2011762"
+  },
+  {
+   "i": 26,
+   "address": "10 Finnsarby Place, Sumner, Christchurch",
+   "suburb": "Sumner",
+   "area": "christchurch",
+   "lat": -43.5809756,
+   "lon": 172.7545497,
+   "linz_address_id": "285475"
+  },
+  {
+   "i": 27,
+   "address": "175 Taylors Mistake Road, Te Onepoto / Taylors Mistake, Christchurch",
+   "suburb": "Te Onepoto / Taylors Mistake",
+   "area": "christchurch",
+   "lat": -43.5808057,
+   "lon": 172.7749044,
+   "linz_address_id": "287069"
+  },
+  {
+   "i": 28,
+   "address": "4 Sir James Wattie Drive, Hornby South, Christchurch",
+   "suburb": "Hornby South",
+   "area": "christchurch",
+   "lat": -43.5615474,
+   "lon": 172.509366,
+   "linz_address_id": "140888"
+  },
+  {
+   "i": 29,
+   "address": "451 Halswell Junction Road, Hornby, Christchurch",
+   "suburb": "Hornby",
+   "area": "christchurch",
+   "lat": -43.5639277,
+   "lon": 172.5305329,
+   "linz_address_id": "162895"
+  },
+  {
+   "i": 30,
+   "address": "19 Date Crescent, Aidanfield, Christchurch",
+   "suburb": "Aidanfield",
+   "area": "christchurch",
+   "lat": -43.5646466,
+   "lon": 172.5616443,
+   "linz_address_id": "26986"
+  },
+  {
+   "i": 31,
+   "address": "104 Mathers Road, Hoon Hay, Christchurch",
+   "suburb": "Hoon Hay",
+   "area": "christchurch",
+   "lat": -43.5629807,
+   "lon": 172.5906642,
+   "linz_address_id": "192021"
+  },
+  {
+   "i": 32,
+   "address": "105 Lyttelton Street, Spreydon, Christchurch",
+   "suburb": "Spreydon",
+   "area": "christchurch",
+   "lat": -43.5626027,
+   "lon": 172.6132351,
+   "linz_address_id": "206753"
+  },
+  {
+   "i": 33,
+   "address": "86B Somerfield Street, Somerfield, Christchurch",
+   "suburb": "Somerfield",
+   "area": "christchurch",
+   "lat": -43.5601939,
+   "lon": 172.6323961,
+   "linz_address_id": "23635"
+  },
+  {
+   "i": 34,
+   "address": "10A Parklands Drive, Huntsbury, Christchurch",
+   "suburb": "Huntsbury",
+   "area": "christchurch",
+   "lat": -43.5625262,
+   "lon": 172.6513699,
+   "linz_address_id": "238356"
+  },
+  {
+   "i": 35,
+   "address": "11 Koromiko Street, Saint Martins, Christchurch",
+   "suburb": "Saint Martins",
+   "area": "christchurch",
+   "lat": -43.559999,
+   "lon": 172.651527,
+   "linz_address_id": "238383"
+  },
+  {
+   "i": 36,
+   "address": "10 Bishopsworth Street, Hillsborough, Christchurch",
+   "suburb": "Hillsborough",
+   "area": "christchurch",
+   "lat": -43.5611939,
+   "lon": 172.6701255,
+   "linz_address_id": "253758"
+  },
+  {
+   "i": 37,
+   "address": "15 Luxton Place, Mount Pleasant, Christchurch",
+   "suburb": "Mount Pleasant",
+   "area": "christchurch",
+   "lat": -43.5664546,
+   "lon": 172.7220203,
+   "linz_address_id": "24255"
+  },
+  {
+   "i": 38,
+   "address": "178 Clifton Terrace, Clifton, Christchurch",
+   "suburb": "Clifton",
+   "area": "christchurch",
+   "lat": -43.5711932,
+   "lon": 172.7497374,
+   "linz_address_id": "54647"
+  },
+  {
+   "i": 39,
+   "address": "119 Moncks Spur Road, Redcliffs, Christchurch",
+   "suburb": "Redcliffs",
+   "area": "christchurch",
+   "lat": -43.5687125,
+   "lon": 172.7332563,
+   "linz_address_id": "239566"
+  },
+  {
+   "i": 40,
+   "address": "12 De Thier Lane, Richmond Hill, Christchurch",
+   "suburb": "Richmond Hill",
+   "area": "christchurch",
+   "lat": -43.5724299,
+   "lon": 172.754729,
+   "linz_address_id": "285120"
+  },
+  {
+   "i": 41,
+   "address": "101 Scarborough Road, Scarborough, Christchurch",
+   "suburb": "Scarborough",
+   "area": "christchurch",
+   "lat": -43.5743363,
+   "lon": 172.7712992,
+   "linz_address_id": "286839"
+  },
+  {
+   "i": 42,
+   "address": "10 Lordship Place, Templeton, Christchurch",
+   "suburb": "Templeton",
+   "area": "christchurch",
+   "lat": -43.5494881,
+   "lon": 172.4645785,
+   "linz_address_id": "156357"
+  },
+  {
+   "i": 43,
+   "address": "173 Pound Road, Islington, Christchurch",
+   "suburb": "Islington",
+   "area": "christchurch",
+   "lat": -43.5418786,
+   "lon": 172.4912286,
+   "linz_address_id": "157593"
+  },
+  {
+   "i": 44,
+   "address": "7 Dalwood Drive, Wigram, Christchurch",
+   "suburb": "Wigram",
+   "area": "christchurch",
+   "lat": -43.554164,
+   "lon": 172.5477904,
+   "linz_address_id": "89360"
+  },
+  {
+   "i": 45,
+   "address": "218 Annex Road, Middleton, Christchurch",
+   "suburb": "Middleton",
+   "area": "christchurch",
+   "lat": -43.5429335,
+   "lon": 172.5830075,
+   "linz_address_id": "51759"
+  },
+  {
+   "i": 46,
+   "address": "118 Wrights Road, Addington, Christchurch",
+   "suburb": "Addington",
+   "area": "christchurch",
+   "lat": -43.5423924,
+   "lon": 172.5972804,
+   "linz_address_id": "169313"
+  },
+  {
+   "i": 47,
+   "address": "142A Hastings Street East, Sydenham, Christchurch",
+   "suburb": "Sydenham",
+   "area": "christchurch",
+   "lat": -43.5486431,
+   "lon": 172.6462293,
+   "linz_address_id": "14936"
+  },
+  {
+   "i": 48,
+   "address": "39 Bunyan Street, Waltham, Christchurch",
+   "suburb": "Waltham",
+   "area": "christchurch",
+   "lat": -43.5502491,
+   "lon": 172.6492664,
+   "linz_address_id": "189933"
+  },
+  {
+   "i": 49,
+   "address": "63F Mackworth Street, Woolston, Christchurch",
+   "suburb": "Woolston",
+   "area": "christchurch",
+   "lat": -43.5402848,
+   "lon": 172.671305,
+   "linz_address_id": "62695"
+  },
+  {
+   "i": 50,
+   "address": "100 Bayswater Crescent, Bromley, Christchurch",
+   "suburb": "Bromley",
+   "area": "christchurch",
+   "lat": -43.5443769,
+   "lon": 172.6936926,
+   "linz_address_id": "264039"
+  },
+  {
+   "i": 51,
+   "address": "165C Rocking Horse Road, Southshore, Christchurch",
+   "suburb": "Southshore",
+   "area": "christchurch",
+   "lat": -43.5525099,
+   "lon": 172.7500899,
+   "linz_address_id": "284834"
+  },
+  {
+   "i": 52,
+   "address": "367 Pound Road, Yaldhurst, Christchurch",
+   "suburb": "Yaldhurst",
+   "area": "christchurch",
+   "lat": -43.5242277,
+   "lon": 172.5016609,
+   "linz_address_id": "158054"
+  },
+  {
+   "i": 53,
+   "address": "30 Roberts Road, Hei Hei, Christchurch",
+   "suburb": "Hei Hei",
+   "area": "christchurch",
+   "lat": -43.5347539,
+   "lon": 172.5149366,
+   "linz_address_id": "158401"
+  },
+  {
+   "i": 54,
+   "address": "1 Ben Nevis Drive, Broomfield, Christchurch",
+   "suburb": "Broomfield",
+   "area": "christchurch",
+   "lat": -43.5237634,
+   "lon": 172.536153,
+   "linz_address_id": "71298"
+  },
+  {
+   "i": 55,
+   "address": "3 Athol Terrace, Upper Riccarton, Christchurch",
+   "suburb": "Upper Riccarton",
+   "area": "christchurch",
+   "lat": -43.5241841,
+   "lon": 172.5698278,
+   "linz_address_id": "23543"
+  },
+  {
+   "i": 56,
+   "address": "20 Nga Mahi Road, Sockburn, Christchurch",
+   "suburb": "Sockburn",
+   "area": "christchurch",
+   "lat": -43.5398466,
+   "lon": 172.556801,
+   "linz_address_id": "70396"
+  },
+  {
+   "i": 57,
+   "address": "10 Camberwell Place, Avonhead, Christchurch",
+   "suburb": "Avonhead",
+   "area": "christchurch",
+   "lat": -43.5223852,
+   "lon": 172.5510513,
+   "linz_address_id": "166136"
+  },
+  {
+   "i": 58,
+   "address": "74 Clyde Road, Ilam, Christchurch",
+   "suburb": "Ilam",
+   "area": "christchurch",
+   "lat": -43.5246915,
+   "lon": 172.5883523,
+   "linz_address_id": "50940"
+  },
+  {
+   "i": 59,
+   "address": "48 Peverel Street, Riccarton, Christchurch",
+   "suburb": "Riccarton",
+   "area": "christchurch",
+   "lat": -43.5329466,
+   "lon": 172.5996601,
+   "linz_address_id": "13825"
+  },
+  {
+   "i": 60,
+   "address": "4/65 Carlton Mill Road, Merivale, Christchurch",
+   "suburb": "Merivale",
+   "area": "christchurch",
+   "lat": -43.5210036,
+   "lon": 172.6226476,
+   "linz_address_id": "16705"
+  },
+  {
+   "i": 61,
+   "address": "11 Fendalton Road, Fendalton, Christchurch",
+   "suburb": "Fendalton",
+   "area": "christchurch",
+   "lat": -43.5231252,
+   "lon": 172.6121044,
+   "linz_address_id": "204626"
+  },
+  {
+   "i": 62,
+   "address": "160 Bealey Avenue, Christchurch Central, Christchurch",
+   "suburb": "Christchurch Central",
+   "area": "christchurch",
+   "lat": -43.52157,
+   "lon": 172.6375452,
+   "linz_address_id": "3351"
+  },
+  {
+   "i": 63,
+   "address": "2/106 Olliviers Road, Phillipstown, Christchurch",
+   "suburb": "Phillipstown",
+   "area": "christchurch",
+   "lat": -43.5363362,
+   "lon": 172.663371,
+   "linz_address_id": "73575"
+  },
+  {
+   "i": 64,
+   "address": "10 Alexandra Street, Richmond, Christchurch",
+   "suburb": "Richmond",
+   "area": "christchurch",
+   "lat": -43.52291,
+   "lon": 172.6513375,
+   "linz_address_id": "235511"
+  },
+  {
+   "i": 65,
+   "address": "44A Norwich Street, Linwood, Christchurch",
+   "suburb": "Linwood",
+   "area": "christchurch",
+   "lat": -43.531513,
+   "lon": 172.6719908,
+   "linz_address_id": "73577"
+  },
+  {
+   "i": 66,
+   "address": "10 Ngarimu Street, Avonside, Christchurch",
+   "suburb": "Avonside",
+   "area": "christchurch",
+   "lat": -43.524294,
+   "lon": 172.674469,
+   "linz_address_id": "250513"
+  },
+  {
+   "i": 67,
+   "address": "100 Bickerton Street, Wainoni, Christchurch",
+   "suburb": "Wainoni",
+   "area": "christchurch",
+   "lat": -43.5206818,
+   "lon": 172.6944053,
+   "linz_address_id": "262991"
+  },
+  {
+   "i": 68,
+   "address": "31 Guernsey Street, Aranui, Christchurch",
+   "suburb": "Aranui",
+   "area": "christchurch",
+   "lat": -43.520614,
+   "lon": 172.7100645,
+   "linz_address_id": "273233"
+  },
+  {
+   "i": 69,
+   "address": "102 Bridge Street, New Brighton, Christchurch",
+   "suburb": "New Brighton",
+   "area": "christchurch",
+   "lat": -43.52386,
+   "lon": 172.7290857,
+   "linz_address_id": "280920"
+  },
+  {
+   "i": 70,
+   "address": "100 Estuary Road, South New Brighton, Christchurch",
+   "suburb": "South New Brighton",
+   "area": "christchurch",
+   "lat": -43.5239316,
+   "lon": 172.7327714,
+   "linz_address_id": "280917"
+  },
+  {
+   "i": 71,
+   "address": "231 School Road, McLeans Island, Christchurch",
+   "suburb": "McLeans Island",
+   "area": "christchurch",
+   "lat": -43.5011138,
+   "lon": 172.4712284,
+   "linz_address_id": "156445"
+  },
+  {
+   "i": 72,
+   "address": "42A Delaware Crescent, Russley, Christchurch",
+   "suburb": "Russley",
+   "area": "christchurch",
+   "lat": -43.5197727,
+   "lon": 172.5414118,
+   "linz_address_id": "14202"
+  },
+  {
+   "i": 73,
+   "address": "10 Annell Place, Burnside, Christchurch",
+   "suburb": "Burnside",
+   "area": "christchurch",
+   "lat": -43.5026465,
+   "lon": 172.5700837,
+   "linz_address_id": "173854"
+  },
+  {
+   "i": 74,
+   "address": "82 Hartley Avenue, Strowan, Christchurch",
+   "suburb": "Strowan",
+   "area": "christchurch",
+   "lat": -43.5056995,
+   "lon": 172.6072208,
+   "linz_address_id": "34062"
+  },
+  {
+   "i": 75,
+   "address": "2/55 Garreg Road, Bryndwr, Christchurch",
+   "suburb": "Bryndwr",
+   "area": "christchurch",
+   "lat": -43.5111514,
+   "lon": 172.5971005,
+   "linz_address_id": "49371"
+  },
+  {
+   "i": 76,
+   "address": "51 Somme Street, St Albans, Christchurch",
+   "suburb": "St Albans",
+   "area": "christchurch",
+   "lat": -43.5078107,
+   "lon": 172.6266656,
+   "linz_address_id": "23645"
+  },
+  {
+   "i": 77,
+   "address": "11 Dormer Street, Papanui, Christchurch",
+   "suburb": "Papanui",
+   "area": "christchurch",
+   "lat": -43.5003661,
+   "lon": 172.6119678,
+   "linz_address_id": "203184"
+  },
+  {
+   "i": 78,
+   "address": "35 Gresford Street, Edgeware, Christchurch",
+   "suburb": "Edgeware",
+   "area": "christchurch",
+   "lat": -43.5163747,
+   "lon": 172.6501917,
+   "linz_address_id": "24409"
+  },
+  {
+   "i": 79,
+   "address": "1/47 Emmett Street, Shirley, Christchurch",
+   "suburb": "Shirley",
+   "area": "christchurch",
+   "lat": -43.5047224,
+   "lon": 172.6547207,
+   "linz_address_id": "233836"
+  },
+  {
+   "i": 80,
+   "address": "13 Acheson Avenue, Mairehau, Christchurch",
+   "suburb": "Mairehau",
+   "area": "christchurch",
+   "lat": -43.5008748,
+   "lon": 172.6532004,
+   "linz_address_id": "233869"
+  },
+  {
+   "i": 81,
+   "address": "1/34 Strathfield Avenue, Dallington, Christchurch",
+   "suburb": "Dallington",
+   "area": "christchurch",
+   "lat": -43.5112236,
+   "lon": 172.6702686,
+   "linz_address_id": "249820"
+  },
+  {
+   "i": 82,
+   "address": "18 Mervyn Drive, Avondale, Christchurch",
+   "suburb": "Avondale",
+   "area": "christchurch",
+   "lat": -43.5037119,
+   "lon": 172.6910643,
+   "linz_address_id": "261630"
+  },
+  {
+   "i": 83,
+   "address": "7/25 Aviation Drive, Christchurch Airport, Christchurch",
+   "suburb": "Christchurch Airport",
+   "area": "christchurch",
+   "lat": -43.4819364,
+   "lon": 172.5296705,
+   "linz_address_id": "1940583"
+  },
+  {
+   "i": 84,
+   "address": "560 Russley Road, Harewood, Christchurch",
+   "suburb": "Harewood",
+   "area": "christchurch",
+   "lat": -43.4836977,
+   "lon": 172.554771,
+   "linz_address_id": "165409"
+  },
+  {
+   "i": 85,
+   "address": "363 Harewood Road, Bishopdale, Christchurch",
+   "suburb": "Bishopdale",
+   "area": "christchurch",
+   "lat": -43.4863493,
+   "lon": 172.5820353,
+   "linz_address_id": "27021"
+  },
+  {
+   "i": 86,
+   "address": "37A Veitches Road, Casebrook, Christchurch",
+   "suburb": "Casebrook",
+   "area": "christchurch",
+   "lat": -43.4809436,
+   "lon": 172.5974568,
+   "linz_address_id": "70513"
+  },
+  {
+   "i": 87,
+   "address": "17 Northcote Road, Northcote, Christchurch",
+   "suburb": "Northcote",
+   "area": "christchurch",
+   "lat": -43.484564,
+   "lon": 172.6144784,
+   "linz_address_id": "62860"
+  },
+  {
+   "i": 88,
+   "address": "10 Grosvenor Street, Redwood, Christchurch",
+   "suburb": "Redwood",
+   "area": "christchurch",
+   "lat": -43.4804409,
+   "lon": 172.6126438,
+   "linz_address_id": "201887"
+  },
+  {
+   "i": 89,
+   "address": "18 McSaveneys Road, Marshland, Christchurch",
+   "suburb": "Marshland",
+   "area": "christchurch",
+   "lat": -43.485751,
+   "lon": 172.6519487,
+   "linz_address_id": "55876"
+  },
+  {
+   "i": 90,
+   "address": "17A Bassett Street, Burwood, Christchurch",
+   "suburb": "Burwood",
+   "area": "christchurch",
+   "lat": -43.498794,
+   "lon": 172.6877804,
+   "linz_address_id": "51599"
+  },
+  {
+   "i": 91,
+   "address": "10 Daytona Place, Parklands, Christchurch",
+   "suburb": "Parklands",
+   "area": "christchurch",
+   "lat": -43.4806552,
+   "lon": 172.6948378,
+   "linz_address_id": "260753"
+  },
+  {
+   "i": 92,
+   "address": "60 Hussey Road, Northwood, Christchurch",
+   "suburb": "Northwood",
+   "area": "christchurch",
+   "lat": -43.4628242,
+   "lon": 172.5940884,
+   "linz_address_id": "187017"
+  },
+  {
+   "i": 93,
+   "address": "120 Radcliffe Road, Belfast, Christchurch",
+   "suburb": "Belfast",
+   "area": "christchurch",
+   "lat": -43.4627343,
+   "lon": 172.6299835,
+   "linz_address_id": "216473"
+  },
+  {
+   "i": 94,
+   "address": "565 Marshland Road, Ouruhia, Christchurch",
+   "suburb": "Ouruhia",
+   "area": "christchurch",
+   "lat": -43.4612907,
+   "lon": 172.6577778,
+   "linz_address_id": "241974"
+  },
+  {
+   "i": 95,
+   "address": "15 Sandpiper Place, Waimairi Beach, Christchurch",
+   "suburb": "Waimairi Beach",
+   "area": "christchurch",
+   "lat": -43.4770151,
+   "lon": 172.7174416,
+   "linz_address_id": "16498"
+  },
+  {
+   "i": 96,
+   "address": "42 Two Chain Road, Swannanoa",
+   "suburb": "Swannanoa",
+   "area": "christchurch",
+   "lat": -43.4400077,
+   "lon": 172.450543,
+   "linz_address_id": "1343471"
+  },
+  {
+   "i": 97,
+   "address": "508 Coutts Island Road, Coutts Island, Christchurch",
+   "suburb": "Coutts Island",
+   "area": "christchurch",
+   "lat": -43.4399956,
+   "lon": 172.5856135,
+   "linz_address_id": "1389018"
+  },
+  {
+   "i": 98,
+   "address": "136 Lower Styx Road, Bottle Lake, Christchurch",
+   "suburb": "Bottle Lake",
+   "area": "christchurch",
+   "lat": -43.4518415,
+   "lon": 172.6723178,
+   "linz_address_id": "249348"
+  },
+  {
+   "i": 99,
+   "address": "155 Baynons Road, Clarkville, Kaiapoi",
+   "suburb": "Clarkville",
+   "area": "christchurch",
+   "lat": -43.4302515,
+   "lon": 172.5741377,
+   "linz_address_id": "173335"
+  },
+  {
+   "i": 100,
+   "address": "29 Empire Road, Kainga, Christchurch",
+   "suburb": "Kainga",
+   "area": "christchurch",
+   "lat": -43.4201915,
+   "lon": 172.6493045,
+   "linz_address_id": "233624"
+  },
+  {
+   "i": 101,
+   "address": "435 Lower Styx Road, Spencerville, Christchurch",
+   "suburb": "Spencerville",
+   "area": "christchurch",
+   "lat": -43.4247562,
+   "lon": 172.6932055,
+   "linz_address_id": "260517"
+  },
+  {
+   "i": 102,
+   "address": "4 Edmunds Road, Ohoka",
+   "suburb": "Ohoka",
+   "area": "christchurch",
+   "lat": -43.4012662,
+   "lon": 172.5819357,
+   "linz_address_id": "179457"
+  },
+  {
+   "i": 103,
+   "address": "49 Neeves Road, Kaiapoi",
+   "suburb": "Kaiapoi",
+   "area": "christchurch",
+   "lat": -43.4010035,
+   "lon": 172.6388211,
+   "linz_address_id": "224452"
+  },
+  {
+   "i": 104,
+   "address": "1026 Lower Styx Road, Brooklands, Christchurch",
+   "suburb": "Brooklands",
+   "area": "christchurch",
+   "lat": -43.4048882,
+   "lon": 172.6947296,
+   "linz_address_id": "260386"
+  },
+  {
+   "i": 105,
+   "address": "1/184 Wolfes Road, Springston",
+   "suburb": "Springston",
+   "area": "christchurch",
+   "lat": -43.7005051,
+   "lon": 172.4535432,
+   "linz_address_id": "1526482"
+  },
+  {
+   "i": 106,
+   "address": "128 Embankment Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "christchurch",
+   "lat": -43.7151085,
+   "lon": 172.4951264,
+   "linz_address_id": "904663"
+  },
+  {
+   "i": 107,
+   "address": "368 Ridge Road, Motukarara, Tai Tapu",
+   "suburb": "Motukarara",
+   "area": "christchurch",
+   "lat": -43.7149548,
+   "lon": 172.5544603,
+   "linz_address_id": "632881"
+  },
+  {
+   "i": 108,
+   "address": "48 Ahuriri Road, Tai Tapu",
+   "suburb": "Tai Tapu",
+   "area": "christchurch",
+   "lat": -43.7007652,
+   "lon": 172.5694275,
+   "linz_address_id": "3146658"
+  },
+  {
+   "i": 109,
+   "address": "185 Gebbies Pass Road, Gebbies Valley, Tai Tapu",
+   "suburb": "Gebbies Valley",
+   "area": "christchurch",
+   "lat": -43.7067715,
+   "lon": 172.6081848,
+   "linz_address_id": "1758513"
+  },
+  {
+   "i": 110,
+   "address": "355 Charteris Bay Road, Ataahua, Tai Tapu",
+   "suburb": "Ataahua",
+   "area": "christchurch",
+   "lat": -43.6919926,
+   "lon": 172.6978513,
+   "linz_address_id": "2250743"
+  },
+  {
+   "i": 111,
+   "address": "584 Western Valley Road, Little River",
+   "suburb": "Little River",
+   "area": "christchurch",
+   "lat": -43.7169084,
+   "lon": 172.797378,
+   "linz_address_id": "286382"
+  },
+  {
+   "i": 112,
+   "address": "1278 Western Valley Road, Port Levy, Diamond Harbour",
+   "suburb": "Port Levy",
+   "area": "christchurch",
+   "lat": -43.6965235,
+   "lon": 172.783501,
+   "linz_address_id": "288498"
+  },
+  {
+   "i": 113,
+   "address": "458 Gebbies Pass Road, Teddington, Governors Bay",
+   "suburb": "Teddington",
+   "area": "christchurch",
+   "lat": -43.694612,
+   "lon": 172.6336311,
+   "linz_address_id": "1758515"
+  },
+  {
+   "i": 114,
+   "address": "309A Charteris Bay Road, Charteris Bay, Governors Bay",
+   "suburb": "Charteris Bay",
+   "area": "christchurch",
+   "lat": -43.6655455,
+   "lon": 172.6785396,
+   "linz_address_id": "2180668"
+  },
+  {
+   "i": 115,
+   "address": "88 Allandale Lane, Allandale, Governors Bay",
+   "suburb": "Allandale",
+   "area": "christchurch",
+   "lat": -43.6405617,
+   "lon": 172.6386114,
+   "linz_address_id": "1319058"
+  },
+  {
+   "i": 116,
+   "address": "17 Monalua Avenue, Purau, Diamond Harbour",
+   "suburb": "Purau",
+   "area": "christchurch",
+   "lat": -43.6405983,
+   "lon": 172.7497278,
+   "linz_address_id": "285609"
+  },
+  {
+   "i": 117,
+   "address": "184 Selwyn Road, Rolleston",
+   "suburb": "Rolleston",
+   "area": "christchurch",
+   "lat": -43.6000382,
+   "lon": 172.455706,
+   "linz_address_id": "1296235"
+  },
+  {
+   "i": 118,
+   "address": "58 Hayes Road, Halswell, Christchurch",
+   "suburb": "Halswell",
+   "area": "christchurch",
+   "lat": -43.6216191,
+   "lon": 172.5502064,
+   "linz_address_id": "1294570"
+  },
+  {
+   "i": 119,
+   "address": "104 Early Valley Road, Lansdowne",
+   "suburb": "Lansdowne",
+   "area": "christchurch",
+   "lat": -43.6201584,
+   "lon": 172.5835333,
+   "linz_address_id": "3126929"
+  },
+  {
+   "i": 120,
+   "address": "9 Bay Heights, Governors Bay",
+   "suburb": "Governors Bay",
+   "area": "christchurch",
+   "lat": -43.6246186,
+   "lon": 172.6443452,
+   "linz_address_id": "232005"
+  },
+  {
+   "i": 121,
+   "address": "13 Te Ara Crescent, Diamond Harbour",
+   "suburb": "Diamond Harbour",
+   "area": "christchurch",
+   "lat": -43.6270954,
+   "lon": 172.7313166,
+   "linz_address_id": "282377"
+  },
+  {
+   "i": 122,
+   "address": "435 Robinsons Road, Prebbleton",
+   "suburb": "Prebbleton",
+   "area": "christchurch",
+   "lat": -43.6095647,
+   "lon": 172.4793256,
+   "linz_address_id": "906974"
+  },
+  {
+   "i": 123,
+   "address": "39 Old Tai Tapu Road, Kennedys Bush, Christchurch",
+   "suburb": "Kennedys Bush",
+   "area": "christchurch",
+   "lat": -43.6033245,
+   "lon": 172.5637464,
+   "linz_address_id": "173175"
+  },
+  {
+   "i": 124,
+   "address": "191 Governors Bay Road, Te Rāpaki-o-Te Rakiwhakaputa, Lyttelton",
+   "suburb": "Te Rāpaki-o-Te Rakiwhakaputa",
+   "area": "christchurch",
+   "lat": -43.6048499,
+   "lon": 172.6840135,
+   "linz_address_id": "260182"
+  },
+  {
+   "i": 125,
+   "address": "10 Harbour View Terrace, Cass Bay, Lyttelton",
+   "suburb": "Cass Bay",
+   "area": "christchurch",
+   "lat": -43.6045424,
+   "lon": 172.6927309,
+   "linz_address_id": "265208"
+  },
+  {
+   "i": 126,
+   "address": "11 Dudley Road, Lyttelton",
+   "suburb": "Lyttelton",
+   "area": "christchurch",
+   "lat": -43.6021313,
+   "lon": 172.7135733,
+   "linz_address_id": "274283"
+  },
+  {
+   "i": 127,
+   "address": "102 Worsleys Road, Cracroft, Christchurch",
+   "suburb": "Cracroft",
+   "area": "christchurch",
+   "lat": -43.5805791,
+   "lon": 172.6131669,
+   "linz_address_id": "208231"
+  },
+  {
+   "i": 128,
+   "address": "10 Ennerdale Row, Westmorland, Christchurch",
+   "suburb": "Westmorland",
+   "area": "christchurch",
+   "lat": -43.5806382,
+   "lon": 172.5971182,
+   "linz_address_id": "200973"
+  },
+  {
+   "i": 129,
+   "address": "19 Kiteroa Place, Cashmere, Christchurch",
+   "suburb": "Cashmere",
+   "area": "christchurch",
+   "lat": -43.5802674,
+   "lon": 172.6299649,
+   "linz_address_id": "223257"
+  },
+  {
+   "i": 130,
+   "address": "62 Horotane Valley Road, Heathcote Valley, Christchurch",
+   "suburb": "Heathcote Valley",
+   "area": "christchurch",
+   "lat": -43.5808,
+   "lon": 172.6952722,
+   "linz_address_id": "269941"
+  },
+  {
+   "i": 131,
+   "address": "119 Sumnervale Drive, Sumner, Christchurch",
+   "suburb": "Sumner",
+   "area": "christchurch",
+   "lat": -43.5847329,
+   "lon": 172.7528549,
+   "linz_address_id": "285480"
+  },
+  {
+   "i": 132,
+   "address": "189 Taylors Mistake Road, Te Onepoto / Taylors Mistake, Christchurch",
+   "suburb": "Te Onepoto / Taylors Mistake",
+   "area": "christchurch",
+   "lat": -43.5816461,
+   "lon": 172.7743885,
+   "linz_address_id": "287077"
+  },
+  {
+   "i": 133,
+   "address": "10 Steele Street, Hornby, Christchurch",
+   "suburb": "Hornby",
+   "area": "christchurch",
+   "lat": -43.5423066,
+   "lon": 172.5141456,
+   "linz_address_id": "158424"
+  },
+  {
+   "i": 134,
+   "address": "109 Mathers Road, Hoon Hay, Christchurch",
+   "suburb": "Hoon Hay",
+   "area": "christchurch",
+   "lat": -43.5634171,
+   "lon": 172.5906595,
+   "linz_address_id": "192032"
+  },
+  {
+   "i": 135,
+   "address": "109 Lyttelton Street, Spreydon, Christchurch",
+   "suburb": "Spreydon",
+   "area": "christchurch",
+   "lat": -43.5621867,
+   "lon": 172.6135833,
+   "linz_address_id": "206758"
+  },
+  {
+   "i": 136,
+   "address": "105 Studholme Street, Somerfield, Christchurch",
+   "suburb": "Somerfield",
+   "area": "christchurch",
+   "lat": -43.5619798,
+   "lon": 172.6308091,
+   "linz_address_id": "221644"
+  },
+  {
+   "i": 137,
+   "address": "12A Huntsbury Avenue, Huntsbury, Christchurch",
+   "suburb": "Huntsbury",
+   "area": "christchurch",
+   "lat": -43.5639545,
+   "lon": 172.652201,
+   "linz_address_id": "238424"
+  },
+  {
+   "i": 138,
+   "address": "12 St Martins Road, Saint Martins, Christchurch",
+   "suburb": "Saint Martins",
+   "area": "christchurch",
+   "lat": -43.5603031,
+   "lon": 172.6506822,
+   "linz_address_id": "238433"
+  },
+  {
+   "i": 139,
+   "address": "11 Hilldale Place, Hillsborough, Christchurch",
+   "suburb": "Hillsborough",
+   "area": "christchurch",
+   "lat": -43.5625405,
+   "lon": 172.674112,
+   "linz_address_id": "253780"
+  },
+  {
+   "i": 140,
+   "address": "101 Cannon Hill Crescent, Mount Pleasant, Christchurch",
+   "suburb": "Mount Pleasant",
+   "area": "christchurch",
+   "lat": -43.5644408,
+   "lon": 172.7129301,
+   "linz_address_id": "273544"
+  },
+  {
+   "i": 141,
+   "address": "28 Kinsey Terrace, Clifton, Christchurch",
+   "suburb": "Clifton",
+   "area": "christchurch",
+   "lat": -43.5648044,
+   "lon": 172.7500898,
+   "linz_address_id": "285047"
+  },
+  {
+   "i": 142,
+   "address": "10 Inverness Lane, Redcliffs, Christchurch",
+   "suburb": "Redcliffs",
+   "area": "christchurch",
+   "lat": -43.5610773,
+   "lon": 172.7309057,
+   "linz_address_id": "281643"
+  },
+  {
+   "i": 143,
+   "address": "109 Scarborough Road, Scarborough, Christchurch",
+   "suburb": "Scarborough",
+   "area": "christchurch",
+   "lat": -43.573988,
+   "lon": 172.77129,
+   "linz_address_id": "286849"
+  },
+  {
+   "i": 144,
+   "address": "2 Azalea Close, Templeton, Christchurch",
+   "suburb": "Templeton",
+   "area": "christchurch",
+   "lat": -43.54512,
+   "lon": 172.4648796,
+   "linz_address_id": "156362"
+  },
+  {
+   "i": 145,
+   "address": "673A Main South Road, Islington, Christchurch",
+   "suburb": "Islington",
+   "area": "christchurch",
+   "lat": -43.5492645,
+   "lon": 172.4929609,
+   "linz_address_id": "157625"
+  },
+  {
+   "i": 146,
+   "address": "39 Napier Drive, Wigram, Christchurch",
+   "suburb": "Wigram",
+   "area": "christchurch",
+   "lat": -43.5558549,
+   "lon": 172.5456386,
+   "linz_address_id": "89603"
+  },
+  {
+   "i": 147,
+   "address": "55 Lunns Road, Middleton, Christchurch",
+   "suburb": "Middleton",
+   "area": "christchurch",
+   "lat": -43.5435484,
+   "lon": 172.5749403,
+   "linz_address_id": "177074"
+  },
+  {
+   "i": 148,
+   "address": "69A Ruskin Street, Addington, Christchurch",
+   "suburb": "Addington",
+   "area": "christchurch",
+   "lat": -43.5458146,
+   "lon": 172.6262224,
+   "linz_address_id": "62665"
+  },
+  {
+   "i": 149,
+   "address": "36C Hastings Street West, Sydenham, Christchurch",
+   "suburb": "Sydenham",
+   "area": "christchurch",
+   "lat": -43.5490438,
+   "lon": 172.6391276,
+   "linz_address_id": "54652"
+  },
+  {
+   "i": 150,
+   "address": "14 Talfourd Place, Waltham, Christchurch",
+   "suburb": "Waltham",
+   "area": "christchurch",
+   "lat": -43.5421144,
+   "lon": 172.6515397,
+   "linz_address_id": "237175"
+  },
+  {
+   "i": 151,
+   "address": "106 Smith Street, Woolston, Christchurch",
+   "suburb": "Woolston",
+   "area": "christchurch",
+   "lat": -43.5401072,
+   "lon": 172.6747922,
+   "linz_address_id": "252192"
+  },
+  {
+   "i": 152,
+   "address": "109 Bayswater Crescent, Bromley, Christchurch",
+   "suburb": "Bromley",
+   "area": "christchurch",
+   "lat": -43.5445736,
+   "lon": 172.693498,
+   "linz_address_id": "264053"
+  },
+  {
+   "i": 153,
+   "address": "169B Rocking Horse Road, Southshore, Christchurch",
+   "suburb": "Southshore",
+   "area": "christchurch",
+   "lat": -43.5530218,
+   "lon": 172.7500492,
+   "linz_address_id": "284848"
+  },
+  {
+   "i": 154,
+   "address": "421 Pound Road, Yaldhurst, Christchurch",
+   "suburb": "Yaldhurst",
+   "area": "christchurch",
+   "lat": -43.5211178,
+   "lon": 172.5033505,
+   "linz_address_id": "158061"
+  },
+  {
+   "i": 155,
+   "address": "10 Amdale Avenue, Broomfield, Christchurch",
+   "suburb": "Broomfield",
+   "area": "christchurch",
+   "lat": -43.5238467,
+   "lon": 172.53081,
+   "linz_address_id": "160924"
+  },
+  {
+   "i": 156,
+   "address": "5 Athol Terrace, Upper Riccarton, Christchurch",
+   "suburb": "Upper Riccarton",
+   "area": "christchurch",
+   "lat": -43.5242494,
+   "lon": 172.5700423,
+   "linz_address_id": "23540"
+  },
+  {
+   "i": 157,
+   "address": "11 Camberwell Place, Avonhead, Christchurch",
+   "suburb": "Avonhead",
+   "area": "christchurch",
+   "lat": -43.5224876,
+   "lon": 172.5513695,
+   "linz_address_id": "166162"
+  },
+  {
+   "i": 158,
+   "address": "103A Waimairi Road, Ilam, Christchurch",
+   "suburb": "Ilam",
+   "area": "christchurch",
+   "lat": -43.5232191,
+   "lon": 172.5723929,
+   "linz_address_id": "175563"
+  },
+  {
+   "i": 159,
+   "address": "109 Puriri Street, Riccarton, Christchurch",
+   "suburb": "Riccarton",
+   "area": "christchurch",
+   "lat": -43.5240979,
+   "lon": 172.5906184,
+   "linz_address_id": "190215"
+  },
+  {
+   "i": 160,
+   "address": "10 Queens Avenue, Merivale, Christchurch",
+   "suburb": "Merivale",
+   "area": "christchurch",
+   "lat": -43.5208116,
+   "lon": 172.6104679,
+   "linz_address_id": "204601"
+  },
+  {
+   "i": 161,
+   "address": "12 Fendalton Road, Fendalton, Christchurch",
+   "suburb": "Fendalton",
+   "area": "christchurch",
+   "lat": -43.5229175,
+   "lon": 172.6124387,
+   "linz_address_id": "204641"
+  },
+  {
+   "i": 162,
+   "address": "152E Salisbury Street, Christchurch Central, Christchurch",
+   "suburb": "Christchurch Central",
+   "area": "christchurch",
+   "lat": -43.5249046,
+   "lon": 172.6384928,
+   "linz_address_id": "13994"
+  },
+  {
+   "i": 163,
+   "address": "11 London Street, Richmond, Christchurch",
+   "suburb": "Richmond",
+   "area": "christchurch",
+   "lat": -43.5206524,
+   "lon": 172.6514117,
+   "linz_address_id": "235538"
+  },
+  {
+   "i": 164,
+   "address": "12 Lionel Street, Avonside, Christchurch",
+   "suburb": "Avonside",
+   "area": "christchurch",
+   "lat": -43.5229374,
+   "lon": 172.6718843,
+   "linz_address_id": "250554"
+  },
+  {
+   "i": 165,
+   "address": "103 Bickerton Street, Wainoni, Christchurch",
+   "suburb": "Wainoni",
+   "area": "christchurch",
+   "lat": -43.5205952,
+   "lon": 172.6947526,
+   "linz_address_id": "262997"
+  },
+  {
+   "i": 166,
+   "address": "48 St Heliers Crescent, Aranui, Christchurch",
+   "suburb": "Aranui",
+   "area": "christchurch",
+   "lat": -43.5201151,
+   "lon": 172.7105544,
+   "linz_address_id": "273384"
+  },
+  {
+   "i": 167,
+   "address": "112 Bridge Street, New Brighton, Christchurch",
+   "suburb": "New Brighton",
+   "area": "christchurch",
+   "lat": -43.5239944,
+   "lon": 172.7284331,
+   "linz_address_id": "280947"
+  },
+  {
+   "i": 168,
+   "address": "111 Estuary Road, South New Brighton, Christchurch",
+   "suburb": "South New Brighton",
+   "area": "christchurch",
+   "lat": -43.5239177,
+   "lon": 172.7332002,
+   "linz_address_id": "280943"
+  },
+  {
+   "i": 169,
+   "address": "360 Miners Road, McLeans Island, Christchurch",
+   "suburb": "McLeans Island",
+   "area": "christchurch",
+   "lat": -43.486411,
+   "lon": 172.450316,
+   "linz_address_id": "1348445"
+  },
+  {
+   "i": 170,
+   "address": "101 Woodbury Street, Russley, Christchurch",
+   "suburb": "Russley",
+   "area": "christchurch",
+   "lat": -43.5146438,
+   "lon": 172.5406563,
+   "linz_address_id": "163235"
+  },
+  {
+   "i": 171,
+   "address": "11A Witbrock Crescent, Burnside, Christchurch",
+   "suburb": "Burnside",
+   "area": "christchurch",
+   "lat": -43.5025798,
+   "lon": 172.5716735,
+   "linz_address_id": "173868"
+  },
+  {
+   "i": 172,
+   "address": "104 Watford Street, Strowan, Christchurch",
+   "suburb": "Strowan",
+   "area": "christchurch",
+   "lat": -43.5025385,
+   "lon": 172.6101694,
+   "linz_address_id": "203143"
+  },
+  {
+   "i": 173,
+   "address": "91 Wairakei Road, Bryndwr, Christchurch",
+   "suburb": "Bryndwr",
+   "area": "christchurch",
+   "lat": -43.5065483,
+   "lon": 172.5983524,
+   "linz_address_id": "68245"
+  },
+  {
+   "i": 174,
+   "address": "142 Bishop Street, St Albans, Christchurch",
+   "suburb": "St Albans",
+   "area": "christchurch",
+   "lat": -43.513889,
+   "lon": 172.641265,
+   "linz_address_id": "51857"
+  },
+  {
+   "i": 175,
+   "address": "15 Perry Street, Papanui, Christchurch",
+   "suburb": "Papanui",
+   "area": "christchurch",
+   "lat": -43.5011378,
+   "lon": 172.6129851,
+   "linz_address_id": "203264"
+  },
+  {
+   "i": 176,
+   "address": "11 Clearbrook Street, Shirley, Christchurch",
+   "suburb": "Shirley",
+   "area": "christchurch",
+   "lat": -43.4945678,
+   "lon": 172.6548006,
+   "linz_address_id": "233745"
+  },
+  {
+   "i": 177,
+   "address": "16 Acheson Avenue, Mairehau, Christchurch",
+   "suburb": "Mairehau",
+   "area": "christchurch",
+   "lat": -43.5011508,
+   "lon": 172.6534414,
+   "linz_address_id": "233899"
+  },
+  {
+   "i": 178,
+   "address": "10 McBratneys Road, Dallington, Christchurch",
+   "suburb": "Dallington",
+   "area": "christchurch",
+   "lat": -43.5140748,
+   "lon": 172.6710664,
+   "linz_address_id": "249833"
+  },
+  {
+   "i": 179,
+   "address": "22 Mervyn Drive, Avondale, Christchurch",
+   "suburb": "Avondale",
+   "area": "christchurch",
+   "lat": -43.5039281,
+   "lon": 172.6915751,
+   "linz_address_id": "261697"
+  },
+  {
+   "i": 180,
+   "address": "44 Perimeter Road, Christchurch Airport, Christchurch",
+   "suburb": "Christchurch Airport",
+   "area": "christchurch",
+   "lat": -43.4901973,
+   "lon": 172.5408795,
+   "linz_address_id": "26126"
+  },
+  {
+   "i": 181,
+   "address": "580 Russley Road, Harewood, Christchurch",
+   "suburb": "Harewood",
+   "area": "christchurch",
+   "lat": -43.4812892,
+   "lon": 172.5571622,
+   "linz_address_id": "168507"
+  },
+  {
+   "i": 182,
+   "address": "10 Bonita Place, Bishopdale, Christchurch",
+   "suburb": "Bishopdale",
+   "area": "christchurch",
+   "lat": -43.4882531,
+   "lon": 172.5786321,
+   "linz_address_id": "71314"
+  },
+  {
+   "i": 183,
+   "address": "110 Highsted Road, Casebrook, Christchurch",
+   "suburb": "Casebrook",
+   "area": "christchurch",
+   "lat": -43.4815356,
+   "lon": 172.5935897,
+   "linz_address_id": "187097"
+  },
+  {
+   "i": 184,
+   "address": "12 Fenchurch Street, Northcote, Christchurch",
+   "suburb": "Northcote",
+   "area": "christchurch",
+   "lat": -43.483266,
+   "lon": 172.6134267,
+   "linz_address_id": "201958"
+  },
+  {
+   "i": 185,
+   "address": "11 Scarlet Lane, Redwood, Christchurch",
+   "suburb": "Redwood",
+   "area": "christchurch",
+   "lat": -43.4806507,
+   "lon": 172.6113195,
+   "linz_address_id": "201925"
+  },
+  {
+   "i": 186,
+   "address": "46 Walters Road, Marshland, Christchurch",
+   "suburb": "Marshland",
+   "area": "christchurch",
+   "lat": -43.481673,
+   "lon": 172.6512307,
+   "linz_address_id": "233729"
+  },
+  {
+   "i": 187,
+   "address": "34 Stillwater Avenue, Burwood, Christchurch",
+   "suburb": "Burwood",
+   "area": "christchurch",
+   "lat": -43.4946503,
+   "lon": 172.6825158,
+   "linz_address_id": "70372"
+  },
+  {
+   "i": 188,
+   "address": "14 Daytona Place, Parklands, Christchurch",
+   "suburb": "Parklands",
+   "area": "christchurch",
+   "lat": -43.4805119,
+   "lon": 172.6944878,
+   "linz_address_id": "260768"
+  },
+  {
+   "i": 189,
+   "address": "108 Rotoiti Lane, Northwood, Christchurch",
+   "suburb": "Northwood",
+   "area": "christchurch",
+   "lat": -43.4504842,
+   "lon": 172.5883651,
+   "linz_address_id": "1617898"
+  },
+  {
+   "i": 190,
+   "address": "303 Radcliffe Road, Belfast, Christchurch",
+   "suburb": "Belfast",
+   "area": "christchurch",
+   "lat": -43.4652757,
+   "lon": 172.6500957,
+   "linz_address_id": "233707"
+  },
+  {
+   "i": 191,
+   "address": "1 Chenery Avenue, Ouruhia, Christchurch",
+   "suburb": "Ouruhia",
+   "area": "christchurch",
+   "lat": -43.4404837,
+   "lon": 172.6536221,
+   "linz_address_id": "233646"
+  },
+  {
+   "i": 192,
+   "address": "55 Eastwood Rise, Waimairi Beach, Christchurch",
+   "suburb": "Waimairi Beach",
+   "area": "christchurch",
+   "lat": -43.4774893,
+   "lon": 172.7162682,
+   "linz_address_id": "16503"
+  },
+  {
+   "i": 193,
+   "address": "352 Two Chain Road, Swannanoa",
+   "suburb": "Swannanoa",
+   "area": "christchurch",
+   "lat": -43.4205381,
+   "lon": 172.453807,
+   "linz_address_id": "156277"
+  },
+  {
+   "i": 194,
+   "address": "359 Coutts Island Road, Coutts Island, Christchurch",
+   "suburb": "Coutts Island",
+   "area": "christchurch",
+   "lat": -43.4358071,
+   "lon": 172.6054453,
+   "linz_address_id": "23616"
+  },
+  {
+   "i": 195,
+   "address": "206 Lower Styx Road, Bottle Lake, Christchurch",
+   "suburb": "Bottle Lake",
+   "area": "christchurch",
+   "lat": -43.4475863,
+   "lon": 172.6769294,
+   "linz_address_id": "254555"
+  },
+  {
+   "i": 196,
+   "address": "84 Baynons Road, Clarkville, Kaiapoi",
+   "suburb": "Clarkville",
+   "area": "christchurch",
+   "lat": -43.4238735,
+   "lon": 172.5800498,
+   "linz_address_id": "179467"
+  },
+  {
+   "i": 197,
+   "address": "1190 Main North Road, Kainga, Christchurch",
+   "suburb": "Kainga",
+   "area": "christchurch",
+   "lat": -43.4242595,
+   "lon": 172.6509551,
+   "linz_address_id": "233597"
+  },
+  {
+   "i": 198,
+   "address": "10 Riverside Lane, Spencerville, Christchurch",
+   "suburb": "Spencerville",
+   "area": "christchurch",
+   "lat": -43.4310866,
+   "lon": 172.6941137,
+   "linz_address_id": "260536"
+  },
+  {
+   "i": 199,
+   "address": "1 Main North Road, Kaiapoi",
+   "suburb": "Kaiapoi",
+   "area": "christchurch",
+   "lat": -43.4113667,
+   "lon": 172.6486825,
+   "linz_address_id": "233582"
+  },
+  {
+   "i": 200,
+   "address": "1033 Lower Styx Road, Brooklands, Christchurch",
+   "suburb": "Brooklands",
+   "area": "christchurch",
+   "lat": -43.4044067,
+   "lon": 172.6944772,
+   "linz_address_id": "260391"
+  },
+  {
+   "i": 201,
+   "address": "45 Wolfes Road, Springston",
+   "suburb": "Springston",
+   "area": "christchurch",
+   "lat": -43.6902267,
+   "lon": 172.4624774,
+   "linz_address_id": "1294179"
+  },
+  {
+   "i": 202,
+   "address": "99 Davidsons Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "christchurch",
+   "lat": -43.7043056,
+   "lon": 172.5047397,
+   "linz_address_id": "1331170"
+  },
+  {
+   "i": 203,
+   "address": "65 Burneys Road, Motukarara, Tai Tapu",
+   "suburb": "Motukarara",
+   "area": "christchurch",
+   "lat": -43.7153926,
+   "lon": 172.5600543,
+   "linz_address_id": "1542353"
+  },
+  {
+   "i": 204,
+   "address": "1453 Christchurch Akaroa Road, Tai Tapu",
+   "suburb": "Tai Tapu",
+   "area": "christchurch",
+   "lat": -43.7146466,
+   "lon": 172.5806229,
+   "linz_address_id": "946547"
+  },
+  {
+   "i": 205,
+   "address": "243 Gebbies Pass Road, Gebbies Valley, Tai Tapu",
+   "suburb": "Gebbies Valley",
+   "area": "christchurch",
+   "lat": -43.7048803,
+   "lon": 172.6119331,
+   "linz_address_id": "208492"
+  },
+  {
+   "i": 206,
+   "address": "757 Kaituna Valley Road, Ataahua, Tai Tapu",
+   "suburb": "Ataahua",
+   "area": "christchurch",
+   "lat": -43.6996513,
+   "lon": 172.7175923,
+   "linz_address_id": "2162939"
+  },
+  {
+   "i": 207,
+   "address": "1431 Western Valley Road, Port Levy, Diamond Harbour",
+   "suburb": "Port Levy",
+   "area": "christchurch",
+   "lat": -43.688985,
+   "lon": 172.7771571,
+   "linz_address_id": "290162"
+  },
+  {
+   "i": 208,
+   "address": "720 Gebbies Pass Road, Teddington, Governors Bay",
+   "suburb": "Teddington",
+   "area": "christchurch",
+   "lat": -43.6818556,
+   "lon": 172.6516787,
+   "linz_address_id": "1394358"
+  },
+  {
+   "i": 209,
+   "address": "279 Charteris Bay Road, Charteris Bay, Governors Bay",
+   "suburb": "Charteris Bay",
+   "area": "christchurch",
+   "lat": -43.6681316,
+   "lon": 172.6926355,
+   "linz_address_id": "2045702"
+  },
+  {
+   "i": 210,
+   "address": "2159 Summit Road, Allandale, Governors Bay",
+   "suburb": "Allandale",
+   "area": "christchurch",
+   "lat": -43.6270306,
+   "lon": 172.6269704,
+   "linz_address_id": "1760598"
+  },
+  {
+   "i": 211,
+   "address": "23 Monalua Avenue, Purau, Diamond Harbour",
+   "suburb": "Purau",
+   "area": "christchurch",
+   "lat": -43.6410148,
+   "lon": 172.7498875,
+   "linz_address_id": "285630"
+  },
+  {
+   "i": 212,
+   "address": "643 Waterholes Road, Rolleston",
+   "suburb": "Rolleston",
+   "area": "christchurch",
+   "lat": -43.5883433,
+   "lon": 172.4504082,
+   "linz_address_id": "406164"
+  },
+  {
+   "i": 213,
+   "address": "5 Barnes Road, Halswell, Christchurch",
+   "suburb": "Halswell",
+   "area": "christchurch",
+   "lat": -43.6178115,
+   "lon": 172.5321659,
+   "linz_address_id": "908391"
+  },
+  {
+   "i": 214,
+   "address": "4/104 Early Valley Road, Lansdowne",
+   "suburb": "Lansdowne",
+   "area": "christchurch",
+   "lat": -43.6264512,
+   "lon": 172.5902087,
+   "linz_address_id": "909172"
+  },
+  {
+   "i": 215,
+   "address": "3 Lachie Griffen Rise, Governors Bay",
+   "suburb": "Governors Bay",
+   "area": "christchurch",
+   "lat": -43.6266311,
+   "lon": 172.6446461,
+   "linz_address_id": "232015"
+  },
+  {
+   "i": 216,
+   "address": "15 Te Ara Crescent, Diamond Harbour",
+   "suburb": "Diamond Harbour",
+   "area": "christchurch",
+   "lat": -43.6270483,
+   "lon": 172.7311029,
+   "linz_address_id": "282385"
+  },
+  {
+   "i": 217,
+   "address": "440 Robinsons Road, Prebbleton",
+   "suburb": "Prebbleton",
+   "area": "christchurch",
+   "lat": -43.6077143,
+   "lon": 172.4803762,
+   "linz_address_id": "1294894"
+  },
+  {
+   "i": 218,
+   "address": "86 Old Tai Tapu Road, Kennedys Bush, Christchurch",
+   "suburb": "Kennedys Bush",
+   "area": "christchurch",
+   "lat": -43.6059153,
+   "lon": 172.5652379,
+   "linz_address_id": "1064813"
+  },
+  {
+   "i": 219,
+   "address": "214 Governors Bay Road, Te Rāpaki-o-Te Rakiwhakaputa, Lyttelton",
+   "suburb": "Te Rāpaki-o-Te Rakiwhakaputa",
+   "area": "christchurch",
+   "lat": -43.6039163,
+   "lon": 172.6818484,
+   "linz_address_id": "260187"
+  },
+  {
+   "i": 220,
+   "address": "11 Governors Bay Road, Cass Bay, Lyttelton",
+   "suburb": "Cass Bay",
+   "area": "christchurch",
+   "lat": -43.6036798,
+   "lon": 172.6936439,
+   "linz_address_id": "265213"
+  },
+  {
+   "i": 221,
+   "address": "12 Dudley Road, Lyttelton",
+   "suburb": "Lyttelton",
+   "area": "christchurch",
+   "lat": -43.6019247,
+   "lon": 172.7135449,
+   "linz_address_id": "274290"
+  },
+  {
+   "i": 222,
+   "address": "327 Worsleys Road, Cracroft, Christchurch",
+   "suburb": "Cracroft",
+   "area": "christchurch",
+   "lat": -43.5877815,
+   "lon": 172.6102713,
+   "linz_address_id": "208474"
+  },
+  {
+   "i": 223,
+   "address": "10 Somerton Rise, Westmorland, Christchurch",
+   "suburb": "Westmorland",
+   "area": "christchurch",
+   "lat": -43.5820516,
+   "lon": 172.5983059,
+   "linz_address_id": "200985"
+  },
+  {
+   "i": 224,
+   "address": "10 Pentre Terrace, Cashmere, Christchurch",
+   "suburb": "Cashmere",
+   "area": "christchurch",
+   "lat": -43.5826931,
+   "lon": 172.6341863,
+   "linz_address_id": "223110"
+  },
+  {
+   "i": 225,
+   "address": "12 Heathvale Place, Heathcote Valley, Christchurch",
+   "suburb": "Heathcote Valley",
+   "area": "christchurch",
+   "lat": -43.5831476,
+   "lon": 172.7060991,
+   "linz_address_id": "274067"
+  },
+  {
+   "i": 226,
+   "address": "121 Sumnervale Drive, Sumner, Christchurch",
+   "suburb": "Sumner",
+   "area": "christchurch",
+   "lat": -43.5846752,
+   "lon": 172.7531308,
+   "linz_address_id": "285485"
+  },
+  {
+   "i": 227,
+   "address": "197 Taylors Mistake Road, Te Onepoto / Taylors Mistake, Christchurch",
+   "suburb": "Te Onepoto / Taylors Mistake",
+   "area": "christchurch",
+   "lat": -43.5821624,
+   "lon": 172.7742287,
+   "linz_address_id": "287086"
+  },
+  {
+   "i": 228,
+   "address": "11 Springmead Place, Hornby, Christchurch",
+   "suburb": "Hornby",
+   "area": "christchurch",
+   "lat": -43.5437728,
+   "lon": 172.5128714,
+   "linz_address_id": "158445"
+  },
+  {
+   "i": 229,
+   "address": "11 Fusilier Street, Hoon Hay, Christchurch",
+   "suburb": "Hoon Hay",
+   "area": "christchurch",
+   "lat": -43.5609727,
+   "lon": 172.5921688,
+   "linz_address_id": "192069"
+  },
+  {
+   "i": 230,
+   "address": "10 Mountfort Street, Spreydon, Christchurch",
+   "suburb": "Spreydon",
+   "area": "christchurch",
+   "lat": -43.5616714,
+   "lon": 172.614927,
+   "linz_address_id": "206772"
+  },
+  {
+   "i": 231,
+   "address": "10 Selsey Lane, Somerfield, Christchurch",
+   "suburb": "Somerfield",
+   "area": "christchurch",
+   "lat": -43.5642009,
+   "lon": 172.6309931,
+   "linz_address_id": "221662"
+  },
+  {
+   "i": 232,
+   "address": "14 Conifer Place, Huntsbury, Christchurch",
+   "suburb": "Huntsbury",
+   "area": "christchurch",
+   "lat": -43.5649328,
+   "lon": 172.6507436,
+   "linz_address_id": "238521"
+  },
+  {
+   "i": 233,
+   "address": "149 Centaurus Road, Saint Martins, Christchurch",
+   "suburb": "Saint Martins",
+   "area": "christchurch",
+   "lat": -43.5629321,
+   "lon": 172.6500746,
+   "linz_address_id": "238510"
+  },
+  {
+   "i": 234,
+   "address": "12 Brabourne Street, Hillsborough, Christchurch",
+   "suburb": "Hillsborough",
+   "area": "christchurch",
+   "lat": -43.5618436,
+   "lon": 172.6729521,
+   "linz_address_id": "253798"
+  },
+  {
+   "i": 235,
+   "address": "107 Cannon Hill Crescent, Mount Pleasant, Christchurch",
+   "suburb": "Mount Pleasant",
+   "area": "christchurch",
+   "lat": -43.5643987,
+   "lon": 172.7126018,
+   "linz_address_id": "273549"
+  },
+  {
+   "i": 236,
+   "address": "10A Panorama Road, Clifton, Christchurch",
+   "suburb": "Clifton",
+   "area": "christchurch",
+   "lat": -43.5678226,
+   "lon": 172.7519988,
+   "linz_address_id": "285088"
+  },
+  {
+   "i": 237,
+   "address": "12 Glendevere Terrace, Redcliffs, Christchurch",
+   "suburb": "Redcliffs",
+   "area": "christchurch",
+   "lat": -43.5625232,
+   "lon": 172.7321631,
+   "linz_address_id": "281675"
+  },
+  {
+   "i": 238,
+   "address": "114 Scarborough Road, Scarborough, Christchurch",
+   "suburb": "Scarborough",
+   "area": "christchurch",
+   "lat": -43.5744803,
+   "lon": 172.7715969,
+   "linz_address_id": "286861"
+  },
+  {
+   "i": 239,
+   "address": "7 Lordship Place, Templeton, Christchurch",
+   "suburb": "Templeton",
+   "area": "christchurch",
+   "lat": -43.5503865,
+   "lon": 172.464879,
+   "linz_address_id": "156367"
+  },
+  {
+   "i": 240,
+   "address": "685 Main South Road, Islington, Christchurch",
+   "suburb": "Islington",
+   "area": "christchurch",
+   "lat": -43.5490194,
+   "lon": 172.4919025,
+   "linz_address_id": "157630"
+  },
+  {
+   "i": 241,
+   "address": "49 Napier Drive, Wigram, Christchurch",
+   "suburb": "Wigram",
+   "area": "christchurch",
+   "lat": -43.5566542,
+   "lon": 172.546325,
+   "linz_address_id": "89972"
+  },
+  {
+   "i": 242,
+   "address": "11 Midas Place, Middleton, Christchurch",
+   "suburb": "Middleton",
+   "area": "christchurch",
+   "lat": -43.5420043,
+   "lon": 172.5820012,
+   "linz_address_id": "183567"
+  },
+  {
+   "i": 243,
+   "address": "1/20 Ruskin Street, Addington, Christchurch",
+   "suburb": "Addington",
+   "area": "christchurch",
+   "lat": -43.5462403,
+   "lon": 172.6233971,
+   "linz_address_id": "158060"
+  },
+  {
+   "i": 244,
+   "address": "102 Orbell Street, Sydenham, Christchurch",
+   "suburb": "Sydenham",
+   "area": "christchurch",
+   "lat": -43.5424091,
+   "lon": 172.6322156,
+   "linz_address_id": "220291"
+  },
+  {
+   "i": 245,
+   "address": "17 Lismore Street, Waltham, Christchurch",
+   "suburb": "Waltham",
+   "area": "christchurch",
+   "lat": -43.5430431,
+   "lon": 172.6516619,
+   "linz_address_id": "237204"
+  },
+  {
+   "i": 246,
+   "address": "10 Bray Street, Woolston, Christchurch",
+   "suburb": "Woolston",
+   "area": "christchurch",
+   "lat": -43.543744,
+   "lon": 172.6730191,
+   "linz_address_id": "252214"
+  },
+  {
+   "i": 247,
+   "address": "116 Bayswater Crescent, Bromley, Christchurch",
+   "suburb": "Bromley",
+   "area": "christchurch",
+   "lat": -43.5432743,
+   "lon": 172.6924291,
+   "linz_address_id": "264075"
+  },
+  {
+   "i": 248,
+   "address": "183C Rocking Horse Road, Southshore, Christchurch",
+   "suburb": "Southshore",
+   "area": "christchurch",
+   "lat": -43.5542493,
+   "lon": 172.7501084,
+   "linz_address_id": "284894"
+  },
+  {
+   "i": 249,
+   "address": "164 Old West Coast Road, Yaldhurst, Christchurch",
+   "suburb": "Yaldhurst",
+   "area": "christchurch",
+   "lat": -43.5074355,
+   "lon": 172.4665612,
+   "linz_address_id": "156452"
+  },
+  {
+   "i": 250,
+   "address": "11 Ben Nevis Drive, Broomfield, Christchurch",
+   "suburb": "Broomfield",
+   "area": "christchurch",
+   "lat": -43.5235173,
+   "lon": 172.5349174,
+   "linz_address_id": "160929"
+  },
+  {
+   "i": 251,
+   "address": "76 Peer Street, Upper Riccarton, Christchurch",
+   "suburb": "Upper Riccarton",
+   "area": "christchurch",
+   "lat": -43.5257988,
+   "lon": 172.5718281,
+   "linz_address_id": "140795"
+  },
+  {
+   "i": 252,
+   "address": "12 Hillcrest Place, Avonhead, Christchurch",
+   "suburb": "Avonhead",
+   "area": "christchurch",
+   "lat": -43.5230095,
+   "lon": 172.5545644,
+   "linz_address_id": "166186"
+  },
+  {
+   "i": 253,
+   "address": "108 Waimairi Road, Ilam, Christchurch",
+   "suburb": "Ilam",
+   "area": "christchurch",
+   "lat": -43.5221703,
+   "lon": 172.5730808,
+   "linz_address_id": "175574"
+  },
+  {
+   "i": 254,
+   "address": "14 Holmwood Road, Merivale, Christchurch",
+   "suburb": "Merivale",
+   "area": "christchurch",
+   "lat": -43.5211571,
+   "lon": 172.6117897,
+   "linz_address_id": "204651"
+  },
+  {
+   "i": 255,
+   "address": "15 Fendalton Road, Fendalton, Christchurch",
+   "suburb": "Fendalton",
+   "area": "christchurch",
+   "lat": -43.5230179,
+   "lon": 172.6120053,
+   "linz_address_id": "204670"
+  },
+  {
+   "i": 256,
+   "address": "3/31 Ely Street, Christchurch Central, Christchurch",
+   "suburb": "Christchurch Central",
+   "area": "christchurch",
+   "lat": -43.5226836,
+   "lon": 172.6446234,
+   "linz_address_id": "32795"
+  },
+  {
+   "i": 257,
+   "address": "14 Perth Street, Richmond, Christchurch",
+   "suburb": "Richmond",
+   "area": "christchurch",
+   "lat": -43.5220542,
+   "lon": 172.6530178,
+   "linz_address_id": "235572"
+  },
+  {
+   "i": 258,
+   "address": "15 Lionel Street, Avonside, Christchurch",
+   "suburb": "Avonside",
+   "area": "christchurch",
+   "lat": -43.5232002,
+   "lon": 172.6717187,
+   "linz_address_id": "250585"
+  },
+  {
+   "i": 259,
+   "address": "107 Pages Road, Wainoni, Christchurch",
+   "suburb": "Wainoni",
+   "area": "christchurch",
+   "lat": -43.5226046,
+   "lon": 172.6909572,
+   "linz_address_id": "263004"
+  },
+  {
+   "i": 260,
+   "address": "69 St Heliers Crescent, Aranui, Christchurch",
+   "suburb": "Aranui",
+   "area": "christchurch",
+   "lat": -43.5202433,
+   "lon": 172.7113006,
+   "linz_address_id": "273455"
+  },
+  {
+   "i": 261,
+   "address": "107 Pine Avenue, New Brighton, Christchurch",
+   "suburb": "New Brighton",
+   "area": "christchurch",
+   "lat": -43.5230525,
+   "lon": 172.7346613,
+   "linz_address_id": "280926"
+  },
+  {
+   "i": 262,
+   "address": "113 Pine Avenue, South New Brighton, Christchurch",
+   "suburb": "South New Brighton",
+   "area": "christchurch",
+   "lat": -43.5234457,
+   "lon": 172.7348426,
+   "linz_address_id": "280949"
+  },
+  {
+   "i": 263,
+   "address": "76 Clarksons Road, McLeans Island, Christchurch",
+   "suburb": "McLeans Island",
+   "area": "christchurch",
+   "lat": -43.4853415,
+   "lon": 172.4760619,
+   "linz_address_id": "1757813"
+  },
+  {
+   "i": 264,
+   "address": "10 Karnak Crescent, Russley, Christchurch",
+   "suburb": "Russley",
+   "area": "christchurch",
+   "lat": -43.5145503,
+   "lon": 172.5446988,
+   "linz_address_id": "163240"
+  },
+  {
+   "i": 265,
+   "address": "11 Glencoe Street, Burnside, Christchurch",
+   "suburb": "Burnside",
+   "area": "christchurch",
+   "lat": -43.5007561,
+   "lon": 172.5739087,
+   "linz_address_id": "173883"
+  },
+  {
+   "i": 266,
+   "address": "108 Hawthorne Street, Strowan, Christchurch",
+   "suburb": "Strowan",
+   "area": "christchurch",
+   "lat": -43.5024542,
+   "lon": 172.6123483,
+   "linz_address_id": "203152"
+  },
+  {
+   "i": 267,
+   "address": "100A Aorangi Road, Bryndwr, Christchurch",
+   "suburb": "Bryndwr",
+   "area": "christchurch",
+   "lat": -43.5037533,
+   "lon": 172.5924549,
+   "linz_address_id": "188599"
+  },
+  {
+   "i": 268,
+   "address": "12 Jameson Avenue, St Albans, Christchurch",
+   "suburb": "St Albans",
+   "area": "christchurch",
+   "lat": -43.5000361,
+   "lon": 172.6345667,
+   "linz_address_id": "217465"
+  },
+  {
+   "i": 269,
+   "address": "17 Perry Street, Papanui, Christchurch",
+   "suburb": "Papanui",
+   "area": "christchurch",
+   "lat": -43.5010503,
+   "lon": 172.613164,
+   "linz_address_id": "203296"
+  },
+  {
+   "i": 270,
+   "address": "25 Clearbrook Street, Shirley, Christchurch",
+   "suburb": "Shirley",
+   "area": "christchurch",
+   "lat": -43.4936514,
+   "lon": 172.6547249,
+   "linz_address_id": "233757"
+  },
+  {
+   "i": 271,
+   "address": "23 Holiday Drive, Mairehau, Christchurch",
+   "suburb": "Mairehau",
+   "area": "christchurch",
+   "lat": -43.4910132,
+   "lon": 172.6469061,
+   "linz_address_id": "25597"
+  },
+  {
+   "i": 272,
+   "address": "11 Mundys Road, Dallington, Christchurch",
+   "suburb": "Dallington",
+   "area": "christchurch",
+   "lat": -43.5078159,
+   "lon": 172.674571,
+   "linz_address_id": "249842"
+  },
+  {
+   "i": 273,
+   "address": "2 Baladin Street, Avondale, Christchurch",
+   "suburb": "Avondale",
+   "area": "christchurch",
+   "lat": -43.5039811,
+   "lon": 172.6938228,
+   "linz_address_id": "261793"
+  },
+  {
+   "i": 274,
+   "address": "8 Durey Road, Christchurch Airport, Christchurch",
+   "suburb": "Christchurch Airport",
+   "area": "christchurch",
+   "lat": -43.4893773,
+   "lon": 172.5431202,
+   "linz_address_id": "26172"
+  },
+  {
+   "i": 275,
+   "address": "10 Dunvegan Place, Harewood, Christchurch",
+   "suburb": "Harewood",
+   "area": "christchurch",
+   "lat": -43.4842914,
+   "lon": 172.5720209,
+   "linz_address_id": "173364"
+  },
+  {
+   "i": 276,
+   "address": "103 Reynolds Avenue, Bishopdale, Christchurch",
+   "suburb": "Bishopdale",
+   "area": "christchurch",
+   "lat": -43.4845738,
+   "lon": 172.5948064,
+   "linz_address_id": "187071"
+  },
+  {
+   "i": 277,
+   "address": "6/149 Highsted Road, Casebrook, Christchurch",
+   "suburb": "Casebrook",
+   "area": "christchurch",
+   "lat": -43.4781683,
+   "lon": 172.5947375,
+   "linz_address_id": "8685"
+  },
+  {
+   "i": 278,
+   "address": "23A Munro Street, Redwood, Christchurch",
+   "suburb": "Redwood",
+   "area": "christchurch",
+   "lat": -43.4766669,
+   "lon": 172.6178514,
+   "linz_address_id": "73583"
+  },
+  {
+   "i": 279,
+   "address": "19 McSaveneys Road, Marshland, Christchurch",
+   "suburb": "Marshland",
+   "area": "christchurch",
+   "lat": -43.4854549,
+   "lon": 172.6520288,
+   "linz_address_id": "233751"
+  },
+  {
+   "i": 280,
+   "address": "11B Yellowstone Crescent, Burwood, Christchurch",
+   "suburb": "Burwood",
+   "area": "christchurch",
+   "lat": -43.4932671,
+   "lon": 172.6739998,
+   "linz_address_id": "249389"
+  },
+  {
+   "i": 281,
+   "address": "19 Daytona Place, Parklands, Christchurch",
+   "suburb": "Parklands",
+   "area": "christchurch",
+   "lat": -43.4807218,
+   "lon": 172.6941578,
+   "linz_address_id": "260804"
+  },
+  {
+   "i": 282,
+   "address": "106 Rotoiti Lane, Northwood, Christchurch",
+   "suburb": "Northwood",
+   "area": "christchurch",
+   "lat": -43.450495,
+   "lon": 172.5885767,
+   "linz_address_id": "2106113"
+  },
+  {
+   "i": 283,
+   "address": "33A Darroch Street, Belfast, Christchurch",
+   "suburb": "Belfast",
+   "area": "christchurch",
+   "lat": -43.4432555,
+   "lon": 172.6298485,
+   "linz_address_id": "19360"
+  },
+  {
+   "i": 284,
+   "address": "239 Guthries Road, Ouruhia, Christchurch",
+   "suburb": "Ouruhia",
+   "area": "christchurch",
+   "lat": -43.4410523,
+   "lon": 172.6541758,
+   "linz_address_id": "233651"
+  },
+  {
+   "i": 285,
+   "address": "65 Eastwood Rise, Waimairi Beach, Christchurch",
+   "suburb": "Waimairi Beach",
+   "area": "christchurch",
+   "lat": -43.4766943,
+   "lon": 172.7158191,
+   "linz_address_id": "16508"
+  },
+  {
+   "i": 286,
+   "address": "145 Pashbys Road, Swannanoa",
+   "suburb": "Swannanoa",
+   "area": "christchurch",
+   "lat": -43.423976,
+   "lon": 172.49657,
+   "linz_address_id": "157986"
+  },
+  {
+   "i": 287,
+   "address": "91 Dickeys Road, Coutts Island, Christchurch",
+   "suburb": "Coutts Island",
+   "area": "christchurch",
+   "lat": -43.4329065,
+   "lon": 172.6292983,
+   "linz_address_id": "1366885"
+  },
+  {
+   "i": 288,
+   "address": "218 Lower Styx Road, Bottle Lake, Christchurch",
+   "suburb": "Bottle Lake",
+   "area": "christchurch",
+   "lat": -43.4463604,
+   "lon": 172.67875,
+   "linz_address_id": "1371785"
+  },
+  {
+   "i": 289,
+   "address": "110 Madeleys Road, Clarkville, Kaiapoi",
+   "suburb": "Clarkville",
+   "area": "christchurch",
+   "lat": -43.4303861,
+   "lon": 172.5833185,
+   "linz_address_id": "179472"
+  },
+  {
+   "i": 290,
+   "address": "27 Spencerville Road, Kainga, Christchurch",
+   "suburb": "Kainga",
+   "area": "christchurch",
+   "lat": -43.4305739,
+   "lon": 172.6543154,
+   "linz_address_id": "233634"
+  },
+  {
+   "i": 291,
+   "address": "330 Lower Styx Road, Spencerville, Christchurch",
+   "suburb": "Spencerville",
+   "area": "christchurch",
+   "lat": -43.4320023,
+   "lon": 172.6948892,
+   "linz_address_id": "260543"
+  },
+  {
+   "i": 292,
+   "address": "115 Doubledays Road, Kaiapoi",
+   "suburb": "Kaiapoi",
+   "area": "christchurch",
+   "lat": -43.4059108,
+   "lon": 172.654981,
+   "linz_address_id": "233576"
+  },
+  {
+   "i": 293,
+   "address": "1038 Lower Styx Road, Brooklands, Christchurch",
+   "suburb": "Brooklands",
+   "area": "christchurch",
+   "lat": -43.4039763,
+   "lon": 172.6949511,
+   "linz_address_id": "260396"
+  },
+  {
+   "i": 294,
+   "address": "117 Yarrs Road, Springston",
+   "suburb": "Springston",
+   "area": "christchurch",
+   "lat": -43.6922825,
+   "lon": 172.4536308,
+   "linz_address_id": "1294433"
+  },
+  {
+   "i": 295,
+   "address": "169 Davidsons Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "christchurch",
+   "lat": -43.7037036,
+   "lon": 172.4965441,
+   "linz_address_id": "1742367"
+  },
+  {
+   "i": 296,
+   "address": "4/1453 Christchurch Akaroa Road, Tai Tapu",
+   "suburb": "Tai Tapu",
+   "area": "christchurch",
+   "lat": -43.7167121,
+   "lon": 172.5803921,
+   "linz_address_id": "1415973"
+  },
+  {
+   "i": 297,
+   "address": "187 Millers Road, Gebbies Valley, Tai Tapu",
+   "suburb": "Gebbies Valley",
+   "area": "christchurch",
+   "lat": -43.7119951,
+   "lon": 172.6150266,
+   "linz_address_id": "215686"
+  },
+  {
+   "i": 298,
+   "address": "1467 Western Valley Road, Port Levy, Diamond Harbour",
+   "suburb": "Port Levy",
+   "area": "christchurch",
+   "lat": -43.6834724,
+   "lon": 172.792481,
+   "linz_address_id": "287479"
+  },
+  {
+   "i": 299,
+   "address": "705 Gebbies Pass Road, Teddington, Governors Bay",
+   "suburb": "Teddington",
+   "area": "christchurch",
+   "lat": -43.6763779,
+   "lon": 172.6295779,
+   "linz_address_id": "1758524"
+  },
+  {
+   "i": 300,
+   "address": "39 Somerton Road, Mitcham, Ashburton",
+   "suburb": "Mitcham",
+   "area": "selwyn",
+   "lat": -43.8341679,
+   "lon": 171.8527678,
+   "linz_address_id": "149065"
+  },
+  {
+   "i": 301,
+   "address": "22 Taverners Road, Dromore, Ashburton",
+   "suburb": "Dromore",
+   "area": "selwyn",
+   "lat": -43.8473545,
+   "lon": 171.8537062,
+   "linz_address_id": "149071"
+  },
+  {
+   "i": 302,
+   "address": "416 Chertsey Road, Chertsey, Ashburton",
+   "suburb": "Chertsey",
+   "area": "selwyn",
+   "lat": -43.8392888,
+   "lon": 171.918674,
+   "linz_address_id": "149236"
+  },
+  {
+   "i": 303,
+   "address": "785 Gardiners Road, Pendarves, Ashburton",
+   "suburb": "Pendarves",
+   "area": "selwyn",
+   "lat": -43.8480233,
+   "lon": 172.0030608,
+   "linz_address_id": "150004"
+  },
+  {
+   "i": 304,
+   "address": "482 Kyle Road, Dorie",
+   "suburb": "Dorie",
+   "area": "selwyn",
+   "lat": -43.8457964,
+   "lon": 172.0213447,
+   "linz_address_id": "150437"
+  },
+  {
+   "i": 305,
+   "address": "645 North Rakaia Road, Southbridge",
+   "suburb": "Southbridge",
+   "area": "selwyn",
+   "lat": -43.8373641,
+   "lon": 172.2086214,
+   "linz_address_id": "1296277"
+  },
+  {
+   "i": 306,
+   "address": "253 McConnels Road, Leeston",
+   "suburb": "Leeston",
+   "area": "selwyn",
+   "lat": -43.8360756,
+   "lon": 172.3340512,
+   "linz_address_id": "1334983"
+  },
+  {
+   "i": 307,
+   "address": "1790 Bayleys Road, Birdlings Flat, Little River",
+   "suburb": "Birdlings Flat",
+   "area": "selwyn",
+   "lat": -43.8375543,
+   "lon": 172.463173,
+   "linz_address_id": "156370"
+  },
+  {
+   "i": 308,
+   "address": "153 Kyle Road, Rakaia",
+   "suburb": "Rakaia",
+   "area": "selwyn",
+   "lat": -43.8219823,
+   "lon": 171.9971089,
+   "linz_address_id": "150002"
+  },
+  {
+   "i": 309,
+   "address": "1002 Somerton Road, Hatfield, Rakaia",
+   "suburb": "Hatfield",
+   "area": "selwyn",
+   "lat": -43.7595226,
+   "lon": 171.9138047,
+   "linz_address_id": "149203"
+  },
+  {
+   "i": 310,
+   "address": "16 Willow Road, Bankside",
+   "suburb": "Bankside",
+   "area": "selwyn",
+   "lat": -43.7346704,
+   "lon": 172.0455565,
+   "linz_address_id": "1333921"
+  },
+  {
+   "i": 311,
+   "address": "613 Drain Road, Doyleston",
+   "suburb": "Doyleston",
+   "area": "selwyn",
+   "lat": -43.7418087,
+   "lon": 172.3087186,
+   "linz_address_id": "1009983"
+  },
+  {
+   "i": 312,
+   "address": "5 Armstrong Avenue, Springston",
+   "suburb": "Springston",
+   "area": "selwyn",
+   "lat": -43.7380496,
+   "lon": 172.4425347,
+   "linz_address_id": "30881"
+  },
+  {
+   "i": 313,
+   "address": "597 Farquhars Road, Barrhill, Lauriston",
+   "suburb": "Barrhill",
+   "area": "selwyn",
+   "lat": -43.7189631,
+   "lon": 171.8544532,
+   "linz_address_id": "149057"
+  },
+  {
+   "i": 314,
+   "address": "128 Embankment Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "selwyn",
+   "lat": -43.7151085,
+   "lon": 172.4951264,
+   "linz_address_id": "904663"
+  },
+  {
+   "i": 315,
+   "address": "850 Heslerton Road, Dunsandel",
+   "suburb": "Dunsandel",
+   "area": "selwyn",
+   "lat": -43.6973199,
+   "lon": 172.1284598,
+   "linz_address_id": "1128917"
+  },
+  {
+   "i": 316,
+   "address": "1492 Selwyn Road, Burnham",
+   "suburb": "Burnham",
+   "area": "selwyn",
+   "lat": -43.6513831,
+   "lon": 172.3082304,
+   "linz_address_id": "1296245"
+  },
+  {
+   "i": 317,
+   "address": "1995 Sharlands Road, Hororata",
+   "suburb": "Hororata",
+   "area": "selwyn",
+   "lat": -43.6348344,
+   "lon": 171.8943541,
+   "linz_address_id": "1296261"
+  },
+  {
+   "i": 318,
+   "address": "2 Sanders Way, Rolleston",
+   "suburb": "Rolleston",
+   "area": "selwyn",
+   "lat": -43.6317101,
+   "lon": 172.3817689,
+   "linz_address_id": "2280533"
+  },
+  {
+   "i": 319,
+   "address": "89 Bebbingtons Road, Mitcham, Ashburton",
+   "suburb": "Mitcham",
+   "area": "selwyn",
+   "lat": -43.8155399,
+   "lon": 171.854638,
+   "linz_address_id": "149064"
+  },
+  {
+   "i": 320,
+   "address": "53 Taverners Road, Dromore, Ashburton",
+   "suburb": "Dromore",
+   "area": "selwyn",
+   "lat": -43.8470788,
+   "lon": 171.8578665,
+   "linz_address_id": "149098"
+  },
+  {
+   "i": 321,
+   "address": "755 Taverners Road, Chertsey, Ashburton",
+   "suburb": "Chertsey",
+   "area": "selwyn",
+   "lat": -43.8423288,
+   "lon": 171.9435615,
+   "linz_address_id": "149520"
+  },
+  {
+   "i": 322,
+   "address": "411 Kyle Road, Dorie",
+   "suburb": "Dorie",
+   "area": "selwyn",
+   "lat": -43.8402238,
+   "lon": 172.0175742,
+   "linz_address_id": "1367263"
+  },
+  {
+   "i": 323,
+   "address": "100 Dobbins Road, Southbridge",
+   "suburb": "Southbridge",
+   "area": "selwyn",
+   "lat": -43.8369879,
+   "lon": 172.2147378,
+   "linz_address_id": "904494"
+  },
+  {
+   "i": 324,
+   "address": "565 Lower Lake Road, Leeston",
+   "suburb": "Leeston",
+   "area": "selwyn",
+   "lat": -43.8403005,
+   "lon": 172.3511063,
+   "linz_address_id": "1334660"
+  },
+  {
+   "i": 325,
+   "address": "1684 Bayleys Road, Birdlings Flat, Little River",
+   "suburb": "Birdlings Flat",
+   "area": "selwyn",
+   "lat": -43.8350397,
+   "lon": 172.4870229,
+   "linz_address_id": "157921"
+  },
+  {
+   "i": 326,
+   "address": "466 Mainwarings Road, Rakaia",
+   "suburb": "Rakaia",
+   "area": "selwyn",
+   "lat": -43.8120428,
+   "lon": 172.0295413,
+   "linz_address_id": "150678"
+  },
+  {
+   "i": 327,
+   "address": "686 Thompsons Track, Hatfield, Rakaia",
+   "suburb": "Hatfield",
+   "area": "selwyn",
+   "lat": -43.7564067,
+   "lon": 171.9345742,
+   "linz_address_id": "149437"
+  },
+  {
+   "i": 328,
+   "address": "1376 Main Rakaia Road, Bankside",
+   "suburb": "Bankside",
+   "area": "selwyn",
+   "lat": -43.7315057,
+   "lon": 172.0616068,
+   "linz_address_id": "958294"
+  },
+  {
+   "i": 329,
+   "address": "10 Railway Terrace, Doyleston",
+   "suburb": "Doyleston",
+   "area": "selwyn",
+   "lat": -43.7436979,
+   "lon": 172.3198026,
+   "linz_address_id": "154475"
+  },
+  {
+   "i": 330,
+   "address": "3 Hurst Road, Springston",
+   "suburb": "Springston",
+   "area": "selwyn",
+   "lat": -43.7381774,
+   "lon": 172.4421156,
+   "linz_address_id": "2352320"
+  },
+  {
+   "i": 331,
+   "address": "1938 Back Track, Barrhill, Lauriston",
+   "suburb": "Barrhill",
+   "area": "selwyn",
+   "lat": -43.6945826,
+   "lon": 171.8579667,
+   "linz_address_id": "149085"
+  },
+  {
+   "i": 332,
+   "address": "34 Englishs Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "selwyn",
+   "lat": -43.6930011,
+   "lon": 172.4823076,
+   "linz_address_id": "1293993"
+  },
+  {
+   "i": 333,
+   "address": "754 Heslerton Road, Dunsandel",
+   "suburb": "Dunsandel",
+   "area": "selwyn",
+   "lat": -43.7049486,
+   "lon": 172.1448333,
+   "linz_address_id": "1538100"
+  },
+  {
+   "i": 334,
+   "address": "812 Brookside Road, Burnham",
+   "suburb": "Burnham",
+   "area": "selwyn",
+   "lat": -43.6510808,
+   "lon": 172.318076,
+   "linz_address_id": "904167"
+  },
+  {
+   "i": 335,
+   "address": "1764 Sharlands Road, Hororata",
+   "suburb": "Hororata",
+   "area": "selwyn",
+   "lat": -43.637645,
+   "lon": 171.9300193,
+   "linz_address_id": "1296260"
+  },
+  {
+   "i": 336,
+   "address": "864 Selwyn Road, Rolleston",
+   "suburb": "Rolleston",
+   "area": "selwyn",
+   "lat": -43.6312632,
+   "lon": 172.3829809,
+   "linz_address_id": "2280538"
+  },
+  {
+   "i": 337,
+   "address": "123 Bebbingtons Road, Mitcham, Ashburton",
+   "suburb": "Mitcham",
+   "area": "selwyn",
+   "lat": -43.813934,
+   "lon": 171.8517546,
+   "linz_address_id": "533699"
+  },
+  {
+   "i": 338,
+   "address": "68 Taverners Road, Dromore, Ashburton",
+   "suburb": "Dromore",
+   "area": "selwyn",
+   "lat": -43.8475177,
+   "lon": 171.859554,
+   "linz_address_id": "1472074"
+  },
+  {
+   "i": 339,
+   "address": "12 Copley Road, Chertsey, Ashburton",
+   "suburb": "Chertsey",
+   "area": "selwyn",
+   "lat": -43.8397213,
+   "lon": 171.9538904,
+   "linz_address_id": "149540"
+  },
+  {
+   "i": 340,
+   "address": "495 Gardiners Road, Dorie",
+   "suburb": "Dorie",
+   "area": "selwyn",
+   "lat": -43.8313552,
+   "lon": 172.0314128,
+   "linz_address_id": "521108"
+  },
+  {
+   "i": 341,
+   "address": "422 Cryers Road, Southbridge",
+   "suburb": "Southbridge",
+   "area": "selwyn",
+   "lat": -43.8475678,
+   "lon": 172.2236226,
+   "linz_address_id": "3210345"
+  },
+  {
+   "i": 342,
+   "address": "395 Harts Road, Leeston",
+   "suburb": "Leeston",
+   "area": "selwyn",
+   "lat": -43.8114362,
+   "lon": 172.29496,
+   "linz_address_id": "1335028"
+  },
+  {
+   "i": 343,
+   "address": "1783 Bayleys Road, Birdlings Flat, Little River",
+   "suburb": "Birdlings Flat",
+   "area": "selwyn",
+   "lat": -43.8429791,
+   "lon": 172.4921895,
+   "linz_address_id": "1755952"
+  },
+  {
+   "i": 344,
+   "address": "494 Mainwarings Road, Rakaia",
+   "suburb": "Rakaia",
+   "area": "selwyn",
+   "lat": -43.8139902,
+   "lon": 172.0317328,
+   "linz_address_id": "150679"
+  },
+  {
+   "i": 345,
+   "address": "581 Thompsons Track, Hatfield, Rakaia",
+   "suburb": "Hatfield",
+   "area": "selwyn",
+   "lat": -43.7580667,
+   "lon": 171.9473953,
+   "linz_address_id": "149533"
+  },
+  {
+   "i": 346,
+   "address": "2885 North Rakaia Road, Bankside",
+   "suburb": "Bankside",
+   "area": "selwyn",
+   "lat": -43.7108505,
+   "lon": 172.0105484,
+   "linz_address_id": "64339"
+  },
+  {
+   "i": 347,
+   "address": "16 Railway Terrace, Doyleston",
+   "suburb": "Doyleston",
+   "area": "selwyn",
+   "lat": -43.7431028,
+   "lon": 172.3202768,
+   "linz_address_id": "154480"
+  },
+  {
+   "i": 348,
+   "address": "8 Hurst Road, Springston",
+   "suburb": "Springston",
+   "area": "selwyn",
+   "lat": -43.7379007,
+   "lon": 172.4426301,
+   "linz_address_id": "2352325"
+  },
+  {
+   "i": 349,
+   "address": "18 Sycamore Avenue, Barrhill, Lauriston",
+   "suburb": "Barrhill",
+   "area": "selwyn",
+   "lat": -43.6729983,
+   "lon": 171.8537401,
+   "linz_address_id": "149049"
+  },
+  {
+   "i": 350,
+   "address": "235 Davidsons Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "selwyn",
+   "lat": -43.700599,
+   "lon": 172.4887848,
+   "linz_address_id": "1331168"
+  },
+  {
+   "i": 351,
+   "address": "307 Frasers Road, Dunsandel",
+   "suburb": "Dunsandel",
+   "area": "selwyn",
+   "lat": -43.6923672,
+   "lon": 172.1705957,
+   "linz_address_id": "8749"
+  },
+  {
+   "i": 352,
+   "address": "200 Coaltrack Road, Burnham",
+   "suburb": "Burnham",
+   "area": "selwyn",
+   "lat": -43.6344896,
+   "lon": 172.2245672,
+   "linz_address_id": "1015016"
+  },
+  {
+   "i": 353,
+   "address": "483 Saunders Road, Hororata",
+   "suburb": "Hororata",
+   "area": "selwyn",
+   "lat": -43.6397268,
+   "lon": 171.9599244,
+   "linz_address_id": "1368754"
+  },
+  {
+   "i": 354,
+   "address": "138 Waterholes Road, Rolleston",
+   "suburb": "Rolleston",
+   "area": "selwyn",
+   "lat": -43.6310607,
+   "lon": 172.4308095,
+   "linz_address_id": "909614"
+  },
+  {
+   "i": 355,
+   "address": "123D Bebbingtons Road, Mitcham, Ashburton",
+   "suburb": "Mitcham",
+   "area": "selwyn",
+   "lat": -43.8144461,
+   "lon": 171.8511156,
+   "linz_address_id": "2314853"
+  },
+  {
+   "i": 356,
+   "address": "283 Taverners Road, Dromore, Ashburton",
+   "suburb": "Dromore",
+   "area": "selwyn",
+   "lat": -43.8480213,
+   "lon": 171.8862103,
+   "linz_address_id": "149159"
+  },
+  {
+   "i": 357,
+   "address": "148 Copley Road, Chertsey, Ashburton",
+   "suburb": "Chertsey",
+   "area": "selwyn",
+   "lat": -43.8358184,
+   "lon": 171.9701802,
+   "linz_address_id": "149860"
+  },
+  {
+   "i": 358,
+   "address": "764 Mainwarings Road, Dorie",
+   "suburb": "Dorie",
+   "area": "selwyn",
+   "lat": -43.832883,
+   "lon": 172.0529151,
+   "linz_address_id": "150798"
+  },
+  {
+   "i": 359,
+   "address": "280 Adams Road, Southbridge",
+   "suburb": "Southbridge",
+   "area": "selwyn",
+   "lat": -43.8326767,
+   "lon": 172.2486268,
+   "linz_address_id": "903716"
+  },
+  {
+   "i": 360,
+   "address": "450 Southbridge Sedgemere Road, Leeston",
+   "suburb": "Leeston",
+   "area": "selwyn",
+   "lat": -43.8282789,
+   "lon": 172.3059103,
+   "linz_address_id": "1395196"
+  },
+  {
+   "i": 361,
+   "address": "470 Gardiners Road, Rakaia",
+   "suburb": "Rakaia",
+   "area": "selwyn",
+   "lat": -43.8298407,
+   "lon": 172.0328679,
+   "linz_address_id": "1855708"
+  },
+  {
+   "i": 362,
+   "address": "562 Thompsons Track, Hatfield, Rakaia",
+   "suburb": "Hatfield",
+   "area": "selwyn",
+   "lat": -43.7578393,
+   "lon": 171.9500122,
+   "linz_address_id": "149531"
+  },
+  {
+   "i": 363,
+   "address": "106 Breadings Road, Bankside",
+   "suburb": "Bankside",
+   "area": "selwyn",
+   "lat": -43.7196842,
+   "lon": 172.0364929,
+   "linz_address_id": "904127"
+  },
+  {
+   "i": 364,
+   "address": "33 Petticoat Lane, Doyleston",
+   "suburb": "Doyleston",
+   "area": "selwyn",
+   "lat": -43.7449539,
+   "lon": 172.3238937,
+   "linz_address_id": "154485"
+  },
+  {
+   "i": 365,
+   "address": "43 Hurst Road, Springston",
+   "suburb": "Springston",
+   "area": "selwyn",
+   "lat": -43.737545,
+   "lon": 172.4430209,
+   "linz_address_id": "2352330"
+  },
+  {
+   "i": 366,
+   "address": "8 Sycamore Avenue, Barrhill, Lauriston",
+   "suburb": "Barrhill",
+   "area": "selwyn",
+   "lat": -43.6737613,
+   "lon": 171.8528201,
+   "linz_address_id": "149054"
+  },
+  {
+   "i": 367,
+   "address": "303 Davidsons Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "selwyn",
+   "lat": -43.6975001,
+   "lon": 172.4822381,
+   "linz_address_id": "1331179"
+  },
+  {
+   "i": 368,
+   "address": "227 Hunters Road, Dunsandel",
+   "suburb": "Dunsandel",
+   "area": "selwyn",
+   "lat": -43.6722748,
+   "lon": 172.0890534,
+   "linz_address_id": "646044"
+  },
+  {
+   "i": 369,
+   "address": "245 Coaltrack Road, Burnham",
+   "suburb": "Burnham",
+   "area": "selwyn",
+   "lat": -43.6319203,
+   "lon": 172.2110507,
+   "linz_address_id": "1572697"
+  },
+  {
+   "i": 370,
+   "address": "1463C Sharlands Road, Hororata",
+   "suburb": "Hororata",
+   "area": "selwyn",
+   "lat": -43.6452623,
+   "lon": 171.9574715,
+   "linz_address_id": "2099766"
+  },
+  {
+   "i": 371,
+   "address": "43 Springston Rolleston Road, Rolleston",
+   "suburb": "Rolleston",
+   "area": "selwyn",
+   "lat": -43.6346325,
+   "lon": 172.4437103,
+   "linz_address_id": "1368337"
+  },
+  {
+   "i": 372,
+   "address": "285 Dromore Hatfield Road, Mitcham, Ashburton",
+   "suburb": "Mitcham",
+   "area": "selwyn",
+   "lat": -43.8182936,
+   "lon": 171.8780086,
+   "linz_address_id": "149138"
+  },
+  {
+   "i": 373,
+   "address": "366 Taverners Road, Dromore, Ashburton",
+   "suburb": "Dromore",
+   "area": "selwyn",
+   "lat": -43.8488405,
+   "lon": 171.8966018,
+   "linz_address_id": "149187"
+  },
+  {
+   "i": 374,
+   "address": "1261 Rakaia Highway, Chertsey, Ashburton",
+   "suburb": "Chertsey",
+   "area": "selwyn",
+   "lat": -43.8205132,
+   "lon": 171.8891449,
+   "linz_address_id": "65853"
+  },
+  {
+   "i": 375,
+   "address": "947 Mainwarings Road, Dorie",
+   "suburb": "Dorie",
+   "area": "selwyn",
+   "lat": -43.8438609,
+   "lon": 172.0691596,
+   "linz_address_id": "150876"
+  },
+  {
+   "i": 376,
+   "address": "143 Jollies Road, Southbridge",
+   "suburb": "Southbridge",
+   "area": "selwyn",
+   "lat": -43.8317791,
+   "lon": 172.2606206,
+   "linz_address_id": "905046"
+  },
+  {
+   "i": 377,
+   "address": "147 McConnels Road, Leeston",
+   "suburb": "Leeston",
+   "area": "selwyn",
+   "lat": -43.8295314,
+   "lon": 172.3236382,
+   "linz_address_id": "1334980"
+  },
+  {
+   "i": 378,
+   "address": "75 Waddells Road, Rakaia",
+   "suburb": "Rakaia",
+   "area": "selwyn",
+   "lat": -43.8009122,
+   "lon": 171.9539657,
+   "linz_address_id": "149537"
+  },
+  {
+   "i": 379,
+   "address": "272 Hatfield Overdale Road, Hatfield, Rakaia",
+   "suburb": "Hatfield",
+   "area": "selwyn",
+   "lat": -43.7634647,
+   "lon": 171.9654696,
+   "linz_address_id": "149855"
+  },
+  {
+   "i": 380,
+   "address": "105 South Two Chain Road, Bankside",
+   "suburb": "Bankside",
+   "area": "selwyn",
+   "lat": -43.7259621,
+   "lon": 172.0480368,
+   "linz_address_id": "1350707"
+  },
+  {
+   "i": 381,
+   "address": "43 Petticoat Lane, Doyleston",
+   "suburb": "Doyleston",
+   "area": "selwyn",
+   "lat": -43.7443168,
+   "lon": 172.3221348,
+   "linz_address_id": "154490"
+  },
+  {
+   "i": 382,
+   "address": "17 Hurst Road, Springston",
+   "suburb": "Springston",
+   "area": "selwyn",
+   "lat": -43.7384081,
+   "lon": 172.4423239,
+   "linz_address_id": "2352335"
+  },
+  {
+   "i": 383,
+   "address": "1440 Rakaia Barrhill Methven Road, Barrhill, Lauriston",
+   "suburb": "Barrhill",
+   "area": "selwyn",
+   "lat": -43.6816197,
+   "lon": 171.8690262,
+   "linz_address_id": "149106"
+  },
+  {
+   "i": 384,
+   "address": "363 Davidsons Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "selwyn",
+   "lat": -43.6964953,
+   "lon": 172.4746767,
+   "linz_address_id": "1859429"
+  },
+  {
+   "i": 385,
+   "address": "240A Sharlands Road, Dunsandel",
+   "suburb": "Dunsandel",
+   "area": "selwyn",
+   "lat": -43.6740484,
+   "lon": 172.1028824,
+   "linz_address_id": "505734"
+  },
+  {
+   "i": 386,
+   "address": "3001 Main South Road, Burnham",
+   "suburb": "Burnham",
+   "area": "selwyn",
+   "lat": -43.64516,
+   "lon": 172.2371014,
+   "linz_address_id": "409602"
+  },
+  {
+   "i": 387,
+   "address": "479 Ardlui Road, Hororata",
+   "suburb": "Hororata",
+   "area": "selwyn",
+   "lat": -43.6402422,
+   "lon": 171.9774753,
+   "linz_address_id": "903854"
+  },
+  {
+   "i": 388,
+   "address": "1428 Shands Road, Rolleston",
+   "suburb": "Rolleston",
+   "area": "selwyn",
+   "lat": -43.6367543,
+   "lon": 172.448532,
+   "linz_address_id": "1398477"
+  },
+  {
+   "i": 389,
+   "address": "375 Somerton Road, Mitcham, Ashburton",
+   "suburb": "Mitcham",
+   "area": "selwyn",
+   "lat": -43.8077462,
+   "lon": 171.8731108,
+   "linz_address_id": "149117"
+  },
+  {
+   "i": 390,
+   "address": "193 Coplands Road, Chertsey, Ashburton",
+   "suburb": "Chertsey",
+   "area": "selwyn",
+   "lat": -43.8250781,
+   "lon": 171.8863013,
+   "linz_address_id": "149158"
+  },
+  {
+   "i": 391,
+   "address": "1010 Mainwarings Road, Dorie",
+   "suburb": "Dorie",
+   "area": "selwyn",
+   "lat": -43.8483927,
+   "lon": 172.0732544,
+   "linz_address_id": "150879"
+  },
+  {
+   "i": 392,
+   "address": "361 Jollies Road, Southbridge",
+   "suburb": "Southbridge",
+   "area": "selwyn",
+   "lat": -43.849863,
+   "lon": 172.2609838,
+   "linz_address_id": "905051"
+  },
+  {
+   "i": 393,
+   "address": "301 Lakeside Ridge Road, Leeston",
+   "suburb": "Leeston",
+   "area": "selwyn",
+   "lat": -43.818896,
+   "lon": 172.3163788,
+   "linz_address_id": "3210382"
+  },
+  {
+   "i": 394,
+   "address": "151 Waddells Road, Rakaia",
+   "suburb": "Rakaia",
+   "area": "selwyn",
+   "lat": -43.8051177,
+   "lon": 171.9587776,
+   "linz_address_id": "1589741"
+  },
+  {
+   "i": 395,
+   "address": "313 Thompsons Track, Hatfield, Rakaia",
+   "suburb": "Hatfield",
+   "area": "selwyn",
+   "lat": -43.759049,
+   "lon": 171.9807522,
+   "linz_address_id": "149881"
+  },
+  {
+   "i": 396,
+   "address": "190 South Two Chain Road, Bankside",
+   "suburb": "Bankside",
+   "area": "selwyn",
+   "lat": -43.7198232,
+   "lon": 172.0512331,
+   "linz_address_id": "1350708"
+  },
+  {
+   "i": 397,
+   "address": "6 Railway Terrace, Doyleston",
+   "suburb": "Doyleston",
+   "area": "selwyn",
+   "lat": -43.744006,
+   "lon": 172.319553,
+   "linz_address_id": "154495"
+  },
+  {
+   "i": 398,
+   "address": "12 Hurst Road, Springston",
+   "suburb": "Springston",
+   "area": "selwyn",
+   "lat": -43.7383177,
+   "lon": 172.4427497,
+   "linz_address_id": "2352340"
+  },
+  {
+   "i": 399,
+   "address": "1 Birch Avenue, Barrhill, Lauriston",
+   "suburb": "Barrhill",
+   "area": "selwyn",
+   "lat": -43.6743863,
+   "lon": 171.8533082,
+   "linz_address_id": "1696927"
+  },
+  {
+   "i": 400,
+   "address": "80 Embankment Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "selwyn",
+   "lat": -43.7094076,
+   "lon": 172.4947303,
+   "linz_address_id": "904666"
+  },
+  {
+   "i": 401,
+   "address": "742 Old South Road, Dunsandel",
+   "suburb": "Dunsandel",
+   "area": "selwyn",
+   "lat": -43.6842214,
+   "lon": 172.1205355,
+   "linz_address_id": "1128907"
+  },
+  {
+   "i": 402,
+   "address": "397 Norwood Road, Burnham",
+   "suburb": "Burnham",
+   "area": "selwyn",
+   "lat": -43.6463817,
+   "lon": 172.2497016,
+   "linz_address_id": "1294716"
+  },
+  {
+   "i": 403,
+   "address": "1149 Rakaia Terrace Road, Hororata",
+   "suburb": "Hororata",
+   "area": "selwyn",
+   "lat": -43.6297191,
+   "lon": 171.8866068,
+   "linz_address_id": "1425671"
+  },
+  {
+   "i": 404,
+   "address": "209 Jamiesons Road, Mitcham, Ashburton",
+   "suburb": "Mitcham",
+   "area": "selwyn",
+   "lat": -43.7971668,
+   "lon": 171.8962887,
+   "linz_address_id": "149184"
+  },
+  {
+   "i": 405,
+   "address": "1347 Rakaia Highway, Chertsey, Ashburton",
+   "suburb": "Chertsey",
+   "area": "selwyn",
+   "lat": -43.8166787,
+   "lon": 171.8983261,
+   "linz_address_id": "149186"
+  },
+  {
+   "i": 406,
+   "address": "1037 Acton Road, Dorie",
+   "suburb": "Dorie",
+   "area": "selwyn",
+   "lat": -43.8316172,
+   "lon": 172.1081602,
+   "linz_address_id": "1145415"
+  },
+  {
+   "i": 407,
+   "address": "255 Milltown Road, Southbridge",
+   "suburb": "Southbridge",
+   "area": "selwyn",
+   "lat": -43.8333919,
+   "lon": 172.2615972,
+   "linz_address_id": "909643"
+  },
+  {
+   "i": 408,
+   "address": "81 Matthews Road, Leeston",
+   "suburb": "Leeston",
+   "area": "selwyn",
+   "lat": -43.8238912,
+   "lon": 172.3368393,
+   "linz_address_id": "1335673"
+  },
+  {
+   "i": 409,
+   "address": "376 Pendarves Rakaia Road, Rakaia",
+   "suburb": "Rakaia",
+   "area": "selwyn",
+   "lat": -43.8086939,
+   "lon": 171.9849684,
+   "linz_address_id": "149884"
+  },
+  {
+   "i": 410,
+   "address": "1320 Dromore Hatfield Road, Hatfield, Rakaia",
+   "suburb": "Hatfield",
+   "area": "selwyn",
+   "lat": -43.7569132,
+   "lon": 171.9725587,
+   "linz_address_id": "1589251"
+  },
+  {
+   "i": 411,
+   "address": "1287 Old South Road, Bankside",
+   "suburb": "Bankside",
+   "area": "selwyn",
+   "lat": -43.7211399,
+   "lon": 172.0809716,
+   "linz_address_id": "1128908"
+  },
+  {
+   "i": 412,
+   "address": "2 Queen Street, Doyleston",
+   "suburb": "Doyleston",
+   "area": "selwyn",
+   "lat": -43.746636,
+   "lon": 172.3243032,
+   "linz_address_id": "154500"
+  },
+  {
+   "i": 413,
+   "address": "739 Days Road, Springston",
+   "suburb": "Springston",
+   "area": "selwyn",
+   "lat": -43.7117438,
+   "lon": 172.4428667,
+   "linz_address_id": "1293943"
+  },
+  {
+   "i": 414,
+   "address": "25 Sycamore Avenue, Barrhill, Lauriston",
+   "suburb": "Barrhill",
+   "area": "selwyn",
+   "lat": -43.6720823,
+   "lon": 171.8540439,
+   "linz_address_id": "2263411"
+  },
+  {
+   "i": 415,
+   "address": "194 Davidsons Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "selwyn",
+   "lat": -43.7020889,
+   "lon": 172.4946521,
+   "linz_address_id": "1331173"
+  },
+  {
+   "i": 416,
+   "address": "121 Sharlands Road, Dunsandel",
+   "suburb": "Dunsandel",
+   "area": "selwyn",
+   "lat": -43.6811491,
+   "lon": 172.1125608,
+   "linz_address_id": "1475687"
+  },
+  {
+   "i": 417,
+   "address": "111 Telegraph Road, Burnham",
+   "suburb": "Burnham",
+   "area": "selwyn",
+   "lat": -43.6323596,
+   "lon": 172.2379178,
+   "linz_address_id": "1647851"
+  },
+  {
+   "i": 418,
+   "address": "1274 Rakaia Terrace Road, Hororata",
+   "suburb": "Hororata",
+   "area": "selwyn",
+   "lat": -43.6214583,
+   "lon": 171.876679,
+   "linz_address_id": "1931688"
+  },
+  {
+   "i": 419,
+   "address": "591 Jamiesons Road, Mitcham, Ashburton",
+   "suburb": "Mitcham",
+   "area": "selwyn",
+   "lat": -43.7748747,
+   "lon": 171.8604732,
+   "linz_address_id": "149089"
+  },
+  {
+   "i": 420,
+   "address": "271 Chertsey Road, Chertsey, Ashburton",
+   "suburb": "Chertsey",
+   "area": "selwyn",
+   "lat": -43.8268926,
+   "lon": 171.9245001,
+   "linz_address_id": "149234"
+  },
+  {
+   "i": 421,
+   "address": "1065 Acton Road, Dorie",
+   "suburb": "Dorie",
+   "area": "selwyn",
+   "lat": -43.8336472,
+   "lon": 172.110469,
+   "linz_address_id": "151565"
+  },
+  {
+   "i": 422,
+   "address": "172 Milltown Road, Southbridge",
+   "suburb": "Southbridge",
+   "area": "selwyn",
+   "lat": -43.835524,
+   "lon": 172.2705084,
+   "linz_address_id": "909638"
+  },
+  {
+   "i": 423,
+   "address": "175 Lakeside Ridge Road, Leeston",
+   "suburb": "Leeston",
+   "area": "selwyn",
+   "lat": -43.8154424,
+   "lon": 172.3311967,
+   "linz_address_id": "1350930"
+  },
+  {
+   "i": 424,
+   "address": "295A Pendarves Rakaia Road, Rakaia",
+   "suburb": "Rakaia",
+   "area": "selwyn",
+   "lat": -43.8012687,
+   "lon": 171.9877977,
+   "linz_address_id": "1934785"
+  },
+  {
+   "i": 425,
+   "address": "1351 Dromore Hatfield Road, Hatfield, Rakaia",
+   "suburb": "Hatfield",
+   "area": "selwyn",
+   "lat": -43.7554144,
+   "lon": 171.9738657,
+   "linz_address_id": "1589304"
+  },
+  {
+   "i": 426,
+   "address": "1/208 Darrochs Road, Bankside",
+   "suburb": "Bankside",
+   "area": "selwyn",
+   "lat": -43.69551,
+   "lon": 171.9565055,
+   "linz_address_id": "1577956"
+  },
+  {
+   "i": 427,
+   "address": "1399 Leeston Road, Doyleston",
+   "suburb": "Doyleston",
+   "area": "selwyn",
+   "lat": -43.7451833,
+   "lon": 172.3302444,
+   "linz_address_id": "958306"
+  },
+  {
+   "i": 428,
+   "address": "32 Spackman Avenue, Springston",
+   "suburb": "Springston",
+   "area": "selwyn",
+   "lat": -43.7168497,
+   "lon": 172.4397888,
+   "linz_address_id": "2023451"
+  },
+  {
+   "i": 429,
+   "address": "1278 Rakaia Barrhill Methven Road, Barrhill, Lauriston",
+   "suburb": "Barrhill",
+   "area": "selwyn",
+   "lat": -43.6898505,
+   "lon": 171.8855989,
+   "linz_address_id": "149152"
+  },
+  {
+   "i": 430,
+   "address": "565 Lower Lake Road, Leeston",
+   "suburb": "Leeston",
+   "area": "waimakariri",
+   "lat": -43.8403005,
+   "lon": 172.3511063,
+   "linz_address_id": "1334660"
+  },
+  {
+   "i": 431,
+   "address": "1790 Bayleys Road, Birdlings Flat, Little River",
+   "suburb": "Birdlings Flat",
+   "area": "waimakariri",
+   "lat": -43.8375543,
+   "lon": 172.463173,
+   "linz_address_id": "156370"
+  },
+  {
+   "i": 432,
+   "address": "316 Magnet Bay Road, Te Oka, Little River",
+   "suburb": "Te Oka",
+   "area": "waimakariri",
+   "lat": -43.8416474,
+   "lon": 172.7448724,
+   "linz_address_id": "284401"
+  },
+  {
+   "i": 433,
+   "address": "41 Poranui Beach Road, Little River",
+   "suburb": "Little River",
+   "area": "waimakariri",
+   "lat": -43.8169212,
+   "lon": 172.7008684,
+   "linz_address_id": "270076"
+  },
+  {
+   "i": 434,
+   "address": "3091 Bossu Road, Okuti Valley, Little River",
+   "suburb": "Okuti Valley",
+   "area": "waimakariri",
+   "lat": -43.8244075,
+   "lon": 172.7143943,
+   "linz_address_id": "1756064"
+  },
+  {
+   "i": 435,
+   "address": "2890 Christchurch Akaroa Road, Prices Valley, Little River",
+   "suburb": "Prices Valley",
+   "area": "waimakariri",
+   "lat": -43.7939626,
+   "lon": 172.6688793,
+   "linz_address_id": "254365"
+  },
+  {
+   "i": 436,
+   "address": "2409 Christchurch Akaroa Road, Ataahua, Tai Tapu",
+   "suburb": "Ataahua",
+   "area": "waimakariri",
+   "lat": -43.7724187,
+   "lon": 172.6440698,
+   "linz_address_id": "232050"
+  },
+  {
+   "i": 437,
+   "address": "1065 Hudsons Road, Motukarara, Tai Tapu",
+   "suburb": "Motukarara",
+   "area": "waimakariri",
+   "lat": -43.7539921,
+   "lon": 172.5458159,
+   "linz_address_id": "1293299"
+  },
+  {
+   "i": 438,
+   "address": "5 Armstrong Avenue, Springston",
+   "suburb": "Springston",
+   "area": "waimakariri",
+   "lat": -43.7380496,
+   "lon": 172.4425347,
+   "linz_address_id": "30881"
+  },
+  {
+   "i": 439,
+   "address": "1905 Christchurch Akaroa Road, Gebbies Valley, Tai Tapu",
+   "suburb": "Gebbies Valley",
+   "area": "waimakariri",
+   "lat": -43.7345161,
+   "lon": 172.6139269,
+   "linz_address_id": "208496"
+  },
+  {
+   "i": 440,
+   "address": "128 Embankment Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "waimakariri",
+   "lat": -43.7151085,
+   "lon": 172.4951264,
+   "linz_address_id": "904663"
+  },
+  {
+   "i": 441,
+   "address": "12 Ahuriri Road, Tai Tapu",
+   "suburb": "Tai Tapu",
+   "area": "waimakariri",
+   "lat": -43.7002654,
+   "lon": 172.5681195,
+   "linz_address_id": "903723"
+  },
+  {
+   "i": 442,
+   "address": "556 Gebbies Pass Road, Teddington, Governors Bay",
+   "suburb": "Teddington",
+   "area": "waimakariri",
+   "lat": -43.6913158,
+   "lon": 172.6392854,
+   "linz_address_id": "232038"
+  },
+  {
+   "i": 443,
+   "address": "1278 Western Valley Road, Port Levy, Diamond Harbour",
+   "suburb": "Port Levy",
+   "area": "waimakariri",
+   "lat": -43.6965235,
+   "lon": 172.783501,
+   "linz_address_id": "288498"
+  },
+  {
+   "i": 444,
+   "address": "70 Charteris Bay Road, Charteris Bay, Governors Bay",
+   "suburb": "Charteris Bay",
+   "area": "waimakariri",
+   "lat": -43.6557524,
+   "lon": 172.6852926,
+   "linz_address_id": "265296"
+  },
+  {
+   "i": 445,
+   "address": "145 Purau Port Levy Road, Purau, Diamond Harbour",
+   "suburb": "Purau",
+   "area": "waimakariri",
+   "lat": -43.6515784,
+   "lon": 172.7572771,
+   "linz_address_id": "1573873"
+  },
+  {
+   "i": 446,
+   "address": "984 Selwyn Road, Burnham",
+   "suburb": "Burnham",
+   "area": "waimakariri",
+   "lat": -43.6324908,
+   "lon": 172.3681304,
+   "linz_address_id": "595014"
+  },
+  {
+   "i": 447,
+   "address": "2 Sanders Way, Rolleston",
+   "suburb": "Rolleston",
+   "area": "waimakariri",
+   "lat": -43.6317101,
+   "lon": 172.3817689,
+   "linz_address_id": "2280533"
+  },
+  {
+   "i": 448,
+   "address": "28 Governors Bay Teddington Road, Allandale, Governors Bay",
+   "suburb": "Allandale",
+   "area": "waimakariri",
+   "lat": -43.6340664,
+   "lon": 172.6445091,
+   "linz_address_id": "232010"
+  },
+  {
+   "i": 449,
+   "address": "48 Waipapa Avenue, Diamond Harbour",
+   "suburb": "Diamond Harbour",
+   "area": "waimakariri",
+   "lat": -43.630805,
+   "lon": 172.7395806,
+   "linz_address_id": "237404"
+  },
+  {
+   "i": 450,
+   "address": "349 Robinsons Road, Prebbleton",
+   "suburb": "Prebbleton",
+   "area": "waimakariri",
+   "lat": -43.6111449,
+   "lon": 172.4884747,
+   "linz_address_id": "1294890"
+  },
+  {
+   "i": 451,
+   "address": "15 Barnes Road, Halswell, Christchurch",
+   "suburb": "Halswell",
+   "area": "waimakariri",
+   "lat": -43.6187552,
+   "lon": 172.5317628,
+   "linz_address_id": "908392"
+  },
+  {
+   "i": 452,
+   "address": "132 Old Tai Tapu Road, Kennedys Bush, Christchurch",
+   "suburb": "Kennedys Bush",
+   "area": "waimakariri",
+   "lat": -43.6100066,
+   "lon": 172.5704056,
+   "linz_address_id": "50494"
+  },
+  {
+   "i": 453,
+   "address": "65 Early Valley Road, Lansdowne",
+   "suburb": "Lansdowne",
+   "area": "waimakariri",
+   "lat": -43.6160818,
+   "lon": 172.5805353,
+   "linz_address_id": "184643"
+  },
+  {
+   "i": 454,
+   "address": "397 Worsleys Road, Cashmere, Christchurch",
+   "suburb": "Cashmere",
+   "area": "waimakariri",
+   "lat": -43.6118584,
+   "lon": 172.6298813,
+   "linz_address_id": "223441"
+  },
+  {
+   "i": 455,
+   "address": "410 Worsleys Road, Governors Bay",
+   "suburb": "Governors Bay",
+   "area": "waimakariri",
+   "lat": -43.6148978,
+   "lon": 172.6344318,
+   "linz_address_id": "223442"
+  },
+  {
+   "i": 456,
+   "address": "14 Sandy Beach Road, Te Rāpaki-o-Te Rakiwhakaputa, Lyttelton",
+   "suburb": "Te Rāpaki-o-Te Rakiwhakaputa",
+   "area": "waimakariri",
+   "lat": -43.619667,
+   "lon": 172.6547761,
+   "linz_address_id": "239889"
+  },
+  {
+   "i": 457,
+   "address": "56 Godley Quay, Lyttelton",
+   "suburb": "Lyttelton",
+   "area": "waimakariri",
+   "lat": -43.6107144,
+   "lon": 172.7091489,
+   "linz_address_id": "1757591"
+  },
+  {
+   "i": 458,
+   "address": "100 Governors Bay Road, Cass Bay, Lyttelton",
+   "suburb": "Cass Bay",
+   "area": "waimakariri",
+   "lat": -43.6022908,
+   "lon": 172.6888589,
+   "linz_address_id": "265207"
+  },
+  {
+   "i": 459,
+   "address": "207 Lower Lake Road, Leeston",
+   "suburb": "Leeston",
+   "area": "waimakariri",
+   "lat": -43.8122437,
+   "lon": 172.3512924,
+   "linz_address_id": "1334655"
+  },
+  {
+   "i": 460,
+   "address": "1684 Bayleys Road, Birdlings Flat, Little River",
+   "suburb": "Birdlings Flat",
+   "area": "waimakariri",
+   "lat": -43.8350397,
+   "lon": 172.4870229,
+   "linz_address_id": "157921"
+  },
+  {
+   "i": 461,
+   "address": "129 Magnet Bay Road, Te Oka, Little River",
+   "suburb": "Te Oka",
+   "area": "waimakariri",
+   "lat": -43.8356988,
+   "lon": 172.7586749,
+   "linz_address_id": "286796"
+  },
+  {
+   "i": 462,
+   "address": "3850 Christchurch Akaroa Road, Little River",
+   "suburb": "Little River",
+   "area": "waimakariri",
+   "lat": -43.7905606,
+   "lon": 172.7564687,
+   "linz_address_id": "1757692"
+  },
+  {
+   "i": 463,
+   "address": "184 Kinloch Road, Okuti Valley, Little River",
+   "suburb": "Okuti Valley",
+   "area": "waimakariri",
+   "lat": -43.7906126,
+   "lon": 172.7960369,
+   "linz_address_id": "287610"
+  },
+  {
+   "i": 464,
+   "address": "3127 Christchurch Akaroa Road, Prices Valley, Little River",
+   "suburb": "Prices Valley",
+   "area": "waimakariri",
+   "lat": -43.802104,
+   "lon": 172.6893484,
+   "linz_address_id": "265308"
+  },
+  {
+   "i": 465,
+   "address": "2474 Christchurch Akaroa Road, Ataahua, Tai Tapu",
+   "suburb": "Ataahua",
+   "area": "waimakariri",
+   "lat": -43.7767106,
+   "lon": 172.6436321,
+   "linz_address_id": "1757661"
+  },
+  {
+   "i": 466,
+   "address": "20 Sportsmans Avenue, Motukarara, Tai Tapu",
+   "suburb": "Motukarara",
+   "area": "waimakariri",
+   "lat": -43.7593276,
+   "lon": 172.5495503,
+   "linz_address_id": "1765158"
+  },
+  {
+   "i": 467,
+   "address": "3 Hurst Road, Springston",
+   "suburb": "Springston",
+   "area": "waimakariri",
+   "lat": -43.7381774,
+   "lon": 172.4421156,
+   "linz_address_id": "2352320"
+  },
+  {
+   "i": 468,
+   "address": "98 Streeters Road, Gebbies Valley, Tai Tapu",
+   "suburb": "Gebbies Valley",
+   "area": "waimakariri",
+   "lat": -43.7361757,
+   "lon": 172.6239932,
+   "linz_address_id": "215699"
+  },
+  {
+   "i": 469,
+   "address": "552 Hudsons Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "waimakariri",
+   "lat": -43.710513,
+   "lon": 172.5205964,
+   "linz_address_id": "1293292"
+  },
+  {
+   "i": 470,
+   "address": "1152 Christchurch Akaroa Road, Tai Tapu",
+   "suburb": "Tai Tapu",
+   "area": "waimakariri",
+   "lat": -43.6976213,
+   "lon": 172.5650335,
+   "linz_address_id": "2279355"
+  },
+  {
+   "i": 471,
+   "address": "688 Gebbies Pass Road, Teddington, Governors Bay",
+   "suburb": "Teddington",
+   "area": "waimakariri",
+   "lat": -43.6842139,
+   "lon": 172.64809,
+   "linz_address_id": "1394359"
+  },
+  {
+   "i": 472,
+   "address": "1431 Western Valley Road, Port Levy, Diamond Harbour",
+   "suburb": "Port Levy",
+   "area": "waimakariri",
+   "lat": -43.688985,
+   "lon": 172.7771571,
+   "linz_address_id": "290162"
+  },
+  {
+   "i": 473,
+   "address": "289 Charteris Bay Road, Charteris Bay, Governors Bay",
+   "suburb": "Charteris Bay",
+   "area": "waimakariri",
+   "lat": -43.6688,
+   "lon": 172.6894883,
+   "linz_address_id": "2180666"
+  },
+  {
+   "i": 474,
+   "address": "240 Purau Port Levy Road, Purau, Diamond Harbour",
+   "suburb": "Purau",
+   "area": "waimakariri",
+   "lat": -43.6566693,
+   "lon": 172.7556954,
+   "linz_address_id": "2446818"
+  },
+  {
+   "i": 475,
+   "address": "986 Selwyn Road, Burnham",
+   "suburb": "Burnham",
+   "area": "waimakariri",
+   "lat": -43.6362335,
+   "lon": 172.3696395,
+   "linz_address_id": "1296240"
+  },
+  {
+   "i": 476,
+   "address": "864 Selwyn Road, Rolleston",
+   "suburb": "Rolleston",
+   "area": "waimakariri",
+   "lat": -43.6312632,
+   "lon": 172.3829809,
+   "linz_address_id": "2280538"
+  },
+  {
+   "i": 477,
+   "address": "79 Allandale Lane, Allandale, Governors Bay",
+   "suburb": "Allandale",
+   "area": "waimakariri",
+   "lat": -43.6405602,
+   "lon": 172.6407961,
+   "linz_address_id": "232028"
+  },
+  {
+   "i": 478,
+   "address": "39 Whero Avenue, Diamond Harbour",
+   "suburb": "Diamond Harbour",
+   "area": "waimakariri",
+   "lat": -43.6303351,
+   "lon": 172.7349914,
+   "linz_address_id": "282440"
+  },
+  {
+   "i": 479,
+   "address": "225 Robinsons Road, Prebbleton",
+   "suburb": "Prebbleton",
+   "area": "waimakariri",
+   "lat": -43.6139787,
+   "lon": 172.5052018,
+   "linz_address_id": "1294885"
+  },
+  {
+   "i": 480,
+   "address": "139 McDrurys Road, Halswell, Christchurch",
+   "suburb": "Halswell",
+   "area": "waimakariri",
+   "lat": -43.6172318,
+   "lon": 172.5330979,
+   "linz_address_id": "1294114"
+  },
+  {
+   "i": 481,
+   "address": "404A Worsleys Road, Kennedys Bush, Christchurch",
+   "suburb": "Kennedys Bush",
+   "area": "waimakariri",
+   "lat": -43.6141826,
+   "lon": 172.6277806,
+   "linz_address_id": "3000975"
+  },
+  {
+   "i": 482,
+   "address": "3 Potters Lane, Lansdowne",
+   "suburb": "Lansdowne",
+   "area": "waimakariri",
+   "lat": -43.6210438,
+   "lon": 172.5709159,
+   "linz_address_id": "904209"
+  },
+  {
+   "i": 483,
+   "address": "14 Hay's Rise, Governors Bay",
+   "suburb": "Governors Bay",
+   "area": "waimakariri",
+   "lat": -43.6189131,
+   "lon": 172.6441946,
+   "linz_address_id": "231998"
+  },
+  {
+   "i": 484,
+   "address": "560 Dyers Pass Road, Te Rāpaki-o-Te Rakiwhakaputa, Lyttelton",
+   "suburb": "Te Rāpaki-o-Te Rakiwhakaputa",
+   "area": "waimakariri",
+   "lat": -43.6089964,
+   "lon": 172.6476513,
+   "linz_address_id": "239851"
+  },
+  {
+   "i": 485,
+   "address": "1/7 Simeon Quay, Lyttelton",
+   "suburb": "Lyttelton",
+   "area": "waimakariri",
+   "lat": -43.6028605,
+   "lon": 172.7118991,
+   "linz_address_id": "274277"
+  },
+  {
+   "i": 486,
+   "address": "10 Harbour View Terrace, Cass Bay, Lyttelton",
+   "suburb": "Cass Bay",
+   "area": "waimakariri",
+   "lat": -43.6045424,
+   "lon": 172.6927309,
+   "linz_address_id": "265208"
+  },
+  {
+   "i": 487,
+   "address": "134 Timber Yard Road, Leeston",
+   "suburb": "Leeston",
+   "area": "waimakariri",
+   "lat": -43.7986178,
+   "lon": 172.3588912,
+   "linz_address_id": "1478622"
+  },
+  {
+   "i": 488,
+   "address": "1641 Bayleys Road, Birdlings Flat, Little River",
+   "suburb": "Birdlings Flat",
+   "area": "waimakariri",
+   "lat": -43.8343513,
+   "lon": 172.5027513,
+   "linz_address_id": "158114"
+  },
+  {
+   "i": 489,
+   "address": "1021 Te Oka Bay Road, Te Oka, Little River",
+   "suburb": "Te Oka",
+   "area": "waimakariri",
+   "lat": -43.8425708,
+   "lon": 172.7896991,
+   "linz_address_id": "287541"
+  },
+  {
+   "i": 490,
+   "address": "3875 Christchurch Akaroa Road, Little River",
+   "suburb": "Little River",
+   "area": "waimakariri",
+   "lat": -43.7889022,
+   "lon": 172.7587815,
+   "linz_address_id": "286793"
+  },
+  {
+   "i": 491,
+   "address": "65 Prices Valley Road, Prices Valley, Little River",
+   "suburb": "Prices Valley",
+   "area": "waimakariri",
+   "lat": -43.7913421,
+   "lon": 172.6917975,
+   "linz_address_id": "265305"
+  },
+  {
+   "i": 492,
+   "address": "2555 Christchurch Akaroa Road, Ataahua, Tai Tapu",
+   "suburb": "Ataahua",
+   "area": "waimakariri",
+   "lat": -43.7735368,
+   "lon": 172.653249,
+   "linz_address_id": "240185"
+  },
+  {
+   "i": 493,
+   "address": "8 Sportsmans Avenue, Motukarara, Tai Tapu",
+   "suburb": "Motukarara",
+   "area": "waimakariri",
+   "lat": -43.7589243,
+   "lon": 172.548222,
+   "linz_address_id": "1765165"
+  },
+  {
+   "i": 494,
+   "address": "8 Hurst Road, Springston",
+   "suburb": "Springston",
+   "area": "waimakariri",
+   "lat": -43.7379007,
+   "lon": 172.4426301,
+   "linz_address_id": "2352325"
+  },
+  {
+   "i": 495,
+   "address": "1677 Christchurch Akaroa Road, Gebbies Valley, Tai Tapu",
+   "suburb": "Gebbies Valley",
+   "area": "waimakariri",
+   "lat": -43.7244612,
+   "lon": 172.5944926,
+   "linz_address_id": "192987"
+  },
+  {
+   "i": 496,
+   "address": "171 Clarks Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "waimakariri",
+   "lat": -43.7105588,
+   "lon": 172.5192752,
+   "linz_address_id": "2197841"
+  },
+  {
+   "i": 497,
+   "address": "48 Ahuriri Road, Tai Tapu",
+   "suburb": "Tai Tapu",
+   "area": "waimakariri",
+   "lat": -43.7007652,
+   "lon": 172.5694275,
+   "linz_address_id": "3146658"
+  },
+  {
+   "i": 498,
+   "address": "743 Gebbies Pass Road, Teddington, Governors Bay",
+   "suburb": "Teddington",
+   "area": "waimakariri",
+   "lat": -43.6789166,
+   "lon": 172.6522206,
+   "linz_address_id": "240177"
+  },
+  {
+   "i": 499,
+   "address": "1467 Western Valley Road, Port Levy, Diamond Harbour",
+   "suburb": "Port Levy",
+   "area": "waimakariri",
+   "lat": -43.6834724,
+   "lon": 172.792481,
+   "linz_address_id": "287479"
+  },
+  {
+   "i": 500,
+   "address": "39 Charteris Bay Road, Charteris Bay, Governors Bay",
+   "suburb": "Charteris Bay",
+   "area": "waimakariri",
+   "lat": -43.6565529,
+   "lon": 172.6945268,
+   "linz_address_id": "265295"
+  },
+  {
+   "i": 501,
+   "address": "10 Camp Bay Road, Purau, Diamond Harbour",
+   "suburb": "Purau",
+   "area": "waimakariri",
+   "lat": -43.6377554,
+   "lon": 172.7534312,
+   "linz_address_id": "285592"
+  },
+  {
+   "i": 502,
+   "address": "942 Ellesmere Junction Road, Burnham",
+   "suburb": "Burnham",
+   "area": "waimakariri",
+   "lat": -43.6378317,
+   "lon": 172.353989,
+   "linz_address_id": "1419068"
+  },
+  {
+   "i": 503,
+   "address": "138 Waterholes Road, Rolleston",
+   "suburb": "Rolleston",
+   "area": "waimakariri",
+   "lat": -43.6310607,
+   "lon": 172.4308095,
+   "linz_address_id": "909614"
+  },
+  {
+   "i": 504,
+   "address": "165 Main Road, Allandale, Governors Bay",
+   "suburb": "Allandale",
+   "area": "waimakariri",
+   "lat": -43.6304192,
+   "lon": 172.6495476,
+   "linz_address_id": "240100"
+  },
+  {
+   "i": 505,
+   "address": "11 Te Papau Crescent, Diamond Harbour",
+   "suburb": "Diamond Harbour",
+   "area": "waimakariri",
+   "lat": -43.6317585,
+   "lon": 172.737966,
+   "linz_address_id": "284164"
+  },
+  {
+   "i": 506,
+   "address": "290 Ellesmere Road, Prebbleton",
+   "suburb": "Prebbleton",
+   "area": "waimakariri",
+   "lat": -43.6123283,
+   "lon": 172.5293415,
+   "linz_address_id": "565810"
+  },
+  {
+   "i": 507,
+   "address": "164 Hayes Road, Halswell, Christchurch",
+   "suburb": "Halswell",
+   "area": "waimakariri",
+   "lat": -43.620216,
+   "lon": 172.5376811,
+   "linz_address_id": "1294575"
+  },
+  {
+   "i": 508,
+   "address": "97 Old Tai Tapu Road, Kennedys Bush, Christchurch",
+   "suburb": "Kennedys Bush",
+   "area": "waimakariri",
+   "lat": -43.606509,
+   "lon": 172.5684351,
+   "linz_address_id": "50435"
+  },
+  {
+   "i": 509,
+   "address": "44 Early Valley Road, Lansdowne",
+   "suburb": "Lansdowne",
+   "area": "waimakariri",
+   "lat": -43.6188047,
+   "lon": 172.5751745,
+   "linz_address_id": "909161"
+  },
+  {
+   "i": 510,
+   "address": "8 Hay's Rise, Governors Bay",
+   "suburb": "Governors Bay",
+   "area": "waimakariri",
+   "lat": -43.6189812,
+   "lon": 172.6448376,
+   "linz_address_id": "232003"
+  },
+  {
+   "i": 511,
+   "address": "191 Governors Bay Road, Te Rāpaki-o-Te Rakiwhakaputa, Lyttelton",
+   "suburb": "Te Rāpaki-o-Te Rakiwhakaputa",
+   "area": "waimakariri",
+   "lat": -43.6048499,
+   "lon": 172.6840135,
+   "linz_address_id": "260182"
+  },
+  {
+   "i": 512,
+   "address": "11 Dudley Road, Lyttelton",
+   "suburb": "Lyttelton",
+   "area": "waimakariri",
+   "lat": -43.6021313,
+   "lon": 172.7135733,
+   "linz_address_id": "274283"
+  },
+  {
+   "i": 513,
+   "address": "11 Governors Bay Road, Cass Bay, Lyttelton",
+   "suburb": "Cass Bay",
+   "area": "waimakariri",
+   "lat": -43.6036798,
+   "lon": 172.6936439,
+   "linz_address_id": "265213"
+  },
+  {
+   "i": 514,
+   "address": "184 Timber Yard Road, Leeston",
+   "suburb": "Leeston",
+   "area": "waimakariri",
+   "lat": -43.7994958,
+   "lon": 172.365196,
+   "linz_address_id": "1478627"
+  },
+  {
+   "i": 515,
+   "address": "1520 Bayleys Road, Birdlings Flat, Little River",
+   "suburb": "Birdlings Flat",
+   "area": "waimakariri",
+   "lat": -43.831729,
+   "lon": 172.5102332,
+   "linz_address_id": "1755954"
+  },
+  {
+   "i": 516,
+   "address": "1075 Te Oka Bay Road, Te Oka, Little River",
+   "suburb": "Te Oka",
+   "area": "waimakariri",
+   "lat": -43.837492,
+   "lon": 172.7913816,
+   "linz_address_id": "287542"
+  },
+  {
+   "i": 517,
+   "address": "3981R Christchurch Akaroa Road, Little River",
+   "suburb": "Little River",
+   "area": "waimakariri",
+   "lat": -43.787323,
+   "lon": 172.7693185,
+   "linz_address_id": "3002860"
+  },
+  {
+   "i": 518,
+   "address": "2979 Christchurch Akaroa Road, Prices Valley, Little River",
+   "suburb": "Prices Valley",
+   "area": "waimakariri",
+   "lat": -43.7893917,
+   "lon": 172.6817561,
+   "linz_address_id": "1757676"
+  },
+  {
+   "i": 519,
+   "address": "2652 Christchurch Akaroa Road, Ataahua, Tai Tapu",
+   "suburb": "Ataahua",
+   "area": "waimakariri",
+   "lat": -43.7802844,
+   "lon": 172.6583208,
+   "linz_address_id": "248025"
+  },
+  {
+   "i": 520,
+   "address": "14A Sportsmans Avenue, Motukarara, Tai Tapu",
+   "suburb": "Motukarara",
+   "area": "waimakariri",
+   "lat": -43.7591796,
+   "lon": 172.5490176,
+   "linz_address_id": "1984025"
+  },
+  {
+   "i": 521,
+   "address": "43 Hurst Road, Springston",
+   "suburb": "Springston",
+   "area": "waimakariri",
+   "lat": -43.737545,
+   "lon": 172.4430209,
+   "linz_address_id": "2352330"
+  },
+  {
+   "i": 522,
+   "address": "1683 Christchurch Akaroa Road, Gebbies Valley, Tai Tapu",
+   "suburb": "Gebbies Valley",
+   "area": "waimakariri",
+   "lat": -43.7222671,
+   "lon": 172.5963747,
+   "linz_address_id": "1543865"
+  },
+  {
+   "i": 523,
+   "address": "34 Englishs Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "waimakariri",
+   "lat": -43.6930011,
+   "lon": 172.4823076,
+   "linz_address_id": "1293993"
+  },
+  {
+   "i": 524,
+   "address": "39 Ahuriri Road, Tai Tapu",
+   "suburb": "Tai Tapu",
+   "area": "waimakariri",
+   "lat": -43.7003539,
+   "lon": 172.572396,
+   "linz_address_id": "1028826"
+  },
+  {
+   "i": 525,
+   "address": "834 Gebbies Pass Road, Teddington, Governors Bay",
+   "suburb": "Teddington",
+   "area": "waimakariri",
+   "lat": -43.6721,
+   "lon": 172.6590679,
+   "linz_address_id": "248017"
+  },
+  {
+   "i": 526,
+   "address": "1457 Western Valley Road, Port Levy, Diamond Harbour",
+   "suburb": "Port Levy",
+   "area": "waimakariri",
+   "lat": -43.6828098,
+   "lon": 172.7935865,
+   "linz_address_id": "290163"
+  },
+  {
+   "i": 527,
+   "address": "475 Marine Drive, Charteris Bay, Governors Bay",
+   "suburb": "Charteris Bay",
+   "area": "waimakariri",
+   "lat": -43.6544437,
+   "lon": 172.7012788,
+   "linz_address_id": "270059"
+  },
+  {
+   "i": 528,
+   "address": "12 Camp Bay Road, Purau, Diamond Harbour",
+   "suburb": "Purau",
+   "area": "waimakariri",
+   "lat": -43.6377163,
+   "lon": 172.7536702,
+   "linz_address_id": "285598"
+  },
+  {
+   "i": 529,
+   "address": "883 Ellesmere Junction Road, Burnham",
+   "suburb": "Burnham",
+   "area": "waimakariri",
+   "lat": -43.6385624,
+   "lon": 172.3608441,
+   "linz_address_id": "2436507"
+  },
+  {
+   "i": 530,
+   "address": "43 Springston Rolleston Road, Rolleston",
+   "suburb": "Rolleston",
+   "area": "waimakariri",
+   "lat": -43.6346325,
+   "lon": 172.4437103,
+   "linz_address_id": "1368337"
+  },
+  {
+   "i": 531,
+   "address": "185 Main Road, Allandale, Governors Bay",
+   "suburb": "Allandale",
+   "area": "waimakariri",
+   "lat": -43.631399,
+   "lon": 172.6491385,
+   "linz_address_id": "240108"
+  },
+  {
+   "i": 532,
+   "address": "15 Te Papau Crescent, Diamond Harbour",
+   "suburb": "Diamond Harbour",
+   "area": "waimakariri",
+   "lat": -43.6316595,
+   "lon": 172.7371923,
+   "linz_address_id": "284185"
+  },
+  {
+   "i": 533,
+   "address": "311 Birchs Road, Prebbleton",
+   "suburb": "Prebbleton",
+   "area": "waimakariri",
+   "lat": -43.611491,
+   "lon": 172.5113769,
+   "linz_address_id": "1009880"
+  },
+  {
+   "i": 534,
+   "address": "6 Robinsons Road, Halswell, Christchurch",
+   "suburb": "Halswell",
+   "area": "waimakariri",
+   "lat": -43.6167247,
+   "lon": 172.5319021,
+   "linz_address_id": "1294875"
+  },
+  {
+   "i": 535,
+   "address": "39 Old Tai Tapu Road, Kennedys Bush, Christchurch",
+   "suburb": "Kennedys Bush",
+   "area": "waimakariri",
+   "lat": -43.6033245,
+   "lon": 172.5637464,
+   "linz_address_id": "173175"
+  },
+  {
+   "i": 536,
+   "address": "98 Early Valley Road, Lansdowne",
+   "suburb": "Lansdowne",
+   "area": "waimakariri",
+   "lat": -43.6164515,
+   "lon": 172.5814702,
+   "linz_address_id": "909166"
+  },
+  {
+   "i": 537,
+   "address": "1 Bay Heights, Governors Bay",
+   "suburb": "Governors Bay",
+   "area": "waimakariri",
+   "lat": -43.6256777,
+   "lon": 172.6442529,
+   "linz_address_id": "232008"
+  },
+  {
+   "i": 538,
+   "address": "214 Governors Bay Road, Te Rāpaki-o-Te Rakiwhakaputa, Lyttelton",
+   "suburb": "Te Rāpaki-o-Te Rakiwhakaputa",
+   "area": "waimakariri",
+   "lat": -43.6039163,
+   "lon": 172.6818484,
+   "linz_address_id": "260187"
+  },
+  {
+   "i": 539,
+   "address": "12 Dudley Road, Lyttelton",
+   "suburb": "Lyttelton",
+   "area": "waimakariri",
+   "lat": -43.6019247,
+   "lon": 172.7135449,
+   "linz_address_id": "274290"
+  },
+  {
+   "i": 540,
+   "address": "13 Governors Bay Road, Cass Bay, Lyttelton",
+   "suburb": "Cass Bay",
+   "area": "waimakariri",
+   "lat": -43.6035618,
+   "lon": 172.6934896,
+   "linz_address_id": "265218"
+  },
+  {
+   "i": 541,
+   "address": "113 Johnstons Road, Leeston",
+   "suburb": "Leeston",
+   "area": "waimakariri",
+   "lat": -43.8034305,
+   "lon": 172.3627502,
+   "linz_address_id": "1597646"
+  },
+  {
+   "i": 542,
+   "address": "1360 Bayleys Road, Birdlings Flat, Little River",
+   "suburb": "Birdlings Flat",
+   "area": "waimakariri",
+   "lat": -43.8282777,
+   "lon": 172.5293602,
+   "linz_address_id": "1755955"
+  },
+  {
+   "i": 543,
+   "address": "2901 Bossu Road, Te Oka, Little River",
+   "suburb": "Te Oka",
+   "area": "waimakariri",
+   "lat": -43.8175095,
+   "lon": 172.7445233,
+   "linz_address_id": "1756065"
+  },
+  {
+   "i": 544,
+   "address": "52 Morrisons Road, Little River",
+   "suburb": "Little River",
+   "area": "waimakariri",
+   "lat": -43.7718885,
+   "lon": 172.7826735,
+   "linz_address_id": "274419"
+  },
+  {
+   "i": 545,
+   "address": "83 Prices Valley Road, Prices Valley, Little River",
+   "suburb": "Prices Valley",
+   "area": "waimakariri",
+   "lat": -43.7879754,
+   "lon": 172.6934844,
+   "linz_address_id": "265306"
+  },
+  {
+   "i": 546,
+   "address": "2563 Christchurch Akaroa Road, Ataahua, Tai Tapu",
+   "suburb": "Ataahua",
+   "area": "waimakariri",
+   "lat": -43.7710459,
+   "lon": 172.6537447,
+   "linz_address_id": "1757664"
+  },
+  {
+   "i": 547,
+   "address": "11 Fuller Street, Motukarara, Tai Tapu",
+   "suburb": "Motukarara",
+   "area": "waimakariri",
+   "lat": -43.7597522,
+   "lon": 172.5493083,
+   "linz_address_id": "1984030"
+  },
+  {
+   "i": 548,
+   "address": "17 Hurst Road, Springston",
+   "suburb": "Springston",
+   "area": "waimakariri",
+   "lat": -43.7384081,
+   "lon": 172.4423239,
+   "linz_address_id": "2352335"
+  },
+  {
+   "i": 549,
+   "address": "1640 Christchurch Akaroa Road, Gebbies Valley, Tai Tapu",
+   "suburb": "Gebbies Valley",
+   "area": "waimakariri",
+   "lat": -43.7227082,
+   "lon": 172.5969218,
+   "linz_address_id": "1757647"
+  },
+  {
+   "i": 550,
+   "address": "235 Davidsons Road, Lincoln",
+   "suburb": "Lincoln",
+   "area": "waimakariri",
+   "lat": -43.700599,
+   "lon": 172.4887848,
+   "linz_address_id": "1331168"
+  },
+  {
+   "i": 551,
+   "address": "1269 Christchurch Akaroa Road, Tai Tapu",
+   "suburb": "Tai Tapu",
+   "area": "waimakariri",
+   "lat": -43.7080445,
+   "lon": 172.5759732,
+   "linz_address_id": "1717637"
+  },
+  {
+   "i": 552,
+   "address": "345 Charteris Bay Road, Teddington, Governors Bay",
+   "suburb": "Teddington",
+   "area": "waimakariri",
+   "lat": -43.6705286,
+   "lon": 172.6735104,
+   "linz_address_id": "254359"
+  },
+  {
+   "i": 553,
+   "address": "737 Purau Port Levy Road, Port Levy, Diamond Harbour",
+   "suburb": "Port Levy",
+   "area": "waimakariri",
+   "lat": -43.6695461,
+   "lon": 172.7916202,
+   "linz_address_id": "1760238"
+  },
+  {
+   "i": 554,
+   "address": "1 Charteris Bay Road, Charteris Bay, Governors Bay",
+   "suburb": "Charteris Bay",
+   "area": "waimakariri",
+   "lat": -43.6564234,
+   "lon": 172.6995257,
+   "linz_address_id": "270064"
+  },
+  {
+   "i": 555,
+   "address": "183 Purau Avenue, Purau, Diamond Harbour",
+   "suburb": "Purau",
+   "area": "waimakariri",
+   "lat": -43.6391078,
+   "lon": 172.7499915,
+   "linz_address_id": "285611"
+  },
+  {
+   "i": 556,
+   "address": "966 Selwyn Road, Burnham",
+   "suburb": "Burnham",
+   "area": "waimakariri",
+   "lat": -43.6354354,
+   "lon": 172.3717493,
+   "linz_address_id": "1296239"
+  },
+  {
+   "i": 557,
+   "address": "1428 Shands Road, Rolleston",
+   "suburb": "Rolleston",
+   "area": "waimakariri",
+   "lat": -43.6367543,
+   "lon": 172.448532,
+   "linz_address_id": "1398477"
+  },
+  {
+   "i": 558,
+   "address": "195 Main Road, Allandale, Governors Bay",
+   "suburb": "Allandale",
+   "area": "waimakariri",
+   "lat": -43.6314957,
+   "lon": 172.6484309,
+   "linz_address_id": "240113"
+  },
+  {
+   "i": 559,
+   "address": "19 Te Papau Crescent, Diamond Harbour",
+   "suburb": "Diamond Harbour",
+   "area": "waimakariri",
+   "lat": -43.6319534,
+   "lon": 172.7378089,
+   "linz_address_id": "284201"
+  }
+ ]
+}

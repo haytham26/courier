@@ -220,6 +220,42 @@ jobs:
         run: node scripts/eval/check-voice-eval.mjs
       - name: Check the scanner evaluation set
         run: node scripts/eval/check-scanner-eval.mjs
+      # BUG-280: the routing evaluation set (the founder's 2026-11-08 directive,
+      # item 3) - the 144 seeded synthetic Christchurch days over the Valhalla-on-
+      # OpenStreetMap road matrix, the engines' measured days re-derived from the
+      # matrix, and the directive's targets (2% on average, 5% at worst, 0
+      # violations where a feasible plan exists, solve p95 under 3s at 150
+      # stops). Zero-dependency node, like the other eval checkers: it reads the
+      # committed set, so the CI runner needs no docker, no tiles and no LINZ key.
+      - name: Check the routing evaluation set
+        run: node scripts/eval/check-routing-eval.mjs
+
+  routing-eval-timing:
+    name: The routing eval's solve time on THIS runner (BUG-280)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+      # The production engine's own solve time on the CI runner is the number
+      # the directive's p95 <3s bar is about, so it is measured HERE, not on a
+      # workstation: only our engine runs (the baselines are a local,
+      # long-budget measurement and their results are committed), only the
+      # 150-stop instances (the size the bar names), into a throwaway directory
+      # so the committed result files are never overwritten.
+      - name: The production engine on every 150-stop day (our engine only)
+        run: |
+          uv sync --directory services/api --extra eval
+          uv run --project services/api --extra eval \
+            python scripts/eval/run-routing-eval.py --engines ours --only 150 \
+            --results-dir "$RUNNER_TEMP/routing-eval" --check-targets
+      # The node checker runs in the floor job without any toolchain: it re-reads
+      # the committed set and the committed results and re-derives every number.
 
   coverage:
     name: Coverage ratchet

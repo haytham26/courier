@@ -7,7 +7,7 @@ backed by a set here and a checker in `scripts/eval/`.
 |---|---|---|
 | `voice/` | The voice commands: 600 scripts with the gold intent and the slots, 840 planned audio files, 240 real LINZ addresses | PARTIAL: the text side is built, the audio is not |
 | `scanner/` | The label scanner: 330 synthetic labels with their ground truth, the field catalogue, the licence ledger | PARTIAL: 40 label photos are the founder's |
-| `routing/` | The routing engine on real Christchurch days | NOT STARTED: the folder holds the plan, not the set |
+| `routing/` | The routing engine on real Christchurch days (the founder's directive item 3): 144 seeded synthetic days - 30/80/150/250 stops, six variants - over a real road matrix from Valhalla on OpenStreetMap, measured against the best of PyVRP-long / OR-Tools with a long budget (VROOM could not be built here: the gap is recorded in ADR-030) | BUILT: the measured numbers are in the set's README and in ADR-030 |
 
 The sets were in `docs/` before; they are data, not documentation, and they are too big to read in
 a review. The method behind them stays in `docs/squads/<module>/`.

@@ -38,6 +38,14 @@ services/courier-voice/coverage.json
 Thumbs.db
 # Local LINZ datasets (large, not committed)
 data/linz/
+# The routing evaluation set's local inputs: the OSM extract (Geofabrik, ODbL),
+# the Valhalla tiles built from it, and the fetched LINZ stop pool (the
+# COMMITTED set lives in packages/eval/routing/manifest; these are the local
+# pipeline's own artefacts, records of them in docs/evidence/main-apk-*).
+data/osm/
+data/valhalla/
+data/valhalla_tiles/
+data/routing-eval/
 # Drawn label images and the real label photos (personal data, never committed)
 data/labels/
 # The voice evaluation audio (Common Voice clips, MUSAN beds, the built
