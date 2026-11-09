@@ -255,6 +255,55 @@ installer and enables ADB in its Settings → Advanced) is SUPPLEMENTARY and get
 getprop + `su -c id` recorded here, APK installed alongside, Maestro flows run with `maestro --device`;
 rooted fails Play Integrity = recorded, not our bug. Never touch the founder's apps/data/Magisk.
 
+---
+
+## 2026-11-09: PART B — the backend's held-out list is now the single shared source
+
+The voice held-out list and the backend's address list had diverged (the LINZ data
+was updated in between): ours was 1,359 of 6,799 streets from the older revision,
+the backend's is 1,360 of 6,802. The backend's 99.65 % accuracy was measured on
+ITS list, so per the founder instruction of 2026-11-09 (PART B) the backend's list
+is ADOPTED unchanged and the voice manifests were regenerated from it — the
+backend's file is not edited, only read:
+
+- `scripts/eval/build-heldout-streets.mjs` now reads the committed fixture
+  (`services/api/tests/fixtures/linz-holdout-streets.txt`) by default; the LINZ
+  derivation stays behind `--derive-from-linz`. No gate reads a local `data/linz`
+  revision any more, so the gates pass on any machine (the founder named the
+  failing heldout-gates test: the old "regenerate from the real LINZ dir" leg read
+  the machine's revision and failed on a newer one — it is rewritten against the
+  committed source, and the three fixture LINZ files it needed are deleted).
+- `scripts/eval/street-key.mjs` (new): the JS twin of the backend's `road_key()`
+  normalisation ("Bealey Avenue" and "Bealey Ave" are one street). The builder,
+  the checker and the circularity proof all match by key.
+- `scripts/eval/check-voice-eval.mjs` re-reads the fixture and REFUSES when its
+  bytes no longer match the manifest's recorded `source_sha256` — proven by
+  corrupting the recorded sha and watching the refusal name the announcement the
+  backend owes. The sha is over the fixture's logical bytes (LF-normalised), so it
+  is the same on CI and on Windows.
+- `scripts/ci/check-parser-circularity.mjs` matches held-out streets by key in
+  either suffix spelling, case-insensitively — the old case-sensitive substring
+  test on the keys never fired and proved nothing; its own fixture test now catches
+  the "Zulu Street" template for real.
+- Confirmed: **no voice tuning has used any street of this list** — the BUG-277
+  hotword export has not been fed to any STT run, and the measurements so far read
+  the eval set rather than fitting it. When the biasing lane runs, the held-out keys
+  are excluded from its vocabulary.
+- **BACKEND, READ THIS:** `services/api/tests/fixtures/linz-holdout-streets.txt`
+  is now the shared held-out source for BOTH lanes. Please never change it without
+  announcing the change in `docs/log/CURRENT-backend.md` — this lane's
+  `check-voice-eval.mjs` refuses on the silent change (it compares the fixture's
+  sha256 with the manifest's recorded one), and the voice manifests would then
+  need rebuilding with `node scripts/eval/build-voice-eval.mjs [--heldout]`.
+
+Switch record with both shas (old 8230c5cb… -> new 90e7b1a3… for the list,
+14e84c2b… for the fixture bytes): `docs/evidence/voice-heldout/README.md`.
+
+Green: `node scripts/eval/build-heldout-streets.mjs`, `build-voice-eval.mjs`
+(both modes), `check-voice-eval.mjs` (both directions),
+`check-parser-circularity.mjs`, `node --test "scripts/*/__tests__/*.test.mjs"`
+(349 pass, 0 fail), parity, doc-links, control-chars, mojibake, markers.
+
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
