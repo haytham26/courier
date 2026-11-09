@@ -1,0 +1,13 @@
+{
+ "judge": "sherpa-onnx whisper tiny.en (Whisper weights MIT, sherpa-onnx runtime Apache-2.0)",
+ "judge_model": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2",
+ "sample_rate": 16000,
+ "normalisation": "lower-case, diacritics folded, punctuation dropped, whitespace collapsed",
+ "resampling": "linear 48 kHz -> 16 kHz (the clips as the mirror serves them)",
+ "python": "3.12.15",
+ "platform": "Windows-11-10.0.26300-SP0",
+ "manifest": "packages/eval/voice/manifest/heldout",
+ "held_out_streets": 1360,
+ "clips": 280,
+ "beds": 8
+}
