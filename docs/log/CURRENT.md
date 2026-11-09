@@ -373,6 +373,33 @@ Queue state: #278 ready to merge; the held-out measurement lane (real STT on the
 new shared list) and the >=500-turn simulation are next; P4's 8 large/200 %
 baselines now have their AVD.
 
+---
+
+## 2026-11-10: CORRECTION — PR #278's merge lost the change set; PR #289 restores it and must prove the legs green
+
+**The entry above this one claimed a green 4-leg run on head a1435cd. That was
+wrong, and it is corrected here rather than left standing.** The run I quoted
+(Android E2E 42697447248 on head b9db49e) had **every leg SKIPPED** by the
+changes filter - it was green because nothing ran. Two separate things went
+wrong, and both are now fixed:
+
+1. The merge that brought origin/main into the #278 branch (b9db49e) ran with a
+   dirty tree and took main's side for every path the branch had changed, so
+   the matrix, the AuthProvider fix, the sheet geometry, the map veils, the
+   settings reorder and their tests **never reached main**. The last good tree
+   was a9a74b7; PR #289 restores exactly those paths onto main.
+2. No 4-leg green run has EVER existed on a head whose tree carries the matrix
+   and the fixes together: the last real 4-leg run (42683729080 on 1ab3002) was
+   api-35-small success, api-34-small success, api-34-large cancelled,
+   api-35-large failure. The run on a9a74b7 (42697058642) was cancelled as
+   superseded before it could finish.
+
+**So BUG-270 and BUG-300 are NOT proven closed on main.** They stay "fixed" in
+BUGS.md only if PR #289's four legs and A1 are all green on the restored tree;
+if any leg is red, the rows go back to doing in the follow-up and the queue
+holds until they are green. This is the §17 discipline applied to myself: a
+vacuous green is not a green, and a merge is not evidence.
+
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
