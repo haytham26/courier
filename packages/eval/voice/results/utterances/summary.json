@@ -1,13 +1,58 @@
 {
- "generated": "2026-11-05T16:52:00+1300",
+ "generated": "2026-11-10T12:14:11+1300",
  "target": "AUDIT_2026-10-25 §A3: >=500 utterances from open data, WER and the parser ceiling per slice",
  "built": 600,
  "judge": "sherpa-onnx whisper tiny.en (Whisper weights MIT, sherpa-onnx runtime Apache-2.0)",
+ "manifest": "packages/eval/voice/manifest",
+ "held_out": false,
+ "held_out_utterances": 0,
+ "held_out_scripts": 0,
+ "held_out_streets": 1360,
+ "street_key_check": "clean",
+ "intent_on_stt_by_slice": {
+  "en_mix": {
+   "correct": 5,
+   "measured": 120,
+   "rate": 0.041666666666666664
+  },
+  "en_nz_quiet": {
+   "correct": 5,
+   "measured": 120,
+   "rate": 0.041666666666666664
+  },
+  "en_nz_van": {
+   "correct": 0,
+   "measured": 360,
+   "rate": 0.0
+  }
+ },
+ "address_extraction_on_stt_by_slice": {
+  "en_mix": {
+   "address_bearing": 15,
+   "hypotheses_with_an_address": 0,
+   "exact": 0,
+   "rate": 0.0
+  },
+  "en_nz_quiet": {
+   "address_bearing": 15,
+   "hypotheses_with_an_address": 0,
+   "exact": 0,
+   "rate": 0.0
+  },
+  "en_nz_van": {
+   "address_bearing": 45,
+   "hypotheses_with_an_address": 0,
+   "exact": 0,
+   "rate": 0.0
+  }
+ },
  "legs": {
   "wer": "the open speakers' own words read by the pinned judge, per slice and per SNR - the set's acoustic difficulty, not our pipeline",
   "false_action_rate": "the parser's share of the speakers' natural sentences it answered with a command - the M9 direction on open speech",
   "parser_ceiling": "NOT AN ACCURACY (BUG-210): the offline brain's patterns spell out the eval generator's templates word for word (scripts/ci/check-parser-circularity.mjs names every standing overlap and fails on a new one), so this number measures the parser's coverage of its own template set, not a held-out accuracy. The held-out set does not exist yet (FOUNDER_TODO), and the intent on the STT hypothesis is unmeasured because the script audio is not synthesised.",
-  "parser_ceiling_with_slots": "EVAL.md's M3 shape: the intent AND the comparable mandatory slots (`safe_place`, `reason`, `raw_address`, `minutes`, `kind`, `priority`) both correct - a ceiling, the same caveat"
+  "parser_ceiling_with_slots": "EVAL.md's M3 shape: the intent AND the comparable mandatory slots (`safe_place`, `reason`, `raw_address`, `minutes`, `kind`, `priority`) both correct - a ceiling, the same caveat",
+  "intent_on_stt": "MEASURED ON THE STT OUTPUT: the intent accuracy of the parser on the JUDGE's hypotheses (per_utterance.csv's parsed_intent against the utterance's gold intent). This is the number the directive asks for. On the open-data slices the speakers speak their OWN sentences (gold_text), not the manifest script, so this number is dominated by what the recognizer returned for that speech - it is NOT the product's command accuracy, and it is never averaged with the ceiling above.",
+  "address_extraction_on_stt": "MEASURED ON THE STT OUTPUT: the exact-match address extraction (the parser's raw_address against the gold spoken form) over the same hypotheses, per slice, with the count of hypotheses that carried an address at all. The on-device address engine is the product's M2 and stays with the device leg."
  },
  "parser_ceiling_by_slice": {
   "ar": {
@@ -103,9 +148,9 @@
    "rate": 0.0
   },
   "mi_places": {
-   "correct": 45,
+   "correct": 47,
    "total": 60,
-   "rate": 0.75
+   "rate": 0.7833333333333333
   },
   "numbers_corrections": {
    "correct": 0,
@@ -179,43 +224,134 @@
   "zh": "the offline brain's catalogue is English; the slice's scripts are not routed through it",
   "sm_to": "the offline brain's catalogue is English; the slice's scripts are not routed through it"
  },
+ "parser_gaps": {
+  "numbers_corrections": "the offline brain's catalogue has no spoken-number-correction form: the gold scripts ('seven no sorry seventeen ...') are not routed through it"
+ },
  "open_slices": {
   "en_nz_quiet": {
    "utterances": 120,
    "measured_wer": 120,
-   "wer_mean": 0.14754370629370625,
+   "wer_mean": 0.1475437062937063,
    "wer_max": 1.0,
    "false_action_rate": 0.0,
    "wer_by_snr": {
-    "None": 0.14754370629370625
+    "None": 0.1475437062937063
    }
   },
   "en_nz_van": {
    "utterances": 360,
    "measured_wer": 360,
-   "wer_mean": 0.28024457409874093,
+   "wer_mean": 0.28024457409874076,
    "wer_max": 1.8,
    "false_action_rate": 0.0,
    "wer_by_snr": {
-    "0": 0.36879845848595855,
+    "0": 0.3687984584859585,
     "5": 0.26123473748473747,
-    "10": 0.21070052632552627
+    "10": 0.21070052632552633
    }
   },
   "en_mix": {
    "utterances": 120,
    "measured_wer": 120,
-   "wer_mean": 0.12497315184815182,
-   "wer_max": 1.2,
-   "false_action_rate": 0.008333333333333333,
+   "wer_mean": 0.15296727782021902,
+   "wer_max": 1.1111111111111112,
+   "false_action_rate": 0.0,
    "wer_by_snr": {
-    "None": 0.12497315184815182
+    "None": 0.15296727782021902
    }
   }
  },
- "false_action_rate_on_open_speech": 0.0016666666666666668,
+ "false_action_rate_on_open_speech": 0.0,
+ "directive_targets": [
+  {
+   "target": "wer_quiet",
+   "definition": "the quiet WER of the NZ English quiet slice",
+   "metric": "M1 on the set's own acoustic difficulty",
+   "slice": "en_nz_quiet",
+   "limit": 0.05,
+   "direction": "at_most",
+   "counts": "120 utterances, mean WER 14.75%",
+   "note": "",
+   "value": 0.1475,
+   "verdict": "FAIL"
+  },
+  {
+   "target": "wer_van",
+   "definition": "the van WER, averaged over the 0 / 5 / 10 dB rows",
+   "metric": "M1 on the set's own acoustic difficulty",
+   "slice": "en_nz_van",
+   "limit": 0.1,
+   "direction": "at_most",
+   "counts": "0 dB 36.88%, 5 dB 26.12%, 10 dB 21.07%",
+   "note": "",
+   "value": 0.2802,
+   "verdict": "FAIL"
+  },
+  {
+   "target": "intent_on_stt",
+   "definition": "the intent accuracy on the STT hypotheses",
+   "metric": "M3 on the recognizer's own output",
+   "slice": "the slices this run has STT output for (never an unsupported one)",
+   "limit": 0.95,
+   "direction": "at_least",
+   "counts": "10/600 correct over 3 measured slices (en_mix, en_nz_quiet, en_nz_van)",
+   "note": "the open-data speakers speak their OWN sentences (per_utterance.csv's gold_text), not the manifest script, so this number is what the recognizer returned for THAT speech: it is not the product's command accuracy",
+   "value": 0.0167,
+   "verdict": "FAIL"
+  },
+  {
+   "target": "address_extraction_on_stt",
+   "definition": "the exact-match address extraction on the STT hypotheses",
+   "metric": "M2 on the offline brain's raw_address",
+   "slice": "the slices this run has STT output for (never an unsupported one)",
+   "limit": 0.95,
+   "direction": "at_least",
+   "counts": "0/75 address-bearing utterances exact, 0 of their hypotheses carried an address at all",
+   "note": "the open-data speakers speak their OWN sentences (per_utterance.csv's gold_text), not the manifest script, so an address-bearing script's audio rarely contains an address for the parser to extract",
+   "value": 0.0,
+   "verdict": "FAIL"
+  },
+  {
+   "target": "false_action",
+   "definition": "the false-action rate on the open speech",
+   "metric": "M9 on the speakers' own sentences",
+   "slice": "the open slices (en_nz_quiet, en_nz_van, en_mix)",
+   "limit": 0.005,
+   "direction": "at_most",
+   "counts": "0/600 transcribed utterances answered with a command",
+   "note": "",
+   "value": 0.0,
+   "verdict": "PASS"
+  },
+  {
+   "target": "corrections_on_stt",
+   "definition": "the spoken-number corrections (\"seven no seventeen\")",
+   "metric": "M3 on the correction form",
+   "slice": "numbers_corrections",
+   "limit": 0.95,
+   "direction": "at_least",
+   "counts": "no audio for this slice in this run",
+   "note": "the numbers_corrections slice has no audio: it needs the project's own TTS voices, and every voice must be in the licence ledger before a sample is committed (D24). The offline brain's catalogue also has no spoken-number-correction form (PARSER_GAPS names the gap).",
+   "value": null,
+   "verdict": "NOT MEASURED",
+   "reason": "the numbers_corrections slice has no audio: it needs the project's own TTS voices, and every voice must be in the licence ledger before a sample is committed (D24). The offline brain's catalogue also has no spoken-number-correction form (PARSER_GAPS names the gap)."
+  },
+  {
+   "target": "latency_p95",
+   "definition": "the end-to-end command latency, p95 (the budget is 700 ms)",
+   "metric": "M6",
+   "slice": "the device leg (EVAL.md M6, CONSTRAINTS.md)",
+   "limit": 700.0,
+   "direction": "at_most",
+   "counts": "not measured here (the shift-sim harness measures the service's own p95)",
+   "note": "the latency is the phone's own path - the last spoken word to the action in the local event log (EVAL.md M6) - and this scorer runs offline on the machine's CPU. The shift-sim harness (app/eval_harness.py) measures the SERVICE's own p95 against the same 700 ms budget; that is not the device leg.",
+   "value": null,
+   "verdict": "NOT MEASURED",
+   "reason": "the latency is the phone's own path - the last spoken word to the action in the local event log (EVAL.md M6) - and this scorer runs offline on the machine's CPU. The shift-sim harness (app/eval_harness.py) measures the SERVICE's own p95 against the same 700 ms budget; that is not the device leg."
+  }
+ ],
  "not_measured": {
-  "M2_address_accuracy": "the address is extracted on the device, not in the service (EVAL.md section 5)",
+  "M2_address_accuracy": "the product's address engine (the D8 / nz-address path on the device) is NOT what is measured here: what is measured is the offline brain's raw_address slot on the judge's hypotheses (address_extraction_on_stt_by_slice), and the open-data speakers speak their own sentences, so an address rarely reaches the parser at all. The device leg owns M2.",
   "M4_wake_false_accepts": "the non-speech corpus is continuous audio, not the utterance set",
   "M5_wake_misses": "the wake word rates need the device",
   "M7_battery": "the battery is measured on a device",

@@ -10,8 +10,14 @@ Common Voice CC0 clips and the MUSAN CC-BY beds fetched by
 - `per_slice.csv` - one row per open slice: the utterance count, the measured
   WER and the false-action rate.
 - `per_utterance.csv` - one row per built utterance: its gold text, the judge's
-  hypothesis, the WER and the parser's intent.
-- `environment.json` - the judge and its model URL, the sample rate, the
+  hypothesis, the WER, the parser's intent AND address on that hypothesis, the
+  utterance's gold intent and gold address, and its `held_out` tag (the shared
+  street list is what proves the tag).
+- `summary.json` - the intent accuracy measured ON THE STT HYPOTHESES
+  (`intent_on_stt_by_slice`) and the exact-match address extraction on the same
+  hypotheses (`address_extraction_on_stt_by_slice`), beside the parser ceiling on
+  the gold text, which is labelled as a ceiling and never confused with an
+  accuracy (BUG-210).- `environment.json` - the judge and its model URL, the sample rate, the
   normalisation and the machine, published with the result (EVAL.md section 4).
 
 The audio itself is NOT in git: it lives in `data/voice/audio/` with its
