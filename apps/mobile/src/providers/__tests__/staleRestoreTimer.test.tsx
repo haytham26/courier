@@ -154,6 +154,19 @@ const flush = async (): Promise<void> => {
 
 describe('the session restore bound never outlives its run (BUG-300)', () => {
   beforeEach(() => {
+    // Every fixture is a `let` whose name begins with `mock`: that is the only
+    // shape babel-plugin-jest-hoist leaves alone (a const referenced from the
+    // jest.mock factory is hoisted to the top of the module and reads undefined).
+    // They are re-assigned here, per test, so the reset is real.
+    mockUser = {
+      id: 'e2e-driver',
+      email: 'driver@example.co.nz',
+      name: 'E2E Driver',
+      emailVerified: true,
+      createdAt: new Date(0),
+      image: null,
+    };
+    mockSignedInData = { user: mockUser, session: { token: 'e2e-token' } };
     mockStore = new Map<string, string>();
     mockAnswer = mockAnswerFor(mockSignedInData);
     mockProbed = undefined;
