@@ -138,6 +138,19 @@ describe('the settings list on a tall window (411x731 dp, BUG-300)', () => {
     expect(screen.getByTestId('settings-forget-memory')).toBeTruthy();
   });
 
+  it("ends the list's VIEWPORT above the dock, so a scrolled-to row is never covered by it (BUG-300: the api-34 large leg tapped the dock)", () => {
+    renderScreen();
+
+    // The run 42455960697 / 42542068115 failure: scrollUntilVisible stops at the
+    // row's first fully-visible frame, which on a tall window puts the row's centre
+    // INSIDE the floating dock's bounds - the tap lands on the glass, not the row,
+    // and the lock-screen route never opens. The frame, not the content padding, is
+    // what keeps a row clear of the dock: the dock is 26 dp off the bottom plus 62
+    // dp of bar, so the list must end that much above the screen bottom.
+    const scroll = screen.UNSAFE_getByType(ScrollView);
+    const frame = StyleSheet.flatten(scroll.props.style as never) as { marginBottom?: number };
+    expect(frame.marginBottom ?? 0).toBeGreaterThanOrEqual(DOCK_DP);
+  });
   it("pads the list's bottom past the 88 dp tab dock, so the last rows can scroll above it", () => {
     renderScreen();
 

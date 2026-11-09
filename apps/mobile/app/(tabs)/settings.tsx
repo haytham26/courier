@@ -580,7 +580,12 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView testID="settings-screen" style={[styles.container, { backgroundColor: t.colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {/* BUG-300: the list's FRAME ends above the floating dock, not just its
+          content. A row scrolled into view at the viewport's bottom sat under the
+          dock on the tall window, so the flow's tap landed on the dock glass and
+          the row's route never opened (the lock-screen flow, both large legs of
+          runs 42455960697 and 42542068115). The dock is 26 + 62 dp tall. */}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, { color: t.colors.label }]} maxFontSizeMultiplier={1.6}>
           Settings
         </Text>
@@ -706,6 +711,11 @@ const DOCK_DP = 26 + 62;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  // BUG-300: the list's own frame stops above the dock, so every row a flow
+  // scrolls to is fully inside the clear viewport.
+  scroll: {
+    marginBottom: DOCK_DP,
+  },
   content: {
     paddingHorizontal: spacing.space16,
     paddingTop: spacing.space16,
