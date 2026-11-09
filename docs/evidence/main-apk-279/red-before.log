@@ -1,0 +1,29 @@
+$ node scripts/ci/check-workflows.mjs   (run on directive-main-apk-279 BEFORE the fix commit;
+   .github/workflows/main-apk.yml was still the b80cfb2 content)
+exit code: 1
+
+check-workflows (BUG-067): 2 violation(s):
+  main-apk.yml:113: this file is not valid YAML, so GitHub refuses the whole workflow before any job starts (BUG-279): bad indentation of a mapping entry (113:70)
+  main-apk.yml:113: a GitHub expression has no ?: operator - write it with && and || (BUG-279): ${{ steps.urls.outputs.configured == 'yes' ? 'pnpm' : '' }}
+
+$ node --test scripts/ci/__tests__/check-workflows.test.mjs   (BEFORE the fix)
+exit code: 1  (the real-tree tests - 'the repo's own workflows pass' and
+'the repo's own workflows carry no job-level secret' - failed on main-apk.yml:113)
+
+Reproduced after the fix against a fixture holding the pre-fix file
+(git show origin/main:.github/workflows/main-apk.yml):
+exit code: 1
+
+check-workflows (BUG-067): 2 violation(s):
+  main-apk.yml:113: this file is not valid YAML, so GitHub refuses the whole workflow before any job starts (BUG-279): bad indentation of a mapping entry (113:70)
+
+ 110 |  ... nly when the build will run: without a
+ 111 |  ... re does not exist on a fresh runner
+ 112 |  ... ls the job (run 42385639298, BUG-272).
+ 113 |  ... .configured == 'yes' ? 'pnpm' : '' }}
+------------------------------------------^
+ 114 |  ... 
+ 115 |  ... 
+      cache: ${{ steps.urls.outputs.configured == 'yes' ? 'pnpm' : '' }}
+  main-apk.yml:113: a GitHub expression has no ?: operator - write it with && and || (BUG-279): ${{ steps.urls.outputs.configured == 'yes' ? 'pnpm' : '' }}
+      cache: ${{ steps.urls.outputs.configured == 'yes' ? 'pnpm' : '' }}

@@ -1,6 +1,6 @@
 # CURRENT — the handoff
 
-**Week:** 2026-W45. **Local `main` == `origin/main` == `abd3754` (PR #276 — the founder directive 2026-11-08 FIRST PR: PLAYBOOK §16 ownership, TRIAL_SCOPE rows 6/10-14/16/17/21 -> Built). Behind it `8d89f8c` = PR #274 (BUG-276, S1-S5 task breakdown). Behind it `3525a50` = PR #266 (the #261/#262/#265 log PR). Behind it `f1ae091` = PR #265 (the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
+**Week:** 2026-W46. **Local `main` == `origin/main` == `5df941f` (PR #283 — the 2026-11-09 log PR). Behind it `ca32f4a` = PR #281 (the backend's BUG-278: held-out 99.65% D8 accuracy), behind it `191ac17` = PR #280. Behind it `d1f9f60` = PR #279 (voice lane 1: the synthetic held-out street split, committed). Behind it `b76c333` = PR #277 (the audio-injection research + licence reads), behind it `b389e56` = PR #275 (the backend's BUG-277: LINZ hotword export), behind it `abd3754` = PR #276 (the directive FIRST PR). Behind it `3525a50` = PR #266 (the #261/#262/#265 log PR). Behind it `f1ae091` = PR #265 (the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
 side, BUG-200 — the prominent background-location disclosure is shown in-app
 before the permission request, and the settings carry the Legal rows). Behind it
 `0f500fe` = PR #251 (BUG-236 — the backend's row), `ffa60ba` = PR #249 (item 5a,
@@ -177,6 +177,117 @@ AVD in the matrix, AVD cache key carries the profile) -> voice lane via sub-agen
 worktrees `..\courier-voice-wt`: held-out street split (20% of Canterbury streets,
 seeded, committed list) + real-STT measurement on it -> the test-flavour audio
 input + mock-reach seam -> >=500-turn A-to-Z simulation in docs/evidence/voice-scale/.
+
+---
+
+## 2026-11-08: PR #279 merged — the synthetic held-out set (directive item 4a) is committed
+
+Voice lane 1 (sub-agent in `..\courier-voice-wt`, branch `voice/heldout-street-split`)
+delivered and it merged as `d1f9f60` with the full ritual (evidence comment with the
+run table, tag `archive/voice/heldout-street-split` pushed, branch deleted, ls-remote
+empty, post-merge deletion check empty). All-green head `bd3530b8`: CI run
+42461310246 (337 tests, 0 fail), Quality gates 42461310257 (check-voice-eval green
+incl. the held-out manifest), Android E2E 42461310285 green on both api legs + A1;
+26 success / 4 path-filtered skips (the mutation floors).
+
+The set: 656,044 LINZ rows -> 6,799 distinct Canterbury streets -> **1,359 held out**
+(= floor(0.20 x 6799), mulberry32 seed 20261108, partial Fisher-Yates over the
+code-unit-sorted list), committed as `packages/eval/voice/manifest/heldout_streets.json`
+(sha256 `8230c5cbfe02ef5df6840426d8b70d58b590c3e07438e403d22971b82b229991`,
+byte-identical across two runs). The split is BY STREET, never by address. The default
+`build-voice-eval` now excludes held-out-street addresses (62 of the old 240-bank were
+held out; the regenerated bank has 0); `--heldout` emits `manifest/heldout/` (240
+addresses / 720 scripts, all `held_out: true`). `check-voice-eval` refuses both
+directions naming the row; `check-parser-circularity` additively proves the 1,359
+held-out streets appear in neither the gold templates nor the parser regexes (BUG-210's
+11 known overlaps untouched). Evidence with the exact commands:
+`docs/evidence/voice-heldout/README.md`.
+
+Honest notes carried from lane 1's report: (1) `results/utterances/` was produced
+against the pre-split manifest and is stale w.r.t. the new `scripts.jsonl` until
+`app.eval_audio` re-runs — the next voice lane re-measures on the NEW manifest, on the
+held-out set, from REAL STT output; (2) `services/courier-voice/app/offline_brain.py`
+carries "57 Poulson Street" in two docstring examples — prose, not a regex; a held-out
+street in a docstring is harmless but noted for a later lane; (3) the founder's real-
+sentence set (ADR-028) still does not exist, so §22 B is NOT claimed tuned.
+
+Lanes now running: lane 2 (`..\courier-voice-wt\audio-input`) implements research
+option C — the test-flavour audio-file input (release-unreachable, mock-reach-gated) +
+a Maestro flow; lane 3 (`.worktrees/bug270-large`, branch `ci/bug270-large-fix`)
+root-causes BUG-300 (7 flows fail only on the large AVD, run 42455960697) in the app.
+PR #278 (BUG-270, large AVD in the e2e matrix) waits for lane 3's fix; its current
+head b620bbd has small legs + A1 green and the large legs red on BUG-300 as expected.
+
+---
+
+## 2026-11-09: the consolidated directive + the emulator hunt (STEP 1 done, STEP 2 started)
+
+The founder's **consolidated directive 2026-11-08** arrived (it replaces every earlier
+message; the queue matches what is already in flight). One rule is TIGHTENED and
+recorded here: **never force-push, never `--force-with-lease`, not even on my own
+branch** — the single recorded use on 2026-11-08 (amending a BUGS.md footer on my own
+unmerged PR branch) is not repeated; plain pushes only from now on.
+
+**Item 2d — main-apk.yml:** it is broken on main (invalid YAML at line 113, from A5)
+and fails on every push including main. It is the **backend's file** (PLAYBOOK §16) and
+the backend is fixing it; I do not touch it. **The founder's APK depends on that fix.**
+
+**Emulator STEP 1 (2026-11-09 ~05:40, directive item 3):** the founder's Magisk emulator
+is NOT currently running or visible: full `tasklist` scan shows no emulator/qemu/
+HD-Player/Nox/MuMu/LDPlayer/MEmu process (only two `adb.exe`, PIDs 24544 = the server,
+31984); `Get-NetTCPConnection -State Listen` shows the only adb-ish listener is 5037
+(the server itself); `adb connect` to 5555/5556/58526 (WSA)/62001/21503/7555/16384/
+16416 all refused (10061); `C:\Program Files\BlueStacks_nxt` exists but is an EMPTY
+stub; `C:\ProgramData\BlueStacks_nxt` does not exist; WSA services are installed
+(WsaService/WsaClient) but its adb port 58526 refuses; docker ps = only the CI
+postgres/valkey; WSL runs docker-desktop only. `adb devices -l` = zero devices.
+Conclusion: STEP 1 fails for now -> STEP 2.
+
+**Emulator STEP 2 (started 2026-11-09 05:46:11):** three BlueStacks installers sit in
+`C:\Users\DCL\Downloads`; `Get-AuthenticodeSignature` on each = **Valid**, signed
+**CN="Now.gg, INC"** (BlueStacks' legal entity) — recorded per the PC-safety rule:
+- `BlueStacks10Installer_10.42.153.1001_native_....exe` (0.91 MB bootstrapper)
+- `BlueStacks10Installer_10.42.91.1001_native_....exe` (0.90 MB)
+- `BlueStacksMicroInstaller_5.22.286.1003_native.exe` (0.91 MB) — LAUNCHED at
+  2026-11-09 05:46:11 (stdout/stderr to the session temp logs). If a UAC prompt or a
+  reboot appears, that goes in `docs/status/FOUNDER_TODO.md` and this step waits on
+  the founder; meanwhile all work continues on the CI AVDs. Hyper-V/WHPX will NOT be
+  disabled (vmcompute, WSA and docker-desktop need them; the Android Studio AVD must
+  stay intact) — if BlueStacks demands it, the step stops and is recorded. After
+  install: Settings -> Advanced -> Android Debug Bridge -> ON, port read from
+  `C:\ProgramData\BlueStacks_nxt\bluestacks.conf`, ONE adb only
+  (`adb kill-server` then `adb connect 127.0.0.1:<port>` with the platform-tools adb),
+  then STEP 3: getprop model/release/abi/qemu + `su -c id` recorded HERE, APK installed
+  alongside, Maestro flows run there — SUPPLEMENTARY evidence, the CI AVDs stay the
+  gate; rooted fails Play Integrity = recorded, not our bug.
+
+**Lanes as of 2026-11-09:** lane 2 (`voice/audio-file-input`, worktree
+`..\courier-voice-wt\audio-input`) and lane 3 (BUG-300 app-side fix, branch
+`ci/bug270-large-fix`, worktree `.worktrees/bug270-large`) and lane 4
+(`voice/heldout-measure`, worktree `..\courier-voice-wt\heldout-measure`: re-run
+`app.eval_audio` on the new main manifest AND the held-out manifest, all headline
+numbers from real STT hypotheses, per-target PASS/FAIL in
+`docs/evidence/voice-heldout/`) are running. PR #278 head `b620bbd`: small legs + A1
+green, large legs red on BUG-300 as expected — it waits on lane 3.
+
+---
+
+## 2026-11-09 07:36: emulator STEP 2 outcome — installer stalled with no UI, stopped per §15
+
+The BlueStacks micro installer launched at 05:46:11 (`BlueStacksMicroInstaller_5.22.286.1003_native.exe`,
+Authenticode Valid, CN="Now.gg, INC") bootstrapped to
+`C:\Users\DCL\AppData\Local\Temp\7zS05103E0F\BlueStacksInstaller.exe` (2.0 MB extracted), then sat with
+**no window title, no established network connections, 0 bytes of output for ~110 minutes** — an
+interactive step the agent cannot click. Per §15 it was stopped at **2026-11-09 07:36:18** (pids 336, 808;
+targeted `taskkill /PID /F` on my own installer processes only). The installers remain signature-verified
+and safe for the founder to run by hand — the exact state is in FOUNDER_TODO.md. `adb devices -l` still
+shows zero devices; no emulator adb port listens anywhere on this PC (full listen-port scan).
+
+**The gate is unchanged:** the CI AVDs (android-e2e.yml, now api 34/35 × small/large on PR #278) carry
+all E2E; any device that appears (the founder's Magisk emulator, or BlueStacks once the founder runs the
+installer and enables ADB in its Settings → Advanced) is SUPPLEMENTARY and gets STEP 3: identify via
+getprop + `su -c id` recorded here, APK installed alongside, Maestro flows run with `maestro --device`;
+rooted fails Play Integrity = recorded, not our bug. Never touch the founder's apps/data/Magisk.
 
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
