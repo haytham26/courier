@@ -43,9 +43,13 @@ green, run 42363101590):
   (`delivery_events` asserted, `.maestro/run-a1.sh`).
 - **Maps** — 2D/3D/Satellite/Auto modes with per-driver memory and 3D buildings;
   the Canterbury PMTiles pack itself is the T5 weekly job (not yet built).
-- **Address** — the D8 engine over **225,151 real LINZ Christchurch addresses**:
-  **98.3 %** accuracy on the sampled real data
-  ([`docs/evidence/phase-2.3/linz-accuracy.md`](../evidence/phase-2.3/linz-accuracy.md)).
+- **Address** — the D8 engine over **656,392 real LINZ Canterbury addresses**:
+  **99.65 % accuracy on the held-out 20 % of streets** (5,979 of 6,000 checks, seed
+  20261108 — a set nothing was tuned on, **no slice below 98.75 %**; the tune-only
+  sample measures 99.97 %, the legacy seeded sample 99.5 % of 1,800)
+  ([`docs/evidence/phase-2.3/linz-accuracy-heldout.md`](../evidence/phase-2.3/linz-accuracy-heldout.md),
+  the before/after rounds and the slice table in
+  [ADR-027](../decisions/adr/ADR-027-address-quality-c3.md), PR #281).
 - **Design & quality gates** — the one token file drives every screen; the
   visual-regression gate (`scripts/ci/check-visual-baselines.mjs`, BUG-203) is
   live with 4 committed baselines (small day/night × 03-today/04-driving;
@@ -63,7 +67,7 @@ green, run 42363101590):
 | Dimension | Rating (of 10) | Headline number |
 |---|---|---|
 | Voice and hands-free | ■■■□□ (6) | WER 14.75 % quiet / **28.0 % van** / 12.5 % mix; false-action 0–0.83 %; intent is a template ceiling (BUG-210) |
-| Address accuracy | ■■■■□ (8) | **98.3 %** D8 on real LINZ, 225,151 addresses indexed |
+| Address accuracy | ■■■■□ (8) | **99.65 %** D8 on the held-out streets (5,979/6,000, 656,392 addresses indexed; no slice < 98.75 %) |
 | Route quality and speed | ■■□□□ (4) | real solver, A1-proven; no VRP eval set yet |
 | Offline and reliability | ■■■□□ (6) | **0 data loss** proven by A1; PMTiles pack pending |
 | Safety, privacy and trust | ■■■■□ (8) | 0 unaccepted advisories, tenant-isolation tests green, 0 copyleft |
@@ -90,8 +94,11 @@ and below it, each with a named owner and gate** — full detail in
 The release APK of every merge to `main` is at the stable link
 **https://github.com/haytham26/courier/releases/download/latest/courier.apk**
 (unsigned until the keystore secrets exist — it installs on a phone you
-control). If the link 404s, set the repository variable `EXPO_PUBLIC_AUTH_URL`
-to the auth service URL and re-run the Main APK workflow. Then run
+control). If the link 404s, set the repository variable `COURIER_STAGING_DOMAIN`
+(preferred — one domain pins the APK to staging) or `EXPO_PUBLIC_AUTH_URL` to the
+auth service URL and re-run the Main APK workflow; both names, and the keystore
+secrets, are in [`FOUNDER_TODO.md`](./FOUNDER_TODO.md) (the run is green but skips
+the build with a notice while they are unset). Then run
 [`docs/operations/ACCEPTANCE_TEST.md`](../operations/ACCEPTANCE_TEST.md) and
 record the result in `docs/status/FOUNDER_TODO.md`'s A6 row. Full run/deploy/
 keys instructions: [`docs/HANDOVER.md`](../HANDOVER.md).

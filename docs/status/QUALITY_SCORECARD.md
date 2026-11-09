@@ -35,9 +35,9 @@ Apache-2.0 but the weights are not shippable. D22 was updated and the replacemen
 
 | | What we measure | Our number | Best OSS | Best competitor | Rating |
 |---|---|---|---|---|---|
-| Correction accuracy on real LINZ data | ≥ 95 % | **98.3 %** D8 accuracy on the sampled real LINZ data, over **225,151 real Christchurch addresses** indexed in `data/linz/` ([evidence](../evidence/phase-2.3/linz-accuracy.md), [ADR-003](../decisions/adr/ADR-003-linz-data.md); the weekly rebuild job ships with T5) | RapidFuzz + a custom matcher (research) | Routific: geocode confidence flags only, no correction | `■■■■■` |
+| Correction accuracy on real LINZ data | ≥ 95 % | **99.65 %** D8 accuracy on the HELD-OUT 20 % of streets (5,979/6,000, seed 20261108 — nothing tuned on them, no slice below 98.75 %), over **656,392 real Canterbury addresses** indexed indexed in `data/linz/` ([evidence](../evidence/phase-2.3/linz-accuracy.md), [ADR-003](../decisions/adr/ADR-003-linz-data.md); the weekly rebuild job ships with T5) | RapidFuzz + a custom matcher (research) | Routific: geocode confidence flags only, no correction | `■■■■■` |
 | Wrong-house auto-corrections at confidence ≥ 0.9 | 0 | **UNVERIFIED** — the confidence-gated test is not written yet | — | — | `□□□□□` |
-| Address coverage | Canterbury (3 authorities) | **Christchurch 225,151 addresses indexed** (real LINZ); Waimakariri and Selwyn extracts are the T5 weekly job's next areas | Photon (typo-tolerant, self-hosted) | Spoke / Upper: cloud geocoders | `■■■■□` |
+| Address coverage | Canterbury (3 authorities) | **656,392 Canterbury addresses indexed** (real LINZ: Christchurch, Waimakariri and Selwyn); further areas are the T5 weekly job's next extracts | Photon (typo-tolerant, self-hosted) | Spoke / Upper: cloud geocoders | `■■■■□` |
 | Time to correct | ≤ 2 s p95 | **UNVERIFIED** (no p95 measurement yet) | — | — | `□□□□□` |
 
 ## 3. Route quality and speed
