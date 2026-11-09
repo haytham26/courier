@@ -217,42 +217,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // The session itself: the server first, the phone second.
   useEffect(() => {
-    // BUG-300: the restore bound exists only WHILE the server has not
-    // answered. A restore that has not answered by the deadline is a
-    // restore the app goes on without: the phone's own session, or the
-    // front door. The server's answer, when it finally comes, still lands
-    // through the same effect (its dependencies move) and moves the stack
-    // then.
-    //
-    // The timer used to be armed on EVERY run while the cleanup ran only on
-    // the fall-through path, so any settled run - a sign-in, a sign-out -
-    // left its timer live: 8 s later the stale timer re-read the phone's
-    // receipt and overwrote the settled answer. In the E2E sign-in flow the
-    // app signs out first (which discards the receipt for the rest of the
-    // app session, BUG-077's fail-closed), then signs back in: the stale
-    // timer then fired right after the sign-in, read the discarded receipt
-    // as gone, and flipped the freshly signed-in courier back to the front
-    // door. On the large AVD (411x731 dp) every command takes seconds, so
-    // the flow's own steps outlast the 8 s and the failure was deterministic
-    // on both large legs (run 42455960697); the small AVD only outran it.
-    // Arming only while pending, and clearing on every run of this effect,
-    // is the whole fix: no run can leave a timer behind it, so no stale
-    // timer can fire after its run is done.
+    // A restore that has not answered by the deadline is a restore the app
+    // goes on without: the phone's own session, or the front door. The
+    // server's answer, when it finally comes, still lands through the same
+    // effect (its dependencies move) and moves the stack then.
+    const bounded = setTimeout(() => {
+      void readOfflineSession().then((offline) => {
+        if (offline) {
+          setUser(toAuthUser(offline.user));
+          setStatus('offline');
+        } else {
+          setUser(null);
+          setStatus('signed-out');
+        }
+      });
+    }, SESSION_RESTORE_TIMEOUT_MS);
+
     if (isPending) {
-      const bounded = setTimeout(() => {
-        void readOfflineSession().then((offline) => {
-          if (offline) {
-            setUser(toAuthUser(offline.user));
-            setStatus('offline');
-          } else {
-            setUser(null);
-            setStatus('signed-out');
-          }
-        });
-      }, SESSION_RESTORE_TIMEOUT_MS);
-      return () => {
-        clearTimeout(bounded);
-      };
+      return;
     }
 
     if (data?.user) {
@@ -317,6 +299,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(null);
     setStatus('signed-out');
+    return () => {
+      clearTimeout(bounded);
+    };
   }, [data, error, isPending]);
 
   // BUG-092 (the C1 audit squad 1's finding): the signed-in driver is

@@ -97,40 +97,6 @@ research -> BUG-270 PR (android-e2e.yml is mine now) -> voice eval honesty
 
 ---
 
-## 2026-11-08: BUG-270 PR opened — the large-screen AVD is the lead's now
-
-`.github/workflows/android-e2e.yml` moved to the lead in PR #276 (PLAYBOOK §16),
-so BUG-270 is ours: this PR adds a `profile` matrix dimension to the e2e job —
-`small` (empty `profile:` input = avdmanager's default device, the one every
-green run so far booted; verified in the action's own `createAvd`: an empty
-profile passes no `--device`) and `large` (`Nexus 6`, 1440×2560 google_apis
-x86_64) — on BOTH api 34 and 35 legs, so P7's two-screen-size half runs. Pin
-discipline kept and extended: the pins fingerprint now carries
-`profile=.../device=...` and the AVD cache key is
-`avd-<os>-<api>-<profile>-google-apis-x86_64-<pins-hash>` with NO restore-keys
-(exact-only restore, per check-e2e-avd-restore-keys.mjs); the evidence
-artifact is `android-e2e-evidence-api<api>-<profile>` and e2e-pins.txt records
-the profile. BUGS.md BUG-270 -> doing; acceptance README §3 amended. The
-screen-recordings.yml half (P4's 8 pending large/200% baselines) is the
-backend's file — the question is in the #276 entry above.
-
-Gates run locally on the branch: check-workflows, check-e2e-pins,
-check-e2e-avd-restore-keys, check-e2e-dispatch, check-emulator-gpu,
-check-action-pins, parity, doc-links, control-chars, mojibake, markers.
-Red-first on the first run (42452385800): both `large` legs died at AVD creation —
-'No device found matching --device Pixel 6' (jobs 128648219110/128648219135);
-plain 'Pixel 6' is not in the 2026 cmdline-tools device list. Fixed in the same
-PR by using `Nexus 6` (1440x2560), the profile screen-recordings.yml already boots
-green on this pinned stack — a harness fix, not an app change, and no re-run was
-spent on the dead name (§17). Note: main-apk.yml fails on EVERY push including
-main (b76c3331, b389e564) — pre-existing, not this PR, not chased (§16).
-
-This PR's diff touches `.github/workflows/android-e2e.yml`, so the pipeline
-leg DOES run on it: 4 Maestro legs + A1. The green large legs are the evidence
-that closes BUG-270 (status -> testing -> fixed with the run id).
-
----
-
 ## 2026-11-08, lead session after the directive: PR #276 merged, audio-injection research done
 
 **PR #276 merged as `abd3754`** (all-green head `2726fc93`: 13 completed checks

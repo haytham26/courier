@@ -16,9 +16,8 @@ on:
     # are filtered at the JOB level below, by the `changes` job. A filter
     # on the trigger keeps the whole workflow from EXISTING for a change it
     # does not match, so the check names it would report (`Build the release
-    # APK`, `Run the Maestro flows on the emulator (api 34, small)` - four legs
-    # since BUG-270 (api 34/35 x small/large) - and `A1: the app against the
-    # real API (no mock)`) are never reported at all - and a
+    # APK`, `Run the Maestro flows on the emulator (api 34)`, `A1: the app
+    # against the real API (no mock)`) are never reported at all - and a
     # required check that is not reported is a PR that can never be merged,
     # forever pending. A job that runs and reports `skipped` is something
     # branch protection can actually reason about.
@@ -295,7 +294,7 @@ jobs:
           retention-days: 7
 
   e2e:
-    name: Run the Maestro flows on the emulator (api ${{ matrix.api }}, ${{ matrix.profile }})
+    name: Run the Maestro flows on the emulator (api ${{ matrix.api }})
     # `always()` because the legs cannot run without the APK the build
     # job produced: when the build is skipped, this job is skipped too -
     # and a skipped job still reports, which is the whole point of item 3g.
@@ -307,34 +306,10 @@ jobs:
     # Chromium init, so the gate runs on the newer api-35 image next to it:
     # the flows must be green on both, and a crash that only fires on one
     # image names itself in the evidence.
-    # BUG-270 (the second, large-screen AVD; this workflow is the LEAD's since
-    # the founder directive 2026-11-08): the matrix is api x profile, so P7's
-    # "TWO screen sizes" half runs too. `small` passes no profile to the action
-    # (avdmanager's own default device - the one every green run so far booted,
-    # an empty input means no --device per the action's own createAvd);
-    # `large` boots a Nexus 6 (1440x2560, google_apis x86_64) - the profile
-    # screen-recordings.yml already boots green on this pinned stack. (`Pixel 6`
-    # is NOT in the SDK's device list: run 42452385800, jobs 128648219110 and
-    # 128648219135, both red with 'No device found matching --device Pixel 6';
-    # recent cmdline-tools dropped the plain Pixel 6 entry.) The pins
-    # fingerprint and the AVD cache key below both carry the profile, so a
-    # profile change is a cache miss by construction (BUG-065/BUG-068 discipline).
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - api: 34
-            profile: small
-            device: ''
-          - api: 34
-            profile: large
-            device: 'Nexus 6'
-          - api: 35
-            profile: small
-            device: ''
-          - api: 35
-            profile: large
-            device: 'Nexus 6'
+        api: [34, 35]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -410,15 +385,12 @@ jobs:
           # itself moved underneath.
           rev_var="SYSIMG_REV_${{ matrix.api }}"
           opts="-no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -memory 6144 -cores 4"
-          # BUG-270: the fingerprint carries the screen profile too, so an AVD
-          # of the OTHER size is never restored under this key.
-          fingerprint="$MAESTRO_VERSION/$MAESTRO_SHA256/$EMULATOR_BUILD/android-${{ matrix.api }}/google_apis/x86_64/${!rev_var}/profile=${{ matrix.profile }}/device='${{ matrix.device }}'/$opts"
+          fingerprint="$MAESTRO_VERSION/$MAESTRO_SHA256/$EMULATOR_BUILD/android-${{ matrix.api }}/google_apis/x86_64/${!rev_var}/$opts"
           hash=$(printf '%s' "$fingerprint" | sha256sum | cut -d' ' -f1 | cut -c1-16)
           echo "hash=$hash" >> "$GITHUB_OUTPUT"
           # The revision is also an output, because caches and assertions name it
           # below and a matrix step cannot read a per-api env key by name.
           echo "revision=${!rev_var}" >> "$GITHUB_OUTPUT"
-          echo "profile=${{ matrix.profile }}" >> "$GITHUB_OUTPUT"
           echo "pin fingerprint: $fingerprint -> $hash (system image revision ${!rev_var})"
 
       # The system image is PINNED from here on (audit item 3f, 2026-11-05).
@@ -517,8 +489,7 @@ jobs:
           # failure, re-armed one line below the comment that describes fixing it.
           # Only an EXACT key restores now, and a pin change is a cache miss that
           # builds the right AVD.
-          # BUG-270: the key carries the profile as well as the pins fingerprint.
-          key: avd-${{ runner.os }}-${{ matrix.api }}-${{ matrix.profile }}-google-apis-x86_64-${{ steps.pins.outputs.hash }}
+          key: avd-${{ runner.os }}-${{ matrix.api }}-google-apis-x86_64-${{ steps.pins.outputs.hash }}
 
       - name: Install Maestro
         env:
@@ -550,9 +521,6 @@ jobs:
           api-level: ${{ matrix.api }}
           target: google_apis
           arch: x86_64
-          # BUG-270: '' = avdmanager's default device (small, as before);
-          # 'Nexus 6' = the large 1440x2560 profile (proven by screen-recordings.yml).
-          profile: ${{ matrix.device }}
           disable-animations: true
           # BUG-060: software GL. Without a -gpu flag the emulator picks its own
           # host GL mode, and on the headless runner it took the gate down with
@@ -599,8 +567,7 @@ jobs:
             echo "maestro_sha256=$MAESTRO_SHA256"
             echo "emulator_build=$EMULATOR_BUILD"
             echo "system_image_revision=${rev:-unknown}"
-            echo "avd_cache_key=avd-${{ runner.os }}-${{ matrix.api }}-${{ matrix.profile }}-google-apis-x86_64-${{ steps.pins.outputs.hash }}"
-            echo "profile=${{ matrix.profile }}"
+            echo "avd_cache_key=avd-${{ runner.os }}-${{ matrix.api }}-google-apis-x86_64-${{ steps.pins.outputs.hash }}"
           } | tee .maestro/evidence/e2e-pins.txt
           # The emulator-runner action installs the image from the stable channel
           # by api-level (audit item 3f): the pre-step pinned it and asserted the
@@ -619,7 +586,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: android-e2e-evidence-api${{ matrix.api }}-${{ matrix.profile }}
+          name: android-e2e-evidence-api${{ matrix.api }}
           path: |
             .maestro/evidence/**
             apk/**
