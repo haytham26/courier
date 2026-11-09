@@ -26,6 +26,7 @@
 //      is present, so the temp trees of this check's own tests stay minimal.)
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { streetKeyOf, streetKeyPattern } from '../eval/street-key.mjs';
 
 const BRAIN = 'services/courier-voice/app/offline_brain.py';
 const BUILDER = 'scripts/eval/build-voice-eval.mjs';
@@ -104,23 +105,31 @@ if (baseline && Array.isArray(baseline.overlaps)) {
 let heldOutStreetCount = 0;
 if (existsSync(HELDOUT_STREETS)) {
   const heldOutDocument = JSON.parse(readFileSync(HELDOUT_STREETS, 'utf8'));
-  const heldOutList = Array.isArray(heldOutDocument.streets) ? heldOutDocument.streets : [];
+  // The shared list (founder instruction 2026-11-09, PART B) spells each street in
+  // the backend's road_key normalisation ("bealey ave"), while the templates and the
+  // regexes spell roads the way a courier says them ("Bealey Avenue"). A held-out
+  // street is therefore matched by KEY, in either suffix spelling,
+  // case-insensitively: the normalisation, not a case-sensitive substring, decides
+  // "spelled out" (a plain substring test on the keys never fires and proves
+  // nothing).
+  const heldOutList = (Array.isArray(heldOutDocument.streets) ? heldOutDocument.streets : []).map(
+    (street) => streetKeyOf(street),
+  );
   heldOutStreetCount = heldOutList.length;
   const brainPatterns = [...brain.matchAll(/pattern=re\.compile\(\s*r?"([^"]+)"/g)].map((m) => m[1]);
-  for (const street of heldOutList) {
-    const escaped = street.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const literal = new RegExp(`(?<![A-Za-z])${escaped}(?![A-Za-z])`);
+  for (const streetKey of heldOutList) {
+    const literal = new RegExp(`(?<![A-Za-z])${streetKeyPattern(streetKey)}(?![A-Za-z])`, 'i');
     if (literal.test(builder)) {
       problems.push(
-        `the eval generator spells out the held-out street "${street}" as a literal - ` +
+        `the eval generator spells out the held-out street "${streetKey}" as a literal - ` +
           'the gold templates must not be derived from held-out-street text',
       );
     }
     for (const pattern of brainPatterns) {
       if (literal.test(pattern)) {
         problems.push(
-          `the offline brain's regex spells out the held-out street "${street}" (pattern ${pattern.slice(0, 60)}) - ` +
-            'the parser regexes must not be derived from held-out-street text',
+          `the offline brain's regex spells out the held-out street "${streetKey}" (pattern ${pattern.slice(0, 60)}) - ` +
+          'the parser regexes must not be derived from held-out-street text',
         );
       }
     }

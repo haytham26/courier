@@ -131,21 +131,47 @@ ones a courier says.
 Nothing is ever tuned on a held-out set. There are two, and they are different
 kinds:
 
-1. **The synthetic street-split set — built and committed.** 20 % of the
-   Canterbury _streets_ (1 359 of 6 799 distinct `road` values of the LINZ
-   index), split by street, NEVER by address: every address of a held-out
-   street is held out with it. The list is `manifest/heldout_streets.json`,
-   committed, seeded (mulberry32, seed 20261108, a documented partial
-   Fisher-Yates over the sorted street list) and byte-identical on every
-   regeneration: `node scripts/eval/build-heldout-streets.mjs [--linz-dir
-data/linz]`. `scripts/eval/build-voice-eval.mjs` excludes every
-   held-out-street address from the **default** manifest, so nothing is ever
-   tuned on held-out streets, and emits the held-out-only manifest under
-   `manifest/heldout/` with `--heldout`, every row tagged `held_out: true`.
+1. **The synthetic street-split set — the shared backend list, adopted.** Since
+   the founder instruction of 2026-11-09 (PART B), the voice lane and the
+   backend share ONE held-out street list: the backend's committed fixture,
+   `services/api/tests/fixtures/linz-holdout-streets.txt` — **1 360 of 6 802**
+   Canterbury streets, seed 20261108, 20 %, split by street, NEVER by address
+   (every address of a held-out street is held out with it). The backend
+   generated it with `scripts/data/split-linz-holdout.py` on 2026-11-08 and
+   measured its 99.65 % accuracy on it, so the voice manifests were regenerated
+   FROM that list rather than keeping a voice-local one (the retired list was
+   1 359 of 6 799 streets, derived from an older LINZ revision, sha256
+   `8230c5cb…`; the switch is recorded in
+   `docs/evidence/voice-heldout/README.md` with both shas).
+
+   `packages/eval/voice/manifest/heldout_streets.json` is the voice view of that
+   list: the streets exactly as the backend spells them (its `road_key`
+   normalisation — lower-case, suffix abbreviated, so "Bealey Avenue" and
+   "Bealey Ave" are one street), the source path and the source's logical-byte
+   sha256 recorded. `node scripts/eval/build-heldout-streets.mjs` rebuilds it
+   from the committed fixture (byte-identical, no local `data/` revision is
+   read, so it runs on any machine), and
+   `scripts/eval/build-voice-eval.mjs`
+
+   - excludes every held-out-street address from the **default** manifest, so
+     nothing is ever tuned on held-out streets (comparing by street key),
+   - emits the held-out-only manifest under `manifest/heldout/` with
+     `--heldout`, every row tagged `held_out: true`.
+
    `scripts/eval/check-voice-eval.mjs` refuses a main manifest containing a
    held-out street and a held-out manifest containing a non-held-out street,
-   naming the row; `scripts/ci/check-parser-circularity.mjs` proves the gold
-   templates and the parser regexes carry no held-out-street text.
+   naming the row, and it re-reads the shared fixture and refuses when its
+   bytes no longer match the manifest's recorded `source_sha256` — that
+   refusal IS the announcement the backend owes this lane: the list must never
+   change silently. `scripts/ci/check-parser-circularity.mjs` proves the gold
+   templates and the parser regexes carry no held-out-street text (matched by
+   key, in either suffix spelling, case-insensitively).
+
+   **No voice tuning has used any street of this list** (recorded 2026-11-09):
+   the hotword export (BUG-277) has not been fed to any STT run yet, and the
+   only measurements so far read the eval set rather than fitting it. When the
+   biasing lane runs, the held-out keys are excluded from its vocabulary.
+
 2. **The founder's real-sentence set — not built yet.** ~100 sentences as real
    couriers say them (ADR-028 / D65, `docs/status/FOUNDER_TODO.md`,
    `manifest/held_out.jsonl`). **Until it exists, the §22 B threshold
@@ -155,7 +181,6 @@ data/linz]`. `scripts/eval/build-voice-eval.mjs` excludes every
 
 The synthetic set measures the pipeline on streets it has never seen; the
 real-sentence set will measure it on sentences nobody in this repo wrote.
-
 ## What is here (the open-data audio)
 
 The three English slices are **built from open data** (A3, AUDIT §A3): 600
