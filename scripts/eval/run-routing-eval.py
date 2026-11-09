@@ -372,11 +372,19 @@ def run_ortools(request: RouteRequest, instance_id: str, budget_s: float) -> lis
     ends = [size - 1] if finish is not None else [0]
     manager = pywrapcp.RoutingIndexManager(size, 1, starts, ends)
     routing = pywrapcp.RoutingModel(manager)
-    # one distance/duration arc per ordered pair
+    # One arc per ordered pair. The transit of an arc is the SERVICE TIME at
+    # the origin plus the ROAD TRAVEL to the destination, which is the shape
+    # OR-Tools' time dimension expects: the cumulative variable at a node is
+    # then the arrival at that node, and the window belongs on it. Leaving the
+    # service out of the arc would make the model's day shorter than the core's
+    # and its "feasible" plans would arrive late when re-timed.
     def duration_callback(from_index: int, to_index: int) -> int:
         from_node = manager.IndexToNode(from_index)
         to_node = manager.IndexToNode(to_index)
-        return travel(from_node, to_node)
+        service = 0
+        if 1 <= from_node <= len(stops):
+            service = _service_seconds(stops[from_node - 1], constraints)
+        return service + travel(from_node, to_node)
 
     duration_index = routing.RegisterTransitCallback(duration_callback)
     routing.SetArcCostEvaluatorOfAllVehicles(duration_index)

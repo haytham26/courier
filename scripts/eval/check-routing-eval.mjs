@@ -342,17 +342,13 @@ function main() {
     if (areas.size < 3) {
       fail(`the pool covers only ${areas.size} areas (want the three Canterbury ones)`);
     }
-    for (const area of ['christchurch', 'selwyn', 'waimakariri']) {
-      const held = pool.filter((stop) => stop.area === area).length;
-      if (held < 252) {
-        fail(`${area} holds ${held} stops: a 250-stop day needs 250 plus a depot and a finish`);
-      }
-    }
     for (const [area, depot] of Object.entries(poolDoc.depots ?? {})) {
       if (!poolIndex.has(depot.pool_index)) fail(`the ${area} depot is not a pool stop`);
     }
     for (const [area, finish] of Object.entries(poolDoc.finishes ?? {})) {
-      if (!poolIndex.has(fail.pool_index ?? fail.i)) fail(`the ${area} finish is not a pool stop`);
+      if (!poolIndex.has(finish.pool_index ?? finish.i)) {
+        fail(`the ${area} finish is not a pool stop`);
+      }
     }
   }
 
@@ -368,6 +364,18 @@ function main() {
     fail(`the set holds ${instances.length} instances (the floor is ${MIN_INSTANCES}: `
       + `${SIZES.join('/')} stops x ${VARIANTS.length} variants x ${SEEDS} seeds)`);
   }
+
+    for (const area of ['christchurch', 'selwyn', 'waimakariri']) {
+      const held = pool.filter((stop) => stop.area === area).length;
+      // an area must hold the biggest day it is asked to draw, plus the depot
+      // and the finish point that stand outside the draw
+      const biggest = instances
+        .filter((instance) => instance.area === area)
+        .reduce((max, instance) => Math.max(max, instance.size ?? 0), 0);
+      if (held < biggest + 2) {
+        fail(`${area} holds ${held} stops but is asked for a ${biggest}-stop day, its depot and its finish`);
+      }
+    }
   const seen = new Set();
   for (const instance of instances) {
     if (seen.has(instance.id)) fail(`${instance.id} appears twice`);
@@ -474,7 +482,7 @@ function main() {
       .map(([name]) => name);
     const baselineTravels = Object.entries(engines)
       .filter(([name]) => name !== 'ours')
-      .map(([, value]) => (walks[name] ? value.travel_s : null))
+      .map(([name, value]) => (walks[name] ? value.travel_s : null))
       .filter((value) => typeof value === 'number' && value > 0);
     rows.push({
       id: instance.id,
