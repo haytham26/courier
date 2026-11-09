@@ -53,9 +53,12 @@ so far — every line names the run, the artifact and the job that proves it.
   same reason (`docs/evidence/design/baselines/manifest.json` — 4 committed
   small day/night baselines of screens 03-today and 04-driving, 8 pending
   large/200 % views).
-- Filed as **BUG-270** (2026-11-08): the second AVD profile lives in the
-  platform-owned `.github/workflows/android-e2e.yml` /
-  `screen-recordings.yml`, which the lead session may not touch. The flows
+- Filed as **BUG-270** (2026-11-08): the second AVD profile lives in
+  `.github/workflows/android-e2e.yml` — lead-owned since the founder directive
+  2026-11-08; the BUG-270 PR adds the `large` (Nexus 6, 1440×2560 — the profile screen-recordings.yml already boots) leg to the
+  matrix on both api legs, with the profile in the pins fingerprint and the AVD
+  cache key — and in `screen-recordings.yml` (the backend's; asked in
+  `docs/log/CURRENT.md`). The flows
   are size-agnostic (id/text selectors; `scrollUntilVisible` with
   `centerElement` where the dock could swallow a tap), so closing BUG-270 is
   a workflow-matrix change plus promoting the large baselines
