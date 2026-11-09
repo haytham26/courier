@@ -630,3 +630,67 @@ class TestTheHeldOutMeasurement:
         # Refused, and the refusal names the street it refused.
         assert code == 2
         assert any("Bealey Avenue" in message for message in caplog.messages)
+
+
+class TestTheDirectiveTargets:
+    """The founder directive's targets, published by the run itself.
+
+    A target the run could not measure is published as NOT MEASURED with its
+    reason, and never as a pass (EVAL.md section 5): the headline numbers are
+    lifted into the final report straight from this block, so a false zero
+    here is a false claim there.
+    """
+
+    def measure(self, root: Path, with_judge: bool) -> dict[str, Any]:
+        measurement = TestTheHeldOutMeasurement()
+        manifest = measurement.make_tree(root, held_out=True)
+        measurement.make_data(manifest)
+        args = argparse.Namespace(
+            manifest="manifest",
+            data="manifest/data",
+            out="results",
+            root=str(root),
+            no_judge=not with_judge,
+        )
+        code = run(
+            args,
+            judge=TestTheBuild.FakeJudge(
+                "delivered at 45 Poulson Street, Addington"
+            )
+            if with_judge
+            else None,
+        )
+        assert code == 0
+        return json.loads((root / "results" / "summary.json").read_text(encoding="utf-8"))
+
+    def test_the_directive_targets_are_published_with_the_slice_each_number_came_from(
+        self, tmp_path: Path
+    ) -> None:
+        summary = self.measure(tmp_path, with_judge=True)
+        by_target = {entry["target"]: entry for entry in summary["directive_targets"]}
+        # The WER targets name the slice they are measured on...
+        assert by_target["wer_quiet"]["slice"] == "en_nz_quiet"
+        assert by_target["wer_van"]["slice"] == "en_nz_van"
+        # ...and every measured one carries the counts behind its number.
+        assert by_target["wer_quiet"]["counts"].strip() != ""
+        assert by_target["false_action"]["counts"].strip() != ""
+        # This tree has no van rows, so the van WER is unmeasured here - which
+        # is exactly what the block must say.
+        assert by_target["wer_van"]["verdict"] == "NOT MEASURED"
+        # And the quiet WER of a judge that answered a command against the
+        # clip's own sentence is a measured FAIL, not a rounded pass.
+        assert by_target["wer_quiet"]["verdict"] == "FAIL"
+
+    def test_a_target_that_cannot_be_measured_is_published_as_not_measured_never_as_a_pass(
+        self, tmp_path: Path
+    ) -> None:
+        summary = self.measure(tmp_path, with_judge=False)
+        by_target = {entry["target"]: entry for entry in summary["directive_targets"]}
+        # Nothing was transcribed, so nothing was measured: not one of these
+        # legs may read as a pass.
+        assert by_target["intent_on_stt"]["verdict"] == "NOT MEASURED"
+        assert by_target["address_extraction_on_stt"]["verdict"] == "NOT MEASURED"
+        assert by_target["false_action"]["verdict"] == "NOT MEASURED"
+        assert all(entry["verdict"] != "PASS" for entry in summary["directive_targets"])
+        # The un-judged run does not publish a false zero either.
+        assert summary["false_action_rate_on_open_speech"] is None
