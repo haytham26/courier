@@ -771,11 +771,21 @@ def _safe_unpack(archive_path: Path, target_dir: Path) -> None:
 
 
 def _model_dirs(target_dir: Path) -> list[Path]:
-    """The unpacked model directories under `target_dir`, by their encoder."""
+    """The unpacked model directories under `target_dir`, by their encoder.
+
+    The encoder is what makes a directory a model directory, and the test is
+    `any(...)` on purpose (BUG-301): `Path.glob` answers a generator, which is
+    ALWAYS truthy, so a directory that merely exists used to count as one. A
+    run killed between the archive's members left the decoder and the tokens
+    without the encoder; `ensure_judge` then saw a model directory, skipped the
+    re-unpack, `load_judge` answered None, and the whole measurement was
+    written without a WER with no explanation. Now the incomplete directory is
+    empty for this test, the archive unpacks again, and the judge loads.
+    """
     return [
         candidate
         for candidate in target_dir.iterdir()
-        if candidate.is_dir() and candidate.glob("tiny.en-encoder.onnx")
+        if candidate.is_dir() and any(candidate.glob("tiny.en-encoder.onnx"))
     ]
 
 

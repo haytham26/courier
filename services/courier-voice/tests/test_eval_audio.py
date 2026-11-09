@@ -24,6 +24,7 @@ import soundfile as sf
 from app.eval_audio import (
     _safe_unpack,
     assign_clips,
+    ensure_judge,
     intent_of,
     normalise,
     run,
@@ -694,3 +695,52 @@ class TestTheDirectiveTargets:
         assert all(entry["verdict"] != "PASS" for entry in summary["directive_targets"])
         # The un-judged run does not publish a false zero either.
         assert summary["false_action_rate_on_open_speech"] is None
+
+
+class TestTheJudgeArchive:
+    """The judge archive, and the run that was killed mid-unpack.
+
+    `ensure_judge` unpacks the archive the fetcher downloaded and re-uses the
+    directory that is already on disk. A run killed between the two - the
+    extraction is member by member, so a kill leaves a directory with the
+    decoder and the tokens but no encoder - must be repaired from its own
+    archive, not silently scored without a WER (BUG-301): the encoder is what
+    makes a directory a model directory.
+    """
+
+    ARCHIVE = "sherpa-onnx-whisper-tiny.en.tar.bz2"
+    MODEL = "sherpa-onnx-whisper-tiny.en"
+
+    @staticmethod
+    def make_archive(path: Path) -> None:
+        with tarfile.open(path, "w:bz2") as archive:
+            for member in ("tiny.en-decoder.onnx", "tiny.en-encoder.onnx", "tiny.en-tokens.txt"):
+                payload = member.encode("utf-8")
+                info = tarfile.TarInfo(f"{TestTheJudgeArchive.MODEL}/{member}")
+                info.size = len(payload)
+                archive.addfile(info, io.BytesIO(payload))
+
+    def test_an_interrupted_unpack_is_repaired_from_its_own_archive(self, tmp_path: Path) -> None:
+        target = tmp_path / "stt"
+        target.mkdir()
+        # The killed run left the directory and the decoder, not the encoder.
+        partial = target / self.MODEL
+        partial.mkdir()
+        (partial / "tiny.en-decoder.onnx").write_bytes(b"tiny.en-decoder.onnx")
+        self.make_archive(target / self.ARCHIVE)
+
+        model_dir = ensure_judge(target)
+
+        # The archive repairs what the kill took, and the directory it hands
+        # back really is a model directory.
+        assert model_dir is not None
+        assert (model_dir / "tiny.en-encoder.onnx").exists()
+        assert (model_dir / "tiny.en-tokens.txt").exists()
+
+    def test_a_directory_with_no_encoder_is_not_a_model_directory(self, tmp_path: Path) -> None:
+        # The same claim from the other side: a directory that merely exists is
+        # not a model directory, which is what makes the repair happen.
+        target = tmp_path / "stt"
+        target.mkdir()
+        (target / "something-else").mkdir()
+        assert ensure_judge(target) is None
