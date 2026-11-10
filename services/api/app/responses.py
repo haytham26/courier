@@ -196,6 +196,20 @@ class EntitlementResponse(BaseModel):
     features: list[str]
 
 
+class CostResponse(BaseModel):
+    """The caller's own budget: what is spent and what is left, per window.
+
+    An unbounded window answers `null` (the deployment set no limit) rather
+    than a fake infinity, and a spent budget answers zero - the guard never
+    lets the remaining go negative."""
+
+    courier_daily_usd: float | None = None
+    courier_monthly_usd: float | None = None
+    tenant_daily_usd: float | None = None
+    global_daily_usd: float | None = None
+    spent: dict[str, float]
+
+
 class BriefingResponse(BaseModel):
     """The intake's answer when the graph finished (`_intake_answer`)."""
 
