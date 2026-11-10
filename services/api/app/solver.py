@@ -225,6 +225,12 @@ class PyVRPEngine:
 
     name = "pyvrp"
 
+    #: The budget the WINDOW-DROPPED retry spends, set for one call and
+    #: consumed by the next `_budget` (the retry is cheaper on purpose: the
+    #: day's windows are already known to be unmeetable, and the core reports
+    #: every violation honestly).
+    _retry_budget: int | None = None
+
     def __init__(self, iterations: int | None = None, seed: int = SEED) -> None:
         # `None` is the production mode: the budget follows the day's size
         # (`iterations_for`). A number pins it, which is how the tests and the
@@ -235,7 +241,7 @@ class PyVRPEngine:
     def _budget(self, request: RouteRequest) -> int:
         if self._iterations is not None:
             return self._iterations
-        retry = getattr(self, "_retry_budget", None)
+        retry = self._retry_budget
         if retry is not None:
             self._retry_budget = None
             return retry
