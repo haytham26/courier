@@ -48,10 +48,8 @@ def cost_repo() -> InMemoryRepo:
 def web_client(client: TestClient) -> Iterator[TestClient]:
     """The authenticated client from the suite's own fixture (its bearer token
     names the courier the guard scopes by)."""
-    repo = app.dependency_overrides.get(get_repo)
-    if repo is None:
-        repo = InMemoryRepo()
-        app.dependency_overrides[get_repo] = lambda: repo
+    if app.dependency_overrides.get(get_repo) is None:
+        app.dependency_overrides[get_repo] = InMemoryRepo
     yield client
 
 

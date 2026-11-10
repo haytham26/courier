@@ -30,8 +30,23 @@ from app.cost_guard import (
 )
 
 
-def settings(**kwargs: object) -> CostGuardSettings:
-    return CostGuardSettings(**kwargs)
+def settings(
+    *,
+    courier_daily_usd: float | None = None,
+    courier_monthly_usd: float | None = None,
+    tenant_daily_usd: float | None = None,
+    global_daily_usd: float | None = None,
+    input_price_per_mtoken: float = 0.15,
+    output_price_per_mtoken: float = 0.60,
+) -> CostGuardSettings:
+    return CostGuardSettings(
+        courier_daily_usd=courier_daily_usd,
+        courier_monthly_usd=courier_monthly_usd,
+        tenant_daily_usd=tenant_daily_usd,
+        global_daily_usd=global_daily_usd,
+        input_price_per_mtoken=input_price_per_mtoken,
+        output_price_per_mtoken=output_price_per_mtoken,
+    )
 
 
 class TestTheVerdict:
