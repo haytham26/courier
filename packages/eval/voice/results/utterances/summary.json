@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-10T12:14:11+1300",
+ "generated": "2026-11-10T13:35:05+1300",
  "target": "AUDIT_2026-10-25 §A3: >=500 utterances from open data, WER and the parser ceiling per slice",
  "built": 600,
  "judge": "sherpa-onnx whisper tiny.en (Whisper weights MIT, sherpa-onnx runtime Apache-2.0)",
