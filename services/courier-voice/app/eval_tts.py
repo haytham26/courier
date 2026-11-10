@@ -55,7 +55,6 @@ import os
 import subprocess
 import sys
 import tarfile
-import urllib.request
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
@@ -304,21 +303,28 @@ def sha256_of(path: Path) -> str:
 
 
 def download(url: str, destination: Path, expected_sha: str) -> None:
-    """One pinned artefact, verified byte for byte before it is kept."""
+    """One pinned artefact, verified byte for byte before it is kept.
+
+    The stream is read through httpx (the service's own HTTP client, already a
+    dependency) rather than `urllib`: the URLs here are this module's own pinned
+    constants, and httpx states that without the file-scheme ambiguity a
+    scanner reads into `urlopen`.
+    """
+    import httpx  # noqa: PLC0415
+
     destination.parent.mkdir(parents=True, exist_ok=True)
     partial = destination.with_name(destination.name + ".part")
     logger.info("fetching %s", url)
-    with urllib.request.urlopen(url) as response, partial.open("wb") as handle:
-        while True:
-            block = response.read(1024 * 1024)
-            if not block:
-                break
-            handle.write(block)
+    with httpx.stream("GET", url, timeout=300.0, follow_redirects=True) as response:
+        response.raise_for_status()
+        with partial.open("wb") as handle:
+            for block in response.iter_bytes(1024 * 1024):
+                handle.write(block)
     actual = sha256_of(partial)
     if actual != expected_sha:
         partial.unlink(missing_ok=True)
         raise ValueError(
-            f"{url} answered {partial.parent} with sha256 {actual}, "
+            f"{url} answered bytes whose sha256 is {actual}, "
             f"the pinned sha256 is {expected_sha} - refusing it"
         )
     partial.replace(destination)
@@ -342,9 +348,26 @@ def ensure_voice_models(data_dir: Path) -> tuple[Path, Path]:
         download(TTS_LEXICON_URL, lexicon, TTS_LEXICON_SHA256)
     model_dir = root / TTS_MODEL_NAME
     if not model_dir.exists():
-        with tarfile.open(archive, "r:bz2") as handle:
-            handle.extractall(root, filter="data")
+        unpack_the_model(archive, root)
     return model_dir, lexicon
+
+
+def unpack_the_model(archive_path: Path, root: Path) -> None:
+    """Unpack the pinned voice archive, member by member.
+
+    The same rule `app/eval_audio.py`'s `_safe_unpack` carries for the judge's
+    archive: a tar is untrusted input, so every member is checked before it is
+    written and one that would leave the target directory is REFUSED by name
+    rather than extracted. No `extractall`: the refusal is the point.
+    """
+    with tarfile.open(archive_path, "r:bz2") as archive:
+        for member in archive.getmembers():
+            parts = Path(member.name).parts
+            if member.name.startswith(("/", "\\")) or ".." in parts:
+                raise ValueError(f"the archive's member {member.name!r} escapes the target {root}")
+            if not member.isfile() and not member.isdir():
+                continue
+            archive.extract(member, root, filter="data")
 
 
 def the_engine(model_dir: Path, lexicon: Path) -> Any:
@@ -522,7 +545,7 @@ def voice_block() -> dict[str, Any]:
     }
 
 
-def write_wav(path: Path, samples: Sequence[float]) -> str:
+def write_wav(path: Path, samples: np.ndarray | Sequence[float]) -> str:
     """One file, PCM_16 mono at the recognizer's rate; answers its sha256."""
     path.parent.mkdir(parents=True, exist_ok=True)
     sf.write(str(path), np.asarray(samples, dtype=np.float32), OUTPUT_RATE, subtype="PCM_16")
@@ -556,7 +579,7 @@ def build(
         spoken = spoken_form(text)
         samples = synthesise(engine, spoken)
         speech = to_output_rate(samples)
-        row = {
+        row: dict[str, Any] = {
             "script_id": str(script.get("id")),
             "slice": slice_id,
             "gold_intent": str(script.get("gold_intent")),
@@ -592,7 +615,7 @@ def build(
                         "variant must differ from its quiet twin ONLY by the bed's gain"
                     )
                 variant = f"snr{int(snr)}"
-                van_row = {
+                van_row: dict[str, Any] = {
                     **{
                         key: value
                         for key, value in row.items()

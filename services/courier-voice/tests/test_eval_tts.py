@@ -15,25 +15,31 @@ sha256 is what the simulation therefore pins.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
+import io
 import json
 import math
+import tarfile
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
 import pytest
+import soundfile as sf
 
 from app import licences
 from app.eval_tts import (
     NATIVE_RATE,
     OUTPUT_RATE,
     TTS_MODEL_SHA256,
+    assemble,
     build,
     gate_problems,
     number_to_words,
     oov_words,
+    read_jsonl,
     select_scripts,
     sha256_of,
     spoken_form,
@@ -126,16 +132,66 @@ def _sample_scripts() -> list[dict[str, Any]]:
 
 
 def _keys() -> set[str]:
-    """The lexicon's keys: the pinned pack's entries, read once."""
-    keys: set[str] = set()
-    for line in (
-        (ROOT / "data/voice/tts-models/lexicon-en-us.txt").read_text(encoding="utf-8").splitlines()
-    ):
-        if " || " in line:
-            key = line.split(" || ", 1)[0].strip().lower()
-            if key:
-                keys.add(key)
-    return keys
+    """A lexicon's keys, as the builder reads them.
+
+    The suite uses the words of the shapes it asserts rather than the pinned
+    168 655-entry pack on disk: `data/voice/` is git-ignored and a fresh clone
+    (CI included) has never fetched it, so a suite that read the real file
+    would be a suite that only passes on the machine that built the audio. The
+    real lexicon's coverage of the set is a MEASURED fact, published in
+    `docs/evidence/voice-scale/README.md` (1188 rows carry words it could not
+    pronounce), not a unit test's subject.
+    """
+    return {
+        "delivered",
+        "delivering",
+        "done",
+        "dropped",
+        "put",
+        "left",
+        "handed",
+        "it",
+        "at",
+        "on",
+        "in",
+        "the",
+        "porch",
+        "letterbox",
+        "door",
+        "neighbour",
+        "man",
+        "poulson",
+        "street",
+        "addington",
+        "date",
+        "crescent",
+        "west",
+        "allenton",
+        "kivers",
+        "burnham",
+        "macmillan",
+        "avenue",
+        "cashmere",
+        "wendover",
+        "bishopdale",
+        "taking",
+        "a",
+        "ten",
+        "minute",
+        "break",
+        "back",
+        "road",
+        "skip",
+        "this",
+        "one",
+        "code",
+        "gate",
+        "is",
+        "four",
+        "two",
+        "three",
+        "twenty",
+    }
 
 
 def _a_build(tmp_path: Path, scripts: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
@@ -442,3 +498,323 @@ class TestTheSpokenWordsAreRecorded:
         moved = to_output_rate(take)
         assert moved.size == OUTPUT_RATE
         assert float(np.max(np.abs(moved))) == pytest.approx(0.25, abs=1e-3)
+
+
+# ------------------------------------------------------- the build's own paths
+
+
+def _the_tree(tmp_path: Path) -> Path:
+    """A whole mini repository the CLI can run against: the manifest, the beds
+    and the shared held-out list, in tmp."""
+    manifest = tmp_path / "packages/eval/voice/manifest"
+    data = tmp_path / "data/voice"
+    (manifest).mkdir(parents=True, exist_ok=True)
+    (data / "noise").mkdir(parents=True, exist_ok=True)
+    addresses = [
+        {"id": "A001", "number": "57", "street": "Poulson Street", "suburb": "Addington"},
+        {"id": "A002", "number": "19", "street": "Date Crescent", "suburb": "Aidanfield"},
+    ]
+    scripts = [
+        {
+            "id": "S0001",
+            "slice": "en_nz_quiet",
+            "text": "delivered at 57 Poulson Street, Addington",
+            "gold_intent": "mark_delivered",
+            "gold_slots": {},
+            "address_id": "A001",
+            "tags": ["delivery"],
+        },
+        {
+            "id": "S0121",
+            "slice": "en_nz_van",
+            "text": "no one home at 3411 Thompsons Track, Ashburton Forks",
+            "gold_intent": "mark_failed",
+            "gold_slots": {"reason": "nobody_home"},
+            "address_id": "A002",
+            "tags": ["delivery"],
+        },
+    ]
+    bed = data / "noise/bed-01.wav"
+    sf.write(str(bed), np.zeros(16000 * 6, dtype=np.float32), 16000, subtype="PCM_16")
+    write_jsonl(manifest / "addresses.jsonl", addresses)
+    write_jsonl(manifest / "scripts.jsonl", scripts)
+    (manifest / "heldout_streets.json").write_text(
+        json.dumps(
+            {
+                "source": str(manifest / "heldout_streets.txt"),
+                "source_sha256": hashlib.sha256(b"").hexdigest(),
+                "streets": ["Date Crescent"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (manifest / "heldout_streets.txt").write_text("date crescent\n", encoding="utf-8")
+    (manifest / "licence.csv").write_text(
+        "dataset,url,licence,read_on,where\n"
+        'MUSAN,https://www.openslr.org/17,CC-BY-4.0,2026-11-10,"the van beds"\n',
+        encoding="utf-8",
+    )
+    write_jsonl(
+        data / "noise/noise.jsonl",
+        [{"file": "data/voice/noise/bed-01.wav", "sha256": sha256_of(bed), "source": "free-sound"}],
+    )
+    return tmp_path
+
+
+class TestTheCliRuns:
+    """The runner's own paths: the single-process build, the worker shares, the
+    assembly and the gates, with the engine and the model fetch stubbed so the
+    CLI is what is under test and not a 98 MB download."""
+
+    @staticmethod
+    def _stub(monkey: pytest.MonkeyPatch, lexicon: Path) -> None:
+        """The engine and the model fetch, replaced by the test's own."""
+        import app.eval_tts as module
+
+        lexicon.parent.mkdir(parents=True, exist_ok=True)
+        lexicon.write_text("".join(f"{word} || AH\n" for word in sorted(_keys())), encoding="utf-8")
+        monkey.setattr(module, "ensure_voice_models", lambda _data: (lexicon, lexicon))
+        monkey.setattr(module, "the_engine", lambda _m, _l: FakeVoice())
+
+    def _one_process(self, tmp_path: Path) -> int:
+        import app.eval_tts as module
+
+        tree = _the_tree(tmp_path)
+        args = argparse.Namespace(
+            root=str(tree),
+            manifest="packages/eval/voice/manifest",
+            data="data/voice",
+            out="packages/eval/voice/manifest/tts_audio.jsonl",
+            heldout=False,
+            force=False,
+            limit=None,
+            workers=1,
+            worker=None,
+            of=1,
+        )
+        monkey = pytest.MonkeyPatch()
+        self._stub(monkey, tmp_path / "data/voice/tts-models/lexicon-en-us.txt")
+        try:
+            return module.run(args)
+        finally:
+            monkey.undo()
+
+    def test_one_process_builds_and_writes_the_sidecar(self, tmp_path: Path) -> None:
+        assert self._one_process(tmp_path) == 0
+        sidecar = tmp_path / "packages/eval/voice/manifest/tts_audio.jsonl"
+        rows = read_jsonl(sidecar)
+        # Only the quiet row survives the held-out gate: S0121's address is on
+        # the shared list.
+        assert [row["script_id"] for row in rows] == ["S0001"]
+        assert rows[0]["file"] == "data/voice/tts/S0001.wav"
+        assert (tmp_path / rows[0]["file"]).exists()
+
+    def test_the_heldout_build_keeps_only_the_held_out_row(self, tmp_path: Path) -> None:
+        import app.eval_tts as module
+
+        _the_tree(tmp_path)
+        args = argparse.Namespace(
+            root=str(tmp_path),
+            manifest="packages/eval/voice/manifest",
+            data="data/voice",
+            out="out.jsonl",
+            heldout=True,
+            force=False,
+            limit=None,
+            workers=1,
+            worker=None,
+            of=1,
+        )
+        monkey = pytest.MonkeyPatch()
+        self._stub(monkey, tmp_path / "data/voice/tts-models/lexicon-en-us.txt")
+        try:
+            assert module.run(args) == 0
+        finally:
+            monkey.undo()
+        rows = read_jsonl(tmp_path / "out.jsonl")
+        assert [row["script_id"] for row in rows] == ["S0121"] * 4
+        # The van variants of a held-out script are held out with it.
+        assert {row["variant"] for row in rows} == {"quiet", "snr0", "snr5", "snr10"}
+
+    def test_a_manifest_without_the_licence_row_refuses_the_build(self, tmp_path: Path) -> None:
+
+        _the_tree(tmp_path)
+        (tmp_path / "packages/eval/voice/manifest/licence.csv").write_text(
+            "dataset,url,licence,read_on,where\n", encoding="utf-8"
+        )
+        rows = gate_problems(
+            scripts=[{"id": "S0001", "address_id": "A001"}],
+            addresses=[{"id": "A001", "street": "Poulson Street"}],
+            held_out_keys={"date cres"},
+            held_out_only=False,
+            manifest_dir=tmp_path / "packages/eval/voice/manifest",
+            beds=[{"file": "data/voice/noise/bed-01.wav"}],
+        )
+        assert any("MUSAN" in problem for problem in rows)
+
+    def test_a_worker_writes_its_share_and_the_parent_assembles_them(self, tmp_path: Path) -> None:
+        import app.eval_tts as module
+
+        _the_tree(tmp_path)
+        args = argparse.Namespace(
+            root=str(tmp_path),
+            manifest="packages/eval/voice/manifest",
+            data="data/voice",
+            out="out.jsonl",
+            heldout=False,
+            force=False,
+            limit=None,
+            workers=2,
+            worker=0,
+            of=2,
+        )
+        monkey = pytest.MonkeyPatch()
+        self._stub(monkey, tmp_path / "data/voice/tts-models/lexicon-en-us.txt")
+        try:
+            assert module.worker(args, 0, 2) == 0
+        finally:
+            monkey.undo()
+        partial = tmp_path / "data/voice/tts/partial-00.jsonl"
+        assert partial.exists()
+        assert read_jsonl(partial)
+        # The parent MERGES the shares back: with only worker 0's on disk, its
+        # rows are what the assembly answers. The quiet slice has no van
+        # variants, so the share is the one row.
+        merged = assemble(tmp_path / "data/voice", 2)
+        assert [row["script_id"] for row in merged] == ["S0001"]
+        assert [row["variant"] for row in merged] == ["quiet"]
+
+    def test_main_parses_the_arguments_and_dispatches(self, tmp_path: Path) -> None:
+        import app.eval_tts as module
+
+        _the_tree(tmp_path)
+        monkey = pytest.MonkeyPatch()
+        self._stub(monkey, tmp_path / "data/voice/tts-models/lexicon-en-us.txt")
+        try:
+            code = module.main(
+                [
+                    "--root",
+                    str(tmp_path),
+                    "--workers",
+                    "1",
+                    "--out",
+                    "packages/eval/voice/manifest/tts_audio.jsonl",
+                ]
+            )
+        finally:
+            monkey.undo()
+        assert code == 0
+        assert (tmp_path / "packages/eval/voice/manifest/tts_audio.jsonl").exists()
+
+    def test_the_heldout_flag_reads_the_held_out_manifest_by_default(self, tmp_path: Path) -> None:
+        import app.eval_tts as module
+
+        _the_tree(tmp_path)
+        seen: list[str] = []
+        monkey = pytest.MonkeyPatch()
+
+        def _record(args: Any) -> int:
+            seen.append(args.manifest)
+            return 0
+
+        monkey.setattr(module, "run", _record)
+        try:
+            module.main(["--heldout"])
+        finally:
+            monkey.undo()
+        assert seen == ["packages/eval/voice/manifest/heldout"]
+
+    def test_a_pinned_archive_is_verified_before_it_is_kept(self, tmp_path: Path) -> None:
+        import app.eval_tts as module
+
+        good = b"the pinned bytes"
+        (tmp_path / "archive.bin").write_bytes(good)
+        monkey = pytest.MonkeyPatch()
+        monkey.setattr(module, "sha256_of", lambda _path: hashlib.sha256(good).hexdigest())
+
+        class _Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args: object) -> None:
+                return None
+
+            def raise_for_status(self) -> None:
+                return None
+
+            def iter_bytes(self, _size: int):
+                yield good
+
+        class _Stream:
+            def __call__(self, _method: str, _url: str, **_kwargs: object):
+                return _Response()
+
+        monkey.setattr("httpx.stream", _Stream())
+        try:
+            module.download(
+                "https://example.invalid/pack.tar.bz2",
+                tmp_path / "kept.bin",
+                hashlib.sha256(good).hexdigest(),
+            )
+        finally:
+            monkey.undo()
+        assert (tmp_path / "kept.bin").read_bytes() == good
+
+    def test_an_archive_with_the_wrong_bytes_is_refused(self, tmp_path: Path) -> None:
+        import app.eval_tts as module
+
+        monkey = pytest.MonkeyPatch()
+
+        class _Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args: object) -> None:
+                return None
+
+            def raise_for_status(self) -> None:
+                return None
+
+            def iter_bytes(self, _size: int):
+                yield b"other bytes"
+
+        class _Stream:
+            def __call__(self, _method: str, _url: str, **_kwargs: object):
+                return _Response()
+
+        monkey.setattr("httpx.stream", _Stream())
+        try:
+            with pytest.raises(ValueError, match="refusing it"):
+                module.download(
+                    "https://example.invalid/pack.tar.bz2",
+                    tmp_path / "kept.bin",
+                    hashlib.sha256(b"the pinned bytes").hexdigest(),
+                )
+        finally:
+            monkey.undo()
+        assert not (tmp_path / "kept.bin").exists()
+
+    def test_a_member_that_would_escape_the_target_is_refused(self, tmp_path: Path) -> None:
+        import app.eval_tts as module
+
+        evil = tmp_path / "evil.tar.bz2"
+        with tarfile.open(evil, "w:bz2") as archive:
+            payload = b"escapes"
+            info = tarfile.TarInfo("../outside.txt")
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+        with pytest.raises(ValueError, match="escapes the target"):
+            module.unpack_the_model(evil, tmp_path / "out")
+
+    def test_a_plain_archive_unpacks_member_by_member(self, tmp_path: Path) -> None:
+        import app.eval_tts as module
+
+        good = tmp_path / "good.tar.bz2"
+        payload = b"the model"
+        with tarfile.open(good, "w:bz2") as archive:
+            info = tarfile.TarInfo("model.onnx")
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+        target = tmp_path / "out"
+        module.unpack_the_model(good, target)
+        assert (target / "model.onnx").read_bytes() == payload
