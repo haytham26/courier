@@ -429,6 +429,53 @@ tests. The evidence comment on the PR names all of it.
 Next in the queue (unaffected): the voice measurement lane (real STT on the
 shared held-out list) is running; the scale-tests, offline and 500-turn
 simulation lanes follow it.
+---
+
+## 2026-11-10: PR #290 merged — the voice numbers are MEASURED, and they are not good yet
+
+`5ac2c44` (the ritual: evidence comment, tag `archive/voice/heldout-measure`, branch
+deleted, ls-remote empty, deletion check empty). The measurement lane re-scored
+both manifests on the real judge; the held-out set (the backend's shared list,
+600 built utterances) carries the table, every number recomputed independently
+from `per_utterance.csv`:
+
+| target | slice | measured | budget | verdict |
+|---|---|---|---|---|
+| quiet WER | `en_nz_quiet`, 120 rows | 14.75 % | ≤ 5 % | **FAIL** |
+| van WER | `en_nz_van`, 360 rows (0 dB 36.88 / 5 dB 26.12 / 10 dB 21.07) | 28.02 % | ≤ 10 % | **FAIL** |
+| intent on STT output | the three English slices | 1.67 % (10/600) | ≥ 95 % | **FAIL** |
+| address exact | 75 address-bearing scripts | 0/75 | ≥ 95 % | **FAIL** |
+| false-action rate | 600 transcribed rows | 0/600 | ≤ 0.5 % | **PASS** |
+| corrections / p95 latency | — | not measured | — | **named, never zeros** |
+
+Honest boundaries from the lane, all recorded in the evidence: the held-out run
+transcribed the SAME 600 files as the main run (verified by id), so its WER legs
+are the set's own acoustic difficulty measured once — the held-out evidence is
+the intent/address/ceiling legs on held-out streets; M1 on our pipeline, M2 on the
+product's address engine, M3 on commands (the open-data speakers never speak a
+command), M4/M5 wake word, M6 latency, M7 battery, M8 TTS and ADR-028's
+real-sentence set are all NOT MEASURED and stay named. Fully offline is proven
+twice (the scorer's only URL is the never-fetched judge URL; the whole run in
+2.8 s with every proxy pointed at a closed port).
+
+**BUG-301 filed** (the lane's red-first fix, committed on #290):
+`eval_audio._model_dirs` tested a directory with `Path.glob(...)`, which answers a
+generator — always truthy — so an unpack killed halfway left no encoder and the
+whole measurement was published with no WER. Fixed, test-pinned, row filed in this
+commit. My large-leg harness flake is renumbered **BUG-302** (no collision with
+the lane's committed number).
+
+**FINAL_REPORT's voice row is now the measured truth: 6 -> 4 of 10** with the
+table above as the headline. The directive's ≥9.5 target is far away, and the
+gap is now a measured fact rather than a hope: the next levers are documented in
+the evidence (contextual biasing without the held-out keys, the address
+normaliser, the command-shaped slices, and ADR-028's sentences).
+
+Also carried: the two legs that were red on #290's first attempt (A1, the
+recordings) failed on the runner infra in the same window that took my own branch
+down and are green on the §17.4 re-runs — recorded so nobody re-reads them as a
+diff failure. The lane's environment note (a dead worktree registration released,
+0 unique commits, admin dir archived) is in its report.
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
