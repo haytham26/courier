@@ -74,31 +74,31 @@ uv run --project services/courier-voice --extra dev --extra eval \
 
 The pinned artefacts:
 
-| Artefact | URL | sha256 |
-| --- | --- | --- |
-| `kokoro-int8-en-v0_19.tar.bz2` (Kokoro-82M, 98 MB) | https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-int8-en-v0_19.tar.bz2 | `c9f0dd393615805b0bab050c340834d5e684e732aec91c0e860cd30e982c08bd` |
-| `lexicon-en-us.txt` (6.3 MB, 168 655 entries) | https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/lexicon-en-us.txt | `8b67ae549a465eee78f92ecb74644ad90c3c58ce65f19c68baf85878a10ef73a` |
-| the judge, `sherpa-onnx-whisper-tiny.en` | https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2 | fetched by `fetch-open-voice-data.mjs`, unpacked locally, never downloaded by the scorer |
+| Artefact                                           | URL                                                                                                    | sha256                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `kokoro-int8-en-v0_19.tar.bz2` (Kokoro-82M, 98 MB) | https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-int8-en-v0_19.tar.bz2        | `c9f0dd393615805b0bab050c340834d5e684e732aec91c0e860cd30e982c08bd`                       |
+| `lexicon-en-us.txt` (6.3 MB, 168 655 entries)      | https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/lexicon-en-us.txt                   | `8b67ae549a465eee78f92ecb74644ad90c3c58ce65f19c68baf85878a10ef73a`                       |
+| the judge, `sherpa-onnx-whisper-tiny.en`           | https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2 | fetched by `fetch-open-voice-data.mjs`, unpacked locally, never downloaded by the scorer |
 
 **Licences (ADR-004 / D24).** Kokoro-82M's weights are **Apache-2.0**
 (`https://huggingface.co/hexgrad/Kokoro-82M`; the pack's own LICENSE file is
 Apache-2.0), the sherpa-onnx runtime is Apache-2.0, and the voice is in the
 service's licence ledger (`app/licences.py`, "Kokoro-82M", shippable, read
-2026-10-21). The van beds are **MUSAN, CC-BY-4.0** — *MUSAN, Snyder et al.,
-https://www.openslr.org/17* — and that attribution line rides on every van row
+2026-10-21). The van beds are **MUSAN, CC-BY-4.0** — _MUSAN, Snyder et al.,
+https://www.openslr.org/17_ — and that attribution line rides on every van row
 of the sidecar and in the set's `licence.csv`. The builder REFUSES to write a
 file when the ledger does not name the voice or the beds.
 
 ### What was built
 
-| | count |
-| --- | --- |
-| scripts in the set | 720 |
-| built audio files | **1880** (see `manifest/tts_audio.jsonl`) |
-| — quiet | 560 |
-| — van variants (0 / 5 / 10 dB over the MUSAN beds) | 1320 (440 per SNR) |
-| rows whose words the lexicon could not fully pronounce (`oov_words` recorded) | 1188 |
-| not synthesised, named with the reason | 160 (the `ar`, `hi_pa`, `zh`, `sm_to` slices: Kokoro-82M has no Arabic, Hindi, Samoan, Tongan or Mandarin voice and the ledger names none) |
+|                                                                               | count                                                                                                                                      |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| scripts in the set                                                            | 720                                                                                                                                        |
+| built audio files                                                             | **1880** (see `manifest/tts_audio.jsonl`)                                                                                                  |
+| — quiet                                                                       | 560                                                                                                                                        |
+| — van variants (0 / 5 / 10 dB over the MUSAN beds)                            | 1320 (440 per SNR)                                                                                                                         |
+| rows whose words the lexicon could not fully pronounce (`oov_words` recorded) | 1188                                                                                                                                       |
+| not synthesised, named with the reason                                        | 160 (the `ar`, `hi_pa`, `zh`, `sm_to` slices: Kokoro-82M has no Arabic, Hindi, Samoan, Tongan or Mandarin voice and the ledger names none) |
 
 The sidecar is `packages/eval/voice/manifest/tts_audio.jsonl`: one JSON line per
 file, with its sha256, the voice, the speed, the model URL and sha256, the licence
@@ -159,21 +159,29 @@ Every turn of the set, in a seeded order (seed 20261110, mulberry32), goes:
 for the run's own, `results/summary.json` for the judge's, and `results/per_turn.csv`
 for every turn.)
 
-| leg | count |
-| --- | --- |
-| scripted turns on the run | 1880 (see the fixture, one row per built file) |
-| action turns | 1730 |
-| chatter / no-intent turns | 170 (the `chatter` slice's 40 at each of the four conditions, plus the set's own noop rows) |
-| action turns the PHONE answered end to end (the directive's ≥ 500 floor) | see the run's summary |
-| false actions on chatter (the phone's parser) | **0** |
-| false actions on chatter (the service's own offline brain) | **0** |
-| quiet turns vs van turns | 560 quiet / 1320 van (440 at 0 dB, 440 at 5 dB, 440 at 10 dB) |
+| leg                                                                          | count                                                                                                                                                  |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **scripted turns on the run**                                                | **1880** (one per built file, in the seeded order)                                                                                                     |
+| action turns                                                                 | 1695                                                                                                                                                   |
+| chatter / no-intent turns                                                    | 185 (the `chatter` slice's 40 × 4 conditions, plus the set's own noop rows)                                                                            |
+| quiet turns vs van turns                                                     | 560 quiet / 1320 van (440 at 0 dB, 440 at 5 dB, 440 at 10 dB)                                                                                          |
+| **action turns the PHONE answered end to end** (the directive's ≥ 500 floor) | **896**                                                                                                                                                |
+| — of those, commands published                                               | 345 `mark_delivered`, 172 `mark_failed`, 199 `add_stop`, 86 `add_location_note`, 48 `mark_skipped`, 23 `end_break`, 15 `start_break`, 8 `set_map_mode` |
+| deliveries applied to the run                                                | 345                                                                                                                                                    |
+| failures applied to the run                                                  | 172                                                                                                                                                    |
+| delivery events in the log (the outbox owes every one)                       | 517                                                                                                                                                    |
+| **false actions on chatter (the phone's parser)**                            | **0**                                                                                                                                                  |
+| **false actions on chatter (the service's own offline brain)**               | **0**                                                                                                                                                  |
+| audio files that no longer hash to their sidecar row                         | 0 (all 1880 verified)                                                                                                                                  |
+| turns on a held-out street                                                   | 0 (the default build excludes them; `--heldout` emits them)                                                                                            |
+| rows whose words the lexicon could not fully pronounce                       | 1188 (`oov_words` recorded per row)                                                                                                                    |
 
 The action turns the recognizer defeated are **named, not dropped**: every one of
-them is in `per_turn.csv` with the transcript that defeated it. The dominant
-reasons are the van noise (the judge's WER on the 0 dB rows) and the
+them is in `results/per_turn.csv` with the transcript that defeated it. The
+dominant reasons are the van noise (the judge's WER rises with the bed) and the
 spoken-number-correction form, which is a **named gap on the phone's parser and
-on the service's own brain alike** (`app/eval_audio.py`'s `PARSER_GAPS`).
+on the service's own brain alike** (`app/eval_audio.py`'s `PARSER_GAPS`: the
+`numbers_corrections` slice scored 0 of 160 on the service's brain).
 
 The action turns the recognizer defeated are **named, not dropped**: every one of
 them is in `per_turn.csv` with the transcript that defeated it. The dominant

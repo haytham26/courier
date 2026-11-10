@@ -1,37 +1,38 @@
 {
- "turns": 1040,
- "action_turns": 870,
- "chatter_turns": 170,
+ "turns": 1880,
+ "action_turns": 1695,
+ "chatter_turns": 185,
  "false_actions": 0,
- "full_turns": 529,
- "delivered": 210,
- "failed": 97,
- "events_logged": 307,
- "events_pending": 307,
+ "full_turns": 984,
+ "delivered": 345,
+ "failed": 172,
+ "events_logged": 517,
+ "events_pending": 517,
  "seed": 20261110,
  "by_slice": {
   "en_nz_van": 480,
   "en_nz_quiet": 120,
-  "en_mix": 120,
-  "chatter": 160,
-  "mi_places": 60,
-  "numbers_corrections": 40,
-  "code_switch": 60
+  "en_mix": 480,
+  "mi_places": 240,
+  "numbers_corrections": 160,
+  "code_switch": 240,
+  "chatter": 160
  },
  "by_variant": {
-  "snr0": 160,
+  "snr0": 440,
   "quiet": 560,
-  "snr10": 160,
-  "snr5": 160
+  "snr10": 440,
+  "snr5": 440
  },
  "commands": {
-  "mark_delivered": 210,
-  "start_break": 10,
-  "mark_skipped": 43,
-  "mark_failed": 97,
-  "add_stop": 107,
-  "add_location_note": 34,
-  "end_break": 10
+  "mark_delivered": 345,
+  "mark_skipped": 48,
+  "start_break": 15,
+  "mark_failed": 172,
+  "add_stop": 199,
+  "set_map_mode": 8,
+  "add_location_note": 86,
+  "end_break": 23
  },
  "false_action_turns": [],
  "unverified_files": []

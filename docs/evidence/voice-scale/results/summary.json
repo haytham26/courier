@@ -4,10 +4,10 @@
  "sample_rate": 16000,
  "python": "3.12.15",
  "platform": "Windows-11-10.0.26300-SP0",
- "turns": 1040,
- "action_turns": 870,
- "chatter_turns": 170,
- "action_intent_ok": 684,
+ "turns": 1880,
+ "action_turns": 1695,
+ "chatter_turns": 185,
+ "action_intent_ok": 1210,
  "false_actions": 0,
  "false_action_rate": 0.0,
  "false_action_turns": [],
@@ -25,28 +25,28 @@
    "intent_ok": 375
   },
   "en_mix": {
-   "turns": 120,
-   "action_turns": 115,
-   "chatter_turns": 5,
-   "intent_ok": 103
+   "turns": 480,
+   "action_turns": 460,
+   "chatter_turns": 20,
+   "intent_ok": 373
   },
   "mi_places": {
-   "turns": 60,
-   "action_turns": 60,
+   "turns": 240,
+   "action_turns": 240,
    "chatter_turns": 0,
-   "intent_ok": 53
+   "intent_ok": 178
   },
   "numbers_corrections": {
-   "turns": 40,
-   "action_turns": 40,
+   "turns": 160,
+   "action_turns": 160,
    "chatter_turns": 0,
    "intent_ok": 0
   },
   "code_switch": {
-   "turns": 60,
-   "action_turns": 60,
+   "turns": 240,
+   "action_turns": 240,
    "chatter_turns": 0,
-   "intent_ok": 58
+   "intent_ok": 204
   },
   "chatter": {
    "turns": 160,
@@ -57,11 +57,11 @@
  },
  "turns_by_variant": {
   "quiet": 560,
-  "snr0": 160,
-  "snr5": 160,
-  "snr10": 160
+  "snr0": 440,
+  "snr5": 440,
+  "snr10": 440
  },
- "turns_with_oov_words": 621,
+ "turns_with_oov_words": 1188,
  "held_out_turns": 0,
  "legs": {
   "stt": "the pinned judge (Whisper tiny.en) on the TTS audio, not the product's on-device STT",
