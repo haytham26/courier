@@ -1,0 +1,76 @@
+{
+ "id": "routing-30-full-20261112",
+ "size": 30,
+ "variant": "full",
+ "seed": 20261112,
+ "area": "waimakariri",
+ "stop_count": 30,
+ "windows": 13,
+ "priorities": 8,
+ "with_break": true,
+ "with_finish": true,
+ "engines": {
+  "ours": {
+   "order": [
+    526,
+    471,
+    481,
+    540,
+    539,
+    446,
+    440,
+    469,
+    467,
+    430,
+    557,
+    450,
+    506,
+    451,
+    511,
+    483,
+    531,
+    558,
+    448,
+    500,
+    554,
+    449,
+    555,
+    553,
+    490,
+    431,
+    488,
+    491,
+    518,
+    465
+   ],
+   "distance_m": 374150.0,
+   "duration_s": 35451.0,
+   "window_violations": 8,
+   "break_violation": false,
+   "break_position": 5,
+   "break_start_at": "2026-11-09T12:00:00+13:00",
+   "priority_violations": 0,
+   "over_capacity": false,
+   "engine": "ours",
+   "travel_m": 382070,
+   "travel_s": 19266,
+   "wall_s": 0.8914,
+   "planned": true
+  },
+  "pyvrp-long": {
+   "order": [],
+   "planned": false
+  },
+  "ortools": {
+   "order": [],
+   "planned": false
+  }
+ },
+ "wall_s": {
+  "ours": 0.8914,
+  "pyvrp-long": 30.0079,
+  "ortools": 15.0046
+ },
+ "best_travel_s": 19266,
+ "feasible_engines": []
+}

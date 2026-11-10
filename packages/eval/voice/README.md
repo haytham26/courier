@@ -109,6 +109,58 @@ latency of the service. The metrics that need the audio or a device are written
 down as **not measured**, with the reason: a number that was not measured is
 never reported as a pass.
 
+## How to measure (the two manifests, real STT output)
+
+Every score is measured from the recognizer's OWN output, never claimed from the
+gold text (founder directive 2026-11-08 item 4 and the 2026-11-09 PART B
+instruction; BUG-210 is why). Two commands, one per manifest, run from the
+repository root:
+
+```
+uv run --directory services/courier-voice --extra eval python -m app.eval_audio \
+  --manifest packages/eval/voice/manifest \
+  --data data/voice \
+  --out packages/eval/voice/results/utterances
+
+uv run --directory services/courier-voice --extra eval python -m app.eval_audio \
+  --manifest packages/eval/voice/manifest/heldout \
+  --data data/voice \
+  --out packages/eval/voice/results/heldout-utterances
+```
+
+The data comes first, once: `node scripts/eval/fetch-open-voice-data.mjs` writes
+`data/voice/` (git-ignored) with the Common Voice clips, the MUSAN beds and the
+judge archive, and re-verifies every clip's sha256 on every run. The scorer
+unpacks the judge from that LOCAL archive and downloads nothing itself, so the
+measurement is fully offline.
+
+What the committed results carry, beside the WER and the parser ceiling:
+
+- **`held_out` on every scored row** (`per_utterance.csv`) and in
+  `summary.json` (`held_out`, `held_out_utterances`, `held_out_scripts`,
+  `held_out_streets`, `street_key_check`). The scorer reads
+  `manifest/heldout_streets.json` - the same shared list
+  `scripts/eval/check-voice-eval.mjs` reads - by street key (the Python twin of
+  `scripts/eval/street-key.mjs`), and REFUSES a manifest whose rows disagree with
+  it, naming the row: a run from the wrong set is never published.
+- **`intent_on_stt_by_slice`** and **`address_extraction_on_stt_by_slice`**: the
+  intent accuracy and the exact-match address extraction, measured on the
+  judge's hypotheses. The gold-text legs stay published as the parser ceiling
+  they are, and `summary.json`'s `legs` says so in its own words.
+- **`directive_targets`**: one entry per target of the founder directive, each
+  with the slice its number was measured on, the counts behind it, and
+  PASS / FAIL / **NOT MEASURED**. NOT MEASURED carries the reason it has none,
+  so a leg this scorer cannot measure is never published as a pass.
+
+**What the two runs do and do not add to each other.** The open-data audio is
+assigned by utterance id, and both manifests lay their 600 open rows out in the
+same order with the same clip pool, so the held-out run transcribes the SAME 600
+files the main run does (verified: 600 of 600 ids mapped to the same clips). The
+WER legs are therefore the set's own acoustic difficulty, measured once - not
+independent evidence about held-out streets, and the held-out run does not claim
+them as such. What the held-out run adds is real: its scripts speak held-out
+streets, so its intent, address and ceiling legs are evidence about streets the
+parser has never been tuned on.
 ## How to regenerate
 
 ```
@@ -200,6 +252,40 @@ and their checksum. What the audio measures is published honestly: the WER is
 the open speakers' own words read by the pinned judge (sherpa-onnx Whisper
 tiny.en - the set's acoustic difficulty, not our pipeline), and the intent
 accuracy is the service's OFFLINE brain on the gold scripts.
+
+## The TTS command audio (the action-bearing utterances)
+
+The open-data slices above are Common Voice **prose**: their speakers read their
+own sentences, so no file of them ever spoke a courier command, and the other
+slices had no audio at all. `services/courier-voice/app/eval_tts.py` builds the
+missing action-bearing audio from the set's own scripts with the product's own
+voice (Kokoro-82M through sherpa-onnx, one fixed voice, one fixed speed, no
+clock, no network at generation time), 16 kHz mono PCM_16, and records every
+file's sha256 with its voice, its model and its licence in the sidecar
+`manifest/tts_audio.jsonl`.
+
+```
+uv run --project services/courier-voice --extra eval python -m app.eval_tts \
+  --root . --workers 6 \
+  --out packages/eval/voice/manifest/tts_audio.jsonl
+```
+
+The van variants mix the MUSAN (CC-BY-4.0) beds at 0 / 5 / 10 dB, so a van turn
+differs from its quiet twin **only by the bed's gain**, and the attribution line
+"MUSAN, Snyder et al." rides on every van row. The held-out rule is the set's own
+(default excluded, `--heldout` only those), and the builder refuses a voice or a
+bed the licence ledgers do not name (D24).
+
+Two facts about the engine shape the build, both measured and published in
+`docs/evidence/voice-scale/README.md`: sherpa-onnx's Kokoro is **not**
+byte-reproducible across runs (so the sidecar's sha256 is the pin, and the
+simulation verifies every file against it), and sherpa-onnx ≥ 2.0.0 dropped
+espeak-ng (so a word the lexicon cannot pronounce is silently dropped — the
+builder spells the digit runs out and records every word it could not speak).
+
+`services/courier-voice/app/eval_scale.py` transcribes the built files with the
+set's own pinned judge and writes the committed turn set
+(`fixtures/scale-turns.jsonl`) the app-side simulation drives.
 
 ## What is not here yet, and why
 

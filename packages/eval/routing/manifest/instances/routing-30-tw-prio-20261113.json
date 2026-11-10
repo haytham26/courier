@@ -1,0 +1,262 @@
+{
+ "id": "routing-30-tw-prio-20261113",
+ "size": 30,
+ "variant": "tw-prio",
+ "seed": 20261113,
+ "seed_step": "mulberry32(seed + hash(variant)) over selwyn drawable stops, Fisher-Yates, first 30",
+ "area": "selwyn",
+ "depot": {
+  "i": 333,
+  "address": "754 Heslerton Road, Dunsandel"
+ },
+ "finish": null,
+ "start_at_epoch_s": 1794164400,
+ "day_start_hour": 8,
+ "day_length_s": 32400,
+ "capacity_parcels": 61,
+ "service_time_s": 300,
+ "speed_kmh": 30,
+ "break": null,
+ "stops": [
+  {
+   "i": 382,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794167648,
+    1794175874
+   ]
+  },
+  {
+   "i": 317,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 340,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 417,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 402,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794180034,
+    1794188006
+   ]
+  },
+  {
+   "i": 323,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794174410,
+    1794181510
+   ]
+  },
+  {
+   "i": 372,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 351,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 392,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 318,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": true,
+   "window": [
+    1794164769,
+    1794173407
+   ]
+  },
+  {
+   "i": 421,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 308,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 332,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 346,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": true,
+   "window": [
+    1794167893,
+    1794174046
+   ]
+  },
+  {
+   "i": 406,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794178944,
+    1794187621
+   ]
+  },
+  {
+   "i": 377,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 422,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794172173,
+    1794178739
+   ]
+  },
+  {
+   "i": 363,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 374,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 328,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794174117,
+    1794182587
+   ]
+  },
+  {
+   "i": 391,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 309,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 319,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 369,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 375,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794174692,
+    1794182794
+   ]
+  },
+  {
+   "i": 410,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 307,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 420,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 301,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794166371,
+    1794173659
+   ]
+  },
+  {
+   "i": 312,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  }
+ ]
+}

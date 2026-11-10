@@ -14,6 +14,7 @@ data, which is either large (the map extracts) or personal (the label photos).
 | `build-linz-index.py` | Turns the LINZ GeoJSON into the one-line-per-address JSONL index the D8 engine loads (`data/linz/addresses-<area>.jsonl`). `uv run python scripts/data/build-linz-index.py --area christchurch`. |
 | `export-linz-hotwords.py` | Exports the DERIVED LINZ name list (unique road/suburb/town names + macron-stripped spoken forms, CC BY 4.0 attribution in the header, no raw bulk) to `packages/nz-address/data/linz-hotwords.json` for voice hotwords. `uv run python scripts/data/export-linz-hotwords.py --execute`. |
 | `split-linz-holdout.py` | Splits the Canterbury streets into tune / HELD-OUT 20 % (by street, never by address; seed 20261108) and writes the committed held-out street list to `services/api/tests/fixtures/linz-holdout-streets.txt`, which `tests/test_linz_accuracy.py` measures against (directive 2026-11-08 item 2). `uv run python scripts/data/split-linz-holdout.py --execute`. |
+| `fetch-routing-pool.py` | Fetches the routing evaluation set's stop pool: real LINZ Canterbury addresses **with geometry** (the WFS layer carries the point), from a fixed grid of 0.02-degree cells over the delivery territory (Christchurch + the two bordering districts; Mid-Canterbury is out) with a per-cell cap, so the sample cannot collapse into one suburb. Writes `data/routing-eval/stop-pool.json` (never committed - the local input of `scripts/eval/build-routing-eval.mjs`). `uv run --with httpx python scripts/data/fetch-routing-pool.py`. |
 
 ## The rules
 

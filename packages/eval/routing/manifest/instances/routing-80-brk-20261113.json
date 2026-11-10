@@ -1,0 +1,586 @@
+{
+ "id": "routing-80-brk-20261113",
+ "size": 80,
+ "variant": "brk",
+ "seed": 20261113,
+ "seed_step": "mulberry32(seed + hash(variant)) over waimakariri drawable stops, Fisher-Yates, first 80",
+ "area": "waimakariri",
+ "depot": {
+  "i": 522,
+  "address": "1683 Christchurch Akaroa Road, Gebbies Valley, Tai Tapu"
+ },
+ "finish": null,
+ "start_at_epoch_s": 1794164400,
+ "day_start_hour": 8,
+ "day_length_s": 32400,
+ "capacity_parcels": 169,
+ "service_time_s": 300,
+ "speed_kmh": 30,
+ "break": {
+  "earliest_epoch_s": 1794178800,
+  "latest_epoch_s": 1794182400,
+  "minutes": 30
+ },
+ "stops": [
+  {
+   "i": 445,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 493,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 477,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 544,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 433,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 485,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 458,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 491,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 472,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 545,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 519,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 484,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 436,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 457,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 502,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 530,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 497,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 476,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 495,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 516,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 546,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 515,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 487,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 449,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 551,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 527,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 531,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 475,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 455,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 451,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 441,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 510,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 444,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 440,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 550,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 543,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 505,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 469,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 437,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 452,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 463,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 490,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 443,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 512,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 442,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 434,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 446,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 461,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 448,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 524,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 494,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 542,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 482,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 553,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 532,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 450,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 548,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 488,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 504,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 533,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 526,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 523,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 430,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 460,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 518,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 462,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 503,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 496,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 508,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 453,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 465,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 489,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 474,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 513,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 481,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 467,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 471,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 525,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 536,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 447,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  }
+ ]
+}

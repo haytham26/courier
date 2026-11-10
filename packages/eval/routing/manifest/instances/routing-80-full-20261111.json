@@ -1,0 +1,661 @@
+{
+ "id": "routing-80-full-20261111",
+ "size": 80,
+ "variant": "full",
+ "seed": 20261111,
+ "seed_step": "mulberry32(seed + hash(variant)) over selwyn drawable stops, Fisher-Yates, first 80",
+ "area": "selwyn",
+ "depot": {
+  "i": 333,
+  "address": "754 Heslerton Road, Dunsandel"
+ },
+ "finish": {
+  "i": 315,
+  "address": "850 Heslerton Road, Dunsandel"
+ },
+ "start_at_epoch_s": 1794164400,
+ "day_start_hour": 8,
+ "day_length_s": 32400,
+ "capacity_parcels": 164,
+ "service_time_s": 300,
+ "speed_kmh": 30,
+ "break": {
+  "earliest_epoch_s": 1794178800,
+  "latest_epoch_s": 1794182400,
+  "minutes": 30
+ },
+ "stops": [
+  {
+   "i": 404,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": true,
+   "window": [
+    1794168717,
+    1794175706
+   ]
+  },
+  {
+   "i": 409,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 356,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 331,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 339,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 323,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 428,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794176677,
+    1794184855
+   ]
+  },
+  {
+   "i": 359,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 316,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 410,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 347,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 389,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794178963,
+    1794185699
+   ]
+  },
+  {
+   "i": 342,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 351,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 344,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 367,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": [
+    1794164661,
+    1794171357
+   ]
+  },
+  {
+   "i": 326,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 368,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 363,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 318,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 313,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 381,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 317,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 330,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794172410,
+    1794178021
+   ]
+  },
+  {
+   "i": 374,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794175718,
+    1794181555
+   ]
+  },
+  {
+   "i": 394,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 307,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794172288,
+    1794180821
+   ]
+  },
+  {
+   "i": 350,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": [
+    1794169783,
+    1794176016
+   ]
+  },
+  {
+   "i": 358,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794168303,
+    1794175755
+   ]
+  },
+  {
+   "i": 427,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 319,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 360,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 369,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 403,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 334,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 362,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794171149,
+    1794178567
+   ]
+  },
+  {
+   "i": 345,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 429,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": [
+    1794169860,
+    1794178032
+   ]
+  },
+  {
+   "i": 335,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 346,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 378,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 304,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 353,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794181467,
+    1794189776
+   ]
+  },
+  {
+   "i": 365,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 391,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": [
+    1794181126,
+    1794187800
+   ]
+  },
+  {
+   "i": 364,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": true,
+   "window": [
+    1794180195,
+    1794187731
+   ]
+  },
+  {
+   "i": 386,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 349,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 377,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": true,
+   "window": [
+    1794174996,
+    1794180403
+   ]
+  },
+  {
+   "i": 390,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794177636,
+    1794186204
+   ]
+  },
+  {
+   "i": 423,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": [
+    1794182356,
+    1794188616
+   ]
+  },
+  {
+   "i": 341,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 401,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 306,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 352,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794180474,
+    1794188945
+   ]
+  },
+  {
+   "i": 303,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 393,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 420,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": [
+    1794175791,
+    1794184576
+   ]
+  },
+  {
+   "i": 305,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 382,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 355,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794170127,
+    1794177823
+   ]
+  },
+  {
+   "i": 332,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 395,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 385,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794164802,
+    1794173524
+   ]
+  },
+  {
+   "i": 406,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 414,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794168049,
+    1794174288
+   ]
+  },
+  {
+   "i": 311,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 373,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 375,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 397,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 372,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794168451,
+    1794176239
+   ]
+  },
+  {
+   "i": 310,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 302,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 422,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 388,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 379,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794173497,
+    1794179214
+   ]
+  },
+  {
+   "i": 338,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 398,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 371,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 417,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  }
+ ]
+}

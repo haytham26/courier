@@ -1,0 +1,232 @@
+{
+ "id": "routing-30-plain-20261112",
+ "size": 30,
+ "variant": "plain",
+ "seed": 20261112,
+ "seed_step": "mulberry32(seed + hash(variant)) over christchurch drawable stops, Fisher-Yates, first 30",
+ "area": "christchurch",
+ "depot": {
+  "i": 148,
+  "address": "69A Ruskin Street, Addington, Christchurch"
+ },
+ "finish": null,
+ "start_at_epoch_s": 1794164400,
+ "day_start_hour": 8,
+ "day_length_s": 32400,
+ "capacity_parcels": 69,
+ "service_time_s": 300,
+ "speed_kmh": 30,
+ "break": null,
+ "stops": [
+  {
+   "i": 123,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 141,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 20,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 200,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 269,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 287,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 115,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 292,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 195,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 188,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 15,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 14,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 206,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 259,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 42,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 34,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 215,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 64,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 158,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 80,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 48,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 6,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 166,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 108,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 147,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 283,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 94,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 106,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 113,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 49,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  }
+ ]
+}

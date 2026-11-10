@@ -1,0 +1,675 @@
+{
+ "id": "routing-80-tw-prio-20261114",
+ "size": 80,
+ "variant": "tw-prio",
+ "seed": 20261114,
+ "seed_step": "mulberry32(seed + hash(variant)) over waimakariri drawable stops, Fisher-Yates, first 80",
+ "area": "waimakariri",
+ "depot": {
+  "i": 522,
+  "address": "1683 Christchurch Akaroa Road, Gebbies Valley, Tai Tapu"
+ },
+ "finish": null,
+ "start_at_epoch_s": 1794164400,
+ "day_start_hour": 8,
+ "day_length_s": 32400,
+ "capacity_parcels": 165,
+ "service_time_s": 300,
+ "speed_kmh": 30,
+ "break": null,
+ "stops": [
+  {
+   "i": 539,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 551,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 550,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 532,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794167137,
+    1794174134
+   ]
+  },
+  {
+   "i": 443,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794172230,
+    1794178101
+   ]
+  },
+  {
+   "i": 451,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794169484,
+    1794177394
+   ]
+  },
+  {
+   "i": 520,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 514,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 467,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 473,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 541,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 506,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794176730,
+    1794184078
+   ]
+  },
+  {
+   "i": 477,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 460,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 494,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 526,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 543,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794174589,
+    1794182279
+   ]
+  },
+  {
+   "i": 556,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794169607,
+    1794178528
+   ]
+  },
+  {
+   "i": 557,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794173996,
+    1794180595
+   ]
+  },
+  {
+   "i": 555,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794179040,
+    1794184511
+   ]
+  },
+  {
+   "i": 502,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 454,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 465,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 463,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": [
+    1794170190,
+    1794177718
+   ]
+  },
+  {
+   "i": 484,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794178661,
+    1794186696
+   ]
+  },
+  {
+   "i": 489,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": [
+    1794166674,
+    1794173614
+   ]
+  },
+  {
+   "i": 503,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794167155,
+    1794174843
+   ]
+  },
+  {
+   "i": 458,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794175477,
+    1794181215
+   ]
+  },
+  {
+   "i": 552,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794165779,
+    1794172205
+   ]
+  },
+  {
+   "i": 466,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 530,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 537,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 442,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 505,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 534,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 487,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": true,
+   "window": [
+    1794178090,
+    1794186939
+   ]
+  },
+  {
+   "i": 470,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 499,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 542,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 559,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": [
+    1794178269,
+    1794186154
+   ]
+  },
+  {
+   "i": 513,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 525,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 511,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 533,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 439,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 447,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 527,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794168798,
+    1794174514
+   ]
+  },
+  {
+   "i": 548,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 517,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 510,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794178958,
+    1794186078
+   ]
+  },
+  {
+   "i": 485,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 496,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794166032,
+    1794171874
+   ]
+  },
+  {
+   "i": 432,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 516,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 472,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794182093,
+    1794187621
+   ]
+  },
+  {
+   "i": 471,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 518,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794169526,
+    1794176449
+   ]
+  },
+  {
+   "i": 508,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": [
+    1794164891,
+    1794173130
+   ]
+  },
+  {
+   "i": 449,
+   "parcels": 1,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 546,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 528,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 452,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794179380,
+    1794185225
+   ]
+  },
+  {
+   "i": 440,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794168206,
+    1794175876
+   ]
+  },
+  {
+   "i": 523,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 544,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 441,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": true,
+   "window": [
+    1794178533,
+    1794184025
+   ]
+  },
+  {
+   "i": 476,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 433,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 462,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 504,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": true,
+   "window": null
+  },
+  {
+   "i": 519,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 481,
+   "parcels": 3,
+   "service_time_s": null,
+   "priority": true,
+   "window": [
+    1794177977,
+    1794185670
+   ]
+  },
+  {
+   "i": 501,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 468,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": true,
+   "window": [
+    1794172275,
+    1794180844
+   ]
+  },
+  {
+   "i": 545,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794179017,
+    1794185691
+   ]
+  },
+  {
+   "i": 461,
+   "parcels": 2,
+   "service_time_s": 60,
+   "priority": false,
+   "window": null
+  },
+  {
+   "i": 480,
+   "parcels": 3,
+   "service_time_s": 60,
+   "priority": false,
+   "window": [
+    1794179820,
+    1794186720
+   ]
+  },
+  {
+   "i": 524,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": [
+    1794180978,
+    1794187526
+   ]
+  },
+  {
+   "i": 478,
+   "parcels": 2,
+   "service_time_s": null,
+   "priority": true,
+   "window": [
+    1794169323,
+    1794174871
+   ]
+  },
+  {
+   "i": 483,
+   "parcels": 1,
+   "service_time_s": null,
+   "priority": false,
+   "window": null
+  }
+ ]
+}

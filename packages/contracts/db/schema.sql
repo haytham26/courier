@@ -126,6 +126,25 @@ CREATE TABLE IF NOT EXISTS stop_addresses (
 -- fact about them, not a receipt - and the source's own id is kept so the
 -- provider's webhook is idempotent.
 
+-- The cost ledger: one row per paid model call, with the estimate and the
+-- characters it was estimated from (COST_PLAN's budgets read these sums back
+-- per window). The estimate is the budget basis - the gateway's own usage is
+-- the invoice - and the row keeps the characters so a price change can be
+-- re-priced without re-running the models.
+CREATE TABLE IF NOT EXISTS cost_events (
+    id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    courier_id   text        NOT NULL,
+    tenant_id    text,
+    usd_estimate numeric     NOT NULL,
+    chars_in     integer     NOT NULL DEFAULT 0,
+    chars_out    integer     NOT NULL DEFAULT 0,
+    call         text        NOT NULL DEFAULT 'llm',
+    created_at   timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS cost_events_courier_time ON cost_events (courier_id, created_at);
+CREATE INDEX IF NOT EXISTS cost_events_tenant_time ON cost_events (tenant_id, created_at);
+
 CREATE TABLE IF NOT EXISTS subscriptions (
     courier_id   text        PRIMARY KEY,
     plan         text        NOT NULL CHECK (plan IN ('trial', 'solo', 'team')),

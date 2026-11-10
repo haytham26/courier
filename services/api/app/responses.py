@@ -27,7 +27,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 StopStatus = Literal["pending", "delivered", "skipped", "deferred", "failed"]
 NoteKind = Literal["entry", "gate_code", "hazard", "safe_place", "access"]
@@ -196,6 +196,20 @@ class EntitlementResponse(BaseModel):
     features: list[str]
 
 
+class CostResponse(BaseModel):
+    """The caller's own budget: what is spent and what is left, per window.
+
+    An unbounded window answers `null` (the deployment set no limit) rather
+    than a fake infinity, and a spent budget answers zero - the guard never
+    lets the remaining go negative."""
+
+    courier_daily_usd: float | None = None
+    courier_monthly_usd: float | None = None
+    tenant_daily_usd: float | None = None
+    global_daily_usd: float | None = None
+    spent: dict[str, float]
+
+
 class BriefingResponse(BaseModel):
     """The intake's answer when the graph finished (`_intake_answer`)."""
 
@@ -250,6 +264,35 @@ class WebhookAcceptedResponse(BaseModel):
     """A billing webhook the server took (`accepted` is always true on 200)."""
 
     accepted: bool
+
+
+class CheckoutSessionRequest(BaseModel):
+    """What the app asks for when a courier starts a subscription (D44).
+
+    The plan is the only thing the client chooses; the courier is the token's,
+    and the return base is where Stripe sends them back - the app's own origin,
+    so a redirect never lands on a host this deployment does not serve."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    plan: PlanName
+    return_base: str = Field(
+        ...,
+        description="The absolute https origin to return to after Stripe.",
+        examples=["https://staging.courier.nz"],
+    )
+
+
+class CheckoutSessionResponse(BaseModel):
+    """The Stripe Checkout Session's URL, to open in a browser."""
+
+    url: str
+
+
+class PortalSessionResponse(BaseModel):
+    """The Stripe portal Session's URL, where the subscription is managed."""
+
+    url: str
 
 
 class HealthResponse(BaseModel):

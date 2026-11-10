@@ -325,13 +325,23 @@ export function toVoiceCommand(action: CourierVoiceAction | null): VoiceCommand 
       // is carried into the app's command. Dropping it here undid the whole
       // point of the courier saying "left it at the side gate" out loud.
       if (action.safe_place !== undefined && action.safe_place !== null && action.safe_place.trim().length > 0) {
-        return { type: 'mark_delivered', stopId, safePlace: action.safe_place.trim() };
+        return {
+          type: 'mark_delivered',
+          stopId,
+          safePlace: action.safe_place.trim(),
+          rawAddress: action.raw_address ?? undefined,
+        };
       }
-      return { type: 'mark_delivered', stopId };
+      return { type: 'mark_delivered', stopId, rawAddress: action.raw_address ?? undefined };
     case 'mark_failed':
-      return { type: 'mark_failed', stopId, reason: action.reason ?? 'voice' };
+      return {
+        type: 'mark_failed',
+        stopId,
+        reason: action.reason ?? 'voice',
+        rawAddress: action.raw_address ?? undefined,
+      };
     case 'skip_stop':
-      return { type: 'mark_skipped', stopId };
+      return { type: 'mark_skipped', stopId, rawAddress: action.raw_address ?? undefined };
     case 'add_stop':
       return { type: 'add_stop', rawAddress: action.raw_address ?? '' };
     case 'start_break':

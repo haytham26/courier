@@ -108,6 +108,20 @@ the file-input path; nothing is reachable in a release build.
 | ---- | -------- | ------- | ------- | ---------------- |
 | VB-CABLE (virtual audio cable) | https://vb-audio.com/Cable/index.htm | **Donationware** — "VB-CABLE is a Donationware! All participations are welcome"; package `VBCABLE_Driver_Pack46.zip` (NOV 2026, XP to WIN11 32/64 bits/Arm64); install runs the setup in administrator mode and **needs a reboot** | 2026-11-08 | routing test WAVs into the emulator's mic on the founder's PC (the real-mic parity path, option A in docs/research/2026/voice-audio-injection.md). Install is FOUNDER_TODO until the reboot/UAC is allowed; until then all runs use the test-flavour file input |
 
+## The routing evaluation set (packages/eval/routing)
+
+The synthetic days are measured against three engines over a real road matrix. The licences below were read from each project's own LICENSE file on 2026-11-09; all four are permissive (MIT or Apache-2.0), so all four are adopted per the founder's rule. None of them reaches the shipped app: the eval is a measurement, the production engine (PyVRP) is an API dependency, and the matrix is a committed data file. VROOM was NOT adopted - it could not be built in this environment (no Rust toolchain, and the PyPI `vroom` package is the stale 1.0.2 of a different product), so the research doc's co-primary stays unverified here and the gap is recorded in ADR-030 rather than papered over.
+
+| What | Upstream | Licence | Read on | Where it is used |
+| ---- | -------- | ------- | ------- | --------------- |
+| Valhalla 3.3.0 | https://github.com/valhalla/valhalla (COPYING) | MIT | 2026-11-09 | the road matrix of the routing evaluation set: every ordered pair of the 560-stop pool, built with `valhalla_build_tiles` over the Geofabrik NZ OpenStreetMap extract and queried with `valhalla_service`'s `/sources_to_targets` (`scripts/eval/build-routing-eval.mjs`); the tiles live on the machine that built them (`data/valhalla_tiles`, git-ignored) and the matrix is committed |
+| OpenStreetMap (Geofabrik NZ extract) | https://download.geofabrik.de/australia-oceania/new-zealand-latest.osm.pbf | Open Database License (ODbL) 1.0 | 2026-11-09 | the road network the matrix was routed over (the ODbL attribution and the produce-a-derived-database duty follow the extract into the matrix, which is a derived database: the attribution is carried in `packages/eval/routing/manifest/road-matrix.meta.json`) |
+| PyVRP 0.14.1 | https://github.com/PyVRP/PyVRP | MIT | 2026-11-09 | the production solver (`services/api/app/solver.py`, ADR-009) AND the long-budget baseline of the routing evaluation set (the same two-phase model, a longer stopping criterion) |
+| OR-Tools 9.15 | https://github.com/google/or-tools | Apache-2.0 | 2026-11-09 | the third engine of the routing evaluation set's baseline (the `eval` extra of `services/api/pyproject.toml`; the API never imports it); the engine itself runs only in the runner (`scripts/eval/run-routing-eval.py`) |
+| VROOM 1.15.0 | https://github.com/VROOM-Project/vroom | BSD-2-Clause (the project's own LICENSE, upstream) | 2026-11-09 | **candidate, NOT adopted**: no Rust toolchain on the machine that built the set, so the source build did not run and the research doc's co-primary engine stays unverified here; the gap is recorded in ADR-030 with the exact reason, and the licence row is kept so the adoption needs no new licence check when a machine with cargo can run it |
+
+The OSRM fallback recorded in `docs/research/2026/routing-vrp-engines.md` was not needed: Valhalla served every ordered pair of the set (0 unroutable pairs), and the fallback is recorded as unused in the matrix's meta record.
+
 ## The API service (services/api)
 
 The API's own dependency closure is audited by the CI `Dependency audits` gate (uv lock);

@@ -273,6 +273,43 @@ export interface ApiPaths {
       };
     };
   };
+  '/v1/billing/checkout-session': {
+    post: {
+      body: {
+        plan: 'solo' | 'team';
+        return_base: string;
+      };
+      responses: {
+        200: {
+          url: string;
+        };
+      };
+    };
+  };
+  '/v1/billing/portal-session': {
+    post: {
+      body: null;
+      responses: {
+        200: {
+          url: string;
+        };
+      };
+    };
+  };
+  '/account/cost': {
+    get: {
+      body: null;
+      responses: {
+        200: {
+          courier_daily_usd?: null | number;
+          courier_monthly_usd?: null | number;
+          tenant_daily_usd?: null | number;
+          global_daily_usd?: null | number;
+          spent: Record<string, unknown>;
+        };
+      };
+    };
+  };
   '/account/entitlements': {
     get: {
       body: null;

@@ -1,6 +1,6 @@
 # FINAL_REPORT — Courier Copilot, for the founder
 
-Written 2026-11-08 by the lead executor, at `origin/main` = `3525a50` (PR #266).
+Written 2026-11-08 by the lead executor, refreshed 2026-11-10 by the backend squad, at `origin/main` = `3525a50` (PR #266).
 This is the §6 Definition-of-Done report: **what was built, the scores, how to
 install, and what only you can do.** Everything claimed here names its merge PR
 or CI run; the acceptance record is
@@ -62,21 +62,29 @@ green, run 42363101590):
 - **Handover** — [`docs/HANDOVER.md`](../HANDOVER.md) (BUG-034): run, deploy,
   keys, map updates, acceptance, the release order.
 
-## 2. The scores (scorecard refreshed 2026-11-08)
+## 2. The scores (scorecard refreshed 2026-11-10; routing and billing measured 2026-11-09/10)
 
 | Dimension | Rating (of 10) | Headline number |
 |---|---|---|
 | Voice and hands-free | ■■□□□ (4) | **MEASURED on the held-out set (600 built utterances, real STT, PR #290 `5ac2c44`): quiet WER 14.75 % (budget ≤5 %), van WER 28.02 % (0 dB 36.88 / 5 dB 26.12 / 10 dB 21.07; budget ≤10 %), intent on STT output 1.67 % (10/600), address exact 0/75, false-action 0/600 (PASS)**; corrections and p95 latency NOT MEASURED; ADR-028's real-sentence set absent, so §22 B is not claimed tuned. Every number from `per_utterance.csv` with the command in `docs/evidence/voice-heldout/README.md` |
 | Address accuracy | ■■■■□ (8) | **99.65 %** D8 on the held-out streets (5,979/6,000, 656,392 addresses indexed; no slice < 98.75 %) |
-| Route quality and speed | ■■□□□ (4) | real solver, A1-proven; no VRP eval set yet |
+| Route quality and speed | ■■■■□ (8) | **measured, on par**: our engine is 0.76% over the best open baseline on average (4.94% at worst) over 144 seeded days on a Valhalla-on-OSM matrix; 0 illegal plans where a feasible plan exists; solve p95 2.907s at 150 stops |
 | Offline and reliability | ■■■□□ (6) | **0 data loss** proven by A1; PMTiles pack pending |
+| Billing (D44) | ■■■□□ (6) | **the lane is built and gated, not yet live**: `app/stripe_nz.py` prices the plans in NZD (the trial is granted, never sold), `/v1/billing/checkout-session` and `/v1/billing/portal-session` carry the token's own courier in Stripe's `client_reference_id`, and Stripe's real webhook shapes translate into the one fact the entitlement layer ingests — 17 tests, the contract, the full suite (BUG-281, ADR-031). The TEST keys start the lane end to end; the live keys are the founder's (FOUNDER_TODO) |
 | Safety, privacy and trust | ■■■■□ (8) | 0 unaccepted advisories, tenant-isolation tests green, 0 copyleft |
 | Delivery, evidence and design | ■■■■□ (8) | 21/21 flows × both api legs + A1 green; APK 44.1 MB |
 
-The §6 bar is ≥ 8/10 on every dimension: **address, safety, delivery are there;
-voice (van-noise WER), routing (eval set) and offline (map pack) are measured
-and below it, each with a named owner and gate** — full detail in
-[`QUALITY_SCORECARD.md`](./QUALITY_SCORECARD.md).
+The §6 bar is ≥ 8/10 on every dimension: **address (99.65 % held-out), routing
+(measured against the best open engine), safety and delivery are there;
+voice (van-noise WER), billing (the founder's keys) and offline (the map pack)
+are measured and below it, each with a named owner and gate** — full detail in
+[`QUALITY_SCORECARD.md`](./QUALITY_SCORECARD.md). The founder's own bar (every
+score ≥ 9.5/10) is not met on any dimension yet, and each gap now has a measured
+number rather than a hope: voice (14.75 % quiet / 28.02 % van WER against budgets
+of 5 % / 10 %), routing (0.76 % over the baseline on average, 4.94 % at worst,
+0 illegal plans, p95 2.907 s — all four directive targets met, so the score is
+held at 8 by the measured-on-par rubric rather than by a gap), offline (the
+Canterbury PMTiles pack, T5), billing (the founder's Stripe keys).
 
 ## 3. Acceptance evidence
 
@@ -107,6 +115,11 @@ keys instructions: [`docs/HANDOVER.md`](../HANDOVER.md).
 
 1. **The keystore secrets** (`ANDROID_KEYSTORE_*`) in the protected `release`
    environment + the encrypted offline backup's location → the **signed APK**.
+0. **The Stripe switches** (`STRIPE_SECRET_KEY`, `STRIPE_PRICE_SOLO`,
+   `STRIPE_PRICE_TEAM`, `BILLING_WEBHOOK_SECRET_STRIPE`) so D44's lane runs in
+   test mode end to end — the app's half is built and measured (BUG-281); with
+   the test keys a courier buys a Solo, the webhook lands and the entitlement
+   answers `active`.
 2. **The Play Console account**, store assets and the background-location
    disclosure video → **v1.0.0 on Google Play** (tag `v1.0.0`; the Release APK
    workflow signs and publishes with SBOM + provenance).
@@ -126,15 +139,16 @@ second (large-screen) AVD profile in `.github/workflows/`.
 
 | §6 clause | State |
 |---|---|
-| P1–P7 complete with evidence | P1–P6 merged with evidence (see `docs/log/CURRENT.md` history); **P7**: acceptance record written (PR #265), scorecard refreshed, BUG-197 fixed — the two-screen-size leg waits on BUG-270 (platform), `v1.0.0` waits on the founder |
+| P1–P7 complete with evidence | P1–P6 merged with evidence (see `docs/log/CURRENT.md` history); **P7**: acceptance record written (PR #265), scorecard refreshed, BUG-197 fixed — the two-screen-size leg waits on BUG-270 (platform), `v1.0.0` waits on the founder. **Item 7's chain on 2026-11-10:** B4, the C3 ADR, C1, A5, §22 B/C, the clean-room ideas, MASVS L2, S1–S5 and **billing D44** are merged (D44 = `e61a884`, BUG-281) — what remains is the cost guard (COST_PLAN's per-driver/per-tenant budgets), the signed APK + SBOM as v1.0.0 (the keystore secrets are the founder's) and the LAST: Oracle staging + the production OmniRoute |
 | Must-haves of SAAS_CHECKLIST / COVERAGE_MAP | the driver-day core is shipped and E2E-proven; the remaining `Planned (task)` rows in PARITY (272) are the post-v1 surface — team/fleet, web dashboard, admin, go-to-market, and the named gaps (offline map pack T5, VRP eval set, large-screen AVD) |
 | PARITY beats Spoke on the differentiators | 4 `Better` rows + 30 `Have` rows with merged-PR evidence; Spoke column on every row (`docs/status/PARITY.md`) |
-| Scorecard ≥ 8/10 everywhere | **3 of 6 dimensions at ≥ 8/10** (address, safety, delivery); voice/routing/offline measured below, with named gaps (§2) |
+| Scorecard ≥ 8/10 everywhere | **4 of 7 dimensions at ≥ 8/10** (address, routing, safety, delivery); voice/billing/offline measured below, with named gaps (§2). The founder's ≥ 9.5/10 bar is NOT met on any dimension, and each gap is a measured number |
 | `v1.0.0` released | **founder-gated** (section 5) |
 | This final report | this file |
 
-Open bug rows on main: 8 (BUG-051, BUG-052, BUG-061, BUG-068, BUG-104,
-BUG-112, BUG-137, BUG-270) — all in the backend/platform lanes or platform-
-owned; the lead's reserved range (BUG-189..209, BUG-270..299) is clear apart
-from BUG-270. Tracker: 236 rows — fixed 196, moved to PARITY 30, closed 2,
-open 5, doing 2, testing 1.
+Open bug rows on main: re-counted at every merge from `docs/status/BUGS.md`
+(the register is the truth); the last count on main: **251 rows — open 4, doing
+3, testing 1, fixed 211, closed 2, moved to PARITY 30** — every row is either in
+the backend/platform lanes, platform-owned (BUG-270), or a named post-v1 gap.
+The lead's reserved range (BUG-300..349) is theirs; the backend's 277..299 is
+282..299 free after BUG-280/281.

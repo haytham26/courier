@@ -194,6 +194,202 @@ node scripts/eval/build-voice-eval.mjs --linz-dir ..\courier\data\linz --heldout
 node scripts/eval/check-voice-eval.mjs                                        # both directions
 ```
 
+---
+
+## Measurement 2026-11 (real STT output)
+
+**Date:** 2026-11-10. **Lane:** the VOICE MEASUREMENT sub-agent, worktree
+`C:\Users\DCL\projects\courier\.worktrees\voice-measure`, branch
+`voice/heldout-measure`, from `origin/main` `9516c97` (PR #278). **PR:**
+voice(eval): measured on the shared held-out list — real STT output,
+per-target PASS/FAIL.
+
+**The rule this measurement works to** (founder directive 2026-11-08 item 4 +
+the 2026-11-09 PART B instruction, and BUG-210's honesty rules): every number
+below is read off the recognizer's OWN output — `per_utterance.csv`'s
+`hypothesis` column — never off the gold text, and no slice the run could not
+measure is ever averaged into a headline. The gold-text legs are still
+published, labelled as what they are: the parser ceiling on the generator's
+own templates (BUG-210).
+
+### The exact commands
+
+```
+# 0. the open data, ONCE, into the worktree (data/ is git-ignored):
+node scripts/eval/fetch-open-voice-data.mjs
+#    data/voice/common-voice/clips.jsonl   280 clips (140 New Zealand English,
+#                                        140 other English accents),
+#    data/voice/noise/noise.jsonl         8 MUSAN beds (CC-BY 4.0),
+#    data/voice/stt/...tar.bz2            the judge archive (118,071,777 bytes).
+#    Every clip's sha256 is re-verified against the file on disk on every run.
+#    The Hugging Face datasets-server answered HTTP 502 on some pages of the
+#    Common Voice scan; the fetcher is restartable (it keeps a scan cursor), so
+#    the lane re-ran it until the pool was complete (nz 40 -> 140, mix 140).
+
+# 1. the MAIN manifest (the results committed there were pre-#279 and stale):
+uv run --directory services/courier-voice --extra eval python -m app.eval_audio \
+  --manifest packages/eval/voice/manifest --data data/voice \
+  --out packages/eval/voice/results/utterances
+
+# 2. the HELD-OUT manifest (every headline number of the held-out set):
+uv run --directory services/courier-voice --extra eval python -m app.eval_audio \
+  --manifest packages/eval/voice/manifest/heldout --data data/voice \
+  --out packages/eval/voice/results/heldout-utterances
+```
+
+Both runs transcribed 600 of 600 utterances: 11:54:00 → 12:14:11 (main) and
+12:17:59 → 12:37:54 (held-out) on 2026-11-10, ~20 minutes of judge pass each,
+with the progress logged every 50 utterances.
+
+### The environment (`results/heldout-utterances/environment.json`)
+
+| field | value |
+| --- | --- |
+| judge | sherpa-onnx whisper tiny.en (Whisper weights MIT, sherpa-onnx runtime Apache-2.0) |
+| judge_model | https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2 |
+| sample_rate | 16000 |
+| normalisation | lower-case, diacritics folded, punctuation dropped, whitespace collapsed |
+| resampling | linear 48 kHz → 16 kHz (the clips as the mirror serves them) |
+| python | 3.12.15 |
+| platform | Windows-11-10.0.26300-SP0 |
+| manifest | packages/eval/voice/manifest/heldout |
+| held_out_streets | 1360 |
+| clips / beds | 280 / 8 |
+
+### The per-target table, measured on the HELD-OUT set
+
+Every value is a row-level measurement of that run's `per_utterance.csv`, and
+each one was recomputed by an INDEPENDENT script from the same CSV and agreed
+with `summary.json` to the last digit (the scorer is not its own witness).
+
+| target | the slice the number came from | measured (real STT output) | budget | verdict |
+| --- | --- | --- | --- | --- |
+| quiet WER | `en_nz_quiet`, 120 utterances | **14.75 %** | ≤ 5 % | **FAIL** |
+| van WER | `en_nz_van`, 360 utterances (0 dB 36.88 %, 5 dB 26.12 %, 10 dB 21.07 %) | **28.02 %** averaged over 0/5/10 dB | ≤ 10 % | **FAIL** |
+| intent accuracy on STT output | the 3 slices with STT output: `en_nz_quiet` 5/120, `en_nz_van` 0/360, `en_mix` 5/120 | **1.67 %** (10/600) | ≥ 95 % | **FAIL** |
+| address extraction, exact match | the same 3 slices: 75 address-bearing scripts, 0 of their hypotheses carried an address | **0 / 75 = 0.00 %** | ≥ 95 % | **FAIL** |
+| false-action rate | the open slices, 600 transcribed utterances | **0 / 600 = 0.00 %** | ≤ 0.5 % | **PASS** |
+| corrections ("seven no seventeen") | `numbers_corrections` — no audio in this run | **not measured** | ≥ 95 % | **NOT MEASURED** |
+| p95 latency | the device leg (EVAL.md M6) | **not measured** | ≤ 700 ms | **NOT MEASURED** |
+
+The courier-mix slice (`en_mix`, 120 utterances) measured 15.30 % WER and 5/120
+intent on the same run; it is reported beside the quiet slice rather than
+averaged into it.
+
+**Why the two FAILs on the acoustic side are not a product verdict.** The WER
+leg measures the SET: the open speakers' own sentences read by a tiny CPU judge
+(Whisper tiny.en, 16 kHz, linear-resampled). It is the bar the set itself sets,
+not our pipeline — the product's own STT is M1 on the device and is listed
+below as unmeasured. The lever is the on-device engine plus the contextual
+biasing, not this judge.
+
+**Why the intent and address FAILs are not a product verdict either.** On the
+open-data slices the speakers speak their OWN sentences
+(`per_utterance.csv`'s `gold_text`), not the manifest script, so the parser
+never sees a command and an address never reaches it — 0 of 75 address-bearing
+hypotheses carried an address at all. The lever is the audio: synthesise the
+command scripts (the TTS licence ledger, D24) or drive the audio-injection path
+(the 2026-11-08 research, option C), and M3/M2 become measurable on commands.
+
+### What the run proves about the held-out set itself
+
+- `held_out: true`, `held_out_utterances: 600`, `held_out_scripts: 720`,
+  `held_out_streets: 1360`, `street_key_check: clean`
+  (`results/heldout-utterances/summary.json`).
+- The scorer reads the SHARED list
+  (`packages/eval/voice/manifest/heldout_streets.json`, the one
+  `scripts/eval/check-voice-eval.mjs` reads) by street key — the Python twin of
+  `scripts/eval/street-key.mjs` — and REFUSES a manifest whose rows disagree
+  with it, naming the row. Cross-language check over the 204 distinct streets
+  of both manifests: 0 disagreements between the JS and the Python key.
+- Every scored row carries its tag in `per_utterance.csv`, so the CSV itself
+  proves which set the numbers came from.
+- The parser ceiling on the HELD-OUT gold text (a ceiling, never an accuracy,
+  BUG-210): `en_nz_quiet` 120/120, `en_nz_van` 120/120, `en_mix` 120/120,
+  `mi_places` 60/60, `chatter` 40/40, `code_switch` 45/60, and 0/40 for `ar`,
+  `hi_pa`, `zh`, `sm_to` (an English catalogue, reported "not supported
+  offline") and `numbers_corrections` 0/40 (the named parser gap). With the
+  mandatory slots: `en_nz_quiet` 120/120, `mi_places` 44/60, `code_switch`
+  30/60.
+
+**What the two runs do and do not add to each other.** The clip assignment is
+by utterance id, and both manifests lay their 600 open rows out in the same
+order with the same pool, so the held-out run transcribed the SAME 600 files
+(verified: 600 of 600 ids mapped to the same clips), which is why the WER
+numbers are identical to the main run's. The WER leg is the set's own
+acoustic difficulty, measured ONCE — it is not independent evidence about
+held-out streets, and the held-out run does not claim it as such. What the
+held-out run adds is real: its scripts speak held-out streets, so its intent,
+address and ceiling legs are evidence about streets the parser has never been
+tuned on, and `check-parser-circularity` proves no held-out street is spelled
+in the gold templates or the parser regexes.
+
+### Coverage: what is in the audio and what is not
+
+- **Built from open data and measured:** 600 utterances — `en_nz_quiet` 120,
+  `en_nz_van` 360 (0/5/10 dB, 120 each), `en_mix` 120. Speakers: 480 rows from
+  New Zealand English clips and 120 from the other English accents of the
+  courier mix (US 73, England 20, NZ+England 17, Canadian 12, Australian 5,
+  Scottish 4, Irish 3, plus mixed-accent labels). The NZ accent mix IS covered.
+- **Text side complete, no audio (never measured, never averaged in):**
+  `mi_places` 60 (te reo Māori place names), `ar` 40, `hi_pa` 40, `zh` 40,
+  `sm_to` 40, `numbers_corrections` 40, `code_switch` 60, `chatter` 40. The
+  TTS slices need the project's own voices in the licence ledger first (D24).
+  `ar`/`hi_pa`/`zh`/`sm_to` are additionally "not supported offline" — the
+  offline brain's catalogue is English — so their 0 % is a fact about the
+  parser, never a measured accuracy and never part of a headline.
+
+### Fully offline — how it is proven
+
+1. **The scorer opens no socket.** The only URL in `app/eval_audio.py` is the
+   `JUDGE_MODEL_URL` constant, which is published with the result and never
+   fetched: the fetcher (`scripts/eval/fetch-open-voice-data.mjs`) is the single
+   download path, and `ensure_judge` only UNPACKS a local archive.
+2. **The whole scorer ran with the network dead.** With
+   `HTTP_PROXY`/`HTTPS_PROXY`/`ALL_PROXY` all pointing at `http://127.0.0.1:9`
+   (a closed port), the same command on a 2-utterance manifest completed in
+   2.8 s and wrote the five result files. A single request would have failed.
+
+### The honest unmeasured legs
+
+| leg | why it is not measured |
+| --- | --- |
+| M1 on OUR pipeline | the product's own STT runs on the phone; the WER here is the set's open speakers read by the pinned judge |
+| M2 on the product's address engine | what is measured is the offline brain's `raw_address` on the judge's hypotheses; the D8/nz-address engine is the device leg |
+| M3 on commands | the open-data audio speaks the speakers' own sentences; the command scripts have no audio (D24) |
+| M4 / M5 (wake word) | the non-speech corpus and the wake phrases need the device |
+| M6 (latency, p95 ≤ 700 ms) | the phone's own path; the shift-sim harness's service p95 is published as 0.0 ms, which is `time.monotonic()`'s resolution on this box (a 1000-iteration loop measures 0.0 ms while `perf_counter` answers 1.1 µs), not a measurement of the service |
+| M7 (battery) | measured on a device |
+| M8 (TTS intelligibility) | the synthesised audio needs the TTS voices, whose licence ledger is pending |
+| the founder's real-sentence set (ADR-028 / D65) | it still does not exist, so §22 B is NOT claimed tuned |
+
+### The numbers the lead can lift into `docs/status/FINAL_REPORT.md`
+
+```
+voice, held-out street set, measured 2026-11-10 from real STT output
+(sherpa-onnx whisper tiny.en, 16 kHz, 280 open clips + 8 MUSAN beds,
+Windows-11, Python 3.12.15):
+
+  built from open data and measured   600 utterances (en_nz_quiet 120,
+                                      en_nz_van 360 at 0/5/10 dB, en_mix 120)
+  quiet WER                           14.75 %   (target <= 5 %)   FAIL
+  van WER (0/5/10 dB averaged)        28.02 %   (target <= 10 %)  FAIL
+  courier-mix WER                     15.30 %
+  intent accuracy on the STT output   1.67 % (10/600)  (target >= 95 %)  FAIL
+  address extraction, exact match     0.00 % (0/75; 0 hypotheses carried an
+                                      address)     (target >= 95 %)  FAIL
+  false-action rate on open speech    0.00 % (0/600) (target <= 0.5 %) PASS
+  corrections ("seven no seventeen")  NOT MEASURED (the slice has no audio)
+  p95 latency                         NOT MEASURED (the device leg)
+  parser ceiling on held-out gold text 120/120 on the three English slices,
+                                      60/60 mi_places, 45/60 code_switch -
+                                      a CEILING on its own templates, not an
+                                      accuracy (BUG-210)
+```
+
+CI covers the voice suite (the scorer's own tests) and `check-voice-eval` over
+both manifests; the 40 minutes of judge pass are not a CI job. The run ids are
+recorded with the PR.
 ## Honest notes
 
 - `utterances.jsonl` is byte-identical after the regeneration (the BUG-210

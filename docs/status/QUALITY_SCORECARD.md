@@ -62,6 +62,19 @@ open — New Zealand drives on the **left**, so this must be closed before we sh
 | Battery while driving | ≤ 8 %/h | **UNVERIFIED** | expo-location + expo-task-manager (already in the app) with `getMotionActivityAsync()` automotive detection | — | `□□□□□` |
 | Offline map of Canterbury | complete | **Partially built**: the map view modes (2D/3D/Satellite/Auto), per-driver memory, voice camera control and the 3D-buildings builder with licences checked are done; the **PMTiles pack itself is not built yet** (needs the LINZ outlines + OSM extract downloads; the weekly rebuild is T5) — PARITY row 308 | PMTiles (spec CC0, CLI `go-pmtiles` BSD-3) + protomaps/basemaps styles (CC0 design) | Apple/Google offline (closed) | `■■□□□` |
 
+## 3b. Billing (D44)
+
+| Measure | Target | Ours | Best OSS | Best competitor |
+|---|---|---|---|---|
+| The subscription lane | a courier can start, manage and lose a subscription without support | **built and gated, not yet live** (BUG-281): the NZD price catalogue (the trial is granted, never sold), `/v1/billing/checkout-session` + `/v1/billing/portal-session`, and Stripe's real webhook shapes as the one fact the entitlement layer ingests - 17 tests, the contract, the full suite | Stripe's own dashboard, without an app's decision layer | Spoke's store-only billing (no self-serve web lane) |
+| The entitlement decision | a failed renewal never strands a courier | `past_due`/`grace` are LIVE (ADR-017 section 1), proven by the provider tests | - | - |
+
+The remainder is the founder's: the TEST keys make the lane run end to end (a
+courier buys a Solo, the webhook lands, the entitlement answers active) and the
+LIVE keys make it sell. The cost guard (COST_PLAN's per-driver daily/monthly
+budgets with the cheaper-cascade fallback) is the next backend slice, its state
+named in `docs/status/FINAL_REPORT.md`'s DoD checklist.
+
 ## 5. Safety, privacy and trust
 
 | | What we measure | Our number | Best OSS | Best competitor | Rating |
@@ -91,13 +104,13 @@ open — New Zealand drives on the **left**, so this must be closed before we sh
 |---|---|---|
 | Voice and hands-free | `■■■□□` | van-noise WER 28.0 % → ≤ 15 % (the founder-gated 296 MB model, A2), a held-out intent set (BUG-210), and a measured command→action ms |
 | Address accuracy | `■■■■□` | the wrong-house guard at confidence ≥ 0.9 and a p95 time-to-correct measurement |
-| Route quality and speed | `■■□□□` | the VRP eval set (PyVRP vs VROOM on a real Christchurch day) and the 200-stop timing |
+| Route quality and speed | `■■■■□` | the VRP eval set is BUILT and measured (BUG-280, ADR-030: 144 seeded days on a Valhalla-on-OSM matrix, our engine within 0.76% / 4.94% of the best baseline, 0 illegal plans where feasible, p95 2.907s at 150 stops); the one open item is VROOM's own run (no Rust toolchain here) |
 | Offline and reliability | `■■■□□` | the Canterbury PMTiles pack (T5 weekly job), a sync-delay p95 and a battery measurement |
 | Safety, privacy and trust | `■■■■□` | the founder's PIA legal review (FOUNDER_TODO) |
 | Delivery, evidence and design | `■■■■□` | the 8 pending large/200 % baselines (BUG-270, platform-owned second AVD) and the mutation floors (voice 58 %, API 50.8 % vs 70 %) |
 
 **Where the §6 bar stands:** address, safety and delivery are at `■■■■□` (8/10) or better
-today. Voice, routing and offline are measured but below 8/10 for the named, specific reasons
+today. Voice and offline are measured but below 8/10 for the named, specific reasons; routing reached the bar with BUG-280's measured set
 above — each has a number, an owner and a gate, and none is hidden. The `v1.0.0` release
 itself is founder-gated (keystore secrets in the protected `release` environment, Play
 account, the real-phone acceptance run A6) — `docs/status/FOUNDER_TODO.md`. The scorecard is

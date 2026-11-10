@@ -55,6 +55,13 @@ dev = [
 load = [
     "locust>=2.20",
 ]
+# The routing evaluation set's runner (scripts/eval/run-routing-eval.py):
+# OR-Tools (Apache-2.0) is one of the three baseline engines of BUG-280, and the
+# API itself never imports it. PyVRP (the production engine, ADR-009) is a main
+# dependency; Valhalla needs no package - the matrix is committed.
+eval = [
+    "ortools>=9.15,<10",
+]
 # The S3-compatible POD store (ADR-011): boto3 (Apache-2.0) at runtime when
 # POD_STORAGE_BACKEND=s3; moto (Apache-2.0) emulates S3 in the tests. MinIO
 # is banned (AGPL-3.0).

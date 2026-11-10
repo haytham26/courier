@@ -476,6 +476,54 @@ recordings) failed on the runner infra in the same window that took my own branc
 down and are green on the §17.4 re-runs — recorded so nobody re-reads them as a
 diff failure. The lane's environment note (a dead worktree registration released,
 0 unique commits, admin dir archived) is in its report.
+---
+
+**Emulator connected: BlueStacks 5, Android 13, x86_64, 127.0.0.1:5555.**
+
+## 2026-11-10: lane status lines (the directive's one-line-per-lane rule)
+
+- **Voice measurement (PR #290, merged 5ac2c44): DONE.** The held-out numbers are
+  measured from real STT output and on FINAL_REPORT (quiet 14.75 %, van 28.02 %,
+  intent 1.67 %, address 0/75, false-action 0/600 PASS). NEXT: the levers, in the
+  founder's order.
+- **Voice lane 5 (TTS command audio + the ≥500-turn simulation,
+  `voice/scale-simulation`): RUNNING** (launched 2026-11-10, polled on the
+  15-minute cadence).
+- **BUG-302 (the large-leg harness flake): RUNNING** — PR #289 restores the
+  BUG-270/300 set; the large legs are red on `import.yaml` alone; the 60 s scroll
+  budget already fixed voice-memory / stops / today-fail there.
+- **BUG-303 (BlueStacks' adb bridge, NEW): DOING** — filed today: the device
+  refuses Maestro (dadb EOF) and `adb root`; the hand-rolled one-shot adb driver
+  runs the voice path on the device instead (evidence in
+  docs/evidence/scale-tests/).
+- **The merge-completeness guard: NEXT** — the directive's new rule (prove the
+  merged tree carries the whole PR diff), red-first, this session.
+- Scale tests, the offline lane and P4: RUNNING, in the lane queue.
+---
+
+## 2026-11-11: PR #300 merged - the A-to-Z simulation at scale, and the parser it exposed
+
+- **Voice lane 5 (the A-to-Z simulation): DONE.** 1,880 action-bearing files built
+  from the set's own 720 scripts (560 quiet + 1,320 van over the MUSAN beds at
+  0/5/10 dB; 160 scripts named-not-synthesised rather than faked), and 1,880 scripted
+  turns - **896 carried end to end through the phone's own command path** (the
+  directive's floor is 500), 0 false actions on 185 chatter turns, every file checked
+  against the sidecar's sha, 345 deliveries + 172 failures applied to the run, 517
+  events logged and owed by the outbox. The engine facts are in the evidence:
+  sherpa-onnx's Kokoro is NOT byte-reproducible (four runs, four hashes), so the
+  sidecar's sha is the pin; sherpa-onnx >= 2.0.0 dropped espeak-ng, so an OOV word is
+  silently dropped and the builder spells every digit run out. Evidence:
+  docs/evidence/voice-scale/README.md (command, counts, licences, what is NOT claimed).
+- **BUG-304 filed** (the lane's fix, renumbered): the phone's offline parser could not
+  act on what couriers actually say - 11 of the 12 new scale tests were red on
+  origin/main. The lane's commit messages say BUG-303; BUG-303 was already taken by
+  the BlueStacks bridge defect (PR #296), so the register number is BUG-304 and the
+  rename is recorded here and in the row.
+- **The merge-completeness guard (PR #298): RUNNING** in CI - the directive's new
+  ritual step, red-first, with the record of the 20 resolutions it found.
+- NEXT: the founder's lever (b) - address resolution on STT output through the
+  backend's normaliser and the Canterbury index - which is the lever the held-out
+  table says moves the most (address exact 0/75 today).
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue

@@ -85,6 +85,16 @@ source_paths = [
 pytest_add_cli_args = [
     "--ignore=tests/test_eval_harness.py",
     "--ignore=tests/test_eval_audio.py",
+    # The same reason as the two above, one file further: the TTS builder's own
+    # suite imports numpy (the `eval` extra) for the samples it feeds through
+    # the builder's seam, and mutmut runs with `--extra dev` only. Its own CI
+    # job (the `eval` extra) proves it; here it would fail every mutant for the
+    # import's reason, not the code's.
+    "--ignore=tests/test_eval_tts.py",
+    # The turn-set scorer reaches the judge through `app/eval_audio.py`, which
+    # imports numpy and soundfile at module scope - the same `eval` extra, the
+    # same reason.
+    "--ignore=tests/test_eval_scale.py",
 ]
 
 [tool.ruff]

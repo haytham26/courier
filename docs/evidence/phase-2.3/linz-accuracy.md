@@ -1,6 +1,6 @@
 # D8 accuracy on the real LINZ data (Canterbury)
 
-- Date: 2026-11-08
+- Date: 2026-11-10
 - Data: LINZ `NZ Addresses` (`data.linz.govt.nz:layer-123113`), the Christchurch, Waimakariri and Selwyn bounding boxes.
 - **656,392 real addresses indexed** across 3 area(s).
 - Sample: 120 real addresses per area (seed 20261020), 1800 checks in total.

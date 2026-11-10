@@ -158,7 +158,11 @@ class TestThePyVRPEngine:
                 continue
             assert original.window.contains(planned.arrival_at)
 
-    def test_a_window_that_cannot_be_met_falls_back_and_flags_the_stop(self) -> None:
+    def test_a_window_that_cannot_be_met_is_planned_around_and_flagged(self) -> None:
+        """BUG-280: a window the day cannot meet used to send the whole day to
+        the plain heuristic. The engine now plans the day with the windows
+        dropped and the core reports every violation honestly - no stop is
+        dropped, and the walk still says which one was late."""
         closing = datetime(2026, 10, 22, 8, 5, tzinfo=UTC)
         far = make_stop(lat=-43.7000, lon=172.7500, window=TimeWindow(end=closing))
         request = make_request([far])
@@ -167,7 +171,30 @@ class TestThePyVRPEngine:
 
         assert plan.stops[0].late is True
         assert plan.window_violations == 1
-        assert plan.engine == "heuristic-nn-2opt"
+        # the stop is still there, and the solver planned the day around it
+        assert [stop.stop_id for stop in plan.stops] == [far.id]
+        assert plan.engine == "pyvrp"
+
+    def test_the_window_dropped_retry_keeps_every_stop_of_the_day(self) -> None:
+        """A day whose windows cannot all be met is planned in full: the
+        retry drops the WINDOWS, never the stops, and the count of the day's
+        window violations is the honest number the walk found."""
+        stops = [
+            make_stop(lat=-43.5400, lon=172.6000,
+                      window=TimeWindow(end=datetime(2026, 10, 22, 8, 1, tzinfo=UTC))),
+            make_stop(lat=-43.5600, lon=172.6200,
+                      window=TimeWindow(end=datetime(2026, 10, 22, 8, 2, tzinfo=UTC))),
+            make_stop(lat=-43.7000, lon=172.7500,
+                      window=TimeWindow(end=datetime(2026, 10, 22, 8, 3, tzinfo=UTC))),
+        ]
+        request = make_request(stops)
+
+        plan = build_plan(request, engine=PyVRPEngine())
+
+        assert len(plan.stops) == 3
+        assert {stop.stop_id for stop in plan.stops} == {stop.id for stop in stops}
+        assert plan.window_violations >= 1
+        assert plan.engine == "pyvrp"
 
     def test_the_service_time_of_the_stop_wins_over_the_default(self) -> None:
         slow = make_stop(lat=-43.5400, lon=172.6000, service_time_s=900)

@@ -1,0 +1,25 @@
+{
+ "source": {
+  "what": "the road matrix of the routing evaluation set: every ordered pair of pool stops",
+  "engine": "Valhalla 3.3.0 (MIT), POST /sources_to_targets, costing \"auto\" (a van on the road network, no traffic, no temporal effects)",
+  "data": "OpenStreetMap via the Geofabrik NZ extract: https://download.geofabrik.de/australia-oceania/new-zealand-latest.osm.pbf",
+  "data_licence": "Open Database License (ODbL) 1.0 - https://opendatacommons.org/licenses/odbl/1-0/",
+  "data_bytes": 405984889,
+  "data_sha256": null,
+  "engine_licence": "MIT - https://github.com/valhalla/valhalla/blob/master/COPYING",
+  "tileset_last_modified": 1794186157,
+  "built_at": "2026-11-09T01:38:48.200Z",
+  "address_source": "the LINZ pool (CC BY 4.0, sourced from the LINZ Data Service), fetched by scripts/data/fetch-routing-pool.py",
+  "query": "POST http://127.0.0.1:8002/sources_to_targets, 12 sources per request against all targets, units kilometers; whole metres and whole seconds per ordered pair, NOT symmetrised (one-way streets)",
+  "fallback_recorded": "OSRM was the recorded fallback in docs/research/2026/routing-vrp-engines.md; Valhalla served every pair here, so the fallback was not needed and was not used"
+ },
+ "stop_count": 560,
+ "units": {
+  "distance": "metres",
+  "time": "seconds"
+ },
+ "ordered_pairs": 313600,
+ "unroutable_pairs": 0,
+ "rows": "i,j,metres,seconds for every ordered pair the engine answered",
+ "sha256_gz": "9fe319c75ed9bc9f6c8d46798deaa280cf912e081314976ebd762b3cbd803a67"
+}

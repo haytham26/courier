@@ -1,6 +1,6 @@
 # D8 accuracy on the HELD-OUT 20 % of Canterbury streets (directive 2026-11-08 item 2)
 
-- Date: 2026-11-08
+- Date: 2026-11-10
 - Held-out list: `services/api/tests/fixtures/linz-holdout-streets.txt` (1360 streets, seed 20261108, split by street by `scripts/data/split-linz-holdout.py`).
 - Addresses on held-out streets: 120,961; sampled 1200 (400/area, seed 20261108), 6000 checks (five ask-cases each).
 - Store: the full register per area (production shape) — the hold-out is on street names, not on the register.

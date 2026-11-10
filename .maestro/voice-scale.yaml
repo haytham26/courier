@@ -1,0 +1,74 @@
+appId: com.courier.copilot
+name: 'The voice scale path: the armed utterance file drives the push-to-talk (founder directive item 4)'
+---
+# The A-to-Z voice path of the founder directive (2026-11-08, item 4), on the
+# device. The >= 500-turn run itself is deterministic and runs where the audio
+# and the recognizer can both be pinned: the app-side simulation
+# (`apps/mobile/src/voice/__tests__/scaleSimulation.test.ts`) drives every turn
+# of the committed set (`packages/eval/voice/fixtures/scale-turns.jsonl`)
+# through the armed file, the recorded-utterance seam, the turn router, the
+# command channel, the run store, the spoken ack and the event log, and writes
+# its own per-turn trace into `docs/evidence/voice-scale/results/`.
+#
+# This flow is the DEVICE leg of the same path on the CI AVDs, and it is honest
+# about what a device without an STT model pack can prove: the file the runner
+# arms (`.maestro/run-all.sh` pushes it into the app's own document directory,
+# and `audioSourceForThisBuild` answers it for this build) IS the one the app
+# hands to `transcribeRecordedUtterance`, and the phone NEVER opens the
+# microphone for it. Beyond that the emulator answers the model it has, which
+# is none: the honest `no-model` answer, and the turn continues through the
+# E2E canned queue exactly as voice-turn.yaml drives it.
+#
+# What this flow does NOT claim: a transcription, an action on the run, or a
+# spoken confirmation from the audio. Those are the simulation's numbers, and
+# the real-mic parity leg (option A of the audio-injection research
+# `docs/research/2026/voice-audio-injection.md`) is the one that closes them.
+#
+# BUG-185: stop the app FIRST, then clear its state (the old task's removal
+# killed the freshly started process on api-34).
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The actions live inside the run sheet, which opens at peek: raise it with the
+# grabber first (the design's own gesture), then scroll to the action.
+- swipe:
+    from:
+      id: "today-sheet-grabber"
+    direction: UP
+- scrollUntilVisible:
+    element:
+      id: "today-add-by-voice"
+    direction: DOWN
+    timeout: 20000
+# The push-to-talk through the armed file: the microphone is never opened.
+- tapOn:
+    id: "today-add-by-voice"
+# The re-arm is deterministic: the same file is handed to the same seam again,
+# which is what makes the run reproducible from the committed manifest.
+- tapOn:
+    id: "today-add-by-voice"
+- takeScreenshot: "voice-scale-armed"
+# The machine must not wedge on it: the sphere's first tap is the canned
+# question (the queue of turnForThisBuild), answered in the dock's caption.
+- tapOn:
+    id: "copilot-sphere"
+- extendedWaitUntil:
+    visible:
+      id: "tab-caption"
+    timeout: 15000
+- assertVisible: "Four stops left on the run."
+# Second tap: the canned "delivered" - routed FREE, no HTTP - publishes the
+# command on the voice channel, and the layout's bridge marks the run's active
+# stop and opens the confirm, exactly as the slide does.
+- tapOn:
+    id: "copilot-sphere"
+- extendedWaitUntil:
+    visible:
+      id: "delivered-screen"
+    timeout: 15000
+- assertVisible: "Delivered"
+- takeScreenshot: "voice-scale-delivered"
