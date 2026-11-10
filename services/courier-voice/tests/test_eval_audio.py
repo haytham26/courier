@@ -810,3 +810,42 @@ class TestTheVerdictNotes:
         # reads 4% as the product's command accuracy.
         assert by_target["intent_on_stt"]["verdict"] in {"PASS", "FAIL"}
         assert "OWN sentences" in by_target["intent_on_stt"]["note"]
+
+
+class TestTheResultsReadme:
+    """The README the run publishes beside its own results.
+
+    A broken line in the published README is a broken result: the run's own
+    readers (and the lead, lifting numbers into the final report) read this file
+    first, so every result file is named as its own bullet and the legs are
+    described where they are.
+    """
+
+    def test_the_results_readme_names_every_result_file_its_own_bullet(self, tmp_path: Path) -> None:
+        measurement = TestTheHeldOutMeasurement()
+        manifest = measurement.make_tree(tmp_path, held_out=True)
+        measurement.make_data(manifest)
+        args = argparse.Namespace(
+            manifest="manifest",
+            data="manifest/data",
+            out="results",
+            root=str(tmp_path),
+            no_judge=False,
+        )
+        code = run(
+            args,
+            judge=TestTheBuild.FakeJudge("delivered at 45 Poulson Street, Addington"),
+        )
+        assert code == 0
+        readme = (tmp_path / "results" / "README.md").read_text(encoding="utf-8")
+        for name in ("summary.json", "per_slice.csv", "per_utterance.csv", "environment.json"):
+            assert f"- `{name}`" in readme, f"{name} is not named as its own bullet"
+        # One bullet per file: no file is documented twice, and no bullet runs
+        # into the next line.
+        assert readme.count("- `summary.json`") == 1
+        assert ".- `" not in readme
+        # And the legs this lane added are described, beside the ceiling that
+        # stays labelled as a ceiling.
+        assert "intent_on_stt_by_slice" in readme
+        assert "address_extraction_on_stt_by_slice" in readme
+        assert "BUG-210" in readme
