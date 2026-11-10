@@ -68,7 +68,7 @@ green, run 42363101590):
 |---|---|---|
 | Voice and hands-free | ■■□□□ (4) | **MEASURED on the held-out set (600 built utterances, real STT, PR #290 `5ac2c44`): quiet WER 14.75 % (budget ≤5 %), van WER 28.02 % (0 dB 36.88 / 5 dB 26.12 / 10 dB 21.07; budget ≤10 %), intent on STT output 1.67 % (10/600), address exact 0/75, false-action 0/600 (PASS)**; corrections and p95 latency NOT MEASURED; ADR-028's real-sentence set absent, so §22 B is not claimed tuned. Every number from `per_utterance.csv` with the command in `docs/evidence/voice-heldout/README.md` |
 | Address accuracy | ■■■■□ (8) | **99.65 %** D8 on the held-out streets (5,979/6,000, 656,392 addresses indexed; no slice < 98.75 %) |
-| Route quality and speed | ■■□□□ (4) | real solver, A1-proven; no VRP eval set yet |
+| Route quality and speed | ■■■■□ (8) | **measured, on par**: our engine is 0.76% over the best open baseline on average (4.94% at worst) over 144 seeded days on a Valhalla-on-OSM matrix; 0 illegal plans where a feasible plan exists; solve p95 2.907s at 150 stops |
 | Offline and reliability | ■■■□□ (6) | **0 data loss** proven by A1; PMTiles pack pending |
 | Safety, privacy and trust | ■■■■□ (8) | 0 unaccepted advisories, tenant-isolation tests green, 0 copyleft |
 | Delivery, evidence and design | ■■■■□ (8) | 21/21 flows × both api legs + A1 green; APK 44.1 MB |

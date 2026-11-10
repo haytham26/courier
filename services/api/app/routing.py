@@ -27,7 +27,7 @@ import math
 import os
 import warnings
 from collections import deque
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
@@ -307,6 +307,47 @@ def _walk(
     return _Timing(legs, cumulative, violations, break_start, break_end, break_violation)
 
 
+def _break_score(
+    timing: _Timing, start: datetime, position: int
+) -> tuple[int, float, int]:
+    """The score a break placement is ranked by: the least violation, then
+    the earliest finish, then the front of the day. The same score as the
+    reopt slots use, so one rule decides everywhere."""
+    return (
+        timing.window_violations + (1 if timing.break_violation else 0),
+        (timing.legs[-1].departure_at - start).total_seconds() if timing.legs else 0.0,
+        position,
+    )
+
+
+def _best_break_position(
+    order: Sequence[RouteStop], request: RouteRequest
+) -> int | None:
+    """Where the break goes when nobody says: the position with the least
+    violation, then the earliest finish, then the front of the day (the same
+    score the reopt slots use). `None` when the day has no break or no pair
+    of stops to put one between.
+
+    One implementation of the rule, in one place - `_schedule` answers the
+    same question with this, and `_improve_order` asks it ONCE and holds the
+    answer for the whole 2-opt: re-deriving it for every candidate move made
+    the fallback day cubic in the stops (a 150-stop day the solver could not
+    plan took 148 seconds, measured by BUG-280's routing eval). The final
+    plan's own placement is scored again from scratch, so the answer the
+    courier sees never changes."""
+    constraint = request.constraints.break_constraint
+    if constraint is None or len(order) < 2:
+        return None
+    start = _aware(request.constraints.start_at)
+    best_position = None
+    best_score: tuple[int, float, int] | None = None
+    for position in range(1, len(order)):
+        score = _break_score(_walk(order, request, position), start, position)
+        if best_score is None or score < best_score:
+            best_position, best_score = position, score
+    return best_position
+
+
 def _schedule(
     order: Sequence[RouteStop],
     request: RouteRequest,
@@ -317,35 +358,20 @@ def _schedule(
     `break_position` is the number of stops before the break. It must stand
     strictly between two stops - 1 up to the stop count - 1 - and anything
     else raises: a told position is never silently re-read as "not given".
-    When it is not given the position comes out of the same score as the
-    reopt slots: the least violation, then the earliest finish, then the
-    front of the day.
+    When it is not given the position comes out of `_best_break_position` -
+    the same score the reopt slots use.
     """
     constraint = request.constraints.break_constraint
     if break_position is not None and not 1 <= break_position < len(order):
         raise ValueError("the break position must stand strictly between two stops of the day")
     if constraint is None:
         return _walk(order, request, None)
-    candidates: Iterable[int] = (
-        {break_position}
-        if break_position is not None and 1 <= break_position < len(order)
-        else range(1, len(order))
-    )
-    start = _aware(request.constraints.start_at)
-    best: _Timing | None = None
-    best_score: tuple[int, float, int] | None = None
-    for position in candidates:
-        timing = _walk(order, request, position)
-        score = (
-            timing.window_violations + timing.break_violation,
-            (timing.legs[-1].departure_at - start).total_seconds() if timing.legs else 0.0,
-            position,
-        )
-        if best_score is None or score < best_score:
-            best, best_score = timing, score
-    if best is None:
+    position = break_position
+    if position is None:
+        position = _best_break_position(order, request)
+    if position is None:
         return _walk(order, request, None)
-    return best
+    return _walk(order, request, position)
 
 
 def _build_plan(
@@ -515,7 +541,15 @@ def _improve_order(order: list[RouteStop], request: RouteRequest) -> list[RouteS
     constraints = request.constraints
     boundary = _priority_boundary(order)
     current = list(order)
-    violations = _schedule(current, request).window_violations
+    # The break position is decided ONCE, from the seeded order, and held for
+    # every move of the 2-opt: a move is refused when it adds a window
+    # violation under that placement. Re-scoring the break for every
+    # candidate cost one walk per position per move - a day the fallback had
+    # to plan alone spent minutes in it (BUG-280). The final plan scores the
+    # break again from scratch (`_build_plan` -> `_schedule` with no told
+    # position), so the placement the courier sees is unchanged.
+    break_position = _best_break_position(current, request)
+    violations = _walk(current, request, break_position).window_violations
     queue: deque[int] = deque(range(1, count))
     queued = [True] * (count + 1)
     dont_look = [False] * (count + 1)
@@ -532,7 +566,7 @@ def _improve_order(order: list[RouteStop], request: RouteRequest) -> list[RouteS
                 continue
             candidate = list(current)
             candidate[i - 1 : j] = reversed(candidate[i - 1 : j])
-            if _schedule(candidate, request).window_violations > violations:
+            if _walk(candidate, request, break_position).window_violations > violations:
                 continue
             current = candidate
             improved = True

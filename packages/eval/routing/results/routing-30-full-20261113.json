@@ -1,0 +1,76 @@
+{
+ "id": "routing-30-full-20261113",
+ "size": 30,
+ "variant": "full",
+ "seed": 20261113,
+ "area": "christchurch",
+ "stop_count": 30,
+ "windows": 15,
+ "priorities": 5,
+ "with_break": true,
+ "with_finish": true,
+ "engines": {
+  "ours": {
+   "order": [
+    82,
+    195,
+    75,
+    58,
+    117,
+    212,
+    12,
+    28,
+    249,
+    180,
+    286,
+    287,
+    88,
+    268,
+    271,
+    188,
+    165,
+    64,
+    245,
+    151,
+    247,
+    25,
+    238,
+    27,
+    19,
+    298,
+    16,
+    210,
+    22,
+    136
+   ],
+   "distance_m": 300008.0,
+   "duration_s": 36100.0,
+   "window_violations": 10,
+   "break_violation": false,
+   "break_position": 8,
+   "break_start_at": "2026-11-09T12:02:29+13:00",
+   "priority_violations": 0,
+   "over_capacity": false,
+   "engine": "ours",
+   "travel_m": 302349,
+   "travel_s": 19091,
+   "wall_s": 1.1942,
+   "planned": true
+  },
+  "pyvrp-long": {
+   "order": [],
+   "planned": false
+  },
+  "ortools": {
+   "order": [],
+   "planned": false
+  }
+ },
+ "wall_s": {
+  "ours": 1.1942,
+  "pyvrp-long": 30.0117,
+  "ortools": 15.0047
+ },
+ "best_travel_s": 19091,
+ "feasible_engines": []
+}

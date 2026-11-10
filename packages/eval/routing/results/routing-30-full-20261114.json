@@ -1,0 +1,76 @@
+{
+ "id": "routing-30-full-20261114",
+ "size": 30,
+ "variant": "full",
+ "seed": 20261114,
+ "area": "selwyn",
+ "stop_count": 30,
+ "windows": 10,
+ "priorities": 6,
+ "with_break": true,
+ "with_finish": true,
+ "engines": {
+  "ours": {
+   "order": [
+    410,
+    379,
+    302,
+    368,
+    417,
+    388,
+    382,
+    332,
+    384,
+    329,
+    311,
+    360,
+    341,
+    323,
+    402,
+    386,
+    352,
+    416,
+    370,
+    310,
+    378,
+    372,
+    374,
+    339,
+    303,
+    391,
+    424,
+    409,
+    395,
+    429
+   ],
+   "distance_m": 336976.0,
+   "duration_s": 36980.0,
+   "window_violations": 8,
+   "break_violation": false,
+   "break_position": 7,
+   "break_start_at": "2026-11-09T12:11:44+13:00",
+   "priority_violations": 0,
+   "over_capacity": false,
+   "engine": "ours",
+   "travel_m": 362396,
+   "travel_s": 22327,
+   "wall_s": 0.8894,
+   "planned": true
+  },
+  "pyvrp-long": {
+   "order": [],
+   "planned": false
+  },
+  "ortools": {
+   "order": [],
+   "planned": false
+  }
+ },
+ "wall_s": {
+  "ours": 0.8894,
+  "pyvrp-long": 30.0073,
+  "ortools": 15.0047
+ },
+ "best_travel_s": 22327,
+ "feasible_engines": []
+}

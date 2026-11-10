@@ -1,0 +1,74 @@
+{
+ "id": "routing-30-tw-prio-20261114",
+ "size": 30,
+ "variant": "tw-prio",
+ "seed": 20261114,
+ "area": "waimakariri",
+ "stop_count": 30,
+ "windows": 14,
+ "priorities": 2,
+ "with_break": false,
+ "with_finish": false,
+ "engines": {
+  "pyvrp-long": {
+   "order": [],
+   "planned": false
+  },
+  "ortools": {
+   "order": [],
+   "planned": false
+  },
+  "ours": {
+   "order": [
+    454,
+    460,
+    489,
+    543,
+    463,
+    443,
+    526,
+    555,
+    532,
+    473,
+    552,
+    477,
+    484,
+    458,
+    539,
+    506,
+    451,
+    557,
+    503,
+    556,
+    502,
+    514,
+    541,
+    494,
+    467,
+    550,
+    466,
+    520,
+    551,
+    465
+   ],
+   "distance_m": 365125.0,
+   "duration_s": 36211.0,
+   "window_violations": 9,
+   "break_violation": false,
+   "break_position": null,
+   "break_start_at": null,
+   "priority_violations": 0,
+   "over_capacity": false,
+   "engine": "ours",
+   "travel_m": 373071,
+   "travel_s": 25123,
+   "wall_s": 1.3488,
+   "planned": true
+  }
+ },
+ "wall_s": {
+  "ours": 1.3488
+ },
+ "best_travel_s": 25123,
+ "feasible_engines": []
+}
