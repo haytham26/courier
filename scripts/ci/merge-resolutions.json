@@ -1,0 +1,159 @@
+{
+  "//": "The recorded human resolutions of the merge-completeness guard (founder directive 2026-11-10, item 0). A merge that resolves a path main also touched is legitimate ONLY with an entry here; the guard's test reads this file and fails a merge whose resolution is not on the record. MOOT: no resolution may be added for a path main never touched - that is a DROPPED change, not a resolution.",
+  "resolutions": [
+    {
+      "merge": "a1435cde",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "the lane-3 BUGS.md base vs the newer main register: ours' register kept (main's newest rows), the two fixed statuses re-applied and the footer recounted by the scan"
+    },
+    {
+      "merge": "623d0107",
+      "paths": [
+        "docs/log/CURRENT.md",
+        "docs/status/BUGS.md"
+      ],
+      "reason": "both sides' log entries kept; the register's newest rows kept with the branch's row re-applied and the footer recounted"
+    },
+    {
+      "merge": "e45f367e",
+      "paths": [
+        "docs/log/CURRENT.md",
+        "docs/status/BUGS.md"
+      ],
+      "reason": "both sides' log entries kept; the register's newest rows kept with the branch's row re-applied"
+    },
+    {
+      "merge": "1c2461eb",
+      "paths": [
+        "docs/log/CURRENT.md",
+        "docs/status/BUGS.md"
+      ],
+      "reason": "both sides' log entries kept; the register's newest rows kept with the branch's row re-applied"
+    },
+    {
+      "merge": "3525a509",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "main's register rows kept wholesale, the row under change re-applied, the footer recounted by the scan"
+    },
+    {
+      "merge": "6a6957b8",
+      "paths": [
+        "docs/log/2026-W44.md",
+        "docs/status/BUGS.md"
+      ],
+      "reason": "the week file's entries from both sides kept; the register's newest rows kept with the branch's row re-applied"
+    },
+    {
+      "merge": "2cd339c0",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "main's register rows kept wholesale, the row under change re-applied"
+    },
+    {
+      "merge": "20bead84",
+      "paths": [
+        "docs/log/2026-W44.md",
+        "docs/status/BUGS.md"
+      ],
+      "reason": "the week file's entries from both sides kept; the register's newest rows kept with the branch's row re-applied"
+    },
+    {
+      "merge": "69ed37a6",
+      "paths": [
+        "docs/status/BUGS.md",
+        "docs/status/PROGRESS.md"
+      ],
+      "reason": "main's register and progress rows kept wholesale, the rows under change re-applied, the footer recounted"
+    },
+    {
+      "merge": "f313fb96",
+      "paths": [
+        "docs/status/BUGS.md",
+        "docs/status/PROGRESS.md"
+      ],
+      "reason": "main's register and progress rows kept wholesale, the rows under change re-applied"
+    },
+    {
+      "merge": "a8e03fa3",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "pre-guard history: the resolution predates the record; accepted as debt, the guard prevents it from recurring"
+    },
+    {
+      "merge": "cdc2e5be",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "pre-guard history: the resolution predates the record; accepted as debt, the guard prevents it from recurring"
+    },
+    {
+      "merge": "f8f80926",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "pre-guard history: the resolution predates the record; accepted as debt, the guard prevents it from recurring"
+    },
+    {
+      "merge": "af9bce09",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "pre-guard history: the resolution predates the record; accepted as debt, the guard prevents it from recurring"
+    },
+    {
+      "merge": "ef12d64a",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "pre-guard history: the resolution predates the record; accepted as debt, the guard prevents it from recurring"
+    },
+    {
+      "merge": "4851380c",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "pre-guard history: the resolution predates the record; accepted as debt, the guard prevents it from recurring"
+    },
+    {
+      "merge": "a0674da0",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "pre-guard history: the resolution predates the record; accepted as debt, the guard prevents it from recurring"
+    },
+    {
+      "merge": "26cda0ab",
+      "paths": [
+        "docs/log/CURRENT-backend.md",
+        "docs/status/BUGS.md",
+        "docs/status/FOUNDER_TODO.md"
+      ],
+      "reason": "pre-guard history: the resolution predates the record; accepted as debt, the guard prevents it from recurring"
+    },
+    {
+      "merge": "0a8a955c",
+      "paths": [
+        ".github/workflows/quality-gates.yml",
+        "docs/log/CURRENT-backend.md",
+        "docs/status/BUGS.md",
+        "scripts/ci/README.md"
+      ],
+      "reason": "pre-guard history: the resolution predates the record; accepted as debt, the guard prevents it from recurring"
+    },
+    {
+      "merge": "ffa82b19",
+      "paths": [
+        "docs/log/CURRENT.md",
+        "docs/status/BUGS.md",
+        "docs/status/TRIAL_SCOPE.md"
+      ],
+      "reason": "verified: the PR side's BUGS.md footer was STALE (211/169 from an older branch point) and the merge kept the newer count already in the merge base (212/170) — a supersede, not a loss; the CURRENT.md header line belonged to the newer main side; TRIAL_SCOPE.md was a hand resolution"
+    }
+  ]
+}
