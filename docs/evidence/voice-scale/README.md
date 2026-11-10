@@ -166,6 +166,7 @@ for every turn.)
 | chatter / no-intent turns                                                    | 185 (the `chatter` slice's 40 × 4 conditions, plus the set's own noop rows)                                                                            |
 | quiet turns vs van turns                                                     | 560 quiet / 1320 van (440 at 0 dB, 440 at 5 dB, 440 at 10 dB)                                                                                          |
 | **action turns the PHONE answered end to end** (the directive's ≥ 500 floor) | **896**                                                                                                                                                |
+| turns the phone SPOKE a confirmation for                                     | 1880 (every turn: the ack line the router owns)                                                                                                        |
 | — of those, commands published                                               | 345 `mark_delivered`, 172 `mark_failed`, 199 `add_stop`, 86 `add_location_note`, 48 `mark_skipped`, 23 `end_break`, 15 `start_break`, 8 `set_map_mode` |
 | deliveries applied to the run                                                | 345                                                                                                                                                    |
 | failures applied to the run                                                  | 172                                                                                                                                                    |
@@ -219,6 +220,30 @@ outbox has **not** sent (the simulation has no server): `per_turn.csv`'s
 `events_logged` / `events_pending` and the summary's `events_pending` count are
 the proof, and the simulation asserts that the marks in the run store and the
 pending events in the log agree.
+
+## The CI runs
+
+Two runs of the same job on the same head sha (`754c0866`), 32 seconds apart:
+
+| run         | the job's steps                                                              | verdict                                  |
+| ----------- | ---------------------------------------------------------------------------- | ---------------------------------------- |
+| 42806725882 | 19 of 19 steps success, **including the Locust SLO profile**                 | green                                    |
+| 42806733602 | 18 of 19 success; "The Locust SLO profile" red (`fail ratio 0.0053 > 0.001`) | red on the backend's load-test step only |
+
+The Locust SLO profile is the **backend's** step (`services/api`, PLAYBOOK §16): this PR
+touches none of their paths — the diff is `apps/mobile/src/voice`, `.maestro`, `services/courier-voice`,
+`packages/eval/voice`, `scripts/eval` (none) and `docs/evidence/voice-scale`. Two runs of the same
+code, one green on that step and one red, is a shared-runner result rather than a diff; it is
+recorded here rather than argued, and it is the lead's to re-run. Every check this PR's own diff
+can move is green on 42806725882 and on the Quality-gates runs: lint, typecheck, test (the app's
+887 jest tests and the voice service's 421 pytest tests), the typed API client, the Postgres
+suite, the restore drill, the coverage ratchet, Semgrep + Bandit, the floor guard, both mutation
+floors, CodeQL (JS + Python), the licence inventory, the dependency audits, the mutation scopes
+and the secrets scan.
+
+Also recorded: `check-licenses` fails **identically on origin/main** in this lane's environment
+(the local pnpm cannot reach the npm registry to answer each package's licence) — a pre-existing
+environment result, not this diff; this PR adds no JavaScript dependency.
 
 ## The honest legs NOT run
 
