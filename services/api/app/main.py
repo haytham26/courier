@@ -53,7 +53,7 @@ from .auth.websocket import (
 )
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
-from .entitlements import entitlement_of
+from .entitlements import Plan, entitlement_of
 from .import_stops import (
     IMPORT_MAX_BYTES,
     ImportFormatError,
@@ -70,7 +70,13 @@ from .pod import (
 )
 from .pod_store import LocalPodStore, PodFingerprintError, pod_store
 from .providers import VERIFIERS, apply_facts, webhook_secret_for
-from .rate_limit import UPLOAD_LIMIT, WEBHOOK_LIMIT, install_rate_limiter, limiter
+from .rate_limit import (
+    UPLOAD_LIMIT,
+    WEBHOOK_LIMIT,
+    WRITE_LIMIT,
+    install_rate_limiter,
+    limiter,
+)
 from .repo import (
     AppendResult,
     DeliveryEventRow,
@@ -82,6 +88,8 @@ from .repo import (
 )
 from .request_guards import install_request_guards
 from .responses import (
+    CheckoutSessionRequest,
+    CheckoutSessionResponse,
     DemoRunResponse,
     EntitlementResponse,
     HealthResponse,
@@ -90,6 +98,7 @@ from .responses import (
     LocationNoteResponse,
     PodResponse,
     PodUrlResponse,
+    PortalSessionResponse,
     ReoptResponse,
     RouteResponse,
     RunResponse,
@@ -112,6 +121,11 @@ from .routing import (
     schedule_plan,
 )
 from .sequencing import Segment
+from .stripe_nz import checkout_session_url, portal_session_url
+
+# The contract's plan names as the entitlement layer's enum (D44): the
+# endpoint reads a name, the catalogue reads the enum.
+PLAN_BY_NAME: dict[str, Plan] = {plan.value: plan for plan in Plan}
 
 # Fail fast when the API cannot verify tokens (no default secrets).
 get_auth_settings()
@@ -1173,6 +1187,61 @@ def get_entitlements(
         "plan": decision.plan.value if decision.plan else None,
         "features": sorted(decision.features),
     }
+
+
+@app.post("/v1/billing/checkout-session", response_model=CheckoutSessionResponse)
+@limiter.limit(WRITE_LIMIT)
+def create_checkout_session(
+    request: Request,
+    payload: CheckoutSessionRequest,
+    principal: AuthPrincipal = Depends(get_current_principal),
+):
+    """The Stripe Checkout Session that sells one plan to THIS courier (D44).
+
+    The plan comes from the body, the courier from the token - never from a
+    client's claim - and the session carries the courier id as Stripe's
+    `client_reference_id`, so the webhook that follows the payment says who
+    paid without this endpoint storing anything. The trial is not sold here:
+    it is granted by the entitlement layer, so asking for it is a 400 with the
+    reason rather than a session that bills nothing.
+
+    A deployment with no Stripe key or no price for the plan refuses with the
+    reason: the founder's switches are in FOUNDER_TODO, and a deployment that
+    half-sells is worse than one that clearly does not.
+    """
+    # The contract's plan name is a literal and the entitlement layer's is its
+    # enum; the mapping is one lookup, and an unmapped name is a 400 rather
+    # than a KeyError on a caller-controlled value.
+    plan = PLAN_BY_NAME.get(payload.plan)
+    if plan is None:
+        raise HTTPException(status_code=400, detail=f"the {payload.plan} plan is not sold")
+    try:
+        url = checkout_session_url(principal.user_id, plan, payload.return_base)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"url": url}
+
+
+@app.post("/v1/billing/portal-session", response_model=PortalSessionResponse)
+@limiter.limit(WRITE_LIMIT)
+def create_portal_session(
+    request: Request,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The Stripe portal Session where the courier manages or cancels (D44).
+
+    The portal opens on the subscription's own recorded customer: a caller with
+    no recorded customer has nothing to manage, and opening somebody else's is
+    the worst answer this endpoint could give.
+    """
+    row = repo.get_subscription(principal.user_id)
+    customer = getattr(row, "purchase_id", None) if row else None
+    try:
+        url = portal_session_url(principal.user_id, "/account/billing", customer)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"url": url}
 
 
 @app.get("/shifts/{shift_id}/stops", response_model=list[StopResponse])

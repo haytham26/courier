@@ -19,7 +19,7 @@ on a BUGS row whose status column is not one of the tracker's words. The gate is
 `scripts/ci/check-parity.mjs` with its test in `scripts/ci/__tests__/check-parity.test.mjs`.
 
 **The count at this merge (312 PARITY rows, 186 BUGS rows):**
-312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 247 bug rows (open 5 · doing 1 · testing 1 · fixed 208 · closed 2 · moved to PARITY 30)
+312 parity rows (Have 30 · Better 4 · Planned (task) 272 · Skip (reason) 6); 251 bug rows (open 4 · doing 3 · testing 1 · fixed 211 · closed 2 · moved to PARITY 30)
 
 **This count is updated with every merge to main**: the merge that changes a row re-runs the command
 and pastes its line above. A `Have` is only a `Have` when its row names the merged PR or the CI run
