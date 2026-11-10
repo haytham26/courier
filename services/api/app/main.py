@@ -8,6 +8,7 @@ import os
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
+from functools import lru_cache
 from typing import Annotated, Any, Literal
 
 from fastapi import (
@@ -52,6 +53,16 @@ from .auth.websocket import (
     refuse,
 )
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
+from .cost_guard import (
+    BudgetSpentError,
+    CostGuardSettings,
+    Spend,
+    day_start,
+    estimate_usd,
+    month_start,
+    remaining,
+    verdict_for,
+)
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
 from .entitlements import Plan, entitlement_of
 from .import_stops import (
@@ -79,6 +90,7 @@ from .rate_limit import (
 )
 from .repo import (
     AppendResult,
+    CostEventRow,
     DeliveryEventRow,
     LocationNoteRow,
     Repo,
@@ -90,6 +102,7 @@ from .request_guards import install_request_guards
 from .responses import (
     CheckoutSessionRequest,
     CheckoutSessionResponse,
+    CostResponse,
     DemoRunResponse,
     EntitlementResponse,
     HealthResponse,
@@ -122,6 +135,14 @@ from .routing import (
 )
 from .sequencing import Segment
 from .stripe_nz import checkout_session_url, portal_session_url
+
+
+@lru_cache(maxsize=1)
+def cost_settings() -> CostGuardSettings:
+    """The budget switches, read once per process (the same shape as the auth
+    and POD settings): no default budgets, so a deployment with none set is
+    unbounded and says so."""
+    return CostGuardSettings()
 
 # The contract's plan names as the entitlement layer's enum (D44): the
 # endpoint reads a name, the catalogue reads the enum.
@@ -987,6 +1008,71 @@ def _intake_answer(result: Any) -> dict[str, object]:
     }
 
 
+def _cost_guarded(
+    *, repo: Repo, run: RunRecord, provider: IntakeProvider, principal_id: str
+) -> IntakeProvider:
+    """The intake's two LLM calls, with the cost guard in front of them.
+
+    COST_PLAN's rule at the limit is not a hard stop but a DECLINE OF THE PAID
+    CALL: the budget is checked before the call, the estimate recorded after,
+    and a spent budget raises the guard's `BudgetSpentError` - which the intake
+    turns into a 4xx with the reason and the local path's answer, never a 500
+    the gateway retries. The guard says WHICH budget is spent (the courier's
+    daily, the courier's monthly, the tenant's, the deployment's), because the
+    founder fixing it needs to know which switch to move.
+
+    The estimate is from the characters of the request and the answer at ~4
+    characters per token - stated everywhere it is used as an estimate, since
+    the gateway's own usage is the invoice and this is the budget basis."""
+    settings = cost_settings()
+    # The tenant dimension is the courier's organisation when the deployment has
+    # one; a run without it records the event unscoped, and the tenant window
+    # sums only the scoped ones.
+    tenant_id = str(getattr(run, "tenant_id", None) or "") or None
+
+    def guard(call: str, chars_in: int, chars_out: int) -> None:
+        about = estimate_usd(chars_in, chars_out, settings)
+        spend = Spend(
+            courier_daily=repo.cost_spend_since(day_start(), courier_id=principal_id),
+            courier_monthly=repo.cost_spend_since(month_start(), courier_id=principal_id),
+            tenant_daily=repo.cost_spend_since(day_start()),
+            global_daily=repo.cost_spend_since(day_start()),
+        )
+        verdict = verdict_for(spend, about, settings)
+        if verdict.blocked:
+            raise BudgetSpentError(verdict)
+        repo.record_cost_event(
+            CostEventRow(
+                courier_id=principal_id,
+                tenant_id=tenant_id,
+                usd_estimate=about,
+                chars_in=chars_in,
+                chars_out=chars_out,
+                call=call,
+            )
+        )
+
+    class GuardedProvider:
+        name = "cost-guarded"
+
+        def extract(self, source: str, text: str) -> list[dict[str, Any]]:
+            rows = provider.extract(source, text)
+            guard("extract", len(text), sum(len(str(row.get("raw", ""))) for row in rows))
+            return rows
+
+        def phrase(self, problem: str, raw: str) -> str:
+            answer = provider.phrase(problem, raw)
+            guard("phrase", len(problem) + len(raw), len(answer))
+            return answer
+
+        def ocr(self, image: bytes, media_type: str = "image/jpeg") -> str:
+            answer = provider.ocr(image, media_type)
+            guard("ocr", len(image), len(answer))
+            return answer
+
+    return GuardedProvider()
+
+
 def _run_intake(
     *,
     repo: Repo,
@@ -995,8 +1081,11 @@ def _run_intake(
     source: str,
     text: str,
     shift_id: uuid.UUID,
+    principal_id: str | None = None,
 ) -> dict[str, object]:
     """One graph turn: start it, or answer the pending question, per shift."""
+    if principal_id is not None:
+        provider = _cost_guarded(repo=repo, run=run, provider=provider, principal_id=principal_id)
     graph = build_graph(provider.extract, provider.phrase, RepoGeo(repo, run), _INTAKE_CHECKPOINTER)
     try:
         result = graph.invoke(
@@ -1037,6 +1126,7 @@ def intake_text(
         source=body.source,
         text=body.text,
         shift_id=shift_id,
+        principal_id=principal.user_id,
     )
 
 
@@ -1242,6 +1332,28 @@ def create_portal_session(
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     return {"url": url}
+
+
+@app.get("/account/cost", response_model=CostResponse)
+def get_cost(
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The caller's own budget: what is spent, what is left, and which windows hold.
+
+    COST_PLAN's budgets are enforced BEFORE a paid model call is made, and this
+    is the same arithmetic read back for the app to show. An unbounded window
+    answers `null` rather than a fake infinity, and a spent budget answers zero
+    - the guard never lets the remaining go negative.
+    """
+    settings = cost_settings()
+    spend = Spend(
+        courier_daily=repo.cost_spend_since(day_start(), courier_id=principal.user_id),
+        courier_monthly=repo.cost_spend_since(month_start(), courier_id=principal.user_id),
+        tenant_daily=repo.cost_spend_since(day_start()),
+        global_daily=repo.cost_spend_since(day_start()),
+    )
+    return remaining(spend, settings)
 
 
 @app.get("/shifts/{shift_id}/stops", response_model=list[StopResponse])

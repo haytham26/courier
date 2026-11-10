@@ -314,6 +314,45 @@ paths:
         '400':
           description: No Stripe key, or no Stripe customer recorded for this courier
 
+
+  /account/cost:
+    get:
+      tags: [account]
+      summary: "The caller's own budget - what is spent and what is left (COST_PLAN)"
+      description: |
+        The budgets COST_PLAN names are enforced BEFORE a paid model call is
+        made, and this is the same arithmetic read back for the app to show -
+        the courier sees their own spend, never another's.
+
+        An unbounded window answers `null` (the deployment set no limit) rather
+        than a fake infinity, and a spent budget answers zero: the guard never
+        lets the remaining go negative.
+      operationId: get_cost
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The spend and the remaining per window
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [spent]
+                properties:
+                  courier_daily_usd:
+                    type: [number, 'null']
+                    description: What is left of the courier's daily budget, or null when unbounded
+                  courier_monthly_usd:
+                    type: [number, 'null']
+                  tenant_daily_usd:
+                    type: [number, 'null']
+                  global_daily_usd:
+                    type: [number, 'null']
+                    description: The deployment's daily cap, never the caller's alone
+                  spent:
+                    type: object
+                    description: The estimated spend per window (the gateway's own usage is the invoice)
+
   /account/entitlements:
     get:
       tags: [account]

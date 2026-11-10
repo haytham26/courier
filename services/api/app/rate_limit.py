@@ -70,6 +70,9 @@ WEBHOOK_LIMIT = _env_limit("RATE_LIMIT_WEBHOOKS", "60/minute")
 # occasionally one portal Session, so the rate is tight (the Stripe call
 # behind it costs the deployment money on a replay).
 WRITE_LIMIT = _env_limit("RATE_LIMIT_BILLING", "10/minute")
+# The reads the app polls (the entitlement and the budget screen): the same
+# bearer token, so tighter than the default and far looser than a write.
+READ_LIMIT = _env_limit("RATE_LIMIT_READS", "120/minute")
 
 limiter = Limiter(key_func=_key, default_limits=[DEFAULT_LIMIT])
 
