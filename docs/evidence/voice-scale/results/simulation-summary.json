@@ -1,0 +1,38 @@
+{
+ "turns": 1040,
+ "action_turns": 870,
+ "chatter_turns": 170,
+ "false_actions": 0,
+ "full_turns": 529,
+ "delivered": 210,
+ "failed": 97,
+ "events_logged": 307,
+ "events_pending": 307,
+ "seed": 20261110,
+ "by_slice": {
+  "en_nz_van": 480,
+  "en_nz_quiet": 120,
+  "en_mix": 120,
+  "chatter": 160,
+  "mi_places": 60,
+  "numbers_corrections": 40,
+  "code_switch": 60
+ },
+ "by_variant": {
+  "snr0": 160,
+  "quiet": 560,
+  "snr10": 160,
+  "snr5": 160
+ },
+ "commands": {
+  "mark_delivered": 210,
+  "start_break": 10,
+  "mark_skipped": 43,
+  "mark_failed": 97,
+  "add_stop": 107,
+  "add_location_note": 34,
+  "end_break": 10
+ },
+ "false_action_turns": [],
+ "unverified_files": []
+}

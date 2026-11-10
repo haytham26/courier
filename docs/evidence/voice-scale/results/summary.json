@@ -1,0 +1,78 @@
+{
+ "judge": "sherpa-onnx whisper tiny.en (Whisper weights MIT, sherpa-onnx runtime Apache-2.0)",
+ "judge_model": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2",
+ "sample_rate": 16000,
+ "python": "3.12.15",
+ "platform": "Windows-11-10.0.26300-SP0",
+ "turns": 1040,
+ "action_turns": 870,
+ "chatter_turns": 170,
+ "action_intent_ok": 684,
+ "false_actions": 0,
+ "false_action_rate": 0.0,
+ "false_action_turns": [],
+ "turns_by_slice": {
+  "en_nz_quiet": {
+   "turns": 120,
+   "action_turns": 115,
+   "chatter_turns": 5,
+   "intent_ok": 105
+  },
+  "en_nz_van": {
+   "turns": 480,
+   "action_turns": 480,
+   "chatter_turns": 0,
+   "intent_ok": 375
+  },
+  "en_mix": {
+   "turns": 120,
+   "action_turns": 115,
+   "chatter_turns": 5,
+   "intent_ok": 103
+  },
+  "mi_places": {
+   "turns": 60,
+   "action_turns": 60,
+   "chatter_turns": 0,
+   "intent_ok": 53
+  },
+  "numbers_corrections": {
+   "turns": 40,
+   "action_turns": 40,
+   "chatter_turns": 0,
+   "intent_ok": 0
+  },
+  "code_switch": {
+   "turns": 60,
+   "action_turns": 60,
+   "chatter_turns": 0,
+   "intent_ok": 58
+  },
+  "chatter": {
+   "turns": 160,
+   "action_turns": 0,
+   "chatter_turns": 160,
+   "intent_ok": 160
+  }
+ },
+ "turns_by_variant": {
+  "quiet": 560,
+  "snr0": 160,
+  "snr5": 160,
+  "snr10": 160
+ },
+ "turns_with_oov_words": 621,
+ "held_out_turns": 0,
+ "legs": {
+  "stt": "the pinned judge (Whisper tiny.en) on the TTS audio, not the product's on-device STT",
+  "intent": "the service's offline brain on the judge's hypotheses, the same one the measurement lane scores",
+  "not_measured": [
+   "M1 on the product's own pipeline (the phone's STT)",
+   "M2 the product's address engine",
+   "M4/M5 the wake word",
+   "M6 the device latency",
+   "M7 the battery",
+   "the AudioRecord / VAD input chain (the file input bypasses it by design)"
+  ]
+ }
+}

@@ -1,0 +1,1041 @@
+turn_id,slice,variant,sha_verified,gold_intent,router,command,command_published,spoken,ack,run_delivered,run_failed,events_logged,false_action,full_turn,hypothesis,gold_text
+S0121-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Delivered at 57 Pausen Street, Addington.","delivered at 57 Poulson Street, Addington"
+S0043-quiet,en_nz_quiet,quiet,true,start_break,free,start_break,true,true,"Break started, 10 minutes.",0,0,0,false,false,taking a 10 minute break.,taking a ten minute break
+S0127-quiet,en_nz_van,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 81 road.,"skip the street for 81 Hawthornden Road, Avonhead"
+S0151-snr10,en_nz_van,snr10,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,"Skip the street for 78 Blacks Road, Green Street.","skip the street for 78 Blacks Road, Greenstreet"
+S0031-quiet,en_nz_quiet,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"cannot get in at 78 blacks road, Green Street.","cannot get in at 78 Blacks Road, Greenstreet"
+S0151-snr0,en_nz_van,snr0,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 78 Blacks Road Green Street,"skip the street for 78 Blacks Road, Greenstreet"
+S0235-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"handed it to the man at 48 perimeter road, Chris Church Airport.","handed it to the man at 48 Perimeter Road, Christchurch Airport"
+S0127-snr0,en_nz_van,snr0,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 81 road.,"skip the street for 81 Hawthornden Road, Avonhead"
+S0205-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 121 road.,"nobody answered at 121 Millars Road, Tinwald"
+S0061-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,priority parcel for 68 Princes Street.,"priority parcel for 60 A Princes Street, Netherby"
+S0313-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 57 drive.,"delivered at 57 Birkdale Drive, Shirley"
+S0283-quiet,en_mix,quiet,true,start_break,free,start_break,true,true,"Break started, 10 minutes.",0,0,0,false,false,taking a 10 minute break.,taking a ten minute break
+S0181-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at 60 A. Princess Street.,"nobody answered at 60 A Princes Street, Netherby"
+S0181-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Nobody answer how it's sixty-eight, Prince is straight.","nobody answered at 60 A Princes Street, Netherby"
+S0355-quiet,en_mix,quiet,true,start_break,free,start_break,true,true,"Break started, 10 minutes.",0,0,0,false,false,taking a 10 minute break.,taking a ten minute break
+S0223-snr10,en_nz_van,snr10,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 35 Avenue.,"skip the street for 35 Montclare Avenue, Avonhead"
+S0037-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,priority parcel for 177. A. Cashmere Road.,"priority parcel for 177 A Cashmere Road, Hoon Hay"
+S0703-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name",wait whats my name
+S0133-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 438 Road.,"nobody answered at 438 Ilam Road, Bryndwr"
+S0121-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 57 Palson Street.,"delivered at 57 Poulson Street, Addington"
+S0038-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Gate code is 14421 at 65A road. Hornby.,"gate code is one four two one at 65 A Amyes Road, Hornby"
+S0014-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Gate code is 14421 at 126 Road. Burn 'em.,"gate code is one four two one at 126 Kivers Road, Burnham"
+S0685-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at 5.,she said she would be home at five
+S0691-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0068-quiet,en_nz_quiet,quiet,true,end_break,free,end_break,true,true,Back on the run.,0,0,0,false,false,back on the road.,back on the road
+S0056-quiet,en_nz_quiet,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Dog in the yard at 5 Carlton Mill Road.,"dog in the yard at 4/65 Carlton Mill Road, Merivale"
+S0409-quiet,mi_places,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add a stop at 77 place, Lincoln.","add a stop at 77 Heathridge Place, Lincoln"
+S0134-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 126 Road, Burnham.","locked out at 126 Kivers Road, Burnham"
+S0103-quiet,en_nz_quiet,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,cannot get in at 35 Avenue.,"cannot get in at 35 Montclare Avenue, Avonhead"
+S0140-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left at the salt and had won 160 Avenue.,"left it at the shop counter at 160 Bealey Avenue, Christchurch Central"
+S0391-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"delivered at 78 Blacks Road, Green Street.","delivered at 78 Blacks Road, Greenstreet"
+S0613-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,7 No Sorry 17 orchard Road,seven no sorry seventeen Orchard Road
+S0703-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0164-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,left it at the shop counter at 333 Kennedy's bus road. Kennedy's bus.,"left it at the shop counter at 333 Kennedys Bush Road, Kennedys Bush"
+S0715-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0097-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 59 Palson Street.,"delivered at 59 Poulson Street, Addington"
+S0134-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 126 Road, Burnham.","locked out at 126 Kivers Road, Burnham"
+S0008-quiet,en_nz_quiet,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,dog in the yard at 70 Terrace Road.,"dog in the yard at 70 Rakaia Terrace Road, Bankside"
+S0709-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at five.,she said she would be home at five
+S0679-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the door 266 MT Hut Road.,left it at the door 266 Mt Hutt Skifield Road — 左边的门
+S0182-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,locked out at 17 road.,"locked out at 17 Northcote Road, Northcote"
+S0235-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it it to the man at 48 perimeter road. Chris Church Airport.,"handed it to the man at 48 Perimeter Road, Christchurch Airport"
+S0194-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left to end of the mark at 6th row.,"left it under the mat at 6 Nga Mahi Road, Sockburn"
+S0361-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 57 Palson Street.,"delivered at 57 Poulson Street, Addington"
+S0146-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it under the mat at 10 railway terrace.,"left it under the mat at 10 Railway Terrace, Doyleston"
+S0212-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the sharp counter at 54 road.,"left it at the shop counter at 54 Longbeach Road, Willowby"
+S0145-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Delivered at 1,636 Clinton's world.","delivered at 1636 Clintons Road, Darfield"
+S0349-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,priority parcel for 436 road.,"priority parcel for 436 Ilam Road, Bryndwr"
+S0169-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"delivered at 77 place, Lincoln.","delivered at 77 Heathridge Place, Lincoln"
+S0122-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 19 day present.,"left it under the mat at 19 Date Crescent, Aidanfield"
+S0151-quiet,en_nz_van,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,"Skip the street for 78 Blacks Road, Green Street.","skip the street for 78 Blacks Road, Greenstreet"
+S0362-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the at 19 date crescent.,"left it at the whare at 19 Date Crescent, Aidanfield"
+S0253-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,priority parcel for 438 road.,"priority parcel for 438 Ilam Road, Bryndwr"
+S0170-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it under the mat at 44 A Norwich Street, Lin-Wert.","left it under the mat at 44 A Norwich Street, Linwood"
+S0145-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,636 Clinton's road.","delivered at 1636 Clintons Road, Darfield"
+S0206-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,locked out at 55 Eastwood Rise. Bitch.,"locked out at 55 Eastwood Rise, Waimairi Beach"
+S0127-snr10,en_nz_van,snr10,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 81 road.,"skip the street for 81 Hawthornden Road, Avonhead"
+S0019-quiet,en_nz_quiet,quiet,true,start_break,free,start_break,true,true,"Break started, 10 minutes.",0,0,0,false,false,taking a 10 minute break.,taking a ten minute break
+S0145-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,636 Clinton's road.","delivered at 1636 Clintons Road, Darfield"
+S0205-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 121 road.,"nobody answered at 121 Millars Road, Tinwald"
+S0608-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,42 52 straight.,forty two or fifty two Gresford Street
+S0140-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left it at the shop counter at 160 Avenue. Chris Church Central.,"left it at the shop counter at 160 Bealey Avenue, Christchurch Central"
+S0152-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 74 William Britain Avenue on the way back.,"add 74 William Brittan Avenue, Halswell on the way back"
+S0229-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 436 Road.,"nobody answered at 436 Ilam Road, Bryndwr"
+S0643-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,left it at the door 359 C. Island Road.,left it at the door 359 Coutts Island Road — 左边的门
+S0163-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it it to the man at 28 drive.,"handed it to the man at 28 Brockelbank Drive, Kaiapoi"
+S0170-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 44 A Norwich Street.,"left it under the mat at 44 A Norwich Street, Linwood"
+S0397-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the at 177 cashmere road.,"left it at the whare at 177 Cashmere Road, Hoon Hay"
+S0619-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,42b Sir James Waddie drive,forty two B Sir James Wattie Drive
+S0332-quiet,en_mix,quiet,true,end_break,free,end_break,true,true,Back on the run.,0,0,0,false,false,back on the road.,back on the road
+S0205-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 121 road.,"nobody answered at 121 Millars Road, Tinwald"
+S0158-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"locked out at 65A road, Hornby.","locked out at 65 A Amyes Road, Hornby"
+S0122-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 19 date crescent.,"left it under the mat at 19 Date Crescent, Aidanfield"
+S0229-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 436 road.,"nobody answered at 436 Ilam Road, Bryndwr"
+S0224-snr5,en_nz_van,snr5,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,ab-669 rolled on the way back.,"add 669 Sharlands Road, Bankside on the way back"
+S0128-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 70 Terrace Road on the way back.,"add 70 Rakaia Terrace Road, Bankside on the way back"
+S0236-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it at the shop counter at 152 B. Salisbury Street, Chris Church Central.","left it at the shop counter at 152 B Salisbury Street, Christchurch Central"
+S0650-quiet,code_switch,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 12th Street.,no one home at 12 Makora Street — maal aayi
+S0025-quiet,en_nz_quiet,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,636 Clinton's road.","delivered at 1636 Clintons Road, Darfield"
+S0044-quiet,en_nz_quiet,quiet,true,end_break,free,end_break,true,true,Back on the run.,0,0,0,false,false,back on the road.,back on the road
+S0176-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 5 Carlton Mill Road on the way back.,"add 4/65 Carlton Mill Road, Merivale on the way back"
+S0188-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Left it at the shop counter at 23 A Monroe Street, Redwood.","left it at the shop counter at 23 A Munro Street, Redwood"
+S0583-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,1-85 West Street.,one eight five West Street
+S0685-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,She's a sort of big one that finds.,she said she would be home at five
+S0217-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Delivering at the left of the United States Street, Addington.","delivered at 59 Poulson Street, Addington"
+S0199-snr10,en_nz_van,snr10,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 51 Somestreat.,"skip the street for 51 Somme Street, St Albans"
+S0074-quiet,en_nz_quiet,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it on the porch at 6, road.","left it on the porch at 6 Nga Mahi Road, Sockburn"
+S0159-quiet,en_nz_van,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for four Sir James Waddie Drive. Hornby South.,"skip the street for 4 Sir James Wattie Drive, Hornby South"
+S0217-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 59 Palson Street.,"delivered at 59 Poulson Street, Addington"
+S0200-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 82 Hartley Avenue on the way back.,"add 82 Hartley Avenue, Strowan on the way back"
+S0134-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 126 Road, Burnham.","locked out at 126 Kivers Road, Burnham"
+S0223-snr5,en_nz_van,snr5,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 35 Avenue.,"skip the street for 35 Montclare Avenue, Avonhead"
+S0199-quiet,en_nz_van,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 51 Sommes Street.,"skip the street for 51 Somme Street, St Albans"
+S0141-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at 135 C. Road.,"nobody answered at 135 C Heywards Road, Clarkville"
+S0177-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Delivered at 5,759, Airender Gorge Road.","delivered at 5759 Arundel Rakaia Gorge Road, Methven"
+S0625-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,delivered at four more street. Kia Ora.,"delivered at 4 Moore Street, Ashburton — kia ora"
+S0320-quiet,en_mix,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,dog in the yard at 82 Hartley Avenue.,"dog in the yard at 82 Hartley Avenue, Strowan"
+S0596-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,SH1 Macmillan Avenue.,S H one MacMillan Avenue
+S0129-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 33 A. Darox Street, Belfast.","delivered at 33 A Darroch Street, Belfast"
+S0368-quiet,mi_places,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 70 Terrace Road.,"no one home at 70 Rakaia Terrace Road, Bankside"
+S0686-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire as flat again.,shoot the tyre is flat again
+S0201-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,044 Browns Road.","delivered at 1044 Browns Road, Swannanoa"
+S0073-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 57 drive.,"delivered at 57 Birkdale Drive, Shirley"
+S0710-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire as flat again.,shoot the tyre is flat again
+S0193-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Delivering the 57-drive. Surely.,"delivered at 57 Birkdale Drive, Shirley"
+S0183-snr0,en_nz_van,snr0,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,skip the street from 130 brow blades road.,"skip the street for 130 Bradleys Road, Ohoka"
+S0055-quiet,en_nz_quiet,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"cannot get in at 793 Island Road, Island.","cannot get in at 793 McLeans Island Road, McLeans Island"
+S0224-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 669 Road on the way back.,"add 669 Sharlands Road, Bankside on the way back"
+S0177-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 5,759, earned on board trade.","delivered at 5759 Arundel Rakaia Gorge Road, Methven"
+S0007-quiet,en_nz_quiet,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,cannot get in at 81 road.,"cannot get in at 81 Hawthornden Road, Avonhead"
+S0153-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Delivered at 145 Orchard Road, Hero Wood, Delivered at 145 Orchard Road, Hero Wood","delivered at 145 Orchard Road, Harewood"
+S0698-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody fuel prices are.,bloody fuel prices eh
+S0230-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,locked out at 536 Ward's Road. Burn 'em.,"locked out at 536 Wards Road, Burnham"
+S0091-quiet,en_nz_quiet,quiet,true,start_break,free,start_break,true,true,"Break started, 10 minutes.",0,0,0,false,false,Taking a 10 minute break.,taking a ten minute break
+S0284-quiet,en_mix,quiet,true,end_break,free,end_break,true,true,Back on the run.,0,0,0,false,false,back on the road.,back on the road
+S0631-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the door 24 Street.,left it at the door 24 Wendover Street — 左边的门
+S0219-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Hand it it to the man at 445 West Street, Alenton.","handed it to the man at 445 West Street, Allenton"
+S0321-quiet,en_mix,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip this one at 1044 Browns Road.,"skip this one at 1044 Browns Road, Swannanoa"
+S0116-quiet,en_nz_quiet,quiet,true,end_break,free,end_break,true,true,Back on the run.,0,0,0,false,false,back on the road.,back on the road
+S0691-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0201-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 1044 Browns Road.,"delivered at 1044 Browns Road, Swannanoa"
+S0195-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it up to the more ammo 80 sets be restored.,"handed it to the man at 86 B Somerfield Street, Somerfield"
+S0615-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,1-8-5 Roberts Road.,one eight five Roberts Road
+S0188-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left of all the software and I can't wait in one of the stuff. Redwood.,"left it at the shop counter at 23 A Munro Street, Redwood"
+S0175-snr10,en_nz_van,snr10,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for 793 Island Road. Island.,"skip the street for 793 McLeans Island Road, McLeans Island"
+S0405-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,The gate is on the Adelaide Street side at 12 Adelaide Street.,"the gate is on the Adelaide Street side at 12 Adelaide Street, Kirwee"
+S0128-snr0,en_nz_van,snr0,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 70 Terrace Road on the way back.,"add 70 Rakaia Terrace Road, Bankside on the way back"
+S0261-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,What was that?,what was that
+S0145-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,636 Clinton's road.","delivered at 1636 Clintons Road, Darfield"
+S0001-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 57 Palson Street.,"delivered at 57 Poulson Street, Addington"
+S0715-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0230-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked out at 536 Ward's Road. Burn 'em.,"locked out at 536 Wards Road, Burnham"
+S0146-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 10 railway terrace.,"left it under the mat at 10 Railway Terrace, Doyleston"
+S0193-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 57 drive.,"delivered at 57 Birkdale Drive, Shirley"
+S0231-quiet,en_nz_van,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 19 A Basset Street.,"skip the street for 19 A Bassett Street, Burwood"
+S0693-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at 5.,she said she would be home at five
+S0207-quiet,en_nz_van,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 289 pages road.,"skip the street for 289 Pages Road, Wainoni"
+S0121-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Delivering at 57 House in the street. Addington.,"delivered at 57 Poulson Street, Addington"
+S0603-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,42B Couts Island Road.,forty two B Coutts Island Road
+S0237-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 133C road.,"nobody answered at 133 C Heywards Road, Clarkville"
+S0169-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 77 place Lincoln,"delivered at 77 Heathridge Place, Lincoln"
+S0692-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0182-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Locked out at 17 Road,"locked out at 17 Northcote Road, Northcote"
+S0050-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Left it on the porch at 44 A Norwich Street, Linwood.","left it on the porch at 44 A Norwich Street, Linwood"
+S0127-snr5,en_nz_van,snr5,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 81 road.,"skip the street for 81 Hawthornden Road, Avonhead"
+S0194-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 6 road.,"left it under the mat at 6 Nga Mahi Road, Sockburn"
+S0644-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop one lane Add a,add a stop 1 Tisbury Lane — أضف عنوانا
+S0187-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"handed it to the man at 149 bus road, putting hill.","handed it to the man at 149 McLennans Bush Road, Pudding Hill"
+S0697-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on Blenheim still silly.,is the traffic on Blenheim still silly
+S0657-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 177 cashmere road.,"delivered at 177 Cashmere Road, Hoon Hay — kia ora"
+S0285-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,What was that?,what was that
+S0175-snr0,en_nz_van,snr0,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 793 Iron Park.,"skip the street for 793 McLeans Island Road, McLeans Island"
+S0128-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 7 to Terrace Road, on the way back.","add 70 Rakaia Terrace Road, Bankside on the way back"
+S0069-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,What was that?,what was that
+S0109-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,priority parcel for 436 road.,"priority parcel for 436 Ilam Road, Bryndwr"
+S0193-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 57 drive.,"delivered at 57 Birkdale Drive, Shirley"
+S0158-snr0,en_nz_van,snr0,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 65 a road, Hornby.","locked out at 65 A Amyes Road, Hornby"
+S0229-snr0,en_nz_van,snr0,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 436 Road.,"nobody answered at 436 Ilam Road, Bryndwr"
+S0218-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 23 gardens.,"left it under the mat at 23 Cassinia Gardens, Aidanfield"
+S0045-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,What was that?,what was that
+S0247-quiet,en_mix,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,cannot get in at 81 road.,"cannot get in at 81 Hawthornden Road, Avonhead"
+S0398-quiet,mi_places,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"No one home at 65 Road, Hornby.","no one home at 65 Amyes Road, Hornby"
+S0212-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the shop counter at 54 road.,"left it at the shop counter at 54 Longbeach Road, Willowby"
+S0591-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,1-8-5 Street.,one eight five Wendover Street
+S0363-quiet,mi_places,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"No one home at 490 West Street, a Lenton.","no one home at 490 West Street, Allenton"
+S0142-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 178 Clifton Terrace, Clifton","locked out at 178 Clifton Terrace, Clifton"
+S0080-quiet,en_nz_quiet,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,dog in the yard at 82 Hartley Avenue.,"dog in the yard at 82 Hartley Avenue, Strowan"
+S0163-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it it to the man at 28 drive.,"handed it to the man at 28 Brockelbank Drive, Kaiapoi"
+S0182-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Locked out at 17 Road.,"locked out at 17 Northcote Road, Northcote"
+S0709-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at five.,she said she would be home at five
+S0717-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at five.,she said she would be home at five
+S0032-quiet,en_nz_quiet,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Dog in the Yard at 74 William Britain Avenue.,"dog in the yard at 74 William Brittan Avenue, Halswell"
+S0134-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Lockdown hit 126 road.,"locked out at 126 Kivers Road, Burnham"
+S0319-quiet,en_mix,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"cannot get in at 51 Sommes Street, Albin's","cannot get in at 51 Somme Street, St Albans"
+S0154-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left it under the mat at too high light lane. Heat coat valley.,"left it under the mat at 2 Highlight Lane, Heathcote Valley"
+S0639-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the door 44 perimeter road.,left it at the door 44 Perimeter Road — 左边的门
+S0716-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0289-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"delivered at 77 place, Lincoln.","delivered at 77 Heathridge Place, Lincoln"
+S0159-snr10,en_nz_van,snr10,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for four so James Waddie Drive. Hornedy South.,"skip the street for 4 Sir James Wattie Drive, Hornby South"
+S0178-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Left to end of the night at 218 Annex Road, Muratin.","left it under the mat at 218 Annex Road, Middleton"
+S0166-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Locked out at 817, Westerfield may field road.","locked out at 817 Tinwald Westerfield Mayfield Road, Lagmhor"
+S0002-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it on the porch at 19 date crescent.,"left it on the porch at 19 Date Crescent, Aidanfield"
+S0199-snr5,en_nz_van,snr5,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for 51 Sommes Street. Albons.,"skip the street for 51 Somme Street, St Albans"
+S0223-quiet,en_nz_van,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 35 Avenue.,"skip the street for 35 Montclare Avenue, Avonhead"
+S0661-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,delivered at 65 Hamilton Avenue. Kia Ora.,"delivered at 65 Hamilton Avenue, Ilam — kia ora"
+S0416-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 65 Carlton Mill Road.,"delivered at 65 Carlton Mill Road, Merivale"
+S0367-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the at eighty one road,"left it at the whare at 81 Hawthornden Road, Avonhead"
+S0655-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the door 30 Roberts Road.,left it at the door 30 Roberts Road — 左边的门
+S0158-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"locked out at 65 a road, Hornbeam.","locked out at 65 A Amyes Road, Hornby"
+S0385-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,"The gate is on the Clinton's roadside at 1,636 Clinton's road.","the gate is on the Clintons Road side at 1636 Clintons Road, Darfield"
+S0176-snr0,en_nz_van,snr0,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add five per to your road on the way back.,"add 4/65 Carlton Mill Road, Merivale on the way back"
+S0200-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 82 Hartley Avenue on the way back.,"add 82 Hartley Avenue, Strowan on the way back"
+S0100-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Put it in the porch at 190A breezes road.,"put it in the porch at 190 A Breezes Road, Aranui"
+S0146-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 10 railway terrace.,"left it under the mat at 10 Railway Terrace, Doyleston"
+S0211-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it it to the man at 9 close.,"handed it to the man at 1/39 Gallaghan Close, Wigram"
+S0231-snr5,en_nz_van,snr5,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 19 A Basset Street.,"skip the street for 19 A Bassett Street, Burwood"
+S0206-snr0,en_nz_van,snr0,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"locked out at 55 Eastwood Rise, beige.","locked out at 55 Eastwood Rise, Waimairi Beach"
+S0675-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the door 793 Island Road.,left it at the door 793 McLeans Island Road — 左边的门
+S0685-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at 5.,she said she would be home at five
+S0153-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Delivered at 145 Orchard Road, Hairwood.","delivered at 145 Orchard Road, Harewood"
+S0716-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0218-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 23 gardens.,"left it under the mat at 23 Cassinia Gardens, Aidanfield"
+S0172-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the shop counter at 428 A in this road.,"left it at the shop counter at 428 A Innes Road, Mairehau"
+S0115-quiet,en_nz_quiet,quiet,true,start_break,free,start_break,true,true,"Break started, 10 minutes.",0,0,0,false,false,taking a 10 minute break.,taking a ten minute break
+S0415-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,The gate is on the island roadside at 793 island road.,"the gate is on the McLeans Island Road side at 793 McLeans Island Road, McLeans Island"
+S0088-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,"parcel box round the back at 191 road, West Melton.","parcel box round the back at 191 Langdales Road, West Melton"
+S0051-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,dropped it in the at 53 cornwall road.,"dropped it in the letterbox at 53 Cornwall Road, Lyttelton"
+S0601-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,"1, 2, 3, 4, R",one two three four Heywards Road
+S0026-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it on the porch at ten railway terrace,"left it on the porch at 10 Railway Terrace, Doyleston"
+S0711-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0067-quiet,en_nz_quiet,quiet,true,start_break,free,start_break,true,true,"Break started, 10 minutes.",0,0,0,false,false,taking a 10 minute break.,taking a ten minute break
+S0279-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Watch the dog at four Sir James Waddie drive. Hornby South.,"watch the dog at 4 Sir James Wattie Drive, Hornby South"
+S0211-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,and handed it to the man at 9 close.,"handed it to the man at 1/39 Gallaghan Close, Wigram"
+S0380-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,"The gate is on the Avenue side at 160 Avenue, Chris Church Central.","the gate is on the Bealey Avenue side at 160 Bealey Avenue, Christchurch Central"
+S0697-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on blendheim still silly.,is the traffic on Blenheim still silly
+S0140-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left it at the shop counter at 160 Avenue. Chris Church Central.,"left it at the shop counter at 160 Bealey Avenue, Christchurch Central"
+S0133-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 438 Road.,"nobody answered at 438 Ilam Road, Bryndwr"
+S0160-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 180 Road on the way back.,"add 180 Haldon Road, Hororata on the way back"
+S0669-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 77 place, Lincoln, Kiara.","delivered at 77 Heathridge Place, Lincoln — kia ora"
+S0111-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Watch the dog at 19 A Bassett Street.,"watch the dog at 19 A Bassett Street, Burwood"
+S0277-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,priority parcel for 177. A cashmere road.,"priority parcel for 177 A Cashmere Road, Hoon Hay"
+S0649-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"delivered at 7 Downs Road, Kia Ora.","delivered at 7 Downs Road, Eyrewell — kia ora"
+S0135-snr0,en_nz_van,snr0,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,skip the street for 27 A street.,"skip the street for 27 A Parnwell Street, Burwood"
+S0698-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody Fuel Prices A.,bloody fuel prices eh
+S0308-quiet,en_mix,quiet,true,end_break,free,end_break,true,true,Back on the run.,0,0,0,false,false,back on the road.,back on the road
+S0123-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Hand it to the man at 490 West Street, Alenton.","handed it to the man at 490 West Street, Allenton"
+S0626-quiet,code_switch,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"No one home at 3,40011 Thompson's track.",no one home at 3411 Thompsons Track — maal aayi
+S0693-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at five.,she said she would be home at five
+S0140-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Left it at the shop counter at 160 Avenue, Chris Church Central.","left it at the shop counter at 160 Bealey Avenue, Christchurch Central"
+S0139-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Hand it to the man at 44 perimeter road, Chris Church Airport.","handed it to the man at 44 Perimeter Road, Christchurch Airport"
+S0171-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 53 Cornwall Road.,"handed it to the man at 53 Cornwall Road, Lyttelton"
+S0124-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the shop counter at 190 breezes road.,"left it at the shop counter at 190 Breezes Road, Aranui"
+S0158-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked out at 65-a-road. Hornby.,"locked out at 65 A Amyes Road, Hornby"
+S0225-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at one drive, Belfast.","delivered at 1 Ballymena Drive, Belfast"
+S0236-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it at the shop counter at 152 B. Salisbury Street, Chris Church Central.","left it at the shop counter at 152 B Salisbury Street, Christchurch Central"
+S0325-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,priority parcel for 121 road.,"priority parcel for 121 Millars Road, Tinwald"
+S0164-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Lefted at the shop counter at 333 Kennedy's Bush Road, Kennedy's Bush.","left it at the shop counter at 333 Kennedys Bush Road, Kennedys Bush"
+S0339-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"dropped it in the at 445 West Street, a lenten.","dropped it in the letterbox at 445 West Street, Allenton"
+S0139-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,handed it to the man at 44 perimeter road. Chris Church Airport.,"handed it to the man at 44 Perimeter Road, Christchurch Airport"
+S0187-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Hand it to the man at 149 bus road, putting hill.","handed it to the man at 149 McLennans Bush Road, Pudding Hill"
+S0177-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 5,759, Airendel Gorge Road.","delivered at 5759 Arundel Rakaia Gorge Road, Methven"
+S0182-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Let's dive at 17 road.,"locked out at 17 Northcote Road, Northcote"
+S0201-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 1044 Browns Road.,"delivered at 1044 Browns Road, Swannanoa"
+S0668-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 10 spring place.,add a stop 10 Spring Place — أضف عنوانا
+S0152-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 74 William Britain Avenue. On the way back.,"add 74 William Brittan Avenue, Halswell on the way back"
+S0235-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Hand it to the man at 48 perimeter road, Chris Church Airport.","handed it to the man at 48 Perimeter Road, Christchurch Airport"
+S0123-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Handed it to the moment, 492 West Street, a lentil.","handed it to the man at 490 West Street, Allenton"
+S0326-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Gate code is 1-4-2-1 at 55 Eastwood Rise.,"gate code is one four two one at 55 Eastwood Rise, Waimairi Beach"
+S0693-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at 5.,she said she would be home at five
+S0620-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,SH1-road.,S H one Haldon Road
+S0021-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,What was that?,what was that
+S0242-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it on the porch at 19 date crescent.,"left it on the porch at 19 Date Crescent, Aidanfield"
+S0213-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Nobody answered at 1,198 highway.","nobody answered at 1198 Methven Highway, Winchmore"
+S0237-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 133C road.,"nobody answered at 133 C Heywards Road, Clarkville"
+S0189-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 48th Street.,"nobody answered at 48 Peverel Street, Riccarton"
+S0621-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 57 Palson Street, Addington, Ki, ora.","delivered at 57 Poulson Street, Addington — kia ora"
+S0704-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,the coffee is called.,the coffee is cold
+S0212-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the shop counter at 54 road.,"left it at the shop counter at 54 Longbeach Road, Willowby"
+S0259-quiet,en_mix,quiet,true,start_break,free,start_break,true,true,"Break started, 10 minutes.",0,0,0,false,false,taking a 10 minute break.,taking a ten minute break
+S0400-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,The gate is on the roadside at 180 road.,"the gate is on the Haldon Road side at 180 Haldon Road, Hororata"
+S0268-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,put it in the porch at 35 Street.,"put it in the porch at 35 Gresford Street, Edgeware"
+S0164-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Lefted at the shop counter at 333 Kennedy's Bush Road, Kennedy's Bush.","left it at the shop counter at 333 Kennedys Bush Road, Kennedys Bush"
+S0094-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Repeat that.,repeat that
+S0129-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Delivering at 33 A. Darox Street. Belfast.,"delivered at 33 A Darroch Street, Belfast"
+S0160-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 180 Road on the way back.,"add 180 Haldon Road, Hororata on the way back"
+S0627-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the door 81 road.,left it at the door 81 Hawthornden Road — 左边的门
+S0104-quiet,en_nz_quiet,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"dog in the yard at 669, road.","dog in the yard at 669 Sharlands Road, Bankside"
+S0230-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Lockdown at 536 wards road. Burn him.,"locked out at 536 Wards Road, Burnham"
+S0663-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the door 28 drive.,left it at the door 28 Brockelbank Drive — 左边的门
+S0705-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on blendheim still silling.,is the traffic on Blenheim still silly
+S0673-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"delivered at 653 Swamp Road, Kia Ora.","delivered at 653 Swamp Road, Maronan — kia ora"
+S0199-snr0,en_nz_van,snr0,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 51 Somestreet.,"skip the street for 51 Somme Street, St Albans"
+S0680-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 15 Luxton Place.,add a stop 15 Luxton Place — أضف عنوانا
+S0220-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the shop counter at 198 breezes road.,"left it at the shop counter at 190 A Breezes Road, Aranui"
+S0224-snr0,en_nz_van,snr0,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,at 669 road on the way back.,"add 669 Sharlands Road, Bankside on the way back"
+S0217-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,delivered at 59 Pauson Street. Addington.,"delivered at 59 Poulson Street, Addington"
+S0705-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on Bill Hoye still soon.,is the traffic on Blenheim still silly
+S0715-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,radio says the road is closed.,radio says the road is closed
+S0607-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,1-8-5 road,one eight five Hororata Dunsandel Road
+S0628-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 70 Terrace Road,add a stop 70 Rakaia Terrace Road — أضف عنوانا
+S0079-quiet,en_nz_quiet,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"cannot get in at 51 Sommes Street, Albin's","cannot get in at 51 Somme Street, St Albans"
+S0154-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left it under the mat at two high-right lane. Heathcoat Valley.,"left it under the mat at 2 Highlight Lane, Heathcote Valley"
+S0169-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Delivered at 77 Place, Lincoln.","delivered at 77 Heathridge Place, Lincoln"
+S0699-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,radio says the road is closed.,radio says the road is closed
+S0177-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 5,759, Arondal Gorge Road.","delivered at 5759 Arundel Rakaia Gorge Road, Methven"
+S0016-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,parcel box round the back at 15 McMillan Avenue. Cashmere.,"parcel box round the back at 15 MacMillan Avenue, Cashmere"
+S0290-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Left it on the porch at 44 A Norwich Street, Linwood.","left it on the porch at 44 A Norwich Street, Linwood"
+S0682-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,bloody fuel prices and,bloody fuel prices eh
+S0124-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the shop counter at 190 breezes road.,"left it at the shop counter at 190 Breezes Road, Aranui"
+S0142-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked out at 178 Clifton Terrace. Clifton.,"locked out at 178 Clifton Terrace, Clifton"
+S0226-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it under the mat at 1,684 Road. Flat.","left it under the mat at 1684 Bayleys Road, Birdlings Flat"
+S0232-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 108B Road.,"add 108 B Hackthorne Road, Cashmere on the way back"
+S0157-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Nobody answered at 177, a cashmere road.","nobody answered at 177 A Cashmere Road, Hoon Hay"
+S0196-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Lefted at the sharp counter at 352 right.,"left it at the shop counter at 352 Knyvetts Road, Southbridge"
+S0163-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 28 drive.,"handed it to the man at 28 Brockelbank Drive, Kaiapoi"
+S0151-snr5,en_nz_van,snr5,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for 78 Blacks Road. Green Street.,"skip the street for 78 Blacks Road, Greenstreet"
+S0175-snr5,en_nz_van,snr5,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 793 Island Road.,"skip the street for 793 McLeans Island Road, McLeans Island"
+S0219-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Hand of the 10-minute, 435 West Street, a lantern.","handed it to the man at 445 West Street, Allenton"
+S0717-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at 5.,she said she would be home at five
+S0118-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Repeat that.,repeat that
+S0262-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Repeat that.,repeat that
+S0229-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 436 Road.,"nobody answered at 436 Ilam Road, Bryndwr"
+S0058-quiet,en_nz_quiet,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,"Come back to 218 Annex Road, Middleton Later.","come back to 218 Annex Road, Middleton later"
+S0154-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left it under the mat at two highlight lane. Heathcoat Valley.,"left it under the mat at 2 Highlight Lane, Heathcote Valley"
+S0646-quiet,code_switch,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 10 railway terrace.,no one home at 10 Railway Terrace — maal aayi
+S0316-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,put it in the porch at 352 road.,"put it in the porch at 352 Knyvetts Road, Southbridge"
+S0193-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 57 drive.,"delivered at 57 Birkdale Drive, Shirley"
+S0208-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 191 Road, West Melton on the way back.","add 191 Langdales Road, West Melton on the way back"
+S0632-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop when the never-strive,add a stop 1 Ben Nevis Drive — أضف عنوانا
+S0214-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked out at 811 Road. Win Slow.,"locked out at 811 Maronan Road, Winslow"
+S0691-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,radio says the road is closed.,radio says the road is closed
+S0119-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Where is it in the van,where is it in the van
+S0250-quiet,en_mix,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Come back to 1,790 Road, flat later.","come back to 1790 Bayleys Road, Birdlings Flat later"
+S0256-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,"parcel box round the back at 15 McNil in Avenue, cashmere.","parcel box round the back at 15 MacMillan Avenue, Cashmere"
+S0200-snr0,en_nz_van,snr0,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 82 Heartly Avenue on the way back.,"add 82 Hartley Avenue, Strowan on the way back"
+S0236-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it at the shop counter at 152 B. Salisbury Street, Chris Church Central.","left it at the shop counter at 152 B Salisbury Street, Christchurch Central"
+S0710-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire as flat as the hammer.,shoot the tyre is flat again
+S0053-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it with a neighbor at 653 swamp road.,"left it with the neighbour at 653 Swamp Road, Maronan"
+S0194-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 6 road.,"left it under the mat at 6 Nga Mahi Road, Sockburn"
+S0379-quiet,mi_places,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add a stop at 44 perimeter road, Chris Church Airport","add a stop at 44 Perimeter Road, Christchurch Airport"
+S0364-quiet,mi_places,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop at 190 breezes road.,"add a stop at 190 Breezes Road, Aranui"
+S0133-snr0,en_nz_van,snr0,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 438 Road.,"nobody answered at 438 Ilam Road, Bryndwr"
+S0188-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Lefted at the shop counter at 23 A Monroe Street, Redwood.","left it at the shop counter at 23 A Munro Street, Redwood"
+S0020-quiet,en_nz_quiet,quiet,true,end_break,free,end_break,true,true,Back on the run.,0,0,0,false,false,back on the road.,back on the road
+S0248-quiet,en_mix,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,dog in the yard at 70 Terrace Road.,"dog in the yard at 70 Rakaia Terrace Road, Bankside"
+S0235-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"and at the end of the year, then the end of the year.","handed it to the man at 48 Perimeter Road, Christchurch Airport"
+S0057-quiet,en_nz_quiet,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Skip this one at 5,759, Airendel Gorge Road.","skip this one at 5759 Arundel Rakaia Gorge Road, Methven"
+S0315-quiet,en_mix,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,dropped it in the 86 B street.,"dropped it in the letterbox at 86 B Somerfield Street, Somerfield"
+S0718-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire is flat again.,shoot the tyre is flat again
+S0123-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"handed it to the man at 490 West Street, a lenten.","handed it to the man at 490 West Street, Allenton"
+S0149-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at seven downs road.,"nobody answered at 7 Downs Road, Eyrewell"
+S0637-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,234 Highfield Road, Proscia, Aura.","delivered at 1234 Highfield Road, Charing Cross — kia ora"
+S0143-snr10,en_nz_van,snr10,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for 359 Kaut's Island Road. Kaut's Island.,"skip the street for 359 Coutts Island Road, Coutts Island"
+S0352-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,parcel box round the back at 108B road.,"parcel box round the back at 108 B Hackthorne Road, Cashmere"
+S0139-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"He ended up telling them, ""Boy, what are you gonna do?"" Mr. Airport.","handed it to the man at 44 Perimeter Road, Christchurch Airport"
+S0331-quiet,en_mix,quiet,true,start_break,free,start_break,true,true,"Break started, 10 minutes.",0,0,0,false,false,Taking a 10 minute break.,taking a ten minute break
+S0164-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Lefted at the shop counter at 333 Kennedy's Bush Road, Kennedy's Bush.","left it at the shop counter at 333 Kennedys Bush Road, Kennedys Bush"
+S0181-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at 60 A. Princes Street.,"nobody answered at 60 A Princes Street, Netherby"
+S0231-snr10,en_nz_van,snr10,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 19 A Bassett Street.,"skip the street for 19 A Bassett Street, Burwood"
+S0698-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody fuel prices and,bloody fuel prices eh
+S0013-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,priority parcel for 438 road.,"priority parcel for 438 Ilam Road, Bryndwr"
+S0131-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 24th Street.,"handed it to the man at 24 Wendover Street, Bishopdale"
+S0022-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Repeat that.,repeat that
+S0121-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 57 Palson Street.,"delivered at 57 Poulson Street, Addington"
+S0403-quiet,mi_places,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 28 drive.,"no one home at 28 Brockelbank Drive, Kaiapoi"
+S0255-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Watch the dog at 27 A Street.,"watch the dog at 27 A Parnwell Street, Burwood"
+S0399-quiet,mi_places,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add a stop at four Sir James Waddie Drive, Hornby South","add a stop at 4 Sir James Wattie Drive, Hornby South"
+S0085-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,priority parcel for 121 road.,"priority parcel for 121 Millars Road, Tinwald"
+S0404-quiet,mi_places,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add a stop at 333 Kennedy's Bush Road, Kennedy's Bush.","add a stop at 333 Kennedys Bush Road, Kennedys Bush"
+S0241-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 57 Palson Street.,"delivered at 57 Poulson Street, Addington"
+S0370-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,"The gate is on the roadside at 1,790 road. Flat.","the gate is on the Bayleys Road side at 1790 Bayleys Road, Birdlings Flat"
+S0301-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,priority parcel for sixty A. Princes Street.,"priority parcel for 60 A Princes Street, Netherby"
+S0218-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 23 gardens.,"left it under the mat at 23 Cassinia Gardens, Aidanfield"
+S0327-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Watch the dog at 289 pages road.,"watch the dog at 289 Pages Road, Wainoni"
+S0686-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire as flat again.,shoot the tyre is flat again
+S0381-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 135 road.,"delivered at 135 Heywards Road, Clarkville"
+S0298-quiet,en_mix,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,"Come back to 218 Annex Road, Middleton Later.","come back to 218 Annex Road, Middleton later"
+S0688-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0190-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,locked out at 7 W. Richmond.,"locked out at 2/97 Warden Street, Richmond"
+S0333-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,What was that?,what was that
+S0685-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at 5.,she said she would be home at five
+S0694-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire as flat again.,shoot the tyre is flat again
+S0165-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 12 Adelaide Street.,"nobody answered at 12 Adelaide Street, Kirwee"
+S0040-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,parcel box round the back at 180 road.,"parcel box round the back at 180 Haldon Road, Hororata"
+S0171-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 53 corn while road.,"handed it to the man at 53 Cornwall Road, Lyttelton"
+S0659-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it at the door 4, Sir James Waddie drive.",left it at the door 4 Sir James Wattie Drive — 左边的门
+S0010-quiet,en_nz_quiet,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Come back to 1,790 Road, flat later.","come back to 1790 Bayleys Road, Birdlings Flat later"
+S0232-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 108B Road, cash near on the way back.","add 108 B Hackthorne Road, Cashmere on the way back"
+S0029-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it with the neighbor at 7 Downs Road.,"left it with the neighbour at 7 Downs Road, Eyrewell"
+S0373-quiet,mi_places,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 438 Road.,"no one home at 438 Ilam Road, Bryndwr"
+S0369-quiet,mi_places,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,"At a stop at 33 D. Rock Street, Belfast","add a stop at 33 Darroch Street, Belfast"
+S0189-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 48th Street.,"nobody answered at 48 Peverel Street, Riccarton"
+S0699-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0181-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at 60 A. Prince's Street.,"nobody answered at 60 A Princes Street, Netherby"
+S0610-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,2/14th Street.,two slash fourteen Makora Street
+S0691-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0211-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it it to the man at 9 close.,"handed it to the man at 1/39 Gallaghan Close, Wigram"
+S0682-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody Fuel Prices A.,bloody fuel prices eh
+S0105-quiet,en_nz_quiet,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Skip this one at one drive, Belfast.","skip this one at 1 Ballymena Drive, Belfast"
+S0213-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Nobody answered at 1,198 highway.","nobody answered at 1198 Methven Highway, Winchmore"
+S0147-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 91 road.,"handed it to the man at 91 Hororata Dunsandel Road, Dunsandel"
+S0243-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"dropped it in the at 490 West Street, a lenten.","dropped it in the letterbox at 490 West Street, Allenton"
+S0671-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the door 53 Cornwall Road.,left it at the door 53 Cornwall Road — 左边的门
+S0191-snr5,en_nz_van,snr5,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for 96 A. Reinwar Drive.,"skip the street for 96 A Renoir Drive, Rolleston"
+S0135-quiet,en_nz_van,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 27A street.,"skip the street for 27 A Parnwell Street, Burwood"
+S0359-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Where is it in the van,where is it in the van
+S0227-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,handle it to the man of 22 straight.,"handed it to the man at 22 Wendover Street, Bishopdale"
+S0717-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at 5.,she said she would be home at five
+S0009-quiet,en_nz_quiet,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,"Skip this one at 33A Darrock Street, Belfast.","skip this one at 33 A Darroch Street, Belfast"
+S0584-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,42. 52 breezes road.,forty two or fifty two Breezes Road
+S0110-quiet,en_nz_quiet,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,Jake Code is 14421 at 536 Ward's Road. Burn 'em.,"gate code is one four two one at 536 Wards Road, Burnham"
+S0651-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the door 78 blacks road.,left it at the door 78 Blacks Road — 左边的门
+S0681-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,The traffic on blendheim still silly.,is the traffic on Blenheim still silly
+S0674-quiet,code_switch,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 18 road.,no one home at 18 McSaveneys Road — maal aayi
+S0265-quiet,en_mix,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,636 Clinton's road.","delivered at 1636 Clintons Road, Darfield"
+S0350-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Gate code is 14421 at 536 Ward's Road. Burn 'em.,"gate code is one four two one at 536 Wards Road, Burnham"
+S0703-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0130-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it under the mat at 1,790 road. Flat.","left it under the mat at 1790 Bayleys Road, Birdlings Flat"
+S0697-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,The traffic on blendheim's still silly.,is the traffic on Blenheim still silly
+S0393-quiet,mi_places,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 145 orchard road.,"no one home at 145 Orchard Road, Harewood"
+S0586-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,2/14 Thompson's track.,two slash fourteen Thompsons Track
+S0188-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Lefted at the shock counter at 23 A. Munre Street, Redwood.","left it at the shop counter at 23 A Munro Street, Redwood"
+S0239-snr10,en_nz_van,snr10,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for 383 Kaut's Island Road. Kaut's Island.,"skip the street for 383 Coutts Island Road, Coutts Island"
+S0175-quiet,en_nz_van,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for 793 Island Road. Island.,"skip the street for 793 McLeans Island Road, McLeans Island"
+S0147-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Hand it to the man at 91 Road.,"handed it to the man at 91 Hororata Dunsandel Road, Dunsandel"
+S0194-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 6 road.,"left it under the mat at 6 Nga Mahi Road, Sockburn"
+S0035-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop at 30 Roberts Road.,"add a stop at 30 Roberts Road, Hei Hei"
+S0117-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,What was that?,what was that
+S0023-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Where is it in the van,where is it in the van
+S0286-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Repeat that.,repeat that
+S0382-quiet,mi_places,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,left it at the at 178 Clifton Terrace. Clifton.,"left it at the whare at 178 Clifton Terrace, Clifton"
+S0233-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"delivered at 700 road, cross.","delivered at 700 Bealey Road, Charing Cross"
+S0233-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 700 road.,"delivered at 700 Bealey Road, Charing Cross"
+S0711-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0411-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 53 Cornwall Road.,"delivered at 53 Cornwall Road, Lyttelton"
+S0371-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 24th Street.,"delivered at 24 Wendover Street, Bishopdale"
+S0072-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Read me the next one.,read me the next one
+S0135-snr5,en_nz_van,snr5,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 27 A Street.,"skip the street for 27 A Parnwell Street, Burwood"
+S0716-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0052-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,put it in the porch at 428A in nest road.,"put it in the porch at 428 A Innes Road, Mairehau"
+S0138-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it under the mat at 1,553 highway.","left it under the mat at 1553 Rakaia Highway, Chertsey"
+S0302-quiet,en_mix,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,Date code is 14421 at 17 road.,"gate code is one four two one at 17 Northcote Road, Northcote"
+S0697-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on Blunt Home's still safe.,is the traffic on Blenheim still silly
+S0709-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at 5.,she said she would be home at five
+S0093-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,What was that?,what was that
+S0595-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,42b straight.,forty two B Parnwell Street
+S0208-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 191 Road, West Melton on the way back.","add 191 Langdales Road, West Melton on the way back"
+S0344-quiet,en_mix,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"dog in the yard at 669, road.","dog in the yard at 669 Sharlands Road, Bankside"
+S0602-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,2/14 Clifton Terrace,two slash fourteen Clifton Terrace
+S0238-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 178 Clifton Terrace, Clifton","locked out at 178 Clifton Terrace, Clifton"
+S0701-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at 5.,she said she would be home at five
+S0590-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,12-13 road,twelve thirteen Bayleys Road
+S0166-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"locked out at 817, Westerfield, Mayfield Road.","locked out at 817 Tinwald Westerfield Mayfield Road, Lagmhor"
+S0609-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,"1, 2, 3, 4 down's road.",one two three four Downs Road
+S0157-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Nobody answered at 177, a cashmere road.","nobody answered at 177 A Cashmere Road, Hoon Hay"
+S0230-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked out at 536 Ward's Road. Burn 'em.,"locked out at 536 Wards Road, Burnham"
+S0215-quiet,en_nz_van,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for 63 F. Street.,"skip the street for 63 F Mackworth Street, Woolston"
+S0195-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 86 B Street.,"handed it to the man at 86 B Somerfield Street, Somerfield"
+S0233-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,delivered at 700 road. Cross.,"delivered at 700 Bealey Road, Charing Cross"
+S0713-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on Blun Home's still safe.,is the traffic on Blenheim still silly
+S0614-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,1213 highlight lane.,twelve thirteen Highlight Lane
+S0683-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0063-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Watch the dog at 130 Bradley's Road.,"watch the dog at 130 Bradleys Road, Ohoka"
+S0214-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked out at 811 Road. Win Slow.,"locked out at 811 Maronan Road, Winslow"
+S0137-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,234 high field road. Cross.","delivered at 1234 Highfield Road, Charing Cross"
+S0215-snr0,en_nz_van,snr0,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 63 Ave Street.,"skip the street for 63 F Mackworth Street, Woolston"
+S0129-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,delivered at $33 A. Dollar Street. Burf-Fast.,"delivered at 33 A Darroch Street, Belfast"
+S0681-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on Glenheim still safe.,is the traffic on Blenheim still silly
+S0048-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Read me the next one.,read me the next one
+S0703-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0401-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 65 Hamilton Avenue.,"delivered at 65 Hamilton Avenue, Ilam"
+S0605-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,7 No Sorry 17 Clinton's Road.,seven no sorry seventeen Clintons Road
+S0715-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0049-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"delivered at 77 place, Lincoln.","delivered at 77 Heathridge Place, Lincoln"
+S0090-quiet,en_nz_quiet,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,starting my run.,starting my run
+S0139-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Hand it to the man at 44 perimeter road, Chris Church Airport.","handed it to the man at 44 Perimeter Road, Christchurch Airport"
+S0232-snr0,en_nz_van,snr0,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,God 108B Road. Tell us we're on the way back.,"add 108 B Hackthorne Road, Cashmere on the way back"
+S0172-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 428A in nest road.,"left it at the shop counter at 428 A Innes Road, Mairehau"
+S0133-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 438 Road.,"nobody answered at 438 Ilam Road, Bryndwr"
+S0157-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Nobody answered at 177, ""A cashmere road.""","nobody answered at 177 A Cashmere Road, Hoon Hay"
+S0307-quiet,en_mix,quiet,true,start_break,free,start_break,true,true,"Break started, 10 minutes.",0,0,0,false,false,taking a 10 minute break.,taking a ten minute break
+S0406-quiet,mi_places,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 817, Westerfield may field road.","delivered at 817 Tinwald Westerfield Mayfield Road, Lagmhor"
+S0683-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,radio says the road is closed.,radio says the road is closed
+S0216-snr0,en_nz_van,snr0,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 100 Old West Coast Road on the way back.,"add 100 Old West Coast Road, Yaldhurst on the way back"
+S0239-snr0,en_nz_van,snr0,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip this to the 3-1-0-0-0-0-0-0-0-0-0-0,"skip the street for 383 Coutts Island Road, Coutts Island"
+S0687-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name",wait whats my name
+S0210-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 45 close.,"left it under the mat at 45 Pentonville Close, Westmorland"
+S0204-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Left it at the shop counter at 290 Old West Coast Road, Templeton.","left it at the shop counter at 290 Old West Coast Road, Templeton"
+S0196-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 352 road.,"left it at the shop counter at 352 Knyvetts Road, Southbridge"
+S0386-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 10 Railway Terrace.,"delivered at 10 Railway Terrace, Doyleston"
+S0342-quiet,en_mix,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"No one home at 3,239 Thompson's track. Forks.","no one home at 3239 Thompsons Track, Ashburton Forks"
+S0652-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 74 William Britain Avenue.,add a stop 74 William Brittan Avenue — أضف عنوانا
+S0209-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,733, Westerfield Mayfield Road, Westerfield","delivered at 1733 Tinwald Westerfield Mayfield Road, Westerfield"
+S0700-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,can you turn the radio down?,can you turn the radio down
+S0257-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,"Side gate left of the garage at 1,234 high field road. Cross.","side gate left of the garage at 1234 Highfield Road, Charing Cross"
+S0589-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,7 No Sorry 17 Darrock Street.,seven no sorry seventeen Darroch Street
+S0392-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the at 74 William Britain Avenue.,"left it at the whare at 74 William Brittan Avenue, Halswell"
+S0064-quiet,en_nz_quiet,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,Horcel box round the back at 9 loft is street.,"parcel box round the back at 9 Loftus Street, Papanui"
+S0200-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 82, partly Avenue, on the way back.","add 82 Hartley Avenue, Strowan on the way back"
+S0150-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Not by the 12th Street.,"locked out at 12 Makora Street, Fendalton"
+S0237-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Nobody is answered, but they'll be present.","nobody answered at 133 C Heywards Road, Clarkville"
+S0123-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"handed it to the man at 490 West Street, a lenten.","handed it to the man at 490 West Street, Allenton"
+S0239-snr5,en_nz_van,snr5,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,"Skip the street for 383 Kout's Island Road, Kout's Island.","skip the street for 383 Coutts Island Road, Coutts Island"
+S0206-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,locked out at 55 Eastwood Rise. Bitch.,"locked out at 55 Eastwood Rise, Waimairi Beach"
+S0092-quiet,en_nz_quiet,quiet,true,end_break,free,end_break,true,true,Back on the run.,0,0,0,false,false,back on the road.,back on the road
+S0125-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at four more streams.,"nobody answered at 4 Moore Street, Ashburton"
+S0700-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0202-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 142 A Hastings Street East.,"left it under the mat at 142 A Hastings Street East, Sydenham"
+S0410-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,"The gate is on the Norwich Street side at 44 Norwich Street, Linwood.","the gate is on the Norwich Street side at 44 Norwich Street, Linwood"
+S0143-quiet,en_nz_van,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,"Skip the street for 359 Kaut's Island Road, Kaut's Island.","skip the street for 359 Coutts Island Road, Coutts Island"
+S0217-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,delivered at 59 Palson Street. Addington.,"delivered at 59 Poulson Street, Addington"
+S0273-quiet,en_mix,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip this one at 145 orchard road. Hairwood.,"skip this one at 145 Orchard Road, Harewood"
+S0710-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire is whad again.,shoot the tyre is flat again
+S0692-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0414-quiet,mi_places,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add a stop at 18 road, Marceland.","add a stop at 18 McSaveneys Road, Marshland"
+S0130-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it under the mat, a 1,700 mounted blade front.","left it under the mat at 1790 Bayleys Road, Birdlings Flat"
+S0136-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 15 McMillan Avenue cashmere on the way back.,"add 15 MacMillan Avenue, Cashmere on the way back"
+S0684-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0042-quiet,en_nz_quiet,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,starting my run.,starting my run
+S0695-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0187-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"and I've been supporting my voice now, putting him.","handed it to the man at 149 McLennans Bush Road, Pudding Hill"
+S0141-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 135c road.,"nobody answered at 135 C Heywards Road, Clarkville"
+S0144-snr0,en_nz_van,snr0,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,"That's wrong, don't even...","add 1 Tisbury Lane, Cracroft on the way back"
+S0131-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,handle it to the marion at 24th Street.,"handed it to the man at 24 Wendover Street, Bishopdale"
+S0152-snr0,en_nz_van,snr0,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 74 William Britton Avenue on the way back.,"add 74 William Brittan Avenue, Halswell on the way back"
+S0167-snr0,en_nz_van,snr0,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Skip the street for 1,068 dip road.","skip the street for 1068 Dip Road, Lauriston"
+S0623-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the door 490 West Street.,left it at the door 490 West Street — 左边的门
+S0211-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it it to the man at nine close.,"handed it to the man at 1/39 Gallaghan Close, Wigram"
+S0003-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"dropped it in the at 490 West Street, a lenten.","dropped it in the letterbox at 490 West Street, Allenton"
+S0266-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it on the porch at 10 Railway Terrace.,"left it on the porch at 10 Railway Terrace, Doyleston"
+S0070-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Repeat that.,repeat that
+S0184-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 9 loft to street on the way back.,"add 9 Loftus Street, Papanui on the way back"
+S0295-quiet,en_mix,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"cannot get in at 793 Island Road, Island.","cannot get in at 793 McLeans Island Road, McLeans Island"
+S0012-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"also got one at one Ben Nevis drive, Broomfield","also got one at 1 Ben Nevis Drive, Broomfield"
+S0203-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it to the mold 194 old tie road. Tie.,"handed it to the man at 194 Old Tai Tapu Road, Tai Tapu"
+S0076-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,put it in the porch at 352 road.,"put it in the porch at 352 Knyvetts Road, Southbridge"
+S0598-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,12-13 highway.,twelve thirteen Rakaia Highway
+S0306-quiet,en_mix,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,starting my run.,starting my run
+S0135-snr10,en_nz_van,snr10,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 27A Street.,"skip the street for 27 A Parnwell Street, Burwood"
+S0163-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,It handed it to the mariner 28 drive.,"handed it to the man at 28 Brockelbank Drive, Kaiapoi"
+S0711-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name",wait whats my name
+S0413-quiet,mi_places,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 653 swamp road.,"no one home at 653 Swamp Road, Maronan"
+S0169-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Delivering at seven or seven place. Lincoln.,"delivered at 77 Heathridge Place, Lincoln"
+S0122-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Loved it under the mouth that mountain date present.,"left it under the mat at 19 Date Crescent, Aidanfield"
+S0083-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop at 194 old tie road. Tie.,"add a stop at 194 Old Tai Tapu Road, Tai Tapu"
+S0713-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,The traffic on blendheim still silly.,is the traffic on Blenheim still silly
+S0122-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 19 date crescent.,"left it under the mat at 19 Date Crescent, Aidanfield"
+S0718-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire is flat again.,shoot the tyre is flat again
+S0708-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0343-quiet,en_mix,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,cannot get in at 35 Avenue.,"cannot get in at 35 Montclare Avenue, Avonhead"
+S0138-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it under the mat at 1,553 highway.","left it under the mat at 1553 Rakaia Highway, Chertsey"
+S0226-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it under the mat at 1,684 round.","left it under the mat at 1684 Bayleys Road, Birdlings Flat"
+S0205-snr0,en_nz_van,snr0,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 121 road.,"nobody answered at 121 Millars Road, Tinwald"
+S0686-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire as flat again.,shoot the tyre is flat again
+S0303-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Watch the dog at 130 Bradley's Road.,"watch the dog at 130 Bradleys Road, Ohoka"
+S0212-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the shop counter at 54 Road.,"left it at the shop counter at 54 Longbeach Road, Willowby"
+S0216-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 100 Old West Coast Road. On the way back.,"add 100 Old West Coast Road, Yaldhurst on the way back"
+S0190-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked all so I would history. Which mean...,"locked out at 2/97 Warden Street, Richmond"
+S0195-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,It handed it to the marion at 86 B Street.,"handed it to the man at 86 B Somerfield Street, Somerfield"
+S0225-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Deliverate at one drive, go first.","delivered at 1 Ballymena Drive, Belfast"
+S0130-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it under the mat at 1,790 road, flat.","left it under the mat at 1790 Bayleys Road, Birdlings Flat"
+S0387-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the at ninety one road,"left it at the whare at 91 Hororata Dunsandel Road, Dunsandel"
+S0712-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0150-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Locked out at 12th Street.,"locked out at 12 Makora Street, Fendalton"
+S0198-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked out at 5 Armstrong Avenue. Springston.,"locked out at 5 Armstrong Avenue, Springston"
+S0157-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at 177 A. Cash No Road.,"nobody answered at 177 A Cashmere Road, Hoon Hay"
+S0062-quiet,en_nz_quiet,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,Date code is 14421 at 17 road.,"gate code is one four two one at 17 Northcote Road, Northcote"
+S0132-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Lefted at the shop counter at one bend never strive. Room field.,"left it at the shop counter at 1 Ben Nevis Drive, Broomfield"
+S0219-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Handed it to the man at 445 West Street, Alenton.","handed it to the man at 445 West Street, Allenton"
+S0128-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 70 Terrace Road on the way back.,"add 70 Rakaia Terrace Road, Bankside on the way back"
+S0155-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 30 Roberts Road.,"handed it to the man at 30 Roberts Road, Hei Hei"
+S0148-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 35 Street.,"left it at the shop counter at 35 Gresford Street, Edgeware"
+S0714-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody Fuel Prices A,bloody fuel prices eh
+S0297-quiet,en_mix,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Skip this one at 5,759, Airendel Gorge Road.","skip this one at 5759 Arundel Rakaia Gorge Road, Methven"
+S0162-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 111 pound road.,"left it under the mat at 111 Pound Road, Islington"
+S0612-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,SH1 William Britain Avenue.,S H one William Brittan Avenue
+S0348-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"also got one at 82 Vanguard Drive, Broomfield","also got one at 82 Vanguard Drive, Broomfield"
+S0165-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 12 Adelaide Street.,"nobody answered at 12 Adelaide Street, Kirwee"
+S0086-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Gate code is 14421 at 55 Eastwood Rise. Bitch.,"gate code is one four two one at 55 Eastwood Rise, Waimairi Beach"
+S0271-quiet,en_mix,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"cannot get in at 78 blacks road, Green Street.","cannot get in at 78 Blacks Road, Greenstreet"
+S0711-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0311-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Where is it in the van,where is it in the van
+S0154-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left it under the mat at too high light lane. Heathcoat Valley.,"left it under the mat at 2 Highlight Lane, Heathcote Valley"
+S0223-snr0,en_nz_van,snr0,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 35 Avenue.,"skip the street for 35 Montclare Avenue, Avonhead"
+S0667-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the door 1068 dip road.,left it at the door 1068 Dip Road — 左边的门
+S0178-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Left it under the mat at 218 Annex Road, Middleton.","left it under the mat at 218 Annex Road, Middleton"
+S0168-snr0,en_nz_van,snr0,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 10 spring place on the way back.,"add 10 Spring Place, Leeston on the way back"
+S0207-snr5,en_nz_van,snr5,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 289 pages road.,"skip the street for 289 Pages Road, Wainoni"
+S0187-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Hand it to the man at 149 bus road.,"handed it to the man at 149 McLennans Bush Road, Pudding Hill"
+S0226-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"left it under the mat, a 1,684 word.","left it under the mat at 1684 Bayleys Road, Birdlings Flat"
+S0030-quiet,en_nz_quiet,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 12th Street.,"no one home at 12 Makora Street, Fendalton"
+S0136-snr0,en_nz_van,snr0,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 15 in the phone Avenue. Tell us we are on the way back.,"add 15 MacMillan Avenue, Cashmere on the way back"
+S0240-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add two lane on the way back.,"add 2 Tisbury Lane, Cracroft on the way back"
+S0146-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it end over night, but 10 more low terms.","left it under the mat at 10 Railway Terrace, Doyleston"
+S0260-quiet,en_mix,quiet,true,end_break,free,end_break,true,true,Back on the run.,0,0,0,false,false,back on the road.,back on the road
+S0179-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it it to the man at 266 MT Hut Road. Mount Hut.,"handed it to the man at 266 Mt Hutt Skifield Road, Mount Hutt"
+S0166-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"locked out at 817, Westerfield may field road.","locked out at 817 Tinwald Westerfield Mayfield Road, Lagmhor"
+S0707-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,radio says the road is closed.,radio says the road is closed
+S0174-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 18 Road, Marceland.","locked out at 18 McSaveneys Road, Marshland"
+S0681-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on Blenheim still silly.,is the traffic on Blenheim still silly
+S0065-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Side gate left of the garage at 106 road.,"side gate left of the garage at 2/106 Olliviers Road, Phillipstown"
+S0616-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,42.52 Mars Road.,forty two or fifty two Marrs Road
+S0324-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"also got one at 290 Old West Coast Road, Templeton.","also got one at 290 Old West Coast Road, Templeton"
+S0171-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 53 Cornwall Road.,"handed it to the man at 53 Cornwall Road, Lyttelton"
+S0234-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it under the mask at 1260 when highway.,"left it under the mat at 1261 Rakaia Highway, Chertsey"
+S0098-quiet,en_nz_quiet,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,He left it on the porch at 23 gardens.,"left it on the porch at 23 Cassinia Gardens, Aidanfield"
+S0201-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,04 browns road.","delivered at 1044 Browns Road, Swannanoa"
+S0604-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,SH1 lane.,S H one Tisbury Lane
+S0078-quiet,en_nz_quiet,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,No one home at five Armstrong Avenue. Springston.,"no one home at 5 Armstrong Avenue, Springston"
+S0684-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0147-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,hand it to the morning at the end of one road.,"handed it to the man at 91 Hororata Dunsandel Road, Dunsandel"
+S0412-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the at 428 in Ness Road.,"left it at the whare at 428 Innes Road, Mairehau"
+S0237-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 133C Road.,"nobody answered at 133 C Heywards Road, Clarkville"
+S0186-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 27 drive.,"left it under the mat at 27 Cairnbrae Drive, Prebbleton"
+S0354-quiet,en_mix,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,starting my run.,starting my run
+S0231-snr0,en_nz_van,snr0,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,skip the street for 19 A Basset Street.,"skip the street for 19 A Bassett Street, Burwood"
+S0720-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0662-quiet,code_switch,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 111 pound road.,no one home at 111 Pound Road — maal aayi
+S0183-quiet,en_nz_van,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 130 Bradley's Road.,"skip the street for 130 Bradleys Road, Ohoka"
+S0686-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tower is flat again.,shoot the tyre is flat again
+S0225-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Delivered at one drive, both faster.","delivered at 1 Ballymena Drive, Belfast"
+S0095-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Where is it in the van,where is it in the van
+S0131-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Hand it to the man at 24 feet.,"handed it to the man at 24 Wendover Street, Bishopdale"
+S0176-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 5 paltimore Road on the way back.,"add 4/65 Carlton Mill Road, Merivale on the way back"
+S0314-quiet,en_mix,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it on the porch at 6, road.","left it on the porch at 6 Nga Mahi Road, Sockburn"
+S0719-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name",wait whats my name
+S0204-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Lefted at the shop counter at 290 Old West Coast Road, Templeton.","left it at the shop counter at 290 Old West Coast Road, Templeton"
+S0039-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,"Watch the dog at four Sir James Waddie drive, Hornby South","watch the dog at 4 Sir James Wattie Drive, Hornby South"
+S0641-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"delivered at 135 Road, Kia Ora.","delivered at 135 Heywards Road, Clarkville — kia ora"
+S0585-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,"1, 2, 3, 4, 4",one two three four Moore Street
+S0345-quiet,en_mix,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Skip this one at one drive, Belfast.","skip this one at 1 Ballymena Drive, Belfast"
+S0126-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"locked out at 3,400-11 Thompson's track. Forks.","locked out at 3411 Thompsons Track, Ashburton Forks"
+S0699-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0706-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody full of crimes is in.,bloody fuel prices eh
+S0189-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody wants me to afford an extreme.,"nobody answered at 48 Peverel Street, Riccarton"
+S0222-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"It's locked out at 3,239 Thompson's track. Forks.","locked out at 3239 Thompsons Track, Ashburton Forks"
+S0197-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 84 Neville Street.,"nobody answered at 84 Neville Street, Spreydon"
+S0695-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name",wait whats my name
+S0125-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered it four more street.,"nobody answered at 4 Moore Street, Ashburton"
+S0692-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0033-quiet,en_nz_quiet,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip this one at 145 orchard road. Hairwood.,"skip this one at 145 Orchard Road, Harewood"
+S0702-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire as flat again.,shoot the tyre is flat again
+S0337-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 59 Palson Street.,"delivered at 59 Poulson Street, Addington"
+S0132-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it at the shop counter at one Ben Nevis drive, Broomfield","left it at the shop counter at 1 Ben Nevis Drive, Broomfield"
+S0171-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Hand it up to the moon, 53.1 road.","handed it to the man at 53 Cornwall Road, Lyttelton"
+S0107-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop at 22 Street.,"add a stop at 22 Wendover Street, Bishopdale"
+S0239-quiet,en_nz_van,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,"Skip the street for 383 Kout's Island Road, Kout's Island.","skip the street for 383 Coutts Island Road, Coutts Island"
+S0165-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered it 12 Adelaide Street.,"nobody answered at 12 Adelaide Street, Kirwee"
+S0267-quiet,en_mix,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,dropped it in the at ninety one road,"dropped it in the letterbox at 91 Hororata Dunsandel Road, Dunsandel"
+S0592-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,42. 52. Ben never strive.,forty two or fifty two Ben Nevis Drive
+S0664-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 333 Kennedy's Bush Road.,add a stop 333 Kennedys Bush Road — أضف عنوانا
+S0153-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 145 orchard road.,"delivered at 145 Orchard Road, Harewood"
+S0709-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at 5.,she said she would be home at five
+S0633-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,delivered at 438 Road. Kia Ora.,"delivered at 438 Ilam Road, Bryndwr — kia ora"
+S0698-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody Fuel Prices A,bloody fuel prices eh
+S0220-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the salt panto at 198 Breezes Road.,"left it at the shop counter at 190 A Breezes Road, Aranui"
+S0221-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at one restraint.,"nobody answered at 1 B Kermode Street, Ashburton"
+S0142-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 178 Clifton Terrace, Clifton.","locked out at 178 Clifton Terrace, Clifton"
+S0027-quiet,en_nz_quiet,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,dropped it in the at ninety one road,"dropped it in the letterbox at 91 Hororata Dunsandel Road, Dunsandel"
+S0720-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,the coffee was called,the coffee is cold
+S0190-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,locked out at 7 Morgan Street Richmond,"locked out at 2/97 Warden Street, Richmond"
+S0236-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"left at the sharp end of the 152 g-saws from straight, post your it's untrapped.","left it at the shop counter at 152 B Salisbury Street, Christchurch Central"
+S0688-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0227-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 22th Street.,"handed it to the man at 22 Wendover Street, Bishopdale"
+S0186-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 27 drive.,"left it under the mat at 27 Cairnbrae Drive, Prebbleton"
+S0682-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody Fuel Prices A,bloody fuel prices eh
+S0028-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,put it in the porch at 35 Street.,"put it in the porch at 35 Gresford Street, Edgeware"
+S0692-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0689-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on Glenheim's still silly.,is the traffic on Blenheim still silly
+S0713-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on Blendheim still safe.,is the traffic on Blenheim still silly
+S0233-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Delivered at 700 Road. Cross.,"delivered at 700 Bealey Road, Charing Cross"
+S0689-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,The traffic on blendheim still silly.,is the traffic on Blenheim still silly
+S0682-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody fuel prices in.,bloody fuel prices eh
+S0264-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Read me the next one.,read me the next one
+S0706-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody fuel prices,bloody fuel prices eh
+S0395-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,"The gate is on the Roberts Road side, a 30 Roberts Road.","the gate is on the Roberts Road side at 30 Roberts Road, Hei Hei"
+S0152-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 74 William Britain Avenue on the way back.,"add 74 William Brittan Avenue, Halswell on the way back"
+S0005-quiet,en_nz_quiet,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left it with the neighbor at four more street.,"left it with the neighbour at 4 Moore Street, Ashburton"
+S0716-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0099-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"dropped it in the at 445 West Street, a lenten.","dropped it in the letterbox at 445 West Street, Allenton"
+S0704-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0176-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 5 Carleton Mill Road on the way back.,"add 4/65 Carlton Mill Road, Merivale on the way back"
+S0228-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Lefted at the shop counter at 82 Vanguard Drive, Broomfield","left it at the shop counter at 82 Vanguard Drive, Broomfield"
+S0130-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left at Under the mat at 1,790 World. Front.","left it under the mat at 1790 Bayleys Road, Birdlings Flat"
+S0015-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Watch the dog at 27 A Street.,"watch the dog at 27 A Parnwell Street, Burwood"
+S0192-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 42, a Delaware Crescent, on the way back.","add 42 A Delaware Crescent, Russley on the way back"
+S0161-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 5A Hamilton Avenue.,"delivered at 2/65 A Hamilton Avenue, Ilam"
+S0017-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,"Side gate left of the garage at 1,234 high field road. Cross.","side gate left of the garage at 1234 Highfield Road, Charing Cross"
+S0170-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Left it under the mat at 44 A Norwich Street, Linwood.","left it under the mat at 44 A Norwich Street, Linwood"
+S0214-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 811 Road, Winslow.","locked out at 811 Maronan Road, Winslow"
+S0150-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Locked out at 12th Street.,"locked out at 12 Makora Street, Fendalton"
+S0209-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,733, Westerfield Mayfield Road, Westerfield.","delivered at 1733 Tinwald Westerfield Mayfield Road, Westerfield"
+S0034-quiet,en_nz_quiet,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Come back to two highlight lane, Heathcoat Valley later.","come back to 2 Highlight Lane, Heathcote Valley later"
+S0149-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 7 Downs Road.,"nobody answered at 7 Downs Road, Eyrewell"
+S0338-quiet,en_mix,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,He left it on the porch at 23 gardens.,"left it on the porch at 23 Cassinia Gardens, Aidanfield"
+S0159-snr0,en_nz_van,snr0,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for four Sir James Waddie Drive. Horn be sound.,"skip the street for 4 Sir James Wattie Drive, Hornby South"
+S0170-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"left it under the mouth at 44 Am. Street, linwood.","left it under the mat at 44 A Norwich Street, Linwood"
+S0238-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Rockdale, no second in the open terrace. Clifton.","locked out at 178 Clifton Terrace, Clifton"
+S0418-quiet,mi_places,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"No one home at 218 Annex Road, Middleton.","no one home at 218 Annex Road, Middleton"
+S0206-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked out at 55 istward rise. Beach.,"locked out at 55 Eastwood Rise, Waimairi Beach"
+S0670-quiet,code_switch,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 44 Norwich Street.,no one home at 44 Norwich Street — maal aayi
+S0203-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it to the mat at 194 old tie road. Tie.,"handed it to the man at 194 Old Tai Tapu Road, Tai Tapu"
+S0178-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Left it under the mat at 218 Annex Road, Middleton.","left it under the mat at 218 Annex Road, Middleton"
+S0378-quiet,mi_places,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"No one home at 1,553 highway.","no one home at 1553 Rakaia Highway, Chertsey"
+S0629-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 33 Darrock Street, Belfast, Kia, Ora.","delivered at 33 Darroch Street, Belfast — kia ora"
+S0213-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Nobody answered at 1,198 highway.","nobody answered at 1198 Methven Highway, Winchmore"
+S0185-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 106 road.,"delivered at 2/106 Olliviers Road, Phillipstown"
+S0179-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Handled it to the main, 266 m2-hot-ray. Note-hot.","handed it to the man at 266 Mt Hutt Skifield Road, Mount Hutt"
+S0635-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the door 27th Street.,left it at the door 27 Parnwell Street — 左边的门
+S0124-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Lefted at the shock counter at 190 breezes road.,"left it at the shop counter at 190 Breezes Road, Aranui"
+S0706-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody Fuel Prices A,bloody fuel prices eh
+S0240-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add two lane on the way back.,"add 2 Tisbury Lane, Cracroft on the way back"
+S0125-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at four more street.,"nobody answered at 4 Moore Street, Ashburton"
+S0384-quiet,mi_places,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop at one lane.,"add a stop at 1 Tisbury Lane, Cracroft"
+S0054-quiet,en_nz_quiet,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"No one home at 18 Road, Marceland.","no one home at 18 McSaveneys Road, Marshland"
+S0165-snr0,en_nz_van,snr0,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 12 Adelaide Street.,"nobody answered at 12 Adelaide Street, Kirwee"
+S0178-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left it under the mat at 218 Annex Road. Middleton.,"left it under the mat at 218 Annex Road, Middleton"
+S0161-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Delivered at 5a Hamilton Avenue.,"delivered at 2/65 A Hamilton Avenue, Ilam"
+S0696-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0702-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire is flat again.,shoot the tyre is flat again
+S0168-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 10 spring place on the way back.,"add 10 Spring Place, Leeston on the way back"
+S0124-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the shop counter at 190 breezes road.,"left it at the shop counter at 190 Breezes Road, Aranui"
+S0293-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it with a neighbor at 653 swamp road.,"left it with the neighbour at 653 Swamp Road, Maronan"
+S0335-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Where is it in the van,where is it in the van
+S0218-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Loved it under the mount, a 23 guidance.","left it under the mat at 23 Cassinia Gardens, Aidanfield"
+S0374-quiet,mi_places,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,"At a stop at 126 Road, Burnham","add a stop at 126 Kivers Road, Burnham"
+S0004-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,put it in the porch at 190 breezes road.,"put it in the porch at 190 Breezes Road, Aranui"
+S0658-quiet,code_switch,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 65 road.,no one home at 65 Amyes Road — maal aayi
+S0672-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 428 in this road.,add a stop 428 Innes Road — أضف عنوانا
+S0700-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0184-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 9 Lofta Street on the way back.,"add 9 Loftus Street, Papanui on the way back"
+S0718-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire as flat again.,shoot the tyre is flat again
+S0087-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Watch the dog at 289 pages road.,"watch the dog at 289 Pages Road, Wainoni"
+S0221-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at one be street.,"nobody answered at 1 B Kermode Street, Ashburton"
+S0159-snr5,en_nz_van,snr5,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for four so James Waddie Drive.,"skip the street for 4 Sir James Wattie Drive, Hornby South"
+S0224-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 669 Road on the way back.,"add 669 Sharlands Road, Bankside on the way back"
+S0075-quiet,en_nz_quiet,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,dropped it in the 86 B street.,"dropped it in the letterbox at 86 B Somerfield Street, Somerfield"
+S0704-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is called.,the coffee is cold
+S0141-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody else will be able to kill five simple.,"nobody answered at 135 C Heywards Road, Clarkville"
+S0687-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0278-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Gate code is 14421 at 65A road. Hornby.,"gate code is one four two one at 65 A Amyes Road, Hornby"
+S0153-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 145 orchard road.,"delivered at 145 Orchard Road, Harewood"
+S0254-quiet,en_mix,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,Date code is 14421 at 126 Road. Burn 'em.,"gate code is one four two one at 126 Kivers Road, Burnham"
+S0185-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,delivered 106 road.,"delivered at 2/106 Olliviers Road, Phillipstown"
+S0196-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 352 road.,"left it at the shop counter at 352 Knyvetts Road, Southbridge"
+S0138-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"left it under the mat at 1,553 highway.","left it under the mat at 1553 Rakaia Highway, Chertsey"
+S0225-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,delivered at one drive. Belfast.,"delivered at 1 Ballymena Drive, Belfast"
+S0189-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 48th Street.,"nobody answered at 48 Peverel Street, Riccarton"
+S0173-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 653 Swamp Road.,"nobody answered at 653 Swamp Road, Maronan"
+S0132-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it at the shop counter at one bend never strive, Broomfield.","left it at the shop counter at 1 Ben Nevis Drive, Broomfield"
+S0198-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,locked out at 5 Armstrong Avenue. Springston.,"locked out at 5 Armstrong Avenue, Springston"
+S0719-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0717-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at five.,she said she would be home at five
+S0666-quiet,code_switch,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"No one home at 817, Westerfield may field road.",no one home at 817 Tinwald Westerfield Mayfield Road — maal aayi
+S0213-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Nobody answered at 1,198 highway.","nobody answered at 1198 Methven Highway, Winchmore"
+S0707-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,radio says the world is closed.,radio says the road is closed
+S0126-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Lockdown, 3,411 Thompson's trial. Forks.","locked out at 3411 Thompsons Track, Ashburton Forks"
+S0272-quiet,en_mix,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Dog in the Yard at 74 William Britain Avenue.,"dog in the yard at 74 William Brittan Avenue, Halswell"
+S0645-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,636 Clinton's road. Kia Ora.","delivered at 1636 Clintons Road, Darfield — kia ora"
+S0694-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire is flat again.,shoot the tyre is flat again
+S0207-snr10,en_nz_van,snr10,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 289 pages road.,"skip the street for 289 Pages Road, Wainoni"
+S0147-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it it to the man at 91 Road.,"handed it to the man at 91 Hororata Dunsandel Road, Dunsandel"
+S0638-quiet,code_switch,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"No one home at 1,553 highway.",no one home at 1553 Rakaia Highway — maal aayi
+S0161-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Delivering at Friday Hamilton Avenue.,"delivered at 2/65 A Hamilton Avenue, Ilam"
+S0356-quiet,en_mix,quiet,true,end_break,free,end_break,true,true,Back on the run.,0,0,0,false,false,back on the road.,back on the road
+S0648-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 35 Street.,add a stop 35 Gresford Street — أضف عنوانا
+S0240-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add two lain on the way back.,"add 2 Tisbury Lane, Cracroft on the way back"
+S0207-snr0,en_nz_van,snr0,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 289 pages road.,"skip the street for 289 Pages Road, Wainoni"
+S0160-snr0,en_nz_van,snr0,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 180 Road on the way back.,"add 180 Haldon Road, Hororata on the way back"
+S0296-quiet,en_mix,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Dog in the yard at 5 Carlton Mill Road,"dog in the yard at 4/65 Carlton Mill Road, Merivale"
+S0113-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Side gate left of the garage at 700 road. Cross.,"side gate left of the garage at 700 Bealey Road, Charing Cross"
+S0357-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,What was that?,what was that
+S0219-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it it to the man at 445 West Street.,"handed it to the man at 445 West Street, Allenton"
+S0108-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"also got one at 82 Vanguard Drive, Broomfield","also got one at 82 Vanguard Drive, Broomfield"
+S0208-snr0,en_nz_van,snr0,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 191 Road, West Melton on the way back.","add 191 Langdales Road, West Melton on the way back"
+S0215-snr10,en_nz_van,snr10,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 63-AF Street.,"skip the street for 63 F Mackworth Street, Woolston"
+S0141-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 135 C road.,"nobody answered at 135 C Heywards Road, Clarkville"
+S0166-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Locked out at 817, Westerfield may field road.","locked out at 817 Tinwald Westerfield Mayfield Road, Lagmhor"
+S0195-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,hand it it to the man at 86 B Street.,"handed it to the man at 86 B Somerfield Street, Somerfield"
+S0036-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,also got one at 416 Mars Road.,"also got one at 416 Marrs Road, Highbank"
+S0082-quiet,en_nz_quiet,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Come back to 142 A Hastings Street East. Later.,"come back to 142 A Hastings Street East, Sydenham later"
+S0183-snr10,en_nz_van,snr10,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 130 Bradley's Road.,"skip the street for 130 Bradleys Road, Ohoka"
+S0210-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it under the mat at 45 close.,"left it under the mat at 45 Pentonville Close, Westmorland"
+S0251-quiet,en_mix,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,That is stop at 24th Street.,"add a stop at 24 Wendover Street, Bishopdale"
+S0292-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,put it in the porch at 428A in nest road.,"put it in the porch at 428 A Innes Road, Mairehau"
+S0071-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Where is it in the van,where is it in the van
+S0687-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0228-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Lefted at the shop counter at 82 Vanguard Drive, Broomfield.","left it at the shop counter at 82 Vanguard Drive, Broomfield"
+S0269-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it with the neighbor at 7 Downs Road.,"left it with the neighbour at 7 Downs Road, Eyrewell"
+S0656-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 416 Mars Road.,add a stop 416 Marrs Road — أضف عنوانا
+S0705-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,The traffic on blendheim still silly.,is the traffic on Blenheim still silly
+S0129-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Delivered at 33A Darox Street, Belfast.","delivered at 33 A Darroch Street, Belfast"
+S0582-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,12-13 date present.,twelve thirteen Date Crescent
+S0142-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Rock doll, no second in the curtain tears. Clifton.","locked out at 178 Clifton Terrace, Clifton"
+S0208-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 191 Road West Melting on the way back.,"add 191 Langdales Road, West Melton on the way back"
+S0245-quiet,en_mix,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left it with the neighbor at four more street.,"left it with the neighbour at 4 Moore Street, Ashburton"
+S0704-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is called.,the coffee is cold
+S0106-quiet,en_nz_quiet,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Come back to 1684 Road. Flat later.,"come back to 1684 Bayleys Road, Birdlings Flat later"
+S0402-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the at 111 pound road.,"left it at the whare at 111 Pound Road, Islington"
+S0144-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add one name on the way back.,"add 1 Tisbury Lane, Cracroft on the way back"
+S0309-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,What was that?,what was that
+S0611-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,42 B-Black's Road.,forty two B Blacks Road
+S0660-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 180 road,add a stop 180 Haldon Road — أضف عنوانا
+S0081-quiet,en_nz_quiet,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip this one at 1044 Browns Road.,"skip this one at 1044 Browns Road, Swannanoa"
+S0238-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked out at 178 Clifton Terrace. Clifton.,"locked out at 178 Clifton Terrace, Clifton"
+S0185-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 106 road.,"delivered at 2/106 Olliviers Road, Phillipstown"
+S0089-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,"Side gate left of the garage at 1,733. Westerfield may field road. Westerfield.","side gate left of the garage at 1733 Tinwald Westerfield Mayfield Road, Westerfield"
+S0180-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Lefted at the shop counter at 15 Mustang plays, not pleasant.","left it at the shop counter at 15 Luxton Place, Mount Pleasant"
+S0653-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 145 orchard road. Herewood, Ki, ora.","delivered at 145 Orchard Road, Harewood — kia ora"
+S0291-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,dropped it in the at 53 cornwall road.,"dropped it in the letterbox at 53 Cornwall Road, Lyttelton"
+S0334-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Repeat that.,repeat that
+S0677-quiet,code_switch,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 5,759.","delivered at 5759 Arundel Rakaia Gorge Road, Methven — kia ora"
+S0710-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire as flat again.,shoot the tyre is flat again
+S0143-snr5,en_nz_van,snr5,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Skip the street for 359 Kaut's Island Road. Kaut's Island.,"skip the street for 359 Coutts Island Road, Coutts Island"
+S0125-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered a four-man street.,"nobody answered at 4 Moore Street, Ashburton"
+S0197-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 84 Neville Street.,"nobody answered at 84 Neville Street, Spreydon"
+S0174-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"locked out at 8 times right, marshland.","locked out at 18 McSaveneys Road, Marshland"
+S0011-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop at 24 Street.,"add a stop at 24 Wendover Street, Bishopdale"
+S0192-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 42, a Delaware Crescent, on the way back.","add 42 A Delaware Crescent, Russley on the way back"
+S0148-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the sharp counter at 45 feet.,"left it at the shop counter at 35 Gresford Street, Edgeware"
+S0138-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it under the mark at 1553 high well.,"left it under the mat at 1553 Rakaia Highway, Chertsey"
+S0593-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,"1, 2, 3, 4, R",one two three four Ilam Road
+S0694-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tile is louder then.,shoot the tyre is flat again
+S0204-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"left it at the shop counter at 290 Old West Coast Road, Templeton.","left it at the shop counter at 290 Old West Coast Road, Templeton"
+S0155-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 30 Roberts Road.,"handed it to the man at 30 Roberts Road, Hei Hei"
+S0046-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Repeat that.,repeat that
+S0234-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 1261 highway.,"left it under the mat at 1261 Rakaia Highway, Chertsey"
+S0249-quiet,en_mix,quiet,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,"Skip this one at 33A Darrock Street, Belfast.","skip this one at 33 A Darroch Street, Belfast"
+S0394-quiet,mi_places,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add a stop at two highlight lane, Heathcoat Valley.","add a stop at 2 Highlight Lane, Heathcote Valley"
+S0388-quiet,mi_places,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 35 Street.,"no one home at 35 Gresford Street, Edgeware"
+S0222-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"It's locked out at 3,239 Thompson's track. Forks.","locked out at 3239 Thompsons Track, Ashburton Forks"
+S0420-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,The gate is on the Luxdon Place side at 15 Luxdon Place. Mount Pleasant.,"the gate is on the Luxton Place side at 15 Luxton Place, Mount Pleasant"
+S0622-quiet,code_switch,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 19 date present.,no one home at 19 Date Crescent — maal aayi
+S0191-snr10,en_nz_van,snr10,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Skip the street for 96, over in wide drive.","skip the street for 96 A Renoir Drive, Rolleston"
+S0180-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left it at the shock powder at 15 Luxembourg. Not present.,"left it at the shop counter at 15 Luxton Place, Mount Pleasant"
+S0310-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Repeat that.,repeat that
+S0351-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Watch the dog at 19 A Bassett Street.,"watch the dog at 19 A Bassett Street, Burwood"
+S0210-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it under the mat at 45 close.,"left it under the mat at 45 Pentonville Close, Westmorland"
+S0581-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,"7 No Sorry, 17 Palson Street.",seven no sorry seventeen Poulson Street
+S0186-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it under the mark the 27th drive.,"left it under the mat at 27 Cairnbrae Drive, Prebbleton"
+S0144-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add one lane on the way back.,"add 1 Tisbury Lane, Cracroft on the way back"
+S0183-snr5,en_nz_van,snr5,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 130 Bradley's Road.,"skip the street for 130 Bradleys Road, Ohoka"
+S0365-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,The gate is on the more street side at four more street.,"the gate is on the Moore Street side at 4 Moore Street, Ashburton"
+S0693-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at five.,she said she would be home at five
+S0184-snr0,en_nz_van,snr0,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,I'm not enough to street on the way back.,"add 9 Loftus Street, Papanui on the way back"
+S0718-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the Tyler is proud again.,shoot the tyre is flat again
+S0202-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 142 A Hastings Street East.,"left it under the mat at 142 A Hastings Street East, Sydenham"
+S0149-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered that seven bounds road.,"nobody answered at 7 Downs Road, Eyrewell"
+S0179-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,handed it to the man at 266 MT Hut Road. Mount Hut.,"handed it to the man at 266 Mt Hutt Skifield Road, Mount Hutt"
+S0681-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on blendheim still silly.,is the traffic on Blenheim still silly
+S0172-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 428A in nest road.,"left it at the shop counter at 428 A Innes Road, Mairehau"
+S0683-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0137-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,234 high field road. Cross.","delivered at 1234 Highfield Road, Charing Cross"
+S0347-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop at 22 Street.,"add a stop at 22 Wendover Street, Bishopdale"
+S0407-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the at 1068 dip road,"left it at the whare at 1068 Dip Road, Lauriston"
+S0148-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 35 Street.,"left it at the shop counter at 35 Gresford Street, Edgeware"
+S0300-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"also got one at 15 Luxton Place, Mount Pleasant.","also got one at 15 Luxton Place, Mount Pleasant"
+S0366-quiet,mi_places,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 3,411 Thompson's track. Forks.","delivered at 3411 Thompsons Track, Ashburton Forks"
+S0041-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Side gate left of the garage at 5A Hamilton Avenue.,"side gate left of the garage at 2/65 A Hamilton Avenue, Ilam"
+S0712-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0203-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it to the man at 194 old Thai road. Thai.,"handed it to the man at 194 Old Tai Tapu Road, Tai Tapu"
+S0705-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on blendheim still silly.,is the traffic on Blenheim still silly
+S0221-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at one be straight.,"nobody answered at 1 B Kermode Street, Ashburton"
+S0597-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,7 No Sorry 17 High Field Road,seven no sorry seventeen Highfield Road
+S0699-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0634-quiet,code_switch,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 126 Road.,no one home at 126 Kivers Road — maal aayi
+S0617-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,1-234 cashmere road.,one two three four Cashmere Road
+S0383-quiet,mi_places,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"No one home at 359 Cows Island Road, Cows Island.","no one home at 359 Coutts Island Road, Coutts Island"
+S0191-quiet,en_nz_van,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Skip the street for 96, A. Renoir Drive.","skip the street for 96 A Renoir Drive, Rolleston"
+S0238-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 178 Clifton Terrace, Clifton.","locked out at 178 Clifton Terrace, Clifton"
+S0417-quiet,mi_places,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"left it at the at 5,759, Airendel Gorge Road.","left it at the whare at 5759 Arundel Rakaia Gorge Road, Methven"
+S0173-snr10,en_nz_van,snr10,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 653 Swamp Road.,"nobody answered at 653 Swamp Road, Maronan"
+S0226-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it under the mat at 1,684 Road. Flat.","left it under the mat at 1684 Bayleys Road, Birdlings Flat"
+S0688-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0101-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it with the neighbor at 1 B Street.,"left it with the neighbour at 1 B Kermode Street, Ashburton"
+S0179-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Handed it to the man at 266 in too hot road.,"handed it to the man at 266 Mt Hutt Skifield Road, Mount Hutt"
+S0227-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,hand it to the man at 22 state,"handed it to the man at 22 Wendover Street, Bishopdale"
+S0375-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,The gate is on the street side at 27th Street.,"the gate is on the Parnwell Street side at 27 Parnwell Street, Burwood"
+S0701-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at five.,she said she would be home at five
+S0112-quiet,en_nz_quiet,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,parcel box round the back at 108B road.,"parcel box round the back at 108 B Hackthorne Road, Cashmere"
+S0196-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 352 road.,"left it at the shop counter at 352 Knyvetts Road, Southbridge"
+S0184-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 9 Lofta Street on the way back.,"add 9 Loftus Street, Papanui on the way back"
+S0276-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,also got one at 416 Mars Road.,"also got one at 416 Marrs Road, Highbank"
+S0695-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0202-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 142 A Hosting Street East.,"left it under the mat at 142 A Hastings Street East, Sydenham"
+S0137-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,234 high field road. Cross.","delivered at 1234 Highfield Road, Charing Cross"
+S0155-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 30 Roberts Road.,"handed it to the man at 30 Roberts Road, Hei Hei"
+S0143-snr0,en_nz_van,snr0,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Skip the street, if anyone who has 59 counts on that road. How's I want to?","skip the street for 359 Coutts Island Road, Coutts Island"
+S0647-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the door 91 road.,left it at the door 91 Hororata Dunsandel Road — 左边的门
+S0640-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 160 Avenue.,add a stop 160 Bealey Avenue — أضف عنوانا
+S0162-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 111 pound road.,"left it under the mat at 111 Pound Road, Islington"
+S0712-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0696-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0185-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 106 Road.,"delivered at 2/106 Olliviers Road, Phillipstown"
+S0228-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Lefted at the shock counter at 82 Vando Drive, Brimfield.","left it at the shop counter at 82 Vanguard Drive, Broomfield"
+S0096-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Read me the next one.,read me the next one
+S0353-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Side gate left of the garage at 700 road. Cross.,"side gate left of the garage at 700 Bealey Road, Charing Cross"
+S0131-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 24th Street.,"handed it to the man at 24 Wendover Street, Bishopdale"
+S0190-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked out at 7 W. Richmond.,"locked out at 2/97 Warden Street, Richmond"
+S0274-quiet,en_mix,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Come back to two highlight lane, Heathcoat Valley later.","come back to 2 Highlight Lane, Heathcote Valley later"
+S0136-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 15 McNilin Avenue, cashmere on the way back.","add 15 MacMillan Avenue, Cashmere on the way back"
+S0687-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0328-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,"parcel box round the back at 191 road, West Melton.","parcel box round the back at 191 Langdales Road, West Melton"
+S0244-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,put it in the porch at 190 breezes road.,"put it in the porch at 190 Breezes Road, Aranui"
+S0214-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Lockdown to 811 Road. Win slow.,"locked out at 811 Maronan Road, Winslow"
+S0642-quiet,code_switch,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"No one home at 178 Clifton, Terrace.",no one home at 178 Clifton Terrace — maal aayi
+S0305-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Side gate left of the garage at 106 road.,"side gate left of the garage at 2/106 Olliviers Road, Phillipstown"
+S0684-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0144-quiet,en_nz_van,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add one lane on the way back.,"add 1 Tisbury Lane, Cracroft on the way back"
+S0688-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0346-quiet,en_mix,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Come back to 1684 Road. Flat later.,"come back to 1684 Bayleys Road, Birdlings Flat later"
+S0148-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the shop counter at 35 Street.,"left it at the shop counter at 35 Gresford Street, Edgeware"
+S0304-quiet,en_mix,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,Horcel box round the back at 9 loft is straight.,"parcel box round the back at 9 Loftus Street, Papanui"
+S0066-quiet,en_nz_quiet,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,starting my run.,starting my run
+S0389-quiet,mi_places,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop at 7-down's road.,"add a stop at 7 Downs Road, Eyrewell"
+S0102-quiet,en_nz_quiet,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"No one home at 3,239 Thompson's track. Forks.","no one home at 3239 Thompsons Track, Ashburton Forks"
+S0719-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0689-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on Blenheim still silly.,is the traffic on Blenheim still silly
+S0588-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,SH1 terrorist road.,S H one Rakaia Terrace Road
+S0377-quiet,mi_places,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,left it at the at 1234 high field road. Cross.,"left it at the whare at 1234 Highfield Road, Charing Cross"
+S0209-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,733, West of the Old Mayfield Road, West of the Old.","delivered at 1733 Tinwald Westerfield Mayfield Road, Westerfield"
+S0220-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the shop counter at 198 breezes road.,"left it at the shop counter at 190 A Breezes Road, Aranui"
+S0202-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the night at 142 A Hastings Street East.,"left it under the mat at 142 A Hastings Street East, Sydenham"
+S0006-quiet,en_nz_quiet,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"No one home at 3,411 Thompson's track. Forks.","no one home at 3411 Thompsons Track, Ashburton Forks"
+S0263-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Where is it in the van,where is it in the van
+S0120-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Read me the next one.,read me the next one
+S0191-snr0,en_nz_van,snr0,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Let's keep this true of the mighty slaps, even while driving.","skip the street for 96 A Renoir Drive, Rolleston"
+S0047-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Where is it in the van,where is it in the van
+S0168-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,add 10 spring place on the way back.,"add 10 Spring Place, Leeston on the way back"
+S0706-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody Fuel Prices A,bloody fuel prices eh
+S0322-quiet,en_mix,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,Come back to 142 A Hastings Street East. Later.,"come back to 142 A Hastings Street East, Sydenham later"
+S0155-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,handed it to the man at 30 Roberts Road.,"handed it to the man at 30 Roberts Road, Hei Hei"
+S0136-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 15 Macmillan Avenue, cashmere on the way back. Add 15 Macmillan Avenue","add 15 MacMillan Avenue, Cashmere on the way back"
+S0714-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody fuel prices in.,bloody fuel prices eh
+S0689-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on Blenheim still soon.,is the traffic on Blenheim still silly
+S0160-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 180 World on the way back.,"add 180 Haldon Road, Hororata on the way back"
+S0209-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,733, Westerfield Mayfield Road, Westerfield.","delivered at 1733 Tinwald Westerfield Mayfield Road, Westerfield"
+S0232-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 108B Road, cash near on the way back.","add 108 B Hackthorne Road, Cashmere on the way back"
+S0318-quiet,en_mix,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,No one home at five Armstrong Avenue. Springston.,"no one home at 5 Armstrong Avenue, Springston"
+S0419-quiet,mi_places,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add a stop at 266 MT Hut Road, Mount Hut.","add a stop at 266 Mt Hutt Skifield Road, Mount Hutt"
+S0707-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0220-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it at the shop counter at 198 breezes road.,"left it at the shop counter at 190 A Breezes Road, Aranui"
+S0222-snr5,en_nz_van,snr5,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Lockdown at 3,239 Thompson's track. Forks.","locked out at 3239 Thompsons Track, Ashburton Forks"
+S0137-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"delivered at 1,234 high field world.","delivered at 1234 Highfield Road, Charing Cross"
+S0172-snr5,en_nz_van,snr5,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Lefted at the shot counter, 428, 8 in less road.","left it at the shop counter at 428 A Innes Road, Mairehau"
+S0340-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Put it in the porch at 190A breezes road.,"put it in the porch at 190 A Breezes Road, Aranui"
+S0700-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0215-snr5,en_nz_van,snr5,true,skip_stop,free,mark_skipped,true,true,Skipped.,0,0,0,false,false,Skip the street for 63-AF Street.,"skip the street for 63 F Mackworth Street, Woolston"
+S0227-snr10,en_nz_van,snr10,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,hand it it to the man at 22th Street.,"handed it to the man at 22 Wendover Street, Bishopdale"
+S0360-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Read me the next one.,read me the next one
+S0376-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 15 McNn Avenue.,"delivered at 15 MacMillan Avenue, Cashmere"
+S0167-snr10,en_nz_van,snr10,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Skip the street for 1,068 dip road.","skip the street for 1068 Dip Road, Lauriston"
+S0280-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,parcel box round the back at 180 road.,"parcel box round the back at 180 Haldon Road, Hororata"
+S0299-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add a stop at 266 MT Hut Road, Mount Hut.","add a stop at 266 Mt Hutt Skifield Road, Mount Hutt"
+S0708-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio now?,can you turn the radio down
+S0168-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 10 spring place on the way back.,"add 10 Spring Place, Leeston on the way back"
+S0341-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it with the neighbor at 1 B Street.,"left it with the neighbour at 1 B Kermode Street, Ashburton"
+S0696-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0330-quiet,en_mix,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,starting my run.,starting my run
+S0720-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0694-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire as flat again.,shoot the tyre is flat again
+S0162-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 111 pound road.,"left it under the mat at 111 Pound Road, Islington"
+S0390-quiet,mi_places,quiet,true,add_location_note,full,,false,true,Noted.,0,0,0,false,true,The gate is on the street side at 12th street.,"the gate is on the Makora Street side at 12 Makora Street, Fendalton"
+S0676-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 65 Carlton Mill Road.,add a stop 65 Carlton Mill Road — أضف عنوانا
+S0060-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"also got one at 15 Luxton Place, Mount Pleasant.","also got one at 15 Luxton Place, Mount Pleasant"
+S0167-snr5,en_nz_van,snr5,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Skip the street for 1,068 dip road.","skip the street for 1068 Dip Road, Lauriston"
+S0712-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0150-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Locked out at 12th Street.,"locked out at 12 Makora Street, Fendalton"
+S0216-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 100 Old West Coast Road on the way back. Add 100 Old West Coast Road on the way back,"add 100 Old West Coast Road, Yaldhurst on the way back"
+S0358-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Repeat that.,repeat that
+S0174-snr0,en_nz_van,snr0,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 18 Road, Marceland.","locked out at 18 McSaveneys Road, Marshland"
+S0018-quiet,en_nz_quiet,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,starting my run.,starting my run
+S0228-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Lefted at the shop counter at 82 Vanguard Drive, Boomfield.","left it at the shop counter at 82 Vanguard Drive, Broomfield"
+S0216-snr5,en_nz_van,snr5,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add 100 Old West Coast Road on the way back.,"add 100 Old West Coast Road, Yaldhurst on the way back"
+S0396-quiet,mi_places,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 416 Mars Road.,"delivered at 416 Marrs Road, Highbank"
+S0288-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Read me the next one.,read me the next one
+S0270-quiet,en_mix,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 12th Street.,"no one home at 12 Makora Street, Fendalton"
+S0198-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,locked out at 5 arms straight over here. Springsteen.,"locked out at 5 Armstrong Avenue, Springston"
+S0156-snr5,en_nz_van,snr5,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 416 Mars Road.,"left it at the shop counter at 416 Marrs Road, Highbank"
+S0696-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0594-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,2/14 road,two slash fourteen Kivers Road
+S0059-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add a stop at 266 MT Hut Road, Mount Hut.","add a stop at 266 Mt Hutt Skifield Road, Mount Hutt"
+S0587-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,42B Road.,forty two B Hawthornden Road
+S0624-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop 190 breezes road.,add a stop 190 Breezes Road — أضف عنوانا
+S0186-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 27 drive.,"left it under the mat at 27 Cairnbrae Drive, Prebbleton"
+S0240-snr0,en_nz_van,snr0,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,I'll tell them I will die.,"add 2 Tisbury Lane, Cracroft on the way back"
+S0197-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered about 84 in Mevo Street.,"nobody answered at 84 Neville Street, Spreydon"
+S0701-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at five.,she said she would be home at five
+S0077-quiet,en_nz_quiet,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it with the neighbor at 84 Neville Street.,"left it with the neighbour at 84 Neville Street, Spreydon"
+S0173-snr0,en_nz_van,snr0,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 653 Swamp Road.,"nobody answered at 653 Swamp Road, Maronan"
+S0714-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody fuel prices are.,bloody fuel prices eh
+S0192-snr10,en_nz_van,snr10,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"Add 42, a Delaware Crescent, on the way back.","add 42 A Delaware Crescent, Russley on the way back"
+S0173-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 653 Swamp Road.,"nobody answered at 653 Swamp Road, Maronan"
+S0618-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,2/14 road,two slash fourteen Amyes Road
+S0287-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Where is it in the van,where is it in the van
+S0701-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,She said she would be home at 5.,she said she would be home at five
+S0149-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at seven downs road.,"nobody answered at 7 Downs Road, Eyrewell"
+S0180-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Left it at the shop counter at 15 Luxton Place, Mount Pleasant.","left it at the shop counter at 15 Luxton Place, Mount Pleasant"
+S0192-snr0,en_nz_van,snr0,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,"That for the two, O'Dellin will not be on the way back.","add 42 A Delaware Crescent, Russley on the way back"
+S0234-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it under the mat at 1261 highway.,"left it under the mat at 1261 Rakaia Highway, Chertsey"
+S0167-quiet,en_nz_van,quiet,true,skip_stop,full,,false,true,Noted.,0,0,0,false,true,"Skip the street for 1,068 dip road.","skip the street for 1068 Dip Road, Lauriston"
+S0114-quiet,en_nz_quiet,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,starting my run.,starting my run
+S0156-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 416 Mars Road.,"left it at the shop counter at 416 Marrs Road, Highbank"
+S0684-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Come turn the radio down.,can you turn the radio down
+S0281-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,Side gate left of the garage at 5A Hamilton Avenue.,"side gate left of the garage at 2/65 A Hamilton Avenue, Ilam"
+S0156-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 416 Mars Road.,"left it at the shop counter at 416 Marrs Road, Highbank"
+S0258-quiet,en_mix,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,starting my run.,starting my run
+S0084-quiet,en_nz_quiet,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"also got one at 290 Old West Coast Road, Templeton.","also got one at 290 Old West Coast Road, Templeton"
+S0275-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop at 30 Roberts Road.,"add a stop at 30 Roberts Road, Hei Hei"
+S0221-snr10,en_nz_van,snr10,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Nobody answered at one be street.,"nobody answered at 1 B Kermode Street, Ashburton"
+S0197-snr5,en_nz_van,snr5,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,Nobody answered at 84 Neville Street.,"nobody answered at 84 Neville Street, Spreydon"
+S0408-quiet,mi_places,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 10 spring place.,"no one home at 10 Spring Place, Leeston"
+S0210-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 45 close.,"left it under the mat at 45 Pentonville Close, Westmorland"
+S0161-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,delivered at 5a Hamilton Avenue.,"delivered at 2/65 A Hamilton Avenue, Ilam"
+S0317-quiet,en_mix,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it with the neighbor at 84 Neville Street.,"left it with the neighbour at 84 Neville Street, Spreydon"
+S0203-quiet,en_nz_van,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Hand it to the man at 194 old tie road. Tie.,"handed it to the man at 194 Old Tai Tapu Road, Tai Tapu"
+S0323-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop at 194 old tie road. Tie.,"add a stop at 194 Old Tai Tapu Road, Tai Tapu"
+S0132-snr0,en_nz_van,snr0,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,Left it at the shop counter at one-burn-never-drive.,"left it at the shop counter at 1 Ben Nevis Drive, Broomfield"
+S0665-quiet,code_switch,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"delivered at 12 Adelaide Street, Kia Ora.","delivered at 12 Adelaide Street, Kirwee — kia ora"
+S0707-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Radio says the road is closed.,radio says the road is closed
+S0246-quiet,en_mix,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"No one home at 3,411 Thompson's track. Forks.","no one home at 3411 Thompsons Track, Ashburton Forks"
+S0683-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,Roadhog's has the world's highest.,radio says the road is closed
+S0126-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Locked out at 3,411 Thompson's track, forks.","locked out at 3411 Thompsons Track, Ashburton Forks"
+S0180-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,"Lefted at the shop counter at 15 Luxton Place, Mount Pleasant.","left it at the shop counter at 15 Luxton Place, Mount Pleasant"
+S0678-quiet,code_switch,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,No one home at 218 Annex Road.,no one home at 218 Annex Road — maal aayi
+S0024-quiet,en_nz_quiet,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Read me the next one.,read me the next one
+S0162-quiet,en_nz_van,quiet,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the matte at 111 pound road.,"left it under the mat at 111 Pound Road, Islington"
+S0599-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,1 8 5 perimeter road.,one eight five Perimeter Road
+S0336-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Read me the next one.,read me the next one
+S0329-quiet,en_mix,quiet,true,add_location_note,free,add_location_note,true,true,Note saved.,0,0,0,false,false,"Side gate left of the garage at 1,733.","side gate left of the garage at 1733 Tinwald Westerfield Mayfield Road, Westerfield"
+S0294-quiet,en_mix,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"No one home at 18 road, marshland.","no one home at 18 McSaveneys Road, Marshland"
+S0282-quiet,en_mix,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,starting my run.,starting my run
+S0690-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Bloody fuel prices, eh?",bloody fuel prices eh
+S0702-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire as flat again.,shoot the tyre is flat again
+S0654-quiet,code_switch,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,No one home at too high light lane.,no one home at 2 Highlight Lane — maal aayi
+S0312-quiet,en_mix,quiet,true,repeat_or_detail,full,,false,true,Noted.,0,0,0,false,true,Read me the next one.,read me the next one
+S0630-quiet,code_switch,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"No one home at 1,790 road.",no one home at 1790 Bayleys Road — maal aayi
+S0174-quiet,en_nz_van,quiet,true,mark_failed,free,mark_failed,true,true,Marked failed.,0,1,1,false,false,"Locked out at 18 Road, Marceland","locked out at 18 McSaveneys Road, Marshland"
+S0234-snr10,en_nz_van,snr10,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,Left it under the mat at 1261 highway.,"left it under the mat at 1261 Rakaia Highway, Chertsey"
+S0372-quiet,mi_places,quiet,true,mark_delivered,full,,false,true,Noted.,0,0,0,false,true,"Left it at the at one bend never strive, Broomfield","left it at the whare at 1 Ben Nevis Drive, Broomfield"
+S0126-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"locked out at 3,400-11 Thompson's track. Forks.","locked out at 3411 Thompsons Track, Ashburton Forks"
+S0719-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0713-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,is the traffic on blendheim still silly.,is the traffic on Blenheim still silly
+S0695-snr0,chatter,snr0,true,noop,full,,false,true,Noted.,0,0,0,false,true,"Wait, what's my name?",wait whats my name
+S0690-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody fuel prices end.,bloody fuel prices eh
+S0702-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Shoot the tire is flat again.,shoot the tyre is flat again
+S0222-snr0,en_nz_van,snr0,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,"Locked out at 3,239 Thompson's track. Forks.","locked out at 3239 Thompsons Track, Ashburton Forks"
+S0708-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0156-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 416 Mars Road.,"left it at the shop counter at 416 Marrs Road, Highbank"
+S0636-quiet,code_switch,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,Add a stop-15 McMillan Avenue.,add a stop 15 MacMillan Avenue — أضف عنوانا
+S0252-quiet,en_mix,quiet,true,add_stop,free,add_stop,true,true,Stop added.,0,0,0,false,false,"also got one at one Ben Nevis drive, Broomfield","also got one at 1 Ben Nevis Drive, Broomfield"
+S0198-quiet,en_nz_van,quiet,true,mark_failed,full,,false,true,Noted.,0,0,0,false,true,Locked out at 5 Armstrong Avenue. Springston.,"locked out at 5 Armstrong Avenue, Springston"
+S0204-snr0,en_nz_van,snr0,true,mark_delivered,free,mark_delivered,true,true,Delivered.,1,0,1,false,false,left it at the shop counter at 290 Old West Coast Road.,"left it at the shop counter at 290 Old West Coast Road, Templeton"
+S0600-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,42. 52 Avenue.,forty two or fifty two Bealey Avenue
+S0690-quiet,chatter,quiet,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody Fuel Prices A,bloody fuel prices eh
+S0690-snr5,chatter,snr5,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody fuel prices A.,bloody fuel prices eh
+S0708-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Can you turn the radio down?,can you turn the radio down
+S0606-quiet,numbers_corrections,quiet,true,add_stop,full,,false,true,Noted.,0,0,0,false,true,12-13 railway terrace.,twelve thirteen Railway Terrace
+S0720-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,The coffee is cold.,the coffee is cold
+S0714-snr10,chatter,snr10,true,noop,full,,false,true,Noted.,0,0,0,false,true,Bloody Fuel Prices A,bloody fuel prices eh

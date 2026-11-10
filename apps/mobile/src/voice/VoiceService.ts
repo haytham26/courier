@@ -76,9 +76,19 @@ export type VoiceCommand =
        * to go on.
        */
       safePlace?: string;
+      /**
+       * The address the courier said, in their own words.
+       *
+       * The eval set's scripts speak the whole address ("delivered at 57
+       * Poulson Street, Addington"), and BUG-073's rule is that the courier's
+       * words travel: the mark's own bridge reads the run's active stop today,
+       * and the address is what lets a later step resolve the stop the courier
+       * MEANT rather than the one the run happened to be on.
+       */
+      rawAddress?: string;
     }
-  | { type: 'mark_skipped'; stopId: string }
-  | { type: 'mark_failed'; stopId: string; reason: string }
+  | { type: 'mark_skipped'; stopId: string; rawAddress?: string }
+  | { type: 'mark_failed'; stopId: string; reason: string; rawAddress?: string }
   | { type: 'add_stop'; rawAddress: string }
   | { type: 'start_break'; minutes: number | null }
   | { type: 'end_break' }
