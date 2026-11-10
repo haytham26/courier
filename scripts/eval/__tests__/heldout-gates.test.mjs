@@ -237,7 +237,10 @@ test('check-parser-circularity fails when the builder spells out a held-out stre
     const answer = spawnSync(process.execPath, [CIRCULARITY], { cwd: dir, encoding: 'utf8' });
     assert.equal(answer.status, 1, `the check must fail, got: ${answer.stdout}`);
     assert.match(answer.stderr, /held-out street/);
-    assert.match(answer.stderr, /Zulu Street/);
+    // the message names the street KEY (the list's spelling) — and the template
+    // spelled the road in full ("Zulu Street"), which is the point: the check
+    // matches the key in either suffix spelling, case-insensitively.
+    assert.match(answer.stderr, /zulu st/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

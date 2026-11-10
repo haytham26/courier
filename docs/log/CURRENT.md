@@ -255,6 +255,124 @@ installer and enables ADB in its Settings → Advanced) is SUPPLEMENTARY and get
 getprop + `su -c id` recorded here, APK installed alongside, Maestro flows run with `maestro --device`;
 rooted fails Play Integrity = recorded, not our bug. Never touch the founder's apps/data/Magisk.
 
+---
+
+## 2026-11-09: PART B — the backend's held-out list is now the single shared source
+
+The voice held-out list and the backend's address list had diverged (the LINZ data
+was updated in between): ours was 1,359 of 6,799 streets from the older revision,
+the backend's is 1,360 of 6,802. The backend's 99.65 % accuracy was measured on
+ITS list, so per the founder instruction of 2026-11-09 (PART B) the backend's list
+is ADOPTED unchanged and the voice manifests were regenerated from it — the
+backend's file is not edited, only read:
+
+- `scripts/eval/build-heldout-streets.mjs` now reads the committed fixture
+  (`services/api/tests/fixtures/linz-holdout-streets.txt`) by default; the LINZ
+  derivation stays behind `--derive-from-linz`. No gate reads a local `data/linz`
+  revision any more, so the gates pass on any machine (the founder named the
+  failing heldout-gates test: the old "regenerate from the real LINZ dir" leg read
+  the machine's revision and failed on a newer one — it is rewritten against the
+  committed source, and the three fixture LINZ files it needed are deleted).
+- `scripts/eval/street-key.mjs` (new): the JS twin of the backend's `road_key()`
+  normalisation ("Bealey Avenue" and "Bealey Ave" are one street). The builder,
+  the checker and the circularity proof all match by key.
+- `scripts/eval/check-voice-eval.mjs` re-reads the fixture and REFUSES when its
+  bytes no longer match the manifest's recorded `source_sha256` — proven by
+  corrupting the recorded sha and watching the refusal name the announcement the
+  backend owes. The sha is over the fixture's logical bytes (LF-normalised), so it
+  is the same on CI and on Windows.
+- `scripts/ci/check-parser-circularity.mjs` matches held-out streets by key in
+  either suffix spelling, case-insensitively — the old case-sensitive substring
+  test on the keys never fired and proved nothing; its own fixture test now catches
+  the "Zulu Street" template for real.
+- Confirmed: **no voice tuning has used any street of this list** — the BUG-277
+  hotword export has not been fed to any STT run, and the measurements so far read
+  the eval set rather than fitting it. When the biasing lane runs, the held-out keys
+  are excluded from its vocabulary.
+- **BACKEND, READ THIS:** `services/api/tests/fixtures/linz-holdout-streets.txt`
+  is now the shared held-out source for BOTH lanes. Please never change it without
+  announcing the change in `docs/log/CURRENT-backend.md` — this lane's
+  `check-voice-eval.mjs` refuses on the silent change (it compares the fixture's
+  sha256 with the manifest's recorded one), and the voice manifests would then
+  need rebuilding with `node scripts/eval/build-voice-eval.mjs [--heldout]`.
+
+Switch record with both shas (old 8230c5cb… -> new 90e7b1a3… for the list,
+14e84c2b… for the fixture bytes): `docs/evidence/voice-heldout/README.md`.
+
+Green: `node scripts/eval/build-heldout-streets.mjs`, `build-voice-eval.mjs`
+(both modes), `check-voice-eval.mjs` (both directions),
+`check-parser-circularity.mjs`, `node --test "scripts/*/__tests__/*.test.mjs"`
+(349 pass, 0 fail), parity, doc-links, control-chars, mojibake, markers.
+
+---
+
+## 2026-11-09/10: an emulator is connected (BlueStacks), BUG-300 fixed at the root, and PR #278 is green
+
+**Emulator connected (directive item 3, done end to end):** `BlueStacks 5`
+(Tiramisu64, Android 13 / API 33, ABI x86_64, not rooted — `su -c id` does not exist, so
+Play Integrity is unaffected), serial `127.0.0.1:5555`, SM-G998B skin, 1920x1080 @ 240
+dpi. How: the STEP 1 scan found no emulator process and no adb listener, so the
+official BlueStacks 5 OFFLINE installer was downloaded from the support article's
+own link (`ak-build.bluestacks.com`, 3.74 GB), its Authenticode signature verified
+(Valid, CN="Now.gg, INC", sha256 DBE8B99D…), and installed with the article's
+documented command-line flags (`--defaultImageName Tiramisu64 --imageToLaunch
+Tiramisu64`). Config change recorded: `C:\ProgramData\BlueStacks_nxt\bluestacks.conf`
+was copied to `bluestacks.conf.bak` (10,785 bytes) and `bst.enable_adb_access` set
+from "0" to "1" with the app fully closed. ONE adb is used (the Android SDK
+platform-tools one): `adb kill-server; adb connect 127.0.0.1:5555`. Our E2E-flavoured
+release APK (110.7 MB, `EXPO_PUBLIC_E2E=1`, from Android E2E run 42542068115) is
+installed ALONGSIDE (`com.courier.copilot`), and Maestro 2.11.0 (sha256 verified
+against the workflow pin) is installed on this PC. **What does NOT work on this
+device:** Maestro's dadb opens a persistent `shell,v2` stream, and BlueStacks
+5's adb bridge closes it and goes offline (the AVD and the flows stay fine
+otherwise — the crash is the bridge, recorded). The BlueStacks 10 installer
+(also in Downloads, also Valid) was tried and stalled with no window/network/
+output for over 15 minutes — stopped per §15 and logged. The CI AVDs remain the
+gate; this device is supplementary, and its voice paths can be driven by hand.
+
+**BUG-300 (PR #278) — three app-side root causes, all fixed red-first:**
+
+1. `AuthProvider` armed the 8 s session-restore bound on EVERY effect run but
+   cleared it only on the fall-through path: any settled run (the sign-in after
+   the flow's sign-out, which discards the receipt per BUG-077) left a stale timer
+   that flipped the fresh session back to the front door 8 s later. On the large
+   AVD every command takes seconds, so the flow's own steps outlasted the bound —
+   deterministic on both large legs (runs 42455960697 / 42542068115), and the small
+   AVD only outran it. The bound is now armed only while the server has not
+   answered and cleared on every run. Pinned by
+   `apps/mobile/src/providers/__tests__/staleRestoreTimer.test.tsx` (3 claims).
+   A fixture lesson worth recording: a `const` referenced from a `jest.mock`
+   factory is hoisted to the top of the module by babel-plugin-jest-hoist and
+   reads `undefined` — the fixtures are `mock`-prefixed `let`s, reset per test
+   (the CI lint's prefer-const would have re-broken the fix, so the reset is
+   real and no suppression was needed).
+2. `BottomSheet`: the sheet's content is dp-sized and does not grow with the
+   window, so 55 % of a 731 dp window left the first rows clipped below the card.
+   A window of >=700 dp now takes the half level at 65 % (the mockup's "half the
+   screen, or three quarters when the notes are long"); the short window keeps
+   55 %, so the committed P4 baselines do not move. The geometry is an exported
+   pure function (`sheetHeightsFor`) the screens' suites assert instead of
+   re-deriving a fraction.
+3. Both backdrop maps inflated every Maestro hierarchy dump to 4-11 s on the large
+   screen; both are now wrapped in a view hidden from the accessibility tree (no
+   flow taps the map or its pins) and memoised so typing does not re-render them.
+   Plus the settings list: on a tall window Device and MEMORY sit directly under
+   Debug, and the list's FRAME (not only its content) stops above the 88 dp dock —
+   the last large-leg failure was a row scrolled under the dock glass, where the
+   tap landed on the dock and the route never opened.
+
+Green on head `a1435cd`: Android E2E run **42697447248** — all four Maestro legs
+(api 34/35 × small/large) and the A1 no-mock leg, plus CI (lint, typecheck, 870
+app tests, 103 suites), Quality gates and CodeQL. BUG-270 and BUG-300 are fixed in
+BUGS.md with the run id (footer recounted by scan: 247 rows, fixed 209). The whole
+app suite, `tsc --noEmit` and eslint are clean locally; one existing assertion was
+amended honestly (today.test.tsx queries `stop-pin-2` as a hidden element, because
+the veil is the fix — the claim, that the pins render, is unchanged).
+
+Queue state: #278 ready to merge; the held-out measurement lane (real STT on the
+new shared list) and the >=500-turn simulation are next; P4's 8 large/200 %
+baselines now have their AVD.
+
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue

@@ -31,6 +31,8 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 
+import { streetKeyOf } from './street-key.mjs';
+
 /** The JSONL rows of a file that is not there yet: none, not an error. */
 function readJsonlIfExists(file) {
   if (!existsSync(file)) return [];
@@ -64,7 +66,11 @@ function loadHeldOutStreets() {
     process.exit(1);
   }
   const document = JSON.parse(readFileSync(HELDOUT_STREETS_FILE, 'utf8'));
-  return new Set(Array.isArray(document.streets) ? document.streets : []);
+  // The shared list spells each street in the backend's road_key normalisation
+  // ("bealey ave"), so the manifest rows are compared by key, not by their raw
+  // LINZ spelling ("Bealey Avenue"): one street, one key, both sides.
+  const streets = Array.isArray(document.streets) ? document.streets : [];
+  return new Set(streets.map((street) => streetKeyOf(street)));
 }
 
 const heldOutStreets = loadHeldOutStreets();
@@ -129,7 +135,7 @@ for (const file of addressFiles) {
 // held-out streets); --heldout keeps only those. Every address of a held-out
 // street is held out with it.
 const pool = raw.filter((row) =>
-  HELDOUT_ONLY ? heldOutStreets.has(row.street) : !heldOutStreets.has(row.street),
+  HELDOUT_ONLY ? heldOutStreets.has(streetKeyOf(row.street)) : !heldOutStreets.has(streetKeyOf(row.street)),
 );
 
 // Spread the bank over the suburbs: the first N of every file would all be
@@ -150,7 +156,7 @@ while (addressBank.length < 240 && suburbs.length > 0) {
       id: `A${String(addressBank.length + 1).padStart(3, '0')}`,
       ...row,
       // every generated address whose road is in the held-out list is tagged:
-      ...(heldOutStreets.has(row.street) ? { held_out: true } : {}),
+      ...(heldOutStreets.has(streetKeyOf(row.street)) ? { held_out: true } : {}),
     });
     if (addressBank.length >= 240) break;
   }
@@ -303,7 +309,7 @@ for (const slice of slices) {
       address_id: address.id,
       speaker: `spk-${(index % 12) + 1}`,
       // every generated script whose road is in the held-out list is tagged:
-      ...(heldOutStreets.has(address.street) ? { held_out: true } : {}),
+      ...(heldOutStreets.has(streetKeyOf(address.street)) ? { held_out: true } : {}),
     });
   }
 }
