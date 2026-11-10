@@ -145,6 +145,15 @@ def _optional_time(raw: object) -> datetime | None:
     return _aware_time(str(raw))
 
 
+def is_stripe_shape(event: dict[str, Any]) -> bool:
+    """Whether this payload is STRIPE's own webhook shape rather than ours.
+
+    Stripe sends `type` + `data.object` and no `courier_id`; the canonical shape
+    both providers share names the courier up front. A payload cannot be both,
+    and a payload that is neither is refused by the readers below."""
+    return "data" in event and "courier_id" not in event and "type" in event
+
+
 def fact_from_stripe_event(event: dict[str, Any], source: str = "stripe") -> ProviderFact:
     """One provider event as a fact (the wire shape both providers share).
 
@@ -153,7 +162,19 @@ def fact_from_stripe_event(event: dict[str, Any], source: str = "stripe") -> Pro
     the row believe it. Every timestamp must carry its offset, because the
     monotonic guard and the entitlement's `ends_at` both mix aware datetimes and
     a naive one would raise rather than mis-answer.
-    """
+
+    A payload in STRIPE's own shape - its `checkout.session.completed`,
+    `customer.subscription.updated` and the rest - is translated by
+    `app.stripe_nz`, the one place that knows Stripe's field names (D44). The
+    signature was verified before this line, so the payload is Stripe's; what
+    it MEANS is this layer's job, not the sender's."""
+    if is_stripe_shape(event):
+        # A late import on purpose: `stripe_nz` reads THIS module's
+        # `ProviderFact`, so a top-level import would be a cycle. One direction
+        # at runtime - the payload is already verified as Stripe's.
+        from .stripe_nz import fact_from_stripe_webhook  # noqa: PLC0415 (#281: D44)
+
+        return fact_from_stripe_webhook(event, source)
     purchase = event.get("purchase") or {}
     try:
         return ProviderFact(

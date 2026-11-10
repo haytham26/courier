@@ -238,6 +238,82 @@ paths:
         '404':
           description: This deployment does not accept that source
 
+
+  /v1/billing/checkout-session:
+    post:
+      tags: [account]
+      summary: The Stripe Checkout Session that sells one plan to this courier (D44)
+      description: |
+        The founder's billing provider is Stripe in New Zealand dollars, test mode
+        until the keys are swapped (ADR-031 / D68). The plan comes from the body,
+        the courier from the token, and the session carries the courier id as
+        Stripe's own `client_reference_id`, so the webhook that follows the
+        payment says who paid without this endpoint storing anything.
+
+        A deployment with no Stripe key, and a plan with no configured price, are
+        each a 400 with the reason - the switches are the founder's
+        (docs/status/FOUNDER_TODO.md). The trial is not sold here: it is granted
+        by the entitlement layer.
+      operationId: create_checkout_session
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [plan, return_base]
+              properties:
+                plan:
+                  type: string
+                  enum: [solo, team]
+                  description: The plan to sell (the trial is granted, not sold)
+                return_base:
+                  type: string
+                  description: The absolute https origin to return to after Stripe
+      responses:
+        '200':
+          description: The session's URL, to open in a browser
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url:
+                    type: string
+                    format: uri
+        '400':
+          description: No Stripe key, no price for the plan, or a return base that is not absolute
+
+  /v1/billing/portal-session:
+    post:
+      tags: [account]
+      summary: The Stripe portal Session where this courier manages the subscription (D44)
+      description: |
+        The portal opens on the subscription's own recorded Stripe customer: the
+        webhook that follows the checkout records it, and a caller with none has
+        nothing to manage - opening somebody else's portal is the worst answer
+        this endpoint could give.
+      operationId: create_portal_session
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The session's URL, to open in a browser
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url:
+                    type: string
+                    format: uri
+        '400':
+          description: No Stripe key, or no Stripe customer recorded for this courier
+
   /account/entitlements:
     get:
       tags: [account]

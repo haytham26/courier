@@ -66,6 +66,10 @@ DEFAULT_LIMIT = _env_limit("RATE_LIMIT_DEFAULT", "120/minute")
 AUTH_LIMIT = _env_limit("RATE_LIMIT_AUTH", "20/minute")
 UPLOAD_LIMIT = _env_limit("RATE_LIMIT_UPLOADS", "30/minute")
 WEBHOOK_LIMIT = _env_limit("RATE_LIMIT_WEBHOOKS", "60/minute")
+# D44's two session endpoints: a courier opens one Checkout Session and
+# occasionally one portal Session, so the rate is tight (the Stripe call
+# behind it costs the deployment money on a replay).
+WRITE_LIMIT = _env_limit("RATE_LIMIT_BILLING", "10/minute")
 
 limiter = Limiter(key_func=_key, default_limits=[DEFAULT_LIMIT])
 
