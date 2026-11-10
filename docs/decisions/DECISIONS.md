@@ -560,6 +560,18 @@ map pack) stand: they are not day-one deferrals, they are P5/P3 scheduled work.
 - Red-first: `services/courier-voice/tests/test_s22_bc.py` (9 tests); suite 364 passed,
   `ruff check .` clean. Evidence `docs/evidence/s22-bc/`.
 
+## D69 — The cost guard: the budget before the paid call (2026-11-10, backend squad, item 7's P6)
+
+- Recorded in `docs/decisions/adr/ADR-032-cost-guard.md`. COST_PLAN's budgets are
+  now enforced: `services/api/app/cost_guard.py` decides (the courier's daily and
+  monthly budgets, the tenant's daily budget, the deployment's daily cap; an
+  unset budget is unbounded, not zero), the intake's provider is wrapped so the
+  check runs BEFORE the paid call and the estimate is recorded after, and a spent
+  budget answers a 4xx naming WHICH window is spent - never a 500 the gateway
+  retries, and never a courier stranded mid-shift.
+- The ledger (`cost_events`) is append-only: a replay is a second row, not an
+  overwrite, and the estimate is labelled as the budget basis everywhere.
+  `GET /account/cost` reads the same arithmetic back for the app.
 ## D68 — D44: Stripe in NZD, test mode, built on entitlements.py (2026-11-10, backend squad, item 7)
 
 - Recorded in `docs/decisions/adr/ADR-031-stripe-nzd-billing.md`. The founder's

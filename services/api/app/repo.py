@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field, replace
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any, Protocol
 from uuid import UUID, uuid4
@@ -178,6 +178,30 @@ class SubscriptionRow(SubscriptionView):
     renews_at: datetime | None = None
 
 
+def _aware_utc(moment: datetime) -> datetime:
+    """A naive instant read as UTC (the ledger's rows carry whatever the caller had)."""
+    if moment.tzinfo is None:
+        return moment.replace(tzinfo=UTC)
+    return moment
+
+
+@dataclass(frozen=True)
+class CostEventRow:
+    """One paid model call in the cost ledger (COST_PLAN's budgets read it back).
+
+    The `usd_estimate` is the budget basis - the gateway's own usage is the
+    invoice - and the characters stay on the row so a price change can re-price
+    the ledger without re-running the models."""
+
+    courier_id: str
+    usd_estimate: float
+    chars_in: int = 0
+    chars_out: int = 0
+    tenant_id: str | None = None
+    call: str = "llm"
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+
 @dataclass(frozen=True)
 class RouteStopRow:
     """A stop of the run, with the constraints the routing engine needs."""
@@ -247,6 +271,30 @@ class Repo(Protocol):
 
     def get_event(self, event_id: UUID) -> DeliveryEventRow | None:
         """One delivery event by id - the POD replay's ownership check."""
+        ...
+
+    def record_cost_event(self, row: CostEventRow) -> None:
+        """One paid model call in the cost ledger (COST_PLAN's budgets).
+
+        The write is append-only and the read is a sum, so a replay of the same
+        call is a second row and not a silent overwrite: the wallet is an
+        accounting log, and the monotonicity that protects a courier's
+        SUBSCRIPTION (ADR-017 §3) is not a rule about money already spent - a
+        double-charge is worse than a stale one, so the caller's own idempotency
+        (the gateway's request id) decides, never this store."""
+        ...
+
+    def cost_spend_since(
+        self,
+        window_start: datetime,
+        courier_id: str | None = None,
+        tenant_id: str | None = None,
+    ) -> float:
+        """The estimated spend in a window, optionally one courier's or one tenant's.
+
+        The windows COST_PLAN names read from this: the courier's daily and
+        monthly sums, the tenant's daily sum, and the deployment's daily cap
+        (no scope)."""
         ...
 
     def list_runs(self, courier_id: str, limit: int = 500) -> list[RunRecord]:
@@ -359,6 +407,7 @@ class InMemoryRepo:
     templates: dict[UUID, RunTemplate] = field(default_factory=dict)
     routes: dict[UUID, RoutePlan] = field(default_factory=dict)
     location_notes: dict[tuple[str, UUID, str], LocationNoteRow] = field(default_factory=dict)
+    cost_events: list[CostEventRow] = field(default_factory=list)
 
     def append_events(self, shift_id: UUID, events: list[DeliveryEventRow]) -> AppendResult:
         """The batch applied as one decision, then one mutation.
@@ -429,6 +478,27 @@ class InMemoryRepo:
         if any(existing.shift_id == run.shift_id for existing in self.runs.values()):
             raise ValueError("this shift already has a run")
         self.runs[run.id] = run
+
+    def record_cost_event(self, row: CostEventRow) -> None:
+        self.cost_events.append(row)
+
+    def cost_spend_since(
+        self,
+        window_start: datetime,
+        courier_id: str | None = None,
+        tenant_id: str | None = None,
+    ) -> float:
+        start = _aware_utc(window_start)
+        total = 0.0
+        for row in self.cost_events:
+            if _aware_utc(row.created_at) < start:
+                continue
+            if courier_id is not None and row.courier_id != courier_id:
+                continue
+            if tenant_id is not None and row.tenant_id != tenant_id:
+                continue
+            total += row.usd_estimate
+        return total
 
     def list_runs(self, courier_id: str, limit: int = 500) -> list[RunRecord]:
         mine = [run for run in self.runs.values() if run.courier_id == courier_id]
@@ -599,6 +669,57 @@ class SqlAlchemyRepo:
         with self._engine.connect() as connection:
             row = connection.execute(statement, {"courier_id": courier_id}).mappings().first()
         return _subscription_row(row) if row else None
+
+    def record_cost_event(self, row: CostEventRow) -> None:
+        statement = text(
+            """
+            INSERT INTO cost_events
+                (courier_id, tenant_id, usd_estimate, chars_in, chars_out, call, created_at)
+            VALUES (:courier_id, :tenant_id, :usd_estimate, :chars_in, :chars_out, :call, :created_at)
+            """
+        )
+        with self._engine.begin() as connection:
+            connection.execute(
+                statement,
+                {
+                    "courier_id": row.courier_id,
+                    "tenant_id": row.tenant_id,
+                    "usd_estimate": row.usd_estimate,
+                    "chars_in": row.chars_in,
+                    "chars_out": row.chars_out,
+                    "call": row.call,
+                    "created_at": row.created_at,
+                },
+            )
+
+    def cost_spend_since(
+        self,
+        window_start: datetime,
+        courier_id: str | None = None,
+        tenant_id: str | None = None,
+    ) -> float:
+        # One statement with the two optional scopes: an unset scope widens the
+        # sum (the deployment's daily cap and the tenant's daily budget read
+        # the same table this way).
+        statement = text(
+            """
+            SELECT COALESCE(SUM(usd_estimate), 0) AS spent
+            FROM cost_events
+            WHERE created_at >= :window_start
+              AND (:courier_id IS NULL OR courier_id = :courier_id)
+              AND (:tenant_id IS NULL OR tenant_id = :tenant_id)
+            """
+        )
+        with self._engine.connect() as connection:
+            total = connection.execute(
+                statement,
+                {
+                    "window_start": window_start,
+                    "courier_id": courier_id,
+                    "tenant_id": tenant_id,
+                },
+            ).scalar()
+            return float(total or 0)
 
     def put_subscription(self, row: SubscriptionRow) -> bool:
         # The correction is monotonic in the source's own time: an older fact

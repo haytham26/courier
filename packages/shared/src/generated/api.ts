@@ -296,6 +296,20 @@ export interface ApiPaths {
       };
     };
   };
+  '/account/cost': {
+    get: {
+      body: null;
+      responses: {
+        200: {
+          courier_daily_usd?: null | number;
+          courier_monthly_usd?: null | number;
+          tenant_daily_usd?: null | number;
+          global_daily_usd?: null | number;
+          spent: Record<string, unknown>;
+        };
+      };
+    };
+  };
   '/account/entitlements': {
     get: {
       body: null;
