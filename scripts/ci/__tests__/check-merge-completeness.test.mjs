@@ -153,9 +153,18 @@ test('a non-merge commit is refused, not silently passed', () => {
   }
 });
 
-test("the repo's own recent merges carry their diffs, and every resolution is recorded", () => {
+test("the repo's own recent merges carry their diffs, and every resolution is recorded", (t) => {
   const runner = (args) => execFileSync('git', args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).toString();
-  const merges = runner(['log', '--merges', '--format=%H', 'origin/main', '-40']).trim().split('\n').filter(Boolean);
+  // A shallow clone (CI's actions/checkout) carries no merge history: the check is
+  // a local one, and the skip is recorded with its reason rather than let fail.
+  let merges = [];
+  try {
+    merges = runner(['log', '--merges', '--format=%H', 'origin/main', '-40']).trim().split('\n').filter(Boolean);
+  } catch { t.skip('a shallow clone carries no merge history — this check runs locally'); return; }
+  if (merges.length === 0) {
+    t.skip('origin/main is not fetched here — this check runs where the full history is');
+    return;
+  }
   assert.ok(merges.length > 5, 'the repo has merges to check');
   const record = JSON.parse(readFileSync(join(process.cwd(), 'scripts', 'ci', 'merge-resolutions.json'), 'utf8'));
   const recorded = new Map(record.resolutions.map((r) => [r.merge, r]));
