@@ -253,6 +253,40 @@ the open speakers' own words read by the pinned judge (sherpa-onnx Whisper
 tiny.en - the set's acoustic difficulty, not our pipeline), and the intent
 accuracy is the service's OFFLINE brain on the gold scripts.
 
+## The TTS command audio (the action-bearing utterances)
+
+The open-data slices above are Common Voice **prose**: their speakers read their
+own sentences, so no file of them ever spoke a courier command, and the other
+slices had no audio at all. `services/courier-voice/app/eval_tts.py` builds the
+missing action-bearing audio from the set's own scripts with the product's own
+voice (Kokoro-82M through sherpa-onnx, one fixed voice, one fixed speed, no
+clock, no network at generation time), 16 kHz mono PCM_16, and records every
+file's sha256 with its voice, its model and its licence in the sidecar
+`manifest/tts_audio.jsonl`.
+
+```
+uv run --project services/courier-voice --extra eval python -m app.eval_tts \
+  --root . --workers 6 \
+  --out packages/eval/voice/manifest/tts_audio.jsonl
+```
+
+The van variants mix the MUSAN (CC-BY-4.0) beds at 0 / 5 / 10 dB, so a van turn
+differs from its quiet twin **only by the bed's gain**, and the attribution line
+"MUSAN, Snyder et al." rides on every van row. The held-out rule is the set's own
+(default excluded, `--heldout` only those), and the builder refuses a voice or a
+bed the licence ledgers do not name (D24).
+
+Two facts about the engine shape the build, both measured and published in
+`docs/evidence/voice-scale/README.md`: sherpa-onnx's Kokoro is **not**
+byte-reproducible across runs (so the sidecar's sha256 is the pin, and the
+simulation verifies every file against it), and sherpa-onnx ≥ 2.0.0 dropped
+espeak-ng (so a word the lexicon cannot pronounce is silently dropped — the
+builder spells the digit runs out and records every word it could not speak).
+
+`services/courier-voice/app/eval_scale.py` transcribes the built files with the
+set's own pinned judge and writes the committed turn set
+(`fixtures/scale-turns.jsonl`) the app-side simulation drives.
+
 ## What is not here yet, and why
 
 - **The audio of the TTS slices** (`mi_places`, `ar`, `hi_pa`, `zh`, `sm_to`,
