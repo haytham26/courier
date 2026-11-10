@@ -45,7 +45,16 @@ name: 'A pasted spreadsheet imports its stops (queue 4e, ADR-025)'
 # "notes" column, which the import answers as ignored.
 - tapOn:
     id: "stops-import-text"
-- inputText: "address,type,notes\n1 Import Lane, delivery, leave at door\n2 Pickup Ave, pickup, ring bell"
+# BUG-302: the large (Nexus 6) legs died in this flow with the Maestro PROCESS
+# killed mid-typing (run 42709298405: the log truncated mid-line, and the
+# failure dump proved the app's state was already correct - the paste had landed).
+# The cause is the harness: `inputText` types character by character - ~90 adb
+# round-trips on a device whose hierarchy read alone takes seconds - and this is
+# the suite's longest flow. Maestro's own documented way to avoid that flakiness
+# is the clipboard, and the app receives the identical text through the
+# identical code path, so the flow asserts the same import as before.
+- setClipboard: "address,type,notes\n1 Import Lane, delivery, leave at door\n2 Pickup Ave, pickup, ring bell"
+- pasteText
 # BUG-197: the keyboard is still DOWN here on purpose. Edge-to-edge Android
 # (api 34/35) does not shrink the window for the soft keyboard, so before the
 # fix the pinned actions row sat under the keyboard and out of the accessibility
