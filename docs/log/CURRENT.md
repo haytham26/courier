@@ -476,6 +476,29 @@ recordings) failed on the runner infra in the same window that took my own branc
 down and are green on the §17.4 re-runs — recorded so nobody re-reads them as a
 diff failure. The lane's environment note (a dead worktree registration released,
 0 unique commits, admin dir archived) is in its report.
+---
+
+**Emulator connected: BlueStacks 5, Android 13, x86_64, 127.0.0.1:5555.**
+
+## 2026-11-10: lane status lines (the directive's one-line-per-lane rule)
+
+- **Voice measurement (PR #290, merged 5ac2c44): DONE.** The held-out numbers are
+  measured from real STT output and on FINAL_REPORT (quiet 14.75 %, van 28.02 %,
+  intent 1.67 %, address 0/75, false-action 0/600 PASS). NEXT: the levers, in the
+  founder's order.
+- **Voice lane 5 (TTS command audio + the ≥500-turn simulation,
+  `voice/scale-simulation`): RUNNING** (launched 2026-11-10, polled on the
+  15-minute cadence).
+- **BUG-302 (the large-leg harness flake): RUNNING** — PR #289 restores the
+  BUG-270/300 set; the large legs are red on `import.yaml` alone; the 60 s scroll
+  budget already fixed voice-memory / stops / today-fail there.
+- **BUG-303 (BlueStacks' adb bridge, NEW): DOING** — filed today: the device
+  refuses Maestro (dadb EOF) and `adb root`; the hand-rolled one-shot adb driver
+  runs the voice path on the device instead (evidence in
+  docs/evidence/scale-tests/).
+- **The merge-completeness guard: NEXT** — the directive's new rule (prove the
+  merged tree carries the whole PR diff), red-first, this session.
+- Scale tests, the offline lane and P4: RUNNING, in the lane queue.
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
