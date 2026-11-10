@@ -62,6 +62,19 @@ open — New Zealand drives on the **left**, so this must be closed before we sh
 | Battery while driving | ≤ 8 %/h | **UNVERIFIED** | expo-location + expo-task-manager (already in the app) with `getMotionActivityAsync()` automotive detection | — | `□□□□□` |
 | Offline map of Canterbury | complete | **Partially built**: the map view modes (2D/3D/Satellite/Auto), per-driver memory, voice camera control and the 3D-buildings builder with licences checked are done; the **PMTiles pack itself is not built yet** (needs the LINZ outlines + OSM extract downloads; the weekly rebuild is T5) — PARITY row 308 | PMTiles (spec CC0, CLI `go-pmtiles` BSD-3) + protomaps/basemaps styles (CC0 design) | Apple/Google offline (closed) | `■■□□□` |
 
+## 3b. Billing (D44)
+
+| Measure | Target | Ours | Best OSS | Best competitor |
+|---|---|---|---|---|
+| The subscription lane | a courier can start, manage and lose a subscription without support | **built and gated, not yet live** (BUG-281): the NZD price catalogue (the trial is granted, never sold), `/v1/billing/checkout-session` + `/v1/billing/portal-session`, and Stripe's real webhook shapes as the one fact the entitlement layer ingests - 17 tests, the contract, the full suite | Stripe's own dashboard, without an app's decision layer | Spoke's store-only billing (no self-serve web lane) |
+| The entitlement decision | a failed renewal never strands a courier | `past_due`/`grace` are LIVE (ADR-017 section 1), proven by the provider tests | - | - |
+
+The remainder is the founder's: the TEST keys make the lane run end to end (a
+courier buys a Solo, the webhook lands, the entitlement answers active) and the
+LIVE keys make it sell. The cost guard (COST_PLAN's per-driver daily/monthly
+budgets with the cheaper-cascade fallback) is the next backend slice, its state
+named in `docs/status/FINAL_REPORT.md`'s DoD checklist.
+
 ## 5. Safety, privacy and trust
 
 | | What we measure | Our number | Best OSS | Best competitor | Rating |

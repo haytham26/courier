@@ -560,6 +560,37 @@ map pack) stand: they are not day-one deferrals, they are P5/P3 scheduled work.
 - Red-first: `services/courier-voice/tests/test_s22_bc.py` (9 tests); suite 364 passed,
   `ruff check .` clean. Evidence `docs/evidence/s22-bc/`.
 
+## D69 — The cost guard: the budget before the paid call (2026-11-10, backend squad, item 7's P6)
+
+- Recorded in `docs/decisions/adr/ADR-032-cost-guard.md`. COST_PLAN's budgets are
+  now enforced: `services/api/app/cost_guard.py` decides (the courier's daily and
+  monthly budgets, the tenant's daily budget, the deployment's daily cap; an
+  unset budget is unbounded, not zero), the intake's provider is wrapped so the
+  check runs BEFORE the paid call and the estimate is recorded after, and a spent
+  budget answers a 4xx naming WHICH window is spent - never a 500 the gateway
+  retries, and never a courier stranded mid-shift.
+- The ledger (`cost_events`) is append-only: a replay is a second row, not an
+  overwrite, and the estimate is labelled as the budget basis everywhere.
+  `GET /account/cost` reads the same arithmetic back for the app.
+## D68 — D44: Stripe in NZD, test mode, built on entitlements.py (2026-11-10, backend squad, item 7)
+
+- Recorded in `docs/decisions/adr/ADR-031-stripe-nzd-billing.md`. The founder's
+  billing provider is **Stripe in New Zealand dollars, test mode until the keys are
+  swapped**. `services/api/app/stripe_nz.py` is the only module that knows Stripe:
+  the price catalogue (the trial is granted by `entitlements`, never sold), the
+  Checkout and portal Session endpoints (`/v1/billing/checkout-session`,
+  `/v1/billing/portal-session`, both bearer-authenticated), and the translation of
+  Stripe's real webhook shapes into the one fact `app.providers` verifies and
+  ingests.
+- The courier id rides in Stripe's `client_reference_id`, and the webhook's fact
+  is built from THAT - never from a field a client could write. The return URLs
+  are the caller's own absolute https base: a redirect to a host we do not serve
+  is a phishing vector.
+- `invoice.payment_failed` maps to PAST_DUE, which the entitlement layer already
+  treats as LIVE (ADR-017 §1). The live lane - a real key, the live prices, and
+  the account verification - is the founder's; the app's half is measured by the
+  17 tests in `tests/test_stripe_nz.py` and the end-to-end test-mode purchase is
+  the acceptance step once the keys exist.
 ## D67 — The routing evaluation set by simulation: PyVRP confirmed as the production engine, Valhalla stays the router, VROOM's run is the recorded open item (2026-11-09, backend squad, the founder's 2026-11-08 directive item 3)
 
 - Recorded in `docs/decisions/adr/ADR-030-routing-eval-set.md`. 144 seeded synthetic Christchurch days (30/80/150/250 stops, six variants) from real LINZ addresses over a real road matrix (Valhalla on OpenStreetMap), three engines, one measuring stick. Measured: our engine is 0.76% over the baseline on average and 4.94% at worst (targets 2%/5%), 0 illegal plan(s) where a feasible plan exists (target 0), and a solve p95 of 2.907s at 150 stops on the CI runner (target <3s).

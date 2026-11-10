@@ -8,6 +8,7 @@ import os
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
+from functools import lru_cache
 from typing import Annotated, Any, Literal
 
 from fastapi import (
@@ -52,8 +53,18 @@ from .auth.websocket import (
     refuse,
 )
 from .billing import WEBHOOK_MAX_BYTES, billing_sources
+from .cost_guard import (
+    BudgetSpentError,
+    CostGuardSettings,
+    Spend,
+    day_start,
+    estimate_usd,
+    month_start,
+    remaining,
+    verdict_for,
+)
 from .demo import DemoDayConflictError, demo_day_body, seed_enabled, write_demo_day
-from .entitlements import entitlement_of
+from .entitlements import Plan, entitlement_of
 from .import_stops import (
     IMPORT_MAX_BYTES,
     ImportFormatError,
@@ -70,9 +81,16 @@ from .pod import (
 )
 from .pod_store import LocalPodStore, PodFingerprintError, pod_store
 from .providers import VERIFIERS, apply_facts, webhook_secret_for
-from .rate_limit import UPLOAD_LIMIT, WEBHOOK_LIMIT, install_rate_limiter, limiter
+from .rate_limit import (
+    UPLOAD_LIMIT,
+    WEBHOOK_LIMIT,
+    WRITE_LIMIT,
+    install_rate_limiter,
+    limiter,
+)
 from .repo import (
     AppendResult,
+    CostEventRow,
     DeliveryEventRow,
     LocationNoteRow,
     Repo,
@@ -82,6 +100,9 @@ from .repo import (
 )
 from .request_guards import install_request_guards
 from .responses import (
+    CheckoutSessionRequest,
+    CheckoutSessionResponse,
+    CostResponse,
     DemoRunResponse,
     EntitlementResponse,
     HealthResponse,
@@ -90,6 +111,7 @@ from .responses import (
     LocationNoteResponse,
     PodResponse,
     PodUrlResponse,
+    PortalSessionResponse,
     ReoptResponse,
     RouteResponse,
     RunResponse,
@@ -112,6 +134,19 @@ from .routing import (
     schedule_plan,
 )
 from .sequencing import Segment
+from .stripe_nz import checkout_session_url, portal_session_url
+
+
+@lru_cache(maxsize=1)
+def cost_settings() -> CostGuardSettings:
+    """The budget switches, read once per process (the same shape as the auth
+    and POD settings): no default budgets, so a deployment with none set is
+    unbounded and says so."""
+    return CostGuardSettings()
+
+# The contract's plan names as the entitlement layer's enum (D44): the
+# endpoint reads a name, the catalogue reads the enum.
+PLAN_BY_NAME: dict[str, Plan] = {plan.value: plan for plan in Plan}
 
 # Fail fast when the API cannot verify tokens (no default secrets).
 get_auth_settings()
@@ -973,6 +1008,71 @@ def _intake_answer(result: Any) -> dict[str, object]:
     }
 
 
+def _cost_guarded(
+    *, repo: Repo, run: RunRecord, provider: IntakeProvider, principal_id: str
+) -> IntakeProvider:
+    """The intake's two LLM calls, with the cost guard in front of them.
+
+    COST_PLAN's rule at the limit is not a hard stop but a DECLINE OF THE PAID
+    CALL: the budget is checked before the call, the estimate recorded after,
+    and a spent budget raises the guard's `BudgetSpentError` - which the intake
+    turns into a 4xx with the reason and the local path's answer, never a 500
+    the gateway retries. The guard says WHICH budget is spent (the courier's
+    daily, the courier's monthly, the tenant's, the deployment's), because the
+    founder fixing it needs to know which switch to move.
+
+    The estimate is from the characters of the request and the answer at ~4
+    characters per token - stated everywhere it is used as an estimate, since
+    the gateway's own usage is the invoice and this is the budget basis."""
+    settings = cost_settings()
+    # The tenant dimension is the courier's organisation when the deployment has
+    # one; a run without it records the event unscoped, and the tenant window
+    # sums only the scoped ones.
+    tenant_id = str(getattr(run, "tenant_id", None) or "") or None
+
+    def guard(call: str, chars_in: int, chars_out: int) -> None:
+        about = estimate_usd(chars_in, chars_out, settings)
+        spend = Spend(
+            courier_daily=repo.cost_spend_since(day_start(), courier_id=principal_id),
+            courier_monthly=repo.cost_spend_since(month_start(), courier_id=principal_id),
+            tenant_daily=repo.cost_spend_since(day_start()),
+            global_daily=repo.cost_spend_since(day_start()),
+        )
+        verdict = verdict_for(spend, about, settings)
+        if verdict.blocked:
+            raise BudgetSpentError(verdict)
+        repo.record_cost_event(
+            CostEventRow(
+                courier_id=principal_id,
+                tenant_id=tenant_id,
+                usd_estimate=about,
+                chars_in=chars_in,
+                chars_out=chars_out,
+                call=call,
+            )
+        )
+
+    class GuardedProvider:
+        name = "cost-guarded"
+
+        def extract(self, source: str, text: str) -> list[dict[str, Any]]:
+            rows = provider.extract(source, text)
+            guard("extract", len(text), sum(len(str(row.get("raw", ""))) for row in rows))
+            return rows
+
+        def phrase(self, problem: str, raw: str) -> str:
+            answer = provider.phrase(problem, raw)
+            guard("phrase", len(problem) + len(raw), len(answer))
+            return answer
+
+        def ocr(self, image: bytes, media_type: str = "image/jpeg") -> str:
+            answer = provider.ocr(image, media_type)
+            guard("ocr", len(image), len(answer))
+            return answer
+
+    return GuardedProvider()
+
+
 def _run_intake(
     *,
     repo: Repo,
@@ -981,8 +1081,11 @@ def _run_intake(
     source: str,
     text: str,
     shift_id: uuid.UUID,
+    principal_id: str | None = None,
 ) -> dict[str, object]:
     """One graph turn: start it, or answer the pending question, per shift."""
+    if principal_id is not None:
+        provider = _cost_guarded(repo=repo, run=run, provider=provider, principal_id=principal_id)
     graph = build_graph(provider.extract, provider.phrase, RepoGeo(repo, run), _INTAKE_CHECKPOINTER)
     try:
         result = graph.invoke(
@@ -1023,6 +1126,7 @@ def intake_text(
         source=body.source,
         text=body.text,
         shift_id=shift_id,
+        principal_id=principal.user_id,
     )
 
 
@@ -1173,6 +1277,83 @@ def get_entitlements(
         "plan": decision.plan.value if decision.plan else None,
         "features": sorted(decision.features),
     }
+
+
+@app.post("/v1/billing/checkout-session", response_model=CheckoutSessionResponse)
+@limiter.limit(WRITE_LIMIT)
+def create_checkout_session(
+    request: Request,
+    payload: CheckoutSessionRequest,
+    principal: AuthPrincipal = Depends(get_current_principal),
+):
+    """The Stripe Checkout Session that sells one plan to THIS courier (D44).
+
+    The plan comes from the body, the courier from the token - never from a
+    client's claim - and the session carries the courier id as Stripe's
+    `client_reference_id`, so the webhook that follows the payment says who
+    paid without this endpoint storing anything. The trial is not sold here:
+    it is granted by the entitlement layer, so asking for it is a 400 with the
+    reason rather than a session that bills nothing.
+
+    A deployment with no Stripe key or no price for the plan refuses with the
+    reason: the founder's switches are in FOUNDER_TODO, and a deployment that
+    half-sells is worse than one that clearly does not.
+    """
+    # The contract's plan name is a literal and the entitlement layer's is its
+    # enum; the mapping is one lookup, and an unmapped name is a 400 rather
+    # than a KeyError on a caller-controlled value.
+    plan = PLAN_BY_NAME.get(payload.plan)
+    if plan is None:
+        raise HTTPException(status_code=400, detail=f"the {payload.plan} plan is not sold")
+    try:
+        url = checkout_session_url(principal.user_id, plan, payload.return_base)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"url": url}
+
+
+@app.post("/v1/billing/portal-session", response_model=PortalSessionResponse)
+@limiter.limit(WRITE_LIMIT)
+def create_portal_session(
+    request: Request,
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The Stripe portal Session where the courier manages or cancels (D44).
+
+    The portal opens on the subscription's own recorded customer: a caller with
+    no recorded customer has nothing to manage, and opening somebody else's is
+    the worst answer this endpoint could give.
+    """
+    row = repo.get_subscription(principal.user_id)
+    customer = getattr(row, "purchase_id", None) if row else None
+    try:
+        url = portal_session_url(principal.user_id, "/account/billing", customer)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"url": url}
+
+
+@app.get("/account/cost", response_model=CostResponse)
+def get_cost(
+    principal: AuthPrincipal = Depends(get_current_principal),
+    repo: Repo = Depends(get_repo),
+):
+    """The caller's own budget: what is spent, what is left, and which windows hold.
+
+    COST_PLAN's budgets are enforced BEFORE a paid model call is made, and this
+    is the same arithmetic read back for the app to show. An unbounded window
+    answers `null` rather than a fake infinity, and a spent budget answers zero
+    - the guard never lets the remaining go negative.
+    """
+    settings = cost_settings()
+    spend = Spend(
+        courier_daily=repo.cost_spend_since(day_start(), courier_id=principal.user_id),
+        courier_monthly=repo.cost_spend_since(month_start(), courier_id=principal.user_id),
+        tenant_daily=repo.cost_spend_since(day_start()),
+        global_daily=repo.cost_spend_since(day_start()),
+    )
+    return remaining(spend, settings)
 
 
 @app.get("/shifts/{shift_id}/stops", response_model=list[StopResponse])
