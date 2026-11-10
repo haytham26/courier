@@ -488,4 +488,3 @@ Both shapes recorded because they need different owners: A is the app, B is the
 runner, and neither is chased as the other.
 
 **Total Bugs:** 254 | **Open:** 4 | **Fixed:** 213 | **Doing:** 4 | **Testing:** 1 | **Closed:** 2 | **Moved to PARITY:** 30 |
-**Total Bugs:** 254 | **Open:** 4 | **Fixed:** 213 | **Doing:** 4 | **Testing:** 1 | **Closed:** 2 | **Moved to PARITY:** 30 |
