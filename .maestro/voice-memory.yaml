@@ -23,11 +23,14 @@ name: The shift memory is visible and clearable in settings (§22 technique C, B
 # tab dock - run 42350703414 tapped the forget row at y=592, the touch landed
 # on the dock, onPress never fired and the confirm text never appeared. Centred,
 # the row sits mid-viewport and the tap lands on it.
+    # BUG-301: the large AVD's hierarchy dump takes 4-11 s (measured), so the
+    # 20 s scroll budget bought one find at best - see voice-memory.yaml's
+    # own note. Device capability, not a weakened assertion.
 - scrollUntilVisible:
     element:
       id: "settings-remember"
     direction: DOWN
-    timeout: 20000
+    timeout: 60000
     centerElement: true
 # The switch starts on (the default) and a tap turns the shift memory off.
 - extendedWaitUntil:

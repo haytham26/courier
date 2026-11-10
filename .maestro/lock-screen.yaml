@@ -28,11 +28,18 @@ name: "The lock screen's glance - the run's Live Activity (screen 13)"
 # failed at exactly this). The repo's own gesture for a row that is on the
 # screen but not visible is `scrollUntilVisible` (the same one summary.yaml and
 # today-list.yaml use inside the sheet), and it never weakens the tap's target.
+    # BUG-301: the large (Nexus 6) AVD's hierarchy dump takes 4-11 s against
+    # the small one's ~1 s (measured in run 42709298405 / 42724433997), and a
+    # 20 s scroll budget buys a single find+swipe iteration there - the scroll
+    # then reports "No visible element found" at try count 0 while the row is
+    # one swipe away. The budget is a device-capability number, not a quality
+    # threshold: the assertion below is unchanged, the row must still be found
+    # and tapped.
 - scrollUntilVisible:
     element:
       id: "settings-lock-screen"
     direction: DOWN
-    timeout: 20000
+    timeout: 60000
 - tapOn:
     id: "settings-lock-screen"
 - extendedWaitUntil:
