@@ -16,7 +16,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from app.cost_guard import BudgetSpentError, day_start, estimate_usd, verdict_for
+from app.cost_guard import BudgetSpentError, Spend, day_start, estimate_usd, verdict_for
 from app.main import app
 from app.repo import CostEventRow, InMemoryRepo, get_repo
 from tests.test_cost_guard import settings as guard_settings
@@ -40,7 +40,7 @@ def _no_cache_leak():
 
 
 @pytest.fixture
-def repo() -> InMemoryRepo:
+def cost_repo() -> InMemoryRepo:
     return InMemoryRepo()
 
 
@@ -64,16 +64,16 @@ def a_spend(usd: float, *, courier_id: str = COURIER, tenant_id: str | None = No
 class TestTheLedger:
     """One row per call, and the four windows read back from it."""
 
-    def test_nothing_spent_is_zero(self, repo: InMemoryRepo) -> None:
-        assert repo.cost_spend_since(day_start()) == 0.0
+    def test_nothing_spent_is_zero(self, cost_repo: InMemoryRepo) -> None:
+        assert cost_repo.cost_spend_since(day_start()) == 0.0
 
-    def test_a_spend_inside_the_window_is_summed(self, repo: InMemoryRepo) -> None:
-        repo.record_cost_event(a_spend(0.50))
+    def test_a_spend_inside_the_window_is_summed(self, cost_repo: InMemoryRepo) -> None:
+        cost_repo.record_cost_event(a_spend(0.50))
 
-        assert repo.cost_spend_since(day_start(), courier_id=COURIER) == 0.50
+        assert cost_repo.cost_spend_since(day_start(), courier_id=COURIER) == 0.50
 
-    def test_a_spend_before_the_window_is_not(self, repo: InMemoryRepo) -> None:
-        repo.record_cost_event(
+    def test_a_spend_before_the_window_is_not(self, cost_repo: InMemoryRepo) -> None:
+        cost_repo.record_cost_event(
             CostEventRow(
                 courier_id=COURIER,
                 usd_estimate=0.50,
@@ -81,26 +81,26 @@ class TestTheLedger:
             )
         )
 
-        assert repo.cost_spend_since(day_start(), courier_id=COURIER) == 0.0
+        assert cost_repo.cost_spend_since(day_start(), courier_id=COURIER) == 0.0
 
-    def test_the_windows_scope_by_courier(self, repo: InMemoryRepo) -> None:
-        repo.record_cost_event(a_spend(0.50))
-        repo.record_cost_event(a_spend(0.70, courier_id="driver-other"))
+    def test_the_windows_scope_by_courier(self, cost_repo: InMemoryRepo) -> None:
+        cost_repo.record_cost_event(a_spend(0.50))
+        cost_repo.record_cost_event(a_spend(0.70, courier_id="driver-other"))
 
-        assert repo.cost_spend_since(day_start(), courier_id=COURIER) == 0.50
+        assert cost_repo.cost_spend_since(day_start(), courier_id=COURIER) == 0.50
 
-    def test_the_tenants_window_sums_only_the_scoped_rows(self, repo: InMemoryRepo) -> None:
-        repo.record_cost_event(a_spend(0.50, tenant_id="team-a"))
-        repo.record_cost_event(a_spend(0.70, courier_id="driver-other", tenant_id="team-b"))
+    def test_the_tenants_window_sums_only_the_scoped_rows(self, cost_repo: InMemoryRepo) -> None:
+        cost_repo.record_cost_event(a_spend(0.50, tenant_id="team-a"))
+        cost_repo.record_cost_event(a_spend(0.70, courier_id="driver-other", tenant_id="team-b"))
 
-        assert repo.cost_spend_since(day_start(), tenant_id="team-a") == 0.50
+        assert cost_repo.cost_spend_since(day_start(), tenant_id="team-a") == 0.50
 
-    def test_a_replay_is_a_second_row_not_an_overwrite(self, repo: InMemoryRepo) -> None:
-        repo.record_cost_event(a_spend(0.50))
-        repo.record_cost_event(a_spend(0.50))
+    def test_a_replay_is_a_second_row_not_an_overwrite(self, cost_repo: InMemoryRepo) -> None:
+        cost_repo.record_cost_event(a_spend(0.50))
+        cost_repo.record_cost_event(a_spend(0.50))
 
-        assert len(repo.cost_events) == 2
-        assert repo.cost_spend_since(day_start(), courier_id=COURIER) == 1.0
+        assert len(cost_repo.cost_events) == 2
+        assert cost_repo.cost_spend_since(day_start(), courier_id=COURIER) == 1.0
 
 
 class TestTheEndpoint:
@@ -148,11 +148,7 @@ class TestTheWiring:
     """A paid call is refused when the budget is spent - with the window named."""
 
     def test_a_spent_budget_blocks_the_call(self) -> None:
-        verdict = verdict_for(
-            __import__("app.cost_guard", fromlist=["Spend"]).Spend(courier_daily=0.99),
-            0.50,
-            guard_settings(courier_daily_usd=1.0),
-        )
+        verdict = verdict_for(Spend(courier_daily=0.99), 0.50, guard_settings(courier_daily_usd=1.0))
 
         assert verdict.blocked
         error = BudgetSpentError(verdict)
