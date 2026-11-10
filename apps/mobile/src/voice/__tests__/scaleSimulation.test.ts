@@ -159,6 +159,7 @@ interface TurnTrace {
   variant: string;
   file: string;
   sha_verified: boolean;
+  armed_file: string | null;
   gold_intent: string;
   gold_text: string;
   hypothesis: string;
@@ -579,6 +580,16 @@ describe('the A-to-Z voice simulation at scale (founder directive item 4)', () =
     );
   });
 
+  it('the build seam armed the file the run asked for, turn after turn', () => {
+    const answered = traces.filter((trace) => trace.command_published);
+    expect(answered.length).toBeGreaterThanOrEqual(500);
+    for (const trace of answered) {
+      // The path the app resolved is the one this run armed, and it is the
+      // committed set's own file: option C's wiring, asserted per turn.
+      expect(trace.armed_file).toBe(join(REPO_ROOT, trace.file));
+    }
+  });
+
   it('every chatter turn acted on nothing: the false-action count is the failure count', () => {
     const chatter = traces.filter((trace) => trace.gold_intent === 'noop');
     expect(chatter.length).toBeGreaterThanOrEqual(100);
@@ -623,8 +634,11 @@ describe('the A-to-Z voice simulation at scale (founder directive item 4)', () =
     const path = join(REPO_ROOT, turn.file);
     const shaVerified = existsAndMatches(path, turn.sha256);
     // The armed file is the one the seam answers with this turn's transcript.
+    // The flag names it the way the E2E runner's push does: a file:// URI, which
+    // the app's own `audioFileInput` takes as it is (a bare name would be read
+    // from the app's document directory instead).
     process.env.EXPO_PUBLIC_E2E = '1';
-    process.env.EXPO_PUBLIC_E2E_AUDIO_FILE = path;
+    process.env.EXPO_PUBLIC_E2E_AUDIO_FILE = `file://${path}`;
     transcribeMock.mockResolvedValue({ status: 'ok', text: turn.hypothesis, latencyMs: 3 });
 
     const beforeDelivered = delivered.length;
@@ -646,6 +660,11 @@ describe('the A-to-Z voice simulation at scale (founder directive item 4)', () =
     const carried = published.slice(beforePublished);
     const command = carried.length > 0 ? carried[0] : null;
     const routed = routeTurn(turn.hypothesis);
+    // The seam answered for THIS file: the app's own build seam resolved the
+    // path the run armed, and the recorded-utterance seam was handed exactly it.
+    // The LAST call is this turn's (the mock keeps the whole run's history).
+    const armedCalls = transcribeMock.mock.calls as unknown[][];
+    const armed = armedCalls.length > 0 ? textOf(armedCalls[armedCalls.length - 1][0]) : null;
     const spokenCalls = speak.mock.calls.slice(beforeSpoken) as unknown[][];
     const spoken = spokenCalls.length > 0;
     const ack = spoken ? textOf(spokenCalls[0][0]) : null;
@@ -656,6 +675,7 @@ describe('the A-to-Z voice simulation at scale (founder directive item 4)', () =
       variant: turn.variant,
       file: turn.file,
       sha_verified: shaVerified,
+      armed_file: armed,
       gold_intent: turn.gold_intent,
       gold_text: turn.gold_text,
       hypothesis: turn.hypothesis,

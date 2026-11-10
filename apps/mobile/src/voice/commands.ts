@@ -127,8 +127,6 @@ const DELIVERY_PATTERNS: readonly { pattern: RegExp; command: VoiceCommand }[] =
  */
 const SPOKEN_ADDRESS = String.raw`(?<address>\d[\w/\-]*(?:\s+[A-Za-z][\w'\u2019]*)+(?:,\s*[A-Za-z][\w'\u2019]*(?:\s+[A-Za-z][\w'\u2019]*)*)?)`;
 
-const ADDRESS = SPOKEN_ADDRESS;
-
 /**
  * The delivery sentences that carry their address.
  *
@@ -141,22 +139,22 @@ const ADDRESS = SPOKEN_ADDRESS;
 const SPOKEN_DELIVERY_PATTERNS: readonly RegExp[] = [
   // "delivered at 57 Poulson Street, Addington" / "delivering at 490 West Street"
   // (the ear's own variant of the same sentence)
-  new RegExp(String.raw`^(?:delivered|delivering|done)\s+at\s+${ADDRESS}$`, 'i'),
+  new RegExp(String.raw`^(?:delivered|delivering|done)\s+at\s+${SPOKEN_ADDRESS}$`, 'i'),
   // "left it on the porch at 19 Date Crescent, Aidanfield", "put it in the porch at ...",
   // "left at the shop counter at 126 Kivers Road, Burnham" (the `it` is optional)
   new RegExp(
-    String.raw`^(?:left|put|lefted)\s+(?:it\s+)?(?:at|by|in|on|under|behind|inside|next to|beside)\s+(?:the\s+)?(?<place>[\w][\w\s]*?)\s+at\s+${ADDRESS}$`,
+    String.raw`^(?:left|put|lefted)\s+(?:it\s+)?(?:at|by|in|on|under|behind|inside|next to|beside)\s+(?:the\s+)?(?<place>[\w][\w\s]*?)\s+at\s+${SPOKEN_ADDRESS}$`,
     'i',
   ),
   // "dropped it in the letterbox at 490 West Street, Allenton"
   new RegExp(
-    String.raw`^dropped\s+it\s+(?:in|on|at|under|behind|inside)\s+(?:the\s+)?(?<place>[\w][\w\s]*?)\s+at\s+${ADDRESS}$`,
+    String.raw`^dropped\s+it\s+(?:in|on|at|under|behind|inside)\s+(?:the\s+)?(?<place>[\w][\w\s]*?)\s+at\s+${SPOKEN_ADDRESS}$`,
     'i',
   ),
   // "left it with the neighbour at 4 Moore Street, Ashburton", "handed it to the man at ...",
   // "hand it to the man at 3 Perimeter Road, Christchurch Airport"
   new RegExp(
-    String.raw`^(?:left|handed|hand)\s+(?:it\s+)?(?:with|to)\s+(?:the\s+)?[\w][\w\s]*?\s+at\s+${ADDRESS}$`,
+    String.raw`^(?:left|handed|hand)\s+(?:it\s+)?(?:with|to)\s+(?:the\s+)?[\w][\w\s]*?\s+at\s+${SPOKEN_ADDRESS}$`,
     'i',
   ),
 ];
@@ -167,23 +165,35 @@ const SPOKEN_DELIVERY_PATTERNS: readonly RegExp[] = [
  * travels as the sentence the courier said, which is ADR-023's own rule.
  */
 const SPOKEN_FAILURE_PATTERNS: readonly { pattern: RegExp; reason: string | null }[] = [
-  { pattern: new RegExp(String.raw`^no one home\s+at\s+${ADDRESS}$`, 'i'), reason: 'nobody_home' },
+  // "no one home at ...", and the ear's own "nobody answered at 121 Road"
   {
-    pattern: new RegExp(String.raw`^(?:no one|nobody)\s+(?:home|answered)\s+at\s+${ADDRESS}$`, 'i'),
+    pattern: new RegExp(
+      String.raw`^(?:no one|nobody)\s+(?:home|answered)\s+at\s+${SPOKEN_ADDRESS}$`,
+      'i',
+    ),
     reason: 'nobody_home',
   },
-  { pattern: new RegExp(String.raw`^cannot get in\s+at\s+${ADDRESS}$`, 'i'), reason: 'no_access' },
   {
-    pattern: new RegExp(String.raw`^(?:it'?s\s+)?locked out\s+at\s+${ADDRESS}$`, 'i'),
+    pattern: new RegExp(String.raw`^cannot get in\s+at\s+${SPOKEN_ADDRESS}$`, 'i'),
+    reason: 'no_access',
+  },
+  {
+    pattern: new RegExp(String.raw`^(?:it'?s\s+)?locked out\s+at\s+${SPOKEN_ADDRESS}$`, 'i'),
     reason: 'door_locked',
   },
-  { pattern: new RegExp(String.raw`^dog in the yard\s+at\s+${ADDRESS}$`, 'i'), reason: null },
+  {
+    pattern: new RegExp(String.raw`^dog in the yard\s+at\s+${SPOKEN_ADDRESS}$`, 'i'),
+    reason: null,
+  },
 ];
 
 /** The skips that carry their address: now, later, or the whole street. */
 const SPOKEN_SKIP_PATTERNS: readonly RegExp[] = [
-  new RegExp(String.raw`^(?:skip this one|skip the street)\s+(?:at\s+|for\s+)?${ADDRESS}$`, 'i'),
-  new RegExp(String.raw`^come back to\s+${ADDRESS}\s+later$`, 'i'),
+  new RegExp(
+    String.raw`^(?:skip this one|skip the street)\s+(?:at\s+|for\s+)?${SPOKEN_ADDRESS}$`,
+    'i',
+  ),
+  new RegExp(String.raw`^come back to\s+${SPOKEN_ADDRESS}\s+later$`, 'i'),
 ];
 
 /**
@@ -193,9 +203,9 @@ const SPOKEN_SKIP_PATTERNS: readonly RegExp[] = [
  * to hand the whole phrase to the address engine.
  */
 const SPOKEN_ADD_PATTERNS: readonly RegExp[] = [
-  new RegExp(String.raw`^add a stop at\s+${ADDRESS}$`, 'i'),
-  new RegExp(String.raw`^also got one at\s+${ADDRESS}$`, 'i'),
-  new RegExp(String.raw`^priority parcel for\s+${ADDRESS}$`, 'i'),
+  new RegExp(String.raw`^add a stop at\s+${SPOKEN_ADDRESS}$`, 'i'),
+  new RegExp(String.raw`^also got one at\s+${SPOKEN_ADDRESS}$`, 'i'),
+  new RegExp(String.raw`^priority parcel for\s+${SPOKEN_ADDRESS}$`, 'i'),
 ];
 
 /** The break a courier starts, in the words they say it in. */
