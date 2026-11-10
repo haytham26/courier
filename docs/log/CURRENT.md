@@ -373,6 +373,109 @@ Queue state: #278 ready to merge; the held-out measurement lane (real STT on the
 new shared list) and the >=500-turn simulation are next; P4's 8 large/200 %
 baselines now have their AVD.
 
+---
+
+## 2026-11-10: CORRECTION — PR #278's merge lost the change set; PR #289 restores it and must prove the legs green
+
+**The entry above this one claimed a green 4-leg run on head a1435cd. That was
+wrong, and it is corrected here rather than left standing.** The run I quoted
+(Android E2E 42697447248 on head b9db49e) had **every leg SKIPPED** by the
+changes filter - it was green because nothing ran. Two separate things went
+wrong, and both are now fixed:
+
+1. The merge that brought origin/main into the #278 branch (b9db49e) ran with a
+   dirty tree and took main's side for every path the branch had changed, so
+   the matrix, the AuthProvider fix, the sheet geometry, the map veils, the
+   settings reorder and their tests **never reached main**. The last good tree
+   was a9a74b7; PR #289 restores exactly those paths onto main.
+2. No 4-leg green run has EVER existed on a head whose tree carries the matrix
+   and the fixes together: the last real 4-leg run (42683729080 on 1ab3002) was
+   api-35-small success, api-34-small success, api-34-large cancelled,
+   api-35-large failure. The run on a9a74b7 (42697058642) was cancelled as
+   superseded before it could finish.
+
+**So BUG-270 and BUG-300 are NOT proven closed on main.** They stay "fixed" in
+BUGS.md only if PR #289's four legs and A1 are all green on the restored tree;
+if any leg is red, the rows go back to doing in the follow-up and the queue
+holds until they are green. This is the §17 discipline applied to myself: a
+vacuous green is not a green, and a merge is not evidence.
+
+---
+
+## 2026-11-10 (later): the 60 s scroll budget fixed three of the four flaky flows; import.yaml is BUG-301 alone
+
+PR #289 head e301731, Android E2E run **42730814610**: api-34-small, api-35-small
+and A1 green; both large legs red on **`.maestro/import.yaml` only**. The commit
+before it (the scroll budget 20 s -> 60 s in voice-memory.yaml and
+lock-screen.yaml, with the measured 4-11 s dump times named in the flow) fixed
+voice-memory, stops and today-fail on the large legs — those are green again.
+
+The remaining failure has FOUR different manifestations across the attempts
+(the Maestro process death mid-tap; a death after the flow's LAST command,
+during Maestro's own log purge; a cut-off typing step; a note-text mismatch),
+and in every dump the app state is correct (window.xml on today-screen, the
+import sheet already dismissed, relaunches=0, no crash in logcat) — 20 of 21
+flows green on both large legs. It is the longest flow on the slowest device,
+and it is a harness defect: **BUG-301**, already filed with the evidence and
+the fix candidates (the flow's exit shape, the large legs' AVD memory, an
+upstream Maestro report with the truncated log).
+
+**PR #289 is NOT merged and BUG-270 stays `doing`** until a large leg is green
+for a whole run. Its non-E2E checks are green (CI 42724433929: lint, typecheck,
+test; Quality gates 42724433919; CodeQL 42724434166), and the change set it
+restores is proven by 870 app tests / 103 suites, tsc, eslint and the script
+tests. The evidence comment on the PR names all of it.
+
+Next in the queue (unaffected): the voice measurement lane (real STT on the
+shared held-out list) is running; the scale-tests, offline and 500-turn
+simulation lanes follow it.
+---
+
+## 2026-11-10: PR #290 merged — the voice numbers are MEASURED, and they are not good yet
+
+`5ac2c44` (the ritual: evidence comment, tag `archive/voice/heldout-measure`, branch
+deleted, ls-remote empty, deletion check empty). The measurement lane re-scored
+both manifests on the real judge; the held-out set (the backend's shared list,
+600 built utterances) carries the table, every number recomputed independently
+from `per_utterance.csv`:
+
+| target | slice | measured | budget | verdict |
+|---|---|---|---|---|
+| quiet WER | `en_nz_quiet`, 120 rows | 14.75 % | ≤ 5 % | **FAIL** |
+| van WER | `en_nz_van`, 360 rows (0 dB 36.88 / 5 dB 26.12 / 10 dB 21.07) | 28.02 % | ≤ 10 % | **FAIL** |
+| intent on STT output | the three English slices | 1.67 % (10/600) | ≥ 95 % | **FAIL** |
+| address exact | 75 address-bearing scripts | 0/75 | ≥ 95 % | **FAIL** |
+| false-action rate | 600 transcribed rows | 0/600 | ≤ 0.5 % | **PASS** |
+| corrections / p95 latency | — | not measured | — | **named, never zeros** |
+
+Honest boundaries from the lane, all recorded in the evidence: the held-out run
+transcribed the SAME 600 files as the main run (verified by id), so its WER legs
+are the set's own acoustic difficulty measured once — the held-out evidence is
+the intent/address/ceiling legs on held-out streets; M1 on our pipeline, M2 on the
+product's address engine, M3 on commands (the open-data speakers never speak a
+command), M4/M5 wake word, M6 latency, M7 battery, M8 TTS and ADR-028's
+real-sentence set are all NOT MEASURED and stay named. Fully offline is proven
+twice (the scorer's only URL is the never-fetched judge URL; the whole run in
+2.8 s with every proxy pointed at a closed port).
+
+**BUG-301 filed** (the lane's red-first fix, committed on #290):
+`eval_audio._model_dirs` tested a directory with `Path.glob(...)`, which answers a
+generator — always truthy — so an unpack killed halfway left no encoder and the
+whole measurement was published with no WER. Fixed, test-pinned, row filed in this
+commit. My large-leg harness flake is renumbered **BUG-302** (no collision with
+the lane's committed number).
+
+**FINAL_REPORT's voice row is now the measured truth: 6 -> 4 of 10** with the
+table above as the headline. The directive's ≥9.5 target is far away, and the
+gap is now a measured fact rather than a hope: the next levers are documented in
+the evidence (contextual biasing without the held-out keys, the address
+normaliser, the command-shaped slices, and ADR-028's sentences).
+
+Also carried: the two legs that were red on #290's first attempt (A1, the
+recordings) failed on the runner infra in the same window that took my own branch
+down and are green on the §17.4 re-runs — recorded so nobody re-reads them as a
+diff failure. The lane's environment note (a dead worktree registration released,
+0 unique commits, admin dir archived) is in its report.
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
