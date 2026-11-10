@@ -400,6 +400,35 @@ if any leg is red, the rows go back to doing in the follow-up and the queue
 holds until they are green. This is the §17 discipline applied to myself: a
 vacuous green is not a green, and a merge is not evidence.
 
+---
+
+## 2026-11-10 (later): the 60 s scroll budget fixed three of the four flaky flows; import.yaml is BUG-301 alone
+
+PR #289 head e301731, Android E2E run **42730814610**: api-34-small, api-35-small
+and A1 green; both large legs red on **`.maestro/import.yaml` only**. The commit
+before it (the scroll budget 20 s -> 60 s in voice-memory.yaml and
+lock-screen.yaml, with the measured 4-11 s dump times named in the flow) fixed
+voice-memory, stops and today-fail on the large legs — those are green again.
+
+The remaining failure has FOUR different manifestations across the attempts
+(the Maestro process death mid-tap; a death after the flow's LAST command,
+during Maestro's own log purge; a cut-off typing step; a note-text mismatch),
+and in every dump the app state is correct (window.xml on today-screen, the
+import sheet already dismissed, relaunches=0, no crash in logcat) — 20 of 21
+flows green on both large legs. It is the longest flow on the slowest device,
+and it is a harness defect: **BUG-301**, already filed with the evidence and
+the fix candidates (the flow's exit shape, the large legs' AVD memory, an
+upstream Maestro report with the truncated log).
+
+**PR #289 is NOT merged and BUG-270 stays `doing`** until a large leg is green
+for a whole run. Its non-E2E checks are green (CI 42724433929: lint, typecheck,
+test; Quality gates 42724433919; CodeQL 42724434166), and the change set it
+restores is proven by 870 app tests / 103 suites, tsc, eslint and the script
+tests. The evidence comment on the PR names all of it.
+
+Next in the queue (unaffected): the voice measurement lane (real STT on the
+shared held-out list) is running; the scale-tests, offline and 500-turn
+simulation lanes follow it.
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
