@@ -14,7 +14,8 @@ one box each. Mid-Canterbury (Ashburton, Rakaia east) is out: those are not
 courier territory for this app, and the wide territorial-authority boxes of
 scripts/data/fetch-linz.py swallowed them.
 
-Run: python scripts/data/fetch-routing-pool.py   (needs LINZ_LDS_API_KEY in .env.local)
+Run: uv run --with httpx python scripts/data/fetch-routing-pool.py
+(needs LINZ_LDS_API_KEY in .env.local)
 Licence: CC BY 4.0 - sourced from the LINZ Data Service.
 """
 
@@ -25,7 +26,6 @@ import os
 import sys
 import time
 import urllib.parse
-import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -64,10 +64,18 @@ KEY = api_key()
 
 
 def wfs(params: dict) -> dict:
+    """Fetches one WFS page through httpx, like `fetch-linz.py` does: the
+    Semgrep rule on a dynamic URL is right that `urllib` can read a `file://`
+    path, and httpx cannot - and this URL is built from the key and a cell box
+    the script itself owns."""
+    import httpx
+
     url = f"{LDS_BASE};key={KEY}/wfs?" + urllib.parse.urlencode(params)
-    request = urllib.request.Request(url, headers={"User-Agent": "courier-eval/1.0"})
-    with urllib.request.urlopen(request, timeout=180) as response:
-        return json.loads(response.read())
+    with httpx.Client(timeout=180.0, follow_redirects=True) as client:
+        response = client.get(url)
+    if response.status_code != 200:
+        raise SystemExit(f"the WFS answered HTTP {response.status_code}")
+    return response.json()
 
 
 def cells(bbox: tuple[float, float, float, float]) -> list[tuple[float, float, float, float]]:
