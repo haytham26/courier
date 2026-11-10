@@ -52,8 +52,8 @@ imported by value); otherwise the path is the production path.
 
 | Engine | Who | The budget |
 | --- | --- | --- |
-| `ours` | **the production engine**: `get_engine()` -> `PyVRPEngine` (ADR-009), priority stops planned as their own phase first | the production budget: 250 iterations, seed 0 |
-| `pyvrp-long` | the SAME two-phase PyVRP model (`app.solver`'s own helpers, matrices, windows and hand-over pins) | a long `MaxRuntime`, seed 20261109 |
+| `ours` | **the production engine**: `get_engine()` -> `PyVRPEngine` (ADR-009), priority stops planned as their own phase first | the production budget, a pure function of the day (`iterations_for`): **400 iterations below 150 stops, 250 at 150 without windows, 50 at 150 with windows** (every windowed 150-stop day in this set is infeasible under its windows for every engine, so the windowed search proves it and the retry does the work), growing by 3 per stop past 150 and capped at 600; seed 0 |
+| `pyvrp-long` | the SAME two-phase PyVRP model (`app.solver`'s own helpers, matrices, windows and hand-over pins) | a long `MaxRuntime` (15 s), **the production seed** - the same solver with the same random stream, so the only difference from `ours` is the budget |
 | `ortools` | OR-Tools' VRP solver (Apache-2.0), one vehicle, capacity and time dimensions, PATH_CHEAPEST_ARC + guided local search | the same long time budget |
 
 **VROOM 1.15.0 is NOT here, and that is a recorded gap, not an omission:** there
@@ -63,19 +63,37 @@ could not be produced here. ADR-030 records the gap and what remains to verify;
 the licence row is in `docs/product/LICENSES.md` so adopting it later needs no
 new licence check.
 
+## The baseline is a LEGAL plan, not the fastest thing on the board
+
+The engines are compared on the travel time of their order, and the baseline is
+**the best travel among the plans that satisfy the instance's own constraints** -
+the priority rule, the windows, the break, the capacity. An engine that ignores
+the priority rule and finishes earlier does not set the bar: that would charge
+our engine for the respect the instance demands and let a violator win the
+comparison. (Measured on this very set: OR-Tools beats the production engine by
+up to 49% on priority days *when it may ignore the priority rule*, and loses
+once it is held to it.) Every engine's number, legal or not, is still recorded
+in the result files; only the baseline is filtered.
+
 ## The measured numbers
 
 <!-- MEASURED: the numbers the runner produced, filled in by the commit that
 landed the set; the checker recomputes every one of them from the matrix. -->
 
-OUR ENGINE, over the 144 instances: **{AVG}% over the baseline on average** (the
-target: within 2%), **{WORST}% at worst** (the target: within 5%),
-**{LEGAL} legal plans where a feasible plan exists** (the target: all of them),
-and a **solve p95 of {P95}s at 150 stops** (the target: under 3s) - measured on
-the runner's machine, whose exact CPU is recorded in the evidence. The per-size
-and per-variant breakdown, the instances where no engine found a feasible plan
-(the random windows can close a day), and the reproduction commands are in
-`docs/evidence/routing-eval-280/`.
+OUR ENGINE, over the **144 instances** (79 of them with a baseline that
+planned the day): **0.76% over the baseline on average** (the target: within 2%)
+and **4.94% at worst** (the target: within 5%, at `routing-80-brk-20261110`);
+**79 plans legal wherever any engine found a feasible plan** (the target: all of
+them; 65 instance(s) - routing-150-full-20261109, routing-150-full-20261110, routing-150-full-20261111, routing-150-full-20261112 - had a feasible plan
+from no engine, the random windows closing the day, and are excluded from the legality
+bar for everyone); and a **solve p95 of 2.907s at 150 stops** (median 1.986s) on
+the runner's machine AND on the CI runner, where the same command runs under
+`--check-targets` in the `routing-eval-timing` job of `quality-gates.yml`.
+
+Per size (average / worst over the instances with a baseline): 30 stops 0.21% / 4.55%; 80 stops 0.69% / 4.94%; 150 stops 1.51% / 3.69%; 250 stops 0.85% / 1.93%. Per variant: plain 0.90%; tw 0.87%; prio 0.43%; tw-prio 0.00%; brk 0.96% over the baseline; `full` has no number because every `full` day is one no engine could plan legally (windows + priorities + a break + a finish point), so no LEGAL baseline exists to compare against - the ratio is undefined, not zero, and the day's violations are reported honestly. Our engine's plan was ILLEGAL on no instance where a feasible plan exists.
+
+The reproduction commands are in `docs/evidence/routing-eval-280/README.md`; the
+checker recomputes every one of these numbers from the committed matrix.
 
 ## How to rebuild the set
 

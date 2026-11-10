@@ -1,6 +1,6 @@
 # D8 error analysis on the TUNE streets (the 80 % split; held-out streets excluded)
 
-- Date: 2026-11-08
+- Date: 2026-11-10
 - Sample: 400 addresses per area (seed 20261108) on NON-held-out streets, 6000 checks; accuracy 99.97% (5998/6000).
 - Held-out list: 1360 streets (`fixtures/linz-holdout-streets.txt`, seed 20261108).
 

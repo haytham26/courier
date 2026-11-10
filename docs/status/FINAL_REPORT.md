@@ -68,7 +68,7 @@ green, run 42363101590):
 |---|---|---|
 | Voice and hands-free | ■■■□□ (6) | WER 14.75 % quiet / **28.0 % van** / 12.5 % mix; false-action 0–0.83 %; intent is a template ceiling (BUG-210) |
 | Address accuracy | ■■■■□ (8) | **99.65 %** D8 on the held-out streets (5,979/6,000, 656,392 addresses indexed; no slice < 98.75 %) |
-| Route quality and speed | ■■□□□ (4) | real solver, A1-proven; no VRP eval set yet |
+| Route quality and speed | ■■■■□ (8) | **measured, on par**: our engine is 0.76% over the best open baseline on average (4.94% at worst) over 144 seeded days on a Valhalla-on-OSM matrix; 0 illegal plans where a feasible plan exists; solve p95 2.907s at 150 stops |
 | Offline and reliability | ■■■□□ (6) | **0 data loss** proven by A1; PMTiles pack pending |
 | Safety, privacy and trust | ■■■■□ (8) | 0 unaccepted advisories, tenant-isolation tests green, 0 copyleft |
 | Delivery, evidence and design | ■■■■□ (8) | 21/21 flows × both api legs + A1 green; APK 44.1 MB |

@@ -1,0 +1,74 @@
+{
+ "id": "routing-30-tw-prio-20261109",
+ "size": 30,
+ "variant": "tw-prio",
+ "seed": 20261109,
+ "area": "christchurch",
+ "stop_count": 30,
+ "windows": 8,
+ "priorities": 7,
+ "with_break": false,
+ "with_finish": false,
+ "engines": {
+  "pyvrp-long": {
+   "order": [],
+   "planned": false
+  },
+  "ortools": {
+   "order": [],
+   "planned": false
+  },
+  "ours": {
+   "order": [
+    210,
+    219,
+    150,
+    94,
+    194,
+    117,
+    45,
+    30,
+    13,
+    110,
+    5,
+    112,
+    202,
+    17,
+    52,
+    156,
+    60,
+    175,
+    88,
+    199,
+    197,
+    91,
+    79,
+    164,
+    247,
+    226,
+    137,
+    24,
+    231,
+    136
+   ],
+   "distance_m": 388963.0,
+   "duration_s": 50530.0,
+   "window_violations": 6,
+   "break_violation": false,
+   "break_position": null,
+   "break_start_at": null,
+   "priority_violations": 0,
+   "over_capacity": false,
+   "engine": "ours",
+   "travel_m": 391401,
+   "travel_s": 31285,
+   "wall_s": 1.0123,
+   "planned": true
+  }
+ },
+ "wall_s": {
+  "ours": 1.0123
+ },
+ "best_travel_s": 31285,
+ "feasible_engines": []
+}

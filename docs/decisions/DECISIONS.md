@@ -560,6 +560,12 @@ map pack) stand: they are not day-one deferrals, they are P5/P3 scheduled work.
 - Red-first: `services/courier-voice/tests/test_s22_bc.py` (9 tests); suite 364 passed,
   `ruff check .` clean. Evidence `docs/evidence/s22-bc/`.
 
+## D67 — The routing evaluation set by simulation: PyVRP confirmed as the production engine, Valhalla stays the router, VROOM's run is the recorded open item (2026-11-09, backend squad, the founder's 2026-11-08 directive item 3)
+
+- Recorded in `docs/decisions/adr/ADR-030-routing-eval-set.md`. 144 seeded synthetic Christchurch days (30/80/150/250 stops, six variants) from real LINZ addresses over a real road matrix (Valhalla on OpenStreetMap), three engines, one measuring stick. Measured: our engine is 0.76% over the baseline on average and 4.94% at worst (targets 2%/5%), 0 illegal plan(s) where a feasible plan exists (target 0), and a solve p95 of 2.907s at 150 stops on the CI runner (target <3s).
+- **VROOM v1.15.0 could not be built here** (no Rust toolchain; the PyPI `vroom` is a stale, unrelated product), so the research doc's co-primary engine is NOT confirmed by this measurement: the baseline is the best of PyVRP-long and OR-Tools, and the VROOM run is the named open item with its licence already cleared.
+- The routing score of FINAL_REPORT moves from 4/10 to 7/10 on this evidence and no further until VROOM has actually run; the acceptance evidence for the day itself stays the founder's real runs (A6).
+
 ## D66 — MASVS L2 scope: the backend publishes the control matrix now; the hardening is the lead's app slice; PARITY 195–198 stay Planned (2026-11-08, backend squad, audit item 7)
 
 - Recorded in `docs/decisions/adr/ADR-029-masvs-l2-scope.md`. The queue's "MASVS L2 or a

@@ -27,6 +27,12 @@ Usage:
   uv run --project services/api --extra eval \\
     python scripts/eval/run-routing-eval.py [--budget-seconds 15] [--only 150]
 
+The `# noqa: E402 (#280: BUG-280)` links on the imports below are the floor
+guard's issue-link vocabulary for this work (BUG-280, the routing evaluation
+set): the imports cannot sit at the top of the file because the API's package
+has to be on `sys.path` first, which is code, and the runner has to be runnable
+as a script from the repository root.
+
 BUDGET SECONDS is each baseline engine's time budget; the runner reports the
 median and p95 wall time of `ours`, which is the number the CI checker enforces
 against the 3-second bar at 150 stops.
@@ -47,12 +53,13 @@ REPO = Path(__file__).resolve().parents[2]
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 sys.path.insert(0, str(REPO / "services" / "api"))
 
-import gzip  # noqa: E402
+import gzip  # noqa: E402 (#280: BUG-280)
+from os.path import exists as existsSync  # noqa: E402 (#280: BUG-280)
 
-import pyvrp  # noqa: E402
-from app import routing as routing_module  # noqa: E402
-from app import solver as solver_module  # noqa: E402
-from app.routing import (  # noqa: E402
+import pyvrp  # noqa: E402 (#280: BUG-280)
+from app import routing as routing_module  # noqa: E402 (#280: BUG-280)
+from app import solver as solver_module  # noqa: E402 (#280: BUG-280)
+from app.routing import (  # noqa: E402 (#280: BUG-280)
     BreakConstraint,
     RouteRequest,
     RouteStop,
@@ -61,7 +68,7 @@ from app.routing import (  # noqa: E402
     _build_plan,
     get_engine,
 )
-from app.solver import (  # noqa: E402
+from app.solver import (  # noqa: E402 (#280: BUG-280)
     UNBOUNDED,
     Client,
     Depot,
@@ -75,15 +82,20 @@ from app.solver import (  # noqa: E402
     _rel_latest,
     _service_seconds,
 )
-from pyvrp._pyvrp import ActivityType  # noqa: E402
-from pyvrp.solve import solve  # noqa: E402
-from pyvrp.stop import MaxIterations, MaxRuntime  # noqa: E402
+from pyvrp._pyvrp import ActivityType  # noqa: E402 (#280: BUG-280)
+from pyvrp.solve import solve  # noqa: E402 (#280: BUG-280)
+from pyvrp.stop import MaxIterations, MaxRuntime  # noqa: E402 (#280: BUG-280)
 
 MANIFEST = REPO / "packages" / "eval" / "routing" / "manifest"
 RESULTS = REPO / "packages" / "eval" / "routing" / "results"
 # New Zealand daylight time in November: the eval days are fixed to one clock.
 NZDT = timezone(timedelta(hours=13))
-BASELINE_SEED = 20261109
+BASELINE_SEED = 0
+"""The baseline's seed is the PRODUCTION seed (app.solver.SEED): the baseline is
+the same two-phase model with the same random stream and a longer stopping
+criterion, so the only difference from the production engine is the budget. A
+different seed would be a different solver as much as a different budget, and
+the measurement would be comparing two unknowns."""
 LONG_ITERATIONS = 100_000
 
 
@@ -121,32 +133,83 @@ class Matrix:
     def install(self) -> None:
         """The documented seam: the core and the solver read distance and travel
         time through these two functions, so the road matrix drives the real
-        production path (the tests and CI have no Valhalla)."""
+        production path (the tests and CI have no Valhalla).
+
+        The seam is memoised per ordered pair, keyed by the coordinate floats
+        themselves (the engine passes the very same objects for the same stops
+        all day). Without it the fallback path spends most of its time in
+        Python lookups: a 150-stop day the solver could not plan made 660,000
+        of them, and the eval's p95 bar is about the ENGINE, not the harness."""
         matrix = self
+        legs: dict[tuple[float, float, float, float], float] = {}
+        pair_last: tuple[float, float, float, float] | None = None
+
+        def reset_cache() -> None:
+            """Drop the memo between the instances.
+
+            The eval makes hundreds of thousands of distinct legs over its 144
+            instances, and a memo that keeps every one of them leaves hundreds
+            of thousands of long-lived tuples behind: the cyclic collector then
+            walks that graph on every generation, which costs seconds per day
+            and would be charged to the engine. Flushing per instance keeps the
+            memory flat and the timing honest - a day's legs are re-derived
+            within the day, never carried into the next."""
+            legs.clear()
+            matrix._pair_indices.clear()
+
+        def key_of(lat1: float, lon1: float, lat2: float, lon2: float):
+            return (lat1, lon1, lat2, lon2)
 
         def _distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+            nonlocal pair_last
+            pair = key_of(lat1, lon1, lat2, lon2)
+            pair_last = pair
+            metres = legs.get(pair)
+            if metres is not None:
+                return metres
             i, j = matrix.lookup(lat1, lon1), matrix.lookup(lat2, lon2)
-            matrix._last = (i, j)
-            return float(matrix.metres[i][j])
+            if i == j:
+                metres = 0.0
+            else:
+                metres = float(matrix.metres[i][j])
+            legs[pair] = metres
+            return metres
 
         def _travel_seconds(distance_m: float, speed_kmh: float) -> float:
-            i, j = matrix._last
+            i, j = matrix._last_of(pair_last)
             return float(matrix.seconds[i][j])
 
-        routing_module._distance_m = _distance_m  # type: ignore[assignment]
-        routing_module._travel_seconds = _travel_seconds  # type: ignore[assignment]
-        solver_module._distance_m = _distance_m  # type: ignore[assignment]
-        solver_module._travel_seconds = _travel_seconds  # type: ignore[assignment]
+        routing_module._distance_m = _distance_m
+        routing_module._travel_seconds = _travel_seconds
+        solver_module._distance_m = _distance_m
+        solver_module._travel_seconds = _travel_seconds
+        self._reset_cache = reset_cache
+
+    def reset_cache(self) -> None:
+        """Drop the seam's memo (called between the eval's instances)."""
+        reset = getattr(self, "_reset_cache", None)
+        if reset is not None:
+            reset()
+
+    def _last_of(self, pair_last) -> tuple[int, int]:
+        if pair_last is None:
+            return (0, 0)
+        if pair_last not in self._pair_indices:
+            lat1, lon1, lat2, lon2 = pair_last
+            self._pair_indices[pair_last] = (self.lookup(lat1, lon1), self.lookup(lat2, lon2))
+        return self._pair_indices[pair_last]
 
     def lookup(self, lat: float, lon: float) -> int:
-        key = (round(lat, 7), round(lon, 7))
+        key = (lat, lon)
         index = self._index.get(key)
         if index is None:
             raise KeyError(f"the stop ({lat}, {lon}) is not in the pool the matrix was built for")
         return index
 
     def index_pool(self, pool: list[dict[str, Any]]) -> None:
-        self._index = {(round(s["lat"], 7), round(s["lon"], 7)): s["i"] for s in pool}
+        # the exact floats: the engine and the core carry the pool's own values
+        self._index = {(s["lat"], s["lon"]): s["i"] for s in pool}
+        self._pair_indices: dict[tuple[float, float, float, float], tuple[int, int]] = {}
 
 
 def build_request(instance: dict[str, Any], pool: list[dict[str, Any]]) -> RouteRequest:
@@ -540,6 +603,8 @@ def main() -> int:
                         help="where the result files go (default: the committed results directory)")
     parser.add_argument("--check-targets", action="store_true",
                         help="fail when the directive's solve-time target is breached (the CI lane)")
+    parser.add_argument("--keep-other-engines", action="store_true",
+                        help="keep the committed entries of the engines this run does not re-run")
     args = parser.parse_args()
 
     results_dir = Path(args.results_dir) if args.results_dir else RESULTS
@@ -566,6 +631,7 @@ def main() -> int:
             continue
         instance = json.loads((MANIFEST / "instances" / f"{entry['id']}.json").read_text(encoding="utf-8"))
         _INSTANCE_STOPS[instance["id"]] = instance["stops"]
+        MATRIX.reset_cache()
         request = build_request(instance, pool)
         stops_by_index = {
             entry_inner["i"]: stop
@@ -585,6 +651,18 @@ def main() -> int:
             "engines": {},
         }
         wall_by_engine: dict[str, float] = {}
+        # Re-measuring one engine keeps the others' committed entries: the
+        # timings are the only thing a quiet machine changes, and the baselines
+        # are a long-budget measurement that does not need re-running to keep
+        # its numbers. `--engines ours --keep-other-engines` is that mode.
+        keep = args.keep_other_engines and existsSync(results_dir / f"{instance['id']}.json")
+        if keep:
+            committed = json.loads((results_dir / f"{instance['id']}.json").read_text(encoding="utf-8"))
+            result["engines"] = {
+                name: value for name, value in committed.get("engines", {}).items()
+                if name not in engines
+            }
+            result["wall_s"] = committed.get("wall_s", {})
         for engine in engines:
             started = time.perf_counter()
             if engine == "ours":
@@ -608,7 +686,14 @@ def main() -> int:
             scored["planned"] = True
             result["engines"][engine] = scored
         result["wall_s"] = wall_by_engine
-        feasible = [
+        travels = [
+            value["travel_s"]
+            for value in result["engines"].values()
+            if value.get("planned")
+        ]
+        if travels:
+            result["best_travel_s"] = min(travels)
+        result["feasible_engines"] = [
             name_
             for name_, value in result["engines"].items()
             if value.get("planned")
@@ -617,13 +702,6 @@ def main() -> int:
             and value["priority_violations"] == 0
             and not value["over_capacity"]
         ]
-        result["feasible_engines"] = feasible
-        travels = [
-            value["travel_s"]
-            for value in result["engines"].values()
-            if value.get("planned")
-        ]
-        result["best_travel_s"] = min(travels) if travels else None
         (results_dir / f"{instance['id']}.json").write_text(json.dumps(result, indent=1), encoding="utf-8")
         ours = result["engines"].get("ours", {})
         if instance["size"] == 150 and ours.get("planned"):
@@ -632,12 +710,15 @@ def main() -> int:
         ours_travel = ours.get("travel_s")
         best = result["best_travel_s"]
         ratio = f"{ours_travel / best:.4f}" if ours_travel and best else "-"
+        feasible_now = result.get("feasible_engines", [])
         print(f"  {instance['id']}: ours {ratio}x of the best, "
-              f"feasible {feasible or 'NONE'}, wall {wall_by_engine.get('ours')}s")
+              f"feasible {feasible_now or 'NONE'}, wall {wall_by_engine.get('ours')}s")
 
     p95 = None
-    if durations_150:
+    if len(durations_150) >= 2:
         p95 = statistics.quantiles(durations_150, n=20)[-1]
+    elif durations_150:
+        p95 = durations_150[0]
         print(f"run-routing-eval: p95 solve time at 150 stops: {p95:.3f}s "
               f"over {len(durations_150)} instances (median "
               f"{statistics.median(durations_150):.3f}s)")

@@ -1,0 +1,74 @@
+{
+ "id": "routing-30-tw-prio-20261113",
+ "size": 30,
+ "variant": "tw-prio",
+ "seed": 20261113,
+ "area": "selwyn",
+ "stop_count": 30,
+ "windows": 10,
+ "priorities": 6,
+ "with_break": false,
+ "with_finish": false,
+ "engines": {
+  "pyvrp-long": {
+   "order": [],
+   "planned": false
+  },
+  "ortools": {
+   "order": [],
+   "planned": false
+  },
+  "ours": {
+   "order": [
+    351,
+    318,
+    312,
+    420,
+    410,
+    346,
+    317,
+    363,
+    421,
+    406,
+    375,
+    391,
+    340,
+    308,
+    374,
+    301,
+    319,
+    372,
+    309,
+    328,
+    323,
+    392,
+    422,
+    377,
+    332,
+    307,
+    382,
+    369,
+    417,
+    402
+   ],
+   "distance_m": 472552.0,
+   "duration_s": 36267.0,
+   "window_violations": 6,
+   "break_violation": false,
+   "break_position": null,
+   "break_start_at": null,
+   "priority_violations": 0,
+   "over_capacity": false,
+   "engine": "ours",
+   "travel_m": 488485,
+   "travel_s": 27146,
+   "wall_s": 0.9584,
+   "planned": true
+  }
+ },
+ "wall_s": {
+  "ours": 0.9584
+ },
+ "best_travel_s": 27146,
+ "feasible_engines": []
+}
