@@ -100,6 +100,27 @@ If the same gesture or tap passes in one flow and fails in another of the same r
 
 Example (BUG-061 family, 2026-10-25): the first Slide to Deliver after a cold launch did not deliver, while the identical swipe in the next flow did.
 
+### 13.0 The merge-completeness guard (the founder directive 2026-11-10, item 0)
+
+PR #278's merge silently dropped the BUG-270/300 change set: the merge that
+brought origin/main into the branch ran with a dirty tree and took main's side
+for every path the branch had changed, and nothing in the ritual caught it — the
+register even said "fixed" for a change that was not on main. So the ritual now
+ends with a proof, not a hope:
+
+```
+node scripts/ci/check-merge-completeness.mjs <merge-commit>
+```
+
+For every path the PR changed, the merge result's blob must be the PR head's
+blob. A path that differs is DROPPED (main never touched it — a hard failure, the
+merge lost the change) or RESOLVED-WITHOUT-RECORD (main touched it too — the human
+resolution must be recorded in `scripts/ci/merge-resolutions.json` and replayed
+with `--resolved <path>`, so an exception is a decision on the record, not an
+oversight). The same check runs against the last 40 merges of origin/main in the
+script suite, with the record, so the debt is paid down once and never regrows.
+Until the check is green, the ritual is not done: the merge is either re-done or
+the PR is re-merged.
 ## 13. Branch safety: handoffs, local commits and merges of main
 
 1. **A handoff claim is verified on origin before it is used.** "The fix is on #N" means: `git ls-remote origin refs/heads/<branch>` shows a SHA, and `git branch -r --contains <sha>` lists `origin/<branch>`. If not, the claim is false; the fix is local only and is pushed first.
