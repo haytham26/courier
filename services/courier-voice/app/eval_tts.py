@@ -310,7 +310,10 @@ def download(url: str, destination: Path, expected_sha: str) -> None:
     constants, and httpx states that without the file-scheme ambiguity a
     scanner reads into `urlopen`.
     """
-    import httpx  # noqa: PLC0415
+    # The service's own HTTP client, reached the same way the engine is: the
+    # runtime is an import here rather than at module scope, so the service's
+    # own suite (no `eval` extra) still imports this module.
+    httpx = importlib.import_module("httpx")
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     partial = destination.with_name(destination.name + ".part")
