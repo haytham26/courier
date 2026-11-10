@@ -273,6 +273,29 @@ export interface ApiPaths {
       };
     };
   };
+  '/v1/billing/checkout-session': {
+    post: {
+      body: {
+        plan: 'solo' | 'team';
+        return_base: string;
+      };
+      responses: {
+        200: {
+          url: string;
+        };
+      };
+    };
+  };
+  '/v1/billing/portal-session': {
+    post: {
+      body: null;
+      responses: {
+        200: {
+          url: string;
+        };
+      };
+    };
+  };
   '/account/entitlements': {
     get: {
       body: null;

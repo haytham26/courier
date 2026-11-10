@@ -61,6 +61,20 @@ def a_recorder(monkeypatch: pytest.MonkeyPatch, answer: dict[str, Any] | None = 
     return sent
 
 
+@pytest.fixture(autouse=True)
+def _no_billing_cache_leak():
+    """The billing settings are cached (`billing_sources`/`webhook_secret` are
+    `lru_cache`d, the same way production reads them once), and a test that sets
+    `BILLING_SOURCES` must not leave "stripe" in that cache for the test that
+    expects an empty deployment - the same reset `test_billing_providers.py`
+    does."""
+    from app.billing import billing_sources, webhook_secret
+
+    yield
+    billing_sources.cache_clear()
+    webhook_secret.cache_clear()
+
+
 @pytest.fixture
 def web_client():
     """A client whose repo and verifier are the test's own (no database)."""
