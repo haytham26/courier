@@ -35,6 +35,7 @@ import importlib
 import json
 import logging
 import platform
+import re
 import sys
 import tarfile
 import time
@@ -81,6 +82,363 @@ PARSER_GAPS = {
 #: normalised phrasing are the app's own and stay not comparable (EVAL.md
 #: section 5: a number that was not measured is never reported as a pass).
 COMPARABLE_SLOTS = ("safe_place", "reason", "raw_address", "minutes", "kind", "priority")
+
+#: The street types and their abbreviations: the Python twin of
+#: `scripts/eval/street-key.mjs`, which mirrors the backend's `road_key`
+#: table (`scripts/data/split-linz-holdout.py` ->
+#: `services/api/app/address_correction.py`).
+STREET_TYPES = {
+    "street": "st",
+    "st": "st",
+    "road": "rd",
+    "rd": "rd",
+    "avenue": "ave",
+    "ave": "ave",
+    "drive": "dr",
+    "dr": "dr",
+    "place": "pl",
+    "pl": "pl",
+    "crescent": "cres",
+    "cres": "cres",
+    "terrace": "tce",
+    "tce": "tce",
+    "lane": "ln",
+    "ln": "ln",
+    "close": "cl",
+    "cl": "cl",
+    "court": "ct",
+    "ct": "ct",
+    "way": "way",
+    "grove": "gr",
+    "gr": "gr",
+    "mews": "mews",
+    "quay": "quay",
+    "parade": "pde",
+    "pde": "pde",
+    "highway": "hwy",
+    "hwy": "hwy",
+    "square": "sq",
+    "sq": "sq",
+    "esplanade": "esp",
+    "esp": "esp",
+    "bypass": "byp",
+    "byp": "byp",
+    "motorway": "shwy",
+    "shwy": "shwy",
+}
+
+
+def street_key_of(road: str) -> str:
+    """The street key: the Python twin of `scripts/eval/street-key.mjs`.
+
+    The voice lane and the backend share ONE held-out street list (founder
+    instruction 2026-11-09, PART B), and both spell it in the backend's
+    `road_key` normalisation, so the manifest rows are compared in that key
+    here too: "Bealey Avenue" and "Bealey Ave" are one street.
+    """
+    text = re.sub(r"[^a-z0-9 ]+", " ", road.lower())
+    tokens = text.split()
+    if tokens and tokens[-1] in STREET_TYPES:
+        tokens[-1] = STREET_TYPES[tokens[-1]]
+    return " ".join(tokens)
+
+
+def shared_held_out_streets(manifest_dir: Path) -> set[str] | None:
+    """The shared held-out street list, as a set of street keys.
+
+    The list is `packages/eval/voice/manifest/heldout_streets.json` - the
+    same file `scripts/eval/check-voice-eval.mjs` reads - and it lives in the
+    manifest's parent, so both the main manifest and `manifest/heldout/`
+    reach it. None when it is not there: nothing to compare, and the caller
+    records that rather than inventing a clean answer.
+    """
+    for path in (
+        manifest_dir.parent / "heldout_streets.json",
+        manifest_dir / "heldout_streets.json",
+    ):
+        if path.exists():
+            document = json.loads(path.read_text(encoding="utf-8"))
+            streets = document.get("streets") or []
+            return {street_key_of(str(street)) for street in streets}
+    return None
+
+
+def held_out_street_problems(
+    addresses: list[dict[str, Any]], held_out_keys: set[str] | None
+) -> list[str]:
+    """Every manifest row that disagrees with the shared held-out list.
+
+    The same two rules `scripts/eval/check-voice-eval.mjs` enforces, by the
+    same street key: a row tagged `held_out` on a street the list does not
+    carry, and an untagged row on a street it does (a held-out street that
+    leaked into the main manifest). Each is named, so a run that would
+    measure the wrong set is refused instead of published.
+    """
+    if held_out_keys is None:
+        return []
+    problems: list[str] = []
+    for address in addresses:
+        identifier = str(address.get("id", "?"))
+        street = str(address.get("street", ""))
+        tagged = address.get("held_out") is True
+        on_list = street_key_of(street) in held_out_keys
+        if tagged and not on_list:
+            problems.append(
+                f'{identifier}: it is tagged held_out, but "{street}" is not on the shared '
+                "held-out list (packages/eval/voice/manifest/heldout_streets.json)"
+            )
+        if on_list and not tagged:
+            problems.append(
+                f'{identifier}: "{street}" is on the shared held-out list, but the row is '
+                "not tagged held_out - a held-out street in the main manifest"
+            )
+    return problems
+
+
+#: The founder directive's targets (2026-11-08 item 4, 2026-11-09 PART B), as the
+#: run publishes them: `limit` and `direction` say how the number is read, and
+#: `slice` says which slice it was measured on, so a headline can always name its
+#: own evidence. A target the run cannot measure is NOT MEASURED with the reason it
+#: has none - never a pass (EVAL.md section 5), and never an unsupported slice
+#: averaged into a headline (BUG-210).
+DIRECTIVE_TARGETS: tuple[dict[str, Any], ...] = (
+    {
+        "id": "wer_quiet",
+        "definition": "the quiet WER of the NZ English quiet slice",
+        "limit": 0.05,
+        "direction": "at_most",
+        "slice": "en_nz_quiet",
+        "metric": "M1 on the set's own acoustic difficulty",
+    },
+    {
+        "id": "wer_van",
+        "definition": "the van WER, averaged over the 0 / 5 / 10 dB rows",
+        "limit": 0.10,
+        "direction": "at_most",
+        "slice": "en_nz_van",
+        "metric": "M1 on the set's own acoustic difficulty",
+    },
+    {
+        "id": "intent_on_stt",
+        "definition": "the intent accuracy on the STT hypotheses",
+        "limit": 0.95,
+        "direction": "at_least",
+        "slice": "the slices this run has STT output for (never an unsupported one)",
+        "metric": "M3 on the recognizer's own output",
+    },
+    {
+        "id": "address_extraction_on_stt",
+        "definition": "the exact-match address extraction on the STT hypotheses",
+        "limit": 0.95,
+        "direction": "at_least",
+        "slice": "the slices this run has STT output for (never an unsupported one)",
+        "metric": "M2 on the offline brain's raw_address",
+    },
+    {
+        "id": "false_action",
+        "definition": "the false-action rate on the open speech",
+        "limit": 0.005,
+        "direction": "at_most",
+        "slice": "the open slices (en_nz_quiet, en_nz_van, en_mix)",
+        "metric": "M9 on the speakers' own sentences",
+    },
+    {
+        "id": "corrections_on_stt",
+        "definition": "the spoken-number corrections (\"seven no seventeen\")",
+        "limit": 0.95,
+        "direction": "at_least",
+        "slice": "numbers_corrections",
+        "metric": "M3 on the correction form",
+    },
+    {
+        "id": "latency_p95",
+        "definition": "the end-to-end command latency, p95 (the budget is 700 ms)",
+        "limit": 700.0,
+        "direction": "at_most",
+        "slice": "the device leg (EVAL.md M6, CONSTRAINTS.md)",
+        "metric": "M6",
+    },
+)
+
+
+#: Why a leg cannot be measured, when it cannot: this scorer has no device, no
+#: clock of the phone's own pipeline, and no synthesised audio for the slices
+#: whose voices are still to be licensed (D24).
+UNMEASURED_REASONS = {
+    "numbers_corrections": (
+        "the numbers_corrections slice has no audio: it needs the project's own TTS "
+        "voices, and every voice must be in the licence ledger before a sample is "
+        "committed (D24). The offline brain's catalogue also has no "
+        "spoken-number-correction form (PARSER_GAPS names the gap)."
+    ),
+    "latency_p95": (
+        "the latency is the phone's own path - the last spoken word to the action in "
+        "the local event log (EVAL.md M6) - and this scorer runs offline on the "
+        "machine's CPU. The shift-sim harness (app/eval_harness.py) measures the "
+        "SERVICE's own p95 against the same 700 ms budget; that is not the device leg."
+    ),
+    "no_stt_output": "the run produced no STT hypotheses to measure on",
+    "no_addresses_in_the_audio": (
+        "the open-data speakers speak their OWN sentences (per_utterance.csv's "
+        "gold_text), not the manifest script, so an address-bearing script's audio "
+        "rarely contains an address for the parser to extract"
+    ),
+}
+
+#: The caveat that rides with every number the open-data audio can produce, so
+#: nobody reads the recognizer's answer to a speaker's own sentence as the
+#: product's command accuracy.
+OPEN_SPEECH_CAVEAT = (
+    "the open-data speakers speak their OWN sentences (per_utterance.csv's "
+    "gold_text), not the manifest script, so this number is what the recognizer "
+    "returned for THAT speech: it is not the product's command accuracy"
+)
+
+
+def _verdict(
+    target: dict[str, Any], value: float | None, counts: str, note: str = ""
+) -> dict[str, Any]:
+    """One target: its number, the counts behind it, and the verdict.
+
+    A target with no number is NOT MEASURED and carries the reason it has none.
+    """
+    answer: dict[str, Any] = {
+        "target": target["id"],
+        "definition": target["definition"],
+        "metric": target["metric"],
+        "slice": target["slice"],
+        "limit": target["limit"],
+        "direction": target["direction"],
+        "counts": counts,
+        "note": note,
+    }
+    if value is None:
+        answer["value"] = None
+        answer["verdict"] = "NOT MEASURED"
+        answer["reason"] = note or UNMEASURED_REASONS["no_stt_output"]
+        return answer
+    answer["value"] = round(value, 4)
+    if target["direction"] == "at_most":
+        answer["verdict"] = "PASS" if value <= target["limit"] else "FAIL"
+    else:
+        answer["verdict"] = "PASS" if value >= target["limit"] else "FAIL"
+    return answer
+
+
+def directive_verdicts(
+    open_slices: dict[str, dict[str, Any]],
+    intents_on_stt: dict[str, dict[str, Any]],
+    addresses_on_stt: dict[str, dict[str, Any]],
+    transcribed: int,
+    false_actions: int,
+) -> list[dict[str, Any]]:
+    """The directive's targets, each with the slice its number came from.
+
+    Every number is one the run just measured on its own STT output: the WER
+    legs read the open slices, the intent and address legs read the two
+    hypothesis-scored blocks, and the false-action leg counts the parser's
+    answers to the speakers' sentences. A slice the run has no STT output for
+    never enters an average (BUG-210), so an unsupported slice is absent from
+    the pooled number rather than counted as a zero.
+    """
+    targets = {target["id"]: target for target in DIRECTIVE_TARGETS}
+    quiet = open_slices.get("en_nz_quiet") or {}
+    van = open_slices.get("en_nz_van") or {}
+    measured_slices = sorted(intents_on_stt)
+    answers: list[dict[str, Any]] = []
+
+    # M1: the quiet WER of the set's own speakers under the pinned judge.
+    measured_quiet = int(quiet.get("measured_wer") or 0)
+    quiet_mean = float(quiet.get("wer_mean") or 0.0)
+    answers.append(
+        _verdict(
+            targets["wer_quiet"],
+            quiet_mean if measured_quiet else None,
+            f"{measured_quiet} utterances, mean WER {100 * quiet_mean:.2f}%",
+            "",
+        )
+    )
+
+    # M1: the van WER, averaged over the SNRs the manifest actually carries.
+    by_snr = van.get("wer_by_snr") or {}
+    answers.append(
+        _verdict(
+            targets["wer_van"],
+            (sum(by_snr.values()) / len(by_snr)) if by_snr else None,
+            ", ".join(f"{snr} dB {100 * value:.2f}%" for snr, value in by_snr.items()),
+            "",
+        )
+    )
+
+    # M3 on the STT hypotheses, pooled over the measured slices only.
+    correct = sum(intents_on_stt[slice_id]["correct"] for slice_id in measured_slices)
+    measured = sum(intents_on_stt[slice_id]["measured"] for slice_id in measured_slices)
+    answers.append(
+        _verdict(
+            targets["intent_on_stt"],
+            (correct / measured) if measured else None,
+            f"{correct}/{measured} correct over {len(measured_slices)} measured slices "
+            f"({', '.join(measured_slices)})",
+            OPEN_SPEECH_CAVEAT,
+        )
+    )
+
+    # M2 on the same hypotheses: the exact match, with the count that carried
+    # an address at all, so a zero from silent audio is visible as one.
+    bearing = sum(addresses_on_stt[slice_id]["address_bearing"] for slice_id in measured_slices)
+    exact = sum(addresses_on_stt[slice_id]["exact"] for slice_id in measured_slices)
+    spoken = sum(
+        addresses_on_stt[slice_id]["hypotheses_with_an_address"] for slice_id in measured_slices
+    )
+    answers.append(
+        _verdict(
+            targets["address_extraction_on_stt"],
+            (exact / bearing) if bearing else None,
+            f"{exact}/{bearing} address-bearing utterances exact, "
+            f"{spoken} of their hypotheses carried an address at all",
+            UNMEASURED_REASONS["no_addresses_in_the_audio"],
+        )
+    )
+
+    # M9: the parser answering the speakers' own sentences.
+    answers.append(
+        _verdict(
+            targets["false_action"],
+            (false_actions / transcribed) if transcribed else None,
+            f"{false_actions}/{transcribed} transcribed utterances answered with a command",
+            "",
+        )
+    )
+
+    # M3 on the correction form: a slice whose audio does not exist yet, so the
+    # number stays unmeasured rather than being carried over from the gold text.
+    corrections = intents_on_stt.get("numbers_corrections") or {}
+    corrections_measured = int(corrections.get("measured") or 0)
+    answers.append(
+        _verdict(
+            targets["corrections_on_stt"],
+            (corrections["correct"] / corrections["measured"])
+            if corrections_measured
+            else None,
+            f"{corrections.get('correct', 0)}/{corrections_measured} on the STT output"
+            if corrections_measured
+            else "no audio for this slice in this run",
+            UNMEASURED_REASONS["numbers_corrections"],
+        )
+    )
+
+    # M6: the device's own latency. This scorer has no device, so the target is
+    # published as what it is - unmeasured - with the pointer to the harness that
+    # measures the service's own p95 against the same budget.
+    answers.append(
+        _verdict(
+            targets["latency_p95"],
+            None,
+            "not measured here (the shift-sim harness measures the service's own p95)",
+            UNMEASURED_REASONS["latency_p95"],
+        )
+    )
+    return answers
 
 #: The acceptance counts of EVAL.md section 1 (the slice floor for the intent
 #: leg; the WER targets are per condition and are checked per row in the checker).
@@ -240,6 +598,23 @@ def intent_of(action: Any) -> str:
     if isinstance(action, dict):
         return str(action.get("type", ""))
     return str(getattr(action, "type", ""))
+
+
+def address_of(action: Any) -> str:
+    """The address an answer carries: the parser's `raw_address`, or empty.
+
+    The offline brain fills `raw_address` from the sentence it routed. The
+    device's own address engine (the D8 / nz-address path) is a different
+    measurement of M2 and stays with the device leg, so this number is
+    labelled as the offline brain's extraction wherever it is published.
+    """
+    if action is None:
+        return ""
+    if isinstance(action, dict):
+        value = action.get("raw_address")
+    else:
+        value = getattr(action, "raw_address", None)
+    return str(value) if value else ""
 
 
 def score_intents(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -406,11 +781,21 @@ def _safe_unpack(archive_path: Path, target_dir: Path) -> None:
 
 
 def _model_dirs(target_dir: Path) -> list[Path]:
-    """The unpacked model directories under `target_dir`, by their encoder."""
+    """The unpacked model directories under `target_dir`, by their encoder.
+
+    The encoder is what makes a directory a model directory, and the test is
+    `any(...)` on purpose (BUG-301): `Path.glob` answers a generator, which is
+    ALWAYS truthy, so a directory that merely exists used to count as one. A
+    run killed between the archive's members left the decoder and the tokens
+    without the encoder; `ensure_judge` then saw a model directory, skipped the
+    re-unpack, `load_judge` answered None, and the whole measurement was
+    written without a WER with no explanation. Now the incomplete directory is
+    empty for this test, the archive unpacks again, and the judge loads.
+    """
     return [
         candidate
         for candidate in target_dir.iterdir()
-        if candidate.is_dir() and candidate.glob("tiny.en-encoder.onnx")
+        if candidate.is_dir() and any(candidate.glob("tiny.en-encoder.onnx"))
     ]
 
 
@@ -476,9 +861,21 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
 
     utterances = _read_jsonl(manifest / "utterances.jsonl")
     scripts = _read_jsonl(manifest / "scripts.jsonl")
+    addresses = _read_jsonl(manifest / "addresses.jsonl")
     clips = _read_jsonl(data / "common-voice" / "clips.jsonl")
     beds = _read_jsonl(data / "noise" / "noise.jsonl")
     if not clips:
+        return 2
+
+    # The held-out street check (founder instruction 2026-11-09, PART B):
+    # the shared list is the single source, and a manifest that disagrees
+    # with it is refused rather than measured - a number from the wrong set
+    # is a lie with a decimal point.
+    held_out_keys = shared_held_out_streets(manifest)
+    street_problems = held_out_street_problems(addresses, held_out_keys)
+    for problem in street_problems:
+        logger.warning("the held-out street check refuses the manifest: %s", problem)
+    if street_problems:
         return 2
 
     built = build_audio(utterances, clips, beds, root, audio_dir)
@@ -495,15 +892,29 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
         if recognizer is None:
             logger.warning("the judge could not be loaded: writing the set without WER")
     if recognizer is not None:
-        for identifier in built:
+        for index, identifier in enumerate(built, start=1):
             hypotheses[identifier] = transcribe(recognizer, audio_dir / f"{identifier}.wav")
+            # A 600-file CPU pass is not a silent wait: the lane watches the
+            # judge's progress, and the evidence carries how long it took.
+            if index % 50 == 0 or index == len(built):
+                logger.info(
+                    "the judge has transcribed %d of %d utterances (%s)",
+                    index,
+                    len(built),
+                    identifier,
+                )
 
     by_id = {row["id"]: row for row in utterances}
+    script_of = {str(script.get("id")): script for script in scripts}
     rows: list[dict[str, Any]] = []
     for identifier, patch in built.items():
         row = by_id[identifier]
         gold = str(patch.get("gold_text", ""))
         hypothesis = hypotheses.get(identifier, "")
+        script = script_of.get(str(row.get("script_id")), {})
+        said_intent = str(script.get("gold_intent", "noop"))
+        said_intent = "noop" if said_intent in ("chat", "noop") else said_intent
+        said_address = str((script.get("gold_slots") or {}).get("raw_address") or "")
         rows.append(
             {
                 "id": identifier,
@@ -512,6 +923,9 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
                 "accent": patch.get("accent", ""),
                 "gold_text": gold,
                 "hypothesis": hypothesis,
+                "held_out": script.get("held_out") is True,
+                "gold_intent": said_intent,
+                "gold_address": said_address,
                 "wer": wer(gold, hypothesis) if hypothesis else None,
                 "file": patch["file"],
                 "sha256": patch["sha256"],
@@ -527,9 +941,13 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
     for row in transcribed:
         action = parse_command(row["hypothesis"])
         row["parsed_intent"] = intent_of(action)
+        row["parsed_address"] = address_of(action)
         if row["parsed_intent"] != "noop":
             false_actions += 1
-    false_action_rate = false_actions / len(transcribed) if transcribed else 0.0
+    # Nothing transcribed means nothing measured: a false zero here would read as
+    # a perfect false-action rate, so the field answers None and the verdict
+    # block says NOT MEASURED.
+    false_action_rate = false_actions / len(transcribed) if transcribed else None
 
     # The distinct templates each slice is scored against (BUG-210): a slice that
     # reuses another's templates is not independent evidence, so the count travels
@@ -559,11 +977,15 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
             for key, value in (script.get("gold_slots") or {}).items()
             if key in COMPARABLE_SLOTS
         }
-        got = {
-            key: getattr(action, key, None)
-            for key in comparable
-            if action is not None and getattr(action, key, None) is not None
-        } if action is not None else {}
+        got = (
+            {
+                key: getattr(action, key, None)
+                for key in comparable
+                if action is not None and getattr(action, key, None) is not None
+            }
+            if action is not None
+            else {}
+        )
         intent_rows.append(
             {
                 "slice": script["slice"],
@@ -604,16 +1026,44 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
                 sum(1 for row in slice_rows if row.get("parsed_intent") not in (None, "noop"))
                 / len(slice_rows)
             )
-            if slice_rows
+            if any(row.get("parsed_intent") is not None for row in slice_rows)
             else None,
         }
         by_snr: dict[str, Any] = {}
         for snr in sorted({row["snr_db"] for row in slice_rows}):
-            snr_bucket = [row for row in slice_rows if row["snr_db"] == snr and row["wer"] is not None]
+            snr_bucket = [
+                row for row in slice_rows if row["snr_db"] == snr and row["wer"] is not None
+            ]
             if snr_bucket:
                 by_snr[str(snr)] = sum(row["wer"] for row in snr_bucket) / len(snr_bucket)
         slices[slice_id]["wer_by_snr"] = by_snr
 
+    # The directive's legs, measured on what the JUDGE actually returned -
+    # the real STT output - rather than on the gold text (BUG-210: a number
+    # that was not measured on the STT output is never reported as a pass).
+    # The gold-text legs above stay published for what they are: the parser
+    # ceiling on the generator's own templates.
+    intents_on_stt: dict[str, dict[str, Any]] = {}
+    addresses_on_stt: dict[str, dict[str, Any]] = {}
+    for slice_id in sorted({str(row["slice"]) for row in transcribed}):
+        slice_rows = [row for row in transcribed if row["slice"] == slice_id]
+        correct = sum(1 for row in slice_rows if row["parsed_intent"] == row["gold_intent"])
+        intents_on_stt[slice_id] = {
+            "correct": correct,
+            "measured": len(slice_rows),
+            "rate": (correct / len(slice_rows)) if slice_rows else 0.0,
+        }
+    for slice_id in sorted({str(row["slice"]) for row in rows}):
+        slice_rows = [row for row in rows if row["slice"] == slice_id]
+        bearing = [row for row in slice_rows if row["gold_address"]]
+        spoken = [row for row in bearing if row.get("parsed_address")]
+        exact = [row for row in spoken if row["parsed_address"] == row["gold_address"]]
+        addresses_on_stt[slice_id] = {
+            "address_bearing": len(bearing),
+            "hypotheses_with_an_address": len(spoken),
+            "exact": len(exact),
+            "rate": (len(exact) / len(bearing)) if bearing else 0.0,
+        }
     out_dir.mkdir(parents=True, exist_ok=True)
     environment = {
         "judge": (judge_label or JUDGE) if recognizer is not None else "none (--no-judge)",
@@ -623,6 +1073,8 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
         "resampling": "linear 48 kHz -> 16 kHz (the clips as the mirror serves them)",
         "python": sys.version.split()[0],
         "platform": platform.platform(),
+        "manifest": args.manifest,
+        "held_out_streets": (len(held_out_keys) if held_out_keys is not None else None),
         "clips": len(clips),
         "beds": len(beds),
     }
@@ -641,6 +1093,10 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
                 "gold_text",
                 "hypothesis",
                 "parsed_intent",
+                "parsed_address",
+                "held_out",
+                "gold_intent",
+                "gold_address",
                 "wer",
                 "file",
                 "sha256",
@@ -681,6 +1137,26 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
         "target": "AUDIT_2026-10-25 §A3: >=500 utterances from open data, WER and the parser ceiling per slice",
         "built": len(built),
         "judge": environment["judge"],
+        "manifest": args.manifest,
+        # The held-out identity of the run: the tag travels with every
+        # scored row, and the shared street list is what proves it (the
+        # check above refused the run when a row disagreed).
+        "held_out": bool(rows) and all(row["held_out"] for row in rows),
+        "held_out_utterances": sum(1 for row in rows if row["held_out"]),
+        "held_out_scripts": sum(1 for script in scripts if script.get("held_out") is True),
+        "held_out_streets": (len(held_out_keys) if held_out_keys is not None else None),
+        "street_key_check": (
+            "clean"
+            if held_out_keys is not None and not street_problems
+            else (
+                "the shared held-out list is not next to the manifest"
+                if held_out_keys is None
+                else "REFUSED"
+            )
+        ),
+        # The directive's legs, on the STT hypotheses.
+        "intent_on_stt_by_slice": intents_on_stt,
+        "address_extraction_on_stt_by_slice": addresses_on_stt,
         "legs": {
             "wer": "the open speakers' own words read by the pinned judge, per slice and per SNR - the set's acoustic difficulty, not our pipeline",
             "false_action_rate": "the parser's share of the speakers' natural sentences it answered with a command - the M9 direction on open speech",
@@ -693,6 +1169,8 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
                 "hypothesis is unmeasured because the script audio is not synthesised."
             ),
             "parser_ceiling_with_slots": "EVAL.md's M3 shape: the intent AND the comparable mandatory slots (`safe_place`, `reason`, `raw_address`, `minutes`, `kind`, `priority`) both correct - a ceiling, the same caveat",
+            "intent_on_stt": "MEASURED ON THE STT OUTPUT: the intent accuracy of the parser on the JUDGE's hypotheses (per_utterance.csv's parsed_intent against the utterance's gold intent). This is the number the directive asks for. On the open-data slices the speakers speak their OWN sentences (gold_text), not the manifest script, so this number is dominated by what the recognizer returned for that speech - it is NOT the product's command accuracy, and it is never averaged with the ceiling above.",
+            "address_extraction_on_stt": "MEASURED ON THE STT OUTPUT: the exact-match address extraction (the parser's raw_address against the gold spoken form) over the same hypotheses, per slice, with the count of hypotheses that carried an address at all. The on-device address engine is the product's M2 and stays with the device leg.",
         },
         "parser_ceiling_by_slice": intents,
         "parser_ceiling_with_slots_by_slice": intents_with_slots,
@@ -704,8 +1182,13 @@ def run(args: argparse.Namespace, judge: Any = None, judge_label: str | None = N
         "parser_gaps": PARSER_GAPS,
         "open_slices": slices,
         "false_action_rate_on_open_speech": false_action_rate,
+        "directive_targets": directive_verdicts(
+            slices, intents_on_stt, addresses_on_stt, len(transcribed), false_actions
+        ),
         "not_measured": {
-            "M2_address_accuracy": "the address is extracted on the device, not in the service (EVAL.md section 5)",
+            "M2_address_accuracy": (
+                "the product's address engine (the D8 / nz-address path on the device) is NOT what is measured here: what is measured is the offline brain's raw_address slot on the judge's hypotheses (address_extraction_on_stt_by_slice), and the open-data speakers speak their own sentences, so an address rarely reaches the parser at all. The device leg owns M2."
+            ),
             "M4_wake_false_accepts": "the non-speech corpus is continuous audio, not the utterance set",
             "M5_wake_misses": "the wake word rates need the device",
             "M7_battery": "the battery is measured on a device",
@@ -728,13 +1211,21 @@ Generated by `{command}` (`services/courier-voice/app/eval_audio.py`) with the
 Common Voice CC0 clips and the MUSAN CC-BY beds fetched by
 `scripts/eval/fetch-open-voice-data.mjs` into `data/voice/` (git-ignored).
 
-- `summary.json` - the built count, the intent accuracy per slice, the open
-  slices' WER, the false-action rate on the open speech, and what was NOT
-  measured with the reason.
+- `summary.json` - the built count, the manifest's held-out identity
+  (`held_out`, `held_out_utterances`, `held_out_scripts`, `held_out_streets`,
+  `street_key_check`), the open slices' WER per slice and per SNR, the
+  false-action rate on the open speech, the intent accuracy measured ON THE STT
+  HYPOTHESES (`intent_on_stt_by_slice`), the exact-match address extraction on
+  the same hypotheses (`address_extraction_on_stt_by_slice`), the parser ceiling
+  on the gold text (labelled as a ceiling and never confused with an accuracy -
+  BUG-210), the directive's targets (`directive_targets`) with PASS / FAIL /
+  NOT MEASURED, and what was NOT measured with the reason.
 - `per_slice.csv` - one row per open slice: the utterance count, the measured
   WER and the false-action rate.
 - `per_utterance.csv` - one row per built utterance: its gold text, the judge's
-  hypothesis, the WER and the parser's intent.
+  hypothesis, the WER, the parser's intent AND address on that hypothesis, the
+  utterance's gold intent and gold address, and its `held_out` tag (the shared
+  street list is what proves the tag).
 - `environment.json` - the judge and its model URL, the sample rate, the
   normalisation and the machine, published with the result (EVAL.md section 4).
 

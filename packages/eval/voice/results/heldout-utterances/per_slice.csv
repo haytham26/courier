@@ -1,0 +1,4 @@
+slice,utterances,measured_wer,wer_mean,false_action_rate
+en_nz_quiet,120,120,0.1475437062937063,0.0
+en_nz_van,360,360,0.28024457409874076,0.0
+en_mix,120,120,0.15296727782021902,0.0

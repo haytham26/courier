@@ -4,8 +4,10 @@
  "sample_rate": 16000,
  "normalisation": "lower-case, diacritics folded, punctuation dropped, whitespace collapsed",
  "resampling": "linear 48 kHz -> 16 kHz (the clips as the mirror serves them)",
- "python": "3.11.9",
- "platform": "Windows-10-10.0.26300-SP0",
+ "python": "3.12.15",
+ "platform": "Windows-11-10.0.26300-SP0",
+ "manifest": "packages/eval/voice/manifest",
+ "held_out_streets": 1360,
  "clips": 280,
  "beds": 8
 }
