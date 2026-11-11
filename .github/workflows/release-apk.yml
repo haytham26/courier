@@ -166,7 +166,22 @@ jobs:
           VERSION: ${{ steps.keystore.outputs.version }}
         run: |
           set -euo pipefail
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          # Semgrep is right about `curl | sh`: it is an arbitrary-code execution
+          # if the URL is ever hijacked. So the pin is a VERSION plus the
+          # publisher's own CHECKSUM, verified before the tarball is unpacked -
+          # the number below is the one on the Syft 0.101.1 release's
+          # checksums.txt, and a release that does not match it fails the job.
+          # (Pinned the way check-action-pins pins an action: by identity, not
+          # by the moving tip of a branch.)
+          SYFT_VERSION="0.101.1"
+          SYFT_SHA256="88ac3dcd752deba6d93d655bed1fee18ea9692ac48fd3ff2cb81dde70a5aac6c"
+          SYFT_TARBALL="syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+          mkdir -p "$RUNNER_TEMP/syft"
+          curl -fsSL -o "$RUNNER_TEMP/${SYFT_TARBALL}" \
+            "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/${SYFT_TARBALL}"
+          echo "${SYFT_SHA256}  $RUNNER_TEMP/${SYFT_TARBALL}" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/${SYFT_TARBALL}" -C "$RUNNER_TEMP/syft" syft
+          install -m 0755 "$RUNNER_TEMP/syft/syft" /usr/local/bin/syft
           syft "file:${APK_PATH}" -o spdx-json --name "Courier Copilot ${VERSION}" \
             > apps/mobile/android/artifacts/courier-${VERSION}.spdx.json
           test -s apps/mobile/android/artifacts/courier-${VERSION}.spdx.json
