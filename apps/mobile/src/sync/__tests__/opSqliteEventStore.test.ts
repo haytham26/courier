@@ -175,13 +175,14 @@ class FakeSqlite {
         .length;
       return { rows: [{ total }], rowsAffected: 0 };
     }
-    if (/^SELECT id, stop_id, kind, utterance, safe_place, lat, lon, accuracy_m, occurred_at/.test(sql)) {
+    if (/^SELECT id, stop_id, kind, utterance, safe_place, reason, lat, lon, accuracy_m, occurred_at/.test(sql)) {
       const selected = [
         'id',
         'stop_id',
         'kind',
         'utterance',
         'safe_place',
+        'reason',
         'lat',
         'lon',
         'accuracy_m',
@@ -244,7 +245,7 @@ describe('the op-sqlite event store', () => {
 
     expect(pending.map((item) => item.id)).toEqual(['a', 'b']);
     expect(database.columnsOf('delivery_events')).toContain('refused_at');
-    expect(database.version).toBe(1);
+    expect(database.version).toBe(2);
   });
 
   it('adds every missing column before the new-shape insert runs', async () => {
