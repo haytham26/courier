@@ -658,7 +658,7 @@ def _tokens_of(text: str, fixes: bool = True) -> list[str]:
     names, never street names, and a street that happens to share a fix's
     spelling has to survive the rewrite.
     """
-    folded = re.sub(r"[,./]", " ", text.lower().strip())
+    folded = re.sub(r"[,.\-\u2013\u2014]", " ", text.lower().strip())
     collapsed = " ".join(folded.split())
     if fixes:
         fixed = collapsed
@@ -668,9 +668,22 @@ def _tokens_of(text: str, fixes: bool = True) -> list[str]:
     tokens = collapsed.split()
     pieces: list[str] = []
     for token in tokens:
-        match = re.fullmatch(r"(\d+)([a-z])", token)
+        match = re.fullmatch(r"(\d+)([a-z]+)", token)
         if match:
             pieces.extend([match.group(1), match.group(2)])
+            continue
+        # A number the recognizer turned into an ordinal ("57th") is the
+        # number again, and the suffix is not part of the address.
+        ordinal = re.fullmatch(r"(\d+)(st|nd|rd|th)", token)
+        if ordinal:
+            pieces.append(ordinal.group(1))
+            continue
+        # A written unit and house number ("2/223") is said "two slash two
+        # hundred twenty three", so it is split into the two numbers and the
+        # slash between them.
+        unit_number = re.fullmatch(r"(\d+)/(\d+)", token)
+        if unit_number:
+            pieces.extend([unit_number.group(1), "slash", unit_number.group(2)])
             continue
         # A written road number ("SH1") is spelled out letter by letter, so it
         # is split into the letters and the number the voice would say.
@@ -766,7 +779,9 @@ def _resolve_tokens(tokens: list[str], index: StreetIndex) -> ResolvedAddress | 
                 tail = tokens[name_start + length + 1 :]
                 suburb, suburb_score = _suburb_answer(tail, road)
                 if not suburb:
-                    suburb, suburb_score = _suburb_from_the_number(road, said_number, index)
+                    suburb, suburb_score = _suburb_from_the_number(
+                        road, said_number.split("/")[-1], index
+                    )
                 confidence = round(
                     STREET_WEIGHT * score + SUBURB_WEIGHT * suburb_score + NUMBER_WEIGHT, 4
                 )

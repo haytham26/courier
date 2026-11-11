@@ -1,0 +1,87 @@
+{
+ "generated": "2026-11-11T20:39:12+1300",
+ "target": "the founder's VOICE LEVER (b): address resolution on the STT output",
+ "judge": "sherpa-onnx whisper tiny.en (Whisper weights MIT, sherpa-onnx runtime Apache-2.0)",
+ "judge_model": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2",
+ "sample_rate": 16000,
+ "manifest": "packages/eval/voice/manifest",
+ "python": "3.12.15",
+ "platform": "Windows-11-10.0.26300-SP0",
+ "turns": 157,
+ "action_turns": 157,
+ "address_bearing_turns": 157,
+ "before_brain_exact": 2,
+ "after_resolved_exact": 39,
+ "after_ungated_exact": 48,
+ "turns_by_slice": {
+  "en_nz_quiet": {
+   "turns": 15,
+   "address_bearing": 15,
+   "brain_exact": 1,
+   "resolved_exact": 6,
+   "ungated_exact": 6,
+   "brain_addresses": 15,
+   "resolved": 8,
+   "ungated": 8
+  },
+  "en_nz_van": {
+   "turns": 60,
+   "address_bearing": 60,
+   "brain_exact": 0,
+   "resolved_exact": 17,
+   "ungated_exact": 18,
+   "brain_addresses": 52,
+   "resolved": 22,
+   "ungated": 23
+  },
+  "en_mix": {
+   "turns": 15,
+   "address_bearing": 15,
+   "brain_exact": 1,
+   "resolved_exact": 6,
+   "ungated_exact": 6,
+   "brain_addresses": 15,
+   "resolved": 8,
+   "ungated": 8
+  },
+  "mi_places": {
+   "turns": 12,
+   "address_bearing": 12,
+   "brain_exact": 0,
+   "resolved_exact": 5,
+   "ungated_exact": 6,
+   "brain_addresses": 9,
+   "resolved": 5,
+   "ungated": 7
+  },
+  "numbers_corrections": {
+   "turns": 40,
+   "address_bearing": 40,
+   "brain_exact": 0,
+   "resolved_exact": 0,
+   "ungated_exact": 7,
+   "brain_addresses": 0,
+   "resolved": 0,
+   "ungated": 21
+  },
+  "code_switch": {
+   "turns": 15,
+   "address_bearing": 15,
+   "brain_exact": 0,
+   "resolved_exact": 5,
+   "ungated_exact": 5,
+   "brain_addresses": 15,
+   "resolved": 8,
+   "ungated": 8
+  }
+ },
+ "legs": {
+  "before": "the offline brain's raw_address compared to the gold string - the 0/75 number the held-out measurement publishes",
+  "after_gated": "MEASURED ON THE STT OUTPUT: app/address_resolve.py's answer on the brain's raw_address, compared as number + suffix + street key + suburb - the resolved address, never a substring hit",
+  "after_ungated": "the resolver's answer on the WHOLE hypothesis, the founder's literal ask; it carries the resolver's own false-positive risk, which the open-speech leg measures separately",
+  "not_measured": [
+   "M1 on the product's own on-device STT (the judge is the set's own)",
+   "the wake word, the device latency and the battery (the device's legs)"
+  ]
+ }
+}

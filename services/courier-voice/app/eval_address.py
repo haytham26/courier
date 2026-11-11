@@ -142,6 +142,7 @@ def build_address_audio(
     keys: set[str],
     engine: Any,
     force: bool = False,
+    audio_dir: str = AUDIO_DIR,
 ) -> list[dict[str, Any]]:
     """The address-bearing scripts, voiced: quiet, and the van variants.
 
@@ -180,7 +181,7 @@ def build_address_audio(
             "gold_slots": script.get("gold_slots") or {},
             "address_id": script.get("address_id"),
             "status": "built",
-            "file": f"{AUDIO_DIR}/{script['id']}.wav",
+            "file": f"{audio_dir}/{script['id']}.wav",
             "sample_rate": OUTPUT_RATE,
             "peak": round(float(max(abs(speech))) if speech.size else 0.0, 6),
             "oov_words": oov_words(spoken, keys),
@@ -214,7 +215,7 @@ def build_address_audio(
                         if key not in ("sha256", "file", "variant")
                     },
                     "variant": variant,
-                    "file": f"{AUDIO_DIR}/{script['id']}-{variant}.wav",
+                    "file": f"{audio_dir}/{script['id']}-{variant}.wav",
                     "bed": str(bed.get("file")),
                     "bed_sha256": str(bed.get("sha256")),
                     "snr_db": snr,
@@ -364,7 +365,9 @@ def summarise(turns: list[dict[str, Any]], judge_label: str, manifest: str) -> d
     }
 
 
-def score_published_csv(csv_path: Path, index: Any) -> list[dict[str, Any]]:
+def score_published_csv(
+    csv_path: Path, index: Any, audio_dir: str = AUDIO_DIR
+) -> list[dict[str, Any]]:
     """The resolver on a results directory that is ALREADY published.
 
     The open-data legs are the recorded 0/75: their hypotheses are the
@@ -453,6 +456,7 @@ def run(args: argparse.Namespace) -> int:
             keys=lexicon_keys(lexicon),
             engine=the_engine(model_dir, lexicon),
             force=args.force,
+            audio_dir=args.audio_dir,
         )
         write_jsonl(sidecar, rows)
         logger.info("built %d address files", len([row for row in rows if row.get("sha256")]))
@@ -556,6 +560,11 @@ def main(argv: list[str] | None = None) -> int:
         help="the manifest directory (not read by --from-csv, which scores a published CSV)",
     )
     parser.add_argument("--data", default="data/voice", help="the data directory")
+    parser.add_argument(
+        "--audio-dir",
+        default=AUDIO_DIR,
+        help="where this run writes its audio (both manifests number their scripts S0001..S0720)",
+    )
     parser.add_argument("--out", required=True, help="the results directory")
     parser.add_argument("--out-sidecar", default=SIDECAR, help="the sidecar this run pins")
     parser.add_argument("--linz-dir", default=None, help="the build-local LINZ address table")
