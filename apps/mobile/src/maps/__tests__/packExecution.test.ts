@@ -25,7 +25,10 @@ const PLAN = {
   tileset: '/repo/apps/mobile/assets/maps/canterbury.tileset.pmtiles',
   bbox: '170.5,-44.5,173.5,-42.8',
   minZoom: 6,
-  maxZoom: 17,
+  // planetiler's own ceiling, measured on 2026-11-11 (`Max zoom must be <= 16,
+  // was 17` from planetiler 0.10.2): the script refuses anything above it
+  // before the tool runs, so the plan this fixture carries is a legal one.
+  maxZoom: 16,
 };
 
 type Commands = {
@@ -70,16 +73,34 @@ describe('the planetiler invocation', () => {
       `--osm-path=${PLAN.input}`,
       `--output=${PLAN.tileset}`,
       '--force',
+      // The OpenMapTiles profile's own base data (natural earth, water
+      // polygons, lake centerlines): planetiler refuses to start without it
+      // and says so itself - "data/sources/lake_centerline.shp.zip does not
+      // exist. Run with --download to fetch it" (2026-11-11, planetiler
+      // 0.10.2, this machine). The bare boolean is the documented form; the
+      // invented one was `--download=<a local file>`, which downloads rather
+      // than reading a file.
+      '--download',
+      // The pack's own zooms, in the argument names the tool publishes
+      // (`planetiler --help` prints `minzoom`/`maxzoom`): without them the
+      // tileset is built at the tool's own defaults, measured on 2026-11-11 at
+      // minzoom 0 / maxzoom 14, while the extract step and the manifest ask
+      // for the pack's range.
+      `--minzoom=${PLAN.minZoom}`,
+      `--maxzoom=${PLAN.maxZoom}`,
     ]);
   });
 
   it('never uses the invented flags', () => {
     // The three defects that made this item necessary: Geofabrik publishes
-    // `new-zealand`, not Christchurch; `--download` downloads rather than
-    // reading a file; and planetiler has no `--overlay` and no `--profile`.
+    // `new-zealand`, not Christchurch; `--download` with a VALUE downloads
+    // rather than reading a file; and planetiler has no `--overlay` and no
+    // `--profile`. The bare `--download` BOOLEAN the profile needs is a
+    // different thing, and it is asserted above: the invented form is the one
+    // that carries a value.
     const joined = printed.planetiler.join(' ');
     expect(joined).not.toContain('--area=');
-    expect(joined).not.toContain('--download');
+    expect(joined).not.toContain('--download=');
     expect(joined).not.toContain('--overlay');
     expect(joined).not.toContain('--profile=');
   });
@@ -91,9 +112,11 @@ describe('the pmtiles invocations', () => {
     expect(printed.pmtiles[1]).toBe(PLAN.tileset);
     expect(printed.pmtiles[2]).toBe(PLAN.output);
     // The CLI's documented order is MIN_LON,MIN_LAT,MAX_LON,MAX_LAT, which is
-    // what CANTERBURY_BOUNDS' west,south,east,north produces.
+    // what CANTERBURY_BOUNDS' west,south,east,north produces. The max zoom is
+    // planetiler's own ceiling (16), measured on 2026-11-11: a pack cannot
+    // carry a zoom the tool that builds it refuses.
     expect(printed.pmtiles).toContain('--bbox=170.5,-44.5,173.5,-42.8');
-    expect(printed.pmtiles).toContain('--maxzoom=17');
+    expect(printed.pmtiles).toContain('--maxzoom=16');
     expect(printed.pmtiles).toContain('--minzoom=6');
   });
 
@@ -113,5 +136,76 @@ describe('asking each tool for its version', () => {
     // flag, so the old single form failed on a machine that HAD the tool.
     expect(versionArgs.pmtiles).toEqual(['version']);
     expect(versionArgs.pmtiles).not.toContain('--version');
+  });
+});
+
+/**
+ * The zoom ceiling the tool itself enforces.
+ *
+ * The script's `--max-zoom 17` default could never have produced a pack: run
+ * on 2026-11-11 against planetiler 0.10.2, `--maxzoom=17` is refused with
+ * `java.lang.IllegalArgumentException: Max zoom must be <= 16, was 17`, and
+ * without any zoom flag at all the tileset is built at the tool's own defaults
+ * (measured: minzoom 0 / maxzoom 14) while the manifest recorded 17. A manifest
+ * whose job is "to be the evidence of what shipped" must not promise a zoom the
+ * archive cannot carry, so the script now refuses above the ceiling itself,
+ * naming the tool's own bound.
+ */
+/** What a run of the build script as a program answers with. */
+interface ScriptResult {
+  code: number;
+  out: string;
+  err: string;
+}
+
+describe('the zoom the pack can actually carry', () => {
+  /** The script run as a program, the way packBuilder.test.ts runs it. */
+  function runScript(args: string[]): ScriptResult {
+    try {
+      const out = execFileSync('node', [SCRIPT, ...args], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      return { code: 0, out, err: '' };
+    } catch (error) {
+      const failure = error as { status?: number; stdout?: string; stderr?: string };
+      return {
+        code: failure.status ?? 1,
+        out: failure.stdout ?? '',
+        err: failure.stderr ?? '',
+      };
+    }
+  }
+
+  it('refuses a max zoom planetiler refuses, before any tool runs', () => {
+    const result = runScript([
+      '--source',
+      'geofabrik-nz',
+      '--max-zoom',
+      '17',
+      '--input',
+      '/data/maps/newzealand-latest.osm.pbf',
+    ]);
+
+    expect(result.code).not.toBe(0);
+    // The refusal names the tool's own bound, so the operator is not left
+    // guessing which side is wrong.
+    const text = `${result.out}${result.err}`;
+    expect(text).toContain('Max zoom must be <= 16');
+    expect(text).toContain('17');
+  });
+
+  it('plans the legal ceiling without complaining', () => {
+    const result = runScript([
+      '--source',
+      'geofabrik-nz',
+      '--max-zoom',
+      '16',
+      '--input',
+      '/data/maps/newzealand-latest.osm.pbf',
+    ]);
+
+    expect(result.code).toBe(0);
+    expect(result.out).toContain('zooms            6 to 16');
   });
 });

@@ -34,7 +34,24 @@ const PACK_MANIFEST = 'canterbury.manifest.json';
 const PACK_FORMAT_VERSION = 1;
 const PACK_REGION = 'canterbury';
 
-/** The pack has to stay under this ceiling (V4 11.1). */
+/**
+ * The maximum zoom planetiler will build, and the reason it is a number here.
+ *
+ * planetiler 0.10.2 (the release the workflow pins) prints `maxzoom=14
+ * (maximum zoom level up to 16)` in its own argument list, and refuses a value
+ * above it: `java.lang.IllegalArgumentException: Max zoom must be <= 16, was
+ * 17` (measured 2026-11-11, on this machine, against the pinned jar).
+ *
+ * The script used to ask the tool for 17 and print a plan that promised it.
+ * Measured the same day: without the zooms planetiler builds at ITS OWN
+ * defaults - minzoom 0 / maxzoom 14 - and the manifest still recorded 17, so
+ * the pack's contract with the app promised a zoom range its archive did not
+ * carry. The ceiling is enforced here, before any tool runs, and the tiles are
+ * built at the pack's own range rather than the tool's default one.
+ */
+const PLANETILER_MAX_ZOOM = 16;
+
+/** The pack has to stay under this ceiling (V4 11.1, the maps squad's gate). */
 
 /**
  * The heap planetiler gets, in gigabytes.
@@ -214,7 +231,9 @@ function parseArgs(argv) {
     input: null,
     output: null,
     minZoom: 6,
-    maxZoom: 17,
+    // planetiler's own ceiling: the tool refuses 17 (measured 2026-11-11), so
+    // a pack whose manifest claims it could never carry it.
+    maxZoom: 16,
     sourceLicence: null,
     sourceLicenceUrl: null,
     sourceAttribution: null,
@@ -383,6 +402,33 @@ function resolveSource(args) {
  * A source whose terms forbid our offline use is refused, whatever the
  * operator asks for: the rule is not ours to waive.
  */
+/**
+ * Refuses a zoom range the tool will not build.
+ *
+ * The check runs before anything else, so the operator is told by the script's
+ * own sentence rather than by a Java stack trace from a run that did nothing.
+ */
+function checkZoomRange(args) {
+  if (!Number.isInteger(args.minZoom) || !Number.isInteger(args.maxZoom)) {
+    console.error('build-pmtiles: --min-zoom and --max-zoom have to be whole numbers.');
+    process.exit(1);
+  }
+  if (args.minZoom < 0 || args.maxZoom < args.minZoom) {
+    console.error(
+      `build-pmtiles: the zoom range ${args.minZoom}..${args.maxZoom} is not a range.`,
+    );
+    process.exit(1);
+  }
+  if (args.maxZoom > PLANETILER_MAX_ZOOM) {
+    console.error(
+      `build-pmtiles: refused. Max zoom must be <= ${PLANETILER_MAX_ZOOM}, was ${args.maxZoom} ` +
+        '- planetiler 0.10.2 refuses it itself (measured 2026-11-11), so the pack could never ' +
+        'carry it and the manifest would promise one. Pass --max-zoom 16.',
+    );
+    process.exit(1);
+  }
+}
+
 function checkTerms(source, args) {
   if (source.offlineUse === 'forbidden') {
     console.error(`build-pmtiles: refused. The terms of "${source.title}" forbid the offline use.`);
@@ -454,7 +500,7 @@ function printPlan(plan) {
   console.log(`  offline use url  ${plan.source.offlineUseUrl}`);
   console.log(`  read on          ${plan.source.offlineUseReadOn}`);
   console.log(`  bbox             ${plan.bbox}`);
-  console.log(`  zooms            ${plan.minZoom} to ${plan.maxZoom}`);
+  console.log(`  zooms            ${plan.minZoom} to ${plan.maxZoom} (built, not the tool's default)`);
   console.log(`  pack             ${plan.output}`);
   console.log(
     `  tileset          ${plan.tileset} (the whole-country build, removed with the pack)`,
@@ -559,7 +605,19 @@ function sha256Of(file) {
  */
 export function buildCommands(plan) {
   return {
-    planetiler: ['--osm-path=' + plan.input, '--output=' + plan.tileset, '--force'],
+    planetiler: [
+      '--osm-path=' + plan.input,
+      '--output=' + plan.tileset,
+      '--force',
+      // The profile's own base data (natural earth, water polygons, the lake
+      // centerlines): planetiler refuses to start without it and names the flag
+      // that fetches it.
+      '--download',
+      // The pack's own zooms, in the argument names the tool publishes, so the
+      // tileset carries what the extract step and the manifest claim.
+      '--minzoom=' + plan.minZoom,
+      '--maxzoom=' + plan.maxZoom,
+    ],
     pmtiles: [
       'extract',
       plan.tileset,
@@ -680,6 +738,7 @@ function main() {
     process.exit(0);
   }
 
+  checkZoomRange(args);
   const source = resolveSource(args);
   checkTerms(source, args);
   const plan = buildPlan(source, args);
