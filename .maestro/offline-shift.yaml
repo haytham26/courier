@@ -1,0 +1,119 @@
+appId: com.courier.copilot
+name: 'The whole shift in airplane mode, held on the phone (the directive item 6)'
+---
+# The founder directive 2026-11-10 item 6 (OFFLINE), the E2E leg's first half.
+#
+# The runner (.maestro/run-all.sh) takes the network away BEFORE this flow
+# runs - `adb shell svc wifi disable` and `svc data disable`, the same two
+# commands the A1 job's offline half uses - so the courier works a whole shift
+# in airplane mode: the day answers from the phone's own cache, every mark is
+# recorded on the phone, and the outbox holds what it could not send instead of
+# losing it (ADR-014).
+#
+# The second half is `.maestro/offline-sync.yaml`: the network comes back and
+# the phone's own answers are still exactly one per stop.
+#
+# BUG-185: stop the app FIRST, then clear its state (the old task's removal
+# killed the freshly started process on api-34).
+- stopApp
+- launchApp:
+    clearState: true
+# The day is on the phone (the E2E build's own seeded day), so the shift starts
+# with the network already gone: the cache answers, not the wire.
+- extendedWaitUntil:
+    visible:
+      id: 'today-screen'
+    timeout: 60000
+# The sheet opens at peek (the morning glance) and the run actions sit below
+# its fold: the courier raises the sheet with its grabber first, the repo's own
+# convention (common/reveal-and-tap.yaml; copilot.yaml learned it the hard way).
+- swipe:
+    from:
+      id: 'today-sheet-grabber'
+    direction: UP
+- assertVisible:
+    id: 'today-go'
+# Three deliveries, each written through the store: the mark on the run and
+# the event in the outbox. The Delivered action is below the fold even when the
+# sheet is raised (BUG-174's convention): scroll to it before each tap, no-op
+# once visible, the tap itself unchanged.
+- repeat:
+    times: 3
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: 'today-mark-delivered'
+          direction: DOWN
+          timeout: 20000
+      - tapOn:
+          id: 'today-mark-delivered'
+# The fourth stop is a failed delivery, with the courier's own reason and their
+# own word (queue 4b, ADR-023): the server refuses a failed event with no
+# reason, and the phone refuses it first. The failure is recorded with no
+# signal, exactly like the deliveries.
+- scrollUntilVisible:
+    element:
+      id: 'today-fail'
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: 'today-fail'
+- extendedWaitUntil:
+    visible:
+      id: 'today-fail-sheet'
+    timeout: 30000
+- assertVisible: 'Why did it fail?'
+- tapOn:
+    id: 'today-fail-reason-nobody_home'
+# The courier's own sentence rides the event beside the structured reason: the
+# office can ask why, and the phone carries the word the driver used.
+- tapOn:
+    id: 'today-fail-note'
+- inputText:
+    text: 'knocked twice, van in the drive'
+- tapOn:
+    id: 'today-fail-confirm'
+- extendedWaitUntil:
+    notVisible:
+      id: 'today-fail-sheet'
+    timeout: 30000
+# The shift is worked, and the phone says so in its own numbers: the run's own
+# counts, with the network still away. Four stops of the E2E build's day are
+# marked, one of them failed with its reason.
+- assertVisible:
+    id: 'today-screen'
+- takeScreenshot: 'offline-shift-worked'
+# ADR-014's answer, in the courier's own words (A1 slice 3): a delivery that
+# could not send is said out loud on the screen the courier is looking at,
+# rather than hidden in a log. The note sits between the sheet's numbers and
+# its next stop, so the sheet is scrolled back up to it (BUG-181).
+- scrollUntilVisible:
+    element:
+      id: 'today-sync-note'
+    direction: UP
+    timeout: 20000
+- assertVisible:
+    id: 'today-sync-note'
+- takeScreenshot: 'offline-shift-held'
+# The end of the day reads the same truth: the summary counts the run the phone
+# holds, not what the server has heard.
+- swipe:
+    from:
+      id: 'today-sheet-grabber'
+    direction: UP
+- scrollUntilVisible:
+    element:
+      id: 'today-end-of-day'
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: 'today-end-of-day'
+- extendedWaitUntil:
+    visible:
+      id: 'summary-screen'
+    timeout: 30000
+- assertVisible:
+    id: 'summary-delivered'
+- assertVisible:
+    id: 'summary-not-home'
+- takeScreenshot: 'offline-shift-summary'

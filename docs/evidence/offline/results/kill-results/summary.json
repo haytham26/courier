@@ -1,0 +1,14 @@
+{
+ "shifts": 12,
+ "events_logged": 110,
+ "server_rows": 110,
+ "duplicate_landings": 0,
+ "duplicate_sends": 10,
+ "lost": 0,
+ "quarantined": 0,
+ "pending_after": 10,
+ "answers_dropped": 10,
+ "seed": 20261124,
+ "network": "one answer dropped to the kill, then online",
+ "kill_mid_sync": 1
+}

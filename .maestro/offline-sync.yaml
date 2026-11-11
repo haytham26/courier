@@ -1,0 +1,72 @@
+appId: com.courier.copilot
+name: 'The network comes back and the phone keeps exactly one mark per stop (the directive item 6)'
+---
+# The founder directive 2026-11-10 item 6 (OFFLINE), the E2E leg's second half.
+#
+# The runner gives the network back between the two flows
+# (`.maestro/run-all.sh`), so this is the same shift, the same phone, the same
+# day, after a COLD START with the signal back - the shape a courier gets when
+# they drive out of the dead zone and the app has been reclaimed by Android in
+# the meantime.
+#
+# The app is NOT relaunched with a cleared state (that would be a different
+# phone): `clearState: false` is the cold start, and the day the phone cached
+# with no network must still be the day it answers with.
+#
+# What this leg proves and what it does not, stated rather than implied: the
+# E2E build has no server (its API base address is the device's own loopback),
+# so it cannot prove a row landing in Postgres. What it proves is the phone's
+# half of exactly-once: every stop the courier marked in airplane mode carries
+# EXACTLY ONE mark after the network returns and after a cold restart, the
+# courier is still told the truth about what the phone holds, and the outbox
+# did not invent a second event for a stop that already had one. The server's
+# half of exactly-once is measured by the app-side simulation
+# (`apps/mobile/src/sync/__tests__/offlineShifts.test.ts`: 0 duplicate
+# landings, 0 losses over 50 shifts) and by the A1 no-mock job against the real
+# compose stack (`.maestro/run-a1.sh`).
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: 'today-screen'
+    timeout: 60000
+# The day is the one the courier worked in airplane mode: the counts are the
+# run's own, and they are the SAME counts the offline half left behind - one
+# mark per stop, no second mark invented when the signal came back.
+- swipe:
+    from:
+      id: 'today-sheet-grabber'
+    direction: UP
+- assertVisible:
+    id: 'today-go'
+- assertVisible:
+    id: 'today-screen'
+- takeScreenshot: 'offline-sync-worked'
+# The courier is still told the truth about what the phone holds (ADR-014): the
+# note the offline half showed is the sentence the app answers with now.
+- scrollUntilVisible:
+    element:
+      id: 'today-sync-note'
+    direction: UP
+    timeout: 20000
+- assertVisible:
+    id: 'today-sync-note'
+- takeScreenshot: 'offline-sync-held'
+# One more cold start, still with the network back: the marks survive it too,
+# because they are the phone's own rows and not a screen's memory (BUG-069).
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: 'today-screen'
+    timeout: 60000
+- swipe:
+    from:
+      id: 'today-sheet-grabber'
+    direction: UP
+- assertVisible:
+    id: 'today-go'
+- assertVisible:
+    id: 'today-screen'
+- takeScreenshot: 'offline-sync-restarted'

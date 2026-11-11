@@ -1,0 +1,14 @@
+{
+ "shifts": 50,
+ "stops_marked": 441,
+ "events_logged": 441,
+ "server_rows": 441,
+ "duplicate_landings": 0,
+ "duplicate_sends": 0,
+ "lost": 0,
+ "quarantined": 0,
+ "pending_after": 0,
+ "answers_dropped": 0,
+ "seed": 20261111,
+ "network": "airplane mode for the whole shift, then online"
+}
