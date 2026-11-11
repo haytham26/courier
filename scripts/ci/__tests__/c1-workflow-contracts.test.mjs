@@ -76,10 +76,24 @@ test('BUG-095: the release collects its APK from where the build wrote it, and t
     /cp app\/build\/outputs\/apk\/(release|debug)\//,
     'the copy is relative to the android directory, as the build wrote it',
   );
+  // BUG-283: the release attaches the APK **and** its SBOM, so the same step's
+  // `files:` block carries both and may be written as a YAML block scalar. The
+  // root path (the fix BUG-095 proved) is matched either way, and the SBOM
+  // beside it is asserted on its own line below.
   assert.match(
     text,
-    /files: apps\/mobile\/android\/\$\{\{ steps\.apk\.outputs\.path \}\}/,
+    /apps\/mobile\/android\/\$\{\{ steps\.apk\.outputs\.path \}\}/,
     "the release action resolves the artifact from the root, where the Collect step's artifact actually is",
+  );
+  // BUG-283: the release attaches the APK
+  // **and** its SBOM, so the same step's `files:` block carries both. The first
+  // line is the APK above; the second is
+  // the SPDX the Syft step wrote, versioned. A release with one artefact and
+  // not the other is the thing this asserts against.
+  assert.match(
+    text,
+    /apps\/mobile\/android\/artifacts\/courier-\$\{\{ steps\.keystore\.outputs\.version \}\}\.spdx\.json/,
+    "the release attaches the SBOM the SBOM step generated, versioned with it",
   );
 });
 
