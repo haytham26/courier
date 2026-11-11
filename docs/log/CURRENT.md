@@ -548,6 +548,23 @@ under Debug on a tall window with its frame ending above the dock.
 
 BUG-300 is filed FIXED (the app-side defects and their tests); BUG-270 stays open
 on main (the matrix lives in #289).
+---
+
+## 2026-11-11: BUG-305 — the import sheet's paste field overlapped the actions row (the large legs)
+
+The large legs of run 42866833804 (both api levels) failed `.maestro/import.yaml`
+at the sheet's own dismiss: the paste field's box sat 84 px OVER the pinned
+actions row, so the tap aimed at the dismiss landed on the text field (api-35's
+Maestro refused it as obstructed). The small legs had 133 dp of room against
+the field's 128 dp, which is why the same build was green there.
+
+Fixed in the app, red-first: `importSheetLayoutFor` (stops.tsx) clamps the inset
+the sheet pads by to what the sheet can absorb and bounds the field by the room
+that leaves, so the field's box can never reach the actions row. Pinned by
+`stopsImportSheet.test.tsx` (5 claims). Green: 906 tests / 109 suites, tsc,
+eslint. BUG-304's large-leg flake (BUG-302) is untouched by this; the two
+still-open large-leg runs to watch are the ci/bug270-restore matrix and the
+P4 capture job.
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue

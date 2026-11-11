@@ -25,6 +25,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Dimensions,
   Keyboard,
   type KeyboardEvent,
   Pressable,
@@ -101,6 +102,67 @@ const segmentOf = (stop: Stop, run: RunState): SegmentKey =>
       ? 'later'
       : 'to-go';
 
+/**
+ * The import sheet's layout against the soft keyboard's inset (BUG-305).
+ *
+ * The sheet's paste field is a multiline TextInput whose box follows its
+ * content, and the sheet's scroll view has only the room the Keyboard
+ * event's IME inset leaves it (edge-to-edge Android, BUG-197). Without a
+ * bound the field's box extends past the scroll view's allocation and OVER
+ * the actions row, so a tap aimed at the dismiss button lands on the text
+ * field: run 42866833804 failed the import flow's own dismiss on BOTH large
+ * legs with an 84 px overlap of the field's box onto the actions row (the
+ * small legs had 133 dp of room against the field's 128 dp, which is why the
+ * same build was green there).
+ *
+ * The inset is clamped to what the sheet can absorb, so the layout always
+ * fits by construction: the field is then bounded by the room that leaves,
+ * and its box can never reach the actions row. A keyboard taller than the
+ * sheet can absorb (a measured inset is 217-260 dp on the large AVDs) pads
+ * only to the clamp - the field keeps its two-line floor and the sheet's
+ * content scrolls rather than overlapping the pinned actions.
+ *
+ * @param windowHeight the screen's height in dp (Dimensions.get().height)
+ * @param keyboardHeight the Keyboard event's IME inset in dp (0 when down)
+ */
+export function importSheetLayoutFor(
+  windowHeight: number,
+  keyboardHeight: number,
+): { inset: number; fieldMinHeight: number; fieldMaxHeight: number } {
+  // The card is pinned 64 dp from the top and 64 above the bottom, with 20
+  // dp of padding either side (styles.detail + styles.importSheet).
+  const sheetChrome = spacing.space64 * 2 + spacing.space20 * 2;
+  // The two answer lines the sheet spells below the field, and the pinned
+  // actions row (styles.detailAction).
+  const notesAndActions =
+    typography.body.lineHeight + typography.body.lineHeight + spacing.space48;
+  // The scroll view's own content above the field: the title, the hint (three
+  // lines at the narrowest width) and the gaps between them (styles.importScroll).
+  const scrollChrome =
+    typography.largeTitle.lineHeight +
+    spacing.space12 +
+    typography.body.lineHeight * 3 +
+    spacing.space12;
+  // Two lines is the field's floor: it never collapses, and a keyboard taller
+  // than the sheet scrolls the text inside the field instead.
+  const fieldFloor = typography.body.lineHeight * 2;
+  // Twelve lines is the ceiling: with the keyboard down the field does not
+  // swallow the sheet either - the CSV scrolls inside it.
+  const fieldCeiling = typography.body.lineHeight * 12;
+  const absorbable = Math.max(
+    0,
+    windowHeight - sheetChrome - notesAndActions - scrollChrome - fieldFloor,
+  );
+  const inset = Math.max(0, Math.min(keyboardHeight, absorbable));
+  const room =
+    windowHeight - sheetChrome - inset - notesAndActions - scrollChrome;
+  return {
+    inset,
+    fieldMinHeight: fieldFloor,
+    fieldMaxHeight: Math.min(fieldCeiling, Math.max(fieldFloor, room)),
+  };
+}
+
 function RouteScreen() {
   const { t } = useChosen();
   const router = useRouter();
@@ -142,6 +204,19 @@ function RouteScreen() {
       hide.remove();
     };
   }, []);
+  // BUG-305: the inset the sheet pads by is the one the sheet can absorb, and
+  // the field is bounded by the room that leaves - so the field's box can never
+  // overlap the pinned actions row (the 84 px overlap in the CI dumps). The unit
+  // environment answers no window metrics (Dimensions reads the device), so the
+  // tall window's own height stands in there - the window the BUG-305 claim is
+  // about, and the one the large AVDs report.
+  const windowHeight = Dimensions.get('window').height;
+  const importLayout = importSheetLayoutFor(
+    Number.isFinite(windowHeight) ? windowHeight : 731,
+    keyboardHeight,
+  );
+  const importInset = importLayout.inset;
+  const fieldHeight = importLayout.fieldMaxHeight;
   // The importer of this build: the mock in the E2E build, the real client's
   // importStops in every other (the labelReader seam's own rule).
   const importer = useMemo(() => importerForThisBuild(), []);
@@ -642,7 +717,7 @@ function RouteScreen() {
                 (correct edge-to-edge), so the actions ride above the keyboard
                 while typing. */}
             <View
-              style={[styles.importAvoid, { paddingBottom: keyboardHeight }]}
+              style={[styles.importAvoid, { paddingBottom: importInset }]}
               testID="stops-import-kav"
             >
             <ScrollView
@@ -663,7 +738,11 @@ function RouteScreen() {
                 accessibilityLabel="The spreadsheet's CSV text"
                 testID="stops-import-text"
                 placeholderTextColor={t.colors.secondaryLabel}
-                style={[styles.importInput, { color: t.colors.label, borderColor: t.colors.separator }]}
+                style={[
+                  styles.importInput,
+                  { height: fieldHeight },
+                  { color: t.colors.label, borderColor: t.colors.separator },
+                ]}
               />
             </ScrollView>
             {importNote === null ? null : (
@@ -829,7 +908,9 @@ const styles = StyleSheet.create({
   importScrollBody: { flex: 1 },
   importScroll: { gap: spacing.space12 },
   importInput: {
-    minHeight: spacing.space64 * 2,
+    // BUG-305: the height rides the field itself (importFieldHeightFor, below
+    // on the element), because it is the room the sheet has - a fixed minimum
+    // let a long paste push the field's box over the actions row.
     borderWidth: 1,
     borderRadius: radii.card,
     padding: spacing.space12,
