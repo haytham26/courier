@@ -1,0 +1,52 @@
+[
+ {
+  "shift": "1f49ffa0-4d2e-4b80-99bb-c65580065d41",
+  "stop": "37163d09-297b-4082-bfb9-5c7c6f9cb424",
+  "event_id": "4e3d7390-0561-42fe-b239-5c1c1d5539ae",
+  "first_status": 201,
+  "first_already_stored": false,
+  "replay_status": 200,
+  "replay_already_stored": true,
+  "rows_in_postgres": 6
+ },
+ {
+  "shift": "ee06bc3d-769f-45d0-ade2-61eb832341d6",
+  "stop": "1db0a93e-128b-487b-80fb-4ca27b52bcbd",
+  "event_id": "c19ae4e0-f573-4833-bfe0-4aa662c0e8da",
+  "first_status": 201,
+  "first_already_stored": false,
+  "replay_status": 200,
+  "replay_already_stored": true,
+  "rows_in_postgres": 6
+ },
+ {
+  "shift": "1df273e2-96d9-4407-a544-4d3a8359b6c3",
+  "stop": "eeaa9a46-1eb4-4feb-8a35-42d9ac59e6a1",
+  "event_id": "a7e348e9-ded3-43ee-9eb8-d2f3b3010326",
+  "first_status": 201,
+  "first_already_stored": false,
+  "replay_status": 200,
+  "replay_already_stored": true,
+  "rows_in_postgres": 6
+ },
+ {
+  "shift": "adf41c57-68c7-4f7c-98ff-a772a1ab919e",
+  "stop": "b8301e40-dba6-47fd-9af3-c2b02f96a271",
+  "event_id": "26f4035e-2bd0-4472-b590-9819c27aad24",
+  "first_status": 201,
+  "first_already_stored": false,
+  "replay_status": 200,
+  "replay_already_stored": true,
+  "rows_in_postgres": 6
+ },
+ {
+  "shift": "cd0686a9-46cc-4df5-ab9e-1098c45bbfcd",
+  "stop": "0267f848-48af-4e98-984b-3a7d7d082ad8",
+  "event_id": "a99149b9-5efa-4c18-9cd3-5db1d8714212",
+  "first_status": 201,
+  "first_already_stored": false,
+  "replay_status": 200,
+  "replay_already_stored": true,
+  "rows_in_postgres": 6
+ }
+]

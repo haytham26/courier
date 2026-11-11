@@ -1,0 +1,55 @@
+appId: com.courier.copilot
+name: 'The map renders with no network and its attribution is on screen (the directive item 6)'
+---
+# The founder directive 2026-11-10 item 6 (OFFLINE), the map half.
+#
+# The runner (.maestro/run-all.sh) takes the network away BEFORE this flow, so
+# the map screen opens with no signal at all: with a pack the tiles come from
+# the phone, and with none of them the app still draws the background, the
+# courier overlay and the attribution - never a broken map.
+#
+# What this leg proves and what it does not: the pack itself is a build
+# artefact and is not in the repository (apps/mobile/assets/maps/README.md), so
+# the emulator's build has none to draw. What IS proven here is the app's own
+# offline behaviour and the ODbL/LINZ credit being on screen with no network.
+# The built pack - its size against the 50 MB ceiling, its manifest, the
+# attribution line and the header - is measured in
+# `docs/evidence/offline/README.md` and read back through the app's own
+# `loadOfflinePack` in `apps/mobile/src/maps/__tests__/canterburyPack.test.ts`.
+# BUG-185: stop the app FIRST, then clear its state (the old task's removal
+# killed the freshly started process on api-34).
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "today-screen"
+    timeout: 60000
+# The map is a tab of the dock, tapped by its testID.
+- tapOn:
+    id: "tab-map"
+- extendedWaitUntil:
+    visible:
+      id: "map-screen"
+    timeout: 30000
+# The map's own state with no network: the offline pack when there is one, the
+# online source when there is not, and the honest answer that there is neither.
+# The app decides it, the screen says it, and the flow reads what it says.
+- assertVisible:
+    id: "map-pack-status"
+# The ODbL attribution, on screen with no signal: the three lines the OSMF
+# copyright page and the LINZ attribution page ask for (styles.ts's
+# ATTRIBUTION_LINES, read 2026-10-21). They work with no network by design -
+# they are the app's own words, not a fetch.
+- assertVisible:
+    id: "map-attribution"
+- assertVisible: "© OpenStreetMap contributors"
+- assertVisible:
+    text: "Contains information from OpenStreetMap, available under the Open Database License (ODbL)."
+- assertVisible:
+    text: "Sourced from the LINZ Data Service and licensed for reuse under the CC BY 4.0 licence"
+# The courier's own overlay is still drawn with no pack and no server: the stop
+# pins are the run's own, and the map is never blank.
+- assertVisible:
+    id: "map-screen"
+- takeScreenshot: "offline-map-pack"
