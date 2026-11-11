@@ -364,12 +364,72 @@ def summarise(turns: list[dict[str, Any]], judge_label: str, manifest: str) -> d
     }
 
 
+def score_published_csv(csv_path: Path, index: Any) -> list[dict[str, Any]]:
+    """The resolver on a results directory that is ALREADY published.
+
+    The open-data legs are the recorded 0/75: their hypotheses are the
+    speakers' own sentences, so this is where the honest answer to "what
+    would the resolver have done there" is measured - without building a
+    single file of audio.
+    """
+    with Path(csv_path).open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    turns: list[dict[str, Any]] = []
+    for row in rows:
+        hypothesis = str(row.get("hypothesis") or "")
+        brain_address = str(row.get("parsed_address") or "")
+        gold = str(row.get("gold_address") or "")
+        gated = resolve(brain_address, index) if brain_address else None
+        ungated = resolve(hypothesis, index)
+        turns.append(
+            {
+                "turn_id": str(row.get("id") or ""),
+                "script_id": "",
+                "slice": str(row.get("slice") or ""),
+                "variant": "open-data",
+                "snr_db": row.get("snr_db") or None,
+                "file": str(row.get("file") or ""),
+                "sha256": str(row.get("sha256") or ""),
+                "gold_text": str(row.get("gold_text") or ""),
+                "spoken_text": str(row.get("gold_text") or ""),
+                "hypothesis": hypothesis,
+                "gold_intent": str(row.get("gold_intent") or "noop"),
+                "parsed_intent": str(row.get("parsed_intent") or "noop"),
+                "gold_address": gold,
+                "brain_address": brain_address,
+                "brain_exact": bool(brain_address) and brain_address == gold,
+                "resolved_address": gated.as_text() if gated else "",
+                "resolved_key": gated.street_key if gated else "",
+                "resolved_exact": exact_match(gated, gold),
+                "ungated_address": ungated.as_text() if ungated else "",
+                "ungated_key": ungated.street_key if ungated else "",
+                "ungated_exact": exact_match(ungated, gold),
+                "oov_words": [],
+                "held_out": str(row.get("held_out") or "") == "True",
+            }
+        )
+    return turns
+
+
+def _score_published(root: Path, args: argparse.Namespace) -> int:
+    """The CSV leg: a results directory that is already published."""
+    index = load_index(linz_dir=Path(args.linz_dir)) if args.linz_dir else load_index()
+    turns = score_published_csv(root / args.from_csv, index)
+    if not turns:
+        logger.warning("the CSV carried no rows: %s", args.from_csv)
+        return 2
+    return write_results(turns, root / args.out, args, "none (--from-csv)", args.manifest)
+
+
 def run(args: argparse.Namespace) -> int:
     """The build, the judge pass and the scoring."""
     root = Path(args.root)
     manifest = root / args.manifest
     data = root / args.data
     sidecar = root / args.out_sidecar
+
+    if args.from_csv:
+        return _score_published(root, args)
 
     scripts = read_jsonl(manifest / "scripts.jsonl")
     addresses = read_jsonl(manifest / "addresses.jsonl")
@@ -405,7 +465,13 @@ def run(args: argparse.Namespace) -> int:
         return 2
 
     index = load_index(linz_dir=Path(args.linz_dir)) if args.linz_dir else load_index()
+    return _score_built(rows, root, data, index, args)
 
+
+def _score_built(
+    rows: list[dict[str, Any]], root: Path, data: Path, index: Any, args: argparse.Namespace
+) -> int:
+    """The judge pass over the verified files, and the scoring."""
     judge = None
     judge_label = "none (--no-judge)"
     if not args.no_judge:
@@ -420,10 +486,19 @@ def run(args: argparse.Namespace) -> int:
     if not turns:
         logger.warning("no turns were scored: nothing is written")
         return 2
+    return write_results(turns, root / args.out, args, judge_label, args.manifest)
 
-    out_dir = root / args.out
+
+def write_results(
+    turns: list[dict[str, Any]],
+    out_dir: Path,
+    args: argparse.Namespace,
+    judge_label: str,
+    manifest: str,
+) -> int:
+    """The per-utterance CSV, the summary and the README."""
     out_dir.mkdir(parents=True, exist_ok=True)
-    summary = summarise(turns, judge_label, args.manifest)
+    summary = summarise(turns, judge_label, manifest)
     (out_dir / "summary.json").write_text(
         json.dumps(summary, indent=1, ensure_ascii=False) + "\n", encoding="utf-8"
     )
@@ -439,7 +514,8 @@ def run(args: argparse.Namespace) -> int:
             )
     command = (
         "uv run --directory services/courier-voice --extra eval python -m app.eval_address "
-        f"--manifest {args.manifest} --out {args.out}"
+        f"--manifest {manifest} --out {args.out}"
+        + (f" --from-csv {args.from_csv}" if args.from_csv else "")
     )
     (out_dir / "README.md").write_text(
         f"""# The address lever, measured on the STT output
@@ -474,11 +550,20 @@ suburb), never as a substring.
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", required=True, help="the manifest directory")
+    parser.add_argument(
+        "--manifest",
+        default="packages/eval/voice/manifest",
+        help="the manifest directory (not read by --from-csv, which scores a published CSV)",
+    )
     parser.add_argument("--data", default="data/voice", help="the data directory")
     parser.add_argument("--out", required=True, help="the results directory")
     parser.add_argument("--out-sidecar", default=SIDECAR, help="the sidecar this run pins")
     parser.add_argument("--linz-dir", default=None, help="the build-local LINZ address table")
+    parser.add_argument(
+        "--from-csv",
+        default=None,
+        help="score a published per_utterance.csv instead of building audio",
+    )
     parser.add_argument("--build", action="store_true", help="build the audio before scoring")
     parser.add_argument(
         "--no-build", action="store_true", help="never build, score what is on disk"
