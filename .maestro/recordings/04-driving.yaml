@@ -14,6 +14,16 @@ name: R.04 driving - beside 04-driving.html and 12-driving-night.html
     from:
       id: "today-sheet-grabber"
     direction: UP
+# The sheet scrolls: at 200 % text on the small device (the small-200pct
+# capture leg of run 42865246271) the next stop's own card pushes the Go below
+# the fold even at half, and the suite's own gesture reaches it - the same
+# scrollUntilVisible .maestro/today-list.yaml uses for the actions. The app
+# scrolls correctly; the flow did not ask it to.
+- scrollUntilVisible:
+    element:
+      id: "today-go"
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: "today-go"
 - extendedWaitUntil:
