@@ -48,7 +48,7 @@
   "devDependencies": {
     "@courier/eslint-config": "workspace:*",
     "typescript": "5.9.3",
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "5.0.5",
     "vitest": "4.1.11",
     "eslint": "10.13.0",
     "@typescript-eslint/eslint-plugin": "8.71.0",
