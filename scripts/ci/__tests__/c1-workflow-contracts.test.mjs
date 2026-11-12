@@ -101,13 +101,13 @@ test('BUG-097: the recordings cache is content-hashed with a restore-keys, and a
   const text = workflow('screen-recordings.yml');
   assert.match(
     text,
-    /key: playwright-\$\{\{ runner\.os \}\}-\$\{\{ hashFiles\('\*\*\/pnpm-lock\.yaml'\) \}\}-chromium-1\.49\.1/,
-    "the Playwright cache key carries what determines the browser's bytes",
+    /key: playwright-\$\{\{ runner\.os \}\}-\$\{\{ matrix\.profile \}\}-\$\{\{ hashFiles\('\*\*\/pnpm-lock\.yaml'\) \}\}-chromium-1\.49\.1/,
+    "the Playwright cache key carries what determines the browser's bytes, and (BUG-270) the profile: a render is of a viewport, so the two legs' entries are separate",
   );
   assert.match(
     text,
-    /key: avd-\$\{\{ runner\.os \}\}-34-google-apis-x86_64-\$\{\{ steps\.pins\.outputs\.hash \}\}/,
-    "the AVD cache key carries the same pins and options hash android-e2e.yml was given by BUG-068's fix",
+    /key: avd-\$\{\{ runner\.os \}\}-34-google-apis-x86_64-\$\{\{ matrix\.profile \}\}-\$\{\{ steps\.pins\.outputs\.hash \}\}/,
+    "the AVD cache key carries the same pins and options hash android-e2e.yml was given by BUG-068's fix, and (BUG-270) the profile a snapshot is made of",
   );
   // BUG-097's second half: a composition that fails is a failure of this job,
   // not a warning the summary can carry past. The keeper is the source of

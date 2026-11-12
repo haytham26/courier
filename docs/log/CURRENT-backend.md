@@ -37,6 +37,28 @@ restart, and once the Oracle host exists the same variables point at staging and
 the APK is stable.** The link goes at the top of this log and of FOUNDER_TODO the
 moment the run publishes it.
 
+## 2026-11-12 (later still): BUG-270's screen-recordings half — the recordings job boots the two profiles (BUG-290)
+
+**Directive item 5, first half, done.** The lead's `android-e2e.yml` now carries the large AVD (their P4 job
+captures the 8 pending visual baselines on both profiles), which is what the row was waiting for, and the
+recordings lane now does the same:
+
+- **The record job is a matrix over the two profiles**, as parallel jobs on the same pins (BUG-065/BUG-068):
+  small (the runner's own default AVD, 390x844 — the phone the design was drawn on) and large (the Nexus 6
+  AVD, 1440x2560 device px at 560 dpi = 411x731 logical dp, the profile the lead's P4 job names `large`).
+- **The pin discipline the row names:** the AVD cache key's fingerprint carries the profile (a snapshot is
+  made of one screen; restoring it onto the other leg's device would boot a screen it never saw and the
+  failure would read as an app failure), and the Chromium cache key carries it too.
+- **The reference HTML renders at the leg's own viewport**, so the side-by-side compares like with like
+  instead of a phone render beside a tablet screencap.
+- **Each leg's artifact is `screen-recordings-<profile>`**, so the two sets of baselines never merge into
+  one artifact and the visual gate promotes the right one.
+- BUG-097's contract test was extended (not relaxed) to require the profile in both cache keys.
+
+**Still open in my lane from the directive:** VROOM v1.15.0 (the routing eval's measured third engine, in a
+pinned Docker image) and the Dependabot triage. Oracle staging remains blocked on the founder's secrets —
+the watcher's last probe (2026-11-12 08:30 UTC) still reads `configured=false`.
+
 ## 2026-11-12 (later): the lead's item 2b — LOCKED STOPS: the reopt never moves a locked stop (BUG-286)
 
 **For the lead, announced as the directive asks.** The reopt now accepts locked stop positions:
