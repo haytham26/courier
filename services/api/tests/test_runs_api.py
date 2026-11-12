@@ -122,9 +122,7 @@ class TestCreatingARun:
         assert refused.status_code == 422, refused.text
 
     def test_a_naive_break_window_is_refused(self, client: TestClient) -> None:
-        body = run_body(
-            break_window={"start": "2026-10-24T12:00:00", "end": "2026-10-24T12:30:00"}
-        )
+        body = run_body(break_window={"start": "2026-10-24T12:00:00", "end": "2026-10-24T12:30:00"})
 
         refused = client.post("/runs", json=body)
 
@@ -179,7 +177,6 @@ class TestCreatingARun:
 
 class TestThePodUrl:
     """ADR-011 §2: the owner gets a URL that dies; a foreign anything is 404."""
-
 
     def _upload(
         self,
@@ -436,8 +433,6 @@ def seed_run_with_stops(
     return run_id, shift_id
 
 
-
-
 class TestTheReplayWhoseBytesCannotBeRead:
     """BUG-119's route half: the reason is an answer, not a bare raise.
 
@@ -496,6 +491,7 @@ class TestTheReplayWhoseBytesCannotBeRead:
         assert "backend down" in answered.json()["detail"]
         assert len(repo.events) == events_before
 
+
 class TestListingTheStops:
     def test_the_stops_list_their_address_and_status(
         self, client: TestClient, repo: InMemoryRepo
@@ -516,9 +512,7 @@ class TestListingTheStops:
             (row.lat, row.lon) for row in repo.run_stops[run_id]
         ]
 
-    def test_a_pickup_stop_lists_its_type(
-        self, client: TestClient, repo: InMemoryRepo
-    ) -> None:
+    def test_a_pickup_stop_lists_its_type(self, client: TestClient, repo: InMemoryRepo) -> None:
         run_id, shift_id = seed_run_with_stops(repo)
         first, second = repo.run_stops[run_id]
         repo.run_stops[run_id] = [first, replace(second, type="pickup")]
@@ -795,6 +789,115 @@ class TestThePartialReopt:
         after = [uuid.UUID(stop["stop_id"]) for stop in body["stops"]]
         kept = [stop_id for stop_id in after if stop_id != added_id]
         assert kept == before
+
+    def test_a_locked_stop_keeps_its_position(self, client: TestClient, repo: InMemoryRepo) -> None:
+        """The lead's 2026-11-12 ask: the reopt never moves a locked stop.
+
+        A locked stop is a wall: the affected stop is re-placed inside the block
+        it came from, so the locked stop keeps its own sequence, and the answer
+        names it so the phone can show the courier that it is exactly where they
+        put it.
+        """
+        run_id, _, added_id = self.seed_planned_run(repo, extra_stops=1)
+        stored = repo.get_run_route(run_id)
+        assert stored is not None
+        kept_id = stored.stops[0].stop_id
+        locked_sequence = stored.stops[0].sequence
+
+        body = client.post(
+            f"/runs/{run_id}/route:reopt",
+            json={
+                "affected_stop_ids": [str(added_id)],
+                "locked_stop_ids": [str(kept_id)],
+            },
+        ).json()
+
+        held = {uuid.UUID(entry["stop_id"]): entry["sequence"] for entry in body["locked_stop_ids"]}
+        assert held == {kept_id: locked_sequence}
+        placed = [uuid.UUID(stop["stop_id"]) for stop in body["stops"]]
+        # The sequence is 1-based (routing.py's _build_plan), so the wall's own
+        # position in the answer is its sequence minus one.
+        assert placed[locked_sequence - 1] == kept_id
+
+    def test_nothing_crosses_a_wall(self, client: TestClient, repo: InMemoryRepo) -> None:
+        """An affected stop is re-placed INSIDE its own block.
+
+        The three-stop day is planned, the middle stop is locked, and the first
+        stop is affected: it may be re-timed, but it may not be moved to the
+        other side of the wall - the wall is the courier's own decision about
+        the shape of their day, and it holds for every stop, not only the
+        locked one.
+        """
+        run_id, shift_id = seed_run_with_stops(repo)
+        request, _ = _route_request(repo.runs[run_id], repo.run_stops[run_id])
+        plan = schedule_plan(request.stops, request)
+        repo.put_run_route(run_id, plan)
+        stored = repo.get_run_route(run_id)
+        assert stored is not None
+        # The plan's own order (the planner may not keep the rows' order).
+        planned = [stop.stop_id for stop in stored.stops]
+        wall_id = planned[1]
+        moved_id = planned[0]
+
+        body = client.post(
+            f"/runs/{run_id}/route:reopt",
+            json={
+                "affected_stop_ids": [str(moved_id)],
+                "locked_stop_ids": [str(wall_id)],
+            },
+        ).json()
+
+        order = [uuid.UUID(stop["stop_id"]) for stop in body["stops"]]
+        assert order.index(moved_id) < order.index(wall_id)
+        assert body["locked_stop_ids"] == [
+            entry for entry in body["locked_stop_ids"] if entry["stop_id"] == str(wall_id)
+        ]
+
+    def test_a_stop_that_is_both_affected_and_locked_is_refused(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        """A request that says "move this" and "do not move this" has no answer."""
+        run_id, _, added_id = self.seed_planned_run(repo, extra_stops=1)
+
+        refused = client.post(
+            f"/runs/{run_id}/route:reopt",
+            json={
+                "affected_stop_ids": [str(added_id)],
+                "locked_stop_ids": [str(added_id)],
+            },
+        )
+
+        assert refused.status_code == 422, refused.text
+        assert "both affected and locked" in refused.text
+
+    def test_an_unknown_locked_stop_is_refused(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        run_id, _, _ = self.seed_planned_run(repo, extra_stops=1)
+
+        refused = client.post(
+            f"/runs/{run_id}/route:reopt",
+            json={
+                "affected_stop_ids": [],
+                "locked_stop_ids": [str(uuid.uuid4())],
+            },
+        )
+
+        assert refused.status_code == 422, refused.text
+
+    def test_with_no_locks_the_day_behaves_exactly_as_it_did(
+        self, client: TestClient, repo: InMemoryRepo
+    ) -> None:
+        """The lock changes nothing when nothing is locked (one block)."""
+        run_id, _, added_id = self.seed_planned_run(repo, extra_stops=1)
+
+        body = client.post(
+            f"/runs/{run_id}/route:reopt",
+            json={"affected_stop_ids": [str(added_id)], "locked_stop_ids": []},
+        ).json()
+
+        assert body["locked_stop_ids"] == []
+        assert added_id in {uuid.UUID(stop["stop_id"]) for stop in body["stops"]}
 
     def test_the_same_reopt_is_the_same_day_and_reapplies_to_nothing(
         self, client: TestClient, repo: InMemoryRepo

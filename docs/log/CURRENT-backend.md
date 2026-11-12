@@ -1,3 +1,32 @@
+## 2026-11-12 (later): the lead's item 2b — LOCKED STOPS: the reopt never moves a locked stop (BUG-286)
+
+**For the lead, announced as the directive asks.** The reopt now accepts locked stop positions:
+
+- **The ask, exactly:** `POST /runs/{run_id}/route:reopt` takes `locked_stop_ids` beside
+  `affected_stop_ids`. The promise is exact and checkable on the phone: **a locked stop keeps the
+  sequence it already has.** A wall splits the day into the blocks around it, an affected stop is
+  re-placed inside the block it came from, and a stop that is not in the plan yet (added at the door)
+  is placed after every wall — so no insertion can shift a wall and nothing crosses one. With no locks
+  the whole day is one block, which is the behaviour the reopt had before (the existing tests prove
+  it: they are unchanged and green).
+- **The answer carries the proof:** both route answers now name `locked_stop_ids` — each held stop with
+  the sequence it kept — so a courier who locked a stop can see it is exactly where they put it.
+- **The two refusals:** a stop that is both affected and locked is 422 ("the request contradicts
+  itself"), and an unknown locked stop is 422. The half-built day a contradiction would produce never
+  reaches the phone — the same discipline as `PUT /runs/{id}/template`'s.
+- **The contract and the client:** `packages/contracts/openapi.yaml` carries both; the generated client
+  is regenerated (`generate_api_client.py check` passes, so it is not stale) and
+  `packages/shared/src/types.ts` has `LockedStop` and `ReoptRequest`.
+- **The evidence:** four new endpoint tests (the wall keeps its sequence, nothing crosses it, both
+  refusals) — 178 tests green across `test_runs_api.py` + `test_routing.py` + `test_demo_seed.py`, the
+  API's full suite 688 passed, mypy clean over 87 files, ruff clean.
+
+**The lead's item 2c (email sign-in against the local server) is DONE and proved by the local stack
+itself:** the founder signs in through the edge (`/api/auth/sign-in/email`), the session cookie mints
+a JWT at `/api/auth/token`, and the smoke test's authenticated leg passes 7/7 over HTTPS — the password
+never crosses the network in the clear and the JWT is what the API verifies. **Item 2a (the Valhalla
+polyline in the route and reopt responses) is the remaining one and is next.**
+
 ## 2026-11-12: THE FOUNDER'S LOCAL SERVER IS UP — the real app, on HTTPS, on this PC (BUG-284) + the smoke test's own day (BUG-285)
 
 The founder's directive of 2026-11-12, item 1: **a local server so the founder sees the real app NOW, before the Oracle host exists.** It is running, and this entry is the announcement the directive asks for.

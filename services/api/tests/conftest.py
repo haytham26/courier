@@ -9,6 +9,7 @@ modules used to copy `repo`/`verifier_key`/`client`/`other_client`/
 each file, where the copies drifted apart. `test_fixture_hoist.py` pins that
 no module redefines them.
 """
+
 from __future__ import annotations
 
 import os
@@ -22,9 +23,7 @@ os.environ.setdefault("AUTH_JWT_AUDIENCE", "courier-api")
 os.environ.setdefault("AUTH_JWT_ISSUER", "http://localhost:3001")
 # The local POD store refuses to boot without a real signing key; tests get a
 # fixed throwaway one (the forged-grant test uses a different key on purpose).
-os.environ.setdefault(
-    "POD_URL_SIGNING_SECRET", "test-only-pod-url-signing-secret-0123456789"
-)
+os.environ.setdefault("POD_URL_SIGNING_SECRET", "test-only-pod-url-signing-secret-0123456789")
 # The copilot's client is built lazily on first use (BUG-116), so the agent
 # tests need a placeholder key - the real gateway is never called (the tests
 # pass their own client, and the socket's loop is tested with a fallback).
@@ -71,6 +70,29 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 
 @pytest.fixture(autouse=True)
+def _billing_settings_are_read_afresh():
+    """BUG-287: the billing settings are cached (`lru_cache`), so a test that
+    sets `BILLING_SOURCES` in the environment cannot take effect once ANY
+    earlier test has called `billing_sources()` - the file order decides the
+    outcome. That is exactly what CI found: `tests/test_rate_limit.py` dials the
+    webhook endpoint with no source configured (it asserts the 404), which fills
+    the cache with the empty set, and `tests/test_stripe_nz.py`'s own
+    `monkeypatch.setenv` then changed nothing - its signed event was answered
+    404 "this deployment does not accept that source". Clearing the caches
+    before and after every test makes the environment the truth for the test
+    that sets it, which is also what a deployment does (a real process reads its
+    environment once, at boot, and the suite's tests are that process's boot).
+    """
+    from app.billing import billing_sources, webhook_secret
+
+    billing_sources.cache_clear()
+    webhook_secret.cache_clear()
+    yield
+    billing_sources.cache_clear()
+    webhook_secret.cache_clear()
+
+
+@pytest.fixture(autouse=True)
 def _fake_dns_for_the_suite(monkeypatch: pytest.MonkeyPatch):
     """The suite never fetches for real (verifiers and providers get mock
     transports), so the SSRF guard's resolver is faked for the whole suite:
@@ -91,6 +113,7 @@ def _fake_dns_for_the_suite(monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setattr(_safe_fetch, "_resolve", fake_resolve)
     yield
+
 
 COURIER = "driver-7"
 OTHER = "driver-8"
@@ -133,9 +156,7 @@ def client(verifier_key: object) -> Iterator[TestClient]:
 @pytest.fixture()
 def other_client(verifier_key: object) -> Iterator[TestClient]:
     with TestClient(app) as test_client:
-        test_client.headers.update(
-            {"Authorization": f"Bearer {sign(verifier_key, subject=OTHER)}"}
-        )
+        test_client.headers.update({"Authorization": f"Bearer {sign(verifier_key, subject=OTHER)}"})
         yield test_client
 
 
