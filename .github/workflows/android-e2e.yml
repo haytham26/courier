@@ -1,4 +1,4 @@
-﻿name: Android E2E (emulator + Maestro)
+name: Android E2E (emulator + Maestro)
 
 # MASTER_EXECUTION P1: the pipeline is built at the root, not patched.
 #  - triggers: PRs to main, nightly and manual only (no push: every push used
@@ -286,7 +286,7 @@ jobs:
         # APK under a red build is not, and the guard is what keeps the two
         # apart (the build step failing stops the job before this runs).
         if: steps.build-apk.outcome == 'success' || steps.apk-cache.outputs.cache-hit == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: courier-release-apk
           path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
@@ -584,7 +584,7 @@ jobs:
 
       - name: Upload the evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: android-e2e-evidence-api${{ matrix.api }}
           path: |
@@ -686,7 +686,7 @@ jobs:
 
       - name: Upload the captures
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: visual-baselines-${{ matrix.view }}
           path: .maestro/visual-baselines/**
@@ -909,7 +909,7 @@ jobs:
 
       - name: Upload the evidence
         if: always() || cancelled()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: android-e2e-evidence-a1
           path: |

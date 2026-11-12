@@ -1,4 +1,4 @@
-﻿name: Quality gates
+name: Quality gates
 
 # The V4 section 2 gates that are not part of the fast CI job: the floor guard, the
 # coverage ratchet, the licence inventory, the dependency audits and the static
@@ -282,7 +282,7 @@ jobs:
         run: node scripts/ci/run-coverage.mjs
       - name: Upload the coverage report
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage
           path: |
@@ -470,7 +470,7 @@ jobs:
 
       - name: Keep the stats
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation-api-pr-stats
           path: |
@@ -500,7 +500,7 @@ jobs:
 
       - name: Keep the stats
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation-voice-pr-stats
           path: |
