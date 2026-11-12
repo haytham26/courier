@@ -197,6 +197,25 @@ FLOWS_RESULT="$EVIDENCE/flows.txt"
 # there, and they took four other flows of that leg down with them.
 for flow in .maestro/*.yaml; do
   name="$(basename "${flow}")"
+  # The founder directive 2026-11-10 item 6 (OFFLINE): the offline legs' flight
+  # mode is the RUNNER's, not a flow's. Maestro cannot run `adb`, so the suite
+  # takes the radio away before the offline shift and the offline map, and
+  # gives it back before the sync half - the same two commands the A1 job's
+  # offline half uses, and the same reason (run-a1.sh names it): both halves of
+  # the emulator's connectivity, so the app cannot reach anything by either
+  # path. The commands are allowed to fail quietly only where the device has no
+  # such radio (an image with no cellular), which the wifi half covers.
+  case "$name" in
+    offline-shift.yaml | offline-map-pack.yaml)
+      echo "::group::the offline leg: take the network away"
+      adb shell svc wifi disable || true
+      adb shell svc data disable || true
+      adb shell svc usb disable || true
+      sleep 3
+      echo "the network is down for the offline leg"
+      echo "::endgroup::"
+      ;;
+  esac
   echo "::group::${flow}"
   if ! timeout "$FLOW_TIMEOUT" maestro test "${flow}"; then
     echo "::error::the flow failed: ${flow}"
@@ -252,6 +271,22 @@ for flow in .maestro/*.yaml; do
   else
     echo "flow=${name} status=pass" >> "$FLOWS_RESULT"
   fi
+  # The network comes back the moment an offline leg is over, whether the flow
+  # passed or failed: the next flow (offline-sync.yaml) needs the signal, and a
+  # leg that ends with the radio off hands a broken device to whatever runs
+  # after it. The failure path restores it too, which is why this is outside
+  # the if.
+  case "$name" in
+    offline-shift.yaml | offline-map-pack.yaml)
+      echo "::group::the offline leg: give the network back"
+      adb shell svc wifi enable || true
+      adb shell svc data enable || true
+      adb shell svc usb enable || true
+      sleep 3
+      echo "the network is back"
+      echo "::endgroup::"
+      ;;
+  esac
   echo "::endgroup::"
 done
 

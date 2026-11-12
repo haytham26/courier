@@ -121,14 +121,33 @@ export class SyncService {
         return this.refused(batch, error);
       }
 
-      // Only what the server took is confirmed: a refused event stays in the
-      // log and its id comes back to the caller (BUG-076).
-      const accepted = Math.min(Math.max(result.accepted, 0), batch.length);
-      await this.log.confirm(batch.slice(0, accepted));
+      // What the server HOLDS is confirmed (BUG-076, and the replay that
+      // BUG-093 could not reach).
+      //
+      // The API's `accepted` is the row count its INSERT took
+      // (`INSERT ... ON CONFLICT (id) DO NOTHING`, services/api/app/repo.py),
+      // so it counts the rows that were NEW - not the rows the server holds.
+      // A batch whose answer was lost is re-offered when the network returns
+      // and every row of it collides: the answer is `accepted: 0` with no
+      // conflicts, the server has every event, and the old rule confirmed
+      // `batch.slice(0, 0)` - nothing - so the same batch was re-offered on
+      // every retry tick for as long as the session lived (the offline lane's
+      // shift-301: 12 of 12 events pending after the network was back).
+      //
+      // The contract makes the rule exact: an insert either inserts a row or
+      // conflicts on an id that is already there with the same content, and a
+      // divergence is named in `conflicts`. So an event of the batch that the
+      // answer does NOT name is stored by the server - either newly inserted
+      // or already held - and it is confirmed. The refused ones stay in the
+      // log and their ids come back to the caller, which is BUG-076
+      // unchanged; the batch's own size bounds the confirmation, which is
+      // the "never confirms more than the batch carried" claim unchanged.
+      const held = batch.filter((event) => !result.conflicts.includes(event.id));
+      await this.log.confirm(held);
       this.failures = 0;
       return this.answer({
         sent: batch.length,
-        accepted,
+        accepted: Math.min(Math.max(result.accepted, 0), batch.length),
         cursor: result.cursor,
         failed: false,
         conflicts: result.conflicts,

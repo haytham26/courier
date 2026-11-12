@@ -1,0 +1,50 @@
+{
+ "started": "2026-11-11T07:27:48.539Z",
+ "finished": "2026-11-11T07:28:54.169Z",
+ "api": "http://127.0.0.1:8000",
+ "auth": "http://127.0.0.1:3001",
+ "origin": "http://10.0.2.2:3001",
+ "shifts_seeded": 50,
+ "stops_per_day": 5,
+ "airplane_mode": {
+  "events_logged": 250,
+  "rows_in_postgres": 250,
+  "duplicate_ids": 0,
+  "conflicts": 0,
+  "lost": 0
+ },
+ "flaky": {
+  "shifts": 10,
+  "events": 50,
+  "rows_in_postgres": 50,
+  "duplicate_ids": 0,
+  "lost": 0
+ },
+ "kill": {
+  "shifts": 6,
+  "events": 30,
+  "rows_in_postgres": 30,
+  "duplicate_ids": 0,
+  "lost": 0
+ },
+ "pod": {
+  "uploads": 10,
+  "first_statuses": [
+   201
+  ],
+  "replay_statuses": [
+   200
+  ],
+  "replay_already_stored": [
+   true,
+   true,
+   true,
+   true,
+   true
+  ]
+ },
+ "legs_not_run": [
+  "the Android UI (the CI AVDs: .maestro/offline-shift.yaml + .maestro/offline-sync.yaml)",
+  "the phone's own op-sqlite log (apps/mobile/src/sync/__tests__/offlineShifts.test.ts)"
+ ]
+}

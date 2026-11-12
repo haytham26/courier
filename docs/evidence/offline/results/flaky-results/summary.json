@@ -1,0 +1,13 @@
+{
+ "shifts": 20,
+ "events_logged": 173,
+ "server_rows": 173,
+ "duplicate_landings": 0,
+ "duplicate_sends": 9,
+ "lost": 0,
+ "quarantined": 0,
+ "pending_after": 4,
+ "answers_dropped": 22,
+ "seed": 20261118,
+ "network": "flaky: 30% of the answers dropped after the server took the batch"
+}

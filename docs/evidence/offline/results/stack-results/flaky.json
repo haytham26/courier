@@ -1,0 +1,72 @@
+[
+ {
+  "shift": "89402658-c76a-4818-a5f1-d0eb3d69a19d",
+  "events": 5,
+  "replay_conflicts": 0,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "2fa9319e-ca09-43d8-afc9-8dc479507104",
+  "events": 5,
+  "replay_conflicts": 0,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "b048d2cd-0172-4fc0-ac6f-03d7f635016a",
+  "events": 5,
+  "replay_conflicts": 0,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "6cb2db39-d182-4599-8a3e-b0c493b62a3c",
+  "events": 5,
+  "replay_conflicts": 0,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "b63c03b7-5bda-4ecb-9de9-9d45521803db",
+  "events": 5,
+  "replay_conflicts": 0,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "b3fb6f9b-51bb-4d2a-92ea-4f34fbba340b",
+  "events": 5,
+  "replay_conflicts": 0,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "210cb196-cb5f-48b4-b67a-8fa451751691",
+  "events": 5,
+  "replay_conflicts": 0,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "d93a4c9a-5b68-478b-9d42-ecf035670d23",
+  "events": 5,
+  "replay_conflicts": 0,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "e9b6f618-9fd2-468e-808d-6c526745ce35",
+  "events": 5,
+  "replay_conflicts": 0,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "7b4c44ce-a3b7-464b-9b60-916035e938c9",
+  "events": 5,
+  "replay_conflicts": 0,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ }
+]

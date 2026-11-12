@@ -1,0 +1,50 @@
+[
+ {
+  "shift": "d53680aa-7532-4940-b043-f9bde83053ee",
+  "events": 5,
+  "abort_killed_the_call": false,
+  "rows_after_the_abort": 5,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "20e8ab12-da0e-4fec-a15c-90ad667cbf3c",
+  "events": 5,
+  "abort_killed_the_call": false,
+  "rows_after_the_abort": 5,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "01d322fc-2ccb-48ab-a9b0-c4b80d96ef56",
+  "events": 5,
+  "abort_killed_the_call": false,
+  "rows_after_the_abort": 5,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "649b1075-038d-4bfd-8048-f3c8b83970f0",
+  "events": 5,
+  "abort_killed_the_call": true,
+  "rows_after_the_abort": 5,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "350763c8-351e-472d-b055-d39787fcda5c",
+  "events": 5,
+  "abort_killed_the_call": true,
+  "rows_after_the_abort": 5,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ },
+ {
+  "shift": "9545b101-957a-4a52-9b52-8150e71246e8",
+  "events": 5,
+  "abort_killed_the_call": true,
+  "rows_after_the_abort": 5,
+  "rows_in_postgres": 5,
+  "duplicates": 0
+ }
+]

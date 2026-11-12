@@ -228,43 +228,78 @@ describe('SyncService', () => {
     expect(await log.pendingCount()).toBe(1);
   });
 
-  it('bounds the run on a batch the server takes nothing from (BUG-093)', async () => {
-    // A transport that answers a batch with nothing accepted and no refusal:
-    // the events stay pending, so the next read hands back the same batch. The
-    // old loop offered it forever; this one offers it a bounded number of
-    // times, with the service's backoff between, and stops.
-    //
-    // RED first: against the unbounded loop the transport's guard (a rejection
-    // past the third offer) fired, so the run answered a failed outcome and
-    // four calls, and every assertion below failed.
+  // BUG-093's hazard was a batch the server answers `accepted: 0` for with no
+  // conflicts named: the old rule confirmed nothing, the events stayed pending,
+  // and the run re-offered the same batch forever. That answer shape is no longer
+  // reachable through the API's own contract - `INSERT ... ON CONFLICT (id) DO
+  // NOTHING` means an insert either inserts or collides, so an event the answer
+  // does NOT name as a conflict is stored by the server, and the confirm rule
+  // takes it (the fix the offline lane's PR #313 carried). What remains for the
+  // bound to cover is a transport that answers with the events CONFIRMED but then
+  // fails before the phone can read the answer - the shape the real stack's kill
+  // leg measured - and that is a failure, not a silence.
+  // BUG-093's hazard was a batch the server answers `accepted: 0` for with no
+  // conflicts named: the old rule confirmed nothing, the events stayed pending,
+  // and the run re-offered the same batch forever. That answer shape is no longer
+  // reachable through the API's own contract - `INSERT ... ON CONFLICT (id) DO
+  // NOTHING` means an insert either inserts or collides, so an event the answer
+  // does NOT name as a conflict is stored by the server, and the confirm rule
+  // takes it (the fix the offline lane's PR #313 carried). What the run still
+  // bounds on is the case the contract DOES express: a transport that never
+  // answers, where the batch is not confirmed and the events stay.
+  it('stops the run at the first failed send and keeps the events (BUG-093)', async () => {
     jest.useFakeTimers();
     try {
       const store = new FakeStore();
       const log = new EventLog(store);
       await log.record(event('a'));
       let calls = 0;
-      const silent: SyncTransport = {
+      const dead: SyncTransport = {
         send() {
           calls += 1;
-          if (calls > 3) {
-            return Promise.reject(new Error('the run should have stopped by now'));
-          }
-          return Promise.resolve({ accepted: 0, cursor: 0, conflicts: [] });
+          return Promise.reject(new Error("the recognizer could not be started: no signal"));
         },
       };
-      const service = new SyncService(log, silent);
+      const service = new SyncService(log, dead);
 
       const run = service.syncAll('shift-1');
-      await jest.advanceTimersByTimeAsync(10_000);
+      await jest.advanceTimersByTimeAsync(20_000);
       const outcomes = await run;
 
-      expect(calls).toBe(3);
-      expect(outcomes).toHaveLength(3);
-      expect(outcomes.every((outcome) => !outcome.failed)).toBe(true);
+      expect(calls).toBe(1);
+      expect(outcomes).toHaveLength(1);
+      expect(outcomes[0]?.failed).toBe(true);
       expect(await log.pendingCount()).toBe(1);
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  // The defect the offline lane handed the lead: a batch whose answer was lost is
+  // re-offered when the network returns, the server answers `accepted: 0` with no
+  // conflicts (every row already stored), and the OLD rule confirmed nothing - so
+  // the same batch was re-offered on every retry tick for as long as the session
+  // lived. The contract makes the fix exact (see sync.ts), and this is its claim.
+  it('confirms a replayed batch the server already holds, so the outbox drains', async () => {
+    const store = new FakeStore();
+    const log = new EventLog(store);
+    await log.record(event('a'));
+    await log.record(event('b'));
+    let calls = 0;
+    const replaying: SyncTransport = {
+      send() {
+        calls += 1;
+        // The server holds both rows: nothing new is inserted, nothing is refused.
+        return Promise.resolve({ accepted: 0, cursor: 2, conflicts: [] });
+      },
+    };
+    const service = new SyncService(log, replaying);
+
+    const outcome = await service.sync('shift-1');
+
+    expect(calls).toBe(1);
+    expect(outcome.sent).toBe(2);
+    expect(await log.pendingCount()).toBe(0);
   });
 
   it('does nothing when there is nothing to send', async () => {

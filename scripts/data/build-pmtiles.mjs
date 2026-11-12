@@ -34,7 +34,44 @@ const PACK_MANIFEST = 'canterbury.manifest.json';
 const PACK_FORMAT_VERSION = 1;
 const PACK_REGION = 'canterbury';
 
-/** The pack has to stay under this ceiling (V4 11.1). */
+/**
+ * The maximum zoom planetiler will build, and the reason it is a number here.
+ *
+ * planetiler 0.10.2 (the release the workflow pins) prints `maxzoom=14
+ * (maximum zoom level up to 16)` in its own argument list, and refuses a value
+ * above it: `java.lang.IllegalArgumentException: Max zoom must be <= 16, was
+ * 17` (measured 2026-11-11, on this machine, against the pinned jar).
+ *
+ * The script used to ask the tool for 17 and print a plan that promised it.
+ * Measured the same day: without the zooms planetiler builds at ITS OWN
+ * defaults - minzoom 0 / maxzoom 14 - and the manifest still recorded 17, so
+ * the pack's contract with the app promised a zoom range its archive did not
+ * carry. The ceiling is enforced here, before any tool runs, and the tiles are
+ * built at the pack's own range rather than the tool's default one.
+ */
+const PLANETILER_MAX_ZOOM = 16;
+
+/**
+ * The pack's own default maximum zoom, and the measurement behind it.
+ *
+ * The whole Canterbury envelope at the tool's own ceiling is 146.5 MB
+ * (153,540,100 bytes, measured 2026-11-12 on the lane's own build), which is
+ * 2.9x over the ceiling this script enforces - so a default of 16 is a default
+ * that cannot pass its own gate. The ladder, extracted with the same pinned
+ * CLI from the same tileset, same envelope:
+ *
+ *   z16 = 153,540,100 bytes (146 MiB)   z13 =  18,729,750 bytes ( 17 MiB)
+ *   z15 =  86,843,698 bytes ( 82 MiB)   z12 =   8,543,430 bytes (  8 MiB)
+ *   z14 =  46,009,919 bytes ( 43 MiB)   z11 =   4,535,342 bytes (  4 MiB)
+ *
+ * so 14 is the highest zoom whose pack fits under the 50 MB ceiling, and it is
+ * the default. The ceiling is NOT weakened to reach it: a pack over it is
+ * still refused by this script, naming the remedy (drop the zoom or cut the
+ * style-driven layers; the courier layers stay).
+ */
+const PACK_DEFAULT_MAX_ZOOM = 14;
+
+/** The pack has to stay under this ceiling (V4 11.1, the maps squad's gate). */
 
 /**
  * The heap planetiler gets, in gigabytes.
@@ -214,7 +251,11 @@ function parseArgs(argv) {
     input: null,
     output: null,
     minZoom: 6,
-    maxZoom: 17,
+    // planetiler's own ceiling: the tool refuses 17 (measured 2026-11-11), so
+    // a pack whose manifest claims it could never carry it.
+    // 14, not 16: the envelope at 16 is 146 MiB, 2.9x over this script's own
+    // ceiling (measured 2026-11-12), and 14 is the highest zoom that fits.
+    maxZoom: PACK_DEFAULT_MAX_ZOOM,
     sourceLicence: null,
     sourceLicenceUrl: null,
     sourceAttribution: null,
@@ -378,6 +419,33 @@ function resolveSource(args) {
 }
 
 /**
+ * Refuses a zoom range the tool will not build.
+ *
+ * The check runs before anything else, so the operator is told by the script's
+ * own sentence rather than by a Java stack trace from a run that did nothing.
+ */
+function checkZoomRange(args) {
+  if (!Number.isInteger(args.minZoom) || !Number.isInteger(args.maxZoom)) {
+    console.error('build-pmtiles: --min-zoom and --max-zoom have to be whole numbers.');
+    process.exit(1);
+  }
+  if (args.minZoom < 0 || args.maxZoom < args.minZoom) {
+    console.error(
+      `build-pmtiles: the zoom range ${args.minZoom}..${args.maxZoom} is not a range.`,
+    );
+    process.exit(1);
+  }
+  if (args.maxZoom > PLANETILER_MAX_ZOOM) {
+    console.error(
+      `build-pmtiles: refused. Max zoom must be <= ${PLANETILER_MAX_ZOOM}, was ${args.maxZoom} ` +
+        '- planetiler 0.10.2 refuses it itself (measured 2026-11-11), so the pack could never ' +
+        'carry it and the manifest would promise one. Pass --max-zoom 16.',
+    );
+    process.exit(1);
+  }
+}
+
+/**
  * Checks the terms of the source.
  *
  * A source whose terms forbid our offline use is refused, whatever the
@@ -454,7 +522,7 @@ function printPlan(plan) {
   console.log(`  offline use url  ${plan.source.offlineUseUrl}`);
   console.log(`  read on          ${plan.source.offlineUseReadOn}`);
   console.log(`  bbox             ${plan.bbox}`);
-  console.log(`  zooms            ${plan.minZoom} to ${plan.maxZoom}`);
+  console.log(`  zooms            ${plan.minZoom} to ${plan.maxZoom} (built, not the tool's default)`);
   console.log(`  pack             ${plan.output}`);
   console.log(
     `  tileset          ${plan.tileset} (the whole-country build, removed with the pack)`,
@@ -466,12 +534,13 @@ function printPlan(plan) {
   console.log(
     `    1. planetiler --osm-path=<extract> --output=<tileset> --force   (the OpenMapTiles tileset)`,
   );
+  console.log('    2. pmtiles cluster <tiles>    (the extract refuses an unclustered archive)');
   console.log(
-    `    2. pmtiles extract <tiles> <pack> --bbox=${plan.bbox} --maxzoom=${plan.maxZoom} --minzoom=${plan.minZoom}`,
+    `    3. pmtiles extract <tiles> <pack> --bbox=${plan.bbox} --maxzoom=${plan.maxZoom} --minzoom=${plan.minZoom}`,
   );
-  console.log(`    3. pmtiles verify <pack>    (the archive is ordered, its header is right)`);
-  console.log(`    4. pmtiles show --header-json <pack>    (the real header, in the manifest)`);
-  console.log(`    5. sha256 and the tool versions, written into ${PACK_MANIFEST}`);
+  console.log(`    4. pmtiles verify <pack>    (the archive is ordered, its header is right)`);
+  console.log(`    5. pmtiles show --header-json <pack>    (the real header, in the manifest)`);
+  console.log(`    6. sha256 and the tool versions, written into ${PACK_MANIFEST}`);
   console.log('');
   console.log(
     `  Heap: JAVA_TOOL_OPTIONS=-Xmx${PLANETILER_HEAP_GB}g (planetiler README: ~0.5x the .osm.pbf)`,
@@ -490,6 +559,31 @@ function printPlan(plan) {
  * knows `version` (verified 2026-10-25: `pmtiles --version` is an unknown
  * flag, and the CLI reference lists `version` as a command).
  */
+/**
+ * The version from what a tool answered with.
+ *
+ * `planetiler --version` does not print a version and stop: it prints its
+ * whole argument list first and the version last ("INF - Planetiler build
+ * version: 0.10.2", measured 2026-11-12 against the pinned 0.10.2 jar). The
+ * manifest records the tool versions as evidence, so an argument dump there is
+ * not evidence - the version is the tool's own line, and anything else it says
+ * is kept out.
+ */
+export function planetilerVersionOf(output) {
+  const spoken = String(output ?? '');
+  const line = spoken
+    .split('\n')
+    .map((entry) => entry.replace(/\x1b\[[0-9;]*m/g, '').trim())
+    .find((entry) => /Planetiler build version:/i.test(entry));
+  if (line === undefined) {
+    // A tool that answers with something else keeps its own answer: never a
+    // guessed version.
+    return spoken.trim();
+  }
+  const version = line.split(':').pop();
+  return version === undefined ? spoken.trim() : version.trim();
+}
+
 export const VERSION_ARGS = {
   planetiler: ['--version'],
   pmtiles: ['version'],
@@ -498,13 +592,38 @@ export const VERSION_ARGS = {
 function requireTool(tool) {
   try {
     const args = VERSION_ARGS[tool] || ['--version'];
-    return execFileSync(tool, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    const answered = execFileSync(tool, args, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    // planetiler's --version is an argument dump with the version inside it
+    // (measured 2026-11-12); the manifest records the version, so it is read
+    // out of what the tool said rather than stored whole.
+    return tool === 'planetiler' ? planetilerVersionOf(answered) : answered.trim();
   } catch (error) {
     console.error(
       `build-pmtiles: ${tool} is not on the PATH, so the build cannot run. Install the pinned version and try again.`,
     );
     process.exit(1);
   }
+}
+
+/**
+ * What the CLI's cluster step answered, classified.
+ *
+ * `pmtiles cluster` runs in place and is not idempotent: pmtiles 1.31.2
+ * refuses a tileset that is already clustered with "Failed to cluster, archive
+ * is already clustered" (measured 2026-11-12, on the lane's own re-run), which
+ * kills a build whose tileset survived a previous one. The step's goal is a
+ * CLUSTERED archive, so the tool naming that state is the goal met - the ONLY
+ * answer that counts as done. Anything else is a failure and is rethrown, so a
+ * real cluster failure still stops the build.
+ */
+export function clusterAnswer(stderr) {
+  if (/already clustered/i.test(String(stderr ?? ''))) {
+    return 'clustered';
+  }
+  return 'failed';
 }
 
 /**
@@ -559,7 +678,19 @@ function sha256Of(file) {
  */
 export function buildCommands(plan) {
   return {
-    planetiler: ['--osm-path=' + plan.input, '--output=' + plan.tileset, '--force'],
+    planetiler: [
+      '--osm-path=' + plan.input,
+      '--output=' + plan.tileset,
+      '--force',
+      // The profile's own base data (natural earth, water polygons, the lake
+      // centerlines): planetiler refuses to start without it and names the flag
+      // that fetches it.
+      '--download',
+      // The pack's own zooms, in the argument names the tool publishes, so the
+      // tileset carries what the extract step and the manifest claim.
+      '--minzoom=' + plan.minZoom,
+      '--maxzoom=' + plan.maxZoom,
+    ],
     pmtiles: [
       'extract',
       plan.tileset,
@@ -570,6 +701,12 @@ export function buildCommands(plan) {
     ],
     verify: ['verify', plan.output],
     headerJson: ['show', plan.output, '--header-json'],
+    // The extract's own precondition, measured on 2026-11-12: pmtiles 1.31.2
+    // refuses with "source archive must be clustered for extracts" when the
+    // archive is in planetiler's own write order. Its `cluster` command is
+    // documented ("Cluster an unclustered local archive, optimizing the size
+    // and layout"), so the pack build runs it between the two.
+    cluster: ['cluster', plan.tileset],
   };
 }
 
@@ -619,6 +756,29 @@ function executePlan(plan) {
   // The tileset covers the whole country; the pack is Canterbury at the
   // zooms the courier drives at. The bbox order is the CLI's:
   // MIN_LON,MIN_LAT,MAX_LON,MAX_LAT.
+  // The extract's own precondition (measured 2026-11-12: "source archive must
+  // be clustered for extracts"), and the CLI's own command that satisfies it.
+  // The step is in place and not idempotent, so its "already clustered" is an
+  // answer, not a failure - and any other failure is rethrown (a real cluster
+  // failure still stops the build).
+  try {
+    execFileSync('pmtiles', commands.cluster, {
+      // The tool writes its own sentence on STDOUT (go-pmtiles' logger, measured
+      // 2026-11-12), so both streams are captured and classified together.
+      stdio: ['ignore', 'pipe', 'pipe'],
+      encoding: 'utf8',
+    });
+  } catch (error) {
+    const spoken = `${error instanceof Error ? (error.stdout ?? '') : ''}`;
+    const failed = `${error instanceof Error ? (error.stderr ?? '') : ''}`;
+    if (clusterAnswer(`${spoken}${failed}`) !== 'clustered') {
+      throw error;
+    }
+    console.log(
+      'build-pmtiles: the tileset is already clustered (the CLI says so), so the extract can run.',
+    );
+  }
+
   execFileSync('pmtiles', commands.pmtiles, { stdio: 'inherit' });
 
   // The check the extract cannot do for itself: the archive is ordered and
@@ -629,7 +789,7 @@ function executePlan(plan) {
   const bytes = statSync(plan.output).size;
   if (bytes > PACK_SIZE_CEILING_BYTES) {
     console.error(
-      `build-pmtiles: the pack is ${bytes} bytes, over the ${PACK_SIZE_CEILING_BYTES} byte ceiling. Drop to z16 or cut the style-driven layers; the courier layers stay.`,
+      `build-pmtiles: the pack is ${bytes} bytes, over the ${PACK_SIZE_CEILING_BYTES} byte ceiling. The measured ladder over this envelope (2026-11-12): z16 = 153,540,100 bytes (146 MiB), z15 = 86,843,698 (82 MiB), z14 = 46,009,919 (43 MiB), z13 = 18,729,750 (17 MiB). Drop the zoom or cut the style-driven layers; the courier layers stay.`,
     );
     process.exit(1);
   }
@@ -680,6 +840,7 @@ function main() {
     process.exit(0);
   }
 
+  checkZoomRange(args);
   const source = resolveSource(args);
   checkTerms(source, args);
   const plan = buildPlan(source, args);
