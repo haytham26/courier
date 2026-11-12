@@ -222,6 +222,26 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      # The host's bootstrap, before anything is copied to it (the founder
+      # decision of 2026-11-11): the deploy user, Docker, the firewall, the
+      # automatic updates, the swap and the nightly backup cron. It is
+      # idempotent by construction, so it runs on every deploy and changes
+      # nothing after the first. ARM64 is the host's architecture (the Oracle
+      # Ampere always-free shape): every package it installs comes from
+      # repositories that serve arm64.
+      - name: Bootstrap the host (once; idempotent)
+        if: steps.host.outputs.configured == 'true'
+        env:
+          HOST: ${{ secrets.COURIER_STAGING_HOST }}
+          USER: ${{ secrets.COURIER_STAGING_USER }}
+          KEY: ${{ secrets.COURIER_STAGING_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new "${USER}@${HOST}" \
+            'bash -s' < infra/bootstrap-host.sh
+
       - name: Deploy to the host
         if: steps.host.outputs.configured == 'true'
         env:

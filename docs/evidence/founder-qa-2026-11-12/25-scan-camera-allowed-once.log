@@ -1,0 +1,7 @@
+--------- beginning of main
+11-12 13:26:42.299   903  1148 E BstGCallService-JNI: gcallCommonCommandClbk called: code=1, name=com.courier.copilot, data=
+11-12 13:26:42.427  3444  3444 E EGL_emulation: eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+11-12 13:26:42.427  3444  3444 E EGL_emulation: tid 3444: eglQueryContext(2349): error 0x3004 (EGL_BAD_ATTRIBUTE)
+11-12 13:26:42.456   593   691 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -61
+11-12 13:26:43.717   801  1340 E EGL_emulation: tid 1340: eglSurfaceAttrib(1726): error 0x3009 (EGL_BAD_MATCH)
+11-12 13:26:43.717   801  1340 E OpenGLRenderer: Unable to match the desired swap behavior.

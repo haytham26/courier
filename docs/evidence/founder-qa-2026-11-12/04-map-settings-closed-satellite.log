@@ -1,0 +1,8 @@
+--------- beginning of main
+11-12 13:20:39.519   980  3408 E WakeLock: GCM_HB_ALARM release without a matched acquire!
+11-12 13:20:39.934  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:20:42.061  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:20:43.444  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:20:43.877  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:20:43.928  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:20:44.511  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
