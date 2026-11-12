@@ -129,6 +129,12 @@ services:
       # service signs with it and the API verifies against it, so they are one
       # value by construction (the audit's BUG-122).
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
+      # The road geometry (ADR-030): the founder's local stack has no Valhalla
+      # server, so the route answer says `geometry_engine: none` and the legs'
+      # shapes are null. Set VALHALLA_BASE_URL in infra/local/local.env and the
+      # same answer carries the real roads - nothing else changes.
+      VALHALLA_BASE_URL: ${VALHALLA_BASE_URL:-}
+      VALHALLA_COSTING: ${VALHALLA_COSTING:-auto}
       VALKEY_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
       # BUG-230: the only Host headers the API answers. The edge forwards the
       # tunnel's name; the healthcheck and the compose network use the rest.
