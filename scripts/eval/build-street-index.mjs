@@ -27,7 +27,7 @@
 //
 // Determinism: the rows are read in a fixed file order, the roads are sorted by
 // key, the display spelling is chosen by a rule rather than by arrival order,
-// and `sha256_of_keys` is taken over the sorted key list joined with \n (the
+// and `roads_sha256` is taken over the sorted key list joined with \n (the
 // same logical-bytes convention the held-out street list uses), so a rebuild
 // from the same LINZ revision is provable rather than merely similar.
 
@@ -166,7 +166,7 @@ async function sha256OfFile(path) {
 /**
  * The index document: the roads, the abbreviation map and where they came from.
  *
- * `sha256_of_keys` is over the sorted key list joined with \n - the logical
+ * `roads_sha256` is over the sorted key list joined with \n - the logical
  * bytes, not the file's - so the value is the same on Windows and on CI and
  * two builds from the same revision are provably identical.
  */
@@ -185,7 +185,7 @@ export function buildIndex(roads, counts, files) {
       rows: counts.rows,
       rows_without_a_full_address: counts.skipped,
       distinct_roads: roads.length,
-      sha256_of_keys: createHash('sha256').update(keys.join('\n')).digest('hex'),
+      roads_sha256: createHash('sha256').update(keys.join('\n')).digest('hex'),
     },
     abbreviations: { ...STREET_TYPES },
     roads,
@@ -208,7 +208,7 @@ async function main() {
   writeFileSync(out, JSON.stringify(index, null, 1) + '\n');  console.log(
     `canterbury street index: ${roads.length} distinct roads from ${rows} LINZ rows ` +
       `(${skipped} without a full address) -> ${out} ` +
-      `(sha256_of_keys ${index.source.sha256_of_keys.slice(0, 16)}, ` +
+      `(roads_sha256 ${index.source.roads_sha256.slice(0, 16)}, ` +
       `${Buffer.byteLength(JSON.stringify(index))} bytes)`,
   );
 }

@@ -24,7 +24,7 @@
   "rows": 656044,
   "rows_without_a_full_address": 0,
   "distinct_roads": 6799,
-  "sha256_of_keys": "fde3aad06575d76b1b5a7f7ed488857520251b4c3e58d99a31b969a26df60a3d"
+  "roads_sha256": "fde3aad06575d76b1b5a7f7ed488857520251b4c3e58d99a31b969a26df60a3d"
  },
  "abbreviations": {
   "street": "st",

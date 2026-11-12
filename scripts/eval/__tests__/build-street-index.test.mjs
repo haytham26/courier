@@ -89,5 +89,5 @@ test('the builder writes the index the reader finds, with its source recorded', 
   assert.equal(written.roads.length, 3);
   assert.equal(written.source.files[0].file, 'addresses-waimakariri.jsonl');
   assert.match(written.source.files[0].sha256, /^[0-9a-f]{64}$/, 'the source file sha travels with the index');
-  assert.ok(written.source.sha256_of_keys.length === 64, 'the sorted key list is hashed so a rebuild is provable');
+  assert.ok(written.source.roads_sha256.length === 64, 'the sorted key list is hashed so a rebuild is provable');
 });
