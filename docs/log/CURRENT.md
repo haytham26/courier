@@ -1,3 +1,266 @@
+# CURRENT — the lead session's own log (the 2026-11-12 founder directive is the standing order)
+
+## 0. THE PC (read once, per the directive's section 0)
+
+- **RAM:** 39.6 GB total, ~20.5 GB free at the last read (2026-11-12). **CPU:** 14 cores / 20 logical.
+- Memory tier: **> 16 GB** — BlueStacks 3 GB / 2 cores; Gradle `-Xmx2g`, `org.gradle.workers.max=2`,
+  `gradlew --stop` after every build; at most 2 sub-agents running at once.
+- The heavy-job lock is `C:\Users\DCL\projects\.heavy-job.lock` (session name + time), taken only for
+  a START or a BUILD (Gradle/APK, Docker, starting BlueStacks) and released at once; a running stack
+  never holds it. No lock file exists right now.
+- If free RAM drops below 15 % (5.9 GB), heavy steps pause until it recovers, and that is logged here.
+- BlueStacks 5: `bst.instance.Tiramisu64` capped at 2 cores / 3 GB while CLOSED, conf backed up first
+  (`bluestacks.conf.bak`); `adb connect 127.0.0.1:5555` only, never `adb kill-server`, never the
+  founder's apps. **BlueStacks is closed on the founder's instruction and must stay closed until he says**
+  **otherwise** (the QA inspector's midnight slot). Nothing here starts it.
+
+## 1. THE FOUNDER'S LOCAL BUILD (the plain guide, per item 2)
+
+- The release APK goes to `C:\Users\DCL\OneDrive\Desktop\CourierCopilot-local.apk`, rebuilt after
+  each batch of merged fixes, with the time noted here.
+- **Not built yet** — it needs the backend's local server URL announced in `CURRENT-backend.md`
+  (`EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_AUTH_URL`) and the STT model + map pack inside the APK (A2/A6).
+- Open it on the phone: BlueStacks 5 → the `Courier Copilot` shortcut on the Desktop (or
+  `adb install -r` the APK), then sign in with the account in the login file on the Desktop
+  (the path is written there, never the password).
+
+## 2. WHAT WORKS / WHAT IS BROKEN / WHAT IS NEXT (the founder's list, kept current)
+
+- **Works** (the QA inspector's own words): installs, cold-starts in ~10 s, never crashed; Today,
+  Route's To go/Later/Done, the map mode and settings sheets and Settings all open; "Go" opens a
+  driving screen with distance and streets; a delivery records and the counters move; Fail has six
+  reasons and a note; sign-out asks twice; airplane mode is honest about the map.
+- **Broken** (the QA report, `docs/evidence/founder-qa-2026-11-12/REPORT.md`, merged as PR #307):
+  nothing survives a restart (QA 40); sign-out is forgotten and there is no real sign-in (01/40); the
+  voice model `models/stt.onnx` is not in the APK (13/14/23); the map has no pack (02/04/34); nothing
+  reaches a server and "no signal" shows with internet (16/43); the app claims things that did not
+  happen (10/25/28); a failure counts as delivered (22); Today and Route disagree (05-08); on an
+  Arabic RTL phone the deliver slider is backwards (09); the sign-in sheet invents "Tane Rua —
+  Signed in with Apple" on Android (29); a DEBUG section shows in release (29); time windows are at
+  night (05).
+- **Next:** PART A below (each item: a BUG row, red-first, a Maestro flow on the RELEASE build), then
+  the B2 competitor list, then the voice levers, scale, offline, BUG-302 and the P4 baselines.
+
+## 3. PART A — MAKE IT REAL (the QA list; a BUG row each, red-first, a release-build flow each)
+
+- **A1 CRITICAL — PERSISTENCE (QA 40).** Every delivery and failure is written to the on-device
+  store (op-sqlite) and survives force-stop and cold start; the outbox survives and sends when the
+  server is reachable. *(the offline lane is building the proof: 50 airplane-mode shifts, exactly-once)*
+- **A2 CRITICAL — VOICE MODEL MISSING (QA 13, 14, 23).** `models/stt.onnx` is not in the APK. Ship it
+  bundled or first-run-downloaded with progress, checksum and resume, the size budget recorded. While
+  it is missing: a clear state and a typed-command fallback; ask for the microphone permission
+  properly. Prove a spoken OR typed command on a FRESH install of the release APK.
+- **A3 CRITICAL — NO FALSE CLAIMS (QA 10, 25, 28).** "Proof photo stored." only after a real photo is
+  saved; the scanner never reports an address from no frames; the Summary shows THIS run's real
+  numbers; earnings are D60 (not in the trial) — hidden or "not tracked yet", never fake money.
+  `check-mock-reach` is extended so no seeded or sample value ("Tane Rua", the $ figures, the fixed
+  "Side gate"/"Shelf B3" chips, the demo stops) can reach a release build.
+- **A4 HIGH — a failure counts as failed, never as delivered (QA 22).**
+- **A5 HIGH — ONE SOURCE OF TRUTH (QA 05-08, 16).** Today, Route and Driving read the same run state;
+  "Go to <stop>" drives to that stop; per-stop notes come from the stop's own data.
+- **A6 HIGH — MAP (QA 02, 04, 34).** The Christchurch PMTiles pack (D61), bundled or downloaded from
+  "Offline Map" with progress; renders offline on a fresh install; the attribution stays readable
+  above the tab bar.
+- **A7 HIGH — IDENTITY (QA 01, 29, 36, 37, 40).** Never invent a signed-in driver. Without a server: a
+  clear "server not configured" state. Sign-out persists. Email sign-in works against the backend's
+  server. Hide Apple sign-in and "Face ID" on Android (say "biometrics").
+- **A8 HIGH — HONEST NETWORK STATE (QA 16, 43).** "no signal" only with no network; "server
+  unreachable" otherwise; queued items retry and send.
+- **A9 HIGH — RELEASE HYGIENE (QA 29).** No DEBUG section in release. Identify the build the founder
+  had (versionName 0.1.0, installed 2026-11-09, sha256 `F6BCEB42…`) and make sure he only ever gets
+  the release variant.
+- **A10 MEDIUM — RTL (Arabic).** The slide-to-deliver follows the knob's direction; fix the overlaps
+  and the reversed time ranges. Every flow runs in Arabic RTL AND English in CI.
+- **A11 MEDIUM — time windows in the run's zone (Pacific/Auckland), pinned by a test.**
+- **A12 MEDIUM — the greeting by local time, the nav-button contrast, the see-through sheets, the
+  driving sheet reaching Fail/Skip, Back from Privacy, and the EGL log flood (QA 20).**
+
+## 4. PART B — THE DRIVER-APP PARITY LIST, ORDERED BY WHAT A COURIER TOUCHES EVERY DAY
+
+(every "Planned (task)" row of docs/status/PARITY.md that is a driver-app feature; each becomes
+ "Have" or "Better" with its PR link. The founder's B2-first items are marked **[B2-FIRST]**.)
+
+### B2 FIRST — the founder named these before all others
+
+- **a. MANUAL ROUTE EDITING:** drag-to-reorder in the stop list (#17, #62); lasso/draw circles on the
+  map to set the order (Spoke's "manually order route"); lock a stop's position; move to first, next
+  or last; undo. Re-optimise respects locked stops (the backend adds it to the reopt contract).
+- **b. THE ROUTE ON THE MAP:** the real road polyline between stops (the backend adds Valhalla route
+  geometry to the contract), numbered pins coloured by status, the current leg highlighted,
+  fit-the-run-to-screen.
+- **c. PIN FIX (#8):** long-press a stop and drag its pin to the right door; saved as door memory and
+  synced.
+- **d. ADD/EDIT ON THE MAP:** tap the map or search to add a stop; edit address, notes, time window,
+  priority and type from the stop sheet.
+- **e. Voice equivalents** (reorder, move to next, lock), measured with the voice harness.
+
+### Driver tools (13 planned) - the stop list, the reorder and the voice assistant - the surface a courier lives in
+- #17 Map + list view, drag reorder **[B2-FIRST]**
+- #20 Live voice assistant (hands-free control of the whole app) **[B2-FIRST]**
+- #62 **Drag reorder of the stop list** with a voice equivalent **[B2-FIRST]**
+- #63 **A rolling, glanceable number** for "stops remaining" (48–76 pt, tabular) **[B2-FIRST]**
+- #67 **Android Auto / CarPlay readiness** — a simplified projection of the driving screen
+- #91 **Spoken rules remembered across days** ("the pharmacy is always after 2pm")
+- #92 **Template / route rebuild from yesterday in one tap**
+- #96 **Every app action as a typed tool the assistant can call** (mark delivered, reorder, reschedule, add stop, cancel stop, read the door note)
+- #97 **A confirmation gate before an irreversible action** ("cancel that stop", "reschedule to tomorrow")
+- #98 **A refusal path** for a request that is not in the catalogue ("email the customer")
+- #99 **Clarification instead of guessing** when a required slot is missing ("the next one" with two matching stops)
+- #302 **Satellite / aerial layer** for driveways and rural drop-offs
+- #310 **Stop types** — reusable presets on an address (a "safe place", a "leave at door", a "pickup")
+### Stop import (3 planned) - the day arriving on the phone
+- #1 CSV/Excel/Sheets import with column mapping
+- #3 Camera label scan (OCR + barcode)
+- #5 Integrations (Shopify, WooCommerce, Zapier, NZ carriers, multi-client)
+### Address (2 planned) - the address being right
+- #6 Autocomplete
+- #8 Pin drop / manual location fix **[B2-FIRST]**
+### POD (8 planned) - proof of delivery: photo, signature, the reasons
+- #24 Signature
+- #25 Delivery outcomes / failed reasons / re-attempt
+- #26 Barcode scan to confirm delivery / reconcile
+- #155 Signature capture
+- #156 Voice POD ("delivered" by voice)
+- #157 Offline POD capture with a queue
+- #158 POD strictness control (how mandatory the photo is)
+- #160 Barcode scan to confirm the delivery
+### Navigation (5 planned) - getting to the door
+- #21 Navigation hand-off (Google/Apple/Waze)
+- #298 **In-app turn-by-turn with spoken guidance** (behind a flag)
+- #299 **Offline navigation in a dead spot** (routing inside the downloaded area with no signal)
+- #300 **Vehicle profile in the router** (bike / scooter / car / small truck / large truck)
+- #301 **Stop side of the road** (either / right only / left only), aware of NZ left-hand traffic
+### Offline maps (9 planned) - the map with no signal
+- #291 **Offline vector map for the whole of Canterbury**, read from a local file, working from the first launch with no internet
+- #292 **Weekly incremental tile refresh** (PMTiles v3 diffs) instead of a full re-download
+- #293 **Day, night and high-contrast-sun styles generated from one theme source**
+- #294 **Courier layers**: house numbers at z17, entrances, access restrictions
+- #295 **Style-driven pack reduction** so the pack fits the 50 MB ceiling with the courier layers kept
+- #296 **Offline attribution**: "(c) OpenStreetMap contributors" + the ODbL notice, visible on the map **and** in ≥ 2 user-visible places, with links, working with no network
+- #297 **LINZ parcel boundaries, address points, contours and aerial** as basemap layers
+- #306 **A pack download manager with resume, a region list and progress** (the Organic Maps UX)
+- #308 **A map that stays correct when OSM changes** — a weekly rebuild with a diff, not a silent replacement
+### Camera (6 planned) - the scanner and the photo
+- #161 Label scan that works on-device and offline
+- #162 Manifest camera flow (a printed manifest, several pages)
+- #163 Camera label scan on Android with a language picker
+- #165 A "readable photo" check before the shot is accepted
+- #166 Camera permission asked in plain English, once
+- #170 Visual-regression baseline for camera screens
+### Reliability (8 planned) - nothing lost, nothing blocking
+- #27 Offline mode (cached route, POD/edit queue)
+- #104 **A voice action that survives a dropped connection** (the tool run is checkpointed and resumes, it does not half-execute)
+- #105 **No irreversible action before the confirmation lands**
+- #150 Offline SMS queue with ordered retry and DLR reconciliation
+- #169 Resumable upload, so a photo is never lost in a dead zone
+- #171 **Crash reporting with a release tag and a symbolicated stack** (native + JS), crash-free session rate ≥ 99.5 %
+- #172 **A crash-free session dashboard and a rollback trigger** (a drop below 99.5 % over the last 24 h stops the rollout)
+- #173 **A deliberate in-app crash report** a driver can trigger from the help menu (a "report a problem" button that captures the log and the state)
+### Driver (5 planned) - the driver's own state
+- #143 Push for a new stop, a reassignment or a route change
+- #144 Android OEM delivery coaching (auto-launch, battery whitelist, One UI categories)
+- #145 Notification channels by urgency (job alert vs exception vs chatty)
+- #146 Local notifications generated while offline (next stop, shift end)
+- #147 Permission ask that a driver can understand
+### Onboarding (2 planned) - the first run
+- #44 Onboarding tutorial
+- #259 **Guided onboarding** for a new depot
+### Customer (6 planned) - what the customer sees
+- #33 Recipient ETA SMS + live tracking page
+- #108 **A spoken customer-notification tool** (optional, off by default, rate-limited)
+- #138 Customer ETA / exception SMS with a tracking link
+- #139 **Delivery report (DLR) shown to the driver** ("sent / delivered / failed")
+- #140 Quiet hours on customer messaging
+- #152 Two-way replies parsed into an instruction (e.g. "leave it with the neighbour")
+### Tracking (2 planned) - the live position
+- #32 Geofence auto-arrival / auto-complete
+- #304 **Geofence auto-arrival** driven by the map's own address and parcel data
+### Voice (20 planned) - hands-free control
+- #70 **On-device speech**: STT/TTS/VAD/KWS running on the phone, audio never uploaded
+- #71 **Hands-free control of the app while driving** (spoken "delivered", re-order, next stop)
+- #72 **Wake word / hands-free activation** (no button press, no screen touch)
+- #73 **NZ English + te reo Māori + Pacific NZ accents** in the STT/TTS models
+- #74 **Multilingual voice** (Arabic, Hindi/Punjabi, Mandarin, Samoan/Tongan) with on-device TTS
+- #76 **Offline voice** (commands and dictation with no signal in the van)
+- #77 **Low-drain listening** (adaptive wake duty cycle, ≤ 8 %/h)
+- #78 **End-of-turn / barge-in** (the driver interrupts the spoken reply)
+- #79 **Voice onboarding and spoken door memory on arrival**
+- #81 Hands-free control of the app **while driving** (spoken "delivered", "next", "skip", "reorder")
+- #82 **Semantic end-of-turn detection** (audio-native, 23 languages, BSD-2, on-device)
+- #83 **Barge-in that does not trip on a cough, a radio or a passenger's "mm"**
+- #84 **Voice control that survives a dropped connection mid-turn** (the turn is decided locally; the answer degrades)
+- #85 **Voice POD / spoken delivery confirmation**
+- #86 **Spoken door note on arrival** (read the access note out when you arrive)
+- #87 **Voice re-ordering / spoken rules engine**
+- #88 **te reo Māori / Samoan / Tongan voice control**
+- #89 **On-device audio** (nothing leaves the van)
+- #90 **Offline map of the driver's region**
+- #240 Voice prompts ≤ 8 words, spoken in the driver's language
+### Optimisation (7 planned) - the route the optimiser builds (the courier feels its output)
+- #12 Start/end, round trip, service time per stop
+- #14 Pickup-delivery pairing
+- #15 Vehicle type, avoid tolls/highways, capacity
+- #16 Zones / territories, multi-depot
+- #102 **Natural-language constraints as tools** ("pharmacy after 2pm", "make this the last stop") **[B2-FIRST]**
+- #103 **A tool that re-optimises without blocking driving**
+- #309 **A planned break in the day** (a window and a duration fed into the optimiser and shown on the map)
+### Accessibility (17 planned) - usable by every courier
+- #52 Touch targets: `touchTarget.minimum` is **44 px**; our bar is **≥ 56 pt** (72 pt primary)
+- #53 Body text `fontSizes.base` is **16 px**; our bar is **≥ 17 pt**
+- #64 **Screen-reader focus order and focus trapping** inside the stop sheet
+- #93 **An accessibility declaration for the assistant** (large text, screen-reader, reduced motion, contrast)
+- #215 **A published accessibility statement** and the store accessibility declaration (VoiceOver, TalkBack, 200 % text, reduced motion, contrast)
+- #216 **Dynamic type to 200 % with no clipping or truncation** on the three key screens, proved by Maestro screenshots at 1.0 / 1.5 / 2.0
+- #217 **Touch targets: ≥ 56 pt everywhere, 72 pt for the primary action** (WCAG 2.2 SC 2.5.8 floor is 24 × 24 CSS px)
+- #218 **Colour-blind-safe status colours**, and status that is never carried by colour alone (shape + text label + spoken state)
+- #219 **Contrast: driving text ≥ 7:1, everything else ≥ 4.5:1, non-text ≥ 3:1, measured in all three themes**
+- #220 **Screen-reader support on every screen**: a role, a name, a value, a state, and a live region for every status change
+- #221 **Focus order and focus trapping** in the stop sheet and the route change (SC 2.4.3, 2.4.11)
+- #222 **Reduced motion honoured**: transitions become instant, never removed, and the "reduce motion" system setting is respected
+- #223 **RTL-ready layouts** (logical `start`/`end` everywhere), with the Arabic UI translated and not accidentally mirrored
+- #224 **Accessibility actions** so a screen reader can activate a stop, a delivery outcome and the assistant — and a voice command for every one of them
+- #225 **An accessibility check in CI** (a11y lint rules, RNTL accessibility matchers, a token-contrast script)
+- #226 **A real-device screen-reader pass** on both platforms, with written transcripts, before v1
+- #227 **Motor-impairment path**: every action reachable by voice, one-handed, with a mounted phone, and with gloves
+### Motion (3 planned) - how it feels
+- #56 **Haptics on confirm, deliver and error** — `expo-haptics` is not installed
+- #57 **Shared-element transitions** are off by default in Reanimated 4.7.1 and default to 500 ms
+- #59 **Night mode by sunset** — the theme follows the OS colour scheme only
+### Design system (3 planned) - one look
+- #51 Our token set says **Inter / JetBrains Mono** while `docs/design/SYSTEM.md` §2 locks **Figtree**
+- #60 Night theme background is **`#09090b`**; `docs/design/SYSTEM.md` §3 says `#0A0A0A`–`#121212`, never pure black
+- #65 **A token pipeline that actually runs** — the package claims Style Dictionary but ships plain TypeScript objects
+### Performance (1 planned) - 60 fps
+- #61 **FlashList is not installed** although §5 and `CONSTRAINTS.md` require 300 stops at 60 fps
+### Languages (1 planned) - every language a courier speaks
+- #94 **Voice support for the NZ delivery workforce's languages**
+### History (1 planned) - the past days
+- #29 Route history
+### Support (4 planned) - when something breaks
+- #47 In-app support / help centre
+- #106 **A help-centre agent grounded in our own documentation**
+- #137 Refunds and disputes handled for the driver
+- #256 **Help centre** in the web app
+### Safety (1 planned) - driving safety
+- #48 SOS / emergency button
+
+## 5. LANE STATUS (one line per lane, the directive's rule)
+
+- **BUG-305 (the import sheet's paste field overlapping the actions row): FIXED, PR #306** — the
+  red-first tests pin it (906 tests green); CI re-running on the head that carries the QA evidence.
+- **PR #302 (P4 baselines): RUNNING** — the capture legs pass; the api-34 main leg is red on a
+  first-launch flake, a re-run is the diagnosis.
+- **PR #289 (the BUG-270 matrix): BLOCKED on BUG-305** — both large legs failed at the import
+  sheet's dismiss, which is exactly what PR #306 fixes.
+- **Lane 6 (voice lever b, address resolution on STT output): RUNNING** — the Canterbury street
+  index (6,799 roads from 656,044 LINZ rows) and the resolver are built; the honest answer is that
+  the held-out set's audio never speaks an address (Common Voice prose), re-derived by an
+  independent script.
+- **Offline lane (item 6): RUNNING** — 50 airplane-mode shifts, exactly-once sync, the PMTiles pack
+  and the Maestro flow.
+- **Scale lane (item 5): RUNNING** — the seeded shifts, kill-mid-sync and the monkey runs.
+- **The QA evidence PR (#307): MERGED** (origin/main 8ae54724) — the report the PART A list is built
+  from, 91 added paths, all under docs/evidence/founder-qa-2026-11-12/.
 # CURRENT — the handoff
 
 **Week:** 2026-W46. **Local `main` == `origin/main` == `5df941f` (PR #283 — the 2026-11-09 log PR). Behind it `ca32f4a` = PR #281 (the backend's BUG-278: held-out 99.65% D8 accuracy), behind it `191ac17` = PR #280. Behind it `d1f9f60` = PR #279 (voice lane 1: the synthetic held-out street split, committed). Behind it `b76c333` = PR #277 (the audio-injection research + licence reads), behind it `b389e56` = PR #275 (the backend's BUG-277: LINZ hotword export), behind it `abd3754` = PR #276 (the directive FIRST PR). Behind it `3525a50` = PR #266 (the #261/#262/#265 log PR). Behind it `f1ae091` = PR #265 (the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
@@ -548,6 +811,23 @@ under Debug on a tall window with its frame ending above the dock.
 
 BUG-300 is filed FIXED (the app-side defects and their tests); BUG-270 stays open
 on main (the matrix lives in #289).
+---
+
+## 2026-11-11: BUG-305 — the import sheet's paste field overlapped the actions row (the large legs)
+
+The large legs of run 42866833804 (both api levels) failed `.maestro/import.yaml`
+at the sheet's own dismiss: the paste field's box sat 84 px OVER the pinned
+actions row, so the tap aimed at the dismiss landed on the text field (api-35's
+Maestro refused it as obstructed). The small legs had 133 dp of room against
+the field's 128 dp, which is why the same build was green there.
+
+Fixed in the app, red-first: `importSheetLayoutFor` (stops.tsx) clamps the inset
+the sheet pads by to what the sheet can absorb and bounds the field by the room
+that leaves, so the field's box can never reach the actions row. Pinned by
+`stopsImportSheet.test.tsx` (5 claims). Green: 906 tests / 109 suites, tsc,
+eslint. BUG-304's large-leg flake (BUG-302) is untouched by this; the two
+still-open large-leg runs to watch are the ci/bug270-restore matrix and the
+P4 capture job.
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue

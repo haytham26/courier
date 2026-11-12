@@ -93,3 +93,8 @@ packages/shared/src/generated/.api-test.ts
 # worktree) - BUG-241.
 services/*/mutants/
 .mutmut-cache
+
+# The founder local server login (a generated password; never committed)
+.local-founder-login.txt
+# The founder local stack: the generated env, the logs, the tunnels binary
+infra/local/
