@@ -1,0 +1,14 @@
+--------- beginning of main
+11-12 13:27:02.733  3444  3444 E EGL_emulation: eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+11-12 13:27:02.733  3444  3444 E EGL_emulation: tid 3444: eglQueryContext(2349): error 0x3004 (EGL_BAD_ATTRIBUTE)
+11-12 13:27:02.744  3444  5165 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:27:02.744  3444  5165 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:27:02.744  3444  5165 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:27:02.744  3444  5165 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:27:02.745  3444  3444 E Surface : getSlotFromBufferLocked: unknown buffer: 0x41df0a0041ff0101
+11-12 13:27:03.449  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-4] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:27:03.531  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-4] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:27:04.447  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-4] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:27:04.514  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-4] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:27:05.164  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-4] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:27:06.614  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-4] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context

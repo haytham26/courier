@@ -1,0 +1,6 @@
+--------- beginning of main
+11-12 13:28:24.841  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-6] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:28:24.866  3444  5600 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:28:24.866  3444  5600 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:28:24.866  3444  5600 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:28:24.866  3444  5600 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
