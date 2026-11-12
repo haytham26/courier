@@ -33,18 +33,28 @@ name: The end-of-day summary
     visible:
       id: "summary-screen"
     timeout: 30000
-# What the day says: the earned amount, the three counts and the split per
-# carrier. The testIDs are the contract, the copy moves with the design.
+# What the day says (A3, the QA inspector's step 28): THIS run's own numbers,
+# and an honest "Not tracked yet" for what the phone does not track. The
+# reference mockup's $438.20, 206 delivered and 92 km are gone from every
+# build - earnings are D60, not in the trial.
 - assertVisible:
     id: "summary-earned"
+# The money says so rather than showing a number the phone never earned.
+- assertVisible: "Not tracked yet"
+- assertVisible: "Earnings are not tracked in the trial"
+# The three counts are the run's own: a fresh launch of the E2E day has
+# nothing delivered yet, so the counter reads 0 - not the reference's 206.
 - assertVisible:
     id: "summary-delivered"
 - assertVisible:
-    id: "summary-not-home"
+    id: "summary-failed"
 - assertVisible:
     id: "summary-driven"
+# The carrier split is D60 too: the card is there and says "Not tracked yet".
 - assertVisible:
     id: "summary-carriers"
+- assertVisible:
+    id: "summary-carriers-none"
 # The dock stays on a root-stack route: the summary is not a tab, and the way
 # out is the dock itself.
 - assertVisible:
