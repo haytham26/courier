@@ -34,6 +34,15 @@ RUN pip install --no-cache-dir --break-system-packages \
     && pip check \
     && find /src/courier-voice -name '__pycache__' -prune -exec rm -rf {} +
 
+# The service does not need root, and a container that runs as root is a
+# container an escaped process lands in with root (ASVS V14, and Semgrep's
+# dockerfile.security.missing-user - which is why this step exists). The
+# installed package is world-readable, so the user below can import it.
+RUN groupadd --gid 10003 app \
+    && useradd --uid 10003 --gid app --create-home app \
+    && chmod -R a+rX /usr/local/lib/python3.12/site-packages
+USER app
+
 WORKDIR /src/courier-voice
 
 # The port the app dials (services/courier-voice/README.md: `uvicorn app.main:app
