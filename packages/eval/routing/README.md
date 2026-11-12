@@ -55,13 +55,16 @@ imported by value); otherwise the path is the production path.
 | `ours` | **the production engine**: `get_engine()` -> `PyVRPEngine` (ADR-009), priority stops planned as their own phase first | the production budget, a pure function of the day (`iterations_for`): **400 iterations below 150 stops, 250 at 150 without windows, 50 at 150 with windows** (every windowed 150-stop day in this set is infeasible under its windows for every engine, so the windowed search proves it and the retry does the work), growing by 3 per stop past 150 and capped at 600; seed 0 |
 | `pyvrp-long` | the SAME two-phase PyVRP model (`app.solver`'s own helpers, matrices, windows and hand-over pins) | a long `MaxRuntime` (15 s), **the production seed** - the same solver with the same random stream, so the only difference from `ours` is the budget |
 | `ortools` | OR-Tools' VRP solver (Apache-2.0), one vehicle, capacity and time dimensions, PATH_CHEAPEST_ARC + guided local search | the same long time budget |
+| `vroom` | **VROOM 1.15.0** (BSD-2-Clause) in its pinned image `infra/eval/vroom/Dockerfile` — the release publishes no prebuilt binary, so the image builds it from its own tag (GCC 13+, hence Ubuntu 24.04) | the same long time budget, passed to the engine's own `-l` |
 
-**VROOM 1.15.0 is NOT here, and that is a recorded gap, not an omission:** there
-is no Rust toolchain on the machine that built the set, the PyPI `vroom` package
-is a stale product of the same name, and the BLAS-capable prebuilt distribution
-could not be produced here. ADR-030 records the gap and what remains to verify;
-the licence row is in `docs/product/LICENSES.md` so adopting it later needs no
-new licence check.
+**VROOM 1.15.0 is a measured engine now, and how it is run is recorded rather than
+assumed.** The earlier gap (no Rust toolchain — there is none, and VROOM is C++, so
+the toolchain was never the real answer) is closed by a pinned image: the engine's
+own tag, a digest-pinned base, and a build whose version is checked at the end of
+the Dockerfile. The runner writes the instance the way the OR-Tools baseline does,
+so the two engines are measured with one stick, and an engine that does not plan the
+day feasibly is NOT measured: the runner reports the day as unplanned, which is the
+same rule the baseline filter already applies to an illegal plan.
 
 ## The baseline is a LEGAL plan, not the fastest thing on the board
 

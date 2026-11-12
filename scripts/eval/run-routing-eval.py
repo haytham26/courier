@@ -42,8 +42,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import statistics
+import subprocess
 import sys
+import tempfile
 import time
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
@@ -302,6 +305,12 @@ def _stop_uuid(instance_id: str, pool_index: int):
 
 
 # ---------------------------------------------------------------------------
+#: The VROOM engine's image, built by infra/eval/vroom/Dockerfile (pinned by
+#: tag and base-image digest). An engine that is a container is pinned the way
+#: an action is: by identity, not by a moving tag.
+VROOM_IMAGE = "courier-vroom:1.15.0"
+
+
 # the engines
 # ---------------------------------------------------------------------------
 
@@ -402,6 +411,109 @@ def _solve_group_long(stops: list, request: RouteRequest, *, start_s: int, start
         for activity in routes[0].schedule()
         if activity.type == ActivityType.CLIENT
     ]
+
+
+def run_vroom(request: RouteRequest, instance_id: str, budget_s: float) -> list[int] | None:
+    """VROOM 1.15.0, in its pinned image: the third baseline (the founder's
+    2026-11-12 directive item 5).
+
+    The engine is a CONTAINER, not a library: `infra/eval/vroom/Dockerfile`
+    builds VROOM 1.15.0 from its own tag (ADR-030's recorded gap - no prebuilt
+    binary exists), and this function writes the instance the same way the
+    OR-Tools engine builds its model - one vehicle, the capacity, the road
+    travel as the arc's duration, the service time at the origin, the windows as
+    offsets from the run's start - so all engines are measured with ONE stick.
+
+    The answer is the order as pool indices, or None when the engine did not
+    answer or answered something that does not cover the day's stops: an engine
+    that cannot plan feasibly is reported, not papered over.
+    """
+    constraints = request.constraints
+    stops = list(request.stops)
+    if not stops:
+        return []
+    finish = (constraints.finish_lat, constraints.finish_lon) if constraints.finish_lat is not None else None
+    points = [(constraints.depot_lat, constraints.depot_lon)]
+    points.extend((stop.lat, stop.lon) for stop in stops)
+    if finish is not None:
+        points.append(finish)
+    _, seconds, _ = METRIX
+
+    start_at = _aware(constraints.start_at)
+    jobs = []
+    for order, stop in enumerate(stops, start=1):
+        job: dict[str, Any] = {
+            "id": order,
+            "location_index": order,
+            "service": _service_seconds(stop, constraints),
+        }
+        if stop.priority:
+            job["priority"] = 1
+        if stop.window is not None:
+            early = max(0, int((_aware(stop.window.start) - start_at).total_seconds()))
+            late = int((_aware(stop.window.end) - start_at).total_seconds())
+            job["time_windows"] = [[early, late + job["service"]]]
+        jobs.append(job)
+
+    document = {
+        "vehicles": [{
+            "id": 1,
+            # VROOM 1.15's vehicle keys are start_index/end_index (a uint): a
+            # `start` ARRAY is read as a coordinate pair, which is what
+            # "[Error] Invalid start array" was telling us. The matrices are
+            # indexed by the point's position, which is what the matrix below
+            # is sized for.
+            "start_index": 0,
+            "end_index": len(points) - 1 if finish is not None else 0,
+            "capacity": [constraints.capacity_parcels or sum(stop.parcels for stop in stops)],
+        }],
+        "jobs": jobs,
+        # VROOM's matrix is travel time in seconds, indexed by the points above:
+        # the road matrix the eval was built from (the same one the other
+        # engines are measured on).
+        "matrix": [[seconds[MATRIX.lookup(*a)][MATRIX.lookup(*b)] for b in points] for a in points],
+        "options": {"exploration_level": 5},
+    }
+
+    try:
+        # VROOM reads a FILE (its CLI has no stdin form: `-i -` answers
+        # "[Error] Can't read file: -"), so the document is written beside the
+        # run and mounted in. The file is removed whatever happens.
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False,
+                                         encoding="utf-8") as handle:
+            handle.write(json.dumps(document))
+            input_path = handle.name
+        try:
+            # `-i` reads a FILE (stdin is the default, but a container has no
+            # stdin to give it), and the answer goes to stdout unless `-o`
+            # names a file - so neither `-i -` nor `-o -` is a real form.
+            # `-l` is the engine's own budget: the same long budget every
+            # baseline is measured with.
+            result = subprocess.run(
+                ["docker", "run", "--rm",
+                 "-v", f"{input_path}:/input.json:ro",
+                 VROOM_IMAGE, "vroom", "-i", "/input.json", "-l", str(int(budget_s))],
+                capture_output=True,
+                timeout=max(120, int(budget_s) + 60),
+            )
+        finally:
+            os.unlink(input_path)
+    except (OSError, subprocess.SubprocessError) as error:
+        print(f"vroom did not run: {error}", file=sys.stderr)
+        return None
+    if result.returncode != 0:
+        print("vroom exited non-zero:", result.stderr.decode("utf-8", "replace")[:200], file=sys.stderr)
+        return None
+    answer = json.loads(result.stdout.decode("utf-8", "replace"))
+    steps = (answer.get("routes") or [{}])[0].get("steps") or []
+    jobs_seen = [step.get("job") for step in steps if step.get("type") == "job" and step.get("job")]
+    if len(jobs_seen) != len(stops):
+        print(f"vroom answered {len(jobs_seen)} of {len(stops)} stops", file=sys.stderr)
+        return None
+    # The job ids are 1-based over the request's stops, so the engine's order
+    # is those stops' own list - and the pool indices come from the same
+    # identity mapping every other engine is read through.
+    return order_from_stops(instance_id, [stops[job_id - 1] for job_id in jobs_seen])
 
 
 def run_ortools(request: RouteRequest, instance_id: str, budget_s: float) -> list[int] | None:
@@ -598,7 +710,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--budget-seconds", type=float, default=15.0)
     parser.add_argument("--only", default=None, help="run only instances whose id contains this")
-    parser.add_argument("--engines", default="ours,pyvrp-long,ortools")
+    parser.add_argument("--engines", default="ours,pyvrp-long,ortools,vroom")
     parser.add_argument("--results-dir", default=None,
                         help="where the result files go (default: the committed results directory)")
     parser.add_argument("--check-targets", action="store_true",
@@ -671,6 +783,8 @@ def main() -> int:
                 order = run_pyvrp_long(request, instance["id"], args.budget_seconds)
             elif engine == "ortools":
                 order = run_ortools(request, instance["id"], args.budget_seconds)
+            elif engine == "vroom":
+                order = run_vroom(request, instance["id"], args.budget_seconds)
             else:
                 raise SystemExit(f"unknown engine {engine}")
             wall = time.perf_counter() - started
@@ -708,7 +822,9 @@ def main() -> int:
             durations_150.append(ours["wall_s"])
         summary_rows.append(instance["id"])
         ours_travel = ours.get("travel_s")
-        best = result["best_travel_s"]
+        # A run where no engine planned has no best travel either, and the
+        # summary must say so rather than crash on a missing key.
+        best = result.get("best_travel_s")
         ratio = f"{ours_travel / best:.4f}" if ours_travel and best else "-"
         feasible_now = result.get("feasible_engines", [])
         print(f"  {instance['id']}: ours {ratio}x of the best, "
