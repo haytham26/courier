@@ -167,6 +167,8 @@ function theBody(request: IncomingMessage): Promise<string> {
 interface WireAnswer {
   status: number;
   ok: boolean;
+  /** The response headers, for the callers that need one (the session cookie). */
+  headers: { get(name: string): string | null };
   json(): Promise<unknown>;
 }
 
@@ -180,7 +182,13 @@ export function theFetchOf(baseUrl: string): (input: string, init?: RequestInit)
     new Promise<WireAnswer>((resolve, reject) => {
       const target = new URL(input, baseUrl);
       const headers = (init.headers ?? {}) as Record<string, string>;
-      const body = typeof init.body === 'string' ? init.body : undefined;
+      // A Buffer body is written as it is: the POD multipart’s image part.
+      const body: string | Buffer | undefined =
+        typeof init.body === 'string'
+          ? init.body
+          : Buffer.isBuffer(init.body)
+            ? init.body
+            : undefined;
       const pending = httpRequest(
         {
           hostname: target.hostname,
@@ -198,6 +206,14 @@ export function theFetchOf(baseUrl: string): (input: string, init?: RequestInit)
             resolve({
               status,
               ok: status >= 200 && status < 300,
+              headers: {
+                // Node answers a set-cookie as a list; the platform’s own
+                // Headers answers one value or a list, and the caller joins them.
+                get: (name: string) => {
+                  const value = response.headers[String(name).toLowerCase()];
+                  return Array.isArray(value) ? value.join('; ') : (value ?? null);
+                },
+              },
               json: () => Promise.resolve(text.length > 0 ? (JSON.parse(text) as unknown) : null),
             });
           });

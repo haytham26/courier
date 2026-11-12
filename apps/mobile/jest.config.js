@@ -30,6 +30,19 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/android/', '<rootDir>/ios/'],
+  testPathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/android/',
+    '<rootDir>/ios/',
+    // The scale lane’s REAL-STACK leg: it drives the A1 compose stack
+    // (infra/compose.ci.yml: Postgres + the API + auth + voice), so it runs as its
+    // own command and belongs to a CI job of its own, never to the default suite
+    // every PR runs. It FAILS LOUDLY when the stack is not up - a test that passes
+    // because no server answered proves nothing - so it is named here rather than
+    // removed:
+    //   docker compose -f infra/compose.ci.yml up -d --wait
+    //   cd apps/mobile && node_modules/.bin/jest.cmd src/run/__tests__/scaleStackSync.test.ts
+    '<rootDir>/src/run/__tests__/scaleStackSync.test.ts',
+  ],
   collectCoverageFrom: ['src/**/*.{ts,tsx}', 'app/**/*.{ts,tsx}'],
 };

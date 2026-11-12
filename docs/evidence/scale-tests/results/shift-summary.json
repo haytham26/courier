@@ -1,0 +1,22 @@
+{
+ "seed": "20261111 (the committed set)",
+ "set": "C:\\Users\\DCL\\projects\\courier\\.worktrees\\scale-tests\\packages\\eval\\scale\\shifts.jsonl",
+ "shifts": 120,
+ "stops": 2864,
+ "delivered": 1764,
+ "failed": 562,
+ "skipped": 289,
+ "skips_with_suburb": 283,
+ "pending": 249,
+ "pods": 1019,
+ "notes": 423,
+ "commands": 360,
+ "events_logged": 2326,
+ "events_sent": 2326,
+ "events_pending_after": 0,
+ "marks_after": 2326,
+ "server_stored": 2326,
+ "server_replays": 0,
+ "problems": 0,
+ "shifts_with_problems": []
+}
