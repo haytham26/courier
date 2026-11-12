@@ -201,13 +201,27 @@ the same event ids.
 | the POD's first-store branch (an id the server has never seen)    | **201** + `already_stored: false`, then the replay 200 + `already_stored: true`, still **one** row  |
 | the phone's pending count after the cold start's sync             | **0**                                                                                               |
 
-**Why this suite is not in the default app suite.** It needs the A1 compose
-stack, so it runs as its own command and belongs to a CI job of its own. It
-**fails loudly** when the stack is not up (a test that passes because no
-server answered proves nothing), and it is named in `apps/mobile/jest.config.js`
-with that reason rather than removed. **The lead's call:** the job that runs it
-(`android-e2e.yml`'s A1 stack is already there in CI) is a workflow change,
-which is the lead's to add.
+**The leg’s repeatability, measured rather than assumed.** The green run above
+is real and repeatable, but two of this machine’s own limits bound how often it
+can be re-run in a row, and both are named so nobody reads a later red as a
+regression:
+
+- the auth service’s **per-account sign-in limit** (`/sign-in/email`: 5 per 900 s,
+  `services/auth/src/http.ts`) — the lane’s own throwaway account is spent after
+  five runs, and the next sign-in is refused until the window passes. A fresh
+  account (or a CI runner’s own) is what a repeatable job needs;
+- **the docker engine on this PC is shared** with the lead session’s own stacks
+  (`courier-local-*`), and it went down twice while this lane worked — each time
+  the A1 stack came back up with `docker compose -f infra/compose.ci.yml up -d
+--wait`. A red on this suite with `ECONNREFUSED` or `socket hang up` is that,
+  and the suite says so loudly rather than passing vacuously.
+  **Why this suite is not in the default app suite.** It needs the A1 compose
+  stack, so it runs as its own command and belongs to a CI job of its own. It
+  **fails loudly** when the stack is not up (a test that passes because no
+  server answered proves nothing), and it is named in `apps/mobile/jest.config.js`
+  with that reason rather than removed. **The lead's call:** the job that runs it
+  (`android-e2e.yml`'s A1 stack is already there in CI) is a workflow change,
+  which is the lead's to add.
 
 **The stack's own limits, measured on this machine:** the auth service limits
 sign-ups per IP and sign-ins per account (`/sign-in/email`: 5 per 900 s,
