@@ -1,0 +1,9 @@
+--------- beginning of main
+11-12 13:25:59.096  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:25:59.247  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:25:59.413  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:26:00.131  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:26:00.245  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:26:01.045  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:26:02.145  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:26:02.645  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context

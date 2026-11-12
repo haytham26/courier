@@ -1,0 +1,143 @@
+--------- beginning of system
+11-12 13:19:41.322   593   638 E VerityUtils: Failed to measure fs-verity, errno 1: /data/app/~~mdPpUHwNpX7Wd6XZ0BeCaA==/com.courier.copilot-VQ2pqoSmMOhSRw-vzB1inw==/base.apk
+--------- beginning of main
+11-12 13:19:41.531   801  1340 E EGL_emulation: tid 1340: eglSurfaceAttrib(1726): error 0x3009 (EGL_BAD_MATCH)
+11-12 13:19:41.531   801  1340 E OpenGLRenderer: Unable to match the desired swap behavior.
+11-12 13:19:41.631   801  1340 E EGL_emulation: tid 1340: eglSurfaceAttrib(1726): error 0x3009 (EGL_BAD_MATCH)
+11-12 13:19:41.631   801  1340 E OpenGLRenderer: Unable to match the desired swap behavior.
+11-12 13:19:41.698   903  1148 E BstGCallService-JNI: gcallCommonCommandClbk called: code=1, name=com.courier.copilot, data=
+11-12 13:19:41.741  3444  3465 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:41.741  3444  3465 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:41.741  3444  3465 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:41.741  3444  3465 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:41.757  3444  3465 E eglCodecCommon: glUtilsParamSize: unknow param 0x00008e7e
+11-12 13:19:41.757  3444  3465 E eglCodecCommon: glUtilsParamSize: unknow param 0x00008e7e
+11-12 13:19:41.759   414   542 E HWComposer: getSupportedContentTypes: getSupportedContentTypes failed for display 0: Unsupported (8)
+11-12 13:19:41.807  3444  3465 E EGL_emulation: tid 3465: eglSurfaceAttrib(1726): error 0x3009 (EGL_BAD_MATCH)
+11-12 13:19:41.807  3444  3465 E OpenGLRenderer: Unable to match the desired swap behavior.
+11-12 13:19:42.161   593   739 E AudioSystem-JNI: Command failed for android_media_AudioSystem_setParameters: -61
+11-12 13:19:42.214   593  3503 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:42.214   593  3503 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:42.215   593  3503 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:42.215   593  3503 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:42.246   593  3503 E eglCodecCommon: glUtilsParamSize: unknow param 0x00008e7e
+11-12 13:19:42.246   593  3503 E eglCodecCommon: glUtilsParamSize: unknow param 0x00008e7e
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: Failed to resolve model path: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy.
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: java.lang.IllegalArgumentException: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy.
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at s76.c(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:363)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at com.sherpaonnx.SherpaOnnxModule.resolveModelPath(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:89)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at com.facebook.jni.NativeRunnable.run(Native Method)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at android.os.Handler.handleCallback(Handler.java:942)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at android.os.Handler.dispatchMessage(Handler.java:99)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at com.facebook.react.bridge.queue.MessageQueueThreadHandler.dispatchMessage(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:4)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at android.os.Looper.loopOnce(Looper.java:201)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at android.os.Looper.loop(Looper.java:288)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion.startNewBackgroundThread$lambda$0(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:29)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion.a(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:1)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at p04.run(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:670)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at java.lang.Thread.run(Thread.java:1012)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: Caused by: java.lang.IllegalArgumentException: File not found after copying parent directory: models/stt.onnx
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	at s76.c(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:351)
+11-12 13:19:42.314  3444  3472 E SherpaOnnx: 	... 11 more
+11-12 13:19:42.362   801  1340 E EGL_emulation: tid 1340: eglSurfaceAttrib(1726): error 0x3009 (EGL_BAD_MATCH)
+11-12 13:19:42.362   801  1340 E OpenGLRenderer: Unable to match the desired swap behavior.
+11-12 13:19:42.370  3444  3471 E ReactNativeJS: 'Voice error:', { [java.lang.IllegalArgumentException: Failed to resolve model path: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy.]
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:   nativeStackAndroid: 
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:    [ { lineNumber: 363,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'c',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 's76' },
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:      { lineNumber: 89,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'resolveModelPath',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 'com.sherpaonnx.SherpaOnnxModule' },
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:      { lineNumber: -2,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'run',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 'com.facebook.jni.NativeRunnable' },
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:      { lineNumber: 942,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'Handler.java',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'handleCallback',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 'android.os.Handler' },
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:      { lineNumber: 99,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'Handler.java',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'dispatchMessage',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 'android.os.Handler' },
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:      { lineNumber: 4,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'dispatchMessage',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 'com.facebook.react.bridge.queue.MessageQueueThreadHandler' },
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:      { lineNumber: 201,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'Looper.java',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'loopOnce',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 'android.os.Looper' },
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:      { lineNumber: 288,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'Looper.java',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'loop',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 'android.os.Looper' },
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:      { lineNumber: 29,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'startNewBackgroundThread$lambda$0',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 'com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion' },
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:      { lineNumber: 1,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'a',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 'com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion' },
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:      { lineNumber: 670,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'run',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 'p04' },
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:      { lineNumber: 1012,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        file: 'Thread.java',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        methodName: 'run',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:        class: 'java.lang.Thread' } ],
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:   name: 'java.lang.IllegalArgumentException',
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:   userInfo: null,
+11-12 13:19:42.370  3444  3471 E ReactNativeJS:   code: 'PATH_RESOLVE_ERROR' }
+11-12 13:19:42.378  3444  3472 E unknown:ReactNative: console.error: Voice error: java.lang.IllegalArgumentException: Failed to resolve model path: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy., stack:
+11-12 13:19:42.378  3444  3472 E unknown:ReactNative: SyntheticError@1:811413
+11-12 13:19:42.378  3444  3472 E unknown:ReactNative: reactConsoleErrorHandler@1:811204
+11-12 13:19:42.378  3444  3472 E unknown:ReactNative: onError@1:2477146
+11-12 13:19:42.378  3444  3472 E unknown:ReactNative: ?anon_0_initialize@1:2706010
+11-12 13:19:42.456   593   608 E ActivityManager: Cannot find package for uid: 1013
+11-12 13:19:42.458   441   580 E MediaPlayerService: Couldn't open fd for content://settings/system/notification_sound
+11-12 13:19:42.459   801  3509 E MediaPlayerNative: Unable to create media player
+11-12 13:19:42.638   801  3513 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:42.638   801  3513 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:42.638   801  3513 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:42.638   801  3513 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:42.743  3444  3518 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:42.743  3444  3518 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:42.744  3444  3518 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:42.744  3444  3518 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:42.761  3444  3444 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:42.761  3444  3444 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:42.761  3444  3444 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:42.761  3444  3444 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:42.793  3444  3444 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:42.793  3444  3444 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:19:42.793  3444  3444 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:42.793  3444  3444 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:19:42.996  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:43.332  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:44.263  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:44.956   593  1471 E TaskPersister: File error accessing recents directory (directory doesn't exist?).
+11-12 13:19:45.398  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:45.864  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:45.898  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:45.935  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:46.494  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:46.544  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:46.927  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:47.061  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:47.529  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:47.728  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:47.895  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:48.078  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:48.111  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:48.894  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:50.844  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:51.111  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:51.978  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:53.118  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:19:53.527  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context

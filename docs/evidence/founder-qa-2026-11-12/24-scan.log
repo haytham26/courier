@@ -1,0 +1,3 @@
+--------- beginning of main
+11-12 13:26:27.547  3444  3444 E Surface : freeAllBuffers: 1 buffers were freed while being dequeued!
+11-12 13:26:27.667   903  1148 E BstGCallService-JNI: gcallCommonCommandClbk called: code=1, name=com.android.permissioncontroller, data=
