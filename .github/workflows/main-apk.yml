@@ -161,6 +161,13 @@ jobs:
           # for sign-in AND for the run data, not one and a localhost.
           EXPO_PUBLIC_AUTH_URL: ${{ steps.urls.outputs.auth_url }}
           EXPO_PUBLIC_API_URL: ${{ steps.urls.outputs.api_url }}
+          # BUG-289 (the founder's 2026-11-12 directive item 4): the voice
+          # service is dialled DIRECTLY by the app
+          # (`EXPO_PUBLIC_VOICE_SERVICE_URL`, apps/mobile/src/voice), so an APK
+          # with no voice URL carries a localhost literal and the voice flows
+          # cannot reach the service that answers them. It rides the same edge
+          # layout as the API unless the variable says otherwise.
+          EXPO_PUBLIC_VOICE_SERVICE_URL: ${{ vars.EXPO_PUBLIC_VOICE_SERVICE_URL }}
         run: |
           set -euo pipefail
           if [ -z "${EXPO_PUBLIC_AUTH_URL}" ] || [ -z "${EXPO_PUBLIC_API_URL}" ]; then

@@ -43,6 +43,43 @@ jobs:
         # `dist`, so the package has to be built before the bundle.
         run: pnpm --filter @courier/design-tokens build
 
+      # BUG-289: the release's URLs resolve the SAME way Main APK's do - the
+      # staging domain first, then the explicit variables - so a v1.0.0 release
+      # built while the local server is the configured one is not pinned to a
+      # quick tunnel that has since moved. The two workflows cannot disagree
+      # about which server an APK dials.
+      - name: The URLs this release's APK dials
+        id: urls
+        env:
+          STAGING_DOMAIN: ${{ vars.COURIER_STAGING_DOMAIN }}
+          AUTH_URL: ${{ vars.EXPO_PUBLIC_AUTH_URL }}
+          API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          VOICE_URL: ${{ vars.EXPO_PUBLIC_VOICE_SERVICE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -n "${STAGING_DOMAIN}" ]; then
+            echo "pinned=staging" >> "$GITHUB_OUTPUT"
+            echo "auth_url=https://${STAGING_DOMAIN}/api/auth" >> "$GITHUB_OUTPUT"
+            echo "api_url=https://${STAGING_DOMAIN}" >> "$GITHUB_OUTPUT"
+            echo "voice_url=${VOICE_URL}" >> "$GITHUB_OUTPUT"
+            echo "::notice::this release is pinned to staging: auth=https://${STAGING_DOMAIN}/api/auth api=https://${STAGING_DOMAIN}"
+          elif [ -n "${AUTH_URL}" ]; then
+            echo "pinned=var" >> "$GITHUB_OUTPUT"
+            echo "auth_url=${AUTH_URL}" >> "$GITHUB_OUTPUT"
+            if [ -n "${API_URL}" ]; then
+              echo "api_url=${API_URL}" >> "$GITHUB_OUTPUT"
+            else
+              host="$(printf '%s' "${AUTH_URL}" | sed -E 's#(https?://[^/]+).*#\1#')"
+              echo "api_url=${host}" >> "$GITHUB_OUTPUT"
+            fi
+            echo "voice_url=${VOICE_URL}" >> "$GITHUB_OUTPUT"
+            echo "configured=yes" >> "$GITHUB_OUTPUT"
+            echo "::notice::this release is pinned to the repository variables: auth=${AUTH_URL} api=${API_URL}"
+          else
+            echo "::error::neither COURIER_STAGING_DOMAIN nor EXPO_PUBLIC_AUTH_URL is set, so this release cannot name an auth server (BUG-072)."
+            exit 1
+          fi
+
       - name: Read the signing secrets
         id: keystore
         env:
@@ -83,6 +120,8 @@ jobs:
           # build fails loudly if it is absent: shipping an APK that cannot
           # sign anyone in is not a release.
           EXPO_PUBLIC_AUTH_URL: ${{ vars.EXPO_PUBLIC_AUTH_URL }}
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_VOICE_SERVICE_URL: ${{ vars.EXPO_PUBLIC_VOICE_SERVICE_URL }}
         run: |
           # BUG-072: without this the release bundle carries a localhost
           # literal that no phone can reach, and nothing downstream can tell.
