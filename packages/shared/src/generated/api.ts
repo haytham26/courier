@@ -151,7 +151,17 @@ export interface ReoptResponse {
     stop_id: string;
     sequence: number;
   }[];
+  geometry_engine?: string;
+  legs?: RouteLeg[];
   stops: Record<string, unknown>[];
+}
+
+export interface RouteLeg {
+  from_stop_id?: string;
+  to_stop_id?: string;
+  distance_m: number;
+  duration_s: number;
+  shape: string;
 }
 
 export interface RouteResponse {
@@ -164,6 +174,8 @@ export interface RouteResponse {
     stop_id: string;
     sequence: number;
   }[];
+  geometry_engine?: string;
+  legs?: RouteLeg[];
   total_distance_m: number;
   total_duration_s: number;
   parcels: number;

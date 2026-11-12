@@ -119,7 +119,11 @@ services:
       # named decision, not a default the API tolerates silently.
       AUTH_JWKS_INTERNAL_HOSTS: ${AUTH_JWKS_INTERNAL_HOSTS:-auth}
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
-      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER
+      # The road geometry (ADR-030): a deployment with no router configured answers
+      # `geometry_engine: none` and null shapes - an absent road, never a straight line.
+      VALHALLA_BASE_URL: ${VALHALLA_BASE_URL:-}
+      VALHALLA_COSTING: ${VALHALLA_COSTING:-auto}:-https://${COURIER_DOMAIN}}
       VALKEY_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
       # BUG-230: the only Host headers the API answers. The edge forwards the
       # staging name; the healthcheck and the compose network use the rest.
