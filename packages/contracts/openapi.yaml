@@ -1128,6 +1128,19 @@ components:
             properties:
               stop_id: { type: string, format: uuid }
               sequence: { type: integer }
+        geometry_engine:
+          type: string
+          description: >-
+            What produced `legs`' shapes: the engine and its configured URL, or
+            `none` when this deployment has no router configured. A null shape
+            with `geometry_engine: none` is an absent road, never a straight
+            line drawn as one.
+        legs:
+          type: array
+          description: >-
+            The road between the day's consecutive stops, depot included. Empty
+            when the plan carries fewer than two points.
+          items: { $ref: '#/components/schemas/RouteLeg' }
         total_distance_m: { type: number }
         total_duration_s: { type: number }
         parcels: { type: integer }
@@ -1163,6 +1176,24 @@ components:
               distance_m: { type: number }
               cumulative_distance_m: { type: number }
               late: { type: boolean }
+
+    RouteLeg:
+      type: object
+      description: >-
+        One leg of the day: the road between two consecutive stops (the lead's
+        2026-11-12 ask). `shape` is the encoded polyline in Valhalla's
+        precision-6 format (ADR-030), or null when no geometry engine answered
+        - a null shape is an absent road, never a straight line drawn as one.
+      required: [distance_m, duration_s, shape]
+      properties:
+        from_stop_id: { type: string, format: uuid, nullable: true }
+        to_stop_id: { type: string, format: uuid, nullable: true }
+        distance_m: { type: number }
+        duration_s: { type: number }
+        shape:
+          type: string
+          nullable: true
+          description: The precision-6 polyline, or null when there is none
 
     HealthResponse:
       type: object
@@ -1229,6 +1260,14 @@ components:
             properties:
               stop_id: { type: string, format: uuid }
               sequence: { type: integer }
+        geometry_engine:
+          type: string
+          description: >-
+            What produced `legs`' shapes (the same answer `RouteResponse`
+            carries): the engine and its URL, or `none`.
+        legs:
+          type: array
+          items: { $ref: '#/components/schemas/RouteLeg' }
         stops:
           type: array
           items: { type: object }

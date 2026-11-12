@@ -36,6 +36,35 @@ APK built against one is only as current as the tunnel: re-announce after any
 restart, and once the Oracle host exists the same variables point at staging and
 the APK is stable.** The link goes at the top of this log and of FOUNDER_TODO the
 moment the run publishes it.
+## 2026-11-12 (later still): the lead's item 2a — ROUTE GEOMETRY: the real road polyline (BUG-288)
+
+**For the lead.** The route and reopt answers now carry the road:
+
+- **What the answer carries:** `legs[]` — one leg per stop, the road the courier drives to reach it —
+  each with the **planner's own** `distance_m` and `duration_s` and the **router's** `shape` (Valhalla's
+  precision-6 polyline, the same request shape the eval's 560-stop road matrix was built with). The
+  first leg's `from_stop_id` is null (it starts at the depot, ADR-022's round trip). The road back to
+  the depot is NOT a leg, because the plan does not split it out — the total distance carries it, and
+  inventing a per-leg number would be a guess the phone would draw as a fact.
+- **What the answer says about itself:** `geometry_engine` — the engine and its configured URL, or
+  `none`. A null shape with `none` is an absent road; **nothing here draws a straight line and calls it
+  a road.**
+- **The configuration:** `VALHALLA_BASE_URL` and `VALHALLA_COSTING` (default `auto` for a van) in the
+  environment, passed through by all three compose files with no default engine — so the local stack
+  and CI answer `none` and the shapes are null until a router exists. `infra/env.example` documents it.
+- **The refusal rules:** one bounded request per route (not one per leg), a router that did not answer
+  degrades to null shapes rather than failing the route read, and an answer whose leg count does not
+  fit the points it was asked about is refused. The transport is injectable, so the tests record one
+  (the Stripe pattern) — eleven of them, covering the request's shape, the costing lever, the three
+  refusals, and both ends of the answer.
+- **The evidence:** eleven new tests, the API's full suite 700 passed, mypy clean over 89 files, ruff
+  clean, and every CI gate green on the PR. The generated client is regenerated and `check` is fresh, so
+  the phone consumes the same file the server is checked against.
+
+**The lead's three asks are now all closed:** 2a (this), 2b (locked stops, BUG-286), and 2c (email
+sign-in end to end against the local server — proved by the local stack itself: the founder signs in
+through the edge, the session cookie mints a JWT at `/api/auth/token`, and the smoke test's
+authenticated leg passes 7/7 over HTTPS).
 
 ## 2026-11-12 (later): the lead's item 2b — LOCKED STOPS: the reopt never moves a locked stop (BUG-286)
 
