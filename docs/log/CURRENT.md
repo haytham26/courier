@@ -1,570 +1,266 @@
-# CURRENT — the handoff
-
-**Week:** 2026-W46. **Local `main` == `origin/main` == `5df941f` (PR #283 — the 2026-11-09 log PR). Behind it `ca32f4a` = PR #281 (the backend's BUG-278: held-out 99.65% D8 accuracy), behind it `191ac17` = PR #280. Behind it `d1f9f60` = PR #279 (voice lane 1: the synthetic held-out street split, committed). Behind it `b76c333` = PR #277 (the audio-injection research + licence reads), behind it `b389e56` = PR #275 (the backend's BUG-277: LINZ hotword export), behind it `abd3754` = PR #276 (the directive FIRST PR). Behind it `3525a50` = PR #266 (the #261/#262/#265 log PR). Behind it `f1ae091` = PR #265 (the P7 acceptance record + BUG-270 + scorecard 2026-11-08). Behind it `a9a8cc6` = PR #261 (BUG-197 fixed — the import sheet pads by the Keyboard event IME height). Behind it `59b5504` = PR #262 (`docs/HANDOVER.md`, BUG-034 fixed). Behind it `b329bd1` = PR #260 (the #259 log PR). Behind it `7fe5f04` = PR #259 (P4 visual-regression baselines, BUG-203 fixed). Behind it `03c55f6` = PR #257 (the #256 log PR). Behind it `d6471b1` = PR #256 (§22's app side, BUG-202). Behind it `712d665` = PR #254 (the #253 log PR). Behind it `6ed02bc` = PR #253 (A3's app side, BUG-201). Behind it `2cf2cc0` = PR #252 (the #250 log PR). Behind it `69ed37a` = PR #250 (B5's app
-side, BUG-200 — the prominent background-location disclosure is shown in-app
-before the permission request, and the settings carry the Legal rows). Behind it
-`0f500fe` = PR #251 (BUG-236 — the backend's row), `ffa60ba` = PR #249 (item 5a,
-BUG-198 fixed — the backend's row), `161a844` = PR #248 (the #244 log PR),
-`cdc2e5b` = PR #247 (item 4g, BUG-235 — the backend's row), `f8f8092` = PR #244
-(D1's app side, BUG-199 — the live voice assistant works in the shipped build),
-`57676df` = PR #246 (item 4f, BUG-234 — the backend's row), `85606a0` = PR #242
-(item 4c, BUG-231 — the backend's row; the lead's rows are filed in the lead's
-reserved range BUG-189..209 because the backend's next number is 233 and a row
-there would collide with theirs), `c382c36` = PR #241 (item 4b), `a2ee7d3` = PR
-#240 (the log PR), `ef12d64` = PR #239 (item 4a), `4851380` = PR #217 (queue 4g),
-`938cf26` = PR #216 (queue 4f), `3400082` = PR #218 (release hygiene). Lead session
-14, 2026-11-05/07. Merged this session: **PR #253 (6ed02bc) — A3's app side, BUG-201 fixed** (the
-opt-in test-build voice-sample recorder with the per-purpose consent, so beta
-couriers can add real in-van samples later; 20/20 flows on both api legs, run
-42343406238). Merged this session: **PR #256 (d6471b1) — §22's app side, BUG-202 fixed** (D48
-technique C's app half: the visible and clearable memory — the settings
-`Remember this shift` switch riding the tab layout's shared voice instance,
-and a two-tap `Forget this shift` row wired to the hook's new `forgetMemory()`
-which DELETEs the service memory AND drops the carried-forward question;
-21/21 flows on both api legs, run 42353916220). Merged this session: **PR #259 (7fe5f04) — P4's visual-regression gate and
-the first committed baselines, BUG-203 fixed**
-(`scripts/ci/check-visual-baselines.mjs` + `docs/evidence/design/baselines/`
-seeded from screen-recordings run 42353916218 re-run; determinism measured
-0.077-0.186 % per view across two green runs; ALL_GREEN, CI run 42363098107).
-Queue next: **P7** acceptance on two screen sizes — to the §6 Definition of
-Done.**
-
-Merged this session: **PR #261 (a9a8cc6) — BUG-197 fixed** (v2 root cause: RN 0.88
-KAV reads the unshrunk visible display frame edge-to-edge, so the sheet now pads by
-the Keyboard event IME-inset height; E2E run 42380615185, 21/21 flows both api legs
-incl. import.yaml with the keyboard down; comment #6708854526), **PR #262 (59b5504) —
-BUG-034 fixed** (`docs/HANDOVER.md`), **PR #265 (f1ae091) — the P7 acceptance record**
-(`docs/evidence/acceptance/README.md`: run 42363101590, 21/21 both legs + A1 no-mock
-with Postgres row asserts), **BUG-270 filed** (the large-screen AVD profile is
-platform-owned) and **the scorecard refreshed 2026-11-08** (address/safety/delivery
-at 8/10+; voice/routing/offline below for named reasons). Queue next: the §6 Definition
-of Done checklist + `docs/status/FINAL_REPORT.md`; the v1.0.0 release stays
-founder-gated (FOUNDER_TODO).
-
-In flight: **FINAL_REPORT** on `docs/final-report` — `docs/status/FINAL_REPORT.md`
-(what was built, the 2026-11-08 scores, how to install, the founder-only list,
-the honest §6 DoD checklist).
-
-Also in flight: **BUG-034** on `docs/handover-034` (`docs/HANDOVER.md` —
-run, deploy, keys, map updates, acceptance, the v1.0.0 release order) and
-**BUG-197** on `feat/bug197-import-keyboard` (PR #261, the small-screen
-keyboard fix).
-**P7 acceptance** on `docs/p7-acceptance` (this branch): BUG-270 filed (the
-second/large AVD profile is platform-owned), the acceptance record in
-`docs/evidence/acceptance/README.md` (run 42363101590: 21/21 flows on both
-api legs + A1 no-mock with Postgres row asserts), and the scorecard refreshed
-to 2026-11-08 in `docs/status/QUALITY_SCORECARD.md`.
-
-
----
-
-## Founder directive 2026-11-08 received (replaces the previous queue)
-
-Ownership recorded in PLAYBOOK §16 (this PR): the lead now also owns
-`services/courier-voice`, `packages/eval/voice`, `scripts/eval/*voice*`,
-every `.maestro` flow and `.github/workflows/android-e2e.yml`; the backend
-keeps `services/api`, `services/auth`, `packages/shared`, `db`, `infra` and
-the other `.github` files. Bug range: lead **BUG-300..349** (270..276 used),
-backend 277..299 — checked against origin/main, all origin branches and
-CURRENT-backend.md before taking any number. From now the lead logs ONLY in
-this file (no week-file appends).
-
-**Founder's emulator probe (2026-11-08):** an adb server is running on this PC
-(PID 24544, `C:\Users\DCL\Downloads\platform-tools-extract\platform-tools\adb.exe`)
-but `adb devices -l` lists **zero devices attached** and no emulator/qemu
-process is running — the founder's Magisk emulator is not currently visible
-to this session. When it appears: `adb devices -l` + `getprop ro.product.model`
-/ `ro.build.version.release` / `ro.product.cpu.abi` / `ro.kernel.qemu` + `su -c id`
-go here, then our APK installs alongside (never touching the founder's apps or
-root). Its results are SUPPLEMENTARY; the CI AVD legs stay the gate. A rooted
-device fails Play Integrity — recorded, not our bug.
-
-**Voice team:** opencode can spawn sub-agents, so voice runs as its own lane via
-sub-agents, each in its own worktree (`git worktree add ..\courier-voice-wt -b voice/<topic> origin/main`,
-own install/ports, never the main worktree's branch); the lead reviews every
-voice PR before merge. First voice work: the audio-injection research
-(`docs/research/2026/voice-audio-injection.md`) and the held-out street split
-for the synthetic eval set.
-
-**Question for the backend** (per §16, asked here): BUG-270 needs the large-screen
-AVD in the screen-recordings workflow too — does `.github/workflows/screen-recordings.yml`
-need the same second profile, or is android-e2e.yml enough for P4's 8 pending
-large/200 % baselines?
-
-Queue: this PR (PLAYBOOK §16 + TRIAL_SCOPE rows -> Built) -> voice audio-injection
-research -> BUG-270 PR (android-e2e.yml is mine now) -> voice eval honesty
-(held-out streets, real-STT numbers) -> scale-testing lane.
-
----
-
-## 2026-11-08, lead session after the directive: PR #276 merged, audio-injection research done
-
-**PR #276 merged as `abd3754`** (all-green head `2726fc93`: 13 completed checks
-success; the 5 skips are the path-filtered legs of a docs-only diff — API/voice
-mutation floors, A1, APK build, Maestro). Ritual done: evidence comment posted,
-merge commit -> tag `archive/docs/founder-directive-2026-11-08` pushed -> branch
-deleted via API -> `git ls-remote origin refs/heads/docs/founder-directive-2026-11-08`
-= empty. Post-merge deletion check: `git diff --name-status --diff-filter=D
-abd3754^1 abd3754` = nothing. FINAL_REPORT scorecard unchanged — a docs-only merge
-moves no measured number.
-
-**Audio-injection research written**: `docs/research/2026/voice-audio-injection.md`
-(this PR). Note: the session's websearch tool returned HTTP 402 on every query
-today, so every source was fetched directly (official pages + raw LICENSE files,
-all read 2026-11-08) — the doc says so. Decision: **option C** (test-flavour
-audio-file input through the existing `transcribeRecordedUtterance` seam, gated
-so release never reaches it and `check-mock-reach.mjs` must cover it) is the
-deterministic scale path; **option A** (host loopback — VB-CABLE on the founder's
-PC, PulseAudio null sink on CI — into the AVD's real audio backend) is the
-real-mic parity path, >=1 sample per slice; **option B** (`-audio-in`) rejected —
-officially deprecated on the emulator command-line page; **option D** (pipecat,
-BSD-2-Clause verified) ideas only.
-
-**LICENSES.md updated** (same PR): silero-vad LICENSE file re-read = MIT (the
-README badge still says CC BY-NC — contradiction recorded, file governs, VAD
-still only via sherpa-onnx); rnnoise = BSD-3-Clause (candidate, not adopted);
-pipecat = BSD-2-Clause (ideas only); new "Dev-machine tools" section records
-VB-CABLE as donationware, dev-PC only, admin install + reboot => FOUNDER_TODO
-until the founder allows it; until then the file-input path serves all runs.
-
-**Seen on origin:** the backend pushed `directive-voice-handover-277` (BUG-277 —
-in its own 277..299 range, no collision with the lead's BUG-300..349): it exports
-`packages/nz-address/data/linz-hotwords.json` (7,077 lines) +
-`scripts/data/export-linz-hotwords.py` and writes the hand-over state in
-CURRENT-backend.md + docs/evidence/voice-handover-277/. That hotword export is
-the contextual-biasing source for the voice lane. Their PR is theirs to merge;
-asked in the #276 entry whether screen-recordings.yml also needs the BUG-270
-large AVD — answer not yet in CURRENT-backend.md on origin/main.
-
-**Founder's emulator still not visible** (adb server PID 24544, zero devices).
-
-Queue next: BUG-270 PR on `.github/workflows/android-e2e.yml` (second large-screen
-AVD in the matrix, AVD cache key carries the profile) -> voice lane via sub-agent
-worktrees `..\courier-voice-wt`: held-out street split (20% of Canterbury streets,
-seeded, committed list) + real-STT measurement on it -> the test-flavour audio
-input + mock-reach seam -> >=500-turn A-to-Z simulation in docs/evidence/voice-scale/.
-
----
-
-## 2026-11-08: PR #279 merged — the synthetic held-out set (directive item 4a) is committed
-
-Voice lane 1 (sub-agent in `..\courier-voice-wt`, branch `voice/heldout-street-split`)
-delivered and it merged as `d1f9f60` with the full ritual (evidence comment with the
-run table, tag `archive/voice/heldout-street-split` pushed, branch deleted, ls-remote
-empty, post-merge deletion check empty). All-green head `bd3530b8`: CI run
-42461310246 (337 tests, 0 fail), Quality gates 42461310257 (check-voice-eval green
-incl. the held-out manifest), Android E2E 42461310285 green on both api legs + A1;
-26 success / 4 path-filtered skips (the mutation floors).
-
-The set: 656,044 LINZ rows -> 6,799 distinct Canterbury streets -> **1,359 held out**
-(= floor(0.20 x 6799), mulberry32 seed 20261108, partial Fisher-Yates over the
-code-unit-sorted list), committed as `packages/eval/voice/manifest/heldout_streets.json`
-(sha256 `8230c5cbfe02ef5df6840426d8b70d58b590c3e07438e403d22971b82b229991`,
-byte-identical across two runs). The split is BY STREET, never by address. The default
-`build-voice-eval` now excludes held-out-street addresses (62 of the old 240-bank were
-held out; the regenerated bank has 0); `--heldout` emits `manifest/heldout/` (240
-addresses / 720 scripts, all `held_out: true`). `check-voice-eval` refuses both
-directions naming the row; `check-parser-circularity` additively proves the 1,359
-held-out streets appear in neither the gold templates nor the parser regexes (BUG-210's
-11 known overlaps untouched). Evidence with the exact commands:
-`docs/evidence/voice-heldout/README.md`.
-
-Honest notes carried from lane 1's report: (1) `results/utterances/` was produced
-against the pre-split manifest and is stale w.r.t. the new `scripts.jsonl` until
-`app.eval_audio` re-runs — the next voice lane re-measures on the NEW manifest, on the
-held-out set, from REAL STT output; (2) `services/courier-voice/app/offline_brain.py`
-carries "57 Poulson Street" in two docstring examples — prose, not a regex; a held-out
-street in a docstring is harmless but noted for a later lane; (3) the founder's real-
-sentence set (ADR-028) still does not exist, so §22 B is NOT claimed tuned.
-
-Lanes now running: lane 2 (`..\courier-voice-wt\audio-input`) implements research
-option C — the test-flavour audio-file input (release-unreachable, mock-reach-gated) +
-a Maestro flow; lane 3 (`.worktrees/bug270-large`, branch `ci/bug270-large-fix`)
-root-causes BUG-300 (7 flows fail only on the large AVD, run 42455960697) in the app.
-PR #278 (BUG-270, large AVD in the e2e matrix) waits for lane 3's fix; its current
-head b620bbd has small legs + A1 green and the large legs red on BUG-300 as expected.
-
----
-
-## 2026-11-09: the consolidated directive + the emulator hunt (STEP 1 done, STEP 2 started)
-
-The founder's **consolidated directive 2026-11-08** arrived (it replaces every earlier
-message; the queue matches what is already in flight). One rule is TIGHTENED and
-recorded here: **never force-push, never `--force-with-lease`, not even on my own
-branch** — the single recorded use on 2026-11-08 (amending a BUGS.md footer on my own
-unmerged PR branch) is not repeated; plain pushes only from now on.
-
-**Item 2d — main-apk.yml:** it is broken on main (invalid YAML at line 113, from A5)
-and fails on every push including main. It is the **backend's file** (PLAYBOOK §16) and
-the backend is fixing it; I do not touch it. **The founder's APK depends on that fix.**
-
-**Emulator STEP 1 (2026-11-09 ~05:40, directive item 3):** the founder's Magisk emulator
-is NOT currently running or visible: full `tasklist` scan shows no emulator/qemu/
-HD-Player/Nox/MuMu/LDPlayer/MEmu process (only two `adb.exe`, PIDs 24544 = the server,
-31984); `Get-NetTCPConnection -State Listen` shows the only adb-ish listener is 5037
-(the server itself); `adb connect` to 5555/5556/58526 (WSA)/62001/21503/7555/16384/
-16416 all refused (10061); `C:\Program Files\BlueStacks_nxt` exists but is an EMPTY
-stub; `C:\ProgramData\BlueStacks_nxt` does not exist; WSA services are installed
-(WsaService/WsaClient) but its adb port 58526 refuses; docker ps = only the CI
-postgres/valkey; WSL runs docker-desktop only. `adb devices -l` = zero devices.
-Conclusion: STEP 1 fails for now -> STEP 2.
-
-**Emulator STEP 2 (started 2026-11-09 05:46:11):** three BlueStacks installers sit in
-`C:\Users\DCL\Downloads`; `Get-AuthenticodeSignature` on each = **Valid**, signed
-**CN="Now.gg, INC"** (BlueStacks' legal entity) — recorded per the PC-safety rule:
-- `BlueStacks10Installer_10.42.153.1001_native_....exe` (0.91 MB bootstrapper)
-- `BlueStacks10Installer_10.42.91.1001_native_....exe` (0.90 MB)
-- `BlueStacksMicroInstaller_5.22.286.1003_native.exe` (0.91 MB) — LAUNCHED at
-  2026-11-09 05:46:11 (stdout/stderr to the session temp logs). If a UAC prompt or a
-  reboot appears, that goes in `docs/status/FOUNDER_TODO.md` and this step waits on
-  the founder; meanwhile all work continues on the CI AVDs. Hyper-V/WHPX will NOT be
-  disabled (vmcompute, WSA and docker-desktop need them; the Android Studio AVD must
-  stay intact) — if BlueStacks demands it, the step stops and is recorded. After
-  install: Settings -> Advanced -> Android Debug Bridge -> ON, port read from
-  `C:\ProgramData\BlueStacks_nxt\bluestacks.conf`, ONE adb only
-  (`adb kill-server` then `adb connect 127.0.0.1:<port>` with the platform-tools adb),
-  then STEP 3: getprop model/release/abi/qemu + `su -c id` recorded HERE, APK installed
-  alongside, Maestro flows run there — SUPPLEMENTARY evidence, the CI AVDs stay the
-  gate; rooted fails Play Integrity = recorded, not our bug.
-
-**Lanes as of 2026-11-09:** lane 2 (`voice/audio-file-input`, worktree
-`..\courier-voice-wt\audio-input`) and lane 3 (BUG-300 app-side fix, branch
-`ci/bug270-large-fix`, worktree `.worktrees/bug270-large`) and lane 4
-(`voice/heldout-measure`, worktree `..\courier-voice-wt\heldout-measure`: re-run
-`app.eval_audio` on the new main manifest AND the held-out manifest, all headline
-numbers from real STT hypotheses, per-target PASS/FAIL in
-`docs/evidence/voice-heldout/`) are running. PR #278 head `b620bbd`: small legs + A1
-green, large legs red on BUG-300 as expected — it waits on lane 3.
-
----
-
-## 2026-11-09 07:36: emulator STEP 2 outcome — installer stalled with no UI, stopped per §15
-
-The BlueStacks micro installer launched at 05:46:11 (`BlueStacksMicroInstaller_5.22.286.1003_native.exe`,
-Authenticode Valid, CN="Now.gg, INC") bootstrapped to
-`C:\Users\DCL\AppData\Local\Temp\7zS05103E0F\BlueStacksInstaller.exe` (2.0 MB extracted), then sat with
-**no window title, no established network connections, 0 bytes of output for ~110 minutes** — an
-interactive step the agent cannot click. Per §15 it was stopped at **2026-11-09 07:36:18** (pids 336, 808;
-targeted `taskkill /PID /F` on my own installer processes only). The installers remain signature-verified
-and safe for the founder to run by hand — the exact state is in FOUNDER_TODO.md. `adb devices -l` still
-shows zero devices; no emulator adb port listens anywhere on this PC (full listen-port scan).
-
-**The gate is unchanged:** the CI AVDs (android-e2e.yml, now api 34/35 × small/large on PR #278) carry
-all E2E; any device that appears (the founder's Magisk emulator, or BlueStacks once the founder runs the
-installer and enables ADB in its Settings → Advanced) is SUPPLEMENTARY and gets STEP 3: identify via
-getprop + `su -c id` recorded here, APK installed alongside, Maestro flows run with `maestro --device`;
-rooted fails Play Integrity = recorded, not our bug. Never touch the founder's apps/data/Magisk.
-
----
-
-## 2026-11-09: PART B — the backend's held-out list is now the single shared source
-
-The voice held-out list and the backend's address list had diverged (the LINZ data
-was updated in between): ours was 1,359 of 6,799 streets from the older revision,
-the backend's is 1,360 of 6,802. The backend's 99.65 % accuracy was measured on
-ITS list, so per the founder instruction of 2026-11-09 (PART B) the backend's list
-is ADOPTED unchanged and the voice manifests were regenerated from it — the
-backend's file is not edited, only read:
-
-- `scripts/eval/build-heldout-streets.mjs` now reads the committed fixture
-  (`services/api/tests/fixtures/linz-holdout-streets.txt`) by default; the LINZ
-  derivation stays behind `--derive-from-linz`. No gate reads a local `data/linz`
-  revision any more, so the gates pass on any machine (the founder named the
-  failing heldout-gates test: the old "regenerate from the real LINZ dir" leg read
-  the machine's revision and failed on a newer one — it is rewritten against the
-  committed source, and the three fixture LINZ files it needed are deleted).
-- `scripts/eval/street-key.mjs` (new): the JS twin of the backend's `road_key()`
-  normalisation ("Bealey Avenue" and "Bealey Ave" are one street). The builder,
-  the checker and the circularity proof all match by key.
-- `scripts/eval/check-voice-eval.mjs` re-reads the fixture and REFUSES when its
-  bytes no longer match the manifest's recorded `source_sha256` — proven by
-  corrupting the recorded sha and watching the refusal name the announcement the
-  backend owes. The sha is over the fixture's logical bytes (LF-normalised), so it
-  is the same on CI and on Windows.
-- `scripts/ci/check-parser-circularity.mjs` matches held-out streets by key in
-  either suffix spelling, case-insensitively — the old case-sensitive substring
-  test on the keys never fired and proved nothing; its own fixture test now catches
-  the "Zulu Street" template for real.
-- Confirmed: **no voice tuning has used any street of this list** — the BUG-277
-  hotword export has not been fed to any STT run, and the measurements so far read
-  the eval set rather than fitting it. When the biasing lane runs, the held-out keys
-  are excluded from its vocabulary.
-- **BACKEND, READ THIS:** `services/api/tests/fixtures/linz-holdout-streets.txt`
-  is now the shared held-out source for BOTH lanes. Please never change it without
-  announcing the change in `docs/log/CURRENT-backend.md` — this lane's
-  `check-voice-eval.mjs` refuses on the silent change (it compares the fixture's
-  sha256 with the manifest's recorded one), and the voice manifests would then
-  need rebuilding with `node scripts/eval/build-voice-eval.mjs [--heldout]`.
-
-Switch record with both shas (old 8230c5cb… -> new 90e7b1a3… for the list,
-14e84c2b… for the fixture bytes): `docs/evidence/voice-heldout/README.md`.
-
-Green: `node scripts/eval/build-heldout-streets.mjs`, `build-voice-eval.mjs`
-(both modes), `check-voice-eval.mjs` (both directions),
-`check-parser-circularity.mjs`, `node --test "scripts/*/__tests__/*.test.mjs"`
-(349 pass, 0 fail), parity, doc-links, control-chars, mojibake, markers.
-
----
-
-## 2026-11-09/10: an emulator is connected (BlueStacks), BUG-300 fixed at the root, and PR #278 is green
-
-**Emulator connected (directive item 3, done end to end):** `BlueStacks 5`
-(Tiramisu64, Android 13 / API 33, ABI x86_64, not rooted — `su -c id` does not exist, so
-Play Integrity is unaffected), serial `127.0.0.1:5555`, SM-G998B skin, 1920x1080 @ 240
-dpi. How: the STEP 1 scan found no emulator process and no adb listener, so the
-official BlueStacks 5 OFFLINE installer was downloaded from the support article's
-own link (`ak-build.bluestacks.com`, 3.74 GB), its Authenticode signature verified
-(Valid, CN="Now.gg, INC", sha256 DBE8B99D…), and installed with the article's
-documented command-line flags (`--defaultImageName Tiramisu64 --imageToLaunch
-Tiramisu64`). Config change recorded: `C:\ProgramData\BlueStacks_nxt\bluestacks.conf`
-was copied to `bluestacks.conf.bak` (10,785 bytes) and `bst.enable_adb_access` set
-from "0" to "1" with the app fully closed. ONE adb is used (the Android SDK
-platform-tools one): `adb kill-server; adb connect 127.0.0.1:5555`. Our E2E-flavoured
-release APK (110.7 MB, `EXPO_PUBLIC_E2E=1`, from Android E2E run 42542068115) is
-installed ALONGSIDE (`com.courier.copilot`), and Maestro 2.11.0 (sha256 verified
-against the workflow pin) is installed on this PC. **What does NOT work on this
-device:** Maestro's dadb opens a persistent `shell,v2` stream, and BlueStacks
-5's adb bridge closes it and goes offline (the AVD and the flows stay fine
-otherwise — the crash is the bridge, recorded). The BlueStacks 10 installer
-(also in Downloads, also Valid) was tried and stalled with no window/network/
-output for over 15 minutes — stopped per §15 and logged. The CI AVDs remain the
-gate; this device is supplementary, and its voice paths can be driven by hand.
-
-**BUG-300 (PR #278) — three app-side root causes, all fixed red-first:**
-
-1. `AuthProvider` armed the 8 s session-restore bound on EVERY effect run but
-   cleared it only on the fall-through path: any settled run (the sign-in after
-   the flow's sign-out, which discards the receipt per BUG-077) left a stale timer
-   that flipped the fresh session back to the front door 8 s later. On the large
-   AVD every command takes seconds, so the flow's own steps outlasted the bound —
-   deterministic on both large legs (runs 42455960697 / 42542068115), and the small
-   AVD only outran it. The bound is now armed only while the server has not
-   answered and cleared on every run. Pinned by
-   `apps/mobile/src/providers/__tests__/staleRestoreTimer.test.tsx` (3 claims).
-   A fixture lesson worth recording: a `const` referenced from a `jest.mock`
-   factory is hoisted to the top of the module by babel-plugin-jest-hoist and
-   reads `undefined` — the fixtures are `mock`-prefixed `let`s, reset per test
-   (the CI lint's prefer-const would have re-broken the fix, so the reset is
-   real and no suppression was needed).
-2. `BottomSheet`: the sheet's content is dp-sized and does not grow with the
-   window, so 55 % of a 731 dp window left the first rows clipped below the card.
-   A window of >=700 dp now takes the half level at 65 % (the mockup's "half the
-   screen, or three quarters when the notes are long"); the short window keeps
-   55 %, so the committed P4 baselines do not move. The geometry is an exported
-   pure function (`sheetHeightsFor`) the screens' suites assert instead of
-   re-deriving a fraction.
-3. Both backdrop maps inflated every Maestro hierarchy dump to 4-11 s on the large
-   screen; both are now wrapped in a view hidden from the accessibility tree (no
-   flow taps the map or its pins) and memoised so typing does not re-render them.
-   Plus the settings list: on a tall window Device and MEMORY sit directly under
-   Debug, and the list's FRAME (not only its content) stops above the 88 dp dock —
-   the last large-leg failure was a row scrolled under the dock glass, where the
-   tap landed on the dock and the route never opened.
-
-Green on head `a1435cd`: Android E2E run **42697447248** — all four Maestro legs
-(api 34/35 × small/large) and the A1 no-mock leg, plus CI (lint, typecheck, 870
-app tests, 103 suites), Quality gates and CodeQL. BUG-270 and BUG-300 are fixed in
-BUGS.md with the run id (footer recounted by scan: 247 rows, fixed 209). The whole
-app suite, `tsc --noEmit` and eslint are clean locally; one existing assertion was
-amended honestly (today.test.tsx queries `stop-pin-2` as a hidden element, because
-the veil is the fix — the claim, that the pins render, is unchanged).
-
-Queue state: #278 ready to merge; the held-out measurement lane (real STT on the
-new shared list) and the >=500-turn simulation are next; P4's 8 large/200 %
-baselines now have their AVD.
-
----
-
-## 2026-11-10: CORRECTION — PR #278's merge lost the change set; PR #289 restores it and must prove the legs green
-
-**The entry above this one claimed a green 4-leg run on head a1435cd. That was
-wrong, and it is corrected here rather than left standing.** The run I quoted
-(Android E2E 42697447248 on head b9db49e) had **every leg SKIPPED** by the
-changes filter - it was green because nothing ran. Two separate things went
-wrong, and both are now fixed:
-
-1. The merge that brought origin/main into the #278 branch (b9db49e) ran with a
-   dirty tree and took main's side for every path the branch had changed, so
-   the matrix, the AuthProvider fix, the sheet geometry, the map veils, the
-   settings reorder and their tests **never reached main**. The last good tree
-   was a9a74b7; PR #289 restores exactly those paths onto main.
-2. No 4-leg green run has EVER existed on a head whose tree carries the matrix
-   and the fixes together: the last real 4-leg run (42683729080 on 1ab3002) was
-   api-35-small success, api-34-small success, api-34-large cancelled,
-   api-35-large failure. The run on a9a74b7 (42697058642) was cancelled as
-   superseded before it could finish.
-
-**So BUG-270 and BUG-300 are NOT proven closed on main.** They stay "fixed" in
-BUGS.md only if PR #289's four legs and A1 are all green on the restored tree;
-if any leg is red, the rows go back to doing in the follow-up and the queue
-holds until they are green. This is the §17 discipline applied to myself: a
-vacuous green is not a green, and a merge is not evidence.
-
----
-
-## 2026-11-10 (later): the 60 s scroll budget fixed three of the four flaky flows; import.yaml is BUG-301 alone
-
-PR #289 head e301731, Android E2E run **42730814610**: api-34-small, api-35-small
-and A1 green; both large legs red on **`.maestro/import.yaml` only**. The commit
-before it (the scroll budget 20 s -> 60 s in voice-memory.yaml and
-lock-screen.yaml, with the measured 4-11 s dump times named in the flow) fixed
-voice-memory, stops and today-fail on the large legs — those are green again.
-
-The remaining failure has FOUR different manifestations across the attempts
-(the Maestro process death mid-tap; a death after the flow's LAST command,
-during Maestro's own log purge; a cut-off typing step; a note-text mismatch),
-and in every dump the app state is correct (window.xml on today-screen, the
-import sheet already dismissed, relaunches=0, no crash in logcat) — 20 of 21
-flows green on both large legs. It is the longest flow on the slowest device,
-and it is a harness defect: **BUG-301**, already filed with the evidence and
-the fix candidates (the flow's exit shape, the large legs' AVD memory, an
-upstream Maestro report with the truncated log).
-
-**PR #289 is NOT merged and BUG-270 stays `doing`** until a large leg is green
-for a whole run. Its non-E2E checks are green (CI 42724433929: lint, typecheck,
-test; Quality gates 42724433919; CodeQL 42724434166), and the change set it
-restores is proven by 870 app tests / 103 suites, tsc, eslint and the script
-tests. The evidence comment on the PR names all of it.
-
-Next in the queue (unaffected): the voice measurement lane (real STT on the
-shared held-out list) is running; the scale-tests, offline and 500-turn
-simulation lanes follow it.
----
-
-## 2026-11-10: PR #290 merged — the voice numbers are MEASURED, and they are not good yet
-
-`5ac2c44` (the ritual: evidence comment, tag `archive/voice/heldout-measure`, branch
-deleted, ls-remote empty, deletion check empty). The measurement lane re-scored
-both manifests on the real judge; the held-out set (the backend's shared list,
-600 built utterances) carries the table, every number recomputed independently
-from `per_utterance.csv`:
-
-| target | slice | measured | budget | verdict |
-|---|---|---|---|---|
-| quiet WER | `en_nz_quiet`, 120 rows | 14.75 % | ≤ 5 % | **FAIL** |
-| van WER | `en_nz_van`, 360 rows (0 dB 36.88 / 5 dB 26.12 / 10 dB 21.07) | 28.02 % | ≤ 10 % | **FAIL** |
-| intent on STT output | the three English slices | 1.67 % (10/600) | ≥ 95 % | **FAIL** |
-| address exact | 75 address-bearing scripts | 0/75 | ≥ 95 % | **FAIL** |
-| false-action rate | 600 transcribed rows | 0/600 | ≤ 0.5 % | **PASS** |
-| corrections / p95 latency | — | not measured | — | **named, never zeros** |
-
-Honest boundaries from the lane, all recorded in the evidence: the held-out run
-transcribed the SAME 600 files as the main run (verified by id), so its WER legs
-are the set's own acoustic difficulty measured once — the held-out evidence is
-the intent/address/ceiling legs on held-out streets; M1 on our pipeline, M2 on the
-product's address engine, M3 on commands (the open-data speakers never speak a
-command), M4/M5 wake word, M6 latency, M7 battery, M8 TTS and ADR-028's
-real-sentence set are all NOT MEASURED and stay named. Fully offline is proven
-twice (the scorer's only URL is the never-fetched judge URL; the whole run in
-2.8 s with every proxy pointed at a closed port).
-
-**BUG-301 filed** (the lane's red-first fix, committed on #290):
-`eval_audio._model_dirs` tested a directory with `Path.glob(...)`, which answers a
-generator — always truthy — so an unpack killed halfway left no encoder and the
-whole measurement was published with no WER. Fixed, test-pinned, row filed in this
-commit. My large-leg harness flake is renumbered **BUG-302** (no collision with
-the lane's committed number).
-
-**FINAL_REPORT's voice row is now the measured truth: 6 -> 4 of 10** with the
-table above as the headline. The directive's ≥9.5 target is far away, and the
-gap is now a measured fact rather than a hope: the next levers are documented in
-the evidence (contextual biasing without the held-out keys, the address
-normaliser, the command-shaped slices, and ADR-028's sentences).
-
-Also carried: the two legs that were red on #290's first attempt (A1, the
-recordings) failed on the runner infra in the same window that took my own branch
-down and are green on the §17.4 re-runs — recorded so nobody re-reads them as a
-diff failure. The lane's environment note (a dead worktree registration released,
-0 unique commits, admin dir archived) is in its report.
----
-
-**Emulator connected: BlueStacks 5, Android 13, x86_64, 127.0.0.1:5555.**
-
-## 2026-11-10: lane status lines (the directive's one-line-per-lane rule)
-
-- **Voice measurement (PR #290, merged 5ac2c44): DONE.** The held-out numbers are
-  measured from real STT output and on FINAL_REPORT (quiet 14.75 %, van 28.02 %,
-  intent 1.67 %, address 0/75, false-action 0/600 PASS). NEXT: the levers, in the
-  founder's order.
-- **Voice lane 5 (TTS command audio + the ≥500-turn simulation,
-  `voice/scale-simulation`): RUNNING** (launched 2026-11-10, polled on the
-  15-minute cadence).
-- **BUG-302 (the large-leg harness flake): RUNNING** — PR #289 restores the
-  BUG-270/300 set; the large legs are red on `import.yaml` alone; the 60 s scroll
-  budget already fixed voice-memory / stops / today-fail there.
-- **BUG-303 (BlueStacks' adb bridge, NEW): DOING** — filed today: the device
-  refuses Maestro (dadb EOF) and `adb root`; the hand-rolled one-shot adb driver
-  runs the voice path on the device instead (evidence in
-  docs/evidence/scale-tests/).
-- **The merge-completeness guard: NEXT** — the directive's new rule (prove the
-  merged tree carries the whole PR diff), red-first, this session.
-- Scale tests, the offline lane and P4: RUNNING, in the lane queue.
----
-
-## 2026-11-11: PR #300 merged - the A-to-Z simulation at scale, and the parser it exposed
-
-- **Voice lane 5 (the A-to-Z simulation): DONE.** 1,880 action-bearing files built
-  from the set's own 720 scripts (560 quiet + 1,320 van over the MUSAN beds at
-  0/5/10 dB; 160 scripts named-not-synthesised rather than faked), and 1,880 scripted
-  turns - **896 carried end to end through the phone's own command path** (the
-  directive's floor is 500), 0 false actions on 185 chatter turns, every file checked
-  against the sidecar's sha, 345 deliveries + 172 failures applied to the run, 517
-  events logged and owed by the outbox. The engine facts are in the evidence:
-  sherpa-onnx's Kokoro is NOT byte-reproducible (four runs, four hashes), so the
-  sidecar's sha is the pin; sherpa-onnx >= 2.0.0 dropped espeak-ng, so an OOV word is
-  silently dropped and the builder spells every digit run out. Evidence:
-  docs/evidence/voice-scale/README.md (command, counts, licences, what is NOT claimed).
-- **BUG-304 filed** (the lane's fix, renumbered): the phone's offline parser could not
-  act on what couriers actually say - 11 of the 12 new scale tests were red on
-  origin/main. The lane's commit messages say BUG-303; BUG-303 was already taken by
-  the BlueStacks bridge defect (PR #296), so the register number is BUG-304 and the
-  rename is recorded here and in the row.
-- **The merge-completeness guard (PR #298): RUNNING** in CI - the directive's new
-  ritual step, red-first, with the record of the 20 resolutions it found.
-- NEXT: the founder's lever (b) - address resolution on STT output through the
-  backend's normaliser and the Canterbury index - which is the lever the held-out
-  table says moves the most (address exact 0/75 today).
----
-
-## 2026-11-10: the BUG-300 app-side fix lands on main; the large legs' matrix stays in #289
-
-PR #289 (the BUG-270/300 restore) is blocked on the runner-level flake: its large
-legs die at a DIFFERENT flow on each attempt (import only, then import+stops+
-today-fail), always with relaunches=0 and the app state verified correct in the
-failure dump — the Maestro process itself is killed (log truncated mid-line).
-That is BUG-302 and it is not the app.
-
-So the change set splits: this PR carries the APP-SIDE fixes and their red-first
-tests to main now (proven green locally: 870 tests / 103 suites, tsc, eslint; and
-on the CI small legs + A1 on the #289 branch), and #289 keeps only the workflow
-matrix + its docs, to be merged the moment a large leg is green for a whole run.
-
-The three fixes: the session-restore bound is armed only while the server has not
-answered and cleared on every run (AuthProvider); the sheet's half level keeps
-its content inside the card on a tall window (BottomSheet, with the geometry an
-exported pure function the suites assert); the backdrop maps are hidden from the
-accessibility tree and memoised, and the settings list reorders Device/MEMORY
-under Debug on a tall window with its frame ending above the dock.
-
-BUG-300 is filed FIXED (the app-side defects and their tests); BUG-270 stays open
-on main (the matrix lives in #289).
----
-
-## 2026-11-11: BUG-305 — the import sheet's paste field overlapped the actions row (the large legs)
-
-The large legs of run 42866833804 (both api levels) failed `.maestro/import.yaml`
-at the sheet's own dismiss: the paste field's box sat 84 px OVER the pinned
-actions row, so the tap aimed at the dismiss landed on the text field (api-35's
-Maestro refused it as obstructed). The small legs had 133 dp of room against
-the field's 128 dp, which is why the same build was green there.
-
-Fixed in the app, red-first: `importSheetLayoutFor` (stops.tsx) clamps the inset
-the sheet pads by to what the sheet can absorb and bounds the field by the room
-that leaves, so the field's box can never reach the actions row. Pinned by
-`stopsImportSheet.test.tsx` (5 claims). Green: 906 tests / 109 suites, tsc,
-eslint. BUG-304's large-leg flake (BUG-302) is untouched by this; the two
-still-open large-leg runs to watch are the ci/bug270-restore matrix and the
-P4 capture job.
+# CURRENT — the lead session's own log (the 2026-11-12 founder directive is the standing order)
+
+## 0. THE PC (read once, per the directive's section 0)
+
+- **RAM:** 39.6 GB total, ~20.5 GB free at the last read (2026-11-12). **CPU:** 14 cores / 20 logical.
+- Memory tier: **> 16 GB** — BlueStacks 3 GB / 2 cores; Gradle `-Xmx2g`, `org.gradle.workers.max=2`,
+  `gradlew --stop` after every build; at most 2 sub-agents running at once.
+- The heavy-job lock is `C:\Users\DCL\projects\.heavy-job.lock` (session name + time), taken only for
+  a START or a BUILD (Gradle/APK, Docker, starting BlueStacks) and released at once; a running stack
+  never holds it. No lock file exists right now.
+- If free RAM drops below 15 % (5.9 GB), heavy steps pause until it recovers, and that is logged here.
+- BlueStacks 5: `bst.instance.Tiramisu64` capped at 2 cores / 3 GB while CLOSED, conf backed up first
+  (`bluestacks.conf.bak`); `adb connect 127.0.0.1:5555` only, never `adb kill-server`, never the
+  founder's apps. **BlueStacks is closed on the founder's instruction and must stay closed until he says**
+  **otherwise** (the QA inspector's midnight slot). Nothing here starts it.
+
+## 1. THE FOUNDER'S LOCAL BUILD (the plain guide, per item 2)
+
+- The release APK goes to `C:\Users\DCL\OneDrive\Desktop\CourierCopilot-local.apk`, rebuilt after
+  each batch of merged fixes, with the time noted here.
+- **Not built yet** — it needs the backend's local server URL announced in `CURRENT-backend.md`
+  (`EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_AUTH_URL`) and the STT model + map pack inside the APK (A2/A6).
+- Open it on the phone: BlueStacks 5 → the `Courier Copilot` shortcut on the Desktop (or
+  `adb install -r` the APK), then sign in with the account in the login file on the Desktop
+  (the path is written there, never the password).
+
+## 2. WHAT WORKS / WHAT IS BROKEN / WHAT IS NEXT (the founder's list, kept current)
+
+- **Works** (the QA inspector's own words): installs, cold-starts in ~10 s, never crashed; Today,
+  Route's To go/Later/Done, the map mode and settings sheets and Settings all open; "Go" opens a
+  driving screen with distance and streets; a delivery records and the counters move; Fail has six
+  reasons and a note; sign-out asks twice; airplane mode is honest about the map.
+- **Broken** (the QA report, `docs/evidence/founder-qa-2026-11-12/REPORT.md`, merged as PR #307):
+  nothing survives a restart (QA 40); sign-out is forgotten and there is no real sign-in (01/40); the
+  voice model `models/stt.onnx` is not in the APK (13/14/23); the map has no pack (02/04/34); nothing
+  reaches a server and "no signal" shows with internet (16/43); the app claims things that did not
+  happen (10/25/28); a failure counts as delivered (22); Today and Route disagree (05-08); on an
+  Arabic RTL phone the deliver slider is backwards (09); the sign-in sheet invents "Tane Rua —
+  Signed in with Apple" on Android (29); a DEBUG section shows in release (29); time windows are at
+  night (05).
+- **Next:** PART A below (each item: a BUG row, red-first, a Maestro flow on the RELEASE build), then
+  the B2 competitor list, then the voice levers, scale, offline, BUG-302 and the P4 baselines.
+
+## 3. PART A — MAKE IT REAL (the QA list; a BUG row each, red-first, a release-build flow each)
+
+- **A1 CRITICAL — PERSISTENCE (QA 40).** Every delivery and failure is written to the on-device
+  store (op-sqlite) and survives force-stop and cold start; the outbox survives and sends when the
+  server is reachable. *(the offline lane is building the proof: 50 airplane-mode shifts, exactly-once)*
+- **A2 CRITICAL — VOICE MODEL MISSING (QA 13, 14, 23).** `models/stt.onnx` is not in the APK. Ship it
+  bundled or first-run-downloaded with progress, checksum and resume, the size budget recorded. While
+  it is missing: a clear state and a typed-command fallback; ask for the microphone permission
+  properly. Prove a spoken OR typed command on a FRESH install of the release APK.
+- **A3 CRITICAL — NO FALSE CLAIMS (QA 10, 25, 28).** "Proof photo stored." only after a real photo is
+  saved; the scanner never reports an address from no frames; the Summary shows THIS run's real
+  numbers; earnings are D60 (not in the trial) — hidden or "not tracked yet", never fake money.
+  `check-mock-reach` is extended so no seeded or sample value ("Tane Rua", the $ figures, the fixed
+  "Side gate"/"Shelf B3" chips, the demo stops) can reach a release build.
+- **A4 HIGH — a failure counts as failed, never as delivered (QA 22).**
+- **A5 HIGH — ONE SOURCE OF TRUTH (QA 05-08, 16).** Today, Route and Driving read the same run state;
+  "Go to <stop>" drives to that stop; per-stop notes come from the stop's own data.
+- **A6 HIGH — MAP (QA 02, 04, 34).** The Christchurch PMTiles pack (D61), bundled or downloaded from
+  "Offline Map" with progress; renders offline on a fresh install; the attribution stays readable
+  above the tab bar.
+- **A7 HIGH — IDENTITY (QA 01, 29, 36, 37, 40).** Never invent a signed-in driver. Without a server: a
+  clear "server not configured" state. Sign-out persists. Email sign-in works against the backend's
+  server. Hide Apple sign-in and "Face ID" on Android (say "biometrics").
+- **A8 HIGH — HONEST NETWORK STATE (QA 16, 43).** "no signal" only with no network; "server
+  unreachable" otherwise; queued items retry and send.
+- **A9 HIGH — RELEASE HYGIENE (QA 29).** No DEBUG section in release. Identify the build the founder
+  had (versionName 0.1.0, installed 2026-11-09, sha256 `F6BCEB42…`) and make sure he only ever gets
+  the release variant.
+- **A10 MEDIUM — RTL (Arabic).** The slide-to-deliver follows the knob's direction; fix the overlaps
+  and the reversed time ranges. Every flow runs in Arabic RTL AND English in CI.
+- **A11 MEDIUM — time windows in the run's zone (Pacific/Auckland), pinned by a test.**
+- **A12 MEDIUM — the greeting by local time, the nav-button contrast, the see-through sheets, the
+  driving sheet reaching Fail/Skip, Back from Privacy, and the EGL log flood (QA 20).**
+
+## 4. PART B — THE DRIVER-APP PARITY LIST, ORDERED BY WHAT A COURIER TOUCHES EVERY DAY
+
+(every "Planned (task)" row of docs/status/PARITY.md that is a driver-app feature; each becomes
+ "Have" or "Better" with its PR link. The founder's B2-first items are marked **[B2-FIRST]**.)
+
+### B2 FIRST — the founder named these before all others
+
+- **a. MANUAL ROUTE EDITING:** drag-to-reorder in the stop list (#17, #62); lasso/draw circles on the
+  map to set the order (Spoke's "manually order route"); lock a stop's position; move to first, next
+  or last; undo. Re-optimise respects locked stops (the backend adds it to the reopt contract).
+- **b. THE ROUTE ON THE MAP:** the real road polyline between stops (the backend adds Valhalla route
+  geometry to the contract), numbered pins coloured by status, the current leg highlighted,
+  fit-the-run-to-screen.
+- **c. PIN FIX (#8):** long-press a stop and drag its pin to the right door; saved as door memory and
+  synced.
+- **d. ADD/EDIT ON THE MAP:** tap the map or search to add a stop; edit address, notes, time window,
+  priority and type from the stop sheet.
+- **e. Voice equivalents** (reorder, move to next, lock), measured with the voice harness.
+
+### Driver tools (13 planned) - the stop list, the reorder and the voice assistant - the surface a courier lives in
+- #17 Map + list view, drag reorder **[B2-FIRST]**
+- #20 Live voice assistant (hands-free control of the whole app) **[B2-FIRST]**
+- #62 **Drag reorder of the stop list** with a voice equivalent **[B2-FIRST]**
+- #63 **A rolling, glanceable number** for "stops remaining" (48–76 pt, tabular) **[B2-FIRST]**
+- #67 **Android Auto / CarPlay readiness** — a simplified projection of the driving screen
+- #91 **Spoken rules remembered across days** ("the pharmacy is always after 2pm")
+- #92 **Template / route rebuild from yesterday in one tap**
+- #96 **Every app action as a typed tool the assistant can call** (mark delivered, reorder, reschedule, add stop, cancel stop, read the door note)
+- #97 **A confirmation gate before an irreversible action** ("cancel that stop", "reschedule to tomorrow")
+- #98 **A refusal path** for a request that is not in the catalogue ("email the customer")
+- #99 **Clarification instead of guessing** when a required slot is missing ("the next one" with two matching stops)
+- #302 **Satellite / aerial layer** for driveways and rural drop-offs
+- #310 **Stop types** — reusable presets on an address (a "safe place", a "leave at door", a "pickup")
+### Stop import (3 planned) - the day arriving on the phone
+- #1 CSV/Excel/Sheets import with column mapping
+- #3 Camera label scan (OCR + barcode)
+- #5 Integrations (Shopify, WooCommerce, Zapier, NZ carriers, multi-client)
+### Address (2 planned) - the address being right
+- #6 Autocomplete
+- #8 Pin drop / manual location fix **[B2-FIRST]**
+### POD (8 planned) - proof of delivery: photo, signature, the reasons
+- #24 Signature
+- #25 Delivery outcomes / failed reasons / re-attempt
+- #26 Barcode scan to confirm delivery / reconcile
+- #155 Signature capture
+- #156 Voice POD ("delivered" by voice)
+- #157 Offline POD capture with a queue
+- #158 POD strictness control (how mandatory the photo is)
+- #160 Barcode scan to confirm the delivery
+### Navigation (5 planned) - getting to the door
+- #21 Navigation hand-off (Google/Apple/Waze)
+- #298 **In-app turn-by-turn with spoken guidance** (behind a flag)
+- #299 **Offline navigation in a dead spot** (routing inside the downloaded area with no signal)
+- #300 **Vehicle profile in the router** (bike / scooter / car / small truck / large truck)
+- #301 **Stop side of the road** (either / right only / left only), aware of NZ left-hand traffic
+### Offline maps (9 planned) - the map with no signal
+- #291 **Offline vector map for the whole of Canterbury**, read from a local file, working from the first launch with no internet
+- #292 **Weekly incremental tile refresh** (PMTiles v3 diffs) instead of a full re-download
+- #293 **Day, night and high-contrast-sun styles generated from one theme source**
+- #294 **Courier layers**: house numbers at z17, entrances, access restrictions
+- #295 **Style-driven pack reduction** so the pack fits the 50 MB ceiling with the courier layers kept
+- #296 **Offline attribution**: "(c) OpenStreetMap contributors" + the ODbL notice, visible on the map **and** in ≥ 2 user-visible places, with links, working with no network
+- #297 **LINZ parcel boundaries, address points, contours and aerial** as basemap layers
+- #306 **A pack download manager with resume, a region list and progress** (the Organic Maps UX)
+- #308 **A map that stays correct when OSM changes** — a weekly rebuild with a diff, not a silent replacement
+### Camera (6 planned) - the scanner and the photo
+- #161 Label scan that works on-device and offline
+- #162 Manifest camera flow (a printed manifest, several pages)
+- #163 Camera label scan on Android with a language picker
+- #165 A "readable photo" check before the shot is accepted
+- #166 Camera permission asked in plain English, once
+- #170 Visual-regression baseline for camera screens
+### Reliability (8 planned) - nothing lost, nothing blocking
+- #27 Offline mode (cached route, POD/edit queue)
+- #104 **A voice action that survives a dropped connection** (the tool run is checkpointed and resumes, it does not half-execute)
+- #105 **No irreversible action before the confirmation lands**
+- #150 Offline SMS queue with ordered retry and DLR reconciliation
+- #169 Resumable upload, so a photo is never lost in a dead zone
+- #171 **Crash reporting with a release tag and a symbolicated stack** (native + JS), crash-free session rate ≥ 99.5 %
+- #172 **A crash-free session dashboard and a rollback trigger** (a drop below 99.5 % over the last 24 h stops the rollout)
+- #173 **A deliberate in-app crash report** a driver can trigger from the help menu (a "report a problem" button that captures the log and the state)
+### Driver (5 planned) - the driver's own state
+- #143 Push for a new stop, a reassignment or a route change
+- #144 Android OEM delivery coaching (auto-launch, battery whitelist, One UI categories)
+- #145 Notification channels by urgency (job alert vs exception vs chatty)
+- #146 Local notifications generated while offline (next stop, shift end)
+- #147 Permission ask that a driver can understand
+### Onboarding (2 planned) - the first run
+- #44 Onboarding tutorial
+- #259 **Guided onboarding** for a new depot
+### Customer (6 planned) - what the customer sees
+- #33 Recipient ETA SMS + live tracking page
+- #108 **A spoken customer-notification tool** (optional, off by default, rate-limited)
+- #138 Customer ETA / exception SMS with a tracking link
+- #139 **Delivery report (DLR) shown to the driver** ("sent / delivered / failed")
+- #140 Quiet hours on customer messaging
+- #152 Two-way replies parsed into an instruction (e.g. "leave it with the neighbour")
+### Tracking (2 planned) - the live position
+- #32 Geofence auto-arrival / auto-complete
+- #304 **Geofence auto-arrival** driven by the map's own address and parcel data
+### Voice (20 planned) - hands-free control
+- #70 **On-device speech**: STT/TTS/VAD/KWS running on the phone, audio never uploaded
+- #71 **Hands-free control of the app while driving** (spoken "delivered", re-order, next stop)
+- #72 **Wake word / hands-free activation** (no button press, no screen touch)
+- #73 **NZ English + te reo Māori + Pacific NZ accents** in the STT/TTS models
+- #74 **Multilingual voice** (Arabic, Hindi/Punjabi, Mandarin, Samoan/Tongan) with on-device TTS
+- #76 **Offline voice** (commands and dictation with no signal in the van)
+- #77 **Low-drain listening** (adaptive wake duty cycle, ≤ 8 %/h)
+- #78 **End-of-turn / barge-in** (the driver interrupts the spoken reply)
+- #79 **Voice onboarding and spoken door memory on arrival**
+- #81 Hands-free control of the app **while driving** (spoken "delivered", "next", "skip", "reorder")
+- #82 **Semantic end-of-turn detection** (audio-native, 23 languages, BSD-2, on-device)
+- #83 **Barge-in that does not trip on a cough, a radio or a passenger's "mm"**
+- #84 **Voice control that survives a dropped connection mid-turn** (the turn is decided locally; the answer degrades)
+- #85 **Voice POD / spoken delivery confirmation**
+- #86 **Spoken door note on arrival** (read the access note out when you arrive)
+- #87 **Voice re-ordering / spoken rules engine**
+- #88 **te reo Māori / Samoan / Tongan voice control**
+- #89 **On-device audio** (nothing leaves the van)
+- #90 **Offline map of the driver's region**
+- #240 Voice prompts ≤ 8 words, spoken in the driver's language
+### Optimisation (7 planned) - the route the optimiser builds (the courier feels its output)
+- #12 Start/end, round trip, service time per stop
+- #14 Pickup-delivery pairing
+- #15 Vehicle type, avoid tolls/highways, capacity
+- #16 Zones / territories, multi-depot
+- #102 **Natural-language constraints as tools** ("pharmacy after 2pm", "make this the last stop") **[B2-FIRST]**
+- #103 **A tool that re-optimises without blocking driving**
+- #309 **A planned break in the day** (a window and a duration fed into the optimiser and shown on the map)
+### Accessibility (17 planned) - usable by every courier
+- #52 Touch targets: `touchTarget.minimum` is **44 px**; our bar is **≥ 56 pt** (72 pt primary)
+- #53 Body text `fontSizes.base` is **16 px**; our bar is **≥ 17 pt**
+- #64 **Screen-reader focus order and focus trapping** inside the stop sheet
+- #93 **An accessibility declaration for the assistant** (large text, screen-reader, reduced motion, contrast)
+- #215 **A published accessibility statement** and the store accessibility declaration (VoiceOver, TalkBack, 200 % text, reduced motion, contrast)
+- #216 **Dynamic type to 200 % with no clipping or truncation** on the three key screens, proved by Maestro screenshots at 1.0 / 1.5 / 2.0
+- #217 **Touch targets: ≥ 56 pt everywhere, 72 pt for the primary action** (WCAG 2.2 SC 2.5.8 floor is 24 × 24 CSS px)
+- #218 **Colour-blind-safe status colours**, and status that is never carried by colour alone (shape + text label + spoken state)
+- #219 **Contrast: driving text ≥ 7:1, everything else ≥ 4.5:1, non-text ≥ 3:1, measured in all three themes**
+- #220 **Screen-reader support on every screen**: a role, a name, a value, a state, and a live region for every status change
+- #221 **Focus order and focus trapping** in the stop sheet and the route change (SC 2.4.3, 2.4.11)
+- #222 **Reduced motion honoured**: transitions become instant, never removed, and the "reduce motion" system setting is respected
+- #223 **RTL-ready layouts** (logical `start`/`end` everywhere), with the Arabic UI translated and not accidentally mirrored
+- #224 **Accessibility actions** so a screen reader can activate a stop, a delivery outcome and the assistant — and a voice command for every one of them
+- #225 **An accessibility check in CI** (a11y lint rules, RNTL accessibility matchers, a token-contrast script)
+- #226 **A real-device screen-reader pass** on both platforms, with written transcripts, before v1
+- #227 **Motor-impairment path**: every action reachable by voice, one-handed, with a mounted phone, and with gloves
+### Motion (3 planned) - how it feels
+- #56 **Haptics on confirm, deliver and error** — `expo-haptics` is not installed
+- #57 **Shared-element transitions** are off by default in Reanimated 4.7.1 and default to 500 ms
+- #59 **Night mode by sunset** — the theme follows the OS colour scheme only
+### Design system (3 planned) - one look
+- #51 Our token set says **Inter / JetBrains Mono** while `docs/design/SYSTEM.md` §2 locks **Figtree**
+- #60 Night theme background is **`#09090b`**; `docs/design/SYSTEM.md` §3 says `#0A0A0A`–`#121212`, never pure black
+- #65 **A token pipeline that actually runs** — the package claims Style Dictionary but ships plain TypeScript objects
+### Performance (1 planned) - 60 fps
+- #61 **FlashList is not installed** although §5 and `CONSTRAINTS.md` require 300 stops at 60 fps
+### Languages (1 planned) - every language a courier speaks
+- #94 **Voice support for the NZ delivery workforce's languages**
+### History (1 planned) - the past days
+- #29 Route history
+### Support (4 planned) - when something breaks
+- #47 In-app support / help centre
+- #106 **A help-centre agent grounded in our own documentation**
+- #137 Refunds and disputes handled for the driver
+- #256 **Help centre** in the web app
+### Safety (1 planned) - driving safety
+- #48 SOS / emergency button
+
+## 5. LANE STATUS (one line per lane, the directive's rule)
+
+- **BUG-305 (the import sheet's paste field overlapping the actions row): FIXED, PR #306** — the
+  red-first tests pin it (906 tests green); CI re-running on the head that carries the QA evidence.
+- **PR #302 (P4 baselines): RUNNING** — the capture legs pass; the api-34 main leg is red on a
+  first-launch flake, a re-run is the diagnosis.
+- **PR #289 (the BUG-270 matrix): BLOCKED on BUG-305** — both large legs failed at the import
+  sheet's dismiss, which is exactly what PR #306 fixes.
+- **Lane 6 (voice lever b, address resolution on STT output): RUNNING** — the Canterbury street
+  index (6,799 roads from 656,044 LINZ rows) and the resolver are built; the honest answer is that
+  the held-out set's audio never speaks an address (Common Voice prose), re-derived by an
+  independent script.
+- **Offline lane (item 6): RUNNING** — 50 airplane-mode shifts, exactly-once sync, the PMTiles pack
+  and the Maestro flow.
+- **Scale lane (item 5): RUNNING** — the seeded shifts, kill-mid-sync and the monkey runs.
+- **The QA evidence PR (#307): MERGED** (origin/main 8ae54724) — the report the PART A list is built
+  from, 91 added paths, all under docs/evidence/founder-qa-2026-11-12/.
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
