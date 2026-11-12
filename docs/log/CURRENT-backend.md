@@ -1,3 +1,42 @@
+## 2026-11-12 (later still): the founder's item 4 — the APK the founder can install (BUG-289), and the one blocker left
+
+The founder's directive item 4: **the releases list is empty and
+`releases/download/latest/courier.apk` returns 404, so there is no APK to install.**
+What was wrong and what is now in place:
+
+- **The voice URL was missing from every APK build.** The app dials Courier Voice
+  directly (`apps/mobile/src/voice/useCourierVoice.ts` reads
+  `EXPO_PUBLIC_VOICE_SERVICE_URL`, defaulting to `http://localhost:8080` — which
+  on a phone is the phone), so an APK built without it carried a voice service
+  no phone could reach. Both APK workflows now pass
+  `EXPO_PUBLIC_VOICE_SERVICE_URL` from the repository variable of that name.
+- **The release path's URL resolution disagreed with Main APK's.**
+  `release-apk.yml` read only `EXPO_PUBLIC_AUTH_URL`, while `main-apk.yml`
+  prefers `COURIER_STAGING_DOMAIN` first. A v1.0.0 release built while the local
+  server is the configured one would have been pinned to a quick tunnel that
+  has since moved. The release workflow now resolves its URLs the SAME way —
+  staging domain first, then the explicit variables — so the two workflows
+  cannot disagree about which server an APK dials.
+
+**The three URLs the app reads (item 1's local server):**
+
+| Build setting | Value |
+|---|---|
+| `EXPO_PUBLIC_API_URL` | `https://cayman-features-folding-permit.trycloudflare.com` |
+| `EXPO_PUBLIC_AUTH_URL` | `https://cayman-features-folding-permit.trycloudflare.com/api/auth` |
+| `EXPO_PUBLIC_VOICE_SERVICE_URL` | `https://farming-advise-friend-wild.trycloudflare.com` |
+
+**The APK itself is one repository-variable step away**: with those three set as
+repository Variables (Settings → Secrets and variables → Actions → Variables), the
+Main APK workflow builds on the next push to main and publishes the stable
+`latest` link — no keystore needed for the installable (unsigned) APK the
+founder tests with, and the signed v1.0.0 build waits for the founder's keystore
+secrets (FOUNDER_TODO). **A quick tunnel's URL changes on every restart, so an
+APK built against one is only as current as the tunnel: re-announce after any
+restart, and once the Oracle host exists the same variables point at staging and
+the APK is stable.** The link goes at the top of this log and of FOUNDER_TODO the
+moment the run publishes it.
+
 ## 2026-11-12 (later): the lead's item 2b — LOCKED STOPS: the reopt never moves a locked stop (BUG-286)
 
 **For the lead, announced as the directive asks.** The reopt now accepts locked stop positions:
