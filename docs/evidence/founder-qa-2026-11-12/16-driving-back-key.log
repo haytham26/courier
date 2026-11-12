@@ -1,0 +1,10 @@
+--------- beginning of main
+11-12 13:24:39.696  3444  3444 E EGL_emulation: eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+11-12 13:24:39.696  3444  3444 E EGL_emulation: tid 3444: eglQueryContext(2349): error 0x3004 (EGL_BAD_ATTRIBUTE)
+11-12 13:24:39.708  3444  4511 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:24:39.709  3444  4511 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:24:39.709  3444  4511 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:24:39.709  3444  4511 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:24:39.710  3444  3444 E Surface : getSlotFromBufferLocked: unknown buffer: 0x500
+11-12 13:24:39.728  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:24:41.263  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context

@@ -1,0 +1,257 @@
+--------- beginning of main
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: Network error while fetching ads config
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: javax.net.ssl.SSLHandshakeException: java.security.cert.CertPathValidatorException: Trust anchor for certification path not found.
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.SSLUtils.toSSLHandshakeException(SSLUtils.java:363)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.convertException(ConscryptEngine.java:1134)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.readPlaintextData(ConscryptEngine.java:1089)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.unwrap(ConscryptEngine.java:876)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.unwrap(ConscryptEngine.java:747)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.unwrap(ConscryptEngine.java:712)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngineSocket$SSLInputStream.processDataFromSocket(ConscryptEngineSocket.java:858)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngineSocket$SSLInputStream.-$$Nest$mprocessDataFromSocket(Unknown Source:0)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngineSocket.doHandshake(ConscryptEngineSocket.java:241)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngineSocket.startHandshake(ConscryptEngineSocket.java:220)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealConnection.j(RealConnection.kt:76)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealConnection.n(RealConnection.kt:53)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealConnection.g(RealConnection.kt:197)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.ExchangeFinder.b(ExchangeFinder.kt:274)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.ExchangeFinder.c(ExchangeFinder.kt:1)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.ExchangeFinder.a(ExchangeFinder.kt:52)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealCall.t(RealCall.kt:32)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.ConnectInterceptor.intercept(ConnectInterceptor.kt:12)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.cache.CacheInterceptor.intercept(CacheInterceptor.kt:190)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.BridgeInterceptor.intercept(BridgeInterceptor.kt:171)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RetryAndFollowUpInterceptor.intercept(RetryAndFollowUpInterceptor.kt:35)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at wf.d.intercept(CurrentTimeInterceptor.kt:10)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at e6.a.intercept(CompositeInterceptor.java:24)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at e6.b.intercept(FileCacheInterceptor.java:307)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at e6.g.j(PromotionServiceGenerator.java:213)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at e6.g.a(PromotionServiceGenerator.java:1)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at e6.e.intercept(R8$$SyntheticClass:9)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealCall.s(RealCall.kt:118)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:45)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1137)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at java.lang.Thread.run(Thread.java:1012)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: Caused by: java.security.cert.CertificateException: java.security.cert.CertPathValidatorException: Trust anchor for certification path not found.
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.TrustManagerImpl.checkTrustedRecursive(TrustManagerImpl.java:654)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.TrustManagerImpl.checkTrusted(TrustManagerImpl.java:503)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.TrustManagerImpl.checkTrusted(TrustManagerImpl.java:423)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.TrustManagerImpl.getTrustedChainForServer(TrustManagerImpl.java:351)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at android.security.net.config.NetworkSecurityTrustManager.checkServerTrusted(NetworkSecurityTrustManager.java:94)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at android.security.net.config.RootTrustManager.checkServerTrusted(RootTrustManager.java:90)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngineSocket$2.checkServerTrusted(ConscryptEngineSocket.java:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.Platform.checkServerTrusted(Platform.java:255)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.verifyCertificateChain(ConscryptEngine.java:1638)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.NativeCrypto.ENGINE_SSL_read_direct(Native Method)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.NativeSsl.readDirectByteBuffer(NativeSsl.java:569)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.readPlaintextDataDirect(ConscryptEngine.java:1095)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.readPlaintextData(ConscryptEngine.java:1079)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	... 36 more
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: Caused by: java.security.cert.CertPathValidatorException: Trust anchor for certification path not found.
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	... 49 more
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: javax.net.ssl.SSLHandshakeException: java.security.cert.CertPathValidatorException: Trust anchor for certification path not found.
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.SSLUtils.toSSLHandshakeException(SSLUtils.java:363)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.convertException(ConscryptEngine.java:1134)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.readPlaintextData(ConscryptEngine.java:1089)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.unwrap(ConscryptEngine.java:876)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.unwrap(ConscryptEngine.java:747)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.unwrap(ConscryptEngine.java:712)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngineSocket$SSLInputStream.processDataFromSocket(ConscryptEngineSocket.java:858)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngineSocket$SSLInputStream.-$$Nest$mprocessDataFromSocket(Unknown Source:0)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngineSocket.doHandshake(ConscryptEngineSocket.java:241)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngineSocket.startHandshake(ConscryptEngineSocket.java:220)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealConnection.j(RealConnection.kt:76)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealConnection.n(RealConnection.kt:53)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealConnection.g(RealConnection.kt:197)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.ExchangeFinder.b(ExchangeFinder.kt:274)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.ExchangeFinder.c(ExchangeFinder.kt:1)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.ExchangeFinder.a(ExchangeFinder.kt:52)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealCall.t(RealCall.kt:32)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.ConnectInterceptor.intercept(ConnectInterceptor.kt:12)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.cache.CacheInterceptor.intercept(CacheInterceptor.kt:190)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.BridgeInterceptor.intercept(BridgeInterceptor.kt:171)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RetryAndFollowUpInterceptor.intercept(RetryAndFollowUpInterceptor.kt:35)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at wf.d.intercept(CurrentTimeInterceptor.kt:10)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at e6.a.intercept(CompositeInterceptor.java:24)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at e6.b.intercept(FileCacheInterceptor.java:307)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at e6.g.j(PromotionServiceGenerator.java:213)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at e6.g.a(PromotionServiceGenerator.java:1)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at e6.e.intercept(R8$$SyntheticClass:9)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.http.RealInterceptorChain.a(RealInterceptorChain.kt:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealCall.s(RealCall.kt:118)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:45)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1137)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:637)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at java.lang.Thread.run(Thread.java:1012)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: Caused by: java.security.cert.CertificateException: java.security.cert.CertPathValidatorException: Trust anchor for certification path not found.
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.TrustManagerImpl.checkTrustedRecursive(TrustManagerImpl.java:654)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.TrustManagerImpl.checkTrusted(TrustManagerImpl.java:503)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.TrustManagerImpl.checkTrusted(TrustManagerImpl.java:423)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.TrustManagerImpl.getTrustedChainForServer(TrustManagerImpl.java:351)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at android.security.net.config.NetworkSecurityTrustManager.checkServerTrusted(NetworkSecurityTrustManager.java:94)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at android.security.net.config.RootTrustManager.checkServerTrusted(RootTrustManager.java:90)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngineSocket$2.checkServerTrusted(ConscryptEngineSocket.java:163)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.Platform.checkServerTrusted(Platform.java:255)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.verifyCertificateChain(ConscryptEngine.java:1638)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.NativeCrypto.ENGINE_SSL_read_direct(Native Method)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.NativeSsl.readDirectByteBuffer(NativeSsl.java:569)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.readPlaintextDataDirect(ConscryptEngine.java:1095)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	at com.android.org.conscrypt.ConscryptEngine.readPlaintextData(ConscryptEngine.java:1079)
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	... 36 more
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: Caused by: java.security.cert.CertPathValidatorException: Trust anchor for certification path not found.
+11-12 13:29:23.653  1500  1500 E FlutterAdsFragment: 	... 49 more
+11-12 13:29:23.656   980  1619 E NlpRequestHelper: failed to send request to NLP
+11-12 13:29:23.700   903  1148 E BstGCallService-JNI: gcallCommonCommandClbk called: code=1, name=com.uncube.launcher3, data=
+11-12 13:29:23.703   903  1148 E BstGCallService-JNI: gcallshowNativeMousePointerClbk called: show = 0
+11-12 13:29:23.725   593   680 E EventHub: Could not get device name for /dev/input/mouse1: Inappropriate ioctl for device
+11-12 13:29:23.725   593   680 E EventHub: could not get driver version for /dev/input/mouse1, Inappropriate ioctl for device
+11-12 13:29:23.759   414   414 E BpTransactionCompletedListener: Failed to transact (-32)
+11-12 13:29:23.782  1500  1692 E EGL_emulation: tid 1692: eglSurfaceAttrib(1726): error 0x3009 (EGL_BAD_MATCH)
+11-12 13:29:23.782  1500  1692 E OpenGLRenderer: Unable to match the desired swap behavior.
+11-12 13:29:23.793  1500  1500 E SurfaceSyncer: Failed to find sync for id=0
+11-12 13:29:23.793  1500  1500 E SurfaceSyncer: Failed to find sync for id=1
+11-12 13:29:23.793  1500  1500 E SurfaceSyncer: Failed to find sync for id=2
+11-12 13:29:23.822   801  1340 E EGL_emulation: tid 1340: eglSurfaceAttrib(1726): error 0x3009 (EGL_BAD_MATCH)
+11-12 13:29:23.822   801  1340 E OpenGLRenderer: Unable to match the desired swap behavior.
+11-12 13:29:23.853  1500  1500 E SurfaceSyncer: Failed to find sync for id=0
+11-12 13:29:23.853  1500  1500 E SurfaceSyncer: Failed to find sync for id=1
+11-12 13:29:23.853  1500  1500 E SurfaceSyncer: Failed to find sync for id=2
+11-12 13:29:23.870  1500  1500 E SurfaceSyncer: Failed to find sync for id=0
+11-12 13:29:23.870  1500  1500 E SurfaceSyncer: Failed to find sync for id=1
+11-12 13:29:23.870  1500  1500 E SurfaceSyncer: Failed to find sync for id=2
+11-12 13:29:23.872   980  1619 E NlpRequestHelper: failed to send request to NLP
+11-12 13:29:23.966   903  1148 E BstGCallService-JNI: gcallCommonCommandClbk called: code=1, name=com.courier.copilot, data=
+11-12 13:29:24.002  5942  5963 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:29:24.003  5942  5963 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:29:24.003  5942  5963 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:29:24.003  5942  5963 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:29:24.018  5942  5963 E eglCodecCommon: glUtilsParamSize: unknow param 0x00008e7e
+11-12 13:29:24.018  5942  5963 E eglCodecCommon: glUtilsParamSize: unknow param 0x00008e7e
+11-12 13:29:24.019   414   542 E HWComposer: getSupportedContentTypes: getSupportedContentTypes failed for display 0: Unsupported (8)
+11-12 13:29:24.036  5942  5963 E EGL_emulation: tid 5963: eglSurfaceAttrib(1726): error 0x3009 (EGL_BAD_MATCH)
+11-12 13:29:24.036  5942  5963 E OpenGLRenderer: Unable to match the desired swap behavior.
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: Failed to resolve model path: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy.
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: java.lang.IllegalArgumentException: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy.
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at s76.c(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:363)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at com.sherpaonnx.SherpaOnnxModule.resolveModelPath(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:89)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at com.facebook.jni.NativeRunnable.run(Native Method)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at android.os.Handler.handleCallback(Handler.java:942)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at android.os.Handler.dispatchMessage(Handler.java:99)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at com.facebook.react.bridge.queue.MessageQueueThreadHandler.dispatchMessage(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:4)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at android.os.Looper.loopOnce(Looper.java:201)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at android.os.Looper.loop(Looper.java:288)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion.startNewBackgroundThread$lambda$0(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:29)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion.a(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:1)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at p04.run(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:670)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at java.lang.Thread.run(Thread.java:1012)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: Caused by: java.lang.IllegalArgumentException: File not found after copying parent directory: models/stt.onnx
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	at s76.c(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:351)
+11-12 13:29:24.311  5942  5973 E SherpaOnnx: 	... 11 more
+11-12 13:29:24.320  5942  5972 E ReactNativeJS: 'Voice error:', { [java.lang.IllegalArgumentException: Failed to resolve model path: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy.]
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:   nativeStackAndroid: 
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:    [ { lineNumber: 363,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'c',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 's76' },
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:      { lineNumber: 89,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'resolveModelPath',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 'com.sherpaonnx.SherpaOnnxModule' },
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:      { lineNumber: -2,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'run',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 'com.facebook.jni.NativeRunnable' },
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:      { lineNumber: 942,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'Handler.java',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'handleCallback',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 'android.os.Handler' },
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:      { lineNumber: 99,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'Handler.java',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'dispatchMessage',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 'android.os.Handler' },
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:      { lineNumber: 4,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'dispatchMessage',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 'com.facebook.react.bridge.queue.MessageQueueThreadHandler' },
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:      { lineNumber: 201,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'Looper.java',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'loopOnce',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 'android.os.Looper' },
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:      { lineNumber: 288,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'Looper.java',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'loop',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 'android.os.Looper' },
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:      { lineNumber: 29,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'startNewBackgroundThread$lambda$0',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 'com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion' },
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:      { lineNumber: 1,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'a',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 'com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion' },
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:      { lineNumber: 670,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'run',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 'p04' },
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:      { lineNumber: 1012,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        file: 'Thread.java',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        methodName: 'run',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:        class: 'java.lang.Thread' } ],
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:   name: 'java.lang.IllegalArgumentException',
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:   userInfo: null,
+11-12 13:29:24.320  5942  5972 E ReactNativeJS:   code: 'PATH_RESOLVE_ERROR' }
+11-12 13:29:24.321  5942  5973 E unknown:ReactNative: console.error: Voice error: java.lang.IllegalArgumentException: Failed to resolve model path: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy., stack:
+11-12 13:29:24.321  5942  5973 E unknown:ReactNative: SyntheticError@1:811413
+11-12 13:29:24.321  5942  5973 E unknown:ReactNative: reactConsoleErrorHandler@1:811204
+11-12 13:29:24.321  5942  5973 E unknown:ReactNative: onError@1:2477146
+11-12 13:29:24.321  5942  5973 E unknown:ReactNative: ?anon_0_initialize@1:2706010
+11-12 13:29:24.580  5942  6011 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:29:24.580  5942  6011 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:29:24.580  5942  6011 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:29:24.580  5942  6011 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:29:24.632  5942  5942 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:29:24.632  5942  5942 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:29:24.632  5942  5942 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:29:24.632  5942  5942 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:29:24.648  5942  5942 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:29:24.648  5942  5942 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:29:24.648  5942  5942 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:29:24.648  5942  5942 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:29:24.805  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:25.452  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:25.668  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:25.836  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:27.017  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:27.268  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+--------- beginning of system
+11-12 13:29:27.649   593  1471 E TaskPersister: File error accessing recents directory (directory doesn't exist?).
+11-12 13:29:27.750  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:28.017  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:28.217  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:28.284  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:28.484  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:30.349  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:30.700  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:30.834  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:31.151  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:31.617  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:31.833  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:33.267  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:33.384  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:33.785  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:29:33.951  5942  5942 E courier.copilot: [SurfaceTexture-0-5942-0] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context

@@ -1,0 +1,6 @@
+--------- beginning of main
+11-12 13:24:16.031  3444  4459 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:24:16.031  3444  4459 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082da
+11-12 13:24:16.031  3444  4459 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:24:16.031  3444  4459 E eglCodecCommon: glUtilsParamSize: unknow param 0x000082e5
+11-12 13:24:16.445  3444  3444 E Surface : freeAllBuffers: 1 buffers were freed while being dequeued!
