@@ -116,6 +116,22 @@ class LockedStopResponse(BaseModel):
     sequence: int
 
 
+class RouteLegResponse(BaseModel):
+    """One leg of the day: the road between two consecutive stops.
+
+    `shape` is the encoded polyline (Valhalla's precision-6 format, ADR-030), or
+    null when no geometry engine answered - a phone can tell a real road from an
+    absent one without asking, and nothing here draws a straight line and calls
+    it a road.
+    """
+
+    from_stop_id: uuid.UUID | None
+    to_stop_id: uuid.UUID | None
+    distance_m: float
+    duration_s: float
+    shape: str | None
+
+
 class RouteResponse(BaseModel):
     """The day's route (`_route_body`): the order, the times, the load."""
 
@@ -125,6 +141,12 @@ class RouteResponse(BaseModel):
     locked: bool
     template_id: str | None
     locked_stop_ids: list[LockedStopResponse] = Field(default_factory=list)
+    # The lead's 2026-11-12 ask: the real road polyline. `geometry_engine`
+    # names what produced the shapes (`none` when nothing did, because the
+    # deployment has no router configured), so the answer says which of the two
+    # it is rather than leaving a null shape ambiguous.
+    geometry_engine: str
+    legs: list[RouteLegResponse] = Field(default_factory=list)
     total_distance_m: float
     total_duration_s: float
     parcels: int
