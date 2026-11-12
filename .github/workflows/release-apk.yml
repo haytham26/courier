@@ -48,6 +48,16 @@ jobs:
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
+          # The release version is the tag this run is for (a dispatch on a
+          # branch carries no tag, so the SBOM names the sha instead - the
+          # directive's v1.0.0 is a TAG push, and this is where the number
+          # the artefact answers to comes from).
+          if [ "${GITHUB_REF#refs/tags/}" != "$GITHUB_REF" ]; then
+            version="${GITHUB_REF#refs/tags/}"
+          else
+            version="$GITHUB_SHA"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
           if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
             echo "signed=true" >> "$GITHUB_OUTPUT"
             echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/courier.keystore"
@@ -140,8 +150,47 @@ jobs:
       # reads is the one that names that directory. Both halves of this fix
       # are the same fact seen from two steps: the build writes under
       # `apps/mobile/android`, not under the root.
+      # BUG-283 (the founder's P6): the release needs an SBOM beside the APK,
+      # and the SBOM is generated HERE rather than committed - it has to
+      # describe the artefact this run actually built, not the one the last
+      # release built. Syft (Apache-2.0) writes SPDX JSON from the built APK:
+      # the components are the app's own dependency closure at this tag, which
+      # is what a store reviewer and a security reviewer both ask for.
+      #
+      # A missing Syft is NOT a silent pass: the release's own done-when is
+      # "APK + SBOM", so a release without one fails here rather than
+      # publishing an artefact nobody can audit.
+      - name: Generate the SBOM (SPDX JSON) of the built APK
+        env:
+          APK_PATH: apps/mobile/android/${{ steps.apk.outputs.path }}
+          VERSION: ${{ steps.keystore.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Semgrep is right about `curl | sh`: it is an arbitrary-code execution
+          # if the URL is ever hijacked. So the pin is a VERSION plus the
+          # publisher's own CHECKSUM, verified before the tarball is unpacked -
+          # the number below is the one on the Syft 0.101.1 release's
+          # checksums.txt, and a release that does not match it fails the job.
+          # (Pinned the way check-action-pins pins an action: by identity, not
+          # by the moving tip of a branch.)
+          SYFT_VERSION="0.101.1"
+          SYFT_SHA256="88ac3dcd752deba6d93d655bed1fee18ea9692ac48fd3ff2cb81dde70a5aac6c"
+          SYFT_TARBALL="syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+          mkdir -p "$RUNNER_TEMP/syft"
+          curl -fsSL -o "$RUNNER_TEMP/${SYFT_TARBALL}" \
+            "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/${SYFT_TARBALL}"
+          echo "${SYFT_SHA256}  $RUNNER_TEMP/${SYFT_TARBALL}" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/${SYFT_TARBALL}" -C "$RUNNER_TEMP/syft" syft
+          install -m 0755 "$RUNNER_TEMP/syft/syft" /usr/local/bin/syft
+          syft "file:${APK_PATH}" -o spdx-json --name "Courier Copilot ${VERSION}" \
+            > apps/mobile/android/artifacts/courier-${VERSION}.spdx.json
+          test -s apps/mobile/android/artifacts/courier-${VERSION}.spdx.json
+          echo "sbom=artifacts/courier-${VERSION}.spdx.json" >> "$GITHUB_OUTPUT"
+
       - name: Attach the APK to the release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          files: apps/mobile/android/${{ steps.apk.outputs.path }}
+          files: |
+            apps/mobile/android/${{ steps.apk.outputs.path }}
+            apps/mobile/android/artifacts/courier-${{ steps.keystore.outputs.version }}.spdx.json
           generate_release_notes: true

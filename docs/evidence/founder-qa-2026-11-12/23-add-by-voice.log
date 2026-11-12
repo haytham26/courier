@@ -1,0 +1,29 @@
+--------- beginning of main
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: Failed to resolve model path: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy.
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: java.lang.IllegalArgumentException: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy.
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at s76.c(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:363)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at com.sherpaonnx.SherpaOnnxModule.resolveModelPath(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:89)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at com.facebook.jni.NativeRunnable.run(Native Method)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at android.os.Handler.handleCallback(Handler.java:942)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at android.os.Handler.dispatchMessage(Handler.java:99)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at com.facebook.react.bridge.queue.MessageQueueThreadHandler.dispatchMessage(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:4)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at android.os.Looper.loopOnce(Looper.java:201)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at android.os.Looper.loop(Looper.java:288)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion.startNewBackgroundThread$lambda$0(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:29)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at com.facebook.react.bridge.queue.MessageQueueThreadImpl$Companion.a(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:1)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at p04.run(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:670)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at java.lang.Thread.run(Thread.java:1012)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: Caused by: java.lang.IllegalArgumentException: File not found after copying parent directory: models/stt.onnx
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	at s76.c(r8-map-id-40e0220e87503dbb93b8e0e19e83fbd3e399e1810f638d306ffdadfa50f27761:351)
+11-12 13:26:11.915  3444  3472 E SherpaOnnx: 	... 11 more
+11-12 13:26:11.923  3444  3471 E ReactNativeJS: 'Voice error:', [Error: the recognizer could not be started: java.lang.IllegalArgumentException: Failed to resolve model path: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy.]
+11-12 13:26:11.924  3444  3472 E unknown:ReactNative: console.error: Voice error: Error: the recognizer could not be started: java.lang.IllegalArgumentException: Failed to resolve model path: Failed to extract asset file: models/stt.onnx. Tried direct copy and directory copy., stack:
+11-12 13:26:11.924  3444  3472 E unknown:ReactNative: SyntheticError@1:811413
+11-12 13:26:11.924  3444  3472 E unknown:ReactNative: reactConsoleErrorHandler@1:811204
+11-12 13:26:11.924  3444  3472 E unknown:ReactNative: onError@1:2477146
+11-12 13:26:11.924  3444  3472 E unknown:ReactNative: ?anon_2_startListening@1:2707663
+11-12 13:26:12.762  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:26:14.579  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:26:15.145  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:26:15.262  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context
+11-12 13:26:17.028  3444  3444 E courier.copilot: [SurfaceTexture-0-3444-2] updateAndRelease: EGLConsumer is not attached to an OpenGL ES context

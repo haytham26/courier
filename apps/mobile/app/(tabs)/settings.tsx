@@ -27,7 +27,16 @@
  * control has an accessibility label and a role.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import {
+  Dimensions,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { openURL } from 'expo-linking';
@@ -370,9 +379,213 @@ export default function SettingsScreen() {
     },
   ];
 
+  // Audit B5: the legal rows sit directly under the identity - a row a
+  // reviewer or a courier has to hunt for on a small screen is a row that is
+  // never found (the BUG-050 class).
+  const legalGroup = (
+    <React.Fragment key="legalGroup">
+            <SettingsGroup title="Legal" rows={legalRows} />
+
+            {/* The sign-out sits high in the list, directly under the Legal group,
+                not at the end of a long scroll list: a row a courier has to hunt
+                for is a row that is never found, and the flow that taps it reads
+                "Element not found" the moment the list is taller than the window
+                (the same class of failure as BUG-050's clipped actions row). */}
+    </React.Fragment>
+  );
+
+  const sessionGroup = (
+    <React.Fragment key="sessionGroup">
+            <SettingsGroup title="Session" rows={signOutRows} />
+
+            {/* Audit A3: the test-build-only row, rendered only when the seam is on. */}
+    </React.Fragment>
+  );
+
+  const voiceGroup = (
+    <React.Fragment key="voiceGroup">
+            <SettingsGroup title="Voice" rows={voiceRows} />
+
+            <View style={[styles.group, { backgroundColor: t.colors.card }]} accessibilityRole="radiogroup">
+              {VOICE_VERBOSITIES.map((option) => {
+                const selected = verbosity === option;
+                return (
+                  <Pressable
+                    key={option}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={VERBOSITY_LABELS[option]}
+                    accessibilityHint="Chooses how much Courier Voice says"
+                    onPress={() => chooseVerbosity(option)}
+                    testID={`settings-verbosity-${option}`}
+                    style={[
+                      styles.choice,
+                      {
+                        borderColor: selected ? t.colors.accent : t.colors.separator,
+                        backgroundColor: selected ? t.colors.fill : 'transparent',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.choiceLabel,
+                        { color: selected ? t.colors.accentText : t.colors.secondaryLabel },
+                      ]}
+                      maxFontSizeMultiplier={1.4}
+                    >
+                      {VERBOSITY_LABELS[option]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* §22 (D48) technique C, BUG-202: the shift memory is visible and
+                clearable here - the "Remember this shift" switch, and the
+                "Forget this shift" row that asks before it clears (the sign-out's
+                two-tap pattern, with the 48 pt floor because it is a button). */}
+    </React.Fragment>
+  );
+
+  const memoryGroup = (
+    <React.Fragment key="memoryGroup">
+            <View style={styles.groupBlock}>
+              <Text style={[styles.groupTitle, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+                MEMORY
+              </Text>
+              <View style={[styles.group, { backgroundColor: t.colors.card }]}>
+                <View style={styles.row} testID="settings-remember-row">
+                  <Tile name="archive" tone="info2" />
+                  <View style={styles.rowText}>
+                    <Text style={[styles.rowLabel, { color: t.colors.label }]} maxFontSizeMultiplier={1.4}>
+                      Remember this shift
+                    </Text>
+                    <Text style={[styles.rowHint, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+                      The voice can refer back to earlier in the shift.
+                    </Text>
+                  </View>
+                  <Switch
+                    value={remember}
+                    onValueChange={toggleRemember}
+                    accessibilityLabel="Remember this shift"
+                    accessibilityHint="Lets the voice refer back to earlier in the shift"
+                    testID="settings-remember"
+                    thumbColor={t.colors.accent}
+                    trackColor={{ true: t.colors.accent, false: t.colors.separator }}
+                  />
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={confirmForget ? 'Forget this shift?' : 'Forget this shift'}
+                  accessibilityHint={
+                    confirmForget
+                      ? 'Tap again to clear what the voice remembers of this shift.'
+                      : 'Clears what the voice remembers of this shift.'
+                  }
+                  onPress={forgetShift}
+                  testID="settings-forget-memory"
+                  style={({ pressed }) => [
+                    styles.row,
+                    styles.rowAction,
+                    { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.colors.separator },
+                    pressed ? { opacity: 0.7 } : null,
+                  ]}
+                >
+                  <Tile name="trash" tone="danger" />
+                  <View style={styles.rowText}>
+                    <Text
+                      style={[
+                        styles.rowLabel,
+                        { color: confirmForget ? t.colors.danger : t.colors.label },
+                      ]}
+                      maxFontSizeMultiplier={1.4}
+                    >
+                      {confirmForget ? 'Forget this shift?' : 'Forget this shift'}
+                    </Text>
+                    <Text style={[styles.rowHint, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+                      {confirmForget
+                        ? 'Tap again to clear what the voice remembers of this shift.'
+                        : 'Clears what the voice remembers of this shift.'}
+                    </Text>
+                  </View>
+                </Pressable>
+              </View>
+            </View>
+    </React.Fragment>
+  );
+
+  const mapGroup = (
+    <React.Fragment key="mapGroup">
+            <SettingsGroup title="Map" rows={mapRows} />
+    </React.Fragment>
+  );
+
+  const deviceGroup = (
+    <React.Fragment key="deviceGroup">
+            <SettingsGroup title="Device" rows={deviceRows} />
+    </React.Fragment>
+  );
+
+  const teamGroup = (
+    <React.Fragment key="teamGroup">
+            <SettingsGroup title="Team" rows={teamRows} />
+    </React.Fragment>
+  );
+
+  const hapticsGroup = (
+    <React.Fragment key="hapticsGroup">
+            <View style={[styles.group, { backgroundColor: t.colors.card }]}>
+              <View style={styles.row}>
+                <Tile name="phone-portrait" tone="info2" />
+                <View style={styles.rowText}>
+                  <Text style={[styles.rowLabel, { color: t.colors.label }]} maxFontSizeMultiplier={1.4}>
+                    Haptics
+                  </Text>
+                  <Text style={[styles.rowHint, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+                    The bump on a delivery, a mode and a slide.
+                  </Text>
+                </View>
+                <Switch
+                  value={haptics}
+                  onValueChange={toggleHaptics}
+                  accessibilityLabel="Haptics"
+                  accessibilityHint="Turns the haptics on or off"
+                  testID="settings-haptics"
+                  thumbColor={t.colors.accent}
+                  trackColor={{ true: t.colors.accent, false: t.colors.separator }}
+                />
+              </View>
+            </View>
+    </React.Fragment>
+  );
+
+  const debugGroup = recorderForThisBuild() ? (
+    <React.Fragment key="debug">
+            {recorderForThisBuild() && <SettingsGroup title="Debug" rows={debugRows} />}
+    </React.Fragment>
+  ) : null;
+
+  // BUG-300 (the large AVD, 411x731 dp): on a tall window the settings list is
+  // reordered so the rows the E2E flows scroll for - `settings-lock-screen`
+  // (the Device group) and `settings-remember` / `settings-forget-memory` (the
+  // MEMORY group) - sit directly under the Debug group, in the first screenful
+  // the flows reach. On the short window the order is exactly as it always was,
+  // which is what the committed baselines and the small-AVD flows were captured
+  // on. The blocks are named once and reordered, never duplicated: a copy is
+  // how two rows drift apart.
+  const tallWindow = Dimensions.get('window').height >= TALL_WINDOW_DP;
+  const orderedGroups = tallWindow
+    ? [legalGroup, sessionGroup, debugGroup, deviceGroup, mapGroup, memoryGroup, voiceGroup, teamGroup, hapticsGroup]
+    : [legalGroup, sessionGroup, debugGroup, voiceGroup, memoryGroup, mapGroup, deviceGroup, teamGroup, hapticsGroup];
+
   return (
     <SafeAreaView testID="settings-screen" style={[styles.container, { backgroundColor: t.colors.background }]}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {/* BUG-300: the list's FRAME ends above the floating dock, not just its
+          content. A row scrolled into view at the viewport's bottom sat under the
+          dock on the tall window, so the flow's tap landed on the dock glass and
+          the row's route never opened (the lock-screen flow, both large legs of
+          runs 42455960697 and 42542068115). The dock is 26 + 62 dp tall. */}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, { color: t.colors.label }]} maxFontSizeMultiplier={1.6}>
           Settings
         </Text>
@@ -394,152 +607,7 @@ export default function SettingsScreen() {
           <Ionicons name="chevron-forward" size={20} color={t.colors.secondaryLabel} />
         </View>
 
-        {/* Audit B5: the legal rows sit directly under the identity - a row a
-            reviewer or a courier has to hunt for on a small screen is a row
-            that is never found (the BUG-050 class), and the 320x640 emulator
-            drops whatever is below the fold out of the accessibility tree. */}
-        <SettingsGroup title="Legal" rows={legalRows} />
-
-        {/* The sign-out sits high in the list, directly under the Legal group,
-            not at the end of a long scroll list: a row a courier has to hunt
-            for is a row that is never found, and the flow that taps it reads
-            "Element not found" the moment the list is taller than the window
-            (the same class of failure as BUG-050's clipped actions row). */}
-        <SettingsGroup title="Session" rows={signOutRows} />
-
-        {/* Audit A3: the test-build-only row, rendered only when the seam is on. */}
-        {recorderForThisBuild() && <SettingsGroup title="Debug" rows={debugRows} />}
-
-        <SettingsGroup title="Voice" rows={voiceRows} />
-
-        <View style={[styles.group, { backgroundColor: t.colors.card }]} accessibilityRole="radiogroup">
-          {VOICE_VERBOSITIES.map((option) => {
-            const selected = verbosity === option;
-            return (
-              <Pressable
-                key={option}
-                accessibilityRole="radio"
-                accessibilityState={{ selected }}
-                accessibilityLabel={VERBOSITY_LABELS[option]}
-                accessibilityHint="Chooses how much Courier Voice says"
-                onPress={() => chooseVerbosity(option)}
-                testID={`settings-verbosity-${option}`}
-                style={[
-                  styles.choice,
-                  {
-                    borderColor: selected ? t.colors.accent : t.colors.separator,
-                    backgroundColor: selected ? t.colors.fill : 'transparent',
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.choiceLabel,
-                    { color: selected ? t.colors.accentText : t.colors.secondaryLabel },
-                  ]}
-                  maxFontSizeMultiplier={1.4}
-                >
-                  {VERBOSITY_LABELS[option]}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* §22 (D48) technique C, BUG-202: the shift memory is visible and
-            clearable here - the "Remember this shift" switch, and the
-            "Forget this shift" row that asks before it clears (the sign-out's
-            two-tap pattern, with the 48 pt floor because it is a button). */}
-        <View style={styles.groupBlock}>
-          <Text style={[styles.groupTitle, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
-            MEMORY
-          </Text>
-          <View style={[styles.group, { backgroundColor: t.colors.card }]}>
-            <View style={styles.row} testID="settings-remember-row">
-              <Tile name="archive" tone="info2" />
-              <View style={styles.rowText}>
-                <Text style={[styles.rowLabel, { color: t.colors.label }]} maxFontSizeMultiplier={1.4}>
-                  Remember this shift
-                </Text>
-                <Text style={[styles.rowHint, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
-                  The voice can refer back to earlier in the shift.
-                </Text>
-              </View>
-              <Switch
-                value={remember}
-                onValueChange={toggleRemember}
-                accessibilityLabel="Remember this shift"
-                accessibilityHint="Lets the voice refer back to earlier in the shift"
-                testID="settings-remember"
-                thumbColor={t.colors.accent}
-                trackColor={{ true: t.colors.accent, false: t.colors.separator }}
-              />
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={confirmForget ? 'Forget this shift?' : 'Forget this shift'}
-              accessibilityHint={
-                confirmForget
-                  ? 'Tap again to clear what the voice remembers of this shift.'
-                  : 'Clears what the voice remembers of this shift.'
-              }
-              onPress={forgetShift}
-              testID="settings-forget-memory"
-              style={({ pressed }) => [
-                styles.row,
-                styles.rowAction,
-                { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.colors.separator },
-                pressed ? { opacity: 0.7 } : null,
-              ]}
-            >
-              <Tile name="trash" tone="danger" />
-              <View style={styles.rowText}>
-                <Text
-                  style={[
-                    styles.rowLabel,
-                    { color: confirmForget ? t.colors.danger : t.colors.label },
-                  ]}
-                  maxFontSizeMultiplier={1.4}
-                >
-                  {confirmForget ? 'Forget this shift?' : 'Forget this shift'}
-                </Text>
-                <Text style={[styles.rowHint, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
-                  {confirmForget
-                    ? 'Tap again to clear what the voice remembers of this shift.'
-                    : 'Clears what the voice remembers of this shift.'}
-                </Text>
-              </View>
-            </Pressable>
-          </View>
-        </View>
-
-        <SettingsGroup title="Map" rows={mapRows} />
-        <SettingsGroup title="Device" rows={deviceRows} />
-        <SettingsGroup title="Team" rows={teamRows} />
-
-        <View style={[styles.group, { backgroundColor: t.colors.card }]}>
-          <View style={styles.row}>
-            <Tile name="phone-portrait" tone="info2" />
-            <View style={styles.rowText}>
-              <Text style={[styles.rowLabel, { color: t.colors.label }]} maxFontSizeMultiplier={1.4}>
-                Haptics
-              </Text>
-              <Text style={[styles.rowHint, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
-                The bump on a delivery, a mode and a slide.
-              </Text>
-            </View>
-            <Switch
-              value={haptics}
-              onValueChange={toggleHaptics}
-              accessibilityLabel="Haptics"
-              accessibilityHint="Turns the haptics on or off"
-              testID="settings-haptics"
-              thumbColor={t.colors.accent}
-              trackColor={{ true: t.colors.accent, false: t.colors.separator }}
-            />
-          </View>
-        </View>
-      </ScrollView>
+                {orderedGroups.filter(Boolean)}</ScrollView>
 
       {/* Audit B5: the same disclosure the drive shows before the permission
           request, opened on demand from the Legal row. */}
@@ -635,12 +703,25 @@ function Tile({ name, tone }: { name: React.ComponentProps<typeof Ionicons>['nam
   );
 }
 
+/** A window of this height or more is the tall phone (BUG-300's 1440x2560 AVD). */
+const TALL_WINDOW_DP = 700;
+
+/** The tab dock's footprint: 26 dp bottom inset + 62 dp bar (the TabBar's geometry). */
+const DOCK_DP = 26 + 62;
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  // BUG-300: the list's own frame stops above the dock, so every row a flow
+  // scrolls to is fully inside the clear viewport.
+  scroll: {
+    marginBottom: DOCK_DP,
+  },
   content: {
     paddingHorizontal: spacing.space16,
     paddingTop: spacing.space16,
-    paddingBottom: spacing.space64,
+    // BUG-300: the last rows must scroll clear of the tab dock (26 dp inset +
+    // 62 dp bar), or the large AVD's flows tap a row the dock covers.
+    paddingBottom: DOCK_DP,
     gap: spacing.space20,
   },
   title: {

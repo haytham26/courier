@@ -524,6 +524,30 @@ diff failure. The lane's environment note (a dead worktree registration released
 - NEXT: the founder's lever (b) - address resolution on STT output through the
   backend's normaliser and the Canterbury index - which is the lever the held-out
   table says moves the most (address exact 0/75 today).
+---
+
+## 2026-11-10: the BUG-300 app-side fix lands on main; the large legs' matrix stays in #289
+
+PR #289 (the BUG-270/300 restore) is blocked on the runner-level flake: its large
+legs die at a DIFFERENT flow on each attempt (import only, then import+stops+
+today-fail), always with relaunches=0 and the app state verified correct in the
+failure dump — the Maestro process itself is killed (log truncated mid-line).
+That is BUG-302 and it is not the app.
+
+So the change set splits: this PR carries the APP-SIDE fixes and their red-first
+tests to main now (proven green locally: 870 tests / 103 suites, tsc, eslint; and
+on the CI small legs + A1 on the #289 branch), and #289 keeps only the workflow
+matrix + its docs, to be merged the moment a large leg is green for a whole run.
+
+The three fixes: the session-restore bound is armed only while the server has not
+answered and cleared on every run (AuthProvider); the sheet's half level keeps
+its content inside the card on a tall window (BottomSheet, with the geometry an
+exported pure function the suites assert); the backdrop maps are hidden from the
+accessibility tree and memoised, and the settings list reorders Device/MEMORY
+under Debug on a tall window with its frame ending above the dock.
+
+BUG-300 is filed FIXED (the app-side defects and their tests); BUG-270 stays open
+on main (the matrix lives in #289).
 ## Lead session 14, started (2026-11-05): the audit of origin/main f9781fb, and the queue it sets
 
 The audit re-verified every high item on the code at `f9781fbf` and replaced the queue
