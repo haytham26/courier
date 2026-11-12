@@ -1,0 +1,349 @@
+# The founder's local stack (the 2026-11-12 directive item 1): the REAL app on
+# the founder's own PC, before the Oracle host exists.
+#
+#   bash infra/local-stack.sh up      # the tunnels, the stack, the seed, the smoke
+#   bash infra/local-stack.sh down    # stop the stack (the volumes stay)
+#
+# It is the staging stack (infra/compose.staging.yml) with four differences a PC
+# needs, and none of the differences that would matter:
+#
+#   - **The voice service is in it.** The app dials it directly
+#     (`EXPO_PUBLIC_VOICE_SERVICE_URL`), and staging's compose file has never
+#     carried it - which is why the founder's local stack does.
+#   - **The resource caps are the PC's.** The directive's §0: >16 GB of RAM
+#     means at most 5 GB and 3 CPUs for the WHOLE stack. Every service below
+#     carries its own `mem_limit` and `cpus`, and the column at the bottom of
+#     this comment adds them up so a change here cannot quietly break the cap.
+#   - **Every published port is bound to 127.0.0.1.** The only way in from
+#     outside is the founder's own HTTPS tunnels (infra/local-stack.sh), so the
+#     app on the founder's phone reaches the stack the same way a courier would
+#     reach staging.
+#   - **The database is the CI one.** `postgis/postgis:17-3.5` is the image the
+#     A1 leg (compose.ci.yml) already proves against the contract's own
+#     schema.sql - PostGIS plus pgvector, arm64 and amd64 both served, and no
+#     image build to wait for before the founder sees the app.
+#
+# What is NOT different: the same API, the same auth service, the same edge with
+# the same security headers and the same rate limits. A founder testing the app
+# on this stack is testing the app staging will serve.
+#
+# The budget (the directive's >16 GB rule, ≤5 GB and 3 CPUs):
+#   postgres 1.5G/1.0, api 768m/0.5, auth 512m/0.5, voice 768m/0.5,
+#   valkey 192m/0.25, caddy 192m/0.25  =>  3.9 GB and 3.0 CPUs.
+
+name: courier-local
+
+x-service-common: &service-common
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: '10m'
+      max-file: '3'
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  postgres:
+    # The same image the Android E2E's no-mock leg runs (infra/compose.ci.yml):
+    # PostGIS 3.5 and pgvector on PostgreSQL 17, both architectures served. The
+    # contract's schema is mounted into the entrypoint directory, exactly as
+    # staging and CI mount it.
+    image: postgis/postgis:17-3.5
+    <<: *service-common
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-courier}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-courier}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - local-postgres-data:/var/lib/postgresql/data
+      - ../packages/contracts/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      # 5433, not 5432: the lead's CI stack (infra/compose.ci.yml) is already
+      # running on this PC on the standard ports, and a second binder on 5432 is
+      # a failed stack. The tunnels' own origins (80 and 8080) are the ports that
+      # carry the founder's traffic and they are left alone.
+      - '127.0.0.1:5433:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-courier} -d ${POSTGRES_DB:-courier}']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1536m
+    networks:
+      courier:
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    <<: *service-common
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD:?VALKEY_PASSWORD is required}
+    command:
+      - sh
+      - -c
+      - valkey-server --appendonly yes --requirepass "$$VALKEY_PASSWORD" --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - local-valkey-data:/data
+    ports:
+      - '127.0.0.1:6380:6379'
+    healthcheck:
+      test: ['CMD-SHELL', 'valkey-cli -a "$$VALKEY_PASSWORD" ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 192m
+    networks:
+      courier:
+
+  api_a:
+    # The service is named `api_a` and aliased `api` because that is staging's
+    # shape (infra/compose.staging.yml): the edge's Caddyfile addresses the
+    # upstreams by those names, and a local edge that resolved different
+    # upstreams would prove something staging never runs.
+    image: ${COURIER_API_IMAGE:-courier-api:local}
+    build:
+      context: ../services/api
+      dockerfile: Dockerfile
+    <<: *service-common
+    environment:
+      APP_ENV: local
+      APP_VERSION: ${APP_VERSION:?APP_VERSION is required}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-courier}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-courier}
+      AUTH_JWKS_URL: http://auth:3001/api/auth${AUTH_JWKS_PATH:-/jwks}
+      # BUG-131: the plaintext hop on the compose network is an explicit, named
+      # decision - the same one staging and production carry.
+      AUTH_JWKS_INTERNAL_HOSTS: ${AUTH_JWKS_INTERNAL_HOSTS:-auth}
+      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
+      # The issuer is the URL the app dials: the tunnel's own hostname. The auth
+      # service signs with it and the API verifies against it, so they are one
+      # value by construction (the audit's BUG-122).
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
+      VALKEY_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
+      # BUG-230: the only Host headers the API answers. The edge forwards the
+      # tunnel's name; the healthcheck and the compose network use the rest.
+      API_ALLOWED_HOSTS: ${API_ALLOWED_HOSTS:-${COURIER_DOMAIN},api,api_a,localhost,127.0.0.1,[::1]}
+      # ADR-011: the API refuses to boot without the POD store's signing grant.
+      POD_STORAGE_BACKEND: local
+      POD_URL_SIGNING_SECRET: ${POD_URL_SIGNING_SECRET:?POD_URL_SIGNING_SECRET is required}
+      # ADR-019: the demo seed is ON. This stack exists for the founder to see
+      # the real app, and its data is disposable.
+      DEMO_SEED_ENABLED: 'true'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:8001:8000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).status == 200 else 1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 768m
+    networks:
+      courier:
+        aliases:
+          - api
+  auth_a:
+    # `auth_a`, aliased `auth`: staging's names again (see api_a above).
+    image: ${COURIER_AUTH_IMAGE:-courier-auth:local}
+    build:
+      context: ..
+      dockerfile: services/auth/Dockerfile
+    <<: *service-common
+    environment:
+      NODE_ENV: production
+      APP_VERSION: ${APP_VERSION:?APP_VERSION is required}
+      PORT: '3001'
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
+      # The URL the founder's phone dials, which is the tunnel's hostname: the
+      # tokens this service signs are the tokens the API verifies.
+      BETTER_AUTH_URL: https://${COURIER_DOMAIN:?COURIER_DOMAIN is required}
+      AUTH_DATABASE_URL: postgresql://${POSTGRES_USER:-courier}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-courier}
+      # The app's expo client sends `expo-origin: courier://` (ADR-006), and the
+      # local run uses `exp://` - both are concrete scheme entries, so they pass
+      # the BUG-134 validator.
+      AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:?AUTH_TRUSTED_ORIGINS is required}
+      AUTH_TRUSTED_IP_HEADERS: x-forwarded-for
+      AUTH_JWKS_PATH: ${AUTH_JWKS_PATH:-/jwks}
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
+      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
+      AUTH_JWT_EXPIRATION: ${AUTH_JWT_EXPIRATION:-2h}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-1000}
+      # BUG-132: the shared (database-backed) limiter store.
+      AUTH_RATE_LIMIT_STORAGE: database
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:3002:3001'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512m
+    networks:
+      courier:
+        aliases:
+          - auth
+
+  voice:
+    # The shift companion (D23). The app dials it DIRECTLY - it is not behind the
+    # edge - so its own tunnel is the second one infra/local-stack.sh starts.
+    image: ${COURIER_VOICE_IMAGE:-courier-voice:local}
+    build:
+      context: ..
+      dockerfile: infra/voice/Dockerfile
+    <<: *service-common
+    environment:
+      # The run comes from the API, on the compose network.
+      COURIER_API_BASE_URL: http://api:8000
+      # The tokens of the courier: the same auth service, the same rules
+      # (BUG-126/BUG-131). The issuer is the URL the app dials.
+      AUTH_JWKS_URL: http://auth:3001/api/auth${AUTH_JWKS_PATH:-/jwks}
+      AUTH_JWKS_INTERNAL_HOSTS: ${AUTH_JWKS_INTERNAL_HOSTS:-auth}
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
+      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
+      # No gateway: the on-device engine answers every command (the service's
+      # own README). The server brain is the founder's OmniRoute decision, not a
+      # local-stack one.
+      VOICE_LOG_LEVEL: ${VOICE_LOG_LEVEL:-info}
+    depends_on:
+      api_a:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:8080:8080'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3).status == 200 else 1)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 768m
+    networks:
+      courier:
+        aliases:
+          - voice
+
+  caddy:
+    # The edge, unchanged from staging's: the same Caddyfile, the same security
+    # headers, the same rate limits, the same 404 for /health*. What is local is
+    # the certificate - Caddy's own root CA issues it for the tunnel's hostname
+    # in seconds, exactly as it does for a VM with no public name.
+    image: ${COURIER_CADDY_IMAGE:-courier-caddy:local}
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile
+    <<: *service-common
+    environment:
+      COURIER_DOMAIN: ${COURIER_DOMAIN:?COURIER_DOMAIN is required}
+      ACME_EMAIL: ${ACME_EMAIL:-founder@courier.local}
+    ports:
+      # Bound to the loopback: the tunnels reach it, nothing else does.
+      - '127.0.0.1:80:80'
+      - '127.0.0.1:8443:443'
+    volumes:
+      # The local edge: the staging Caddyfile with the site served over HTTP,
+      # because the tunnel in front of it already terminates TLS (a 308 redirect
+      # from Caddy here would be a loop the phone could never escape). Every
+      # header, rate limit and health behaviour is staging's - see the file's own
+      # header comment.
+      - ./Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - local-caddy-data:/data
+      - local-caddy-config:/config
+      - local-caddy-logs:/var/log/caddy
+    depends_on:
+      api_a:
+        condition: service_healthy
+      auth_a:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:2019/config/']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 192m
+    networks:
+      courier:
+
+volumes:
+  local-postgres-data:
+    name: courier-local-postgres-data
+  local-valkey-data:
+    name: courier-local-valkey-data
+  local-caddy-data:
+    name: courier-local-caddy-data
+  local-caddy-config:
+    name: courier-local-caddy-config
+  local-caddy-logs:
+    name: courier-local-caddy-logs
+
+networks:
+  courier:
+    name: ${COURIER_NETWORK:-courier-local-net}
+    ipam:
+      driver: default
+      config:
+        # 172.30, so the local stack can run beside CI's (default), staging's
+        # (172.29) and production's (172.28): Docker refuses an overlap.
+        #
+        # There are no per-service static addresses here, and that is the one
+        # structural difference from staging's compose file: the auth service's
+        # own migration runs as a ONE-OFF container from the same service
+        # definition (`compose run --no-deps auth_a`, infra/deploy.sh's
+        # migrate_auth), and a service that owns a fixed address cannot spawn a
+        # second container on it - the run fails with "Address already in use"
+        # and reads like a broken network. Every service here is reached by its
+        # compose name (api_a, auth_a, voice) or its alias (api, auth), exactly
+        # as the Caddyfile addresses them, so nothing needs a fixed address.
+        - subnet: 172.30.0.0/24

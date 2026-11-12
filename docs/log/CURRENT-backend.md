@@ -1,3 +1,42 @@
+## 2026-11-12: THE FOUNDER'S LOCAL SERVER IS UP — the real app, on HTTPS, on this PC (BUG-284) + the smoke test's own day (BUG-285)
+
+The founder's directive of 2026-11-12, item 1: **a local server so the founder sees the real app NOW, before the Oracle host exists.** It is running, and this entry is the announcement the directive asks for.
+
+**THE THREE URLS (what the app reads):**
+
+| Build setting | Value |
+|---|---|
+| `EXPO_PUBLIC_API_URL` | `https://cayman-features-folding-permit.trycloudflare.com` |
+| `EXPO_PUBLIC_AUTH_URL` | `https://cayman-features-folding-permit.trycloudflare.com/api/auth` |
+| `EXPO_PUBLIC_VOICE_SERVICE_URL` | `https://farming-advise-friend-wild.trycloudflare.com` |
+
+**The sign-in:** the account is seeded (`founder@courier.local`) and its generated password is in **`.local-founder-login.txt`** — git-ignored and `chmod 600`, and that file is the only place the password exists (never in the log, never in git, never in a command line). The day is seeded through the app's own demo seed (ADR-019): one Christchurch run, five stops — real Canterbury addresses near the Hornby depot — with a planned break, a priority stop (8 Smith Street, Papanui), a delivery window (45 Papanui Road, 08:00–10:00 UTC today) and a pickup.
+
+**The smoke test against the live edge** (`infra/smoke.sh --domain <the tunnel> --port 443 --no-version --token <the founder's JWT>`): **7/7 PASS** — the edge answers TLS (404 for `/health*`, by design), the deployed version (`local-8ae5472`), the seed needs a token (401 anonymous), the demo seed (200), the seeded run reads back (200), the seeded stops read back (200), and the health endpoint is not public (404).
+
+**The commands:** `bash infra/local-stack.sh up` (tunnels → build → stack → the seed → the smoke test) · `status` (what is running, at which URLs) · `smoke` (the smoke test again, live) · `down` (stop the stack; the database volume stays).
+
+**The ports** — all bound to `127.0.0.1`, and the debug ones deliberately NOT the standard ones because the lead's CI stack may be running on the same PC (it was): `80`/`8443` the edge, `8001` the API, `3002` the auth service, `8080` Courier Voice (the second tunnel's origin), `5433` Postgres, `6380` Valkey.
+
+**What the stack is:** the same API, the same auth service, the same PostGIS + pgvector database with the contract's own schema, the same Courier Voice service and the same Caddy edge — the same security headers, the same rate limits, the same 404 for `/health*` — that staging runs. The one difference at the edge is that Caddy serves the site over HTTP, because the Cloudflare tunnel in front of it already terminates TLS (`infra/Caddyfile.local`'s header says why: a 308 redirect there is a loop the phone can never escape). The standing procedure, the ports and the licences are in **`docs/operations/LOCAL_SERVER.md`**.
+
+**The tunnels, and their verification:** `infra/cloudflared.sh` downloads **cloudflared 2026.10.7** from Cloudflare's own release and proves it before a byte runs — the file's sha256 is the pinned identity (`2493dbc1…`) and Windows' own read of the Authenticode signature says **Valid, signed by Cloudflare, Inc.** Two tunnels, because the app dials the voice service directly, and putting it behind the edge would split one `/v1` prefix across two services. cloudflared is Apache-2.0; it is the founder's testing tool and is not shipped in the app, so its licence is recorded here and in LOCAL_SERVER.md (the licence gate reads the mobile app's pnpm closure).
+
+**The PC's budget (the directive's section 0), measured once:** **39.6 GB RAM, 14 cores / 20 threads, 51.3% free** — so the >16 GB rule allows the stack 5 GB and 3 CPUs. Every service in `infra/compose.local.yml` carries its own `mem_limit` and `cpus` (3.9 GB / 3.0 CPUs in total, added up in the file's header), and `C:\Users\DCL\.wslconfig` was raised from 3 GB/2 CPUs to **5 GB/3 CPUs** (the previous file kept at `infra/local/wslconfig.backup-2026-11-12`), applied after `wsl --shutdown` — which also stopped Docker — before the stack started. The heavy-job lock was taken for the build and the start and released the moment the stack was up: **the running stack does not hold it**, so the lead can build the app and run BlueStacks while the founder tests. The long eval jobs (routing, VROOM, mutation) are not run while this stack serves.
+
+**What the first runs taught us, all fixed:**
+1. **The auth service's own tables are a second migration.** Better Auth creates them with its own CLI and the contract's `schema.sql` does not carry them (`services/auth/src/migrate.config.ts`). The local stack now runs the same command `infra/deploy.sh` runs on the staging host, in the same order — database, migration, then the services — because Better Auth checks its schema at boot and a container started before its tables exist holds that verdict for its whole life (sign-up answered 500 with a log that said nothing).
+2. **The service names are staging's.** The edge's Caddyfile addresses `api_a`/`auth_a`, so the local stack's services are named that and aliased `api`/`auth`; a local edge that resolved different upstreams would prove something staging never runs.
+3. **Sign-in has a budget, and behind the edge it is shared.** `/sign-in/email` is 10 requests per 15 minutes per IP (`services/auth/src/config.ts`), and the client IP cannot be resolved through the edge, so every request shares one bucket per path. The seed reuses a cached JWT, honours `Retry-After` on a 429, and never signs in twice when a token still answers — the founder's own sign-ins keep their budget.
+4. **The token the API takes is a JWT, and the sign-in's token is not one.** Better Auth's session token is opaque; `POST /demo/runs` with it answers 401. The `jwt()` plugin mints a JWT from the session cookie at `GET /api/auth/token`, so the seed is two calls.
+5. **BUG-285 (a real bug, found here):** `infra/smoke.sh` seeded the demo day with `{"reason":"staging"}` — a value the API refuses with 422 — so **the deploy's own authenticated smoke leg could never pass anywhere**, and the first staging deploy would have rolled back a good deployment. Fixed with a new reason, `smoke`, in the API's vocabulary (the deploy's own caller, so it never collides with the E2E job's day or the founder's phone), plus two tests. The other three checks of the smoke test were green before it.
+
+**A quick tunnel's URL changes on every restart:** re-run `up` (or read `status`) and re-announce. The stack is recreated with the new name, and an app build pointed at the old one would dial a dead host. To stop it cleanly: `bash infra/local-stack.sh down`.
+
+**Item 1's next step (the founder's directive item 4):** with the local server reachable, the Main APK workflow can build an APK that points at it — see the FOUNDER_TODO row added below for the repository variables that need setting, and the note that the URLs are a quick tunnel's.
+
+Skills: ci-cd-and-automation (the compose stack, the two scripts, the workflow), security-and-hardening (the verified cloudflared, the generated password's single home, the loopback binds, the auth migration, the JWT), constraint-driven-development (the resource caps and the smoke test as the gate, never lowered — the smoke test's failure is what found BUG-285), documentation-and-adrs (LOCAL_SERVER.md and this log).
+
 ## 2026-11-11: the Oracle staging is the founder's FIRST (no local server) — the guide, the bootstrap, and the SBOM (BUG-283)
 
 The founder's decision of 2026-11-11: **no local server; the Oracle Cloud machine comes today or tomorrow, so "LAST: Oracle staging" is now FIRST.** What that changed in our lane, in order:
