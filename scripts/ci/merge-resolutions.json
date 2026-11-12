@@ -158,9 +158,17 @@
     {
       "merge": "88764fc9",
       "paths": [
-        "docs/log/CURRENT.md"
+        "docs/log/CURRENT.md",
+        "docs/status/BUGS.md"
       ],
-      "reason": "both sides' log entries kept: the branch carried the BUG-305 entry (2026-11-11) and main carried the 2026-11-12 directive's headers plus the QA-evidence entry (PR #307/#309); the merged file holds the directive headers, PART A, the driver-app PARITY list and every lane entry from both sides (verified: 2018 lines, the directive header, the BUG-305 entry, the emulator one-liner and the PR #300/#307 entries all present). Recorded after the merge because the resolution happened while bringing main into the branch, and §13.0 requires the record before the ritual is complete."
+      "reason": "verified: both sides kept in both files. CURRENT.md carries the directive headers, PART A, the driver-app PARITY list AND every lane entry from both sides (2018 lines; the directive header, the BUG-305 entry, the emulator one-liner and the PR #300/#307 entries all present). BUGS.md carries every register row from both sides with the footer recounted (256 rows). Recorded after the merge because the resolution happened while bringing main into the branch, and §13.0 requires the record before the ritual is complete."
+    },
+    {
+      "merge": "db7d3dc6",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "the branch's own merge of origin/main (inside PR #306): the register's rows from both sides kept, the footer recounted (256 rows). The same resolution carries into the merge 88764fc9 that brings it to main."
     }
   ]
 }
