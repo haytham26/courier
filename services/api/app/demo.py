@@ -33,7 +33,19 @@ from .repo import RouteStopRow, RunRecord
 
 #: The one reason per day: which demo day a caller is seeding. A fixed, small
 #: vocabulary keeps callers from overwriting each other's day.
-DEMO_REASONS: tuple[str, ...] = ("e2e", "demo", "dev")
+#:
+#: BUG-285: `smoke` is the deploy's own caller. The deploy's smoke test seeds a
+#: day to prove the deployment can hold a courier's run (infra/smoke.sh's
+#: authenticated leg), and before this reason existed the smoke test asked for
+#: `staging` - a value the API refused with 422, so the deploy's own smoke test
+#: could never pass its authenticated leg and every deploy ended in a rollback.
+#: The other three reasons were no answer either: `e2e` is the E2E job's day and
+#: `demo` is the founder's phone, and a caller that shares a reason with another
+#: caller is answered with the same 409 the second seed of the same day gets -
+#: so the smoke test would fail whenever one of them had seeded first. The ids
+#: are derived from the reason, so this is a new day by construction and not a
+#: change to any existing one.
+DEMO_REASONS: tuple[str, ...] = ("e2e", "demo", "dev", "smoke")
 
 #: How many stops the demo day carries: three to deliver, one to go offline with,
 #: and one left over.

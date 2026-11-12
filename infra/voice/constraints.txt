@@ -1,0 +1,7 @@
+# The constraint the voice service's own lockfile declares (its `[tool.uv]
+# constraint-dependencies`): the audit's security patch for a transitive
+# dependency, PYSEC-2026-4320 in certifi. The local stack's image installs the
+# service with pip (infra/voice/Dockerfile), and pip does not read uv's
+# constraint section - so the same pin is carried here instead of dropped.
+# A local stack is not a reason to build the unpatched one.
+certifi>=2026.10.19

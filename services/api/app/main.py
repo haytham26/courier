@@ -545,9 +545,14 @@ def healthz():
 
 
 class DemoSeedRequest(BaseModel):
-    """The one reason this caller wants a demo day for."""
+    """The one reason this caller wants a demo day for.
 
-    reason: Literal["e2e", "demo", "dev"] = "e2e"
+    The vocabulary is `DEMO_REASONS` (app/demo.py): e2e, demo, dev and - since
+    BUG-285 - smoke, the deploy's own caller, whose day is derived from its own
+    reason so it never collides with the founder's phone or the E2E job.
+    """
+
+    reason: Literal["e2e", "demo", "dev", "smoke"] = "e2e"
 
 
 @app.post("/demo/runs", response_model=DemoRunResponse)

@@ -217,7 +217,7 @@ fi
 # This check runs always - it is the one an unauthenticated smoke test can still
 # prove, and a stack that seeds for anyone is a stack that is not safe.
 if ! check "the seed needs a token" "$BASE/demo/runs" 401 -k -X POST \
-  -H 'Content-Type: application/json' -d '{"reason":"staging"}'; then
+  -H 'Content-Type: application/json' -d '{"reason":"smoke"}'; then
   die "the seed endpoint answered 200 to an anonymous caller: the deploy is not safe"
 fi
 
@@ -232,7 +232,7 @@ else
   SEED_FILE="$EVIDENCE_DIR/seed.json"
   SEED_STATUS="$(curl -sS -o "$SEED_FILE" -w '%{http_code}' --max-time 20 -k -X POST \
     -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-    -d '{"reason":"staging"}' "$BASE/demo/runs" || echo 000)"
+    -d '{"reason":"smoke"}' "$BASE/demo/runs" || echo 000)"
   CHECKS=$((CHECKS + 1))
   if [ "$SEED_STATUS" = "200" ]; then
     PASSED=$((PASSED + 1))

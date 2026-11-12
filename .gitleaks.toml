@@ -25,6 +25,22 @@ regexes = [
   # The generic-api-key rule reads the argument after a `*_SECRET` constant as
   # the secret itself; this one is a TTL (and the call is one arg per line now).
   '''ttl_seconds=-1''',
+  # The Canterbury street index's own integrity field
+  # (packages/eval/voice/data/canterbury-streets.json): a sha256 of the LINZ
+  # road KEYS, which are normalised public road names, computed at build time
+  # so a rebuild of the index can be verified. It is not a credential - the
+  # generic-api-key rule matches it because a 64-hex string has the entropy a
+  # random key has. The field is named roads_sha256 in the tree now (the
+  # lane renames it in its second commit); the allowlist entry is needed
+  # because the gate scans the PR RANGE, where the first commit still carries
+  # the old spelling, and history cannot be rewritten.
+  '''"sha256_of_keys"''',
+  # ...and the VALUE itself: the `regexTarget = "secret"` above means gitleaks
+  # matches the allowlist against the SECRET text, not the key that carries it,
+  # so the entry has to name the hash. It is the sha256 of the LINZ road KEYS
+  # (normalised public road names) that build-street-index.mjs records as the
+  # index's integrity field, computed at build time so a rebuild is verified.
+  '''fde3aad06575d76b1b5a7f7ed488857520251b4c3e58d99a31b969a26df60a3d''',
   # The auth client's token test: two hand-written stand-ins for Better Auth's
   # session token and for the bearer token the auth service mints. They are
   # fixtures for a test that asserts WHICH of the two values the app sends to

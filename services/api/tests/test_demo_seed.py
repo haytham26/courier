@@ -106,6 +106,31 @@ class TestTheSeedEndpoint:
 
         assert demo["run_id"] != e2e["run_id"]
 
+    def test_the_smoke_reason_is_its_own_day(
+        self, client: TestClient, repo: InMemoryRepo, seeded: None
+    ) -> None:
+        """BUG-285: the deploy's smoke test seeds with reason `smoke`.
+
+        The deploy's authenticated leg proves the deployment can hold a
+        courier's run, and it must not land on the founder's phone's day
+        (`demo`) or the E2E job's (`e2e`): a caller that shares a reason with
+        another is answered with the same 409 the second seed of one day gets,
+        so a shared reason would fail the deploy whenever one of them had seeded
+        first. The ids are derived from the reason, so this is a new day by
+        construction.
+        """
+        e2e = client.post(PATH, json=a_seed("e2e")).json()
+
+        demo = client.post(PATH, json=a_seed("demo")).json()
+
+        smoke = client.post(PATH, json=a_seed("smoke")).json()
+
+        assert smoke["run_id"] not in (e2e["run_id"], demo["run_id"])
+        assert smoke["stops"][0]["id"] == str(demo_stop_id(COURIER, "smoke", 0))
+        # And the day is stable: the smoke test runs on every deploy, and the
+        # second run of the same reason must not be a new day.
+        assert client.post(PATH, json=a_seed("smoke")).json() == smoke
+
     def test_one_reason_is_enough(
         self, client: TestClient, repo: InMemoryRepo, seeded: None
     ) -> None:
@@ -193,7 +218,10 @@ class TestTheGate:
 
 class TestTheVocabulary:
     def test_the_reasons_are_a_small_fixed_set(self, seeded: None) -> None:
-        assert DEMO_REASONS == ("e2e", "demo", "dev")
+        # BUG-285: `smoke` is the deploy's own caller. It was absent before that
+        # fix, which is why the deploy's authenticated smoke leg could never
+        # pass (it asked for `staging`, a value the API refuses with 422).
+        assert DEMO_REASONS == ("e2e", "demo", "dev", "smoke")
 
 
 class TestTheRaceWithOneself:
