@@ -51,13 +51,15 @@ HELD_OUT_LIST = REPO / "packages/eval/voice/manifest/heldout_streets.json"
 NZ_ADDRESS_CONSTANTS = REPO / "packages/nz-address/src/constants.ts"
 
 
-def _vocabulary_of(path: Path) -> set[str]:
+def _vocabulary_of(path: str | None) -> set[str]:
     """Every string literal and every identifier the resolver's code carries.
 
     Read through the AST rather than the raw text, so the claim is about the
     VOCABULARY - the words the matcher could be fitted with - and not about
     the prose of a docstring that happens to name a street in an example.
     """
+    if path is None:
+        return set()
     tree = ast.parse(Path(path).read_text(encoding="utf-8"))
     docstrings = {
         id(statement.value)

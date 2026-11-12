@@ -127,9 +127,7 @@ class TestTheBuild:
             "text": "加一个地址 57",
             "gold_slots": {"raw_address": "x"},
         }
-        rows = build_address_audio(
-            [script], root=Path(), beds=[], keys=set(), engine=FakeEngine()
-        )
+        rows = build_address_audio([script], root=Path(), beds=[], keys=set(), engine=FakeEngine())
         assert rows[0]["status"] == "not synthesised"
         assert "Mandarin" in rows[0]["reason"]
         assert "zh" not in VOICED_SLICES

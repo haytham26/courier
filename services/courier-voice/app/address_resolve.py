@@ -710,7 +710,7 @@ def resolve(text: str, index: StreetIndex) -> ResolvedAddress | None:
     aitken street") and occasionally the first letter of the street name.
     """
     best: ResolvedAddress | None = None
-    best_rank = (-1.0, -1.0, 0)
+    best_rank: tuple[float, float, int] = (-1.0, 0, 0)
     for fixes in (True, False):
         answer = _resolve_tokens(_tokens_of(text, fixes), index)
         if answer is not None and _rank(answer, index) > best_rank:
@@ -743,7 +743,7 @@ def _resolve_tokens(tokens: list[str], index: StreetIndex) -> ResolvedAddress | 
     if not tokens:
         return None
     best: ResolvedAddress | None = None
-    best_rank = (-1.0, -1.0, 0)
+    best_rank: tuple[float, int, float, int] = (-1.0, 0, -1.0, 0)
     for at, token in enumerate(tokens):
         if not _starts_a_number(token):
             continue
