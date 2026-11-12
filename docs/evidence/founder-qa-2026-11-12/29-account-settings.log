@@ -1,0 +1,4 @@
+--------- beginning of main
+11-12 13:27:25.739  3444  3444 E EGL_emulation: eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+11-12 13:27:25.739  3444  3444 E EGL_emulation: tid 3444: eglQueryContext(2349): error 0x3004 (EGL_BAD_ATTRIBUTE)
+11-12 13:27:25.744  3444  3444 E Surface : getSlotFromBufferLocked: unknown buffer: 0x4288000042820100
