@@ -1,4 +1,4 @@
-﻿name: Android E2E (emulator + Maestro)
+name: Android E2E (emulator + Maestro)
 
 # MASTER_EXECUTION P1: the pipeline is built at the root, not patched.
 #  - triggers: PRs to main, nightly and manual only (no push: every push used
@@ -122,7 +122,7 @@ jobs:
       e2e: ${{ steps.diff.outputs.e2e }}
       a1: ${{ steps.diff.outputs.a1 }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The base sha is a commit that only exists in the repository, so the
           # whole history is fetched; a shallow clone answers "unknown revision"
@@ -203,7 +203,7 @@ jobs:
     outputs:
       apk-sha: ${{ steps.hash.outputs.sha }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
@@ -311,7 +311,7 @@ jobs:
       matrix:
         api: [34, 35]
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
@@ -624,7 +624,7 @@ jobs:
       VIEW: ${{ matrix.view }}
       FONT_SCALE: ${{ matrix.font }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
@@ -716,7 +716,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
