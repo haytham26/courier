@@ -1,3 +1,30 @@
+## 2026-11-12 (later still): VROOM 1.15.0 RUNS — the pinned image is built and the engine is the eval's fourth measured baseline (BUG-291)
+
+**Directive item 5's VROOM half, first half done.** ADR-030's recorded gap is closed in the tooling:
+
+- **The pinned image exists and the engine runs.** `infra/eval/vroom/Dockerfile` builds VROOM 1.15.0 from its
+  own tag and proves it at the end of the build (`vroom --version` must answer 1.15.0). The base is Ubuntu
+  24.04 by digest, and the reason is recorded in the file's header: Debian bookworm's GCC 12 cannot compile
+  VROOM (`<format>`, GCC 13+) — the first build attempt failed exactly there. The earlier gap's stated
+  cause ("no Rust toolchain") was wrong: VROOM is C++, and the actual obstacle is that its release
+  publishes no prebuilt binary at all.
+- **The runner measures it.** `scripts/eval/run-routing-eval.py` gains `run_vroom`, writing the instance in
+  the OR-Tools baseline's shape (one vehicle, capacity, the road matrix as the arc durations, the windows
+  as offsets from the run's start) so all four engines are measured with ONE stick, and reading the answer
+  back through the same pool-index mapping. A first short run over the 30-stop instances measures the
+  engine on the days it can plan (the `brk` variants) and reports the rest as **unplanned** — the `full`
+  variants (the ones with a finish point) leave 28–29 of 30 stops placed, and an engine that does not plan
+  feasibly does not set the bar. That is the eval's own rule, applied honestly rather than measuring a
+  partial order.
+- **Three real defects the wiring found and fixed:** VROOM's CLI has no stdin form (`-i -` answers "Can't
+  read file: -", so the document is a bind-mounted file), its vehicle keys are `start_index`/`end_index`
+  (a uint, not a coordinate array — "Invalid start array" was its way of saying so), and the runner's
+  summary crashed with a KeyError when no engine planned at all.
+- **What remains:** the full 144-instance re-measure with VROOM in the set, then the numbers in ADR-030
+  and FINAL_REPORT are re-derived and re-pasted with the co-primary actually measured. **That run is
+  scheduled for when the founder's local server is stopped** — the directive's resource rule keeps a long
+  eval off a PC the founder is testing on, so it waits rather than competing with him.
+
 ## 2026-11-12 (later still): the founder's item 4 — the APK the founder can install (BUG-289), and the one blocker left
 
 The founder's directive item 4: **the releases list is empty and
