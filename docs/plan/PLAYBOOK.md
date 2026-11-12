@@ -130,6 +130,11 @@ the PR is re-merged.
    - If a path is listed, `git checkout origin/main -- <path>` and amend the merge before pushing (the merge is not yet pushed, so this is allowed).
    - If the merge shows unexpected deletions while still in progress: `git merge --abort` and start again from the right branch.
 4. **The PR diff is read before merging:** `git diff --stat origin/main...origin/<branch>` lists only files the PR owns. A backend path in a mobile PR (or the reverse) blocks the merge.
+5. **A new BUG or D number is the highest across origin/main AND every branch on origin, plus one** (founder directive 2026-11-03). Reading main alone is not enough: a number is taken the moment any branch on origin carries it. On 2026-11-03 two collisions came from a main-only check (the lead's BUG-168..170 against main's, then the backend's BUG-171 against the lead's branch).
+   - Before you write a new row: `git fetch origin --prune`, then `node scripts/ci/next-number.mjs`. Take the number it prints.
+   - Push the branch with the new row soon after you take the number, so the other session's next run of the script sees it.
+   - A range the founder or the manager reserves for a session (for example "the lead has BUG-182..185, the backend starts at BUG-186") wins over the script until that range is used.
+   - After every merge of main into a branch, run `node scripts/ci/check-parity.mjs --base origin/main`. If one of your rows now shares a number with a row on main, renumber **your** row (never main's) with the script's next number, and change every reference to it on the branch.
 
 ## 14. A test must prove what its name says (founder directive 2026-10-25)
 
