@@ -72,15 +72,27 @@ where a feasible plan exists; solve p95 under 3 seconds at 150 stops on the CI r
 | solve p95 < 3s at 150 stops on the CI runner | < 3.000s | **2.907s** (median 1.986s) | MET |
 
 Per size (average / worst): 30 stops 0.21% / 4.55%; 80 stops 0.69% / 4.94%; 150 stops 1.51% / 3.69%; 250 stops 0.85% / 1.93%.
-The engines that could NOT run here: **VROOM 1.15.0** - no Rust toolchain on the
-machine that built the set, and the PyPI `vroom` package is a stale product of the same
-name (1.0.2, unrelated). The research doc's co-primary is therefore **NOT confirmed by
-this measurement**: the baseline is the best of the two engines that could run, and the
-VROOM run is a recorded open item (with its licence already cleared) for a machine that
-has cargo. Break planning, which PyVRP cannot model (Enterprise-only), is handled by
-the core's own scored placement and measured identically for every engine - the gap the
-directive allowed us to record is recorded here and closed in the model, not in the
-solver.
+The engines that could NOT run here at the time of the measurement: **VROOM 1.15.0**.
+That gap is now CLOSED in the tooling, and the remaining step is a measurement, not a
+build: `infra/eval/vroom/Dockerfile` builds VROOM 1.15.0 from its own tag in a pinned
+image (the release publishes no prebuilt binary, and the wiki's build needs GCC 13+ for
+`<format>` — the image is Ubuntu 24.04, pinned by digest; the first attempt on Debian
+bookworm failed the compile with `fatal error: format`, which is recorded in the
+Dockerfile's header rather than left to be rediscovered). The engine runs and is
+wired into the runner as its fourth measured engine (`scripts/eval/run-routing-eval.py`,
+`--engines ours,pyvrp-long,ortools,vroom`), writing the instance in the same shape the
+OR-Tools baseline uses — one vehicle, the capacity, the road matrix as the arc
+durations, the windows as offsets from the run's start — so all engines are measured
+with one stick. A first short run (the 30-stop instances) shows the engine works and
+is honest about what it cannot do: on the `full` variants (the ones with a finish
+point) it leaves 28–29 of 30 stops placed and the runner reports the day as NOT
+planned rather than measuring a partial order, which is the eval's own rule — an
+engine that does not plan feasibly does not set the bar. **The full 144-instance
+re-measure with VROOM in the set is the open item**, scheduled for when the founder's
+local server is stopped (the directive's rule about long eval jobs), and the numbers
+above will be re-derived and re-pasted with VROOM in the baseline when it runs. The
+baseline is still the best of the engines that were measured, so nothing above is
+overstated meanwhile.
 
 ## Decision
 
