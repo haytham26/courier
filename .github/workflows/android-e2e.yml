@@ -1,4 +1,4 @@
-﻿name: Android E2E (emulator + Maestro)
+name: Android E2E (emulator + Maestro)
 
 # MASTER_EXECUTION P1: the pipeline is built at the root, not patched.
 #  - triggers: PRs to main, nightly and manual only (no push: every push used
@@ -213,7 +213,7 @@ jobs:
           version: 12.14.0
 
       - name: Set up Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 24
           cache: pnpm
@@ -759,7 +759,7 @@ jobs:
           version: 12.14.0
 
       - name: Set up Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 24
           cache: pnpm
