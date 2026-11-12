@@ -11,7 +11,7 @@
  * light/dark truth the screen reads (the legacy day/night selector is gone).
  */
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ChosenProvider } from '@/components/chosen';
@@ -266,6 +266,21 @@ describe('the map screen', () => {
 
       expect(screen.queryByTestId('map-theme-day')).toBeNull();
       expect(screen.queryByTestId('map-theme-night')).toBeNull();
+    });
+  });
+
+  describe('the pack state on the map screen (A6)', () => {
+    it('carries the pack\u2019s own state on the map screen, without opening the sheet', async () => {
+      await renderScreen();
+
+      const row = screen.getByTestId('map-pack-status');
+      expect(row).toBeTruthy();
+      expect(screen.getByText(/No map tiles: the stops are still here/)).toBeTruthy();
+      // The claim is PLACEMENT: the row is a child of the map screen itself, not of
+      // the settings sheet, so the accessibility tree carries it with the sheet
+      // closed - which is why the flow could not see it on the device before.
+      const screenNode = screen.getByTestId('map-screen');
+      expect(within(screenNode).queryByTestId('map-pack-status')).toBeTruthy();
     });
   });
 

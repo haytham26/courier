@@ -561,7 +561,6 @@ export default function MapScreen() {
         </Text>
       ) : null}
 
-      {offlineRowNode}
     </View>
   );
 
@@ -623,6 +622,14 @@ export default function MapScreen() {
           </MapButtonColumn>
         </View>
 
+        {/* A6 (QA steps 02, 04 and 34): the pack's own state is on the MAP SCREEN,
+            not inside the settings sheet - a courier looking at a grey background has
+            to be told why without opening anything. The accessibility tree carries it
+            with the sheet closed, which is what the flow asserts. */}
+        <View style={styles.packStatusRow}>
+          {offlineRowNode}
+        </View>
+
         <View style={styles.attribution} pointerEvents="none" testID="map-attribution">
           {ATTRIBUTION_LINES.map((line) => (
             <Text
@@ -642,9 +649,9 @@ export default function MapScreen() {
         bottomInset={SHEET_INSET}
         testID="map-sheet"
       >
-        {sheetHeight === 'peek' ? (
-          <View style={styles.peekContent}>{offlineRowNode}</View>
-        ) : (
+        {/* A6: the pack's own state is on the MAP SCREEN now, so the sheet at peek
+            carries nothing of it - one node, one testID, one place to read it. */}
+        {sheetHeight === 'peek' ? null : (
           <ScrollView
             style={styles.sheetScroll}
             contentContainerStyle={styles.sheetScrollContent}
@@ -686,6 +693,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: spacing.space16,
     top: spacing.space64,
+  },
+  // The pack state row on the map screen: above the attribution, below the map
+  // buttons, so the courier reads it without the sheet.
+  packStatusRow: {
+    position: 'absolute',
+    left: spacing.space12,
+    right: spacing.space12,
+    bottom: spacing.space48 + spacing.space24,
   },
   attribution: {
     position: 'absolute',
