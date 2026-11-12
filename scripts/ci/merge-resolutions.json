@@ -154,6 +154,13 @@
         "docs/status/TRIAL_SCOPE.md"
       ],
       "reason": "verified: the PR side's BUGS.md footer was STALE (211/169 from an older branch point) and the merge kept the newer count already in the merge base (212/170) — a supersede, not a loss; the CURRENT.md header line belonged to the newer main side; TRIAL_SCOPE.md was a hand resolution"
+    },
+    {
+      "merge": "88764fc9",
+      "paths": [
+        "docs/log/CURRENT.md"
+      ],
+      "reason": "both sides' log entries kept: the branch carried the BUG-305 entry (2026-11-11) and main carried the 2026-11-12 directive's headers plus the QA-evidence entry (PR #307/#309); the merged file holds the directive headers, PART A, the driver-app PARITY list and every lane entry from both sides (verified: 2018 lines, the directive header, the BUG-305 entry, the emulator one-liner and the PR #300/#307 entries all present). Recorded after the merge because the resolution happened while bringing main into the branch, and §13.0 requires the record before the ritual is complete."
     }
   ]
 }
