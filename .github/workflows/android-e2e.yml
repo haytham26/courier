@@ -1,4 +1,4 @@
-﻿name: Android E2E (emulator + Maestro)
+name: Android E2E (emulator + Maestro)
 
 # MASTER_EXECUTION P1: the pipeline is built at the root, not patched.
 #  - triggers: PRs to main, nightly and manual only (no push: every push used
@@ -349,7 +349,7 @@ jobs:
             echo "::notice::attempt 2: the job summary asks for the justification, and attempt 3 will fail by design."
           fi
       - name: Download the APK
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: courier-release-apk
           path: apk
@@ -629,7 +629,7 @@ jobs:
           persist-credentials: false
 
       - name: Download the APK
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: courier-release-apk
           path: apk
