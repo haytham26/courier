@@ -147,7 +147,10 @@ test('the manifest records the seed, the counts and the pool the addresses came 
   assert.equal(manifest.pool.stops, 560);
   assert.equal(
     manifest.pool.sha256,
-    createHash('sha256').update(readFileSync(POOL)).digest('hex'),
+    // The same normalisation the builder records with: the pin is over the
+    // file's content, not over the checkout's line endings (which differ per
+    // platform).
+    createHash('sha256').update(readFileSync(POOL, 'utf8').replace(/\r\n/g, '\n')).digest('hex'),
     'the pool the set was drawn from is recorded by its own sha256',
   );
   const total = (name) =>

@@ -21,7 +21,7 @@
  },
  "pool": {
   "file": "packages/eval/routing/manifest/pool.json",
-  "sha256": "f5548057dffda8297f4e3fe149ce4d17f7ba81c49f57875c0beaebd2ed8b5427",
+  "sha256": "aa11eeb2cb43c4192cba5a49e44c155dcc86c4c80bcf2b5beb15c7652c9fcae9",
   "stops": 560,
   "source": {
    "what": "LINZ Data Service WFS, layer 123113 (NZ Addresses), fetched 2026-11-09",

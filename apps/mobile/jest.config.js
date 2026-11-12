@@ -42,7 +42,12 @@ module.exports = {
     // removed:
     //   docker compose -f infra/compose.ci.yml up -d --wait
     //   cd apps/mobile && node_modules/.bin/jest.cmd src/run/__tests__/scaleStackSync.test.ts
-    '<rootDir>/src/run/__tests__/scaleStackSync.test.ts',
+    // A regex over the FILE NAME, not over a rooted path: `<rootDir>` expands
+    // with the platform's own separator, so a pattern spelled with forward
+    // slashes matched the Linux runners and never a Windows worktree - the leg
+    // ran in the default suite there and failed loudly with no stack up, which
+    // is the opposite of what the entry is for.
+    'scaleStackSync\\.test\\.ts',
   ],
   collectCoverageFrom: ['src/**/*.{ts,tsx}', 'app/**/*.{ts,tsx}'],
 };

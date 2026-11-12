@@ -46,6 +46,17 @@ const flag = (name, fallback) => {
   return index >= 0 && args[index + 1] ? args[index + 1] : fallback;
 };
 
+/**
+ * The sha256 of a file's CONTENT, with the line endings normalised to LF.
+ *
+ * A manifest recorded on a Windows worktree (core.autocrlf writes CRLF into the
+ * checkout) must equal the one recorded on the Linux runners, or the pin
+ * differs per platform and the set fails wherever it was not built.
+ */
+function contentSha256(path) {
+  return createHash('sha256').update(readFileSync(path, 'utf8').replace(/\r\n/g, '\n')).digest('hex');
+}
+
 /** The seed of the whole set: one number, recorded in the manifest. */
 const SEED = 20261111;
 
@@ -386,7 +397,12 @@ function main() {
     ),
     pool: {
       file: 'packages/eval/routing/manifest/pool.json',
-      sha256: createHash('sha256').update(readFileSync(POOL)).digest('hex'),
+      // The pool's own hash, taken over its CONTENT with the line endings
+      // normalised: the checked-out file carries CRLF on a Windows worktree
+      // and LF on the Linux runners, and the manifest is one record - a pin
+      // taken over the checkout would differ per platform and fail the set on
+      // the other one.
+      sha256: contentSha256(POOL),
       stops: pool.length,
       source: rawSource(POOL),
     },
