@@ -1,3 +1,34 @@
+## 2026-11-13 (the close-out): VROOM is merged, the queue is clear, the watcher runs on
+
+**The day's last merges.** VROOM 1.15.0 (BUG-291, #334): the pinned image builds, the engine runs, and the
+eval measures it as its fourth baseline — the research doc's co-primary is no longer a recorded gap. The
+full 144-instance re-measure is the remaining step, and it is deliberately scheduled for when the
+founder's local server is stopped (the directive's resource rule keeps a long eval off a machine the
+founder is testing on). Also merged: the next-BUG-number tool (#182), which takes the number across
+**every origin branch** rather than main alone — it reports `BUG-308` and `D70` as today's free numbers.
+
+**Two stale PRs closed with their reasons, not silently:** #197 (a two-line historical log entry about
+#194's merge, already superseded by many merges) and #182's earlier duplicate dance. The only open PRs in
+the repository now are the lead's four (their lane: `ci/bug270-restore`, `voice/address-resolution`,
+`fix/qa-2026-11-12-a3-a11`, `offline/shifts`) and the Dependabot queue, whose green ones become eligible
+on **2026-11-14** (the 7-day cooldown) and whose five red ones carry their reasons in the triage note.
+
+**The lead's asks are all closed and answered on their PRs:** 2a (the road polyline, #325), 2b (locked
+stops, #318), 2c (email sign-in end to end against the local server — the smoke test's authenticated leg
+passes 7/7 over HTTPS), and the gitleaks question on #308 (both `no secrets in git` legs are green on its
+head; the allowlist carries the digest AND the old field name, because `regexTarget = "secret"` matches
+the secret text rather than the key that carries it).
+
+**The founder's server is still running** — all six services healthy, ~45% of the PC's RAM free — with the
+URLs, the commands and the password's location in the standing summary above and in
+`docs/operations/LOCAL_SERVER.md`.
+
+**What is left, in order:** (1) the Oracle watcher (every 30 minutes; the last probe still reads
+`configured=false`), (2) the moment the founder sets the three repository variables — the Main APK
+workflow publishes the installable APK and the link goes to the top of this log and of FOUNDER_TODO,
+(3) the full routing re-measure with VROOM once the server is stopped, (4) the Dependabot merges from
+2026-11-14, and (5) the production OmniRoute, which is founder-blocked.
+
 ## 2026-11-12 (the day's standing summary, refreshed at each merge)
 
 **The founder's local server is RUNNING** (all six services healthy, ~45% of the PC's RAM free):
