@@ -34,7 +34,7 @@ describe("the mock day's break window and finish point (queue 4d)", () => {
     const run = e2eDay();
     const window = run.run.break_window;
 
-    expect(windowInRunZone(window!.start, window!.end)).toBe('12:00 - 13:00');
+    expect(windowInRunZone(window.start, window.end)).toBe('12:00 - 13:00');
   });
 
   it('answers the finish point as the depot, the way the seeded day does', () => {
