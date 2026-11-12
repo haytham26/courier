@@ -397,12 +397,6 @@ function resolveSource(args) {
 }
 
 /**
- * Checks the terms of the source.
- *
- * A source whose terms forbid our offline use is refused, whatever the
- * operator asks for: the rule is not ours to waive.
- */
-/**
  * Refuses a zoom range the tool will not build.
  *
  * The check runs before anything else, so the operator is told by the script's
@@ -429,6 +423,12 @@ function checkZoomRange(args) {
   }
 }
 
+/**
+ * Checks the terms of the source.
+ *
+ * A source whose terms forbid our offline use is refused, whatever the
+ * operator asks for: the rule is not ours to waive.
+ */
 function checkTerms(source, args) {
   if (source.offlineUse === 'forbidden') {
     console.error(`build-pmtiles: refused. The terms of "${source.title}" forbid the offline use.`);

@@ -66,7 +66,15 @@ name: 'The whole shift in airplane mode, held on the phone (the directive item 6
 - tapOn:
     id: 'today-fail-reason-nobody_home'
 # The courier's own sentence rides the event beside the structured reason: the
-# office can ask why, and the phone carries the word the driver used.
+# office can ask why, and the phone carries the word the driver used. The note
+# sits under the picker inside the fail sheet's own ScrollView, so the sheet is
+# scrolled to it before the tap (the repo's convention for a row below the
+# fold); the tap itself is unchanged.
+- scrollUntilVisible:
+    element:
+      id: 'today-fail-note'
+    direction: DOWN
+    timeout: 20000
 - tapOn:
     id: 'today-fail-note'
 - inputText:
