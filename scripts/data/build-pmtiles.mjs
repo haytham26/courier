@@ -51,6 +51,26 @@ const PACK_REGION = 'canterbury';
  */
 const PLANETILER_MAX_ZOOM = 16;
 
+/**
+ * The pack's own default maximum zoom, and the measurement behind it.
+ *
+ * The whole Canterbury envelope at the tool's own ceiling is 146.5 MB
+ * (153,540,100 bytes, measured 2026-11-12 on the lane's own build), which is
+ * 2.9x over the ceiling this script enforces - so a default of 16 is a default
+ * that cannot pass its own gate. The ladder, extracted with the same pinned
+ * CLI from the same tileset, same envelope:
+ *
+ *   z16 = 153,540,100 bytes (146 MiB)   z13 =  18,729,750 bytes ( 17 MiB)
+ *   z15 =  86,843,698 bytes ( 82 MiB)   z12 =   8,543,430 bytes (  8 MiB)
+ *   z14 =  46,009,919 bytes ( 43 MiB)   z11 =   4,535,342 bytes (  4 MiB)
+ *
+ * so 14 is the highest zoom whose pack fits under the 50 MB ceiling, and it is
+ * the default. The ceiling is NOT weakened to reach it: a pack over it is
+ * still refused by this script, naming the remedy (drop the zoom or cut the
+ * style-driven layers; the courier layers stay).
+ */
+const PACK_DEFAULT_MAX_ZOOM = 14;
+
 /** The pack has to stay under this ceiling (V4 11.1, the maps squad's gate). */
 
 /**
@@ -233,7 +253,9 @@ function parseArgs(argv) {
     minZoom: 6,
     // planetiler's own ceiling: the tool refuses 17 (measured 2026-11-11), so
     // a pack whose manifest claims it could never carry it.
-    maxZoom: 16,
+    // 14, not 16: the envelope at 16 is 146 MiB, 2.9x over this script's own
+    // ceiling (measured 2026-11-12), and 14 is the highest zoom that fits.
+    maxZoom: PACK_DEFAULT_MAX_ZOOM,
     sourceLicence: null,
     sourceLicenceUrl: null,
     sourceAttribution: null,
@@ -512,12 +534,13 @@ function printPlan(plan) {
   console.log(
     `    1. planetiler --osm-path=<extract> --output=<tileset> --force   (the OpenMapTiles tileset)`,
   );
+  console.log('    2. pmtiles cluster <tiles>    (the extract refuses an unclustered archive)');
   console.log(
-    `    2. pmtiles extract <tiles> <pack> --bbox=${plan.bbox} --maxzoom=${plan.maxZoom} --minzoom=${plan.minZoom}`,
+    `    3. pmtiles extract <tiles> <pack> --bbox=${plan.bbox} --maxzoom=${plan.maxZoom} --minzoom=${plan.minZoom}`,
   );
-  console.log(`    3. pmtiles verify <pack>    (the archive is ordered, its header is right)`);
-  console.log(`    4. pmtiles show --header-json <pack>    (the real header, in the manifest)`);
-  console.log(`    5. sha256 and the tool versions, written into ${PACK_MANIFEST}`);
+  console.log(`    4. pmtiles verify <pack>    (the archive is ordered, its header is right)`);
+  console.log(`    5. pmtiles show --header-json <pack>    (the real header, in the manifest)`);
+  console.log(`    6. sha256 and the tool versions, written into ${PACK_MANIFEST}`);
   console.log('');
   console.log(
     `  Heap: JAVA_TOOL_OPTIONS=-Xmx${PLANETILER_HEAP_GB}g (planetiler README: ~0.5x the .osm.pbf)`,
@@ -628,6 +651,12 @@ export function buildCommands(plan) {
     ],
     verify: ['verify', plan.output],
     headerJson: ['show', plan.output, '--header-json'],
+    // The extract's own precondition, measured on 2026-11-12: pmtiles 1.31.2
+    // refuses with "source archive must be clustered for extracts" when the
+    // archive is in planetiler's own write order. Its `cluster` command is
+    // documented ("Cluster an unclustered local archive, optimizing the size
+    // and layout"), so the pack build runs it between the two.
+    cluster: ['cluster', plan.tileset],
   };
 }
 
@@ -677,6 +706,10 @@ function executePlan(plan) {
   // The tileset covers the whole country; the pack is Canterbury at the
   // zooms the courier drives at. The bbox order is the CLI's:
   // MIN_LON,MIN_LAT,MAX_LON,MAX_LAT.
+  // The extract's own precondition (measured 2026-11-12: "source archive must
+  // be clustered for extracts"), and the CLI's own command that satisfies it.
+  execFileSync('pmtiles', commands.cluster, { stdio: 'inherit' });
+
   execFileSync('pmtiles', commands.pmtiles, { stdio: 'inherit' });
 
   // The check the extract cannot do for itself: the archive is ordered and

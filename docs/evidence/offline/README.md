@@ -13,12 +13,12 @@ attribution, and a **Maestro flow in CI** for the offline shift.
 
 ## 0. The machine and the stack (what ran where)
 
-| Leg | Where it ran | The command |
-|---|---|---|
-| the app-side simulation | this machine, jest (`jest-expo`), the app's own write path | `cd apps/mobile && npx jest src/sync/__tests__/offlineShifts.test.ts` |
-| the real-stack simulation | this machine, the **CI stack** (`infra/compose.ci.yml`: Postgres + the API + the auth service, `DEMO_SEED_ENABLED=true`) | `node docs/evidence/offline/stack-sim.mjs` |
-| the pack build | this machine, **inside Linux** (`node:24-trixie-slim` + `openjdk-21-jre-headless`, the same steps `map-pack.yml` runs on ubuntu) | `docker run --rm -v <worktree>:/w -w /w offline-pack-builder:1 bash /w/.tools/run-build.sh --execute` |
-| the CI legs | GitHub's AVDs (api 34 / api 35, the small 320×640 profile) | `bash .maestro/run-all.sh` (the workflow's own runner) |
+| Leg                       | Where it ran                                                                                                                     | The command                                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| the app-side simulation   | this machine, jest (`jest-expo`), the app's own write path                                                                       | `cd apps/mobile && npx jest src/sync/__tests__/offlineShifts.test.ts`                                 |
+| the real-stack simulation | this machine, the **CI stack** (`infra/compose.ci.yml`: Postgres + the API + the auth service, `DEMO_SEED_ENABLED=true`)         | `node docs/evidence/offline/stack-sim.mjs`                                                            |
+| the pack build            | this machine, **inside Linux** (`node:24-trixie-slim` + `openjdk-21-jre-headless`, the same steps `map-pack.yml` runs on ubuntu) | `docker run --rm -v <worktree>:/w -w /w offline-pack-builder:1 bash /w/.tools/run-build.sh --execute` |
+| the CI legs               | GitHub's AVDs (api 34 / api 35, the small 320×640 profile)                                                                       | `bash .maestro/run-all.sh` (the workflow's own runner)                                                |
 
 Two local-run deviations, both recorded because they are the stack's business
 and not the lane's to change:
@@ -29,7 +29,7 @@ and not the lane's to change:
   already holds 127.0.0.1:5432 on this machine. Everything else — the services,
   the environment, the schema mount, the seed gate — is the file's own.
 - **The auth container needed its own migration and a restart.** `docker compose
-  … run --rm auth npx --yes auth migrate --yes --config src/migrate.config.ts`
+… run --rm auth npx --yes auth migrate --yes --config src/migrate.config.ts`
   ran the auth service's own migration (the container refuses to boot on a
   database without its tables), and a `docker compose restart auth` cleared the
   in-memory rate limiter after the lane hit the sign-up cap
@@ -37,27 +37,27 @@ and not the lane's to change:
 
 Tools and versions actually used (the workflow's own pins):
 
-| Tool | Version | How it was pinned |
-|---|---|---|
+| Tool       | Version                                                                                                          | How it was pinned                     |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
 | planetiler | 0.10.2 (jar sha256 `f310bd0413e2e4512b27f4046d418664e8e1d3bf31603c2a70e23de06c167e4d`, verified on this machine) | `map-pack.yml`'s `PLANETILER_VERSION` |
-| pmtiles | 1.31.2 (`pmtiles version` → `commit a3e4951ea6a0477b784c27c1dcbfd9c130878c5a`) | `map-pack.yml`'s `PMTILES_VERSION` |
-| Java | OpenJDK 21.0.13 (planetiler 0.10.2 is built for 21) | the workflow's `java-version: '21'` |
-| node | v24.22.2 (the container) / v24.21.0 (the host) | the workspace pin |
+| pmtiles    | 1.31.2 (`pmtiles version` → `commit a3e4951ea6a0477b784c27c1dcbfd9c130878c5a`)                                   | `map-pack.yml`'s `PMTILES_VERSION`    |
+| Java       | OpenJDK 21.0.13 (planetiler 0.10.2 is built for 21)                                                              | the workflow's `java-version: '21'`   |
+| node       | v24.22.2 (the container) / v24.21.0 (the host)                                                                   | the workspace pin                     |
 
 ## 0b. The pre-fetch record (written BEFORE the Geofabrik fetch, per the lane brief)
 
-| Item | Value |
-|---|---|
-| URL | `https://download.geofabrik.de/australia-oceania/new-zealand-latest.osm.pbf` (the alias the workflow uses; a `307` redirects it to the dated extract below) |
-| Resolved URL | `https://download.geofabrik.de/australia-oceania/new-zealand-261109.osm.pbf` |
-| Host | `download.geofabrik.de` — the registered host of the `geofabrik-nz` source in `scripts/data/build-pmtiles.mjs`, checked by its own `--check-url` before any byte is fetched (BUG-102). Measured: `build-pmtiles: the extract URL is allowed (download.geofabrik.de, source geofabrik-nz)` |
-| Expected size | 406,060,713 bytes (387.3 MiB), the `Content-Length` of the resolved URL, read 2026-11-11 |
-| Server `Last-Modified` | Tue, 10 Nov 2026 07:45:10 GMT |
-| Fetch | started **2026-11-11T06:24:24+13:00**, finished **2026-11-11T06:26:53+13:00** (149 s) |
-| Measured | `http=200 size=406060713` — the bytes on disk match the expected length exactly |
-| sha256 | `b5595da206e0066cb2670363a3ee039c3a65ececb3247ac16ec1175af2cb74f7` (`data/maps/fetch-sha.txt`) |
-| Licence | ODbL (an OSM extract is OpenStreetMap data; we build our own tiles from it, so the OSMF tile servers and their usage policy are not involved) |
-| Fetched into | `<worktree>/data/maps/` (git-ignored per ADR-003) |
+| Item                   | Value                                                                                                                                                                                                                                                                                     |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| URL                    | `https://download.geofabrik.de/australia-oceania/new-zealand-latest.osm.pbf` (the alias the workflow uses; a `307` redirects it to the dated extract below)                                                                                                                               |
+| Resolved URL           | `https://download.geofabrik.de/australia-oceania/new-zealand-261109.osm.pbf`                                                                                                                                                                                                              |
+| Host                   | `download.geofabrik.de` — the registered host of the `geofabrik-nz` source in `scripts/data/build-pmtiles.mjs`, checked by its own `--check-url` before any byte is fetched (BUG-102). Measured: `build-pmtiles: the extract URL is allowed (download.geofabrik.de, source geofabrik-nz)` |
+| Expected size          | 406,060,713 bytes (387.3 MiB), the `Content-Length` of the resolved URL, read 2026-11-11                                                                                                                                                                                                  |
+| Server `Last-Modified` | Tue, 10 Nov 2026 07:45:10 GMT                                                                                                                                                                                                                                                             |
+| Fetch                  | started **2026-11-11T06:24:24+13:00**, finished **2026-11-11T06:26:53+13:00** (149 s)                                                                                                                                                                                                     |
+| Measured               | `http=200 size=406060713` — the bytes on disk match the expected length exactly                                                                                                                                                                                                           |
+| sha256                 | `b5595da206e0066cb2670363a3ee039c3a65ececb3247ac16ec1175af2cb74f7` (`data/maps/fetch-sha.txt`)                                                                                                                                                                                            |
+| Licence                | ODbL (an OSM extract is OpenStreetMap data; we build our own tiles from it, so the OSMF tile servers and their usage policy are not involved)                                                                                                                                             |
+| Fetched into           | `<worktree>/data/maps/` (git-ignored per ADR-003)                                                                                                                                                                                                                                         |
 
 ## 1. A complete shift in airplane mode with 0 data loss, over ≥ 50 shifts
 
@@ -80,11 +80,11 @@ simulated phone survives a kill the way a real phone's SQLCipher log does.
 50 airplane-mode shifts land every mark exactly once
 ```
 
-| leg | shifts | stops marked | events logged | rows on the server | duplicate landings | lost | quarantined | pending after sync |
-|---|---|---|---|---|---|---|---|---|
-| airplane mode | **50** | **441** | **441** | **441** | **0** | **0** | **0** | **0** |
-| flaky (30 % of the answers dropped after the server took the batch) | 20 | 173 | 173 | 173 | 0 | 0 | 0 | 4 |
-| kill mid-sync (one answer lost to the process death) | 12 | 110 | 110 | 110 | 0 | 0 | 0 | 10 |
+| leg                                                                 | shifts | stops marked | events logged | rows on the server | duplicate landings | lost  | quarantined | pending after sync |
+| ------------------------------------------------------------------- | ------ | ------------ | ------------- | ------------------ | ------------------ | ----- | ----------- | ------------------ |
+| airplane mode                                                       | **50** | **441**      | **441**       | **441**            | **0**              | **0** | **0**       | **0**              |
+| flaky (30 % of the answers dropped after the server took the batch) | 20     | 173          | 173           | 173                | 0                  | 0     | 0           | 4                  |
+| kill mid-sync (one answer lost to the process death)                | 12     | 110          | 110           | 110                | 0                  | 0     | 0           | 10                 |
 
 The per-shift trace is in `docs/evidence/offline/results/{shift,flaky,kill}-results/`
 (`per_shift.csv`, one row per shift; `summary.json`). The run is deterministic
@@ -120,12 +120,12 @@ endpoints: `POST /runs`, `POST /shifts/{id}/import` (ADR-025's spreadsheet
 import), `POST /shifts/{id}/events:batch`, `POST /runs/{id}/stops/{id}/pod`.
 The rows are counted in Postgres through the stack's own `psql`.
 
-| leg | shifts | events | rows in Postgres | duplicate ids | conflicts | lost |
-|---|---|---|---|---|---|---|
-| airplane mode (marks recorded with NO network call, then one sync) | **50** | **250** | **250** | **0** | **0** | **0** |
-| flaky (the same batch sent twice — the answer was lost) | 10 | 50 (offered twice) | 50 | 0 | 0 | 0 |
-| kill (a real HTTP request aborted mid-flight, then re-sent) | 6 | 30 | 30 | 0 | 0 | 0 |
-| POD (the proof photo uploaded twice, same client event id) | 5 | — | 5 rows | 0 | — | 0 |
+| leg                                                                | shifts | events             | rows in Postgres | duplicate ids | conflicts | lost  |
+| ------------------------------------------------------------------ | ------ | ------------------ | ---------------- | ------------- | --------- | ----- |
+| airplane mode (marks recorded with NO network call, then one sync) | **50** | **250**            | **250**          | **0**         | **0**     | **0** |
+| flaky (the same batch sent twice — the answer was lost)            | 10     | 50 (offered twice) | 50               | 0             | 0         | 0     |
+| kill (a real HTTP request aborted mid-flight, then re-sent)        | 6      | 30                 | 30               | 0             | 0         | 0     |
+| POD (the proof photo uploaded twice, same client event id)         | 5      | —                  | 5 rows           | 0             | —         | 0     |
 
 - The kill leg's abort really killed the call 3 of 6 times
   (`abort_killed_the_call: true`) and the rows were already there 6 of 6 times
@@ -139,7 +139,7 @@ The rows are counted in Postgres through the stack's own `psql`.
   ("the log is stale or the clock is wrong"), so the marks carry the phone's own
   recent clock rather than a fixed epoch.
 - Output: `docs/evidence/offline/results/stack-results/{airplane-mode,flaky,kill,pod}.json`
-  + `summary.json`.
+  - `summary.json`.
 
 ## 2. Exactly-once sync under flaky networks and a kill mid-sync
 
@@ -166,17 +166,16 @@ every replay).
 
 ## 3. The Christchurch PMTiles pack (D61)
 
-**The build finally ran, and running it found three defects in the script that
-builds it** — all measured on 2026-11-11 against the pinned tools, all fixed
-red-first in `scripts/data/build-pmtiles.mjs` (the lane's file), all in commit
-2 of this branch:
+**Running the build found FOUR defects in the script that builds it** — all
+measured on 2026-11-11/12 against the pinned tools (planetiler 0.10.2,
+pmtiles 1.31.2), all fixed red-first in `scripts/data/build-pmtiles.mjs`:
 
 1. **planetiler refused to start at all.** Its own sentence:
    `data/sources/lake_centerline.shp.zip does not exist. Run with --download to
-   fetch it`. The script never handed it `--download`, so the OpenMapTiles
-   profile's own base data (natural earth, water polygons, lake centerlines) was
-   never fetched. The bare boolean is the documented form; the invented one was
-   `--download=<a local file>`.
+fetch it`. The script never handed it `--download`, so the OpenMapTiles
+   profile's own base data (natural earth, water polygons, lake centerlines)
+   was never fetched. The bare boolean is the documented form; the invented one
+   was `--download=<a local file>`.
 2. **The pack's zooms were never given to planetiler**, so the tileset was built
    at the tool's own defaults — measured: `minzoom: 0, maxzoom: 14` — while the
    extract step and the manifest asked for and recorded 6..17. The tiles are now
@@ -185,26 +184,72 @@ red-first in `scripts/data/build-pmtiles.mjs` (the lane's file), all in commit
    underscore form is silently ignored — measured).
 3. **The plan's max zoom of 17 is a zoom planetiler refuses:**
    `java.lang.IllegalArgumentException: Max zoom must be <= 16, was 17`. The
-   ceiling is enforced by the script now, before the tool runs, and the default
-   is 16. A manifest whose job is "to be the evidence of what shipped" must not
-   promise a zoom its archive cannot carry.
+   ceiling is enforced by the script now, before the tool runs. A manifest
+   whose job is "to be the evidence of what shipped" must not promise a zoom
+   its archive cannot carry.
+4. **`pmtiles extract` refused the tileset it was handed**:
+   `source archive must be clustered for extracts` (pmtiles 1.31.2, measured
+   2026-11-12). planetiler writes its archive in its own order, so the pack
+   build has to run the CLI's own `cluster` step ("Cluster an unclustered local
+   archive, optimizing the size and layout") between the tileset and the
+   extract. Without it the pipeline cannot produce a pack at all — which is
+   very likely why the ceiling had never been observed: the build never got
+   past this step.
 
 The licence gate runs on the real URL before a byte is fetched:
 `node scripts/data/build-pmtiles.mjs --source geofabrik-nz --check-url <the URL>`
 → `the extract URL is allowed (download.geofabrik.de, source geofabrik-nz)`.
 
-The build itself, its size against the ceiling, the manifest it writes and the
-app-side proof that it renders offline are written here once the run finishes —
-the tileset's `osm_pass2` phase over the whole country is the long one (the
-water-polygons phase alone took 32m40s, logged throughout).
+**The budget, observed at last.** `scripts/data/build-pmtiles.mjs` enforces
+`PACK_SIZE_CEILING_BYTES = 50 * 1024 * 1024`, and the maps squad's gate names
+the same number ("the pack at or under 50 MB", `docs/squads/maps/README.md`;
+`docs/research/2026/oss-maps-courier.md` names "pack ≤ 50 MB").
+`docs/decisions/DECISIONS.md` (D42) records that this ceiling "is checked but
+has never been observed". **It is observed now, and the measured ladder is the
+finding:**
 
-**The budget.** `scripts/data/build-pmtiles.mjs` enforces
-`PACK_SIZE_CEILING_BYTES = 50 * 1024 * 1024` and the maps squad's gate names the
-same number ("the pack at or under 50 MB",
-`docs/squads/maps/README.md`; `docs/research/2026/oss-maps-courier.md` names
-"pack ≤ 50 MB"). `docs/decisions/DECISIONS.md` (D42) records that this ceiling
-"is checked but has never been observed". **It is observed in this lane, and
-the measured size is written below.**
+| pack, the whole Canterbury envelope (170.5,-44.5 → 173.5,-42.8), z6..N | bytes          | MiB    |
+| ---------------------------------------------------------------------- | -------------- | ------ |
+| N = 16 (planetiler's own ceiling)                                      | 153,540,100    | 146    |
+| N = 15                                                                 | 86,843,698     | 82     |
+| **N = 14 (the script's default now)**                                  | **46,009,919** | **43** |
+| N = 13                                                                 | 18,729,750     | 17     |
+| N = 12                                                                 | 8,543,430      | 8      |
+| N = 11                                                                 | 4,535,342      | 4      |
+| N = 10                                                                 | 2,501,876      | 2      |
+
+The envelope at the tool's ceiling is **2.9× over the ceiling** — so a default
+of 16 was a default that could not pass its own gate. The script's default is
+now the highest zoom whose pack fits (14, 43 MiB), and the ceiling is NOT
+weakened: a pack over it is still refused, naming the remedy (drop the zoom or
+cut the style-driven layers; the courier layers stay). **Which zoom the pack
+ships at is the maps squad's and the founder's decision, and the ladder above
+is the number that decision needs** — recorded, not chosen by the lane.
+
+**The build this lane ran end to end** (in Linux, bounded to the pack's own
+envelope, with the four fixes in): the tileset, the cluster step, the extract,
+the verify, the header and the manifest are in
+`docs/evidence/offline/results/pack/` (the manifest verbatim, the tool
+versions, the timings), and the pack's own header reads:
+
+```json
+{
+  "tile_compression": "gzip",
+  "tile_type": "mvt",
+  "minzoom": 6,
+  "maxzoom": 14,
+  "bounds": [170.5, -44.5, 173.5, -42.8]
+}
+```
+
+The app-side proof that it renders offline is
+`apps/mobile/src/maps/__tests__/canterburyPack.test.ts`, which reads the REAL
+bytes through the app's own `parsePackManifest`, `checkOfflinePack` (BUG-085's
+checksum gate), `resolveTileSource` and the attribution contract: the manifest
+parses, its `sha256` matches the archive on disk so the app answers `ready`,
+the style is handed the `pmtiles://file://` URL the native reader takes, and
+the attribution carries the OpenStreetMap ODbL line, the LINZ credit and the
+OpenMapTiles credit the schema's own profile requires.
 
 ## 4. The Maestro flows in CI
 
@@ -214,11 +259,11 @@ that need it and gives it back after — because Maestro cannot run `adb`, the
 network is a property of the **run**, not of a flow (the same two `svc`
 commands `.maestro/run-a1.sh` uses, with the same reason):
 
-| Flow | What it proves, on the device |
-|---|---|
-| `.maestro/offline-shift.yaml` | the whole shift in airplane mode: three deliveries, a failed delivery with its reason and the courier's own word, the run's own counts, ADR-014's "the delivery waits on this phone" note, and the end-of-day summary — with the network away for all of it |
-| `.maestro/offline-sync.yaml` | the signal comes back: a cold start (`clearState: false`) still answers the same day, one mark per stop, the courier is still told the truth, and a second cold start keeps them. **Exactly one mark per stop, on the phone** |
-| `.maestro/offline-map-pack.yaml` | the map with no signal: `map-pack-status` (the app's own answer), and the three ODbL / LINZ attribution lines on screen |
+| Flow                             | What it proves, on the device                                                                                                                                                                                                                               |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.maestro/offline-shift.yaml`    | the whole shift in airplane mode: three deliveries, a failed delivery with its reason and the courier's own word, the run's own counts, ADR-014's "the delivery waits on this phone" note, and the end-of-day summary — with the network away for all of it |
+| `.maestro/offline-sync.yaml`     | the signal comes back: a cold start (`clearState: false`) still answers the same day, one mark per stop, the courier is still told the truth, and a second cold start keeps them. **Exactly one mark per stop, on the phone**                               |
+| `.maestro/offline-map-pack.yaml` | the map with no signal: `map-pack-status` (the app's own answer), and the three ODbL / LINZ attribution lines on screen                                                                                                                                     |
 
 **What the E2E build can and cannot prove, stated plainly:** the E2E build has no
 server (its API base address is the device's own loopback), so the legs above
@@ -228,11 +273,11 @@ own write path over the mirrored `events:batch`, and the real stack in compose.
 
 ## 5. What is NOT measured here
 
-| Leg | Why not, and where it is |
-|---|---|
-| The pack built, its size, its manifest, the app rendering its tiles on a device | The build is still running when this file was last written (the whole-country tileset is the long phase); the numbers land in §3 as soon as it finishes |
-| The CI AVD runs of the three new flows | They run in `android-e2e.yml` on GitHub's runners (api 34 / api 35, the small 320×640 profile). This lane cannot boot an emulator locally (no local emulator per AGENTS.md; the BlueStacks device refuses Maestro's `dadb` — BUG-303), so the flows are proven to **parse** and to satisfy the repo's own cold-start gate (`scripts/ci/__tests__/flows-cold-start.test.mjs`), and the legs' first green run is the lead's to record |
-| The large-screen legs | BUG-270, platform-owned |
-| A second AVD profile for the offline flows | BUG-270 |
-| The app's z17 style layer drawing from the pack | planetiler's own ceiling is 16, so a z17 layer cannot be drawn from a planetiler-built pack: it overzooms. Named for the maps squad — the layer's minzoom is the design's decision, and the lane does not change the style |
-| A workflow change | `.github/workflows/**` is not the lane's; the flows join the existing suite through `run-all.sh`'s own glob, and no new job is needed |
+| Leg                                             | Why not, and where it is                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The build of the pack on the runner             | The lane ran it here instead: Linux, the pinned tools, the same steps. The MAP_PACK workflow publishes the pack and the manifest as an artifact twice a week; the lane's first green run there is the lead's to record                                                                                                                                                                                                              |
+| The CI AVD runs of the three new flows          | They run in `android-e2e.yml` on GitHub's runners (api 34 / api 35, the small 320×640 profile). This lane cannot boot an emulator locally (no local emulator per AGENTS.md; the BlueStacks device refuses Maestro's `dadb` — BUG-303), so the flows are proven to **parse** and to satisfy the repo's own cold-start gate (`scripts/ci/__tests__/flows-cold-start.test.mjs`), and the legs' first green run is the lead's to record |
+| The large-screen legs                           | BUG-270, platform-owned                                                                                                                                                                                                                                                                                                                                                                                                             |
+| A second AVD profile for the offline flows      | BUG-270                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| The app's z17 style layer drawing from the pack | planetiler's own ceiling is 16, so a z17 layer cannot be drawn from a planetiler-built pack: it overzooms. Named for the maps squad — the layer's minzoom is the design's decision, and the lane does not change the style                                                                                                                                                                                                          |
+| A workflow change                               | `.github/workflows/**` is not the lane's; the flows join the existing suite through `run-all.sh`'s own glob, and no new job is needed                                                                                                                                                                                                                                                                                               |

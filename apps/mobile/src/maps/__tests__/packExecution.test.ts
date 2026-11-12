@@ -34,6 +34,7 @@ const PLAN = {
 type Commands = {
   planetiler: string[];
   pmtiles: string[];
+  cluster: string[];
   verify: string[];
   headerJson: string[];
 };
@@ -118,6 +119,15 @@ describe('the pmtiles invocations', () => {
     expect(printed.pmtiles).toContain('--bbox=170.5,-44.5,173.5,-42.8');
     expect(printed.pmtiles).toContain('--maxzoom=16');
     expect(printed.pmtiles).toContain('--minzoom=6');
+  });
+
+  it('clusters the tileset before it extracts from it', () => {
+    // The extract step's own error, measured on 2026-11-12 against pmtiles
+    // 1.31.2: "source archive must be clustered for extracts". planetiler
+    // writes its archive in its own order, so the pack build has to run the
+    // CLI's `cluster` step between the two - it is a documented command
+    // ("Cluster an unclustered local archive, optimizing the size and layout").
+    expect(printed.cluster).toEqual(['cluster', PLAN.tileset]);
   });
 
   it('verifies the archive and reads the header with the flag the CLI documents', () => {
@@ -207,5 +217,33 @@ describe('the zoom the pack can actually carry', () => {
 
     expect(result.code).toBe(0);
     expect(result.out).toContain('zooms            6 to 16');
+  });
+
+  it('defaults to the highest zoom whose pack fits the ceiling it enforces', () => {
+    // The measured ladder, extracted with the pinned CLI from the same tileset
+    // over the same envelope (2026-11-12): z16 = 153,540,100 bytes (146 MiB),
+    // z15 = 86,843,698 (82 MiB), z14 = 46,009,919 (43 MiB), z13 = 18,729,750
+    // (17 MiB). The envelope at the tool's own ceiling is 2.9x over the 50 MB
+    // ceiling, so the default is the highest zoom that fits - and the ceiling
+    // itself is NOT weakened: a pack over it is still refused.
+    const plan = runScript([
+      '--source',
+      'geofabrik-nz',
+      '--input',
+      '/data/maps/newzealand-latest.osm.pbf',
+    ]);
+
+    expect(plan.code).toBe(0);
+    expect(plan.out).toContain('zooms            6 to 14');
+    // The CLI's own ceiling is still the bound: 17 is refused, 16 is planned.
+    const legal = runScript([
+      '--source',
+      'geofabrik-nz',
+      '--max-zoom',
+      '16',
+      '--input',
+      '/data/maps/newzealand-latest.osm.pbf',
+    ]);
+    expect(legal.code).toBe(0);
   });
 });
