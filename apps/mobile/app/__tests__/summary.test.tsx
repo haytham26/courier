@@ -1,22 +1,23 @@
 /**
  * Tests for the end-of-day summary (screen 10).
  *
- * The screen is pure layout over `src/summary/daySummary.ts`, so these tests
- * ride the wiring, the copy and the number formatting, and nothing else: the
- * numbers themselves are the module's contract (the reference's mock day), and
- * the module is tested separately below.
+ * A3 (QA step 28): this screen used to show the reference mockup's own numbers
+ * for any run at all - $438.20 earned, 206 delivered, 92 km, and the three
+ * carriers' split - on a day with two stops done. The screen now reads the run
+ * the phone holds and says "not tracked yet" for what the phone does not track
+ * (D60: earnings are not in the trial), so these tests pin that truth. The
+ * formatting helpers the design lab renders with are still the module's own,
+ * and they are tested here as themselves.
  */
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ChosenProvider } from '@/components/chosen';
-import {
-  REFERENCE_DAY,
-  barHeightFraction,
-  formatKm,
-  formatMoney,
-} from '@/summary/daySummary';
+import { RunProvider } from '@/maps/runState';
+import { e2eDay } from '@/run/dayForThisBuild';
+import type { DeliveredMark, RunDayStore } from '@/run/types';
+import { barHeightFraction, formatKm, formatMoney, NOT_TRACKED } from '@/summary/runSummary';
 import SummaryScreen from '../summary';
 
 // The dock is a pressable island on a root-stack route: the router is not
@@ -40,11 +41,30 @@ jest.mock('@/voice/useVoice', () => ({
   }),
 }));
 
-function renderScreen() {
+/**
+ * A store over the E2E build's own day, with the marks it is given: the
+ * shape the app's own construction site builds, so the screen reads the run
+ * the way it reads a real one.
+ */
+function storeWithMarks(marks: DeliveredMark[]): RunDayStore {
+  return {
+    load: () => Promise.resolve({ status: 'ok', source: 'cache', snapshot: e2eDay() }),
+    refresh: () => Promise.resolve({ status: 'ok', source: 'cache', snapshot: e2eDay() }),
+    deliveredMarks: () => Promise.resolve(marks),
+    markDelivered: () => Promise.resolve(),
+    undoDelivered: () => Promise.resolve(),
+    close: () => Promise.resolve(),
+    applyRouteOrder: () => Promise.resolve(false),
+  };
+}
+
+function renderScreen(marks: DeliveredMark[] = []) {
   return render(
     <GestureHandlerRootView>
       <ChosenProvider mode="light">
-        <SummaryScreen />
+        <RunProvider store={storeWithMarks(marks)}>
+          <SummaryScreen />
+        </RunProvider>
       </ChosenProvider>
     </GestureHandlerRootView>,
   );
@@ -66,43 +86,51 @@ describe('the summary screen', () => {
     // provider. Rendered bare it used to die at mount with "useChosen needs a
     // ChosenProvider above it", which on the emulator looks like the app going
     // back to Today and the flow's `summary-screen` assert timing out. The
-    // screen now carries its own provider, so this render has none above it.
-    render(<SummaryScreen />);
+    // screen now carries its own provider, so this render has no CHOICE above
+    // it: only the run's own provider, which every route of the app sits under.
+    render(
+      <ChosenProvider mode="light">
+        <RunProvider store={storeWithMarks([])}>
+          <SummaryScreen />
+        </RunProvider>
+      </ChosenProvider>,
+    );
 
     expect(screen.getByTestId('summary-screen')).toBeTruthy();
     expect(screen.getByText('Summary')).toBeTruthy();
   });
 
-  it('shows what the day earned', () => {
+  // A3: the QA inspector's $438.20 was the reference mockup's number. Earnings
+  // are D60 - not in the trial - so the screen says "Not tracked yet".
+  it('says "not tracked yet" for the money, never a number the phone never earned', () => {
     renderScreen();
 
     expect(screen.getByTestId('summary-earned')).toBeTruthy();
-    expect(screen.getByText(formatMoney(REFERENCE_DAY.earnedCents))).toBeTruthy();
+    // The money, the kilometres and the carriers are all D60: three nodes,
+    expect(screen.getAllByText(NOT_TRACKED).length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByText('Earnings are not tracked in the trial')).toBeTruthy();
   });
 
-  it('shows the three counts of the day', () => {
-    renderScreen();
+  it('shows the run\u2019s own three counts of the day', async () => {
+    // A store that carries one delivery and one failure: the run's own numbers,
+    // not the reference day's 206 delivered and 8 not home.
+    renderScreen([
+      { stopId: '2', sequence: 2, at: Date.now(), eventId: 'e-2' },
+      { stopId: '3', sequence: 3, at: Date.now(), eventId: 'e-3' },
+    ]);
 
-    expect(screen.getByText(String(REFERENCE_DAY.delivered))).toBeTruthy();
-    expect(screen.getByText(String(REFERENCE_DAY.notHome))).toBeTruthy();
-    expect(screen.getByText(formatKm(REFERENCE_DAY.drivenKm))).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('2')).toBeTruthy());
+    expect(screen.getByTestId('summary-delivered')).toBeTruthy();
+    // The E2E day's own stop 4 is the failed one; stop 5 is still pending.
+    expect(screen.getByTestId('summary-failed')).toBeTruthy();
   });
 
-  it('shows one line per carrier, with the amount in tabular numbers', () => {
+  it('says "not tracked yet" for the kilometres, and carries no carriers', () => {
     renderScreen();
 
-    for (const [index, carrier] of REFERENCE_DAY.carriers.entries()) {
-      expect(screen.getByText(carrier.name)).toBeTruthy();
-      const amount = screen.getByTestId(`summary-carrier-${index}`);
-      expect(amount.props.children).toBe(formatMoney(carrier.cents));
-    }
-  });
-
-  it('draws a bar per day of the week, and the tallest one is full height', () => {
-    renderScreen();
-
-    const bars = screen.getByLabelText('The earnings of the last seven days');
-    expect(bars.props.children).toHaveLength(REFERENCE_DAY.bars.length);
+    // The driven kilometres are D60, and so is the per-carrier split.
+    expect(screen.getAllByText(NOT_TRACKED).length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByTestId('summary-carriers-none')).toBeTruthy();
   });
 
   it('keeps the dock so a root-stack screen can still be left', () => {
@@ -133,13 +161,12 @@ describe('the day summary numbers', () => {
   });
 
   it('finds the tallest bar so a week always fills its band', () => {
-    expect(barHeightFraction(REFERENCE_DAY.bars)).toBeCloseTo(56 / 70, 5);
+    expect(
+      barHeightFraction([
+        { letter: 'W', fraction: 21 / 70 },
+        { letter: 'T', fraction: 56 / 70 },
+      ]),
+    ).toBeCloseTo(56 / 70, 5);
     expect(barHeightFraction([])).toBe(1);
-  });
-
-  it('carries the reference day, so the screen never invents a number', () => {
-    expect(REFERENCE_DAY.finishedAt).toBe('2:31 pm');
-    expect(REFERENCE_DAY.delivered).toBe(206);
-    expect(REFERENCE_DAY.carriers).toHaveLength(3);
   });
 });

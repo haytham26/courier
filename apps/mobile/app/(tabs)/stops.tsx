@@ -38,6 +38,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Camera, Map as MapView, Marker } from '@maplibre/maplibre-react-native';
 
+import { clockInRunZone } from '@/time/runZone';
 import { ChosenProvider, GlassSurface, Segmented, StopPin, Timeline, useChosen } from '@/components/chosen';
 import type { TimelineItem } from '@/components/chosen';
 import { errorMessage } from '@/lib/errors';
@@ -66,17 +67,15 @@ type SegmentKey = (typeof SEGMENTS)[number]['key'];
 const apiClient = new CourierApiClient();
 
 /**
- * One moment the run stamped, as the courier reads it: the device's own clock,
- * because a window "09:00 to 11:00" is a local time and the contract's stamps
- * are UTC.
+ * One moment the run stamped, as the courier reads it (A11).
+ *
+ * The run is a Pacific/Auckland day: a Christchurch courier's "09:00 to
+ * 11:00" is a LOCAL time, and the contract stamps are UTC. The QA inspector
+ * read "22:00 - 00:00" for that window because the device's clock was used
+ * with a UTC stamp, so the zone is the run's own and is pinned in
+ * src/time/runZone.ts with a test against the real changeover dates.
  */
-const clockOf = (stamp: string): string => {
-  const at = new Date(stamp);
-  if (Number.isNaN(at.getTime())) {
-    return stamp;
-  }
-  return `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
-};
+const clockOf = (stamp: string): string => clockInRunZone(stamp);
 
 /**
  * Which segment a stop's status sits in.

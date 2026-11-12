@@ -82,7 +82,7 @@ export const mockStops: Stop[] = [
     sequence: 2,
     coordinates: { lat: -43.518, lng: 172.625 },
     priority: true,
-    window: { start: '2026-10-31T09:00:00.000Z', end: '2026-10-31T11:00:00.000Z' },
+    window: { start: '2026-10-30T20:00:00.000Z', end: '2026-10-30T22:00:00.000Z' },
     type: 'delivery',
   },
   {
@@ -93,7 +93,7 @@ export const mockStops: Stop[] = [
     sequence: 3,
     coordinates: { lat: -43.545, lng: 172.595 },
     priority: false,
-    window: { start: '2026-10-31T10:30:00.000Z', end: '2026-10-31T13:00:00.000Z' },
+    window: { start: '2026-10-30T21:30:00.000Z', end: '2026-11-01T00:00:00.000Z' },
     // Queue 4c (the trial's #21): one stop of the mock list is the run's own
     // pickup, so the E2E day answers a type a courier can read and the flows
     // can assert the word.
