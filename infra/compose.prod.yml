@@ -123,7 +123,11 @@ services:
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-courier-api}
       # The issuer the API checks on the token. The default is the public URL
       # of the auth service, the same one the auth service signs with.
-      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-https://${COURIER_DOMAIN}}
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER
+      # The road geometry (ADR-030): a deployment with no router configured answers
+      # `geometry_engine: none` and null shapes - an absent road, never a straight line.
+      VALHALLA_BASE_URL: ${VALHALLA_BASE_URL:-}
+      VALHALLA_COSTING: ${VALHALLA_COSTING:-auto}:-https://${COURIER_DOMAIN}}
       VALKEY_URL: redis://:${VALKEY_PASSWORD}@valkey:6379/0
       # BUG-230: the only Host headers the API answers. The edge forwards the
       # public name; the healthcheck and the compose network use the rest.

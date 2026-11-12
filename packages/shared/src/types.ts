@@ -86,6 +86,16 @@ export interface LockedStop {
   sequence: number;
 }
 
+export interface RouteLeg {
+  /** The stop this leg starts at, or null when it starts at the depot. */
+  from_stop_id: string | null;
+  to_stop_id: string | null;
+  distance_m: number;
+  duration_s: number;
+  /** Valhalla's precision-6 polyline, or null when no geometry engine answered. */
+  shape: string | null;
+}
+
 export interface ReoptRequest {
   affected_stop_ids: string[];
   locked_stop_ids: string[];
@@ -98,6 +108,9 @@ export interface Route {
   locked: boolean;
   template_id: string | null;
   locked_stop_ids: LockedStop[];
+  /** What produced `legs`' shapes, or `none` (the lead's 2026-11-12 ask). */
+  geometry_engine: string;
+  legs: RouteLeg[];
   total_distance_m: number;
   total_duration_s: number;
   parcels: number;

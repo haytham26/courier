@@ -6,7 +6,7 @@ import asyncio
 import logging
 import os
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Annotated, Any, Literal
@@ -135,6 +135,7 @@ from .routing import (
 )
 from .sequencing import Segment
 from .stripe_nz import checkout_session_url, portal_session_url
+from .valhalla import ValhallaClient, base_url, engine_name
 
 
 @lru_cache(maxsize=1)
@@ -499,6 +500,67 @@ def _covers(plan: RoutePlan, request: RouteRequest) -> bool:
     return {stop.stop_id for stop in plan.stops} == {stop.id for stop in request.stops}
 
 
+def _legs_of(run: RunRecord, plan: RoutePlan) -> list[dict[str, Any]]:
+    """The road into each stop (the lead's 2026-11-12 ask).
+
+    One leg per stop: the road the courier drives to reach it. `distance_m` is
+    the planner's own distance for that leg (the same number the stop carries),
+    and `duration_s` is the time between the previous point's departure and this
+    stop's arrival - the depot's own departure being the run's start. Nothing
+    here is the engine's: a router answers the SHAPE, and the times stay the
+    planner's, so adding or removing a router cannot change the day.
+
+    The first leg's `from_stop_id` is null: it starts at the depot (ADR-022's
+    round trip), which has no stop id. The road back to the depot at the end of
+    the day is NOT a leg here, because the plan does not split it out - the
+    total distance carries it, and inventing a per-leg number for it would be a
+    guess the phone would draw as a fact.
+    """
+    if not plan.stops:
+        return []
+    locations: list[tuple[float, float]] = []
+    if run.depot_lat is not None and run.depot_lon is not None:
+        locations.append((run.depot_lat, run.depot_lon))
+    locations.extend((stop.lat, stop.lon) for stop in plan.stops)
+    shapes = _geometry_shapes(locations)
+
+    legs: list[dict[str, Any]] = []
+    previous_left_at = run.start_at
+    previous_stop_id: uuid.UUID | None = None
+    for index, stop in enumerate(plan.stops):
+        legs.append(
+            {
+                "from_stop_id": str(previous_stop_id) if previous_stop_id is not None else None,
+                "to_stop_id": str(stop.stop_id),
+                "distance_m": round(stop.distance_m, 1),
+                "duration_s": round((stop.arrival_at - previous_left_at).total_seconds(), 1),
+                "shape": shapes[index] if shapes is not None and index < len(shapes) else None,
+            }
+        )
+        previous_left_at = stop.departure_at
+        previous_stop_id = stop.stop_id
+    return legs
+
+
+@lru_cache(maxsize=1)
+def _geometry_client() -> ValhallaClient:
+    """The geometry client, read once (its configuration is a release lever)."""
+    return ValhallaClient()
+
+
+def _geometry_shapes(locations: Sequence[tuple[float, float]]) -> list[str | None] | None:
+    """The shapes for these locations, or None when no engine answered.
+
+    The call is bounded and its failure is a degradation, never an error: a
+    route read is not the place to fail a courier's day because a router is
+    having a bad one. An engine that is not configured answers None before any
+    request is made, which is what a local stack and a CI runner both do.
+    """
+    if len(locations) < 2 or base_url() == "":
+        return None
+    return _geometry_client().shapes(locations)
+
+
 def _route_body(
     shift_id: uuid.UUID,
     run: RunRecord,
@@ -513,6 +575,8 @@ def _route_body(
         "engine": plan.engine,
         "locked": plan.engine == "template-lock",
         "template_id": template.id if template is not None else None,
+        "geometry_engine": engine_name(),
+        "legs": _legs_of(run, plan),
         "total_distance_m": round(plan.total_distance_m, 1),
         "total_duration_s": round(plan.total_duration_s, 1),
         "parcels": plan.parcels,
