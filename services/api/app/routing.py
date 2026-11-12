@@ -307,9 +307,7 @@ def _walk(
     return _Timing(legs, cumulative, violations, break_start, break_end, break_violation)
 
 
-def _break_score(
-    timing: _Timing, start: datetime, position: int
-) -> tuple[int, float, int]:
+def _break_score(timing: _Timing, start: datetime, position: int) -> tuple[int, float, int]:
     """The score a break placement is ranked by: the least violation, then
     the earliest finish, then the front of the day. The same score as the
     reopt slots use, so one rule decides everywhere."""
@@ -320,9 +318,7 @@ def _break_score(
     )
 
 
-def _best_break_position(
-    order: Sequence[RouteStop], request: RouteRequest
-) -> int | None:
+def _best_break_position(order: Sequence[RouteStop], request: RouteRequest) -> int | None:
     """Where the break goes when nobody says: the position with the least
     violation, then the earliest finish, then the front of the day (the same
     score the reopt slots use). `None` when the day has no break or no pair
@@ -667,10 +663,47 @@ def _best_slot(order: list[RouteStop], request: RouteRequest, stop: RouteStop) -
     return best_order
 
 
+def _block_order(
+    block: Sequence[RouteStop],
+    affected: set[UUID],
+    request: RouteRequest,
+    unplaced: Sequence[RouteStop] = (),
+) -> list[RouteStop]:
+    """The order of one block of the day: its kept stops, then its affected ones
+    re-placed inside it.
+
+    A block is the stretch of the day between two walls (a wall being a locked
+    stop) - or between a wall and the end of the day. Its membership is fixed:
+    only the affected stops of THIS block are re-placed, and they are re-placed
+    inside it, so no stop crosses a wall and no index outside the block changes.
+
+    `unplaced` is for the stops that are affected but not in the plan yet - the
+    stop added at the door, which has no block of its own because it has no
+    position. It is placed by `build_reopt_plan` into the block where it scores
+    best, so a new stop is still placed exactly where the whole-day version
+    would have put it when there are no walls at all.
+    """
+    kept = [stop for stop in block if stop.id not in affected]
+    changed = [stop for stop in block if stop.id in affected]
+    changed.extend(unplaced)
+    constraints = request.constraints
+    changed.sort(
+        key=lambda stop: (
+            _distance_m(constraints.depot_lat, constraints.depot_lon, stop.lat, stop.lon),
+            str(stop.id),
+        )
+    )
+    order = list(kept)
+    for stop in changed:
+        order = _best_slot(order, request, stop)
+    return order
+
+
 def build_reopt_plan(
     request: RouteRequest,
     current: RoutePlan,
     affected_ids: Sequence[UUID],
+    locked_ids: Sequence[UUID] = (),
 ) -> ReoptResult:
     """Re-places only the affected stops; the rest of the order stays as it is.
 
@@ -680,15 +713,32 @@ def build_reopt_plan(
     `_best_slot` picks, so the same day always maps to the same reopt. The
     result carries the finish-time delta, so the copilot can say "this adds
     N minutes" before the edit is made.
+
+    `locked_ids` (the lead's 2026-11-12 ask): the stops whose position the
+    courier has locked. The promise is exact and it is the one a courier can
+    check on the phone: **a locked stop keeps the sequence it already has.**
+    A wall splits the day into the blocks around it, an affected stop is
+    re-placed inside the block it came from, and a stop that is not in the plan
+    yet (added at the door) is placed after every wall - so no insertion can
+    shift a wall and nothing crosses one. With no locks the whole day is one
+    block, which is exactly the behaviour this function had before.
     """
     current_ids = {stop.stop_id for stop in current.stops}
     request_ids = {stop.id for stop in request.stops}
     affected = list(dict.fromkeys(affected_ids))
-    unknown = [stop_id for stop_id in affected if stop_id not in request_ids | current_ids]
+    locked = list(dict.fromkeys(locked_ids))
+    unknown = [stop_id for stop_id in affected + locked if stop_id not in request_ids | current_ids]
     if unknown:
         listed = ", ".join(str(stop_id) for stop_id in unknown)
         raise ValueError(f"affected stop {listed} is not part of this run")
+    both = [stop_id for stop_id in affected if stop_id in set(locked)]
+    if both:
+        listed = ", ".join(str(stop_id) for stop_id in both)
+        raise ValueError(
+            f"stop {listed} is both affected and locked: the request contradicts itself"
+        )
     affected_set = set(affected)
+    locked_set = set(locked) & request_ids
     missing = [stop_id for stop_id in request_ids if stop_id not in affected_set | current_ids]
     if missing:
         listed = ", ".join(str(stop_id) for stop_id in missing)
@@ -696,18 +746,48 @@ def build_reopt_plan(
             f"stop {listed} is in the run but not in the plan and not in the affected stops"
         )
     by_id = {stop.id: stop for stop in request.stops}
-    order = [by_id[stop.stop_id] for stop in current.stops if stop.stop_id in request_ids]
-    changed = [by_id[stop_id] for stop_id in affected if stop_id in request_ids]
+    placed = [by_id[stop.stop_id] for stop in current.stops if stop.stop_id in request_ids]
+
+    # The day as blocks. A wall is never inside a block's body: it closes the
+    # block before it and is placed after it, so the slots `_best_slot` may use
+    # are the ones that do not cross it. `blocks[i]` is followed by `walls[i]`.
+    blocks: list[list[RouteStop]] = [[]]
+    walls: list[RouteStop] = []
+    for stop in placed:
+        if stop.id in locked_set:
+            walls.append(stop)
+            blocks.append([])
+        else:
+            blocks[-1].append(stop)
+
+    # A stop that is affected but not in the plan yet has no block of its own
+    # because it has no position - and the promise is exact: a wall keeps the
+    # sequence it already has, so a new stop may only be placed in the LAST
+    # block, after every wall. That is also the courier's own case: the stop
+    # they are standing at is the one they lock, and what is added at the door
+    # comes later in the day.
+    unplaced = [
+        by_id[stop_id]
+        for stop_id in affected
+        if stop_id in request_ids and stop_id not in current_ids
+    ]
     constraints = request.constraints
-    changed.sort(
+    unplaced.sort(
         key=lambda stop: (
             _distance_m(constraints.depot_lat, constraints.depot_lon, stop.lat, stop.lon),
             str(stop.id),
         )
     )
-    for stop in changed:
-        order = [kept for kept in order if kept.id != stop.id]
-        order = _best_slot(order, request, stop)
+    # The last block, then: `_block_order` still places each one at its best
+    # slot INSIDE that block.
+    extra: list[list[RouteStop]] = [[] for _ in blocks]
+    extra[-1].extend(unplaced)
+
+    order: list[RouteStop] = []
+    for index, block in enumerate(blocks):
+        order.extend(_block_order(block, affected_set, request, extra[index]))
+        if index < len(walls):
+            order.append(walls[index])
 
     after = _build_plan(order, request, "partial-reopt")
     return ReoptResult(plan=after, finish_delta_s=finish_delta_s(current, after))

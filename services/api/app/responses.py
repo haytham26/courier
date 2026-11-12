@@ -103,6 +103,19 @@ class RouteStopResponse(BaseModel):
     late: bool
 
 
+class LockedStopResponse(BaseModel):
+    """One stop the server held still, and the sequence it kept.
+
+    The lead's 2026-11-12 ask: a courier who locked a stop's place in the day
+    must be able to see that it is exactly where they put it, so the answer
+    names each locked stop and the sequence it holds in the plan - which is
+    the proof the lock was honoured rather than merely accepted.
+    """
+
+    stop_id: uuid.UUID
+    sequence: int
+
+
 class RouteResponse(BaseModel):
     """The day's route (`_route_body`): the order, the times, the load."""
 
@@ -111,6 +124,7 @@ class RouteResponse(BaseModel):
     engine: str
     locked: bool
     template_id: str | None
+    locked_stop_ids: list[LockedStopResponse] = Field(default_factory=list)
     total_distance_m: float
     total_duration_s: float
     parcels: int

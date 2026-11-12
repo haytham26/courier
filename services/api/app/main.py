@@ -144,6 +144,7 @@ def cost_settings() -> CostGuardSettings:
     unbounded and says so."""
     return CostGuardSettings()
 
+
 # The contract's plan names as the entitlement layer's enum (D44): the
 # endpoint reads a name, the catalogue reads the enum.
 PLAN_BY_NAME: dict[str, Plan] = {plan.value: plan for plan in Plan}
@@ -183,9 +184,7 @@ app.include_router(auth_router)
 
 
 @app.exception_handler(RouteTooLargeError)
-async def the_day_is_too_big(
-    request: Request, error: RouteTooLargeError
-) -> JSONResponse:
+async def the_day_is_too_big(request: Request, error: RouteTooLargeError) -> JSONResponse:
     """A day over the route cap is a 422 the caller can act on (BUG-117).
 
     The refusal is the API's boundary rather than the solver's: without it a
@@ -302,9 +301,19 @@ class CreateRunRequest(BaseModel):
 
 
 class ReoptRequest(BaseModel):
-    """The stops whose place in the day changed; everything else stays."""
+    """The stops whose place in the day changed; everything else stays.
+
+    `locked_stop_ids` is the lead's 2026-11-12 ask: the stops whose position
+    the courier has locked. The reopt never moves them, and the affected stops
+    are re-placed into the slots that are left. A stop that is both affected
+    and locked is refused with 422 - a request that says "move this" and "do
+    not move this" about one stop has no answer, and the half-built day it
+    would produce is exactly what the endpoint's 422 discipline exists to
+    keep off the phone (the same shape as `PUT /runs/{id}/template`'s).
+    """
 
     affected_stop_ids: list[uuid.UUID] = Field(max_length=500)
+    locked_stop_ids: list[uuid.UUID] = Field(default_factory=list, max_length=500)
 
 
 class DeliveryEvent(BaseModel):
@@ -730,9 +739,7 @@ def upload_pod(
             # (BUG-119: it used to escape as a bare RuntimeError, a 500 with no
             # explanation), and leave the event log untouched so the phone's
             # retry is a replay rather than a second event.
-            logger.warning(
-                "the POD replay of %s cannot be fingerprinted: %s", resolved_id, error
-            )
+            logger.warning("the POD replay of %s cannot be fingerprinted: %s", resolved_id, error)
             raise HTTPException(status_code=500, detail=str(error)) from error
     else:
         # Not a replay: the upload is the record, and bytes that sit there
@@ -915,7 +922,7 @@ def reopt_route(
             [stop for stop in request.stops if stop.id not in affected], request
         )
     try:
-        result = build_reopt_plan(request, current, body.affected_stop_ids)
+        result = build_reopt_plan(request, current, body.affected_stop_ids, body.locked_stop_ids)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     repo.put_run_route(run.id, result.plan)
@@ -923,6 +930,15 @@ def reopt_route(
         shift_id=run.shift_id, run=run, plan=result.plan, template=None, unroutable=unroutable
     )
     body_out["finish_delta_s"] = result.finish_delta_s
+    # What the server held still, and the sequence each locked stop kept: the
+    # phone shows it so a courier can see that the stop they locked is exactly
+    # where they put it (the lead's 2026-11-12 ask).
+    locked = set(body.locked_stop_ids)
+    body_out["locked_stop_ids"] = [
+        {"stop_id": str(stop.stop_id), "sequence": stop.sequence}
+        for stop in result.plan.stops
+        if stop.stop_id in locked
+    ]
     return body_out
 
 
@@ -1522,8 +1538,7 @@ def sync_events(
         raise HTTPException(status_code=422, detail="the batch is over the 500-event cap")
     known = {row.id for row in repo.get_run_stops(run.id)}
     unknown = [
-        (index, event.stop_id) for index, event in enumerate(events)
-        if event.stop_id not in known
+        (index, event.stop_id) for index, event in enumerate(events) if event.stop_id not in known
     ]
     if unknown:
         # BUG-139: the refusal is whole-batch (ADR-014 section 3), but the
@@ -1600,11 +1615,7 @@ async def voice(
     except UnauthenticatedError as exc:
         # BUG-125: the reason's category rides in the close code, so a
         # half-closed socket still gets an answer (the frame may never land).
-        code = (
-            CLOSE_INVALID_TOKEN
-            if exc.reason == INVALID_TOKEN_MESSAGE
-            else CLOSE_UNAUTHENTICATED
-        )
+        code = CLOSE_INVALID_TOKEN if exc.reason == INVALID_TOKEN_MESSAGE else CLOSE_UNAUTHENTICATED
         await refuse(ws, exc.reason, code)
         return
     # BUG-140: the owner is part of the lookup, so the 404 is the store's

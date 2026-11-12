@@ -818,6 +818,16 @@ paths:
                   type: array
                   maxItems: 500
                   items: { type: string, format: uuid }
+                locked_stop_ids:
+                  type: array
+                  maxItems: 500
+                  description: >-
+                    The stops whose place in the day the courier has locked
+                    (the lead's 2026-11-12 ask): the reopt never moves them,
+                    and the affected stops are re-placed into the slots that
+                    are left. A stop that is both affected and locked is
+                    refused with 422, because the request contradicts itself.
+                  items: { type: string, format: uuid }
       responses:
         '200':
           description: The reopt'd day with the finish-time delta (may be negative)
@@ -1106,6 +1116,18 @@ components:
         engine: { type: string }
         locked: { type: boolean }
         template_id: { type: string, nullable: true }
+        locked_stop_ids:
+          type: array
+          description: >-
+            The stops the server held still, and the sequence each one kept:
+            the locked positions of the reopt that produced this route. Empty
+            when nothing was locked.
+          items:
+            type: object
+            required: [stop_id, sequence]
+            properties:
+              stop_id: { type: string, format: uuid }
+              sequence: { type: integer }
         total_distance_m: { type: number }
         total_duration_s: { type: number }
         parcels: { type: integer }
@@ -1196,6 +1218,17 @@ components:
         run_id: { type: string, format: uuid }
         engine: { type: string }
         finish_delta_s: { type: number }
+        locked_stop_ids:
+          type: array
+          description: >-
+            The stops the reopt held still, and the sequence each one kept
+            (the same answer `RouteResponse` carries).
+          items:
+            type: object
+            required: [stop_id, sequence]
+            properties:
+              stop_id: { type: string, format: uuid }
+              sequence: { type: integer }
         stops:
           type: array
           items: { type: object }

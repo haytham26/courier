@@ -81,12 +81,23 @@ export interface RouteStop {
   late: boolean;
 }
 
+export interface LockedStop {
+  stop_id: string;
+  sequence: number;
+}
+
+export interface ReoptRequest {
+  affected_stop_ids: string[];
+  locked_stop_ids: string[];
+}
+
 export interface Route {
   shift_id: string;
   run_id: string;
   engine: string;
   locked: boolean;
   template_id: string | null;
+  locked_stop_ids: LockedStop[];
   total_distance_m: number;
   total_duration_s: number;
   parcels: number;
