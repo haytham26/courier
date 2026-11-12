@@ -26,7 +26,7 @@
  * The copy is plain New Zealand English, there is no emoji anywhere, and every
  * control has an accessibility label and a role.
  */
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -35,12 +35,15 @@ import { copilotStateOf } from '@/voice/copilotState';
 import { useVoice } from '@/voice/useVoice';
 import { ChosenProvider, TabBar, useChosen, type TabSlot } from '@/components/chosen';
 import { hapticFor } from '@/motion/haptics';
+import { useRun } from '@/maps/runState';
 import {
-  REFERENCE_DAY,
   barHeightFraction,
   formatKm,
   formatMoney,
-} from '@/summary/daySummary';
+  NOT_TRACKED,
+  summaryForRun,
+  trackedLabel,
+} from '@/summary/runSummary';
 import { radii, spacing, typography } from '@courier/design-tokens/chosen';
 
 /** The bar band's height, from the reference. */
@@ -49,8 +52,14 @@ const BAR_BAND = 70;
 /** The reference's quiet accent bar: the accent, at the reference's 22 percent. */
 const BAR_QUIET_OPACITY = 0.22;
 
-/** The tallest bar in the week, so every week fills its band. */
-const TALLEST = barHeightFraction(REFERENCE_DAY.bars);
+/**
+ * The week's bars: none until the runs API carries earlier days (D60), so a
+ * driver's screen shows none rather than the reference's seven.
+ */
+const WEEK_BARS: readonly { letter: string; fraction: number }[] = [];
+
+/** The tallest bar in the week, so a week (when there is one) fills its band. */
+const TALLEST = barHeightFraction(WEEK_BARS);
 
 export default function SummaryScreen() {
   // The route: the light and the dark resolve here, because a root-stack route
@@ -69,7 +78,14 @@ function SummaryScreenBody() {
   const { t } = useChosen();
   const router = useRouter();
   const voice = useVoice();
-  const day = REFERENCE_DAY;
+  const run = useRun();
+  // A3: the summary is THIS run's own day - the stops the phone holds and the
+  // marks it recorded - and the money and the kilometres say "not tracked yet"
+  // (D60) instead of the reference mockup’s own numbers.
+  const day = useMemo(
+    () => summaryForRun(run.day.stops, run.delivered, new Date()),
+    [run.day.stops, run.delivered],
+  );
 
   // The Copilot centre is on every main screen (D34): a tap toggles the
   // microphone with the voice haptic, and the sphere reads the engine's state.
@@ -122,7 +138,12 @@ function SummaryScreenBody() {
             ]}
             maxFontSizeMultiplier={1.6}
           >
-            {formatMoney(day.earnedCents)}
+            {trackedLabel(day.earnedCents, (cents) => `${(cents / 100).toFixed(2)}`)}
+          </Text>
+          {/* D60: earnings are not in the trial, so the screen says so rather
+              than show a number the phone never earned. */}
+          <Text style={[styles.earningsLabel, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
+            Earnings are not tracked in the trial
           </Text>
 
           <View style={styles.week} accessibilityRole="image" accessibilityLabel="The earnings of the last seven days">
@@ -163,14 +184,14 @@ function SummaryScreenBody() {
             </View>
             <View style={[styles.statCard, { backgroundColor: t.colors.card }]}>
               <Text
-                testID="summary-not-home"
+                testID="summary-failed"
                 style={[styles.statValue, { color: t.colors.danger, fontFamily: typography.family.numbers.iOS }]}
                 maxFontSizeMultiplier={1.6}
               >
-                {day.notHome}
+                {day.failed}
               </Text>
               <Text style={[styles.statLabel, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
-                Not home
+                Failed
               </Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: t.colors.card }]}>
@@ -179,7 +200,7 @@ function SummaryScreenBody() {
                 style={[styles.statValue, { color: t.colors.label, fontFamily: typography.family.numbers.iOS }]}
                 maxFontSizeMultiplier={1.6}
               >
-                {formatKm(day.drivenKm)}
+                {trackedLabel(day.drivenKm, formatKm)}
               </Text>
               <Text style={[styles.statLabel, { color: t.colors.secondaryLabel }]} maxFontSizeMultiplier={1.4}>
                 Driven
@@ -189,7 +210,16 @@ function SummaryScreenBody() {
         </View>
 
         <View style={[styles.carriersCard, { backgroundColor: t.colors.card }]} testID="summary-carriers">
-          {day.carriers.map((carrier, index) => (
+          {day.carriers.length === 0 ? (
+            <Text
+              testID="summary-carriers-none"
+              style={[styles.carrierName, { color: t.colors.secondaryLabel }]}
+              maxFontSizeMultiplier={1.4}
+            >
+              {NOT_TRACKED}
+            </Text>
+          ) : (
+          day.carriers.map((carrier, index) => (
             <View
               key={carrier.name}
               style={[
@@ -211,7 +241,7 @@ function SummaryScreenBody() {
                 {formatMoney(carrier.cents)}
               </Text>
             </View>
-          ))}
+          )))}
         </View>
       </ScrollView>
 

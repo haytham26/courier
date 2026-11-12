@@ -11,14 +11,30 @@
  */
 import { e2eDay } from '../dayForThisBuild';
 
-/** The break window the mock run carries, in the contract's own stamps. */
-const THE_BREAK = { start: '2026-10-31T12:00:00.000Z', end: '2026-10-31T13:00:00.000Z' };
+import { windowInRunZone } from '@/time/runZone';
+
+/**
+ * The break window the mock run carries, in the contract's own stamps.
+ *
+ * A11: the stamps are authored so the break READS 12:00 - 13:00 in the run's
+ * zone (Pacific/Auckland), the way the founder's brief says the day is. The
+ * QA inspector read "01:00 - 02:00" for it (step 05) because the stamps were
+ * UTC wall-clock numbers, and the rows now render in the run's zone.
+ */
+const THE_BREAK = { start: '2026-10-30T23:00:00.000Z', end: '2026-10-31T00:00:00.000Z' };
 
 describe("the mock day's break window and finish point (queue 4d)", () => {
   it('answers the break window the run carries', () => {
     const run = e2eDay();
 
     expect(run.run.break_window).toEqual(THE_BREAK);
+  });
+
+  it('reads the break window as the run planned it, in the run\u2019s own zone', () => {
+    const run = e2eDay();
+    const window = run.run.break_window;
+
+    expect(windowInRunZone(window.start, window.end)).toBe('12:00 - 13:00');
   });
 
   it('answers the finish point as the depot, the way the seeded day does', () => {

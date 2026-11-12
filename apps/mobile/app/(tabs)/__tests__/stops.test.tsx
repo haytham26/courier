@@ -16,6 +16,7 @@ import { Keyboard, Text } from 'react-native';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { clockInRunZone } from '@/time/runZone';
 import RouteTab from '../stops';
 import { RunProvider } from '@/maps/runState';
 import { e2eDay } from '@/run/dayForThisBuild';
@@ -498,14 +499,19 @@ describe('the route screen\'s optimise', () => {
  * word, and the route row shows it: the priority a stop carries and the window
  * the run gave it - the times a courier reads, not the contract's own stamps.
  */
-/** The run's own window for stop 2, as the app's screens read it. */
-const theWindow = { start: '2026-10-31T09:00:00.000Z', end: '2026-10-31T11:00:00.000Z' };
+/**
+ * The run's own window for stop 2 (A11).
+ *
+ * The stamps are authored so the window READS 09:00 - 11:00 in the run's
+ * zone (Pacific/Auckland, UTC+13 on that date): a Christchurch courier's
+ * morning window. Reading them on a UTC device is what the QA inspector saw
+ * as "22:00 - 00:00" (step 05), so the row renders in the run's zone and
+ * this test derives its expectation through the same pinned rule.
+ */
+const theWindow = { start: '2026-10-30T20:00:00.000Z', end: '2026-10-30T22:00:00.000Z' };
 
-/** One of the window's moments as the courier's own clock reads it. */
-const clock = (stamp: string): string => {
-  const at = new Date(stamp);
-  return `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
-};
+/** One of the window's moments as the RUN's zone reads it (not the device's). */
+const clock = (stamp: string): string => clockInRunZone(stamp);
 
 describe("the route screen's priority and windows (queue 4a)", () => {
   it('shows the priority the run itself gives the stop', async () => {
@@ -525,9 +531,10 @@ describe("the route screen's priority and windows (queue 4a)", () => {
   it('shows the time window the run itself gives the stop', async () => {
     await renderWithRun([]);
 
-    // Stop 2's own window, read on the device's own clock: a window is a local
-    // time, so the test derives the times the same way the row does rather than
-    // pinning a UTC stamp. The window is its own node, beside the priority.
+    // Stop 2's own window read in the RUN's zone: a window is the run's local
+    // time, so the test derives the times through the same pinned rule rather
+    // than pinning a UTC stamp or the device's clock (A11). The window is its
+    // own node, beside the priority.
     const expected = `${clock(theWindow.start)} - ${clock(theWindow.end)}`;
     fireEvent.press(screen.getByTestId('stops-segment-to-go'));
     await waitFor(() => {
@@ -618,10 +625,10 @@ describe("the route screen's stop types (queue 4c)", () => {
  * neither shows neither row.
  */
 describe("the route screen's break window and finish point (queue 4d)", () => {
-  /** The mock run's own break window, as the E2E day answers it. */
-  const theBreak = { start: '2026-10-31T12:00:00.000Z', end: '2026-10-31T13:00:00.000Z' };
+  /** The mock run's own break window, authored to read 12:00 - 13:00 in the run's zone (A11). */
+  const theBreak = { start: '2026-10-30T23:00:00.000Z', end: '2026-10-31T00:00:00.000Z' };
 
-  it('shows the break the run planned, with its times on the device\u2019s own clock', async () => {
+  it('shows the break the run planned, with its times in the run\u2019s own zone', async () => {
     await renderWithRun([]);
 
     await waitFor(() => {
