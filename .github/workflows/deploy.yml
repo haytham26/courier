@@ -65,7 +65,7 @@ jobs:
     if: github.event_name != 'workflow_run'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # No workspace install on purpose: nothing here runs Node on the runner.
       # The images build their own dependencies, and the auth service's
@@ -217,7 +217,7 @@ jobs:
       # may have moved since they finished, and a deploy of the tip is a deploy
       # of a tree nobody tested. On a `workflow_dispatch` the event's own sha is
       # what a human asked for.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.host.outputs.configured == 'true'
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
