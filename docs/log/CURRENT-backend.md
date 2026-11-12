@@ -1,3 +1,38 @@
+## 2026-11-12 (the day's standing summary, refreshed at each merge)
+
+**The founder's local server is RUNNING** (all six services healthy, ~45% of the PC's RAM free):
+
+| Build setting | Value |
+|---|---|
+| `EXPO_PUBLIC_API_URL` | `https://cayman-features-folding-permit.trycloudflare.com` |
+| `EXPO_PUBLIC_AUTH_URL` | `https://cayman-features-folding-permit.trycloudflare.com/api/auth` |
+| `EXPO_PUBLIC_VOICE_SERVICE_URL` | `https://farming-advise-friend-wild.trycloudflare.com` |
+
+Sign in as `founder@courier.local` with the password in `.local-founder-login.txt` (git-ignored, `chmod 600`),
+and the Christchurch day is already seeded. `bash infra/local-stack.sh up|status|smoke|down` runs it; the
+repo's own `infra/smoke.sh` passes **7/7** against the live edge. The procedure is
+`docs/operations/LOCAL_SERVER.md`.
+
+**What landed on main today, in order:** the Oracle guide + the host bootstrap + the release's SBOM
+(BUG-283, #305) → the founder's local server (BUG-284) + the smoke test's own day (BUG-285, #315) →
+locked stops for the lead (BUG-286, #318) + the billing cache's order-dependence (BUG-287) → the APK's
+voice URL and one URL precedence (BUG-289, #322) → the recordings' two profiles (BUG-290, #323) → the
+real road polyline for the lead (BUG-288, #325) → VROOM 1.15.0 runs (BUG-291, #328) → the founder's
+three variables (FOUNDER_TODO's top row, #327).
+
+**The three things the founder can do right now:**
+1. **Install the app**: set the three repository variables FOUNDER_TODO's top row names (two clicks each)
+   and the Main APK workflow publishes the stable link on its next run. They are public URLs, not secrets.
+2. **Watch the Oracle deploy**: the watcher's last probe still reads `configured=false`, so the host and
+   its secrets are not in yet — the deploy leg keeps skipping with its notice rather than going red.
+3. **Merge the Dependabot queue from 2026-11-14** (the 7-day cooldown): the fourteen green ones in the
+   order the triage note lists, and the five red ones only after their reasons are addressed.
+
+**What is deliberately NOT done yet:** the full 144-instance routing re-measure with VROOM (the engine
+runs and is wired; the long eval waits for the founder's server to stop, by the directive's resource
+rule), the production OmniRoute (founder-blocked), and the signed v1.0.0 APK (waiting on the keystore
+secrets, FOUNDER_TODO).
+
 ## 2026-11-12 (later still): the founder's item 4 — the APK the founder can install (BUG-289), and the one blocker left
 
 The founder's directive item 4: **the releases list is empty and
