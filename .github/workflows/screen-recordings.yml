@@ -16,6 +16,17 @@ name: Screen recordings (13 reference screens)
 #
 # Dark alias: the night driving is its own reference (12-driving-night), so
 # the dark pass of the driving flow is composed against that one.
+#
+# BUG-270's screen-recordings half (P7's acceptance is "on the CI emulator at
+# TWO screen sizes"): the record job is a MATRIX over the two profiles - the
+# small one (an empty device name is the emulator-runner's own default) and the
+# large one (Nexus 6) - because recordings proven on one size prove nothing
+# about the other. The two legs run as parallel jobs on the same pins
+# (BUG-065/BUG-068), the AVD cache key carries the profile so a snapshot is
+# never restored onto the other screen, and each leg's artefacts carry the
+# profile in their names so the two sets of baselines never collide. The
+# reference HTML renders at the leg's own viewport, so a side-by-side compares
+# like with like rather than a phone render against a tablet screencap.
 
 on:
   pull_request:
@@ -109,12 +120,32 @@ jobs:
           retention-days: 7
 
   record:
-    name: Record the screens on the emulator
+    name: Record the screens on the emulator (${{ matrix.profile }})
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The small screen: an empty device name is the emulator-runner's own
+          # default AVD, the one this job has always booted, and 390x844 is the
+          # phone the design was drawn on.
+          - profile: small
+            device: ''
+            viewport: '390x844'
+          # The large screen: the Nexus 6 AVD (1440x2560 device px at 560 dpi,
+          # which is 411x731 logical dp) - the profile the lead's P4 job names
+          # as `large`. The reference renders at the leg's own logical size
+          # rather than the design phone's, so the side-by-side is a comparison
+          # of the same window at two sizes.
+          - profile: large
+            device: 'Nexus 6'
+            viewport: '411x731'
     env:
       PKG: com.courier.copilot
+      PROFILE: ${{ matrix.profile }}
+      VIEWPORT: ${{ matrix.viewport }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -146,22 +177,25 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}-chromium-1.49.1
+          key: playwright-${{ runner.os }}-${{ matrix.profile }}-${{ hashFiles('**/pnpm-lock.yaml') }}-chromium-1.49.1
           restore-keys: |
-            playwright-${{ runner.os }}-chromium-1.49.1-
+            playwright-${{ runner.os }}-${{ matrix.profile }}-chromium-1.49.1-
 
       - name: Render the 13 reference screens
-        # The references are static HTML at a fixed 390×844 (the phone the
-        # design was drawn on): they render to the PNG the side-by-side
-        # composes against. Chromium is the renderer; the browser is cached.
+        # The references are static HTML, rendered at THIS LEG's own viewport
+        # (the matrix's viewport): a phone render beside a tablet screencap
+        # would compare two different windows, and the composition would prove
+        # nothing. Chromium is the renderer; the browser is cached, and the
+        # cache key carries the profile so the two legs' entries are separate.
         run: |
           mkdir -p ~/.cache/ms-playwright
           npx --yes playwright@1.49.1 install chromium --with-deps
           mkdir -p render
+          size="${VIEWPORT//x/,}"
           for html in docs/design/chosen/screens/*.html; do
             name="$(basename "$html" .html)"
             npx --yes playwright@1.49.1 screenshot \
-              --viewport-size=390,844 --wait-for-timeout=2500 \
+              --viewport-size="$size" --wait-for-timeout=2500 \
               "file://$PWD/$html" "render/$name.png"
             echo "rendered: $name"
           done
@@ -180,7 +214,11 @@ jobs:
         run: |
           set -euo pipefail
           opts="-no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim"
-          fingerprint="$MAESTRO_VERSION/$MAESTRO_SHA256/$EMULATOR_BUILD/34/google_apis/x86_64/$opts"
+          # BUG-270: the fingerprint carries the PROFILE. A snapshot is made of
+          # one screen; restoring it onto the other leg's device would boot a
+          # screen the snapshot never saw, and the failure would read as an app
+          # failure (the same class as BUG-068's runner-image rotation).
+          fingerprint="$MAESTRO_VERSION/$MAESTRO_SHA256/$EMULATOR_BUILD/34/google_apis/x86_64/$opts/$PROFILE"
           hash=$(printf '%s' "$fingerprint" | sha256sum | cut -d' ' -f1 | cut -c1-16)
           echo "hash=$hash" >> "$GITHUB_OUTPUT"
           echo "pin fingerprint: $fingerprint -> $hash"
@@ -189,9 +227,9 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.android/avd
-          key: avd-${{ runner.os }}-34-google-apis-x86_64-${{ steps.pins.outputs.hash }}
+          key: avd-${{ runner.os }}-34-google-apis-x86_64-${{ matrix.profile }}-${{ steps.pins.outputs.hash }}
           restore-keys: |
-            avd-${{ runner.os }}-34-google-apis-x86_64-
+            avd-${{ runner.os }}-34-google-apis-x86_64-${{ matrix.profile }}-
 
       - name: Enable KVM for the emulator
         run: |
@@ -205,7 +243,10 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
-          profile: Nexus 6
+          # The device comes from the matrix: an empty one is the runner's own
+          # default AVD (the small screen) and the large leg names its own. The
+          # profile itself travels in the AVD cache key's hash above, not here.
+          profile: ${{ matrix.device }}
           # The animations stay on: the recording is the evidence of the
           # motion (the flows gate runs under the same rules it asserts).
           disable-animations: false
@@ -228,7 +269,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: screen-recordings
+          # BUG-270: the artefact's name carries the profile. Two legs uploading
+          # under one name would merge the two sets of baselines into one
+          # artifact - the small set beside the large one - and the visual gate
+          # would promote whichever it read first.
+          name: screen-recordings-${{ matrix.profile }}
           path: |
             .maestro/recordings/**
             render/**
