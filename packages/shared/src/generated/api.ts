@@ -147,6 +147,10 @@ export interface ReoptResponse {
   run_id: string;
   engine: string;
   finish_delta_s: number;
+  locked_stop_ids?: {
+    stop_id: string;
+    sequence: number;
+  }[];
   stops: Record<string, unknown>[];
 }
 
@@ -156,6 +160,10 @@ export interface RouteResponse {
   engine: string;
   locked: boolean;
   template_id?: string;
+  locked_stop_ids?: {
+    stop_id: string;
+    sequence: number;
+  }[];
   total_distance_m: number;
   total_duration_s: number;
   parcels: number;
@@ -445,6 +453,7 @@ export interface ApiPaths {
     post: {
       body: {
         affected_stop_ids: string[];
+        locked_stop_ids?: string[];
       };
       responses: {
         200: ReoptResponse;
