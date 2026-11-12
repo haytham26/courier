@@ -22,3 +22,12 @@ services/api --extra eval python scripts/eval/run-routing-eval.py`) because it d
 production engine (`app.solver`/`app.routing`) and the baselines (PyVRP long-budget, OR-Tools);
 the checker is zero-dependency node so CI needs neither the Python toolchain nor the matrix
 engine. The instructions to rebuild the set end to end are in the set's README.
+
+## The scale set (the founder directive 2026-11-10, item 5)
+
+| Script                   | What it does                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `build-scale-shifts.mjs` | Builds the scale set: 120 seeded, simulated FULL SHIFTS (load -> navigate -> deliver -> fail with a reason -> POD photo -> break -> finish) drawn from the committed routing pool of real LINZ Canterbury addresses, one outcome per stop, the proof photos, the courier’s own note words and the spoken break and finish, seeded with mulberry32 (seed 20261111) so the same seed builds byte-identical bytes. `node scripts/eval/build-scale-shifts.mjs`.               |
+| `scale-device-legs.sh`   | The scale run’s device legs on a connected device: the monkey over every screen (seeded, with the crashes and the ANRs read per screen), the permissions revoked mid-shift and re-granted, the low-battery mode, and the offline run with the delivery held. One-shot adb commands only — the BlueStacks bridge refuses Maestro (BUG-303) — and a screen that never answers its testID fails the leg rather than skipping it. `bash scripts/eval/scale-device-legs.sh -s <serial>`. |
+
+The evidence the scale run writes is `docs/evidence/scale-tests/README.md`.

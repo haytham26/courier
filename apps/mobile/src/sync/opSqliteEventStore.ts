@@ -29,7 +29,13 @@ import { type DB, type Scalar } from '@op-engineering/op-sqlite';
 import { errorMessage } from '@/lib/errors';
 
 import { sharedDatabase, type SharedHandle } from './dbConnections';
-import { dbNumber, dbText, migrateTable, normaliseOccurredAt, type TableShape } from './eventSchema';
+import {
+  dbNumber,
+  dbText,
+  migrateTable,
+  normaliseOccurredAt,
+  type TableShape,
+} from './eventSchema';
 import type { DeliveryEvent, EventStore } from './types';
 
 /** The shape of the event log's table, and the version of that shape. */
@@ -41,6 +47,14 @@ export const EVENT_TABLE: TableShape = {
     ['kind', 'TEXT', 'NOT NULL'],
     ['utterance', 'TEXT'],
     ['safe_place', 'TEXT'],
+    // The structured reason a FAILED delivery carries (ADR-023's own field).
+    // The API's `DeliveryEvent` refuses a `failed` event without one - a
+    // refusal there takes the whole batch with it, and a refused batch is one
+    // the outbox keeps out of the send path (ADR-014 §3) - so the reason the
+    // store records has to be the reason the log reads back. Before this
+    // column the store dropped it on the write: 562 failed events of the
+    // 120-shift scale run reached the server with no reason at all.
+    ['reason', 'TEXT'],
     ['lat', 'REAL'],
     ['lon', 'REAL'],
     ['accuracy_m', 'REAL'],
@@ -48,7 +62,7 @@ export const EVENT_TABLE: TableShape = {
     ['synced', 'INTEGER', 'NOT NULL DEFAULT 0'],
     ['refused_at', 'TEXT'],
   ],
-  version: 1,
+  version: 2,
 };
 
 /** The version every database of the event log is migrated to. */
@@ -123,7 +137,9 @@ export class OpSqliteEventStore implements EventStore {
     }
     await this.ready.catch((error: unknown) => {
       // A store whose migration failed still has to give its handle back.
-      console.warn(`sync: the event log was never ready, its handle is released anyway: ${errorMessage(error)}`);
+      console.warn(
+        `sync: the event log was never ready, its handle is released anyway: ${errorMessage(error)}`,
+      );
     });
     // The handle is shared, so it is released rather than closed: the run cache
     // may still be reading the same file.
@@ -154,14 +170,17 @@ export class OpSqliteEventStore implements EventStore {
     await this.ensureOpen();
     await this.handle.database.execute(
       `INSERT OR IGNORE INTO ${EVENT_TABLE.table}
-         (id, stop_id, kind, utterance, safe_place, lat, lon, accuracy_m, occurred_at, synced, refused_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL)`,
+         (id, stop_id, kind, utterance, safe_place, reason, lat, lon, accuracy_m, occurred_at, synced, refused_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL)`,
       [
         event.id,
         event.stopId,
         event.kind,
         event.utterance ?? null,
         event.safePlace ?? null,
+        // ADR-023: the reason a failed delivery carries rides the row, so the
+        // batch the outbox sends is the batch the server accepts.
+        event.reason ?? null,
         event.lat ?? null,
         event.lon ?? null,
         event.accuracyM ?? null,
@@ -173,7 +192,7 @@ export class OpSqliteEventStore implements EventStore {
   async pending(limit: number): Promise<DeliveryEvent[]> {
     await this.ensureOpen();
     const result = await this.handle.database.execute(
-      `SELECT id, stop_id, kind, utterance, safe_place, lat, lon, accuracy_m, occurred_at
+      `SELECT id, stop_id, kind, utterance, safe_place, reason, lat, lon, accuracy_m, occurred_at
          FROM ${EVENT_TABLE.table}
         WHERE synced = 0 AND refused_at IS NULL
         ORDER BY julianday(occurred_at) ASC
@@ -235,6 +254,9 @@ function eventOf(row: Record<string, Scalar>): DeliveryEvent {
     kind: dbText(row, 'kind') as DeliveryEvent['kind'],
     utterance: row.utterance === null ? undefined : dbText(row, 'utterance'),
     safePlace: row.safe_place === null ? undefined : dbText(row, 'safe_place'),
+    // The reason a FAILED delivery carries (ADR-023): read back with everything
+    // else, because the API refuses a failed event without one.
+    ...(row.reason === null ? {} : { reason: dbText(row, 'reason') }),
     lat: dbNumber(row, 'lat'),
     lon: dbNumber(row, 'lon'),
     accuracyM: dbNumber(row, 'accuracy_m'),
