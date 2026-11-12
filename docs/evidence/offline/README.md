@@ -226,21 +226,50 @@ cut the style-driven layers; the courier layers stay). **Which zoom the pack
 ships at is the maps squad's and the founder's decision, and the ladder above
 is the number that decision needs** — recorded, not chosen by the lane.
 
-**The build this lane ran end to end** (in Linux, bounded to the pack's own
-envelope, with the four fixes in): the tileset, the cluster step, the extract,
-the verify, the header and the manifest are in
-`docs/evidence/offline/results/pack/` (the manifest verbatim, the tool
-versions, the timings), and the pack's own header reads:
+**The build this lane ran end to end, and the pack it produced.** In Linux
+(the pinned tools, the same steps the workflow runs), bounded to the pack's own
+envelope because the whole-country pass is a multi-hour run on this machine and
+it was killed twice by restarts - the extract clips to the same envelope, so
+the archive is the one the app reads:
 
-```json
-{
-  "tile_compression": "gzip",
-  "tile_type": "mvt",
-  "minzoom": 6,
-  "maxzoom": 14,
-  "bounds": [170.5, -44.5, 173.5, -42.8]
-}
-```
+| the pack                | measured                                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| **size**                | **47,718,502 bytes (45.5 MiB)** - under the 50 MiB ceiling the script enforces      |
+| sha256                  | `7ee57e5ab53ec344c137a4944e04fc1db9926f2382a45262a5e6fdf88f8de2f1`                  |
+| tile type / compression | `mvt` / `gzip` (from the tool's own header)                                         |
+| zooms                   | `minzoom: 6, maxzoom: 14`                                                           |
+| bounds                  | `[170.5, -44.5, 173.5, -42.8]` - the Canterbury envelope                            |
+| built                   | 2026-11-12T02:37:26Z, in 6m07s over a 47,734,753-byte tileset                       |
+| tools                   | planetiler **0.10.2**, pmtiles **1.31.2**, OpenJDK 21.0.13, node v24.22.2           |
+| verify                  | `pmtiles verify` → `Completed verify` (the archive is ordered, its header is right) |
+
+The manifest the app reads is in
+`docs/evidence/offline/results/pack/canterbury.manifest.json` (verbatim), with
+the build log and the tool versions beside it in `pack-evidence.md`. Its
+`attribution` is the line the licence work requires:
+
+> "© OpenStreetMap contributors. Contains information from OpenStreetMap,
+> available under the Open Database License (ODbL). Sourced from the LINZ Data
+> Service and licensed for reuse under the CC BY 4.0 licence Vector tiles and
+> schema derived from OpenMapTiles, licensed under CC BY 4.0, (c) OpenMapTiles
+> contributors"
+
+Two more defects fell out of the manifest itself, both fixed red-first in this
+commit:
+
+5. `pmtiles cluster` is **in place and not idempotent**: it refuses a tileset
+   that is already clustered ("Failed to cluster, archive is already
+   clustered", pmtiles 1.31.2, measured on the lane's own re-run), which killed a
+   build whose tileset survived a previous one. The step's goal is a clustered
+   archive, so the tool naming that state is the goal met
+   (`clusterAnswer`); any other answer is rethrown, so a real cluster failure
+   still stops the build.
+6. The manifest's `tools.planetiler.version` was **planetiler's whole argument
+   dump** (12 KB) rather than a version: `planetiler --version` prints its
+   argument list first and the version inside it ("INF - Planetiler build
+   version: 0.10.2"). The manifest records the version, so it is read out of
+   what the tool said (`planetilerVersionOf`). A manifest whose job is
+   evidence must not store an argument dump as a version.
 
 The app-side proof that it renders offline is
 `apps/mobile/src/maps/__tests__/canterburyPack.test.ts`, which reads the REAL

@@ -39,6 +39,38 @@ type Commands = {
   headerJson: string[];
 };
 
+/** What the module's own version extractor answers, read from the module. */
+function planetilerVersionOf(output: string): string {
+  const printed = execFileSync(
+    'node',
+    [
+      '--input-type=module',
+      '-e',
+      `const { pathToFileURL } = await import('node:url');
+       const m = await import(pathToFileURL(${JSON.stringify(SCRIPT)}).href);
+       process.stdout.write(String(m.planetilerVersionOf(${JSON.stringify(output)})));`,
+    ],
+    { encoding: 'utf8' },
+  );
+  return printed.trim();
+}
+
+/** What the module's own cluster classifier answers, read from the module. */
+function clusterAnswerOf(stderr: string): string {
+  const printed = execFileSync(
+    'node',
+    [
+      '--input-type=module',
+      '-e',
+      `const { pathToFileURL } = await import('node:url');
+       const m = await import(pathToFileURL(${JSON.stringify(SCRIPT)}).href);
+       process.stdout.write(String(m.clusterAnswer(${JSON.stringify(stderr)})));`,
+    ],
+    { encoding: 'utf8' },
+  );
+  return printed.trim();
+}
+
 /** How each tool is asked for its version. */
 type VersionArgs = Record<string, string[]>;
 
@@ -203,6 +235,42 @@ describe('the zoom the pack can actually carry', () => {
     const text = `${result.out}${result.err}`;
     expect(text).toContain('Max zoom must be <= 16');
     expect(text).toContain('17');
+  });
+
+  // The cluster step is in place and not idempotent: pmtiles 1.31.2 refuses a
+  // tileset that is already clustered, which killed the lane's re-run on
+  // 2026-11-12. The step's goal is a CLUSTERED archive, so the tool naming
+  // that state is the goal met; anything else is a failure the build rethrows.
+  it('counts the CLI\'s own "already clustered" as the goal met', () => {
+    expect(clusterAnswerOf('Failed to cluster, archive is already clustered')).toBe('clustered');
+    expect(clusterAnswerOf('archive is already clustered')).toBe('clustered');
+  });
+
+  // The manifest records the tool versions as evidence. planetiler 0.10.2's
+  // `--version` prints its whole argument list FIRST and the version inside
+  // it ("INF - Planetiler build version: 0.10.2", measured 2026-11-12 against
+  // the pinned jar), so the recorded version was a 12 KB argument dump - not
+  // evidence of anything. The version is the tool's own line.
+  it('reads planetiler\'s version out of what its --version answers', () => {
+    const dump = [
+      '\u001b[m\u001b[0m0:00:00 DEB - argument: threads=3 (num threads)',
+      '\u001b[m\u001b[0m0:00:00 DEB - argument: maxzoom=14 (maximum zoom level up to 16)',
+      '\u001b[m\u001b[0m0:00:00 INF - Planetiler build git hash: 0e5588c4a6e8c29a270a33afe8df62027d889604',
+      '\u001b[m\u001b[0m0:00:00 INF - Planetiler build version: 0.10.2',
+      '\u001b[m\u001b[0m0:00:00 INF - Planetiler build timestamp: 2026-03-28T14:35:36.815Z',
+    ].join('\n');
+
+    expect(planetilerVersionOf(dump)).toBe('0.10.2');
+  });
+
+  it('keeps a tool\'s own answer when it names no version, rather than guessing', () => {
+    expect(planetilerVersionOf('some-other-tool 2.1')).toBe('some-other-tool 2.1');
+    expect(planetilerVersionOf('')).toBe('');
+  });
+
+  it('counts anything else the cluster answers as a failure', () => {
+    expect(clusterAnswerOf('Failed to cluster, permission denied')).toBe('failed');
+    expect(clusterAnswerOf('')).toBe('failed');
   });
 
   it('plans the legal ceiling without complaining', () => {

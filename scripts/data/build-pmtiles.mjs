@@ -559,6 +559,31 @@ function printPlan(plan) {
  * knows `version` (verified 2026-10-25: `pmtiles --version` is an unknown
  * flag, and the CLI reference lists `version` as a command).
  */
+/**
+ * The version from what a tool answered with.
+ *
+ * `planetiler --version` does not print a version and stop: it prints its
+ * whole argument list first and the version last ("INF - Planetiler build
+ * version: 0.10.2", measured 2026-11-12 against the pinned 0.10.2 jar). The
+ * manifest records the tool versions as evidence, so an argument dump there is
+ * not evidence - the version is the tool's own line, and anything else it says
+ * is kept out.
+ */
+export function planetilerVersionOf(output) {
+  const spoken = String(output ?? '');
+  const line = spoken
+    .split('\n')
+    .map((entry) => entry.replace(/\x1b\[[0-9;]*m/g, '').trim())
+    .find((entry) => /Planetiler build version:/i.test(entry));
+  if (line === undefined) {
+    // A tool that answers with something else keeps its own answer: never a
+    // guessed version.
+    return spoken.trim();
+  }
+  const version = line.split(':').pop();
+  return version === undefined ? spoken.trim() : version.trim();
+}
+
 export const VERSION_ARGS = {
   planetiler: ['--version'],
   pmtiles: ['version'],
@@ -567,13 +592,38 @@ export const VERSION_ARGS = {
 function requireTool(tool) {
   try {
     const args = VERSION_ARGS[tool] || ['--version'];
-    return execFileSync(tool, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    const answered = execFileSync(tool, args, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    // planetiler's --version is an argument dump with the version inside it
+    // (measured 2026-11-12); the manifest records the version, so it is read
+    // out of what the tool said rather than stored whole.
+    return tool === 'planetiler' ? planetilerVersionOf(answered) : answered.trim();
   } catch (error) {
     console.error(
       `build-pmtiles: ${tool} is not on the PATH, so the build cannot run. Install the pinned version and try again.`,
     );
     process.exit(1);
   }
+}
+
+/**
+ * What the CLI's cluster step answered, classified.
+ *
+ * `pmtiles cluster` runs in place and is not idempotent: pmtiles 1.31.2
+ * refuses a tileset that is already clustered with "Failed to cluster, archive
+ * is already clustered" (measured 2026-11-12, on the lane's own re-run), which
+ * kills a build whose tileset survived a previous one. The step's goal is a
+ * CLUSTERED archive, so the tool naming that state is the goal met - the ONLY
+ * answer that counts as done. Anything else is a failure and is rethrown, so a
+ * real cluster failure still stops the build.
+ */
+export function clusterAnswer(stderr) {
+  if (/already clustered/i.test(String(stderr ?? ''))) {
+    return 'clustered';
+  }
+  return 'failed';
 }
 
 /**
@@ -708,7 +758,26 @@ function executePlan(plan) {
   // MIN_LON,MIN_LAT,MAX_LON,MAX_LAT.
   // The extract's own precondition (measured 2026-11-12: "source archive must
   // be clustered for extracts"), and the CLI's own command that satisfies it.
-  execFileSync('pmtiles', commands.cluster, { stdio: 'inherit' });
+  // The step is in place and not idempotent, so its "already clustered" is an
+  // answer, not a failure - and any other failure is rethrown (a real cluster
+  // failure still stops the build).
+  try {
+    execFileSync('pmtiles', commands.cluster, {
+      // The tool writes its own sentence on STDOUT (go-pmtiles' logger, measured
+      // 2026-11-12), so both streams are captured and classified together.
+      stdio: ['ignore', 'pipe', 'pipe'],
+      encoding: 'utf8',
+    });
+  } catch (error) {
+    const spoken = `${error instanceof Error ? (error.stdout ?? '') : ''}`;
+    const failed = `${error instanceof Error ? (error.stderr ?? '') : ''}`;
+    if (clusterAnswer(`${spoken}${failed}`) !== 'clustered') {
+      throw error;
+    }
+    console.log(
+      'build-pmtiles: the tileset is already clustered (the CLI says so), so the extract can run.',
+    );
+  }
 
   execFileSync('pmtiles', commands.pmtiles, { stdio: 'inherit' });
 
@@ -720,7 +789,7 @@ function executePlan(plan) {
   const bytes = statSync(plan.output).size;
   if (bytes > PACK_SIZE_CEILING_BYTES) {
     console.error(
-      `build-pmtiles: the pack is ${bytes} bytes, over the ${PACK_SIZE_CEILING_BYTES} byte ceiling. Drop to z16 or cut the style-driven layers; the courier layers stay.`,
+      `build-pmtiles: the pack is ${bytes} bytes, over the ${PACK_SIZE_CEILING_BYTES} byte ceiling. The measured ladder over this envelope (2026-11-12): z16 = 153,540,100 bytes (146 MiB), z15 = 86,843,698 (82 MiB), z14 = 46,009,919 (43 MiB), z13 = 18,729,750 (17 MiB). Drop the zoom or cut the style-driven layers; the courier layers stay.`,
     );
     process.exit(1);
   }
