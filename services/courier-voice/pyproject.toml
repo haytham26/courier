@@ -95,6 +95,14 @@ pytest_add_cli_args = [
     # imports numpy and soundfile at module scope - the same `eval` extra, the
     # same reason.
     "--ignore=tests/test_eval_scale.py",
+    # The address resolver's own suites reach the pinned voice builder
+    # (`app/eval_tts.py`, numpy and soundfile at module scope) for the spoken
+    # form a house number takes and for the build's seam - the same `eval`
+    # extra, the same reason, and `app/address_resolve.py` is outside this
+    # floor's source_paths anyway. Their own CI job (the `eval` extra) proves
+    # them.
+    "--ignore=tests/test_address_resolve.py",
+    "--ignore=tests/test_eval_address.py",
 ]
 
 [tool.ruff]

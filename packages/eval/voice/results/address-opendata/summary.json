@@ -1,0 +1,57 @@
+{
+ "generated": "2026-11-11T19:51:16+1300",
+ "target": "the founder's VOICE LEVER (b): address resolution on the STT output",
+ "judge": "none (--from-csv)",
+ "judge_model": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2",
+ "sample_rate": 16000,
+ "manifest": "packages/eval/voice/manifest",
+ "python": "3.12.15",
+ "platform": "Windows-11-10.0.26300-SP0",
+ "turns": 600,
+ "action_turns": 590,
+ "address_bearing_turns": 75,
+ "before_brain_exact": 0,
+ "after_resolved_exact": 0,
+ "after_ungated_exact": 0,
+ "turns_by_slice": {
+  "en_nz_quiet": {
+   "turns": 120,
+   "address_bearing": 15,
+   "brain_exact": 0,
+   "resolved_exact": 0,
+   "ungated_exact": 0,
+   "brain_addresses": 0,
+   "resolved": 0,
+   "ungated": 0
+  },
+  "en_nz_van": {
+   "turns": 360,
+   "address_bearing": 45,
+   "brain_exact": 0,
+   "resolved_exact": 0,
+   "ungated_exact": 0,
+   "brain_addresses": 0,
+   "resolved": 0,
+   "ungated": 0
+  },
+  "en_mix": {
+   "turns": 120,
+   "address_bearing": 15,
+   "brain_exact": 0,
+   "resolved_exact": 0,
+   "ungated_exact": 0,
+   "brain_addresses": 0,
+   "resolved": 0,
+   "ungated": 0
+  }
+ },
+ "legs": {
+  "before": "the offline brain's raw_address compared to the gold string - the 0/75 number the held-out measurement publishes",
+  "after_gated": "MEASURED ON THE STT OUTPUT: app/address_resolve.py's answer on the brain's raw_address, compared as number + suffix + street key + suburb - the resolved address, never a substring hit",
+  "after_ungated": "the resolver's answer on the WHOLE hypothesis, the founder's literal ask; it carries the resolver's own false-positive risk, which the open-speech leg measures separately",
+  "not_measured": [
+   "M1 on the product's own on-device STT (the judge is the set's own)",
+   "the wake word, the device latency and the battery (the device's legs)"
+  ]
+ }
+}
