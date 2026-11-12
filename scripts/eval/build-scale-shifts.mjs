@@ -195,9 +195,7 @@ function aShift(random, at, pool, area) {
   // never walked.
   const deliveries = outcomes.filter((entry) => entry.outcome.outcome === 'delivered');
   const photoIndexes = new Set(
-    deliveries
-      .map((entry, index) => (random() < 0.55 ? index : -1))
-      .filter((index) => index >= 0),
+    deliveries.map((entry, index) => (random() < 0.55 ? index : -1)).filter((index) => index >= 0),
   );
   if (photoIndexes.size === 0 && deliveries.length > 0) {
     photoIndexes.add(Math.floor(random() * deliveries.length));
@@ -239,7 +237,10 @@ function aShift(random, at, pool, area) {
     plan: outcomes,
     notes,
     commands: [
-      { text: `taking a ${BREAK_WORDS[Math.floor(random() * BREAK_WORDS.length)]} minute break`, kind: 'start_break' },
+      {
+        text: `taking a ${BREAK_WORDS[Math.floor(random() * BREAK_WORDS.length)]} minute break`,
+        kind: 'start_break',
+      },
       { text: BACK_WORDS[Math.floor(random() * BACK_WORDS.length)], kind: 'end_break' },
       { text: FINISH_WORDS[Math.floor(random() * FINISH_WORDS.length)], kind: 'end_shift' },
     ],
@@ -303,7 +304,14 @@ export function checkShift(shift, index) {
       problems.push(`stop ${stop.id} failed with no reason`);
     }
   }
-  if (!shift.stops.some((stop) => shift.plan.some((entry) => entry.stop_id === stop.id && entry.outcome.outcome === 'delivered' && entry.outcome.pod))) {
+  if (
+    !shift.stops.some((stop) =>
+      shift.plan.some(
+        (entry) =>
+          entry.stop_id === stop.id && entry.outcome.outcome === 'delivered' && entry.outcome.pod,
+      ),
+    )
+  ) {
     problems.push('the shift carries no proof photo');
   }
   for (const note of shift.notes) {
@@ -338,23 +346,30 @@ function main() {
     shifts: shifts.length,
     stops: shifts.reduce((total, shift) => total + shift.stops.length, 0),
     delivered: shifts.reduce(
-      (total, shift) => total + shift.plan.filter((entry) => entry.outcome.outcome === 'delivered').length,
+      (total, shift) =>
+        total + shift.plan.filter((entry) => entry.outcome.outcome === 'delivered').length,
       0,
     ),
     failed: shifts.reduce(
-      (total, shift) => total + shift.plan.filter((entry) => entry.outcome.outcome === 'failed').length,
+      (total, shift) =>
+        total + shift.plan.filter((entry) => entry.outcome.outcome === 'failed').length,
       0,
     ),
     skipped: shifts.reduce(
-      (total, shift) => total + shift.plan.filter((entry) => entry.outcome.outcome === 'skipped').length,
+      (total, shift) =>
+        total + shift.plan.filter((entry) => entry.outcome.outcome === 'skipped').length,
       0,
     ),
     pending: shifts.reduce(
-      (total, shift) => total + shift.plan.filter((entry) => entry.outcome.outcome === 'pending').length,
+      (total, shift) =>
+        total + shift.plan.filter((entry) => entry.outcome.outcome === 'pending').length,
       0,
     ),
     pods: shifts.reduce(
-      (total, shift) => total + shift.plan.filter((entry) => entry.outcome.outcome === 'delivered' && entry.outcome.pod).length,
+      (total, shift) =>
+        total +
+        shift.plan.filter((entry) => entry.outcome.outcome === 'delivered' && entry.outcome.pod)
+          .length,
       0,
     ),
     notes: shifts.reduce((total, shift) => total + shift.notes.length, 0),
@@ -366,7 +381,9 @@ function main() {
     generator: 'mulberry32, the same PRNG the routing and voice sets use',
     shifts: counts.shifts,
     counts,
-    areas: Object.fromEntries(areas.map((area) => [area, shifts.filter((shift) => shift.area === area).length])),
+    areas: Object.fromEntries(
+      areas.map((area) => [area, shifts.filter((shift) => shift.area === area).length]),
+    ),
     pool: {
       file: 'packages/eval/routing/manifest/pool.json',
       sha256: createHash('sha256').update(readFileSync(POOL)).digest('hex'),
@@ -376,7 +393,7 @@ function main() {
     licence:
       'the addresses are LINZ Data Service layer 123113 (NZ Addresses), CC BY 4.0, ' +
       'sourced through the committed routing pool; the reasons, the notes and the ' +
-      'words are this repository\'s own',
+      "words are this repository's own",
     harness: 'apps/mobile/src/run/__tests__/scaleShifts.test.ts',
     evidence: 'docs/evidence/scale-tests/README.md',
   };

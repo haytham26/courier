@@ -43,14 +43,17 @@
  * native SQLite engine and the real API. Those are the CI AVDs' and the A1
  * stack's legs, and `docs/evidence/scale-tests/README.md` names them.
  */
+// The mock is a `mock`-prefixed binding, the only shape babel-plugin-jest-hoist
+// lets a mock factory close over; it is wired to the durable stand-in below.
 jest.mock('@op-engineering/op-sqlite', () => {
-  // The app's own stores read their statements through this; the stand-in
-  // answers them the way SQLite does and KEEPS THE ROWS ACROSS A CLOSE, which
-  // is what makes the kill legs (scaleKillSync.test.ts) mean anything.
-  const { theDatabaseOf } = require('../testing/scaleSqlite') as typeof import('../testing/scaleSqlite');
-  return { open: jest.fn((options: { name: string }) => theDatabaseOf(options.name)) };
+  // The app’s own stores read their statements through this. The stand-in
+  // answers them the way SQLite does and KEEPS ITS ROWS ACROSS A CLOSE, which
+  // is what makes the kill legs mean anything. `jest.requireActual` reaches the
+  // module inside the factory (a plain `require` is the lint’s refused shape),
+  // and the stand-in carries no native dependency, so the actual module IS it.
+  const { theDatabaseOf } = jest.requireActual<typeof import('../testing/scaleSqlite')>('../testing/scaleSqlite');
+  return { open: (options: { name: string }) => theDatabaseOf(options.name) };
 });
-
 jest.mock('expo-file-system', () => {
   // The POD capture writes the canned JPEG to the app's own cache: the cache is
   // a file, and a test run has no file system for it, so the write is recorded
@@ -59,10 +62,7 @@ jest.mock('expo-file-system', () => {
   class TheFile {
     readonly uri: string;
 
-    constructor(
-      base: string,
-      name: string,
-    ) {
+    constructor(base: string, name: string) {
       this.uri = `${base}/${name}`;
     }
 
@@ -70,9 +70,11 @@ jest.mock('expo-file-system', () => {
       return undefined;
     }
 
-    async write(data: string, options: { encoding: 'base64' | 'utf8' }): Promise<void> {
-      const bytes = options.encoding === 'base64' ? Buffer.from(data, 'base64').toString('binary') : data;
+    write(data: string, options: { encoding: 'base64' | 'utf8' }): Promise<void> {
+      const bytes =
+        options.encoding === 'base64' ? Buffer.from(data, 'base64').toString('binary') : data;
       written.push({ uri: this.uri, bytes });
+      return Promise.resolve();
     }
   }
 
@@ -128,7 +130,9 @@ const SET = join(REPO_ROOT, 'packages/eval/scale/shifts.jsonl');
  * read it.
  */
 const LIMIT =
-  process.env.SCALE_SHIFTS === undefined ? Number.POSITIVE_INFINITY : Number(process.env.SCALE_SHIFTS);
+  process.env.SCALE_SHIFTS === undefined
+    ? Number.POSITIVE_INFINITY
+    : Number(process.env.SCALE_SHIFTS);
 
 /** Where this run writes its own trace, so the evidence is reproducible. */
 const RESULTS = join(REPO_ROOT, 'docs/evidence/scale-tests/results');
@@ -249,7 +253,10 @@ class TheApi implements RunApi {
   constructor(private readonly shift: SeededShift) {}
 
   seedDemoRun(): Promise<ApiOutcome<{ run_id: string; shift_id: string }>> {
-    return Promise.resolve({ status: 'ok', data: { run_id: this.shift.run_id, shift_id: this.shift.shift_id } });
+    return Promise.resolve({
+      status: 'ok',
+      data: { run_id: this.shift.run_id, shift_id: this.shift.shift_id },
+    });
   }
 
   getRun(): Promise<ApiOutcome<RunSnapshot['run']>> {
@@ -281,7 +288,10 @@ function theSpokenSkip(stop: StopResponse): { text: string; withSuburb: boolean 
   }
   return { text: `skip this one at ${parts[0]}`, withSuburb: false };
 }
-/** The run's active stop, the way `@/maps/drive`'s own `activeOf` reads it. */function activeOf(stops: readonly StopResponse[], marked: readonly string[]): StopResponse | null {
+/** The run's active stop, the way `@/maps/drive`'s own `activeOf` reads it. */ function activeOf(
+  stops: readonly StopResponse[],
+  marked: readonly string[],
+): StopResponse | null {
   const pending = stops
     .filter((stop) => !marked.includes(stop.id))
     .sort((left, right) => (left.seq ?? 0) - (right.seq ?? 0));
@@ -310,12 +320,18 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
   beforeAll(async () => {
     server = new ScaleServer();
     baseUrl = await server.start();
+    // The app's own stores read their statements through this; the stand-in
+    // answers them the way SQLite does and KEEPS THE ROWS ACROSS A CLOSE, which
+    // is what makes the kill legs (scaleKillSync.test.ts) mean anything.
     // The app's own warnings are kept rather than swallowed: the run asserts
     // below that the ONLY things it said were the solver's own refusal of a
     // half order, which this harness asks for on purpose.
-    jest.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {
-      warnings.push(args.map((arg) => textOf(arg)).join(' '));
-    });
+    // The warning is kept whole, as the JSON of everything the app passed:
+    // the assertions below read the words out of it.
+    const captureWarning = (...args: unknown[]): void => {
+      warnings.push(JSON.stringify(args));
+    };
+    jest.spyOn(console, 'warn').mockImplementation(captureWarning);
   });
 
   afterAll(async () => {
@@ -327,7 +343,7 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
     // The run's own crash counter: an unhandled rejection in React Native is a
     // red screen, so one anywhere in 120 shifts is a failure, not a warning.
     const onRejection = (reason: unknown): void => {
-      rejections.push(reason instanceof Error ? reason.message : String(reason));
+      rejections.push(reason instanceof Error ? reason.message : JSON.stringify(reason));
     };
     process.on('unhandledRejection', onRejection);
   });
@@ -336,7 +352,7 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
     process.removeAllListeners('unhandledRejection');
   });
 
-  it('the committed set carries the directive\'s 100 seeded full shifts', () => {
+  it("the committed set carries the directive's 100 seeded full shifts", () => {
     expect(shifts.length).toBeGreaterThanOrEqual(100);
     expect(new Set(shifts.map((shift) => shift.shift_id)).size).toBe(shifts.length);
   });
@@ -357,7 +373,9 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
           `${String(shift.stops.length)} stops in ${String(Date.now() - at)}ms\n`,
       );
     }
-    process.stdout.write(`the whole run: ${String(driven.length)} shifts in ${String(Date.now() - started)}ms\n`);
+    process.stdout.write(
+      `the whole run: ${String(driven.length)} shifts in ${String(Date.now() - started)}ms\n`,
+    );
     // Not one shift threw, and not one rejection went unhandled.
     expect(rejections).toEqual([]);
     expect(traces.length).toBe(driven.length);
@@ -370,7 +388,7 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
     expect(warnings.length).toBe(driven.length);
   }, 1_800_000);
 
-  it('every stop the plan says was delivered or failed carries exactly one mark and exactly one event', async () => {
+  it('every stop the plan says was delivered or failed carries exactly one mark and exactly one event', () => {
     let stops = 0;
     let delivered = 0;
     let failed = 0;
@@ -392,7 +410,7 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
     expect(failed).toBeGreaterThan(100);
   });
 
-  it('the skipped and the left-pending stops were neither marked nor sent', async () => {
+  it('the skipped and the left-pending stops were neither marked nor sent', () => {
     for (const trace of traces) {
       expect(trace.marks_after).toBeLessThanOrEqual(trace.stops);
       // The events the log holds are the marks: nothing was recorded for a
@@ -402,7 +420,7 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
     }
   });
 
-  it('every shift walked the POD path, the break and the finish on the app\'s own parser', async () => {
+  it("every shift walked the POD path, the break and the finish on the app's own parser", () => {
     for (const trace of traces) {
       expect(trace.pods).toBeGreaterThanOrEqual(1);
       expect(trace.notes).toBeGreaterThanOrEqual(0);
@@ -419,7 +437,9 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
   it('the seeded order is the same for the same seed, shift after shift', () => {
     const again = theSet();
     expect(again.map((shift) => shift.shift_id)).toEqual(shifts.map((shift) => shift.shift_id));
-    expect(again[0].stops.map((stop) => stop.address)).toEqual(shifts[0].stops.map((stop) => stop.address));
+    expect(again[0].stops.map((stop) => stop.address)).toEqual(
+      shifts[0].stops.map((stop) => stop.address),
+    );
   });
 
   /**
@@ -461,14 +481,16 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
     }
     const theDay = loaded.snapshot ?? day;
     if (theDay.stops.length !== shift.stops.length) {
-      problems.push(`the phone holds ${theDay.stops.length} stops, the shift carries ${shift.stops.length}`);
+      problems.push(
+        `the phone holds ${theDay.stops.length} stops, the shift carries ${shift.stops.length}`,
+      );
     }
     const breakWindow = theDay.run.break_window;
     if (breakWindow === undefined || breakWindow.start !== shift.break_window.start) {
-      problems.push('the run\'s own break window did not survive the load');
+      problems.push("the run's own break window did not survive the load");
     }
     if (theDay.run.finish === undefined) {
-      problems.push('the run\'s own finish point did not survive the load');
+      problems.push("the run's own finish point did not survive the load");
     }
 
     // ---- navigate: the solver's order is applied to the day the phone holds,
@@ -476,7 +498,7 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
     const order = theDay.stops.map((stop) => ({ stopId: stop.id, sequence: stop.seq ?? 0 }));
     const applied = await store.applyRouteOrder(order);
     if (!applied) {
-      problems.push('the solver\'s own order was refused by the store');
+      problems.push("the solver's own order was refused by the store");
     }
     const halfRefused = await store.applyRouteOrder(order.slice(0, Math.max(1, order.length - 1)));
     if (halfRefused) {
@@ -516,10 +538,10 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
           : theStopTheDayStoppedAt.id;
       const active = activeOf(theDay.stops, resolved);
       if (active === null || active.id !== expected) {
-        problems.push(`the run's active stop is ${active === null ? 'nothing' : active.id} while the plan is at ${expected}`);
+        problems.push(
+          `the run's active stop is ${active === null ? 'nothing' : active.id} while the plan is at ${expected}`,
+        );
       }
-
-
 
       if (outcome.outcome === 'delivered') {
         await store.markDelivered({ id: stop.id, sequence: stop.seq ?? 0 });
@@ -556,12 +578,16 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
         // The courier says the address the way the ear hears it: the number,
         // the street and the suburb, never the extra locality some LINZ rows
         // carry (the app's own pattern is anchored on the whole sentence).
-                const said = theSpokenSkip(stop);
+        const said = theSpokenSkip(stop);
         if (said.withSuburb) {
           skipsWithSuburb += 1;
         }
         const routed = routeTurn(said.text);
-        if (routed.gate !== 'free' || routed.command === null || routed.command.type !== 'mark_skipped') {
+        if (
+          routed.gate !== 'free' ||
+          routed.command === null ||
+          routed.command.type !== 'mark_skipped'
+        ) {
           problems.push(`the spoken skip of ${stop.id} did not route free`);
         }
       } else {
@@ -572,7 +598,11 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
     // The notes the courier speaks at a stop, through the app's own parser.
     for (const note of shift.notes) {
       const routed = routeTurn(`note: ${note.note}`);
-      if (routed.gate !== 'free' || routed.command === null || routed.command.type !== 'add_location_note') {
+      if (
+        routed.gate !== 'free' ||
+        routed.command === null ||
+        routed.command.type !== 'add_location_note'
+      ) {
         problems.push(`the note ${note.note} did not route free`);
         continue;
       }
@@ -597,7 +627,9 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
       if (routed.command.type === 'end_shift') {
         // The end of the shift is the server's own: the full path answers it.
         if (routed.gate !== 'full') {
-          problems.push('the spoken finish routed free, which would end a shift without the office');
+          problems.push(
+            'the spoken finish routed free, which would end a shift without the office',
+          );
         }
       } else if (routed.gate !== 'free' || ackLineFor(routed.command).length === 0) {
         problems.push(`the spoken ${command.kind} was not answered out loud by the phone`);
@@ -617,7 +649,9 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
     const storedEvents = record.stored.filter((event) => shiftStopIds.has(event.stop_id));
 
     if (marks.length !== delivered + failed) {
-      problems.push(`the run carries ${marks.length} marks for ${delivered + failed} stops that moved`);
+      problems.push(
+        `the run carries ${marks.length} marks for ${delivered + failed} stops that moved`,
+      );
     }
     if (sent.length !== 0) {
       problems.push(`the outbox still holds ${sent.length} events after the shift`);
@@ -626,14 +660,19 @@ describe('the seeded full shifts at scale (founder directive 2026-11-10, item 5)
       problems.push(`the log still counts ${pendingCount} pending events after the shift`);
     }
     if (storedEvents.length !== sentEvents.length) {
-      problems.push(`the server stored ${storedEvents.length} of the ${sentEvents.length} events sent`);
+      problems.push(
+        `the server stored ${storedEvents.length} of the ${sentEvents.length} events sent`,
+      );
     }
     // The failed events carried their reason and the courier's own words.
     for (const event of storedEvents) {
       if (event.kind === 'failed' && (event.reason === undefined || event.reason.length === 0)) {
         problems.push(`the failed event ${event.id} reached the server with no reason`);
       }
-      if (event.kind === 'failed' && (event.utterance === undefined || event.utterance.length === 0)) {
+      if (
+        event.kind === 'failed' &&
+        (event.utterance === undefined || event.utterance.length === 0)
+      ) {
         problems.push(`the failed event ${event.id} reached the server with no utterance`);
       }
     }
@@ -809,7 +848,11 @@ function writeTheEvidence(traces: ShiftTrace[]): void {
     pending: traces.reduce((total, trace) => total + trace.pending, 0),
     pods: traces.reduce((total, trace) => total + trace.pods, 0),
     notes: traces.reduce((total, trace) => total + trace.notes, 0),
-    commands: traces.reduce((total, trace) => total + trace.commands.start_break + trace.commands.end_break + trace.commands.end_shift, 0),
+    commands: traces.reduce(
+      (total, trace) =>
+        total + trace.commands.start_break + trace.commands.end_break + trace.commands.end_shift,
+      0,
+    ),
     events_logged: traces.reduce((total, trace) => total + trace.events_logged, 0),
     events_sent: traces.reduce((total, trace) => total + trace.events_sent, 0),
     events_pending_after: traces.reduce((total, trace) => total + trace.events_pending_after, 0),
@@ -817,7 +860,9 @@ function writeTheEvidence(traces: ShiftTrace[]): void {
     server_stored: traces.reduce((total, trace) => total + trace.server_stored, 0),
     server_replays: traces.reduce((total, trace) => total + trace.server_replays, 0),
     problems: traces.reduce((total, trace) => total + trace.problems.length, 0),
-    shifts_with_problems: traces.filter((trace) => trace.problems.length > 0).map((trace) => trace.shift_id),
+    shifts_with_problems: traces
+      .filter((trace) => trace.problems.length > 0)
+      .map((trace) => trace.shift_id),
   };
   const dir = RESULTS;
   mkdirSync(dir, { recursive: true });

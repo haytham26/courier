@@ -18,7 +18,13 @@
  * JSON body, the shape check, the outcome mapping, the transport's refusal
  * logic and the sync service's confirm-after-store — is the app's own.
  */
-import { createServer, request as httpRequest, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import {
+  createServer,
+  request as httpRequest,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from 'node:http';
 
 import type { SyncResult } from '@/sync/types';
 
@@ -54,7 +60,8 @@ export class ScaleServer {
 
   private readonly sent: StoredEvent[] = [];
 
-  private readonly batches: { events: number; accepted: number; outcome: 'answered' | 'died' }[] = [];
+  private readonly batches: { events: number; accepted: number; outcome: 'answered' | 'died' }[] =
+    [];
 
   private mode: ServerMode = 'answer';
 
@@ -164,7 +171,7 @@ function theBody(request: IncomingMessage): Promise<string> {
 }
 
 /** What the app's own client reads an answer through. */
-interface WireAnswer {
+export interface WireAnswer {
   status: number;
   ok: boolean;
   /** The response headers, for the callers that need one (the session cookie). */
@@ -177,7 +184,9 @@ interface WireAnswer {
  * environment has no React Native networking, and the point of the harness is
  * the app's own path above this line, not the runtime's fetch.
  */
-export function theFetchOf(baseUrl: string): (input: string, init?: RequestInit) => Promise<WireAnswer> {
+export function theFetchOf(
+  baseUrl: string,
+): (input: string, init?: RequestInit) => Promise<WireAnswer> {
   return (input: string, init: RequestInit = {}) =>
     new Promise<WireAnswer>((resolve, reject) => {
       const target = new URL(input, baseUrl);

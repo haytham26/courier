@@ -34,15 +34,26 @@ function theCommittedSet() {
     .map((line) => JSON.parse(line));
 }
 
-test('the committed set carries at least the directive\'s 100 seeded full shifts', () => {
+test("the committed set carries at least the directive's 100 seeded full shifts", () => {
   const shifts = theCommittedSet();
-  assert.ok(shifts.length >= 100, `the directive's floor is 100 shifts, the set carries ${shifts.length}`);
+  assert.ok(
+    shifts.length >= 100,
+    `the directive's floor is 100 shifts, the set carries ${shifts.length}`,
+  );
   assert.equal(shifts.length, SHIFTS);
-  assert.equal(new Set(shifts.map((shift) => shift.shift_id)).size, shifts.length, 'the shift ids are distinct');
-  assert.equal(new Set(shifts.map((shift) => shift.run_id)).size, shifts.length, 'the run ids are distinct');
+  assert.equal(
+    new Set(shifts.map((shift) => shift.shift_id)).size,
+    shifts.length,
+    'the shift ids are distinct',
+  );
+  assert.equal(
+    new Set(shifts.map((shift) => shift.run_id)).size,
+    shifts.length,
+    'the run ids are distinct',
+  );
 });
 
-test('every seeded shift is a day the app\'s own run store can read', () => {
+test("every seeded shift is a day the app's own run store can read", () => {
   for (const shift of theCommittedSet()) {
     const problems = checkShift(shift, 0);
     assert.deepEqual(problems, [], `${shift.shift_id}: ${problems.join('; ')}`);
@@ -52,9 +63,15 @@ test('every seeded shift is a day the app\'s own run store can read', () => {
     assert.ok(typeof shift.depot.lat === 'number' && typeof shift.depot.lon === 'number');
     assert.equal(typeof shift.start_at, 'string');
     assert.ok(shift.break_window.start < shift.break_window.end, 'the break window is a window');
-    assert.ok(shift.finish.lat === shift.depot.lat && shift.finish.lon === shift.depot.lon, 'the round trip ends at the depot');
+    assert.ok(
+      shift.finish.lat === shift.depot.lat && shift.finish.lon === shift.depot.lon,
+      'the round trip ends at the depot',
+    );
     for (const stop of shift.stops) {
-      assert.ok(stop.type === 'delivery' || stop.type === 'pickup', `${stop.id} carries the contract's own type`);
+      assert.ok(
+        stop.type === 'delivery' || stop.type === 'pickup',
+        `${stop.id} carries the contract's own type`,
+      );
       assert.equal(stop.status, 'pending', `${stop.id} starts on the run, not finished`);
       assert.ok(stop.address.length > 0, `${stop.id} carries a real Canterbury address`);
       assert.ok(typeof stop.lat === 'number' && typeof stop.lon === 'number');
@@ -74,7 +91,10 @@ test('every stop of every shift has exactly one outcome, and the failed ones car
       const outcome = entries[0].outcome;
       if (outcome.outcome === 'failed') {
         failed += 1;
-        assert.ok(outcome.reason.length > 0, `${stop.id} failed with the reason the server demands`);
+        assert.ok(
+          outcome.reason.length > 0,
+          `${stop.id} failed with the reason the server demands`,
+        );
         assert.ok(outcome.utterance.length > 0, `${stop.id} carries the courier's own words`);
       }
       if (outcome.outcome === 'delivered') {
@@ -90,13 +110,18 @@ test('every stop of every shift has exactly one outcome, and the failed ones car
 
 test('every shift carries a proof photo, a spoken break and a spoken finish', () => {
   for (const shift of theCommittedSet()) {
-    const pods = shift.plan.filter((entry) => entry.outcome.outcome === 'delivered' && entry.outcome.pod);
+    const pods = shift.plan.filter(
+      (entry) => entry.outcome.outcome === 'delivered' && entry.outcome.pod,
+    );
     assert.ok(pods.length >= 1, `${shift.shift_id} walks the POD path at least once`);
     assert.equal(shift.commands.filter((command) => command.kind === 'start_break').length, 1);
     assert.equal(shift.commands.filter((command) => command.kind === 'end_break').length, 1);
     assert.equal(shift.commands.filter((command) => command.kind === 'end_shift').length, 1);
     for (const note of shift.notes) {
-      assert.ok(shift.stops.some((stop) => stop.id === note.stop_id), 'a note is about a stop the run has');
+      assert.ok(
+        shift.stops.some((stop) => stop.id === note.stop_id),
+        'a note is about a stop the run has',
+      );
       assert.ok(note.note.length > 0);
     }
   }
@@ -125,10 +150,17 @@ test('the manifest records the seed, the counts and the pool the addresses came 
     createHash('sha256').update(readFileSync(POOL)).digest('hex'),
     'the pool the set was drawn from is recorded by its own sha256',
   );
-  const total = (name) => theCommittedSet().reduce((sum, shift) => sum + shift.plan.filter((entry) => entry.outcome.outcome === name).length, 0);
+  const total = (name) =>
+    theCommittedSet().reduce(
+      (sum, shift) => sum + shift.plan.filter((entry) => entry.outcome.outcome === name).length,
+      0,
+    );
   assert.equal(manifest.counts.delivered, total('delivered'));
   assert.equal(manifest.counts.failed, total('failed'));
-  assert.equal(manifest.counts.stops, theCommittedSet().reduce((sum, shift) => sum + shift.stops.length, 0));
+  assert.equal(
+    manifest.counts.stops,
+    theCommittedSet().reduce((sum, shift) => sum + shift.stops.length, 0),
+  );
 });
 
 test('the generator refuses a shift whose plan does not cover its own stops', () => {
@@ -158,7 +190,7 @@ test('the generator refuses a shift whose plan does not cover its own stops', ()
   }
 });
 
-test('the set is written where the harness reads it, and the temp dir is the repo\'s own', () => {
+test("the set is written where the harness reads it, and the temp dir is the repo's own", () => {
   assert.ok(existsSync(SHIFTS_FILE), `the committed shifts are at ${SHIFTS_FILE}`);
   assert.ok(existsSync(MANIFEST));
   const scratch = mkdtempSync(join(tmpdir(), 'scale-shifts-'));

@@ -1,58 +1,43 @@
 {
- "generated_by": "scripts/eval/build-scale-shifts.mjs",
- "seed": 20261111,
- "generator": "mulberry32, the same PRNG the routing and voice sets use",
- "shifts": 120,
- "counts": {
+  "generated_by": "scripts/eval/build-scale-shifts.mjs",
+  "seed": 20261111,
+  "generator": "mulberry32, the same PRNG the routing and voice sets use",
   "shifts": 120,
-  "stops": 2864,
-  "delivered": 1764,
-  "failed": 562,
-  "skipped": 289,
-  "pending": 249,
-  "pods": 1019,
-  "notes": 423,
-  "commands": 360
- },
- "areas": {
-  "christchurch": 40,
-  "selwyn": 40,
-  "waimakariri": 40
- },
- "pool": {
-  "file": "packages/eval/routing/manifest/pool.json",
-  "sha256": "f5548057dffda8297f4e3fe149ce4d17f7ba81c49f57875c0beaebd2ed8b5427",
-  "stops": 560,
-  "source": {
-   "what": "LINZ Data Service WFS, layer 123113 (NZ Addresses), fetched 2026-11-09",
-   "licence": "CC BY 4.0 (sourced from the LINZ Data Service)",
-   "url_pattern": "https://data.linz.govt.nz/services;key=<LINZ_LDS_API_KEY>/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=data.linz.govt.nz:layer-123113&bbox=<cell box>&srsName=EPSG:4326&outputFormat=application/json&count=5000&sortBy=address_id",
-   "sampling": "deterministic: a grid of 0.02-degree cells over each delivery territory box, row-major order, cap 6 stops per cell, every 5th address inside a cell",
-   "territory_boxes": {
-    "christchurch": [
-     -43.72,
-     172.45,
-     -43.4,
-     172.83
-    ],
-    "selwyn": [
-     -43.85,
-     171.85,
-     -43.55,
-     172.5
-    ],
-    "waimakariri": [
-     -43.85,
-     172.35,
-     -43.6,
-     172.8
-    ]
-   },
-   "grid_cell_degrees": 0.02,
-   "per_cell_cap": 6
-  }
- },
- "licence": "the addresses are LINZ Data Service layer 123113 (NZ Addresses), CC BY 4.0, sourced through the committed routing pool; the reasons, the notes and the words are this repository's own",
- "harness": "apps/mobile/src/run/__tests__/scaleShifts.test.ts",
- "evidence": "docs/evidence/scale-tests/README.md"
+  "counts": {
+    "shifts": 120,
+    "stops": 2864,
+    "delivered": 1764,
+    "failed": 562,
+    "skipped": 289,
+    "pending": 249,
+    "pods": 1019,
+    "notes": 423,
+    "commands": 360
+  },
+  "areas": {
+    "christchurch": 40,
+    "selwyn": 40,
+    "waimakariri": 40
+  },
+  "pool": {
+    "file": "packages/eval/routing/manifest/pool.json",
+    "sha256": "f5548057dffda8297f4e3fe149ce4d17f7ba81c49f57875c0beaebd2ed8b5427",
+    "stops": 560,
+    "source": {
+      "what": "LINZ Data Service WFS, layer 123113 (NZ Addresses), fetched 2026-11-09",
+      "licence": "CC BY 4.0 (sourced from the LINZ Data Service)",
+      "url_pattern": "https://data.linz.govt.nz/services;key=<LINZ_LDS_API_KEY>/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=data.linz.govt.nz:layer-123113&bbox=<cell box>&srsName=EPSG:4326&outputFormat=application/json&count=5000&sortBy=address_id",
+      "sampling": "deterministic: a grid of 0.02-degree cells over each delivery territory box, row-major order, cap 6 stops per cell, every 5th address inside a cell",
+      "territory_boxes": {
+        "christchurch": [-43.72, 172.45, -43.4, 172.83],
+        "selwyn": [-43.85, 171.85, -43.55, 172.5],
+        "waimakariri": [-43.85, 172.35, -43.6, 172.8]
+      },
+      "grid_cell_degrees": 0.02,
+      "per_cell_cap": 6
+    }
+  },
+  "licence": "the addresses are LINZ Data Service layer 123113 (NZ Addresses), CC BY 4.0, sourced through the committed routing pool; the reasons, the notes and the words are this repository's own",
+  "harness": "apps/mobile/src/run/__tests__/scaleShifts.test.ts",
+  "evidence": "docs/evidence/scale-tests/README.md"
 }

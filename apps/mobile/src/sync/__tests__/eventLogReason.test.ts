@@ -22,8 +22,13 @@
  * device's leg.
  */
 jest.mock('@op-engineering/op-sqlite', () => {
-  const { theDatabaseOf } = require('../../run/testing/scaleSqlite') as typeof import('../../run/testing/scaleSqlite');
-  return { open: jest.fn((options: { name: string }) => theDatabaseOf(options.name)) };
+  // The app’s own stores read their statements through this. The stand-in
+  // answers them the way SQLite does and KEEPS ITS ROWS ACROSS A CLOSE, which
+  // is what makes the kill legs mean anything. `jest.requireActual` reaches the
+  // module inside the factory (a plain `require` is the lint’s refused shape),
+  // and the stand-in carries no native dependency, so the actual module IS it.
+  const { theDatabaseOf } = jest.requireActual<typeof import('../../run/testing/scaleSqlite')>('../../run/testing/scaleSqlite');
+  return { open: (options: { name: string }) => theDatabaseOf(options.name) };
 });
 
 import { OpSqliteEventStore } from '../opSqliteEventStore';
@@ -55,7 +60,9 @@ describe('the failed delivery keeps its reason through the phone\u2019s own even
 
     // And the event the API reads carries both: the transport's own mapping,
     // which is what `events:batch` sends.
-    const mapping = toContractEvent(event ?? { id: '', stopId: '', kind: 'failed', occurredAt: '' });
+    const mapping = toContractEvent(
+      event ?? { id: '', stopId: '', kind: 'failed', occurredAt: '' },
+    );
     expect(mapping.status).toBe('mapped');
     if (mapping.status === 'mapped') {
       expect(mapping.event.reason).toBe('no one home');
@@ -80,7 +87,9 @@ describe('the failed delivery keeps its reason through the phone\u2019s own even
     // through a NEW store instance over the SAME database.
     const second = OpSqliteEventStore.open(DATABASE);
     const reopened = await new EventLog(second).nextBatch(10);
-    const event = reopened.find((candidate) => candidate.id === '77777777-7777-7777-7777-777777777777');
+    const event = reopened.find(
+      (candidate) => candidate.id === '77777777-7777-7777-7777-777777777777',
+    );
     expect(event?.reason).toBe('refused');
     expect(event?.utterance).toBe('they refused the parcel');
     await second.close();
@@ -100,7 +109,9 @@ describe('the failed delivery keeps its reason through the phone\u2019s own even
       occurredAt: '2026-11-11T06:02:00.000Z',
     });
     const migrated = await new EventLog(opened).nextBatch(10);
-    const event = migrated.find((candidate) => candidate.id === '99999999-9999-9999-9999-999999999999');
+    const event = migrated.find(
+      (candidate) => candidate.id === '99999999-9999-9999-9999-999999999999',
+    );
     expect(event?.reason).toBe('damaged');
     await opened.close();
   });

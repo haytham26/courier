@@ -29,7 +29,13 @@ import { type DB, type Scalar } from '@op-engineering/op-sqlite';
 import { errorMessage } from '@/lib/errors';
 
 import { sharedDatabase, type SharedHandle } from './dbConnections';
-import { dbNumber, dbText, migrateTable, normaliseOccurredAt, type TableShape } from './eventSchema';
+import {
+  dbNumber,
+  dbText,
+  migrateTable,
+  normaliseOccurredAt,
+  type TableShape,
+} from './eventSchema';
 import type { DeliveryEvent, EventStore } from './types';
 
 /** The shape of the event log's table, and the version of that shape. */
@@ -131,7 +137,9 @@ export class OpSqliteEventStore implements EventStore {
     }
     await this.ready.catch((error: unknown) => {
       // A store whose migration failed still has to give its handle back.
-      console.warn(`sync: the event log was never ready, its handle is released anyway: ${errorMessage(error)}`);
+      console.warn(
+        `sync: the event log was never ready, its handle is released anyway: ${errorMessage(error)}`,
+      );
     });
     // The handle is shared, so it is released rather than closed: the run cache
     // may still be reading the same file.

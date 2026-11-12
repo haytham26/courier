@@ -22,27 +22,27 @@ The directive (2026-11-10, item 5):
 
 ### The set
 
-| | |
-|---|---|
-| generator | `scripts/eval/build-scale-shifts.mjs` (mulberry32, **seed 20261111**) |
-| the set | `packages/eval/scale/shifts.jsonl` — one JSON object per shift |
-| manifest | `packages/eval/scale/manifest.json` (the seed, the counts, the pool's sha256) |
+|           |                                                                                                                            |
+| --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| generator | `scripts/eval/build-scale-shifts.mjs` (mulberry32, **seed 20261111**)                                                      |
+| the set   | `packages/eval/scale/shifts.jsonl` — one JSON object per shift                                                             |
+| manifest  | `packages/eval/scale/manifest.json` (the seed, the counts, the pool's sha256)                                              |
 | addresses | the **committed routing pool** (`packages/eval/routing/manifest/pool.json`, 560 real LINZ Canterbury addresses, CC BY 4.0) |
-| licence | LINZ Data Service layer 123113, CC BY 4.0, through the routing pool; the reasons/notes/words are this repository's own |
-| gates | `node --test scripts/eval/__tests__/build-scale-shifts.test.mjs` — **8 tests, 8 pass** |
+| licence   | LINZ Data Service layer 123113, CC BY 4.0, through the routing pool; the reasons/notes/words are this repository's own     |
+| gates     | `node --test scripts/eval/__tests__/build-scale-shifts.test.mjs` — **8 tests, 8 pass**                                     |
 
-| the counts | |
-|---|---|
-| shifts | **120** (the directive's floor is 100) |
-| stops | 2864 (8–40 per shift, one area per shift: 40 Christchurch / 40 Selwyn / 40 Waimakariri) |
-| delivered | 1764 |
-| failed (with a reason + the courier's own words) | 562 |
-| skipped | 289 |
-| left pending (the courier never reached them) | 249 |
-| proof photos | 1019 |
-| notes | 423 |
-| spoken commands | 360 (120 start_break, 120 end_break, 120 end_shift) |
-| the set's sha256 | `386E68F9DC979AEBA1490755CF0F9A319C5ABCEBFCFDBE4644E7688F0AECB555` |
+| the counts                                       |                                                                                         |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| shifts                                           | **120** (the directive's floor is 100)                                                  |
+| stops                                            | 2864 (8–40 per shift, one area per shift: 40 Christchurch / 40 Selwyn / 40 Waimakariri) |
+| delivered                                        | 1764                                                                                    |
+| failed (with a reason + the courier's own words) | 562                                                                                     |
+| skipped                                          | 289                                                                                     |
+| left pending (the courier never reached them)    | 249                                                                                     |
+| proof photos                                     | 1019                                                                                    |
+| notes                                            | 423                                                                                     |
+| spoken commands                                  | 360 (120 start_break, 120 end_break, 120 end_shift)                                     |
+| the set's sha256                                 | `386E68F9DC979AEBA1490755CF0F9A319C5ABCEBFCFDBE4644E7688F0AECB555`                      |
 
 **The set is deterministic**: two runs of the generator build byte-identical
 bytes, and the committed file is that build (the suite asserts it).
@@ -67,18 +67,18 @@ loopback stack that answers the contract's own shape.
 **The whole run took 6.9 s** (the per-shift times are in `results/per_shift.csv`)
 and left:
 
-| | |
-|---|---|
-| shifts driven | 120 (0 stopped early) |
-| marks on the run | **2326** = the stops that moved (1764 delivered + 562 failed) |
-| events in the log | 2326 — one per marked stop, no duplicates, none lost |
-| events the outbox sent | 2326 |
-| events the server stored | 2326 — exactly once each |
-| replays the run made | **0** |
-| events still owed after the shift | **0** |
-| unhandled rejections (a crash on the phone) | **0** |
-| warnings the app itself wrote | 120, and every one of them the harness's own asking (the solver's refusal of a half order) |
-| problems the run found | **0** |
+|                                             |                                                                                            |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| shifts driven                               | 120 (0 stopped early)                                                                      |
+| marks on the run                            | **2326** = the stops that moved (1764 delivered + 562 failed)                              |
+| events in the log                           | 2326 — one per marked stop, no duplicates, none lost                                       |
+| events the outbox sent                      | 2326                                                                                       |
+| events the server stored                    | 2326 — exactly once each                                                                   |
+| replays the run made                        | **0**                                                                                      |
+| events still owed after the shift           | **0**                                                                                      |
+| unhandled rejections (a crash on the phone) | **0**                                                                                      |
+| warnings the app itself wrote               | 120, and every one of them the harness's own asking (the solver's refusal of a half order) |
+| problems the run found                      | **0**                                                                                      |
 
 The evidence the run writes: `results/per_shift.csv` (one row per shift) and
 `results/shift-summary.json`.
@@ -92,7 +92,7 @@ named in the test file's own comments:
   WHERE parameter per row instead of per statement (a stand-in defect, fixed);
 - **the skips the parser could not hear** — the app's own
   `SPOKEN_SKIP_PATTERNS` is anchored on a spoken address (`skip this one at 14
-  Sandy Beach Road`), and a LINZ suburb with a macron or a slash in it is
+Sandy Beach Road`), and a LINZ suburb with a macron or a slash in it is
   spoken as the street alone. The harness now builds the sentence the app's own
   parser accepts, and the trace records which form each address needed
   (283 of the 289 skips carried their suburb);
@@ -102,14 +102,21 @@ named in the test file's own comments:
 - **the finish the app does not hear** — the app's own `end_shift` pattern is
   `end (my) shift`, not "finishing the run";
 - **the failed events with no reason** — that one is the app's own defect, and
-  it is **BUG-305** (below).
+  it is **BUG-306** (below).
 
-## 2. BUG-305 — the phone's event log drops the reason a failed delivery carries
+## 2. BUG-306 — the phone's event log drops the reason a failed delivery carries
+
+**The number, and the collision.** This lane's commits were written saying
+BUG-305; **BUG-305 was already taken** — the lead's import-sheet fix (PR #306,
+merged to origin/main while this lane was working). The register number for the
+defect below is **BUG-306**, the next free number in the lead's 305..349 range,
+and the rename is recorded here exactly the way BUG-304's was: the commit
+messages say 305, the register says 306. The row itself is the lead's to file.
 
 **The claim, red-first** (`apps/mobile/src/sync/__tests__/eventLogReason.test.ts`,
-3 tests): *a failed delivery the courier records keeps the reason the server
+3 tests): _a failed delivery the courier records keeps the reason the server
 refuses to be without, through the phone's own store and out to the API's own
-vocabulary.*
+vocabulary._
 
 **The red run** (against origin/main's code, before the fix):
 
@@ -150,12 +157,12 @@ node_modules/.bin/jest.cmd src/run/__tests__/scaleKillSync.test.ts
 `apps/mobile/src/run/__tests__/scaleKillSync.test.ts` — **4 tests, 4 pass**
 (the whole file: ~11 s):
 
-| the leg | what it measured |
-|---|---|
-| **a kill mid-delivery** | 20 seeded shifts, each killed **twice** (at a seeded stop and at the day's end) and cold-started to finish its day — **40 kills**. Every mark, every event and every reason survived, and the server holds exactly one row per event id: **0 lost, 0 duplicated** |
-| **a kill mid-sync** | the server **stores the batch and dies before it answers**; the phone reads that as "nobody answered" and keeps the events; a cold start re-sends the very same event ids, and the server's own `ON CONFLICT (id) DO NOTHING` keeps one row each. The outbox also asked again for what was never confirmed — its own retry bound (BUG-093), never a second delivery |
-| **a partial accept** | the server takes half the batch: the phone confirms exactly that half (BUG-076) and the rest send on the next ask, each landing once |
-| **the set** | the kill legs drive the committed set, unchanged |
+| the leg                 | what it measured                                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **a kill mid-delivery** | 20 seeded shifts, each killed **twice** (at a seeded stop and at the day's end) and cold-started to finish its day — **40 kills**. Every mark, every event and every reason survived, and the server holds exactly one row per event id: **0 lost, 0 duplicated**                                                                                                   |
+| **a kill mid-sync**     | the server **stores the batch and dies before it answers**; the phone reads that as "nobody answered" and keeps the events; a cold start re-sends the very same event ids, and the server's own `ON CONFLICT (id) DO NOTHING` keeps one row each. The outbox also asked again for what was never confirmed — its own retry bound (BUG-093), never a second delivery |
+| **a partial accept**    | the server takes half the batch: the phone confirms exactly that half (BUG-076) and the rest send on the next ask, each landing once                                                                                                                                                                                                                                |
+| **the set**             | the kill legs drive the committed set, unchanged                                                                                                                                                                                                                                                                                                                    |
 
 What the kill legs do **not** claim: the Android process itself. The phone's
 storage here is the app's own `OpSqliteRunCache` and `OpSqliteEventStore` over
@@ -183,16 +190,16 @@ The kill is the one a courier's phone actually dies of: the server has taken
 the batch and the phone is gone before it can confirm. The cold start re-sends
 the same event ids.
 
-| the measured answer | |
-|---|---|
-| events this run wrote, by their ids | 4 |
-| rows in `delivery_events` for those ids | **4** — one per id, no duplicates |
-| the failed event's `reason` in the database | **`no one home`** |
-| delivered events | 3 |
+| the measured answer                                               |                                                                                                     |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| events this run wrote, by their ids                               | 4                                                                                                   |
+| rows in `delivery_events` for those ids                           | **4** — one per id, no duplicates                                                                   |
+| the failed event's `reason` in the database                       | **`no one home`**                                                                                   |
+| delivered events                                                  | 3                                                                                                   |
 | the stops the API answers with, read through the app's own client | `delivered`, `delivered`, `failed`, `delivered` (the statuses are derived from the log, ADR-010 §2) |
-| the POD uploaded for the event the server already has | 200 + `already_stored: true`, and **one** row for that id after two uploads |
-| the POD's first-store branch (an id the server has never seen) | **201** + `already_stored: false`, then the replay 200 + `already_stored: true`, still **one** row |
-| the phone's pending count after the cold start's sync | **0** |
+| the POD uploaded for the event the server already has             | 200 + `already_stored: true`, and **one** row for that id after two uploads                         |
+| the POD's first-store branch (an id the server has never seen)    | **201** + `already_stored: false`, then the replay 200 + `already_stored: true`, still **one** row  |
+| the phone's pending count after the cold start's sync             | **0**                                                                                               |
 
 **Why this suite is not in the default app suite.** It needs the A1 compose
 stack, so it runs as its own command and belongs to a CI job of its own. It
@@ -267,7 +274,7 @@ cd apps/mobile && node_modules/.bin/jest.cmd src/run/__tests__/scaleShifts.test.
 # the kill legs
 cd apps/mobile && node_modules/.bin/jest.cmd src/run/__tests__/scaleKillSync.test.ts
 
-# the reason (BUG-305), red-first
+# the reason (BUG-306), red-first
 cd apps/mobile && node_modules/.bin/jest.cmd src/sync/__tests__/eventLogReason.test.ts
 
 # the real stack

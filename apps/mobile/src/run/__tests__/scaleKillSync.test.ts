@@ -29,18 +29,19 @@
  * `docs/evidence/scale-tests/README.md` names what it measured.
  */
 jest.mock('@op-engineering/op-sqlite', () => {
-  const { theDatabaseOf } = require('../testing/scaleSqlite') as typeof import('../testing/scaleSqlite');
-  return { open: jest.fn((options: { name: string }) => theDatabaseOf(options.name)) };
+  // The app’s own stores read their statements through this. The stand-in
+  // answers them the way SQLite does and KEEPS ITS ROWS ACROSS A CLOSE, which
+  // is what makes the kill legs mean anything. `jest.requireActual` reaches the
+  // module inside the factory (a plain `require` is the lint’s refused shape),
+  // and the stand-in carries no native dependency, so the actual module IS it.
+  const { theDatabaseOf } = jest.requireActual<typeof import('../testing/scaleSqlite')>('../testing/scaleSqlite');
+  return { open: (options: { name: string }) => theDatabaseOf(options.name) };
 });
-
 jest.mock('expo-file-system', () => {
   class TheFile {
     readonly uri: string;
 
-    constructor(
-      base: string,
-      name: string,
-    ) {
+    constructor(base: string, name: string) {
       this.uri = `${base}/${name}`;
     }
 
@@ -48,8 +49,8 @@ jest.mock('expo-file-system', () => {
       return undefined;
     }
 
-    async write(): Promise<void> {
-      return undefined;
+    write(): Promise<void> {
+      return Promise.resolve();
     }
   }
 
@@ -92,7 +93,11 @@ interface SeededShift {
   break_window: { start: string; end: string; minutes: number };
   finish: { lat: number; lon: number };
   stops: SeededStop[];
-  plan: { stop_id: string; seq: number; outcome: { outcome: string; pod?: boolean; reason?: string; utterance?: string } }[];
+  plan: {
+    stop_id: string;
+    seq: number;
+    outcome: { outcome: string; pod?: boolean; reason?: string; utterance?: string };
+  }[];
 }
 
 interface SeededStop {
@@ -147,7 +152,10 @@ class TheApi implements RunApi {
   constructor(private readonly shift: SeededShift) {}
 
   seedDemoRun(): Promise<ApiOutcome<{ run_id: string; shift_id: string }>> {
-    return Promise.resolve({ status: 'ok', data: { run_id: this.shift.run_id, shift_id: this.shift.shift_id } });
+    return Promise.resolve({
+      status: 'ok',
+      data: { run_id: this.shift.run_id, shift_id: this.shift.shift_id },
+    });
   }
 
   getRun(): Promise<ApiOutcome<RunSnapshot['run']>> {
@@ -217,7 +225,9 @@ class ThePhone {
   async load(): Promise<void> {
     const loaded = await this.store.load();
     if (loaded.status !== 'ok') {
-      throw new Error(`the day did not load after ${String(this.coldStarts)} cold starts (${loaded.status})`);
+      throw new Error(
+        `the day did not load after ${String(this.coldStarts)} cold starts (${loaded.status})`,
+      );
     }
   }
 
@@ -268,7 +278,7 @@ interface KillTrace {
 
 describe('the kill legs: an app killed mid-delivery and mid-sync loses nothing (directive item 5)', () => {
   const shifts = theSet();
-  /** One loopback stack per leg, so no leg counts another leg's rows. */
+  /** One loopback stack per leg, so no leg counts another leg’s rows. */
   const stacks: ScaleServer[] = [];
 
   afterAll(async () => {
@@ -276,7 +286,6 @@ describe('the kill legs: an app killed mid-delivery and mid-sync loses nothing (
       await stack.stop();
     }
   });
-
   /** A fresh stack, and the app's own client speaking to it. */
   async function aStack(): Promise<{ server: ScaleServer; client: CourierApiClient }> {
     const server = new ScaleServer();
@@ -349,7 +358,6 @@ describe('the kill legs: an app killed mid-delivery and mid-sync loses nothing (
     // The app is killed and started again, and the outbox asks once more.
     await phone.kill();
     const restarted = await new ThePhone('kill-sync.db', shift, stack.client).coldStart(shift);
-    restarted.outbox; // the outbox is the restarted phone's own
     await restarted.outbox.syncAll(shift.shift_id);
 
     const record = stack.server.record();
@@ -471,7 +479,8 @@ describe('the kill legs: an app killed mid-delivery and mid-sync loses nothing (
         failed += 1;
       }
       const atTheEnd = stop.seq === day.stops.length;
-      const atTheSeededStop = position === Math.min(killAfter, Math.max(1, Math.floor(day.stops.length / 2)));
+      const atTheSeededStop =
+        position === Math.min(killAfter, Math.max(1, Math.floor(day.stops.length / 2)));
       if (killCount < kills && (atTheSeededStop || atTheEnd)) {
         // The app dies in the middle of the day, mid-delivery: no flush, no
         // confirm, nothing closed politely.
@@ -493,7 +502,9 @@ describe('the kill legs: an app killed mid-delivery and mid-sync loses nothing (
     const sent = record.sent.filter((event) => mine(event.stop_id));
 
     if (marks.length !== delivered + failed) {
-      problems.push(`the run carries ${marks.length} marks for ${delivered + failed} stops that moved`);
+      problems.push(
+        `the run carries ${marks.length} marks for ${delivered + failed} stops that moved`,
+      );
     }
     const markIds = marks.map((mark) => mark.eventId);
     if (new Set(markIds).size !== markIds.length) {
@@ -525,7 +536,8 @@ describe('the kill legs: an app killed mid-delivery and mid-sync loses nothing (
       server_sent: sent.length,
       duplicates: sent.length - stored.length,
       lost: delivered + failed - stored.length,
-      reasons_sent: reasons.filter((row) => row.reason !== undefined && row.reason.length > 0).length,
+      reasons_sent: reasons.filter((row) => row.reason !== undefined && row.reason.length > 0)
+        .length,
       problems,
     };
   }

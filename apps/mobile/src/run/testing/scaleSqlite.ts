@@ -53,17 +53,6 @@ function declaredColumns(body: string): string[] {
   return splitList(body).map((definition) => definition.split(/\s+/)[0] ?? '');
 }
 
-/** The primary key of a table, from its CREATE body. */
-function primaryKeyOf(body: string): string | null {
-  for (const definition of splitList(body)) {
-    if (/PRIMARY KEY/i.test(definition)) {
-      const name = definition.split(/\s+/)[0];
-      return name ?? null;
-    }
-  }
-  return null;
-}
-
 export class FakeSqlite {
   /** `PRAGMA user_version`: the shape the database has been migrated to. */
   version = 0;
@@ -87,7 +76,15 @@ export class FakeSqlite {
   }
 
   /** op-sqlite's slice of the API this stand-in has to answer. */
-  async execute(sql: string, params: (string | number | null)[] = []): Promise<Answer> {
+  execute(sql: string, params: (string | number | null)[] = []): Promise<Answer> {
+    // The answer is computed synchronously and handed back as a promise:
+    // the stores await it, and a statement this stand-in cannot answer THROWS
+    // here, which their own try/catch reads as a failed operation.
+    return Promise.resolve(this.answerOf(sql, params));
+  }
+
+  /** The answer for one statement: the SQLite this stand-in models. */
+  private answerOf(sql: string, params: (string | number | null)[]): Answer {
     const statement = sql.replace(/\s+/g, ' ').trim();
     this.executed.push(statement);
     if (this.closed) {
@@ -131,9 +128,8 @@ export class FakeSqlite {
       return { rows: [], rowsAffected: 0 };
     }
 
-    const inserted = /^INSERT OR (IGNORE|REPLACE) INTO (\w+) \(([^)]*)\) VALUES \(([\s\S]*)\)$/.exec(
-      statement,
-    );
+    const inserted =
+      /^INSERT OR (IGNORE|REPLACE) INTO (\w+) \(([^)]*)\) VALUES \(([\s\S]*)\)$/.exec(statement);
     if (inserted !== null) {
       return this.insert(
         inserted[2] ?? '',
@@ -158,7 +154,9 @@ export class FakeSqlite {
       }
       return { rows: [], rowsAffected: affected };
     }
-    if (/^UPDATE delivery_events SET refused_at = \? WHERE id = \? AND synced = 0$/.test(statement)) {
+    if (
+      /^UPDATE delivery_events SET refused_at = \? WHERE id = \? AND synced = 0$/.test(statement)
+    ) {
       const table = this.tableOf('delivery_events');
       const entry = table.rows.get(String(params[1]));
       if (entry !== undefined && entry.row.synced === 0) {
@@ -194,9 +192,10 @@ export class FakeSqlite {
       return { rows: [], rowsAffected: 0 };
     }
 
-    const selected = /^SELECT ([\s\S]+?) FROM (\w+)(?: WHERE ([\s\S]+?))?(?: ORDER BY ([\s\S]+?))?(?: LIMIT (\?|\d+))?$/.exec(
-      statement,
-    );
+    const selected =
+      /^SELECT ([\s\S]+?) FROM (\w+)(?: WHERE ([\s\S]+?))?(?: ORDER BY ([\s\S]+?))?(?: LIMIT (\?|\d+))?$/.exec(
+        statement,
+      );
     if (selected !== null) {
       return this.select(selected, params);
     }
@@ -247,8 +246,7 @@ export class FakeSqlite {
     return table.columns[0] ?? 'id';
   }
 
-
-/** Reads rows back, with the WHERE, ORDER BY and LIMIT the stores ask for. */
+  /** Reads rows back, with the WHERE, ORDER BY and LIMIT the stores ask for. */
   private select(match: RegExpExecArray, params: (string | number | null)[]): Answer {
     const columns = splitList(match[1] ?? '');
     const table = this.tableOf(match[2] ?? '');
@@ -277,7 +275,9 @@ export class FakeSqlite {
       }
     }
     if (predicates.length > 0) {
-      entries = entries.filter((entry) => predicates.every((predicate) => theTerm(entry.row, predicate, bound)));
+      entries = entries.filter((entry) =>
+        predicates.every((predicate) => theTerm(entry.row, predicate, bound)),
+      );
     }
 
     if (order.length > 0) {
@@ -334,14 +334,17 @@ export class FakeSqlite {
           ? Number(params[parameter] ?? entries.length)
           : Number(limitTerm);
     return {
-      rows: entries.slice(0, limited).map((entry) => Object.fromEntries(columns.map((name) => [name, entry.row[name] ?? null]))),
+      rows: entries
+        .slice(0, limited)
+        .map((entry) => Object.fromEntries(columns.map((name) => [name, entry.row[name] ?? null]))),
       rowsAffected: 0,
     };
   }
 
   /** op-sqlite's close: the handle is dropped, the rows are not. */
-  async closeAsync(): Promise<void> {
+  closeAsync(): Promise<void> {
     this.closed = true;
+    return Promise.resolve();
   }
 
   /** Opens it again, the way a new process does: the same file, the same rows. */
@@ -406,7 +409,11 @@ function thePredicate(term: string, ordinal: number): Predicate {
 }
 
 /** Whether one row satisfies one term, with the statement's own binding. */
-function theTerm(row: Row, predicate: Predicate, bound: Map<number, string | number | null>): boolean {
+function theTerm(
+  row: Row,
+  predicate: Predicate,
+  bound: Map<number, string | number | null>,
+): boolean {
   const actual = row[predicate.column];
   if (predicate.kind === 'null') {
     return actual === null;

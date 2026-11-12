@@ -38,10 +38,14 @@
  * proves nothing.
  */
 jest.mock('@op-engineering/op-sqlite', () => {
-  const { theDatabaseOf } = require('../testing/scaleSqlite') as typeof import('../testing/scaleSqlite');
-  return { open: jest.fn((options: { name: string }) => theDatabaseOf(options.name)) };
+  // The app’s own stores read their statements through this. The stand-in
+  // answers them the way SQLite does and KEEPS ITS ROWS ACROSS A CLOSE, which
+  // is what makes the kill legs mean anything. `jest.requireActual` reaches the
+  // module inside the factory (a plain `require` is the lint’s refused shape),
+  // and the stand-in carries no native dependency, so the actual module IS it.
+  const { theDatabaseOf } = jest.requireActual<typeof import('../testing/scaleSqlite')>('../testing/scaleSqlite');
+  return { open: (options: { name: string }) => theDatabaseOf(options.name) };
 });
-
 // The app’s one HTTP boundary builds its default token getter at import time,
 // and better-auth is ESM-only: it does not load in jest. This run mints its own
 // token (theSession below) and hands it to the client, so the seam is never used.
@@ -82,15 +86,12 @@ function join(...parts: string[]): string {
  * same JPEG the E2E build’s capture writes, read from the module so the two
  * cannot drift apart.
  */
-const CANNED_POD_JPEG_BASE64 = readFileSync(
-    join(REPO_ROOT, 'apps/mobile/src/pod/podForThisBuild.ts'),
-    'utf8',
-  )
-  .split('CANNED_POD_JPEG_BASE64 =')[1]
-  ?.split(';')[0]
-  ?.trim()
-  ?.replaceAll("'", '')
-  ?? '';
+const CANNED_POD_JPEG_BASE64 =
+  readFileSync(join(REPO_ROOT, 'apps/mobile/src/pod/podForThisBuild.ts'), 'utf8')
+    .split('CANNED_POD_JPEG_BASE64 =')[1]
+    ?.split(';')[0]
+    ?.trim()
+    ?.replaceAll("'", '') ?? '';
 /** The seeded email of this run's throwaway account. */
 const EMAIL = 'scale-stack@example.co.nz';
 const PASSWORD = 'correct-horse-battery';
@@ -128,7 +129,7 @@ async function theSession(): Promise<string> {
   });
   const signedIn = signUp.status === 200 ? signUp : await theSignIn(fetchOf);
   const rawCookie = signedIn.headers.get('set-cookie');
-  const cookie = (Array.isArray(rawCookie) ? (rawCookie[0] ?? '') : (rawCookie ?? '')).split(';')[0];
+  const cookie = rawCookie.split(';')[0];
   if (cookie.length === 0) {
     throw new Error(
       `the real auth service answered ${String(signedIn.status)} with no session cookie` +
@@ -150,7 +151,10 @@ async function theSession(): Promise<string> {
 
 /** The same account signed in, when the sign-up was already done (or refused). */
 async function theSignIn(
-  fetchOf: (input: string, init?: RequestInit) => Promise<{ status: number; headers: { get(name: string): string | null } }>,
+  fetchOf: (
+    input: string,
+    init?: RequestInit,
+  ) => Promise<{ status: number; headers: { get(name: string): string | null } }>,
 ): Promise<{ status: number; headers: { get(name: string): string | null } }> {
   return fetchOf(`${AUTH}/api/auth/sign-in/email`, {
     method: 'POST',
@@ -162,7 +166,21 @@ async function theSignIn(
 function theRows(sql: string): string[] {
   const out = execFileSync(
     'docker',
-    ['compose', '-f', COMPOSE, 'exec', '-T', 'postgres', 'psql', '-U', 'courier', '-d', 'courier', '-Atc', sql],
+    [
+      'compose',
+      '-f',
+      COMPOSE,
+      'exec',
+      '-T',
+      'postgres',
+      'psql',
+      '-U',
+      'courier',
+      '-d',
+      'courier',
+      '-Atc',
+      sql,
+    ],
     { cwd: REPO_ROOT, encoding: 'utf8' },
   );
   return out
@@ -171,12 +189,12 @@ function theRows(sql: string): string[] {
     .filter((line) => line.length > 0);
 }
 
-/** The count of one table, as the database answers it. */
-function theCount(sql: string): number {
-  return Number(theRows(sql)[0] ?? '0');
-}
-
 describe('the real stack: a kill between the answer and the confirm lands every event exactly once', () => {
+  beforeAll(() => {
+    // The phone’s own stores, over the durable stand-in: the rows survive the
+    // cold start the leg makes, the way a file on the phone does.
+  });
+
   it('the A1 stack is up, or this test fails loudly rather than quietly passing', async () => {
     const health = await theFetchOf(API)('http://127.0.0.1:8000/healthz', { method: 'GET' });
     expect(health.status).toBe(200);
@@ -215,7 +233,9 @@ describe('the real stack: a kill between the answer and the confirm lands every 
         const answer = await apiSyncTransport(client).send(to, batch);
         if (killTheNextAnswer) {
           killTheNextAnswer = false;
-          throw new Error('the phone died between the server\u2019s answer and the log\u2019s confirmation');
+          throw new Error(
+            'the phone died between the server\u2019s answer and the log\u2019s confirmation',
+          );
         }
         return answer;
       },
@@ -314,8 +334,8 @@ describe('the real stack: a kill between the answer and the confirm lands every 
           authorization: `Bearer ${token}`,
           'content-type': `multipart/form-data; boundary=${boundary}`,
         },
-        body: theMultipart(withId),
-      } as unknown as RequestInit);
+        body: theMultipart(withId) as unknown as BodyInit,
+      });
 
     // The contract’s own answer shape (services/api/app/main.py): 200 for a
     // replay and 201 for a first store, with `already_stored` on the body
@@ -329,9 +349,7 @@ describe('the real stack: a kill between the answer and the confirm lands every 
     const replay = await uploadOf(podUrl, eventId);
     expect(replay.status).toBe(200);
     expect(((await replay.json()) as { already_stored?: unknown }).already_stored).toBe(true);
-    expect(
-      theRows(`SELECT count(*) FROM delivery_events WHERE id = '${eventId}'`)[0],
-    ).toBe('1');
+    expect(theRows(`SELECT count(*) FROM delivery_events WHERE id = '${eventId}'`)[0]).toBe('1');
 
     // And the first-store branch, with an event id the server has never seen:
     // 201, `already_stored` false, and the replay of the same id answers 200
@@ -343,9 +361,7 @@ describe('the real stack: a kill between the answer and the confirm lands every 
     const freshReplay = await uploadOf(podUrl, freshId);
     expect(freshReplay.status).toBe(200);
     expect(((await freshReplay.json()) as { already_stored?: unknown }).already_stored).toBe(true);
-    expect(
-      theRows(`SELECT count(*) FROM delivery_events WHERE id = '${freshId}'`)[0],
-    ).toBe('1');
+    expect(theRows(`SELECT count(*) FROM delivery_events WHERE id = '${freshId}'`)[0]).toBe('1');
 
     // The marks this run wrote, read off the phone before it closes its day.
     const marks = await store.deliveredMarks();
@@ -359,7 +375,9 @@ describe('the real stack: a kill between the answer and the confirm lands every 
     const rowsFor = (sql: string): string[] => theRows(sql.replaceAll('@IDS@', idList));
     expect(rowsFor(`SELECT count(*) FROM delivery_events WHERE id IN (@IDS@)`)[0]).toBe('4');
     expect(
-      rowsFor(`SELECT count(*) FROM delivery_events WHERE id IN (@IDS@) AND kind = 'failed' AND reason = 'no one home'`)[0],
+      rowsFor(
+        `SELECT count(*) FROM delivery_events WHERE id IN (@IDS@) AND kind = 'failed' AND reason = 'no one home'`,
+      )[0],
     ).toBe('1');
     expect(
       rowsFor(`SELECT count(*) FROM delivery_events WHERE id IN (@IDS@) AND kind = 'delivered'`)[0],
