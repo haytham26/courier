@@ -1,3 +1,61 @@
+## 2026-11-12 (later still): the Dependabot triage — 19 PRs, all green ones still inside the cooldown
+
+**The directive's item 5, third half.** The queue is 19 Dependabot PRs (#219–#238), every one of them opened
+on 2026-11-07 — **5 days old, so all of them are still inside the repo's 7-day cooldown** (the dependabot
+config's `default-days`, BUG-228). The cooldown is the rule, so **nothing was merged today**; the green ones
+become eligible on 2026-11-14 and the list below is the order they go in.
+
+**Green (14):** #219 setup-node 4.4.0→7.1.0 (30/30) · #220 checkout 4.4.0→7.0.1 · #221 upload-artifact
+4.6.2→7.0.2 · #223 fastapi 0.158.1→0.162.0 (courier-voice) · #226 jsdom 26→30 · #227 pytest 9.1.1→9.2.0
+(courier-voice) · #229 pydantic 2.14.1→2.14.2 · #230 ruff 0.17.1→0.17.3 (api) · #231 pydantic-settings
+2.16.1→2.16.2 · #232 expo-audio 58.0.9→58.0.10 · #233 ruff 0.17.1→0.17.3 (courier-voice) · #234
+@maplibre/maplibre-react-native 11.3.7→11.5.x (24/24) · #235 boto3 1.43.118→1.43.122 · #237 fastapi
+0.143.5→0.162.0 (api) · #238 anthropic 1.15.0→2.3.0.
+
+**Red (5), each with its reason recorded rather than left to a re-run:**
+- **#224 actions/download-artifact 4.3.0→8.0.2 (major)** — the emulator legs go red on the runner
+  step itself: the major version changes how the artifact is fetched, and the two emulator jobs fail
+  before the app runs. This one needs a real change, not a cooldown.
+- **#222 github/codeql-action 3.39.0→4.39.1 (major)** — CodeQL (javascript-typescript) and CodeQL
+  (python) both fail: the major version's query packs or the analysis setup no longer match the tree.
+- **#236 @vitest/coverage-v8 4.1.11→5.0.5 (major)** — the **Coverage ratchet** fails, which is the
+  floor guard doing its job: a major coverage-instrumentation change must not be allowed to lower the
+  measured coverage by accident. Needs the ratchet's numbers re-derived by hand.
+- **#225 pytest 9.1.1→9.2.0 (services/api)** — `lint, typecheck, test` fails: a patch bump of the test
+  runner breaks a suite that passes on the pinned one.
+- **#228 react-test-renderer 19.3.0→19.3.1** — `lint, typecheck, test` fails for the same class of
+  reason.
+
+The five red ones stay open with these reasons in this log; the fourteen green ones will be merged on
+and after 2026-11-14 by the cooldown, one at a time, each on its own green head.
+
+## 2026-11-12 (later still): VROOM 1.15.0 RUNS — the pinned image is built and the engine is the eval's fourth measured baseline (BUG-291)
+
+**Directive item 5's VROOM half, first half done.** ADR-030's recorded gap is closed in the tooling:
+
+- **The pinned image exists and the engine runs.** `infra/eval/vroom/Dockerfile` builds VROOM 1.15.0 from its
+  own tag and proves it at the end of the build (`vroom --version` must answer 1.15.0). The base is Ubuntu
+  24.04 by digest, and the reason is recorded in the file's header: Debian bookworm's GCC 12 cannot compile
+  VROOM (`<format>`, GCC 13+) — the first build attempt failed exactly there. The earlier gap's stated
+  cause ("no Rust toolchain") was wrong: VROOM is C++, and the actual obstacle is that its release
+  publishes no prebuilt binary at all.
+- **The runner measures it.** `scripts/eval/run-routing-eval.py` gains `run_vroom`, writing the instance in
+  the OR-Tools baseline's shape (one vehicle, capacity, the road matrix as the arc durations, the windows
+  as offsets from the run's start) so all four engines are measured with ONE stick, and reading the answer
+  back through the same pool-index mapping. A first short run over the 30-stop instances measures the
+  engine on the days it can plan (the `brk` variants) and reports the rest as **unplanned** — the `full`
+  variants (the ones with a finish point) leave 28–29 of 30 stops placed, and an engine that does not plan
+  feasibly does not set the bar. That is the eval's own rule, applied honestly rather than measuring a
+  partial order.
+- **Three real defects the wiring found and fixed:** VROOM's CLI has no stdin form (`-i -` answers "Can't
+  read file: -", so the document is a bind-mounted file), its vehicle keys are `start_index`/`end_index`
+  (a uint, not a coordinate array — "Invalid start array" was its way of saying so), and the runner's
+  summary crashed with a KeyError when no engine planned at all.
+- **What remains:** the full 144-instance re-measure with VROOM in the set, then the numbers in ADR-030
+  and FINAL_REPORT are re-derived and re-pasted with the co-primary actually measured. **That run is
+  scheduled for when the founder's local server is stopped** — the directive's resource rule keeps a long
+  eval off a PC the founder is testing on, so it waits rather than competing with him.
+
 ## 2026-11-12 (later still): the founder's item 4 — the APK the founder can install (BUG-289), and the one blocker left
 
 The founder's directive item 4: **the releases list is empty and
