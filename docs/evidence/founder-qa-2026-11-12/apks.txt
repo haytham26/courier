@@ -1,0 +1,7 @@
+﻿installed-from-desktop-shortcut.apk (base.apk of com.courier.copilot pulled from the emulator)
+size=116037310
+sha256=F6BCEB42425D2BF4B7F01CE17D619C2CE446868D49D664F69623327077FCD1E0
+versionName=0.1.0 versionCode=1 minSdk=24 targetSdk=36
+
+Desktop APK: none (only 'Courier Copilot.lnk' on C:\Users\DCL\OneDrive\Desktop)
+Main APK: releases/download/latest/courier.apk and courier-unsigned.apk both HTTP 404; releases list empty

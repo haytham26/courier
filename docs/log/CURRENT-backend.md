@@ -1,3 +1,14 @@
+## 2026-11-11: the Oracle staging is the founder's FIRST (no local server) — the guide, the bootstrap, and the SBOM (BUG-283)
+
+The founder's decision of 2026-11-11: **no local server; the Oracle Cloud machine comes today or tomorrow, so "LAST: Oracle staging" is now FIRST.** What that changed in our lane, in order:
+
+1. **`docs/operations/ORACLE_SETUP.md` is written** — seven numbered click-by-click steps for the founder: the Always Free Ampere A1 VM (Ubuntu 24.04, Sydney, 4 OCPU / 24 GB), BOTH of Oracle's firewalls (80/443 in the subnet Security List), a name or DuckDNS, and the handover as a table: the GitHub **Secrets** `COURIER_STAGING_HOST` / `COURIER_STAGING_USER` / `COURIER_STAGING_KEY` / `COURIER_STAGING_DOMAIN` / `COURIER_SMOKE_TOKEN` / `COURIER_POSTGRES_PASSWORD` / `BETTER_AUTH_SECRET` / `ACME_EMAIL` and the **Variable** `COURIER_DOMAIN` — with where each value comes from. The same list is the TOP row of `FOUNDER_TODO.md` (it was the one blocker the founder named).
+2. **`infra/bootstrap-host.sh`** — the host's one-time setup the deploy now runs before anything else (idempotent, wired into `deploy.yml`'s deploy leg): the non-root `deploy` user with passwordless *docker* sudo, Docker CE from arm64's own repository, ufw (22/80/443), unattended-upgrades, a 4 GB swap (the always-free Ampere boots with none), `/opt/courier`, and the nightly backup cron whose restore drill is `infra/test-restore.sh`.
+3. **`release-apk.yml` generates the SBOM** (BUG-283, P6's "signed APK + SBOM as v1.0.0"): Syft writes SPDX JSON over the APK the run itself collected — versioned by the tag — and the release step attaches both. A missing SBOM fails the release; the unsigned path still skips with the notice naming the founder's keystore secrets (never red — the founder's v1.0.0 tag push is the approval, and the lane without the keystore is proved).
+4. **The watcher is running**: the staging-smoke probe says `configured=false` as of this entry, so the secrets are NOT in yet — the deploy leg will keep skipping with its notice until they are. Checked every 30 minutes while the rest of the queue runs; the moment they appear: deploy, smoke, the APK against staging, and the two links in this log.
+
+Skills: ci-cd-and-automation, documentation-and-adrs, security-and-hardening, constraint-driven-development.
+
 # CURRENT — backend squad (read this first)
 
 Updated: 2026-11-05 · main at `f9781fb` (backend PRs #177–186, #188 and #190 merged; #189 and #191 are the lead's; #182 is not merged yet) · **This
