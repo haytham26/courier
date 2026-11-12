@@ -154,6 +154,21 @@
         "docs/status/TRIAL_SCOPE.md"
       ],
       "reason": "verified: the PR side's BUGS.md footer was STALE (211/169 from an older branch point) and the merge kept the newer count already in the merge base (212/170) — a supersede, not a loss; the CURRENT.md header line belonged to the newer main side; TRIAL_SCOPE.md was a hand resolution"
+    },
+    {
+      "merge": "88764fc9",
+      "paths": [
+        "docs/log/CURRENT.md",
+        "docs/status/BUGS.md"
+      ],
+      "reason": "verified: both sides kept in both files. CURRENT.md carries the directive headers, PART A, the driver-app PARITY list AND every lane entry from both sides (2018 lines; the directive header, the BUG-305 entry, the emulator one-liner and the PR #300/#307 entries all present). BUGS.md carries every register row from both sides with the footer recounted (256 rows). Recorded after the merge because the resolution happened while bringing main into the branch, and §13.0 requires the record before the ritual is complete."
+    },
+    {
+      "merge": "db7d3dc6",
+      "paths": [
+        "docs/status/BUGS.md"
+      ],
+      "reason": "the branch's own merge of origin/main (inside PR #306): the register's rows from both sides kept, the footer recounted (256 rows). The same resolution carries into the merge 88764fc9 that brings it to main."
     }
   ]
 }
